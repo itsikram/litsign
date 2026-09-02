@@ -400,6 +400,9 @@ function litsign_scripts()
 	wp_enqueue_style('font-awesome', get_template_directory_uri() . '/css/all.min.css', array(), _S_VERSION);
 	wp_enqueue_style('litsign-style', get_stylesheet_uri(), array(), _S_VERSION);
 	wp_enqueue_style('custom-style', get_template_directory_uri() . '/css/style.css', array(), _S_VERSION);
+	if (is_page_template('landing-page.php')) {
+		wp_enqueue_style('landing-page', get_template_directory_uri() . '/css/landing-page.css', array('litsign-style', 'custom-style'), _S_VERSION);
+	}
 	//wp_enqueue_style('zebra_dialog', get_template_directory_uri() . '/css/zebra_dialog.css', array(), _S_VERSION);
 
 	wp_style_add_data('litsign-style', 'rtl', 'replace');

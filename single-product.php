@@ -163,9 +163,9 @@ get_header();
 ?>
 
 <div class="container  product-details">
-    <h2 class="fs-5 product-title my-3">
-        <?php echo get_the_title(); ?>
-    </h2>
+    <h1 class="fs-5 product-title my-3">
+        <?php echo esc_html(get_the_title()); ?>
+    </h1>
     <form action="<?php echo site_url() . '/cart'; ?>" method="POST" enctype="multipart/form-data" class="needs-validation">
         <input type="hidden" name="product_id" value="<?php echo get_the_ID(); ?>">
         <div class="row">

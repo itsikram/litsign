@@ -1,0 +1,8 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^php -l functions\\.php; php -l single-product\\.php; php -l page\\.php; php -l search\\.php; php -l b2calc\\.php$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}

@@ -438,6 +438,162 @@ function litsign_scripts()
 add_action('wp_enqueue_scripts', 'litsign_scripts');
 
 /**
+ * Return whether a third-party SEO plugin is active.
+ *
+ * The theme should not emit duplicate metadata when an SEO plugin already
+ * owns the document head.
+ */
+function wholesale_has_seo_plugin()
+{
+	return defined('WPSEO_VERSION')
+		|| defined('RANK_MATH_VERSION')
+		|| defined('AIOSEO_VERSION')
+		|| defined('SEOPRESS_VERSION');
+}
+
+/**
+ * Build a useful description for the current public request.
+ */
+function wholesale_seo_description()
+{
+	if (is_singular()) {
+		$description = get_post_meta(get_queried_object_id(), '_seo_description', true);
+
+		if (!$description) {
+			$description = get_the_excerpt(get_queried_object_id());
+		}
+
+		if (!$description && get_post_field('post_content', get_queried_object_id())) {
+			$description = wp_trim_words(
+				wp_strip_all_tags(strip_shortcodes(get_post_field('post_content', get_queried_object_id()))),
+				30,
+				'...'
+			);
+		}
+	} elseif (is_tax() || is_category() || is_tag()) {
+		$description = term_description();
+	} elseif (is_search()) {
+		$description = sprintf(
+			/* translators: %s: search query. */
+			__('Search results for %s.', 'litsign'),
+			get_search_query()
+		);
+	} elseif (is_archive()) {
+		$description = get_bloginfo('description');
+	} else {
+		$description = get_bloginfo('description');
+	}
+
+	$description = trim(preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $description)));
+
+	return $description ?: get_bloginfo('name');
+}
+
+/**
+ * Keep private transactional screens out of search results.
+ */
+function wholesale_seo_is_noindex()
+{
+	$private_pages = array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders');
+
+	return is_404()
+		|| is_search()
+		|| is_page(array_merge($private_pages, array('my_orders')))
+		|| is_singular('order');
+}
+
+add_filter('document_title_parts', function ($parts) {
+	if (wholesale_has_seo_plugin()) {
+		return $parts;
+	}
+
+	if (is_front_page() || is_home()) {
+		$parts['title'] = get_bloginfo('name');
+		$parts['tagline'] = get_bloginfo('description');
+	} else {
+		$parts['site'] = get_bloginfo('name');
+	}
+
+	return $parts;
+});
+
+/**
+ * Emit canonical, robots, Open Graph, Twitter, and JSON-LD metadata.
+ */
+function wholesale_seo_head()
+{
+	if (wholesale_has_seo_plugin()) {
+		return;
+	}
+
+	remove_action('wp_head', 'rel_canonical');
+	$url = is_singular() ? get_permalink() : home_url(add_query_arg(array(), $GLOBALS['wp']->request));
+	$url = $url ? $url : home_url('/');
+	$title = wp_get_document_title();
+	$description = wholesale_seo_description();
+	$image = is_singular() ? get_the_post_thumbnail_url(get_queried_object_id(), 'large') : '';
+
+	if (!$image) {
+		$image = get_theme_mod('custom_logo') ? wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full') : '';
+	}
+
+	echo '<link rel="canonical" href="' . esc_url($url) . '">' . "\n";
+	echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
+	echo '<meta property="og:type" content="' . esc_attr(is_singular('product') ? 'product' : 'website') . '">' . "\n";
+	echo '<meta property="og:title" content="' . esc_attr($title) . '">' . "\n";
+	echo '<meta property="og:description" content="' . esc_attr($description) . '">' . "\n";
+	echo '<meta property="og:url" content="' . esc_url($url) . '">' . "\n";
+	echo '<meta property="og:site_name" content="' . esc_attr(get_bloginfo('name')) . '">' . "\n";
+
+	if ($image) {
+		echo '<meta property="og:image" content="' . esc_url($image) . '">' . "\n";
+	}
+
+	echo '<meta name="twitter:card" content="' . esc_attr($image ? 'summary_large_image' : 'summary') . '">' . "\n";
+	echo '<meta name="twitter:title" content="' . esc_attr($title) . '">' . "\n";
+	echo '<meta name="twitter:description" content="' . esc_attr($description) . '">' . "\n";
+
+	$graph = array(
+		'@context' => 'https://schema.org',
+		'@type' => is_singular('product') ? 'Product' : 'WebPage',
+		'name' => $title,
+		'url' => $url,
+		'description' => $description,
+	);
+
+	if (is_singular('product')) {
+		$price = get_post_meta(get_queried_object_id(), '_price_per_sqft', true);
+		$graph['image'] = $image ? array($image) : array();
+
+		if ($price !== '' && floatval($price) > 0) {
+			$graph['offers'] = array(
+				'@type' => 'Offer',
+				'priceCurrency' => 'USD',
+				'price' => (string) floatval($price),
+				'availability' => 'https://schema.org/InStock',
+				'url' => $url,
+			);
+		}
+	}
+
+	echo '<script type="application/ld+json">' . wp_json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
+}
+add_action('wp_head', 'wholesale_seo_head', 1);
+
+function wholesale_seo_robots($robots)
+{
+	if (!wholesale_has_seo_plugin() && wholesale_seo_is_noindex()) {
+		return array(
+			'noindex' => true,
+			'follow' => true,
+		);
+	}
+
+	return $robots;
+}
+add_filter('wp_robots', 'wholesale_seo_robots');
+
+/**
  * Remove resource hints for third-party origins that are not used by the theme.
  *
  * The hints otherwise compete with the document and critical stylesheet

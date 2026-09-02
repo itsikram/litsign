@@ -2,12 +2,12 @@
 // template name: Account
 
 if (!is_user_logged_in()) {
-    wp_redirect(site_url());
+    wp_redirect(site_url().'/login');
+
 }
 
 if (isset($_REQUEST['logout'])) {
     wp_logout();
-    wp_redirect(site_url());
 }
 
 
@@ -234,7 +234,7 @@ get_header();
                                                 <div class="col-md-4">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">City</label>
-                                                        <input type="text" value="<?php echo $user_city; ?>" placeholder="Ney York" name="city" class="form-control">
+                                                        <input type="text" value="<?php echo $user_city; ?>" placeholder="New York" name="city" class="form-control">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-4">

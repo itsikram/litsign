@@ -9,6 +9,8 @@ if (is_user_logged_in()) {
 if (isset($_REQUEST['email'])) {
     $email = $_REQUEST['email'];
     $pass = isset($_REQUEST['password']) ? $_REQUEST['password'] : '';
+    $redirect_url = isset($_REQUEST['redirect_ulr']) ? $_REQUEST['redirect_ulr'] : home_url();
+
 
     $is_login = wp_signon(
         array(
@@ -17,7 +19,17 @@ if (isset($_REQUEST['email'])) {
             'remember' => true,
         )
     );
-    wp_redirect(get_permalink() . '?type=danger&message="Invalid Credential"');
+
+
+
+    if(is_user_logged_in()) {
+        
+        wp_redirect($redirect_url);
+
+    }else {
+        wp_redirect(get_permalink() . '?type=danger&message="Invalid Credential"&redirect_ulr='.$redirect_url);
+
+    }
 }
 get_header();
 

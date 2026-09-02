@@ -1,0 +1,180 @@
+
+[
+    {
+        "name": "height",
+        "type": "normal",
+        "cssClass": "select-height avoid-price",
+        "options": [
+            { "8 Inch": "352" },
+            { "9 Inch": "360" },
+            { "10 Inch": "392" },
+            { "11 Inch": "414" },
+            { "12 Inch": "436" },
+            { "13 Inch": "458" },
+            { "14 Inch": "480" },
+            { "15 Inch": "502" },
+            { "16 Inch": "542" },
+            { "17 Inch": "572" },
+            { "18 Inch": "620" },
+            { "19 Inch": "686" },
+            { "20 Inch": "752" },
+            { "21 Inch": "812" },
+            { "22 Inch": "890" },
+            { "23 Inch": "896" },
+            { "24 Inch": "1052" },
+            { "25 Inch": "1130" },
+            { "26 Inch": "1218" },
+            { "27 Inch": "1302" },
+            { "28 Inch": "1430" },
+            { "29 Inch": "1544" },
+            { "30 Inch": "1664" },
+            { "31 Inch": "1774" },
+            { "32 Inch": "1882" },
+            { "33 Inch": "1962" },
+            { "34 Inch": "2042" },
+            { "35 Inch": "2134" },
+            { "36 Inch": "2222" }
+        ]
+    },
+    {
+        "name": "face",
+        "type": "normal",
+        "cssClass": "select-face",
+        "options": [
+            { "White (Acrylic Color)": "0/0/#fff" }
+        ]
+    },
+    {
+        "name": "return",
+        "type": "normal",
+        "cssClass": "select-return avoid-price",
+        "options": [
+            {
+                "Yellow": "0/0/rgb(255, 205, 0)"
+            },
+            {
+                "Sunflower": "0/0/rgb(242, 169, 0)"
+            },
+            {
+                "Golden Yellow": "0/0/rgb(255, 184, 28)"
+            },
+            {
+                "Poppy Orange": "0/0/rgb(255, 173, 74)"
+            },
+            {
+                "Kumquat Orange": "0/0/rgb(255, 130, 0)"
+            },
+            {
+                "Orange": "0/0/rgb(250, 70, 22)"
+            },
+            {
+                "Light Tomato Red": "0/0/rgb(210, 38, 48)"
+            },
+            {
+                "Dark Red": "0/0/rgb(171, 35, 40)"
+            },
+            {
+                "Cardinal Red": "0/0/rgb(186, 12, 47)"
+            },
+            {
+                "Burgundy": "0/0/rgb(128, 17, 36)"
+            },
+            {
+                "Intense Magenta": "0/0/rgb(172, 22, 133)"
+            },
+            {
+                "Raspberry": "0/0/rgb(165, 0, 80)"
+            },
+            {
+                "Vivid Rose": "0/0/rgb(206, 0, 55)"
+            },
+            {
+                "Plum Purple": "0/0/rgb(87, 44, 95)"
+            },
+            {
+                "Royal Blue": "0/0/rgb(40, 0, 113)"
+            },
+            {
+                "Blue": "0/0/rgb(0, 32, 91)"
+            },
+            {
+                "Bright Blue": "0/0/rgb(120, 190, 32)"
+            },
+            {
+                "Brilliant Green": "0/0/rgb(210, 38, 48)"
+            },
+            {
+                "Mirrored Stainless Steel": "0/0/rgb(141, 144, 146)"
+            },
+            {
+                "Bright Blue": "0/0/rgb(0, 87, 184)"
+            },
+            {
+                "Teal Green": "0/0/rgb(0, 140, 149)"
+            },
+            {
+                "Turquoise": "0/0/rgb(0, 133, 120)"
+            },
+            {
+                "Dark Red": "0/0/rgb(171, 35, 40)"
+            },
+            {
+                "Tea Green": "0/0/rgb(0, 140, 149)"
+            },
+            {
+                "Dark Emerald": "0/0/rgb(0, 99, 65)"
+            },
+            {
+                "Green": "0/0/rgb(0, 111, 68)"
+            },
+            {
+                "Light Kelly Green": "0/0/rgb(0, 150, 94)"
+            },
+            {
+                "Vivid Green": "0/0/rgb(0, 132, 61)"
+            },
+            {
+                "Lime Green": "0/0/rgb(108, 194, 74)"
+            },
+            {
+                "Brilliant Green": "0/0/rgb(120, 190, 32)"
+            },
+            {
+                "Ivory": "0/0/rgb(223, 209, 167)"
+            },
+            {
+                "Rust Brown": "0/0/rgb(104, 52, 49)"
+            },
+            {
+                "Duranodic": "0/0/rgb(61, 57, 53)"
+            },
+            {
+                "White": "0/0/rgb(242, 243, 233)"
+            },
+            {
+                "Shadow Gray": "0/0/rgb(150, 140, 131)"
+            },
+            {
+                "Black": "0/0/rgb(45, 41, 38)"
+            },
+            {
+                "Gold Nugget": "0/0/rgb(174, 145, 66)"
+            },
+            {
+                "Gold Nugget 2": "0/0/rgb(178, 139, 51)"
+            },
+            {
+                "Gold Matallic": "0/0/rgb(139, 115, 74)"
+            },
+            {
+                "Mirrored Stainless Steel": "0/0/rgb(141, 144, 146)"
+            },
+            {
+                "Brushed Stainless Steel": "0/0/rgb(141, 144, 146)"
+            },
+            {
+                "Silver": "0/0/rgb(141, 144, 146)"
+            }
+        ]
+    }
+]

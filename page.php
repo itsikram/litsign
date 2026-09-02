@@ -16,8 +16,13 @@ get_header();
 ?>
 
 	<main id="primary" class="site-main">
-
+		<div class="container">
 		<h1><?php echo get_the_title(); ?></h1>
+
+		<?php the_content(); ?>
+
+		</div>
+
 	</main><!-- #main -->
 
 <?php

@@ -277,16 +277,21 @@ function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
 
 
 
+if (WHOLESALE_PAYMENT_DISABLED) {
+    place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart);
+
+    wp_redirect(home_url() . '/?type=success&message=' . rawurlencode('Order placed successfully. Payment is temporarily unavailable.'));
+    exit;
+}
+
 $result = processPayment($grand_total, $card_number, $card_exp_month . $card_exp_year, $card_cvv, $address, $billing_zip);
 
 if ($result['status'] == 'success') {
     place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart);
-    
-    wp_redirect(home_url() . '/?type=success&message=' . $result['message']);
-} else if ($result['status'] == 'failed') {
 
-    //place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart); 
-    wp_redirect(home_url() . '/?type=danger&message=' . $result['message']);
-} else if ($result['status'] == 'delined') {
-    wp_redirect(home_url() . '/?type=danger&message=' . $result['message']);
+    wp_redirect(home_url() . '/?type=success&message=' . rawurlencode($result['message']));
+    exit;
+} else {
+    wp_redirect(home_url() . '/?type=danger&message=' . rawurlencode($result['message']));
+    exit;
 }

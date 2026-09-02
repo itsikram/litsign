@@ -259,6 +259,11 @@ get_header();
 
                 <h3 class="fs-3 my-3">3. Payment Method</h3>
 
+                <?php if (WHOLESALE_PAYMENT_DISABLED) : ?>
+                    <div class="alert alert-info" role="status">
+                        Payment is temporarily unavailable. You can place your order now and we will contact you about payment.
+                    </div>
+                <?php else : ?>
                 <div class="card-details-container p-3">
 
                     <!-- card types -->
@@ -331,6 +336,7 @@ get_header();
                         </div>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
             <div class="col-md-4">
                 <h3 class="fs-3"> 4. Review Your Order</h3>

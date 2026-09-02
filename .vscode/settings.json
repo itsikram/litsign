@@ -15,6 +15,22 @@
     "/^& 'C:\\\\xampp\\\\php\\\\php\\.exe' -l single-product\\.php; git --no-pager diff --check$/": {
       "approve": true,
       "matchCommandLine": true
+    },
+    "/^& 'C:\\\\xampp\\\\php\\\\php\\.exe' -l 'payment\\.php'$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^& 'C:\\\\xampp\\\\php\\\\php\\.exe' -l 'checkout\\.php'; git diff --check$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^& 'C:\\\\xampp\\\\php\\\\php\\.exe' -l 'functions\\.php'; & 'C:\\\\xampp\\\\php\\\\php\\.exe' -l 'checkout\\.php'; & 'C:\\\\xampp\\\\php\\\\php\\.exe' -l 'payment\\.php'; git diff --check$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^& 'C:\\\\xampp\\\\php\\\\php\\.exe' -l 'functions\\.php'; & 'C:\\\\xampp\\\\php\\\\php\\.exe' -l 'payment\\.php'$/": {
+      "approve": true,
+      "matchCommandLine": true
     }
   }
 }

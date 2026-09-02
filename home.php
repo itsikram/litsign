@@ -219,6 +219,7 @@ get_header();
                     ),
                 ));
                 if ($product_query->have_posts()) {
+                    $is_first_product = true;
                     while ($product_query->have_posts()) {
                         $product_query->the_post();
 
@@ -238,11 +239,13 @@ get_header();
                                 <div class="pb-image-top">
                                     <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium_large', false, array(
                                         'alt' => esc_attr(get_the_title()),
-                                        'loading' => 'lazy',
+                                        'loading' => $is_first_product ? 'eager' : 'lazy',
+                                        'fetchpriority' => $is_first_product ? 'high' : 'auto',
                                         'decoding' => 'async',
                                         'sizes' => '(max-width: 767px) 100vw, 656px',
                                     )); ?>
                                 </div>
+                                <?php $is_first_product = false; ?>
                                 <div class="pb-details">
                                     <h4 class="pb-title fs-6 text-truncate" title="<?php echo get_the_title(); ?>">
                                         <?php echo get_the_title(); ?>

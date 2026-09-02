@@ -396,7 +396,7 @@ add_action('widgets_init', 'litsign_widgets_init');
  */
 function litsign_scripts()
 {
-	wp_enqueue_style('bootsrap', 'https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css', array(), _S_VERSION);
+	wp_enqueue_style('bootsrap', get_template_directory_uri() . '/css/bootstrap.min.css', array(), _S_VERSION);
 	wp_enqueue_style('font-awesome', get_template_directory_uri() . '/css/all.min.css', array(), _S_VERSION);
 	wp_enqueue_style('litsign-style', get_stylesheet_uri(), array(), _S_VERSION);
 	wp_enqueue_style('custom-style', get_template_directory_uri() . '/css/style.css', array(), _S_VERSION);
@@ -404,9 +404,9 @@ function litsign_scripts()
 
 	wp_style_add_data('litsign-style', 'rtl', 'replace');
 
-	wp_enqueue_script('bootsrap', 'https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js', array('jquery'), _S_VERSION, true);
+	wp_enqueue_script('bootsrap', get_template_directory_uri() . '/js/bootstrap.min.js', array('jquery'), _S_VERSION, true);
 
-	wp_enqueue_script('eModal', get_template_directory_uri() . '/js/jquery.eModal.js', array(), _S_VERSION, true);
+	wp_enqueue_script('eModal', get_template_directory_uri() . '/js/jquery.eModal.js', array('jquery'), _S_VERSION, true);
 	//wp_enqueue_script('stripe', 'https://js.stripe.com/v3/', array(), _S_VERSION, false);
 	wp_enqueue_script('custom-script', get_template_directory_uri() . '/js/main.js', array('jquery'), '8.5.3', true);
 
@@ -428,8 +428,34 @@ function litsign_scripts()
 			'nonce'    => wp_create_nonce('wp_rest'),
 		]);
 	}
+
+	foreach (array('jquery', 'jquery-migrate', 'bootsrap', 'eModal', 'custom-script', 'konva', 'redux', 'cl') as $script_handle) {
+		if (wp_script_is($script_handle, 'enqueued')) {
+			wp_script_add_data($script_handle, 'strategy', 'defer');
+		}
+	}
 }
 add_action('wp_enqueue_scripts', 'litsign_scripts');
+
+/**
+ * Remove resource hints for third-party origins that are not used by the theme.
+ *
+ * The hints otherwise compete with the document and critical stylesheet
+ * connections during the initial load.
+ */
+function wholesale_resource_hints($urls, $relation_type)
+{
+	if ('preconnect' !== $relation_type) {
+		return $urls;
+	}
+
+	return array_values(array_filter($urls, function ($url) {
+		$href = is_array($url) && isset($url['href']) ? $url['href'] : $url;
+		return false === strpos($href, 'cdnjs.cloudflare.com')
+			&& false === strpos($href, 'socket.tidio.co');
+	}));
+}
+add_filter('wp_resource_hints', 'wholesale_resource_hints', 10, 2);
 
 
 function my_enqueue($hook)
@@ -1560,4 +1586,3 @@ function allow_cross_origin_requests()
     header("Access-Control-Allow-Headers: Content-Type");
 }
 add_action('init', 'allow_cross_origin_requests');
-

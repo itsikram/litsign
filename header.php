@@ -78,6 +78,7 @@ if ($logo_url) {
 			/*a name to be used later*/
 			src: url('<?php echo get_template_directory_uri() . '/fonts/NimbusSanL-Bol.otf'; ?>');
 			font-weight: bold;
+			font-display: swap;
 			/*URL to font*/
 		}
 
@@ -85,34 +86,40 @@ if ($logo_url) {
 			font-family: 'type-writer';
 			src: url('<?php echo get_template_directory_uri() . '/fonts/TYPEWR_B.TTF'; ?>');
 			font-weight: bold;
+			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'alegreya';
 			src: url('<?php echo get_template_directory_uri() . '/fonts/Alegreya-VariableFont_wght.ttf'; ?>');
+			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'anton';
 			src: url('<?php echo get_template_directory_uri() . '/fonts/Anton-Regular.ttf'; ?>');
+			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'gotham-medium';
 			src: url('<?php echo get_template_directory_uri() . '/fonts/gotham-medium.otf'; ?>');
 			font-weight: 900;
+			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'helvetica-condensed-bold';
 			src: url('<?php echo get_template_directory_uri() . '/fonts/helvetica-condensed-bold.otf'; ?>');
 			font-weight: 900;
+			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'helvetica-rounded-bold';
 			src: url('<?php echo get_template_directory_uri() . '/fonts/helvetica-rounded-bold.otf'; ?>');
 			font-weight: 900;
+			font-display: swap;
 		}
 
 

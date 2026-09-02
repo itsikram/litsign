@@ -429,7 +429,7 @@ function litsign_scripts()
 		]);
 	}
 
-	foreach (array('jquery', 'jquery-migrate', 'bootsrap', 'eModal', 'custom-script', 'konva', 'redux', 'cl') as $script_handle) {
+	foreach (array('jquery-migrate', 'bootsrap', 'eModal', 'custom-script', 'konva', 'redux', 'cl') as $script_handle) {
 		if (wp_script_is($script_handle, 'enqueued')) {
 			wp_script_add_data($script_handle, 'strategy', 'defer');
 		}

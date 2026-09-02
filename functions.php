@@ -12,7 +12,7 @@
 
 if (!defined('_S_VERSION')) {
 	// Replace the version number of the theme on each release.
-	define('_S_VERSION', '1.0.0');
+	define('_S_VERSION', '2.5.1');
 }
 
 
@@ -1560,7 +1560,4 @@ function allow_cross_origin_requests()
     header("Access-Control-Allow-Headers: Content-Type");
 }
 add_action('init', 'allow_cross_origin_requests');
-
-
-
 

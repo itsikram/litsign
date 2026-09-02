@@ -228,7 +228,7 @@ get_header();
                         $starting_at_options = get_post_meta(get_the_ID(), "_starting_at_options", true);
                         $terms = get_the_terms(get_the_ID(), 'product_category');
                         $product_category_slug = isset($terms[0]) ? $terms[0]->slug : '';
-                        $product_thumbnail = get_the_post_thumbnail_url(get_the_ID(), 'full');
+                        $product_thumbnail_id = get_post_thumbnail_id(get_the_ID());
                         $product_slug = get_post_field('post_name', get_the_ID(), 'raw');
 
 
@@ -236,7 +236,12 @@ get_header();
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-image-top">
-                                    <img src="<?php echo $product_thumbnail; ?>" alt="">
+                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium_large', false, array(
+                                        'alt' => esc_attr(get_the_title()),
+                                        'loading' => 'lazy',
+                                        'decoding' => 'async',
+                                        'sizes' => '(max-width: 767px) 100vw, 656px',
+                                    )); ?>
                                 </div>
                                 <div class="pb-details">
                                     <h4 class="pb-title fs-6 text-truncate" title="<?php echo get_the_title(); ?>">
@@ -318,7 +323,19 @@ get_header();
                     <div class="product-box" data-product-category="adhesive-products">
                         <a href="<?php echo home_url() . '/?category_slug=' . $ref_term->slug; ?>">
                             <div class="pb-image-top">
-                                <img src="<?php echo  $ref_term_image; ?>" alt="">
+                                <?php
+                                $ref_term_image_id = attachment_url_to_postid($ref_term_image);
+                                if ($ref_term_image_id) {
+                                    echo wp_get_attachment_image($ref_term_image_id, 'medium_large', false, array(
+                                        'alt' => esc_attr($ref_term_title),
+                                        'loading' => 'lazy',
+                                        'decoding' => 'async',
+                                        'sizes' => '(max-width: 767px) 100vw, 656px',
+                                    ));
+                                } else {
+                                    echo '<img src="' . esc_url($ref_term_image) . '" alt="' . esc_attr($ref_term_title) . '" loading="lazy" decoding="async">';
+                                }
+                                ?>
                             </div>
                             <div class="pb-details">
                                 <h4 class="pb-title fs-6 text-truncate" title="AV12 – Dry Erase Adhesive Vinyl">
@@ -380,13 +397,18 @@ get_header();
                         $terms = get_the_terms(get_the_ID(), 'product_category');
 
                         $product_category_slug = isset($terms[0]) ? $terms[0]->slug : '';
-                        $product_thumbnail = get_the_post_thumbnail_url(get_the_ID(), 'full');
+                        $product_thumbnail_id = get_post_thumbnail_id(get_the_ID());
                         $product_slug = get_post_field('post_name', get_the_ID(), 'raw');
                 ?>
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-image-top">
-                                    <img src="<?php echo $product_thumbnail; ?>" alt="">
+                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium_large', false, array(
+                                        'alt' => esc_attr(get_the_title()),
+                                        'loading' => 'lazy',
+                                        'decoding' => 'async',
+                                        'sizes' => '(max-width: 767px) 100vw, 656px',
+                                    )); ?>
                                 </div>
                                 <div class="pb-details">
                                     <h4 class="pb-title fs-6 text-truncate" title="<?php echo get_the_title(); ?>">

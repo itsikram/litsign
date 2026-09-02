@@ -23,7 +23,7 @@
         <div class="button-container">
         </div>
 
-        <img src="<?php echo get_template_directory_uri() . '/img/footer-bd-2.webp'; ?>" alt="">
+        <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bd-2.webp?ver=' . _S_VERSION); ?>" alt="" loading="lazy" decoding="async">
     </div>
     <div class="container mt-3 text-center">
         <a href="<?php echo home_url(); ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
@@ -42,7 +42,7 @@
     </div>
 
     <div class="footer-bg-image-1">
-        <img src="<?php echo get_template_directory_uri() . '/img/footer-bg-1.png'; ?>" alt="">
+        <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bg-1.png?ver=' . _S_VERSION); ?>" alt="" loading="lazy" decoding="async">
     </div>
 
     <div class="footer-info py-4">
@@ -51,17 +51,22 @@
                 <div class="col-md-4 p-3">
                     <div class="footer-logo-container">
                         <a href="<?php echo home_url() . '/'; ?>">
-                            <?php $logo_url = get_theme_mod('custom_logo');
+                            <?php $logo_id = get_theme_mod('custom_logo');
 
-                            if ($logo_url) {
-                                $logo_url = wp_get_attachment_image_url($logo_url, 'full');
+                            if ($logo_id) {
                             ?>
-                                <img src="<?php echo $logo_url; ?>" alt="<?php echo bloginfo('title'); ?>" class="header-logo">
+                                <?php echo wp_get_attachment_image($logo_id, 'medium_large', false, array(
+                                    'class' => 'header-logo',
+                                    'alt' => get_bloginfo('name'),
+                                    'loading' => 'lazy',
+                                    'decoding' => 'async',
+                                    'sizes' => '(max-width: 767px) 90vw, 665px',
+                                )); ?>
 
                             <?php
                             } else {
                             ?>
-                                <img src="<?php echo get_template_directory_uri() . '/img/logo.png'; ?>" alt="<?php echo bloginfo('title'); ?>" class="header-logo">
+                                <img src="<?php echo esc_url(get_template_directory_uri() . '/img/logo.png'); ?>" alt="<?php echo esc_attr(get_bloginfo('name')); ?>" class="header-logo" loading="lazy" decoding="async">
 
                             <?php
                             } ?>

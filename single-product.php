@@ -172,7 +172,13 @@ get_header();
             <div class="col-md-4">
                 <div class="thumbnail-container">
                     <?php
-                    the_post_thumbnail('', array('class' => 'single-product-thumbnail'));
+                    the_post_thumbnail('', array(
+                        'class' => 'single-product-thumbnail',
+                        'alt' => esc_attr(get_the_title()),
+                        'loading' => 'eager',
+                        'fetchpriority' => 'high',
+                        'decoding' => 'async',
+                    ));
                     ?>
                 </div>
                 <?php if ($product_gallery_images) : ?>
@@ -182,7 +188,7 @@ get_header();
                         ?>
                             <div data-image="<?php echo $image; ?>" class="gallery-image-item">
 
-                                <img src="<?php echo $image; ?>" alt="">
+                                <img src="<?php echo esc_url($image); ?>" alt="<?php echo esc_attr(get_the_title()); ?>" loading="lazy" decoding="async">
                             </div>
 
                         <?php
@@ -1054,7 +1060,7 @@ get_header();
         <div class="row mt-4 overflow-hidden">
             <div class="col">
                 <div class="product-main-desc">
-                    <h3 class="fs-3 mb-4">Product Description</h3>
+                    <h2 class="fs-3 mb-4">Product Description</h2>
 
                     <?php
 

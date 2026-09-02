@@ -7,6 +7,14 @@
     "/^& \"C:\\\\xampp\\\\php\\\\php\\.exe\" -l \"C:\\\\xampp\\\\htdocs\\\\storefrontsignonline\\.com\\\\wp-config\\.php\"$/": {
       "approve": true,
       "matchCommandLine": true
+    },
+    "/^& 'C:\\\\xampp\\\\php\\\\php\\.exe' -l functions\\.php; & 'C:\\\\xampp\\\\php\\\\php\\.exe' -l home\\.php; & 'C:\\\\xampp\\\\php\\\\php\\.exe' -l single-product\\.php$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^& 'C:\\\\xampp\\\\php\\\\php\\.exe' -l single-product\\.php; git --no-pager diff --check$/": {
+      "approve": true,
+      "matchCommandLine": true
     }
   }
 }

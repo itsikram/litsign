@@ -188,10 +188,10 @@ get_header();
                 </div>
             </div> -->
 
-            <?php if ($current_term): ?>
-                <h1 class="text-center fs-2"><?php print_r($current_term->name); ?></h1>
-                <p class="text-center fs-5 mb-0"><?php print_r($current_term->description); ?></p>
-            <?php endif; ?>
+            <header class="shop-header">
+                <h1 class="text-center fs-2"><?php echo esc_html($current_term ? $current_term->name : __('Custom Signs', 'litsign')); ?></h1>
+                <p class="text-center fs-5 mb-0"><?php echo esc_html($current_term ? $current_term->description : __('Shop custom signage designed and built for your business.', 'litsign')); ?></p>
+            </header>
             <div id="product-box-container" class="product-box-container d-flex flex-wrap">
 
                 <?php
@@ -247,11 +247,11 @@ get_header();
                                 </div>
                                 <?php $is_first_product = false; ?>
                                 <div class="pb-details">
-                                    <h4 class="pb-title fs-6 text-truncate" title="<?php echo get_the_title(); ?>">
-                                        <?php echo get_the_title(); ?>
-                                    </h4>
+                                    <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
+                                        <?php echo esc_html(get_the_title()); ?>
+                                    </h2>
                                     <div class="pb-description-list">
-                                        <?php echo $short_desc; ?>
+                                        <?php echo wp_kses_post($short_desc); ?>
                                     </div>
                                     <hr>
                                     <div class="start-at-pricing">
@@ -341,10 +341,10 @@ get_header();
                                 ?>
                             </div>
                             <div class="pb-details">
-                                <h4 class="pb-title fs-6 text-truncate" title="AV12 – Dry Erase Adhesive Vinyl">
-                                    <?php echo $ref_term_title; ?></h4>
+                                <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr($ref_term_title); ?>">
+                                    <?php echo esc_html($ref_term_title); ?></h2>
                                 <div class="pb-description-list">
-                                    <?php echo $ref_term_desc; ?></h4>
+                                    <?php echo wp_kses_post($ref_term_desc); ?>
 
                                 </div>
                                 <hr>
@@ -414,11 +414,11 @@ get_header();
                                     )); ?>
                                 </div>
                                 <div class="pb-details">
-                                    <h4 class="pb-title fs-6 text-truncate" title="<?php echo get_the_title(); ?>">
-                                        <?php echo get_the_title(); ?>
-                                    </h4>
+                                    <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
+                                        <?php echo esc_html(get_the_title()); ?>
+                                    </h2>
                                     <div class="pb-description-list">
-                                        <?php echo $short_desc; ?>
+                                        <?php echo wp_kses_post($short_desc); ?>
                                     </div>
                                     <hr>
                                     <p class="pb-pricing d-flex justify-content-between">

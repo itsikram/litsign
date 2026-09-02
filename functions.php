@@ -459,7 +459,28 @@ function wholesale_has_seo_plugin()
  */
 function wholesale_seo_description()
 {
-	if (is_singular()) {
+	if (is_singular('product')) {
+		$product_id = get_queried_object_id();
+		$description = get_post_meta($product_id, '_seo_description', true);
+
+		if (!$description) {
+			$description = get_post_meta($product_id, '_product_short_desc', true);
+		}
+
+		if (!$description) {
+			$description = get_post_meta($product_id, '_product_description', true);
+		}
+
+		if (!$description) {
+			$description = get_post_field('post_content', $product_id);
+		}
+	} elseif (is_page_template('home.php') || (is_home() && !is_front_page())) {
+		$term_slug = isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : 'channel-letters';
+		$term = get_term_by('slug', $term_slug, 'product_category');
+		$description = $term && !is_wp_error($term) && $term->description
+			? $term->description
+			: __('Shop custom signs, channel letters, adhesive products, and professional signage built for your business.', 'litsign');
+	} elseif (is_singular()) {
 		$description = get_post_meta(get_queried_object_id(), '_seo_description', true);
 
 		if (!$description) {
@@ -493,6 +514,24 @@ function wholesale_seo_description()
 }
 
 /**
+ * Return the canonical URL for the custom product shop.
+ */
+function wholesale_seo_url()
+{
+	if (is_page_template('home.php') || (is_home() && !is_front_page())) {
+		$term_slug = isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : '';
+		$shop_url = is_page_template('home.php')
+			? get_permalink()
+			: get_permalink(get_option('page_for_posts'));
+		$shop_url = $shop_url ? $shop_url : home_url('/');
+
+		return $term_slug ? add_query_arg('category_slug', $term_slug, $shop_url) : $shop_url;
+	}
+
+	return is_singular() ? get_permalink() : home_url(add_query_arg(array(), $GLOBALS['wp']->request));
+}
+
+/**
  * Keep private transactional screens out of search results.
  */
 function wholesale_seo_is_noindex()
@@ -510,7 +549,14 @@ add_filter('document_title_parts', function ($parts) {
 		return $parts;
 	}
 
-	if (is_front_page() || is_home()) {
+	if (is_page_template('home.php') || (is_home() && !is_front_page())) {
+		$term_slug = isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : '';
+		$term = $term_slug ? get_term_by('slug', $term_slug, 'product_category') : false;
+		$parts['title'] = $term && !is_wp_error($term)
+			? sprintf(__('%s Sign Products', 'litsign'), $term->name)
+			: __('Custom Sign Products', 'litsign');
+		$parts['site'] = get_bloginfo('name');
+	} elseif (is_front_page() || is_home()) {
 		$parts['title'] = get_bloginfo('name');
 		$parts['tagline'] = get_bloginfo('description');
 	} else {
@@ -530,7 +576,7 @@ function wholesale_seo_head()
 	}
 
 	remove_action('wp_head', 'rel_canonical');
-	$url = is_singular() ? get_permalink() : home_url(add_query_arg(array(), $GLOBALS['wp']->request));
+	$url = wholesale_seo_url();
 	$url = $url ? $url : home_url('/');
 	$title = wp_get_document_title();
 	$description = wholesale_seo_description();
@@ -558,25 +604,76 @@ function wholesale_seo_head()
 
 	$graph = array(
 		'@context' => 'https://schema.org',
-		'@type' => is_singular('product') ? 'Product' : 'WebPage',
+		'@type' => is_singular('product') ? 'Product' : (is_page_template('home.php') ? 'CollectionPage' : 'WebPage'),
 		'name' => $title,
 		'url' => $url,
 		'description' => $description,
 	);
 
 	if (is_singular('product')) {
-		$price = get_post_meta(get_queried_object_id(), '_price_per_sqft', true);
+		$product_id = get_queried_object_id();
+		$product_name = get_the_title($product_id);
+		$product_description = wholesale_seo_description();
+		$price = floatval(get_post_meta($product_id, '_min_sqft', true)) * floatval(get_post_meta($product_id, '_price_per_sqft', true));
+		$graph['name'] = $product_name;
+		$graph['description'] = $product_description;
 		$graph['image'] = $image ? array($image) : array();
+		$graph['brand'] = array(
+			'@type' => 'Brand',
+			'name' => get_bloginfo('name'),
+		);
+		$graph['sku'] = (string) get_post_field('post_name', $product_id);
 
-		if ($price !== '' && floatval($price) > 0) {
+		$terms = get_the_terms($product_id, 'product_category');
+		if ($terms && !is_wp_error($terms)) {
+			$graph['category'] = implode(', ', wp_list_pluck($terms, 'name'));
+		}
+
+		if ($price > 0) {
 			$graph['offers'] = array(
 				'@type' => 'Offer',
 				'priceCurrency' => 'USD',
-				'price' => (string) floatval($price),
+				'price' => number_format($price, 2, '.', ''),
 				'availability' => 'https://schema.org/InStock',
 				'url' => $url,
 			);
 		}
+	} elseif (is_page_template('home.php')) {
+		$term_slug = isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : 'channel-letters';
+		$query = new WP_Query(array(
+			'post_type' => 'product',
+			'post_status' => 'publish',
+			'posts_per_page' => 99,
+			'no_found_rows' => true,
+			'fields' => 'ids',
+			'tax_query' => array(
+				array(
+					'taxonomy' => 'product_category',
+					'field' => 'slug',
+					'terms' => $term_slug,
+				),
+			),
+			'meta_query' => array(
+				array(
+					'key' => '_show_in_list',
+					'value' => 'on',
+				),
+			),
+		));
+		$items = array();
+		foreach ($query->posts as $position => $product_id) {
+			$items[] = array(
+				'@type' => 'ListItem',
+				'position' => $position + 1,
+				'url' => get_permalink($product_id),
+				'name' => get_the_title($product_id),
+			);
+		}
+		$graph['mainEntity'] = array(
+			'@type' => 'ItemList',
+			'numberOfItems' => count($items),
+			'itemListElement' => $items,
+		);
 	}
 
 	echo '<script type="application/ld+json">' . wp_json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";

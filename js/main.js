@@ -796,82 +796,65 @@
 
 
     // })
-    let updateGrandTotal = (subTotal,shiipingCost) => {
-      let grandTotal = parseFloat(subTotal + shiipingCost).toFixed(2)
-      $('#grandTotal').val(grandTotal);
-
+    let updateGrandTotal = (subTotal, shippingCost) => {
+    let totalTax = parseFloat($('#totalTax').val()) || 0;
+    let grandTotal = parseFloat(subTotal + shippingCost + totalTax).toFixed(2);
+    $('#grandTotal').val(grandTotal);
+    return parseFloat(grandTotal);
     }
     // shipping cost radio change
     $('.shipping-radio[name="shipping_method"]').change(function () {
-      let currentShippingCost = parseFloat($('#shippingCost').val())
-      let newShippingCost = parseFloat($(this).val());
+    let newShippingCost = parseFloat($(this).val());
+    let checkoutSubTotal = parseFloat($('#subTotal').val()) || 0;
+    let productTurnaround = parseInt($('#productTurnaround').val());
+    let productCategory = $('#productCategory').val();
 
-      let checkoutSubTotal = parseFloat($('#subTotal').val());
-      let productTurnaround = parseInt($('#productTurnaround').val());
-      let productCategory = $('#productCategory').val();
-
-      if (productCategory != 'adhesive-products') {
-        switch (newShippingCost) {
-          case 50:
-            $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 5)}`);
-            $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 5))
-            updateGrandTotal(checkoutSubTotal,50)
-            break;
-          case 200:
-            $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 3)}`);
-            $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 3))
-            updateGrandTotal(checkoutSubTotal,200)
-
-            break;
-          case 250:
-            $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 2)}`);
-            $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 2))
-            updateGrandTotal(checkoutSubTotal,250)
-
-            break;
-          case 300:
-            $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 0)}`);
-            $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround))
-            updateGrandTotal(checkoutSubTotal,300)
-
-            break;
-
-        }
-      } else {
-        switch (newShippingCost) {
-          case 12.5:
-            $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 5)}`);
-            $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 5))
-            updateGrandTotal(checkoutSubTotal,12.5)
-
-            break;
-          case 50:
-            $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 3)}`);
-            $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 3))
-            updateGrandTotal(checkoutSubTotal,50)
-
-            break;
-          case 62.5:
-            $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 2)}`);
-            $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 2))
-            updateGrandTotal(checkoutSubTotal,62.5)
-
-            break;
-          case 75:
-            $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround)}`);
-            $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround));
-            updateGrandTotal(checkoutSubTotal,75)
-
-            break;
-
-        }
+    if (productCategory != 'adhesive-products') {
+      switch (newShippingCost) {
+        case 50:
+          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 5)}`);
+          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 5));
+          break;
+        case 200:
+          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 3)}`);
+          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 3));
+          break;
+        case 250:
+          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 2)}`);
+          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 2));
+          break;
+        case 300:
+          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround)}`);
+          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround));
+          break;
       }
-      let totalTax = parseFloat($('#totalTax').val()).toFixed(2)
-      console.log(checkoutSubTotal,newShippingCost,parseFloat(totalTax))
-      let grandTotal = parseFloat((checkoutSubTotal) + newShippingCost + parseFloat(totalTax));
-      $('.grand-total-holder').text('$' + numberWithCommas(grandTotal.toFixed(2)))
-      $('.shipping-cost-holder').text('$' + newShippingCost)
-      $('#shippingCost').val(newShippingCost)
+    } else {
+      switch (newShippingCost) {
+        case 12.5:
+          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 5)}`);
+          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 5));
+          break;
+        case 50:
+          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 3)}`);
+          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 3));
+          break;
+        case 62.5:
+          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 2)}`);
+          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 2));
+          break;
+        case 75:
+          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround)}`);
+          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround));
+          break;
+      }
+    }
+
+    let totalTax = parseFloat($('#totalTax').val()) || 0;
+    let grandTotal = parseFloat(checkoutSubTotal + newShippingCost + totalTax);
+    $('.grand-total-holder').text('$' + numberWithCommas(grandTotal.toFixed(2)))
+    $('.shipping-cost-holder').text('$' + newShippingCost.toFixed(2))
+    $('#shippingCost').val(newShippingCost.toFixed(2))
+    $('#grandTotal').val(grandTotal.toFixed(2))
     })
 
 

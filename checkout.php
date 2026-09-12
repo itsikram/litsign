@@ -68,7 +68,7 @@ get_header();
     <form action="<?php echo site_url(); ?>/payment" class="needs-validation">
         <input type="hidden" name="sub_total" value="<?php echo $cart->sub_total; ?>" id="subTotal">
 
-        <input type="hidden" name="grand_total" value="<?php echo $cart->sub_total + intval($shipping_cost[0]) + $total_tax; ?>" data-sc="<?php echo intval($shipping_cost[0]); ?>" id="grandTotal">
+        <input type="hidden" name="grand_total" value="<?php echo $cart->sub_total + floatval($shipping_cost[0]) + $total_tax; ?>" data-sc="<?php echo floatval($shipping_cost[0]); ?>" id="grandTotal">
         <input type="hidden" name="shipping_cost" value="<?php echo $shipping_cost[0]; ?>" id="shippingCost">
         <input type="hidden" name="total_tax" value="<?php echo $total_tax; ?>" id="totalTax">
         <input type="hidden" name="product_turnaround" value="<?php echo $turnaround; ?>" id="productTurnaround">

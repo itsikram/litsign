@@ -75,11 +75,10 @@ if ($same_shipping_address == 'on') {
 
 
 
-$sub_total = isset($_REQUEST['sub_total']) ? $_REQUEST['sub_total'] : '';
-$grand_total = isset($_REQUEST['grand_total']) ? $_REQUEST['grand_total'] : '';
-
+$sub_total = isset($_REQUEST['sub_total']) ? floatval($_REQUEST['sub_total']) : floatval($cart->sub_total);
+$shipping_cost = isset($_REQUEST['shipping_cost']) ? floatval($_REQUEST['shipping_cost']) : 0;
 $tax = isset($_REQUEST['total_tax']) ? floatval($_REQUEST['total_tax']) : 0;
-$grand_total =  $cart->sub_total + intval($shipping_cost) + $tax ;
+$grand_total = $sub_total + $shipping_cost + $tax;
 $product_data = json_encode($cart->get_items());
 
 $order_cost = json_encode(array(

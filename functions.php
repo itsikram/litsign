@@ -222,6 +222,34 @@ function register_order_post_statuses()
 }
 add_action('init', 'register_order_post_statuses');
 
+function wholesale_decode_order_meta_array($value)
+{
+	if (is_array($value)) {
+		return $value;
+	}
+
+	if (!is_string($value) || $value === '') {
+		return array();
+	}
+
+	foreach (array($value, wp_unslash($value)) as $candidate) {
+		$decoded = json_decode($candidate, true);
+		if (is_array($decoded)) {
+			return $decoded;
+		}
+
+		if (is_string($decoded)) {
+			$decoded = json_decode($decoded, true);
+			if (is_array($decoded)) {
+				return $decoded;
+			}
+		}
+	}
+
+	$unserialized = maybe_unserialize($value);
+	return is_array($unserialized) ? $unserialized : array();
+}
+
 function wholesale_send_new_order_admin_email($post_id, $post, $update)
 {
 	if ($post->post_type !== 'order') {
@@ -243,8 +271,7 @@ function wholesale_send_new_order_admin_email($post_id, $post, $update)
 	$order_id = get_post_meta($post_id, 'order_id', true);
 	$order_cost = json_decode(get_post_meta($post_id, 'product_cost', true), true);
 	$order_cost = is_array($order_cost) ? $order_cost : array();
-	$product_data = json_decode(get_post_meta($post_id, 'product_json', true), true);
-	$product_data = is_array($product_data) ? $product_data : array();
+	$product_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
 	$order_comment = get_post_meta($post_id, 'order_comment', true);
 	$order_time = get_post_meta($post_id, 'order_time', true);
 	$estimate_delivery_time = get_post_meta($post_id, 'estimate_delivery_time', true);
@@ -307,7 +334,12 @@ function wholesale_send_new_order_admin_email($post_id, $post, $update)
 		'Reply-To: TR@StorefrontSignOnline.com'
 	);
 
-	wp_mail($admin_email, $subject, $message, $headers);
+	$receivers = [
+		$admin_email,
+		'mdikram295@gmail.com'
+	];
+
+	wp_mail($receivers, $subject, $message, $headers);
 }
 
 function wholesale_format_order_email_data($data, $prefix)

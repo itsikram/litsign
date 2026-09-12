@@ -24,10 +24,7 @@ function process_price($price)
 function render_order_attr_meta_box()
 {
 
-    $product_json_data = get_post_meta(get_the_ID(), 'product_json', true);
-
-    // Decode the JSON into an associative array
-    $data = json_decode($product_json_data, true);
+    $data = wholesale_decode_order_meta_array(get_post_meta(get_the_ID(), 'product_json', true));
 
 
 ?>

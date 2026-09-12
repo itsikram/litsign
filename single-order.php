@@ -1,7 +1,7 @@
 <?php
 
 
-$product_json_data = json_decode(get_post_meta(get_the_ID(), 'product_json', true), true);
+$product_json_data = wholesale_decode_order_meta_array(get_post_meta(get_the_ID(), 'product_json', true));
 $post_id = get_the_ID();
 $shipping_address = json_decode(get_post_meta($post_id, 'shipping_address', true), true);
 $billing_address = json_decode(get_post_meta($post_id, 'billing_address', true), true);

@@ -244,7 +244,7 @@ trimCapSize = activeTrimcapColorCode
 
 if (defaultColorDataInput) {
     try {
-
+        
         let defaultColorJson = JSON.parse(defaultColorDataInput)
         defaultColorData = defaultColorJson
 
@@ -5204,8 +5204,45 @@ window.addEventListener('load', function (e) {
         // Optional, based on server setup
 
         try {
+            const mediaEndpoint = (window.mediaUploadData && window.mediaUploadData.rest_url)
+                ? window.mediaUploadData.rest_url
+                : siteUrl + '/wp-json/wp/v2/media';
+            const restNonce = (window.mediaUploadData && window.mediaUploadData.nonce)
+                ? window.mediaUploadData.nonce
+                : (window.wpApiSettings && window.wpApiSettings.nonce);
+            const freshResponse = await fetch(mediaEndpoint, {
+                method: 'POST',
+                headers: {
+                    'X-WP-Nonce': restNonce
+                },
+                body: formData
+            });
 
-            // Make the AJAX request to upload the image
+            if (!freshResponse.ok) {
+                const errorDetails = await freshResponse.text();
+                throw new Error(`Media upload failed (${freshResponse.status}): ${errorDetails || freshResponse.statusText}`);
+            }
+
+            const freshMediaData = await freshResponse.json();
+            if (!freshMediaData.id) {
+                throw new Error('Media upload succeeded without returning an attachment ID.');
+            }
+
+            loadingImage.remove();
+            const contentDimenstion = {
+                height: contentHeight,
+                width: contentWidth
+            };
+            const elements = store.getState()['elements'];
+            const extras = store.getState()['extras'];
+            const updatedState = { elements, extras, contentDimenstion };
+            const designData = JSON.stringify(updatedState);
+            const redirectUrl = `${productPermalink}?save_design=true&design_data=${encodeURIComponent(designData)}&design_id=${freshMediaData.id}`;
+            window.location.href = redirectUrl;
+            return;
+
+            /*
+            // Legacy JWT upload path retained below for reference.
             const jwtToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL3N0b3JlZnJvbnRzaWdub25saW5lLmNvbSIsImlhdCI6MTczNDgxNTYyOSwibmJmIjoxNzM0ODE1NjI5LCJleHAiOjE3MzU0MjA0MjksImRhdGEiOnsidXNlciI6eyJpZCI6IjkifX19.swVU-Zp-lbpsLpXOLT97y9h4V5psnZrSyA5-gzWeVNw';
             const response = await fetch(siteUrl + '/wp-json/wp/v2/media', {
                 method: 'POST',
@@ -5238,9 +5275,10 @@ window.addEventListener('load', function (e) {
             let redirectUrl = `${productPermalink}?save_design=true&design_data=${designData}&design_id=${attachmentId}`;
             window.location.href = redirectUrl
 
+            */
         } catch (error) {
             console.error('Error uploading image:', error);
-            this.querySelector('img').remove();
+            loadingImage.remove();
         }
 
 

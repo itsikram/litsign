@@ -31,6 +31,11 @@
     "/^& 'C:\\\\xampp\\\\php\\\\php\\.exe' -l 'functions\\.php'; & 'C:\\\\xampp\\\\php\\\\php\\.exe' -l 'payment\\.php'$/": {
       "approve": true,
       "matchCommandLine": true
+    },
+    "&": true,
+    "/^@'\n<\\?php\nrequire 'C:/xampp/htdocs/storefrontsignonline\\.com/wp-load\\.php';\nglobal \\$wpdb;\n\\$post_id = 1492;\n\\$rows = \\$wpdb->get_results\\(\\$wpdb->prepare\\(\"SELECT meta_id, meta_key, meta_value FROM \\{\\$wpdb->postmeta\\} WHERE post_id=%d ORDER BY meta_id\", \\$post_id\\), ARRAY_A\\);\nforeach \\(\\$rows as \\$row\\) \\{\n    echo \"META_ID=\\{\\$row\\['meta_id'\\]\\} KEY=\\{\\$row\\['meta_key'\\]\\} LEN=\" \\. strlen\\(\\$row\\['meta_value'\\]\\) \\. \"\\\\n\";\n    echo \\$row\\['meta_value'\\] \\. \"\\\\n---\\\\n\";\n\\}\n'@ \\| & 'C:\\\\xampp\\\\php\\\\php\\.exe'$/": {
+      "approve": true,
+      "matchCommandLine": true
     }
   }
 }

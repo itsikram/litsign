@@ -39,8 +39,10 @@ function get_variant_cost($product_cost, $variable_cost)
     return round(floatval($product_cost) + floatval($variable_cost), 2);
 }
 
-$current_category = isset($_REQUEST['category_slug']) ? $_REQUEST['category_slug'] : 'channel-letters';
-$is_default_category = isset($_REQUEST['category_slug']) ? false : true;
+$requested_category = get_query_var('category_slug');
+$requested_category = $requested_category ? $requested_category : (isset($_REQUEST['category_slug']) ? wp_unslash($_REQUEST['category_slug']) : '');
+$current_category = $requested_category ? sanitize_title($requested_category) : 'channel-letters';
+$is_default_category = !$requested_category;
 $current_term = get_term_by('slug', $current_category, 'product_category');
 
 $current_term_id = $current_term ?  $current_term->term_id : 0;
@@ -139,7 +141,7 @@ get_header();
                         ?>
 
                             <li class="filter-item text-truncate <?php echo $is_current_item ? 'active' : ''; ?>">
-                                <a href="<?php echo get_permalink() . '?category_slug=' . $child_slug; ?>" class="d-flex justify-content-between">
+                                <a href="<?php echo esc_url(wholesale_category_url($child_slug)); ?>" class="d-flex justify-content-between">
                                     <span class="text"><?php echo $child_name; ?></span>
                                     <i class="fa-solid fa-chevron-right"></i>
                                 </a>
@@ -324,7 +326,7 @@ get_header();
 
                 <?php if ($ref_term == true): ?>
                     <div class="product-box" data-product-category="adhesive-products">
-                        <a href="<?php echo home_url() . '/?category_slug=' . $ref_term->slug; ?>">
+                        <a href="<?php echo esc_url(wholesale_category_url($ref_term->slug)); ?>">
                             <div class="pb-image-top">
                                 <?php
                                 $ref_term_image_id = attachment_url_to_postid($ref_term_image);
@@ -351,7 +353,7 @@ get_header();
                                 <p class="pb-pricing d-flex justify-content-between">
                                     <span class="pb-title-short fs-6">
 
-                                        <a href="<?php echo home_url() . '/?category_slug=' . $ref_term->slug; ?>">See All</a>
+                                        <a href="<?php echo esc_url(wholesale_category_url($ref_term->slug)); ?>">See All</a>
 
                                     </span>
                                     <span class="pb-price">

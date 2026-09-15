@@ -139,6 +139,10 @@ function wholesale_setup()
 
 			),
 			'public' => true,
+			'publicly_queryable' => true,
+			'show_in_rest' => true,
+			'has_archive' => false,
+			'rewrite' => array('slug' => 'product'),
 		)
 	);
 	register_post_type('cnn', array(
@@ -185,9 +189,12 @@ function wholesale_setup()
 			'hierarchical' => true,
 			'labels' => $category_labels,
 			'show_ui' => true,
+			'public' => true,
+			'publicly_queryable' => true,
+			'show_in_rest' => true,
 			'update_count_callback' => '_update_post_term_count',
 			'query_var' => true,
-			'rewrite' => array('slug' => 'cpecial-category')
+			'rewrite' => array('slug' => 'category')
 		)
 	);
 
@@ -199,6 +206,116 @@ function wholesale_setup()
 
 }
 add_action('after_setup_theme', 'wholesale_setup');
+
+/**
+ * Expose product categories as clean top-level URLs while keeping the
+ * existing shop page and its category query compatible.
+ */
+function wholesale_category_rewrites()
+{
+	$terms = get_terms(array(
+		'taxonomy' => 'product_category',
+		'hide_empty' => false,
+		'fields' => 'slugs',
+	));
+
+	if (is_wp_error($terms)) {
+		return;
+	}
+
+	foreach ($terms as $term_slug) {
+		add_rewrite_rule(
+			'^' . preg_quote($term_slug, '/') . '/?$',
+			'index.php?category_slug=' . $term_slug,
+			'top'
+		);
+	}
+}
+add_action('init', 'wholesale_category_rewrites', 20);
+add_action('after_switch_theme', function () {
+	wholesale_category_rewrites();
+	flush_rewrite_rules();
+});
+
+function wholesale_category_query_var($vars)
+{
+	$vars[] = 'category_slug';
+	return $vars;
+}
+add_filter('query_vars', 'wholesale_category_query_var');
+
+function wholesale_category_template($template)
+{
+	$term_slug = get_query_var('category_slug');
+
+	if ($term_slug && get_term_by('slug', $term_slug, 'product_category')) {
+		return locate_template('home.php');
+	}
+
+	return $template;
+}
+add_filter('template_include', 'wholesale_category_template');
+
+function wholesale_category_url($term_slug)
+{
+	return trailingslashit(home_url(sanitize_title($term_slug)));
+}
+
+function wholesale_category_redirect()
+{
+	if (!empty($_GET['category_slug'])) {
+		$term_slug = sanitize_title(wp_unslash($_GET['category_slug']));
+		$term = get_term_by('slug', $term_slug, 'product_category');
+
+		if ($term && !is_wp_error($term)) {
+			wp_safe_redirect(wholesale_category_url($term->slug), 301);
+			exit;
+		}
+	}
+}
+add_action('template_redirect', 'wholesale_category_redirect', 1);
+
+add_filter('the_generator', '__return_empty_string');
+
+/**
+ * Keep core's dynamic sitemap focused on indexable products and categories.
+ */
+function wholesale_sitemap_post_types($post_types)
+{
+	unset($post_types['cnn'], $post_types['order']);
+	return $post_types;
+}
+add_filter('wp_sitemaps_post_types', 'wholesale_sitemap_post_types');
+
+function wholesale_sitemap_taxonomies($taxonomies)
+{
+	return $taxonomies;
+}
+add_filter('wp_sitemaps_taxonomies', 'wholesale_sitemap_taxonomies');
+
+function wholesale_sitemap_excluded_page_ids($args, $post_type)
+{
+	if ('page' !== $post_type) {
+		return $args;
+	}
+
+	$private_pages = array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders', 'my_orders');
+	$excluded_ids = array();
+
+	foreach ($private_pages as $slug) {
+		$page = get_page_by_path($slug);
+		if ($page) {
+			$excluded_ids[] = $page->ID;
+		}
+	}
+
+	if ($excluded_ids) {
+		$args['post__not_in'] = $excluded_ids;
+	}
+
+	return $args;
+}
+add_filter('wp_sitemaps_posts_query_args', 'wholesale_sitemap_excluded_page_ids', 10, 2);
 
 function register_order_post_statuses()
 {
@@ -570,12 +687,15 @@ function wholesale_seo_description()
 		if (!$description) {
 			$description = get_post_field('post_content', $product_id);
 		}
-	} elseif (is_page_template('home.php') || (is_home() && !is_front_page())) {
-		$term_slug = isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : 'channel-letters';
+	} elseif (get_query_var('category_slug')) {
+		$term_slug = get_query_var('category_slug');
+		$term_slug = sanitize_title($term_slug);
 		$term = get_term_by('slug', $term_slug, 'product_category');
 		$description = $term && !is_wp_error($term) && $term->description
 			? $term->description
-			: __('Shop custom signs, channel letters, adhesive products, and professional signage built for your business.', 'litsign');
+			: __('Factory-direct channel letters and custom signage, made in the USA since 2002 and shipped nationwide from Renton, WA.', 'litsign');
+	} elseif (is_front_page() || is_page_template('home.php') || (is_home() && !is_front_page())) {
+		$description = __('Factory-direct channel letters and custom signage, made in the USA since 2002 and shipped nationwide from Renton, WA.', 'litsign');
 	} elseif (is_singular()) {
 		$description = get_post_meta(get_queried_object_id(), '_seo_description', true);
 
@@ -614,14 +734,15 @@ function wholesale_seo_description()
  */
 function wholesale_seo_url()
 {
-	if (is_page_template('home.php') || (is_home() && !is_front_page())) {
-		$term_slug = isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : '';
+	if (is_page_template('home.php') || (is_home() && !is_front_page()) || get_query_var('category_slug')) {
+		$term_slug = get_query_var('category_slug');
+		$term_slug = $term_slug ? sanitize_title($term_slug) : (isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : '');
 		$shop_url = is_page_template('home.php')
 			? get_permalink()
 			: get_permalink(get_option('page_for_posts'));
 		$shop_url = $shop_url ? $shop_url : home_url('/');
 
-		return $term_slug ? add_query_arg('category_slug', $term_slug, $shop_url) : $shop_url;
+		return $term_slug ? wholesale_category_url($term_slug) : $shop_url;
 	}
 
 	return is_singular() ? get_permalink() : home_url(add_query_arg(array(), $GLOBALS['wp']->request));
@@ -645,16 +766,23 @@ add_filter('document_title_parts', function ($parts) {
 		return $parts;
 	}
 
-	if (is_page_template('home.php') || (is_home() && !is_front_page())) {
-		$term_slug = isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : '';
+	if (is_page_template('home.php') || (is_home() && !is_front_page()) || get_query_var('category_slug')) {
+		$term_slug = get_query_var('category_slug');
+		$term_slug = $term_slug ? sanitize_title($term_slug) : (isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : '');
 		$term = $term_slug ? get_term_by('slug', $term_slug, 'product_category') : false;
 		$parts['title'] = $term && !is_wp_error($term)
-			? sprintf(__('%s Sign Products', 'litsign'), $term->name)
-			: __('Custom Sign Products', 'litsign');
-		$parts['site'] = get_bloginfo('name');
+			? sprintf(__('%s | Wholesale Pricing, Ships Nationwide | Store Front Sign Online', 'litsign'), $term->name)
+			: __('Wholesale Channel Letters & Custom Signage | Factory Direct Pricing | Store Front Sign Online', 'litsign');
+		$parts['site'] = '';
+		$parts['tagline'] = '';
 	} elseif (is_front_page() || is_home()) {
-		$parts['title'] = get_bloginfo('name');
-		$parts['tagline'] = get_bloginfo('description');
+		$parts['title'] = __('Wholesale Channel Letters & Custom Signage | Factory Direct Pricing | Store Front Sign Online', 'litsign');
+		$parts['site'] = '';
+		$parts['tagline'] = '';
+	} elseif (is_singular('product')) {
+		$parts['title'] = sprintf(__('%s | Store Front Sign Online', 'litsign'), get_the_title());
+		$parts['site'] = '';
+		$parts['tagline'] = '';
 	} else {
 		$parts['site'] = get_bloginfo('name');
 	}
@@ -704,6 +832,20 @@ function wholesale_seo_head()
 		'name' => $title,
 		'url' => $url,
 		'description' => $description,
+		'publisher' => array(
+			'@type' => 'Organization',
+			'name' => 'Store Front Sign Online',
+			'url' => home_url('/'),
+			'telephone' => '+1-866-436-2101',
+			'address' => array(
+				'@type' => 'PostalAddress',
+				'streetAddress' => '707 S. Grady Way Suite 600',
+				'addressLocality' => 'Renton',
+				'addressRegion' => 'WA',
+				'postalCode' => '98057',
+				'addressCountry' => 'US',
+			),
+		),
 	);
 
 	if (is_singular('product')) {
@@ -733,9 +875,44 @@ function wholesale_seo_head()
 				'availability' => 'https://schema.org/InStock',
 				'url' => $url,
 			);
+		} else {
+			$graph['offers'] = array(
+				'@type' => 'Offer',
+				'priceCurrency' => 'USD',
+				'availability' => 'https://schema.org/InStock',
+				'url' => $url,
+				'priceSpecification' => array(
+					'@type' => 'PriceSpecification',
+					'priceCurrency' => 'USD',
+					'description' => __('Pricing varies by size and configuration.', 'litsign'),
+				),
+			);
 		}
-	} elseif (is_page_template('home.php')) {
-		$term_slug = isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : 'channel-letters';
+
+		$breadcrumb_items = array(
+			array('@type' => 'ListItem', 'position' => 1, 'name' => __('Home', 'litsign'), 'item' => home_url('/')),
+		);
+		if ($terms && !is_wp_error($terms)) {
+			$breadcrumb_items[] = array(
+				'@type' => 'ListItem',
+				'position' => 2,
+				'name' => $terms[0]->name,
+				'item' => wholesale_category_url($terms[0]->slug),
+			);
+		}
+		$breadcrumb_items[] = array(
+			'@type' => 'ListItem',
+			'position' => count($breadcrumb_items) + 1,
+			'name' => $product_name,
+			'item' => $url,
+		);
+		$graph['breadcrumb'] = array(
+			'@type' => 'BreadcrumbList',
+			'itemListElement' => $breadcrumb_items,
+		);
+	} elseif (is_page_template('home.php') || get_query_var('category_slug')) {
+		$term_slug = get_query_var('category_slug');
+		$term_slug = $term_slug ? sanitize_title($term_slug) : (isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : 'channel-letters');
 		$query = new WP_Query(array(
 			'post_type' => 'product',
 			'post_status' => 'publish',
@@ -788,6 +965,16 @@ function wholesale_seo_robots($robots)
 	return $robots;
 }
 add_filter('wp_robots', 'wholesale_seo_robots');
+
+function wholesale_robots_txt($output, $public)
+{
+	if ($public && false === strpos($output, 'Sitemap:')) {
+		$output .= "\nSitemap: " . esc_url(home_url('/wp-sitemap.xml')) . "\n";
+	}
+
+	return $output;
+}
+add_filter('robots_txt', 'wholesale_robots_txt', 10, 2);
 
 /**
  * Remove resource hints for third-party origins that are not used by the theme.

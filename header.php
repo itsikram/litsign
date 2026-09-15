@@ -179,6 +179,7 @@ if ($logo_url) {
 					</div>
 					<div class="col-md-6 col-2">
 
+						<nav aria-label="<?php esc_attr_e('Primary navigation', 'litsign'); ?>">
 						<?php
 						wp_nav_menu(array(
 							'theme_location' => 'header-menu',
@@ -186,12 +187,14 @@ if ($logo_url) {
 							'menu_class' => 'header-menu text-center'
 						));
 						?>
+						</nav>
 						<div class="mobile-menu-container hide-on-desktop">
 							<div class="text-end">
 								<span class="mobile-menu-close text-danger fs-2 p-2">
 									&times;
 								</span>
 							</div>
+							<nav aria-label="<?php esc_attr_e('Mobile navigation', 'litsign'); ?>">
 							<?php
 							wp_nav_menu(array(
 								'theme_location' => 'header-menu',
@@ -204,6 +207,7 @@ if ($logo_url) {
 								'menu_class' => 'header-menu text-center'
 							));
 							?>
+							</nav>
 
 							<?php if (!is_user_logged_in()) { ?>
 								<!-- <form class="header-account-form" method="POST" action="/login';">
@@ -287,7 +291,7 @@ if ($logo_url) {
 												<h4 class="mm-heading">
 													Signs / Letters
 												</h4>
-												<a href="/?category_slug=channel-letters" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="mm-link">
 													<span>
 														Channel Letters
 													</span>
@@ -298,13 +302,13 @@ if ($logo_url) {
 												<h4 class="mm-heading">
 													Indoor / Outdoor Displays
 												</h4>
-												<a href="/?category_slug=advertising-flags" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('advertising-flags')); ?>" class="mm-link">
 													<span>
 														Advertising Flags
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=banner-stands" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('banner-stands')); ?>" class="mm-link">
 													<span>
 														Banner Stands
 													</span>
@@ -315,49 +319,49 @@ if ($logo_url) {
 														Step and Repeat Backdrop
 													</span>
 												</a>
-												<a href="/?category_slug=real-estate-products" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('real-estate-products')); ?>" class="mm-link">
 													<span>
 														Real Estate Products
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=a-frame-and-sign-holders" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('a-frame-and-sign-holders')); ?>" class="mm-link">
 													<span>
 														A Frame and Sign Holders
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=signicade-a-frames" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('signicade-a-frames')); ?>" class="mm-link">
 													<span>
 														Signicade A-Frames
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=seg-products" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('seg-products')); ?>" class="mm-link">
 													<span>
 														SEG Products
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=trade-show-products" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('trade-show-products')); ?>" class="mm-link">
 													<span>
 														Trade Show Products
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=custom-event-tents" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('custom-event-tents')); ?>" class="mm-link">
 													<span>
 														Custom Event Tents
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=table-throws" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('table-throws')); ?>" class="mm-link">
 													<span>
 														Table Throws
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=hardware-only" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('hardware-only')); ?>" class="mm-link">
 													<span>
 														Hardware Only
 													</span>
@@ -424,25 +428,25 @@ if ($logo_url) {
 												<h4 class="mm-heading">
 													Large Format
 												</h4>
-												<a href="?category_slug=wall-art" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('wall-art')); ?>" class="mm-link">
 													<span>
 														Wall Art
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=rigid-signs-and-magnets" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('rigid-signs-and-magnets')); ?>" class="mm-link">
 													<span>
 														Rigid Signs and Magnets
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=reflective-products" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('reflective-products')); ?>" class="mm-link">
 													<span>
 														Reflective Products
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/?category_slug=dry-erase-products" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('dry-erase-products')); ?>" class="mm-link">
 													<span>
 														Dry Erase Products
 													</span>

@@ -163,9 +163,20 @@ get_header();
 ?>
 
 <div class="container  product-details">
-    <h1 class="fs-5 product-title my-3">
+    <main id="primary">
+    <article <?php post_class('product-article'); ?>>
+    <h1 class="fs-2 product-title my-3">
         <?php echo esc_html(get_the_title()); ?>
     </h1>
+    <?php
+    $product_intro = trim((string) $short_desc);
+    if (!$product_intro && $terms && !is_wp_error($terms)) {
+        $product_intro = trim((string) $terms[0]->description);
+    }
+    if ($product_intro) :
+    ?>
+        <div class="product-intro mb-4"><?php echo wp_kses_post($product_intro); ?></div>
+    <?php endif; ?>
     <form action="<?php echo site_url() . '/cart'; ?>" method="POST" enctype="multipart/form-data" class="needs-validation">
         <input type="hidden" name="product_id" value="<?php echo get_the_ID(); ?>">
         <div class="row">
@@ -206,9 +217,6 @@ get_header();
                     </div>
 
                 <?php }; ?>
-                <div class="prodcut-short-desc-container my-3">
-                    <?php echo $short_desc; ?>
-                </div>
             </div>
             <div class="col-md-8">
 
@@ -1128,6 +1136,8 @@ get_header();
             </div>
         </div>
     </form>
+    </article>
+    </main>
 </div>
 
 <?php

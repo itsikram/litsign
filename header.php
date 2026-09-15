@@ -163,14 +163,7 @@ if ($logo_url) {
 							<a href="<?php echo home_url() . '/'; ?>">
 								<?php
 								if ($logo_url && get_theme_mod('custom_logo')) {
-									echo wp_get_attachment_image(get_theme_mod('custom_logo'), 'medium', false, array(
-										'class' => 'header-logo',
-										'alt' => get_bloginfo('name'),
-										'loading' => 'eager',
-										'decoding' => 'async',
-										'sizes' => '300px',
-										'fetchpriority' => 'low',
-									));
+									echo '<img src="' . esc_url($logo_url) . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" loading="eager" decoding="async" fetchpriority="high">';
 								} else {
 									echo '<img src="' . esc_url($logo_url) . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" loading="eager" decoding="async">';
 								}

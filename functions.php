@@ -235,6 +235,7 @@ function wholesale_category_rewrites()
 add_action('init', 'wholesale_category_rewrites', 20);
 add_action('after_switch_theme', function () {
 	wholesale_category_rewrites();
+	wholesale_sitemap_rewrite();
 	flush_rewrite_rules();
 });
 
@@ -277,6 +278,114 @@ function wholesale_category_redirect()
 add_action('template_redirect', 'wholesale_category_redirect', 1);
 
 add_filter('the_generator', '__return_empty_string');
+
+/**
+ * Register the public XML sitemap endpoint.
+ */
+function wholesale_sitemap_rewrite()
+{
+	add_rewrite_rule('^sitemap\.xml$', 'index.php?wholesale_sitemap=1', 'top');
+}
+add_action('init', 'wholesale_sitemap_rewrite', 20);
+add_action('init', function () {
+	if ('1' !== get_option('wholesale_sitemap_rewrite_version')) {
+		flush_rewrite_rules(false);
+		update_option('wholesale_sitemap_rewrite_version', '1');
+	}
+}, 99);
+add_filter('query_vars', function ($vars) {
+	$vars[] = 'wholesale_sitemap';
+	return $vars;
+});
+
+/**
+ * Render a dynamic sitemap containing only public, indexable URLs.
+ */
+function wholesale_render_sitemap()
+{
+	if ('1' !== get_query_var('wholesale_sitemap')) {
+		return;
+	}
+
+	$urls = array();
+	$add_url = function ($url, $lastmod = '', $changefreq = '', $priority = '') use (&$urls) {
+		$url = esc_url_raw($url);
+		if (!$url || isset($urls[$url])) {
+			return;
+		}
+
+		$urls[$url] = array(
+			'loc' => $url,
+			'lastmod' => $lastmod,
+			'changefreq' => $changefreq,
+			'priority' => $priority,
+		);
+	};
+
+	$last_modified = get_lastpostmodified('gmt');
+	$last_modified = $last_modified ? mysql2date('c', $last_modified, true) : '';
+	$add_url(home_url('/'), $last_modified, 'daily', '1.0');
+
+	$private_pages = array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders', 'my_orders');
+	$page_query = new WP_Query(array(
+		'post_type' => array('page', 'post', 'product'),
+		'post_status' => 'publish',
+		'posts_per_page' => -1,
+		'orderby' => 'modified',
+		'order' => 'DESC',
+		'no_found_rows' => true,
+		'ignore_sticky_posts' => true,
+	));
+
+	foreach ($page_query->posts as $post) {
+		if ('page' === $post->post_type && in_array($post->post_name, $private_pages, true)) {
+			continue;
+		}
+
+		$url = get_permalink($post);
+		if ($url) {
+			$add_url($url, get_post_modified_time('c', true, $post), 'weekly', '0.8');
+		}
+	}
+
+	$terms = get_terms(array(
+		'taxonomy' => 'product_category',
+		'hide_empty' => true,
+	));
+
+	if (!is_wp_error($terms)) {
+		foreach ($terms as $term) {
+			$term_url = wholesale_category_url($term->slug);
+			$add_url($term_url, '', 'weekly', '0.7');
+		}
+	}
+
+	nocache_headers();
+	header('Content-Type: application/xml; charset=UTF-8');
+	status_header(200);
+
+	echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+	echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+
+	foreach ($urls as $entry) {
+		echo "\t<url>\n";
+		echo "\t\t<loc>" . esc_xml($entry['loc']) . "</loc>\n";
+		if ($entry['lastmod']) {
+			echo "\t\t<lastmod>" . esc_xml($entry['lastmod']) . "</lastmod>\n";
+		}
+		if ($entry['changefreq']) {
+			echo "\t\t<changefreq>" . esc_xml($entry['changefreq']) . "</changefreq>\n";
+		}
+		if ($entry['priority']) {
+			echo "\t\t<priority>" . esc_xml($entry['priority']) . "</priority>\n";
+		}
+		echo "\t</url>\n";
+	}
+
+	echo '</urlset>';
+	exit;
+}
+add_action('template_redirect', 'wholesale_render_sitemap', 0);
 
 /**
  * Keep core's dynamic sitemap focused on indexable products and categories.
@@ -970,7 +1079,7 @@ add_filter('wp_robots', 'wholesale_seo_robots');
 function wholesale_robots_txt($output, $public)
 {
 	if ($public && false === strpos($output, 'Sitemap:')) {
-		$output .= "\nSitemap: " . esc_url(home_url('/wp-sitemap.xml')) . "\n";
+		$output .= "\nSitemap: " . esc_url(home_url('/sitemap.xml')) . "\n";
 	}
 
 	return $output;

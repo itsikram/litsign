@@ -5198,23 +5198,13 @@ window.addEventListener('load', function (e) {
         // Prepare the form data
         var formData = new FormData();
         formData.append('file', imageBlob, 'clDesign-' + Math.random() + '.png');
-        //formData.append('meta', "{'_custom_meta_key': 'custom_meta_value'}");
-        formData.append('action', 'upload_image');
-
-        // Optional, based on server setup
+        formData.append('action', 'wholesale_upload_design');
+        formData.append('nonce', window.mediaUploadData.upload_nonce);
 
         try {
-            const mediaEndpoint = (window.mediaUploadData && window.mediaUploadData.rest_url)
-                ? window.mediaUploadData.rest_url
-                : siteUrl + '/wp-json/wp/v2/media';
-            const restNonce = (window.mediaUploadData && window.mediaUploadData.nonce)
-                ? window.mediaUploadData.nonce
-                : (window.wpApiSettings && window.wpApiSettings.nonce);
+            const mediaEndpoint = window.mediaUploadData.upload_url;
             const freshResponse = await fetch(mediaEndpoint, {
                 method: 'POST',
-                headers: {
-                    'X-WP-Nonce': restNonce
-                },
                 body: formData
             });
 
@@ -5223,10 +5213,14 @@ window.addEventListener('load', function (e) {
                 throw new Error(`Media upload failed (${freshResponse.status}): ${errorDetails || freshResponse.statusText}`);
             }
 
-            const freshMediaData = await freshResponse.json();
-            if (!freshMediaData.id) {
-                throw new Error('Media upload succeeded without returning an attachment ID.');
+            const uploadResponse = await freshResponse.json();
+            if (!uploadResponse.success || !uploadResponse.data || !uploadResponse.data.id) {
+                const uploadMessage = uploadResponse.data && uploadResponse.data.message
+                    ? uploadResponse.data.message
+                    : 'The design image could not be uploaded.';
+                throw new Error(uploadMessage);
             }
+            const freshMediaData = uploadResponse.data;
 
             loadingImage.remove();
             const contentDimenstion = {

@@ -752,6 +752,8 @@ function litsign_scripts()
 		wp_localize_script('cl', 'mediaUploadData', [
 			'rest_url' => esc_url_raw(rest_url('/wp/v2/media')),
 			'nonce' => wp_create_nonce('wp_rest'),
+			'upload_url' => esc_url_raw(admin_url('admin-ajax.php')),
+			'upload_nonce' => wp_create_nonce('wholesale_upload_design'),
 		]);
 	}
 
@@ -762,6 +764,48 @@ function litsign_scripts()
 	}
 }
 add_action('wp_enqueue_scripts', 'litsign_scripts');
+
+/**
+ * Upload builder preview images for guests as well as logged-in users.
+ *
+ * WordPress's media REST endpoint requires authentication, but designs are
+ * intentionally stored in the visitor's session until they are added to a
+ * cart or order.
+ */
+function wholesale_upload_design()
+{
+	check_ajax_referer('wholesale_upload_design', 'nonce');
+
+	if (empty($_FILES['file'])) {
+		wp_send_json_error(array('message' => __('No design image was provided.', 'litsign')), 400);
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/media.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+
+	$attachment_id = media_handle_upload(
+		'file',
+		0,
+		array(
+			'post_title' => sanitize_text_field(wp_unslash($_FILES['file']['name'])),
+		),
+		array(
+			'test_form' => false,
+		)
+	);
+
+	if (is_wp_error($attachment_id)) {
+		wp_send_json_error(array('message' => $attachment_id->get_error_message()), 400);
+	}
+
+	wp_send_json_success(array(
+		'id' => $attachment_id,
+		'url' => wp_get_attachment_url($attachment_id),
+	));
+}
+add_action('wp_ajax_wholesale_upload_design', 'wholesale_upload_design');
+add_action('wp_ajax_nopriv_wholesale_upload_design', 'wholesale_upload_design');
 
 /**
  * Return whether a third-party SEO plugin is active.

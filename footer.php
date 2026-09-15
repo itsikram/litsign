@@ -55,12 +55,12 @@
 
                             if ($logo_id) {
                             ?>
-                                <?php echo wp_get_attachment_image($logo_id, 'medium_large', false, array(
+                                <?php echo wp_get_attachment_image($logo_id, 'medium', false, array(
                                     'class' => 'header-logo',
                                     'alt' => get_bloginfo('name'),
                                     'loading' => 'lazy',
                                     'decoding' => 'async',
-                                    'sizes' => '(max-width: 767px) 90vw, 665px',
+                                    'sizes' => '300px',
                                 )); ?>
 
                             <?php

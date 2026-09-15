@@ -239,12 +239,12 @@ get_header();
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-image-top">
-                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium_large', false, array(
+                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium', false, array(
                                         'alt' => esc_attr(get_the_title()),
                                         'loading' => $is_first_product ? 'eager' : 'lazy',
                                         'fetchpriority' => $is_first_product ? 'high' : 'auto',
                                         'decoding' => 'async',
-                                        'sizes' => '(max-width: 767px) 100vw, 656px',
+                                        'sizes' => '300px',
                                     )); ?>
                                 </div>
                                 <?php $is_first_product = false; ?>
@@ -331,11 +331,11 @@ get_header();
                                 <?php
                                 $ref_term_image_id = attachment_url_to_postid($ref_term_image);
                                 if ($ref_term_image_id) {
-                                    echo wp_get_attachment_image($ref_term_image_id, 'medium_large', false, array(
+                                    echo wp_get_attachment_image($ref_term_image_id, 'medium', false, array(
                                         'alt' => esc_attr($ref_term_title),
                                         'loading' => 'lazy',
                                         'decoding' => 'async',
-                                        'sizes' => '(max-width: 767px) 100vw, 656px',
+                                        'sizes' => '300px',
                                     ));
                                 } else {
                                     echo '<img src="' . esc_url($ref_term_image) . '" alt="' . esc_attr($ref_term_title) . '" loading="lazy" decoding="async">';
@@ -408,11 +408,11 @@ get_header();
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-image-top">
-                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium_large', false, array(
+                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium', false, array(
                                         'alt' => esc_attr(get_the_title()),
                                         'loading' => 'lazy',
                                         'decoding' => 'async',
-                                        'sizes' => '(max-width: 767px) 100vw, 656px',
+                                        'sizes' => '300px',
                                     )); ?>
                                 </div>
                                 <div class="pb-details">

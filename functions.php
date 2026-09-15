@@ -162,6 +162,7 @@ function wholesale_setup()
 		'supports' => array('title', 'editor', 'thumbnail'),
 		'has_archive' => true, // Enable archive for the custom post type
 		'rewrite' => array('slug' => 'order'), // Custom slug for your post type
+		'query_var' => 'store_order',
 		'show_in_rest' => true, // Enable block editor support
 	));
 
@@ -999,13 +1000,12 @@ add_filter('wp_resource_hints', 'wholesale_resource_hints', 10, 2);
 
 function my_enqueue($hook)
 {
-
-
 	wp_enqueue_style('bootsrap', get_template_directory_uri() . '/css/bootstrap.min.css', array(), _S_VERSION);
 	wp_enqueue_style('admin-style', get_template_directory_uri() . '/css/admin.css', array(), _S_VERSION);
 
-
-	wp_enqueue_script('admin-script', get_template_directory_uri() . '/js/admin-script.js');
+	if (in_array($hook, array('post.php', 'post-new.php'), true)) {
+		wp_enqueue_script('admin-script', get_template_directory_uri() . '/js/admin-script.js', array('jquery'), _S_VERSION, true);
+	}
 }
 
 add_action('admin_enqueue_scripts', 'my_enqueue');

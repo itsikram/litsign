@@ -33,29 +33,19 @@
         let showInList = $('#showInList').val();
         let hideCalculator = $('#hideCalculator').val();
 
-        if (hasCustomArtwork == 'on') {
-            var checkbox = document.getElementById('_has_upload_artwork');
-            checkbox.checked = true; // Uncheck the checkbox
-
-        } else {
-            var checkbox = document.getElementById('_has_upload_artwork');
-            checkbox.checked = false; // Uncheck the checkbox
+        var hasCustomArtworkCheckbox = document.getElementById('_has_upload_artwork');
+        if (hasCustomArtworkCheckbox) {
+            hasCustomArtworkCheckbox.checked = hasCustomArtwork == 'on';
         }
 
-        if (showInList == 'on') {
-            var checkbox = document.getElementById('_show_in_list');
-            checkbox.checked = true; // Uncheck the checkbox
-        } else {
-            var checkbox = document.getElementById('_show_in_list');
-            checkbox.checked = false; // Uncheck the checkbox
+        var showInListCheckbox = document.getElementById('_show_in_list');
+        if (showInListCheckbox) {
+            showInListCheckbox.checked = showInList == 'on';
         }
 
-        if (hideCalculator == 'on') {
-            var checkbox = document.getElementById('_hide_calculator');
-            checkbox.checked = true; // Uncheck the checkbox
-        } else {
-            var checkbox = document.getElementById('_hide_calculator');
-            checkbox.checked = false; // Uncheck the checkbox
+        var hideCalculatorCheckbox = document.getElementById('_hide_calculator');
+        if (hideCalculatorCheckbox) {
+            hideCalculatorCheckbox.checked = hideCalculator == 'on';
         }
 
         $('#addAttrBtn').click(e => {

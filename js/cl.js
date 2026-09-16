@@ -5166,13 +5166,21 @@ window.addEventListener('load', function (e) {
 
 
     saveBtn.addEventListener('click', async function (e) {
+        if (saveBtn.disabled) {
+            return;
+        }
 
-
-
-        let loadingImage = document.createElement('img');
+        const originalButtonText = saveBtn.textContent.trim();
+        const loadingImage = document.createElement('img');
         loadingImage.height = 20;
         loadingImage.style.marginLeft = '5px';
         loadingImage.src = siteUrl + '/wp-content/themes/wholesale/img/ajax_loader.gif';
+
+        saveBtn.disabled = true;
+        saveBtn.setAttribute('aria-busy', 'true');
+        saveBtn.setAttribute('data-original-label', originalButtonText);
+        saveBtn.innerHTML = '<span>Saving Design...</span>';
+        saveBtn.appendChild(loadingImage);
 
         nodeLists.forEach(nodeContainer => {
 
@@ -5187,8 +5195,6 @@ window.addEventListener('load', function (e) {
             layer.draw()
 
         })
-
-        this.appendChild(loadingImage);
 
         stage.height(container.clientHeight);
 
@@ -5223,6 +5229,8 @@ window.addEventListener('load', function (e) {
             const freshMediaData = uploadResponse.data;
 
             loadingImage.remove();
+            saveBtn.disabled = false;
+            saveBtn.removeAttribute('aria-busy');
             const contentDimenstion = {
                 height: contentHeight,
                 width: contentWidth
@@ -5273,6 +5281,10 @@ window.addEventListener('load', function (e) {
         } catch (error) {
             console.error('Error uploading image:', error);
             loadingImage.remove();
+            saveBtn.disabled = false;
+            saveBtn.removeAttribute('aria-busy');
+            const previousLabel = saveBtn.getAttribute('data-original-label');
+            saveBtn.textContent = previousLabel || 'Save Design';
         }
 
 

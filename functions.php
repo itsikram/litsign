@@ -1,8 +1,26 @@
 <?php
 
-if (!defined('WHOLESALE_PAYMENT_DISABLED')) {
-	define('WHOLESALE_PAYMENT_DISABLED', true);
+if (!defined('WHOLESALE_CONVERGE_MERCHANT_ID')) {
+	define('WHOLESALE_CONVERGE_MERCHANT_ID', '2466214');
 }
+
+if (!defined('WHOLESALE_CONVERGE_USER_ID')) {
+	define('WHOLESALE_CONVERGE_USER_ID', 'apiuser229803');
+}
+
+if (!defined('WHOLESALE_CONVERGE_PIN')) {
+	define('WHOLESALE_CONVERGE_PIN', 'C2UZW43BPDVLYKUS4ZV0V1OUZWUTHGD66BIR65V4UFRFN8N8VB7OJV6CZOSDKHIW');
+}
+
+if (!defined('WHOLESALE_PAYMENT_DISABLED')) {
+	define('WHOLESALE_PAYMENT_DISABLED', false);
+}
+
+
+if (!defined('WHOLESALE_PAYMENT_DISABLED')) {
+	define('WHOLESALE_PAYMENT_DISABLED', false);
+}
+
 
 
 /**
@@ -766,42 +784,129 @@ function litsign_scripts()
 add_action('wp_enqueue_scripts', 'litsign_scripts');
 
 /**
- * Upload builder preview images for guests as well as logged-in users.
+ * Upload builder preview images for authenticated users.
  *
- * WordPress's media REST endpoint requires authentication, but designs are
- * intentionally stored in the visitor's session until they are added to a
- * cart or order.
+ * Uploaded files are treated as untrusted input and must be restricted to a
+ * narrow, safe image allowlist before being stored or referenced.
  */
+function wholesale_validate_design_upload($file)
+{
+	if (empty($file) || !is_array($file) || empty($file['tmp_name'])) {
+		return new WP_Error('missing_file', __('No design image was provided.', 'litsign'));
+	}
+
+	if (!empty($file['error'])) {
+		return new WP_Error('upload_error', __('The uploaded image could not be processed.', 'litsign'));
+	}
+
+	if (!is_uploaded_file($file['tmp_name'])) {
+		return new WP_Error('invalid_upload', __('The uploaded image is invalid.', 'litsign'));
+	}
+
+	$allowed_types = array(
+		'image/jpeg' => array('jpg', 'jpeg'),
+		'image/png' => array('png'),
+		'image/gif' => array('gif'),
+		'image/webp' => array('webp'),
+	);
+
+	$file_type = wp_check_filetype_and_ext($file['tmp_name'], $file['name']);
+	if (empty($file_type['ext']) || empty($file_type['type']) || !isset($allowed_types[$file_type['type']])) {
+		return new WP_Error('invalid_file_type', __('Only JPG, PNG, GIF, and WebP files are allowed.', 'litsign'));
+	}
+
+	if (!in_array(strtolower($file_type['ext']), $allowed_types[$file_type['type']], true)) {
+		return new WP_Error('invalid_file_extension', __('The uploaded file extension is not allowed.', 'litsign'));
+	}
+
+	$filesize = filesize($file['tmp_name']);
+	if ($filesize === false || $filesize > 8 * 1024 * 1024) {
+		return new WP_Error('too_large', __('Image uploads must be under 8MB.', 'litsign'));
+	}
+
+	return true;
+}
+
+function wholesale_store_design_attachment($file)
+{
+	$file_validation = wholesale_validate_design_upload($file);
+	if (is_wp_error($file_validation)) {
+		return $file_validation;
+	}
+
+	require_once ABSPATH . 'wp-admin/includes/file.php';
+	require_once ABSPATH . 'wp-admin/includes/image.php';
+
+	$wp_upload_dir = wp_upload_dir();
+	if (!empty($wp_upload_dir['error'])) {
+		return new WP_Error('upload_dir_error', __('The site upload directory is not writable.', 'litsign'));
+	}
+
+	$design_dir = trailingslashit($wp_upload_dir['basedir']) . 'guest-designs';
+	if (!wp_mkdir_p($design_dir)) {
+		return new WP_Error('upload_dir_error', __('The guest design directory could not be created.', 'litsign'));
+	}
+
+	$file_type = wp_check_filetype_and_ext($file['tmp_name'], $file['name']);
+	$extension = strtolower((string) $file_type['ext']);
+	$mime_type = (string) $file_type['type'];
+	$filename = 'guest-design-' . wp_generate_uuid4() . '.' . $extension;
+
+	$upload_result = wp_upload_bits($filename, null, file_get_contents($file['tmp_name']));
+	if (!empty($upload_result['error'])) {
+		return new WP_Error('upload_error', esc_html($upload_result['error']));
+	}
+
+	$file_path = $upload_result['file'];
+	$file_url  = $upload_result['url'];
+	$attachment = array(
+		'guid'           => $file_url,
+		'post_mime_type' => $mime_type,
+		'post_title'     => sanitize_file_name(wp_basename($file['name'])),
+		'post_content'   => '',
+		'post_status'    => 'inherit',
+	);
+
+	$attachment_id = wp_insert_attachment($attachment, $file_path, 0, true);
+	if (is_wp_error($attachment_id)) {
+		return $attachment_id;
+	}
+
+	$metadata = wp_generate_attachment_metadata($attachment_id, $file_path);
+	if (!is_wp_error($metadata)) {
+		wp_update_attachment_metadata($attachment_id, $metadata);
+	}
+
+	return $attachment_id;
+}
+
 function wholesale_upload_design()
 {
 	check_ajax_referer('wholesale_upload_design', 'nonce');
+
+	$is_guest_request = !is_user_logged_in();
+	$is_valid_guest_nonce = $is_guest_request && isset($_POST['nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'wholesale_upload_design');
+
+	if ($is_guest_request && !$is_valid_guest_nonce) {
+		wp_send_json_error(array('message' => __('Guest design uploads require a valid security nonce.', 'litsign')), 403);
+	}
+
+	if (is_user_logged_in() && !current_user_can('upload_files')) {
+		wp_send_json_error(array('message' => __('You do not have permission to upload designs.', 'litsign')), 403);
+	}
 
 	if (empty($_FILES['file'])) {
 		wp_send_json_error(array('message' => __('No design image was provided.', 'litsign')), 400);
 	}
 
-	require_once ABSPATH . 'wp-admin/includes/file.php';
-	require_once ABSPATH . 'wp-admin/includes/media.php';
-	require_once ABSPATH . 'wp-admin/includes/image.php';
-
-	$attachment_id = media_handle_upload(
-		'file',
-		0,
-		array(
-			'post_title' => sanitize_text_field(wp_unslash($_FILES['file']['name'])),
-		),
-		array(
-			'test_form' => false,
-		)
-	);
-
+	$attachment_id = wholesale_store_design_attachment($_FILES['file']);
 	if (is_wp_error($attachment_id)) {
 		wp_send_json_error(array('message' => $attachment_id->get_error_message()), 400);
 	}
 
 	wp_send_json_success(array(
-		'id' => $attachment_id,
-		'url' => wp_get_attachment_url($attachment_id),
+		'id' => absint($attachment_id),
+		'url' => esc_url_raw(wp_get_attachment_url($attachment_id)),
 	));
 }
 add_action('wp_ajax_wholesale_upload_design', 'wholesale_upload_design');

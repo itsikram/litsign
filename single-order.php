@@ -32,20 +32,20 @@ get_header();
 
         <?php switch ($order_status) {
             case 'pending':
-                echo '<span class="text-primary">Pending Review<span>';
+                echo '<span class="text-primary">Pending Review</span>';
                 break;
 
             case 'on_hold':
-                echo '<span class="text-warning">On Hold<span>';
+                echo '<span class="text-warning">On Hold</span>';
                 break;
             case 'completed':
-                echo '<span class="text-success">Completed<span>';
+                echo '<span class="text-success">Completed</span>';
                 break;
             case 'failed':
-                echo '<span class="text-danger">Failed<span>';
+                echo '<span class="text-danger">Failed</span>';
                 break;
             default:
-                echo '<span class="text-warning">' . $order_status . '<span>';
+                echo '<span class="text-warning">' . esc_html($order_status) . '</span>';
         }
         ?>
     </h1>
@@ -65,11 +65,11 @@ get_header();
 
                     <div class="row">
                         <div class="col-md-3 cart-image">
-                            <img class="cart-item-image w-100" src="<?php echo $product['product_thumbnail']; ?>" alt="">
+                            <img class="cart-item-image w-100" src="<?php echo esc_url($product['product_thumbnail']); ?>" alt="<?php echo esc_attr($product['product_title']); ?>">
                         </div>
                         <div class="col-md-9 ">
                             <div class="cart-title-container d-flex justify-content-between align-self-start border-bottom">
-                                <h4 class="fs-4 align-self-center"><?php echo $product['product_title']; ?></h4>
+                                <h4 class="fs-4 align-self-center"><?php echo esc_html($product['product_title']); ?></h4>
                                 <div class="align-self-center">
                                     <!-- <a href="#" class="btn btn-link">Edit</a>| -->
                                     <!-- <a href="<?php echo get_permalink() . '?remove_cart=' . $product['cart_id']; ?>" class="btn btn-link">Remove</a> -->
@@ -100,17 +100,10 @@ get_header();
                                         if ($value == null) {
                                             continue;
                                         }
-                                        if (preg_match('/u201d/i', $value)) {
+                                        $label = esc_html($name);
+                                        $display_value = is_scalar($value) ? esc_html(str_replace('u201d', '”', (string) $value)) : '';
                                     ?>
-                                            <strong><?php echo $name; ?>: </strong><?php echo str_replace('u201d', '”', $value); ?> <br>
-
-                                        <?php
-                                            continue;
-                                        }
-                                        ?>
-
-
-                                        <strong><?php echo $name; ?>: </strong><?php echo $value; ?> <br>
+                                            <strong><?php echo $label; ?>: </strong><?php echo $display_value; ?> <br>
                                     <?php }
                                     ?>
                                 </div>
@@ -120,8 +113,8 @@ get_header();
                                     <label class="d-inline-block fw-bold" style="margin-right: 20px">Quantity</label>
                                     <div class="quantiy-input-container">
                                         <form action="">
-                                            <input type="hidden" name="cart_id" value="<?php echo $product['cart_id']; ?>">
-                                            <input type="text" readonly value="<?php echo $product['product_quantity']; ?>" name="update_quantity" style="width: 50px" id="">
+                                            <input type="hidden" name="cart_id" value="<?php echo esc_attr($product['cart_id']); ?>">
+                                            <input type="text" readonly value="<?php echo esc_attr($product['product_quantity']); ?>" name="update_quantity" style="width: 50px" id="">
                                             <!-- <input type="submit" value="Update"> -->
                                         </form>
 
@@ -216,20 +209,20 @@ get_header();
                                         ?>
                                             <tr>
 
-                                                <td><?php echo $key + 1; ?></td>
-                                                <td><?php echo $element_type; ?></td>
-                                                <td><?php echo $item_dimenstion; ?></td>
-                                                <td><?php echo $cl_text; ?></td>
-                                                <td><?php echo $item_font; ?></td>
-                                                <td><?php echo $item_face_color; ?></td>
-                                                <td><?php echo $item_return_color; ?></td>
-                                                <td><?php echo $item_trimcap_color; ?></td>
-                                                <td><?php echo $item_return_size; ?></td>
-                                                <td><?php echo $item_trimcap_size; ?></td>
-                                                <td><?php echo $item_radius; ?></td>
-                                                <td><?php echo format_price($item_cost); ?></td>
-                                                <td><?php echo format_price($item_face_cost); ?></td>
-                                                <td><?php echo format_price($item_total_cost); ?></td>
+                                                <td><?php echo esc_html((string) ($key + 1)); ?></td>
+                                                <td><?php echo esc_html((string) $element_type); ?></td>
+                                                <td><?php echo esc_html((string) $item_dimenstion); ?></td>
+                                                <td><?php echo esc_html((string) $cl_text); ?></td>
+                                                <td><?php echo esc_html((string) $item_font); ?></td>
+                                                <td><?php echo esc_html((string) $item_face_color); ?></td>
+                                                <td><?php echo esc_html((string) $item_return_color); ?></td>
+                                                <td><?php echo esc_html((string) $item_trimcap_color); ?></td>
+                                                <td><?php echo esc_html((string) $item_return_size); ?></td>
+                                                <td><?php echo esc_html((string) $item_trimcap_size); ?></td>
+                                                <td><?php echo esc_html((string) $item_radius); ?></td>
+                                                <td><?php echo esc_html(format_price($item_cost)); ?></td>
+                                                <td><?php echo esc_html(format_price($item_face_cost)); ?></td>
+                                                <td><?php echo esc_html(format_price($item_total_cost)); ?></td>
 
                                             </tr>
 
@@ -243,8 +236,8 @@ get_header();
                                             $total_extras_cost += $power_supply['cost'];
                                         ?>
                                             <tr>
-                                                <td colspan="13">Power Supply: <span class="fw-bold"><?php echo $power_supply['value']; ?></span></td>
-                                                <td>$<?php echo format_price($power_supply['cost']); ?></td>
+                                                <td colspan="13">Power Supply: <span class="fw-bold"><?php echo esc_html((string) $power_supply['value']); ?></span></td>
+                                                <td>$<?php echo esc_html(format_price($power_supply['cost'])); ?></td>
                                             </tr>
                                         <?php
 
@@ -254,8 +247,8 @@ get_header();
 
                                         ?>
                                             <tr>
-                                                <td colspan="13">Power Supply: <span class="fw-bold"><?php echo $cable['value']; ?></span></td>
-                                                <td>$<?php echo format_price($cable['cost']); ?></td>
+                                                <td colspan="13">Power Supply: <span class="fw-bold"><?php echo esc_html((string) $cable['value']); ?></span></td>
+                                                <td>$<?php echo esc_html(format_price($cable['cost'])); ?></td>
                                             </tr>
                                         <?php
 
@@ -266,8 +259,8 @@ get_header();
 
                                         ?>
                                             <tr>
-                                                <td colspan="13">Lit: <span class="fw-bold"><?php echo $lit['value']; ?></span></td>
-                                                <td>$<?php echo format_price($lit_cost); ?> (<?php echo $lit['cost']; ?>%)</td>
+                                                <td colspan="13">Lit: <span class="fw-bold"><?php echo esc_html((string) $lit['value']); ?></span></td>
+                                                <td>$<?php echo esc_html(format_price($lit_cost)); ?> (<?php echo esc_html((string) $lit['cost']); ?>%)</td>
                                             </tr>
                                         <?php
 
@@ -278,8 +271,8 @@ get_header();
 
 
                                         <tr>
-                                            <td class="fw-bold" colspan="7" id="dtTotalObjDisplay">Total : <span class="text-primary"> <?php echo $total_objects; ?> </span> Objects</td>
-                                            <td colspan="7" id="dtTotalPriceDisplay">Total Price: <span class="text-success fw-bold">$<?php echo format_price($total_order_cost); ?></span></td>
+                                            <td class="fw-bold" colspan="7" id="dtTotalObjDisplay">Total : <span class="text-primary"> <?php echo esc_html((string) $total_objects); ?> </span> Objects</td>
+                                            <td colspan="7" id="dtTotalPriceDisplay">Total Price: <span class="text-success fw-bold">$<?php echo esc_html(format_price($total_order_cost)); ?></span></td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -300,13 +293,13 @@ get_header();
                     <div class="order-cost">
                         <h1>Order Details</h1>
 
-                        <h6 style="padding: 0; line-height: 1.5"> <b>Sub Total: </b> $<?php echo  number_format($product_cost['sub_total'], 2, '.', ','); ?>
-                            <h6 style="padding: 0; line-height: 1.5"> <b>Shipping Cost: </b> $<?php echo  number_format($product_cost['shipping_cost'], 2, '.', ','); ?></h6>
-                            <h6 style="padding: 0; line-height: 1.5"> <b>tax:</b> $<?php echo  number_format($product_cost['tax'] ? $product_cost['tax'] : 0, 2, '.', ','); ?>
-                                <h6 style="padding: 0; line-height: 1.5"> <b>Grand Total: </b> $<?php echo  number_format($product_cost['grand_total'], 2, '.', ','); ?>
-                                    <h6 style="padding: 0; line-height: 1.5"> <b>Order Time:</b> <?php echo $order_time; ?></h6>
-                                    <h6 style="padding: 0; line-height: 1.5"> <b>Estimate Delivery Time:</b> <?php echo $estimate_delivery_time; ?></h6>
-                                    <h6 style="padding: 0; line-height: 1.5"> <b>Order Id:</b> <a href="<?php echo get_permalink(); ?>"><?php echo $order_id; ?></a></h6>
+                        <h6 style="padding: 0; line-height: 1.5"> <b>Sub Total: </b> $<?php echo esc_html(number_format((float) $product_cost['sub_total'], 2, '.', ',')); ?>
+                            <h6 style="padding: 0; line-height: 1.5"> <b>Shipping Cost: </b> $<?php echo esc_html(number_format((float) $product_cost['shipping_cost'], 2, '.', ',')); ?></h6>
+                            <h6 style="padding: 0; line-height: 1.5"> <b>tax:</b> $<?php echo esc_html(number_format((float) ($product_cost['tax'] ? $product_cost['tax'] : 0), 2, '.', ',')); ?>
+                                <h6 style="padding: 0; line-height: 1.5"> <b>Grand Total: </b> $<?php echo esc_html(number_format((float) $product_cost['grand_total'], 2, '.', ',')); ?>
+                                    <h6 style="padding: 0; line-height: 1.5"> <b>Order Time:</b> <?php echo esc_html($order_time); ?></h6>
+                                    <h6 style="padding: 0; line-height: 1.5"> <b>Estimate Delivery Time:</b> <?php echo esc_html($estimate_delivery_time); ?></h6>
+                                    <h6 style="padding: 0; line-height: 1.5"> <b>Order Id:</b> <a href="<?php echo esc_url(get_permalink()); ?>"><?php echo esc_html($order_id); ?></a></h6>
                                     <hr>
                     </div>
                 </div>
@@ -316,9 +309,10 @@ get_header();
 
                         <?php
                         foreach ($billing_address as $key => $value) {
-
+                            $label = ucwords(str_replace('billing_', ' ', (string) $key));
+                            $display_value = is_scalar($value) ? esc_html((string) $value) : '';
                         ?>
-                            <b> <?php echo ucwords(str_replace('billing_', ' ', $key)); ?>:</b> <?php echo $value; ?> <br />
+                            <b> <?php echo esc_html($label); ?>:</b> <?php echo $display_value; ?> <br />
 
                         <?php
 
@@ -332,9 +326,10 @@ get_header();
 
                         <?php
                         foreach ($shipping_address as $key => $value) {
-
+                            $label = ucwords(str_replace('billing_', ' ', str_replace('shipping_', ' ', (string) $key)));
+                            $display_value = is_scalar($value) ? esc_html((string) $value) : '';
                         ?>
-                            <b> <?php echo ucwords(str_replace('billing_', ' ', str_replace('shipping_', ' ', $key))); ?>:</b> <?php echo $value; ?> <br />
+                            <b> <?php echo esc_html($label); ?>:</b> <?php echo $display_value; ?> <br />
 
                         <?php
 

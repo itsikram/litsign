@@ -54,10 +54,10 @@ if (is_user_logged_in()) {
                         
                 ?>
                         <tr>
-                            <td><a href="<?php echo get_permalink(); ?>">#<?php echo $order_id; ?></a></td>
-                            <td><?php echo $contact_number; ?></td>
-                            <td><?php echo $order_time; ?></td>
-                            <td><?php echo $estimate_delivery_time; ?></td>
+                            <td><a href="<?php echo esc_url(get_permalink()); ?>">#<?php echo esc_html($order_id); ?></a></td>
+                            <td><?php echo esc_html((string) $contact_number); ?></td>
+                            <td><?php echo esc_html((string) $order_time); ?></td>
+                            <td><?php echo esc_html((string) $estimate_delivery_time); ?></td>
                             <td>
 
                                 <?php switch($order_status){
@@ -75,7 +75,7 @@ if (is_user_logged_in()) {
                                         break;
                                 }
                                 ?>
-                            
+                             
                             </td>
                         </tr>
 

@@ -146,6 +146,9 @@ function wholesale_setup()
 		)
 	);
 
+	add_image_size('header-logo', 240, 40, false);
+	add_image_size('product-card', 290, 290, true);
+
 	register_post_type(
 		'product',
 		array(
@@ -182,6 +185,24 @@ function wholesale_setup()
 		'rewrite' => array('slug' => 'order'), // Custom slug for your post type
 		'query_var' => 'store_order',
 		'show_in_rest' => true, // Enable block editor support
+	));
+
+	register_post_type('contact_submission', array(
+		'label' => 'Contact Submissions',
+		'labels' => array(
+			'name' => 'Contact Submissions',
+			'singular_name' => 'Contact Submission',
+			'add_new_item' => 'Add Contact Submission',
+			'edit_item' => 'View Contact Submission',
+		),
+		'public' => false,
+		'show_ui' => true,
+		'show_in_menu' => true,
+		'show_in_rest' => false,
+		'supports' => array('title', 'editor'),
+		'menu_icon' => 'dashicons-email-alt',
+		'capability_type' => 'post',
+		'map_meta_cap' => true,
 	));
 
 
@@ -225,6 +246,132 @@ function wholesale_setup()
 
 }
 add_action('after_setup_theme', 'wholesale_setup');
+
+/**
+ * Send contact notifications to the configured site admin and administrators.
+ *
+ * @return string[]
+ */
+function wholesale_contact_admin_recipients()
+{
+	$recipients = array(get_option('admin_email'));
+	$administrators = get_users(array(
+		'role' => 'administrator',
+		'fields' => array('user_email'),
+	));
+
+	foreach ($administrators as $administrator) {
+		$recipients[] = $administrator->user_email;
+	}
+
+	return array_values(array_unique(array_filter(array_map('sanitize_email', $recipients))));
+}
+
+function wholesale_contact_submission_columns($columns)
+{
+	return array(
+		'cb' => isset($columns['cb']) ? $columns['cb'] : '<input type="checkbox">',
+		'title' => 'Submission',
+		'contact_business' => 'Business',
+		'contact_email' => 'Email',
+		'contact_project_type' => 'Project type',
+		'date' => 'Received',
+	);
+}
+add_filter('manage_contact_submission_posts_columns', 'wholesale_contact_submission_columns');
+
+function wholesale_contact_submission_column_content($column, $post_id)
+{
+	$meta_keys = array(
+		'contact_business' => '_contact_business',
+		'contact_email' => '_contact_email',
+		'contact_project_type' => '_contact_project_type',
+	);
+
+	if (isset($meta_keys[$column])) {
+		echo esc_html(get_post_meta($post_id, $meta_keys[$column], true));
+	}
+}
+add_action('manage_contact_submission_posts_custom_column', 'wholesale_contact_submission_column_content', 10, 2);
+
+function wholesale_contact_submission_details_meta_box($post)
+{
+	$fields = array(
+		'Name' => '_contact_name',
+		'Business' => '_contact_business',
+		'Phone' => '_contact_phone',
+		'Email' => '_contact_email',
+		'Project type' => '_contact_project_type',
+	);
+
+	echo '<table class="widefat striped"><tbody>';
+	foreach ($fields as $label => $meta_key) {
+		$value = get_post_meta($post->ID, $meta_key, true);
+		echo '<tr><td><strong>' . esc_html($label) . '</strong></td><td>';
+		if ('_contact_email' === $meta_key && is_email($value)) {
+			echo '<a href="mailto:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
+		} elseif ('_contact_phone' === $meta_key) {
+			echo '<a href="tel:' . esc_attr(preg_replace('/[^0-9+]/', '', $value)) . '">' . esc_html($value) . '</a>';
+		} else {
+			echo esc_html($value);
+		}
+		echo '</td></tr>';
+	}
+	echo '</tbody></table>';
+}
+
+function wholesale_contact_submission_register_meta_box()
+{
+	add_meta_box(
+		'contact-submission-details',
+		'Contact Details',
+		'wholesale_contact_submission_details_meta_box',
+		'contact_submission',
+		'normal',
+		'high'
+	);
+}
+add_action('add_meta_boxes_contact_submission', 'wholesale_contact_submission_register_meta_box');
+
+/**
+ * Keep conversion tracking, but wait until the page has loaded before fetching it.
+ */
+function wholesale_deferred_conversion_tracking()
+{
+	?>
+	<script>
+		window.addEventListener('load', function () {
+			var script = document.createElement('script');
+			script.async = true;
+			script.src = 'https://www.googletagmanager.com/gtag/js?id=AW-18454059893';
+			document.head.appendChild(script);
+			window.dataLayer = window.dataLayer || [];
+			window.gtag = window.gtag || function () {
+				window.dataLayer.push(arguments);
+			};
+			window.gtag('js', new Date());
+			window.gtag('config', 'AW-18454059893');
+			window.gtag('config', 'AW-18454059893/OK42COLkgPocEPW2yt9E', {
+				'phone_conversion_number': '866-436-2101'
+			});
+		});
+	</script>
+	<?php
+}
+add_action('wp_footer', 'wholesale_deferred_conversion_tracking', 20);
+
+/**
+ * Do not let the GoDaddy widget become a parser-blocking request.
+ */
+function wholesale_defer_wsimg_script($tag, $handle, $src)
+{
+	if (false === strpos($src, 'img1.wsimg.com')) {
+		return $tag;
+	}
+
+	return str_replace(' src=', ' defer src=', $tag);
+}
+add_filter('script_loader_tag', 'wholesale_defer_wsimg_script', 10, 3);
 
 /**
  * Expose product categories as clean top-level URLs while keeping the
@@ -1662,11 +1809,19 @@ function wholesale_resource_hints($urls, $relation_type)
 		return $urls;
 	}
 
-	return array_values(array_filter($urls, function ($url) {
+	$urls = array_values(array_filter($urls, function ($url) {
 		$href = is_array($url) && isset($url['href']) ? $url['href'] : $url;
 		return false === strpos($href, 'cdnjs.cloudflare.com')
 			&& false === strpos($href, 'socket.tidio.co');
 	}));
+
+	$urls[] = 'https://img1.wsimg.com';
+	$urls[] = array(
+		'href' => 'https://csp.secureserver.net',
+		'crossorigin' => true,
+	);
+
+	return $urls;
 }
 add_filter('wp_resource_hints', 'wholesale_resource_hints', 10, 2);
 

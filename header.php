@@ -146,6 +146,16 @@ if ($logo_url) {
 	</style>
 
 
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18454059893"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18454059893');
+</script>
+
 	<?php wp_head(); ?>
 </head>
 

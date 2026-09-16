@@ -232,6 +232,8 @@ add_action('after_setup_theme', 'wholesale_setup');
  */
 function wholesale_category_rewrites()
 {
+	add_rewrite_rule('^thank-you/?$', 'index.php?wholesale_thank_you=1', 'top');
+
 	$terms = get_terms(array(
 		'taxonomy' => 'product_category',
 		'hide_empty' => false,
@@ -260,12 +262,17 @@ add_action('after_switch_theme', function () {
 function wholesale_category_query_var($vars)
 {
 	$vars[] = 'category_slug';
+	$vars[] = 'wholesale_thank_you';
 	return $vars;
 }
 add_filter('query_vars', 'wholesale_category_query_var');
 
 function wholesale_category_template($template)
 {
+	if (get_query_var('wholesale_thank_you')) {
+		return locate_template('thank-you.php');
+	}
+
 	$term_slug = get_query_var('category_slug');
 
 	if ($term_slug && get_term_by('slug', $term_slug, 'product_category')) {
@@ -306,9 +313,9 @@ function wholesale_sitemap_rewrite()
 }
 add_action('init', 'wholesale_sitemap_rewrite', 20);
 add_action('init', function () {
-	if ('1' !== get_option('wholesale_sitemap_rewrite_version')) {
+	if ('2' !== get_option('wholesale_sitemap_rewrite_version')) {
 		flush_rewrite_rules(false);
-		update_option('wholesale_sitemap_rewrite_version', '1');
+		update_option('wholesale_sitemap_rewrite_version', '2');
 	}
 }, 99);
 add_filter('query_vars', function ($vars) {
@@ -603,6 +610,109 @@ function wholesale_format_order_email_data($data, $prefix)
 	return $formatted_data ? implode('<br>', $formatted_data) : 'N/A';
 }
 add_action('save_post_order', 'wholesale_send_new_order_admin_email', 20, 3);
+
+/**
+ * Add the most useful order information to the admin order list.
+ */
+function wholesale_order_admin_columns($columns)
+{
+	$custom_columns = array(
+		'order_number' => __('Order #', 'litsign'),
+		'customer' => __('Customer', 'litsign'),
+		'contact' => __('Contact', 'litsign'),
+		'items' => __('Items', 'litsign'),
+		'order_total' => __('Total', 'litsign'),
+		'delivery_date' => __('Delivery', 'litsign'),
+	);
+
+	unset($columns['title']);
+
+	$updated_columns = array();
+	foreach ($columns as $key => $label) {
+		$updated_columns[$key] = $label;
+
+		if ('cb' === $key) {
+			$updated_columns = array_merge($updated_columns, $custom_columns);
+		}
+	}
+
+	return $updated_columns;
+}
+add_filter('manage_order_posts_columns', 'wholesale_order_admin_columns');
+
+function wholesale_order_admin_column_content($column, $post_id)
+{
+	$billing_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+	$order_cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
+	$product_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
+
+	switch ($column) {
+		case 'order_number':
+			$order_number = get_post_meta($post_id, 'order_id', true);
+			printf(
+				'<a href="%s"><strong>#%s</strong></a>',
+				esc_url(get_edit_post_link($post_id)),
+				esc_html($order_number ?: $post_id)
+			);
+			break;
+
+		case 'customer':
+			$name = trim(
+				(isset($billing_data['billing_fname']) ? $billing_data['billing_fname'] : '')
+				. ' '
+				. (isset($billing_data['billing_lname']) ? $billing_data['billing_lname'] : '')
+			);
+			echo esc_html($name ?: __('Guest', 'litsign'));
+			break;
+
+		case 'contact':
+			$email = isset($billing_data['billing_email']) ? sanitize_email($billing_data['billing_email']) : '';
+			$phone = isset($billing_data['billing_tel']) ? $billing_data['billing_tel'] : '';
+
+			if ($email) {
+				printf('<a href="mailto:%s">%s</a>', esc_attr($email), esc_html($email));
+			}
+			if ($phone) {
+				printf('<br><span>%s</span>', esc_html($phone));
+			}
+			if (!$email && !$phone) {
+				echo '&mdash;';
+			}
+			break;
+
+		case 'items':
+			$item_count = 0;
+			$product_names = array();
+
+			foreach ($product_data as $product) {
+				$quantity = isset($product['product_quantity']) ? absint($product['product_quantity']) : 0;
+				$item_count += $quantity;
+
+				if (!empty($product['product_title'])) {
+					$product_names[] = $product['product_title'] . ' x ' . $quantity;
+				}
+			}
+
+			printf(
+				'<span title="%s">%s item%s</span>',
+				esc_attr(implode(', ', $product_names)),
+				esc_html($item_count),
+				1 === $item_count ? '' : 's'
+			);
+			break;
+
+		case 'order_total':
+			$total = isset($order_cost['grand_total']) ? floatval($order_cost['grand_total']) : 0;
+			echo esc_html('$' . number_format($total, 2, '.', ','));
+			break;
+
+		case 'delivery_date':
+			$delivery_date = get_post_meta($post_id, 'estimate_delivery_time', true);
+			echo $delivery_date ? esc_html($delivery_date) : '&mdash;';
+			break;
+	}
+}
+add_action('manage_order_posts_custom_column', 'wholesale_order_admin_column_content', 10, 2);
 
 
 function add_custom_status_to_dropdown()

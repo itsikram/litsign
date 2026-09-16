@@ -1,6 +1,16 @@
 <?php
 //template name: payment
 
+if ('POST' !== strtoupper(isset($_SERVER['REQUEST_METHOD']) ? $_SERVER['REQUEST_METHOD'] : '')) {
+    wp_safe_redirect(home_url('/checkout/'));
+    exit;
+}
+
+$order_nonce = isset($_POST['wholesale_order_nonce']) ? sanitize_text_field(wp_unslash($_POST['wholesale_order_nonce'])) : '';
+if (!$order_nonce || !wp_verify_nonce($order_nonce, 'wholesale_place_order')) {
+    wp_die(esc_html__('Your checkout session has expired. Please return to checkout and try again.', 'litsign'), esc_html__('Invalid checkout request', 'litsign'), array('response' => 403));
+}
+
 if (file_exists(get_template_directory() . '/utils/Cart.php')) {
     require_once(get_template_directory() . '/utils/Cart.php');
 }
@@ -24,6 +34,19 @@ $billing_zip = isset($_REQUEST['billing_zip']) ? sanitize_text_field(wp_unslash(
 $billing_country = isset($_REQUEST['billing_country']) ? sanitize_text_field(wp_unslash($_REQUEST['billing_country'])) : '';
 $billing_tel = isset($_REQUEST['billing_tel']) ? sanitize_text_field(wp_unslash($_REQUEST['billing_tel'])) : '';
 $address = trim($billing_address . ', ' . $billing_city . ', ' . $billing_country);
+
+if (
+    !is_email($billing_email)
+    || '' === $billing_fname
+    || '' === $billing_lname
+    || '' === $billing_address
+    || '' === $billing_city
+    || '' === $billing_state
+    || '' === $billing_zip
+    || '' === $billing_country
+) {
+    wp_die(esc_html__('Please provide a complete and valid billing address.', 'litsign'), esc_html__('Invalid order', 'litsign'), array('response' => 400));
+}
 
 $billing_data = wp_json_encode(array(
    'billing_email' => $billing_email,
@@ -72,10 +95,47 @@ if ('on' === $same_shipping_address) {
 }
 
 $sub_total = isset($_REQUEST['sub_total']) ? floatval(wp_unslash($_REQUEST['sub_total'])) : (isset($cart->sub_total) ? floatval($cart->sub_total) : 0);
-$shipping_cost = isset($_REQUEST['shipping_cost']) ? floatval(wp_unslash($_REQUEST['shipping_cost'])) : 0;
-$tax = isset($_REQUEST['total_tax']) ? floatval(wp_unslash($_REQUEST['total_tax'])) : 0;
-$grand_total = $sub_total + $shipping_cost + $tax;
-$product_data = wp_json_encode($cart->get_items());
+$cart_items = is_object($cart) && is_callable(array($cart, 'get_items')) ? $cart->get_items() : array();
+
+if (empty($cart_items)) {
+    wp_safe_redirect(home_url('/cart/?type=warning&message=' . rawurlencode('Your cart is currently empty.')));
+    exit;
+}
+
+foreach ($cart_items as $cart_item) {
+    $product_id = isset($cart_item->product_id) ? absint($cart_item->product_id) : 0;
+    $quantity = isset($cart_item->product_quantity) ? absint($cart_item->product_quantity) : 0;
+    $item_subtotal = isset($cart_item->product_subtotal) ? floatval($cart_item->product_subtotal) : 0;
+
+    if (!$product_id || 'product' !== get_post_type($product_id) || 'publish' !== get_post_status($product_id) || $quantity < 1 || $item_subtotal <= 0) {
+        wp_die(esc_html__('The cart contains an invalid item. Please rebuild your cart and try again.', 'litsign'), esc_html__('Invalid order', 'litsign'), array('response' => 400));
+    }
+}
+
+// Never trust totals from hidden form fields; derive them from the server-side cart.
+$sub_total = round(floatval($cart->sub_total), 2);
+$shipping_options = array(12.5, 50, 62.5, 75);
+foreach ($cart_items as $cart_item) {
+    $categories = get_the_terms(absint($cart_item->product_id), 'product_category');
+    if (is_array($categories)) {
+        foreach ($categories as $category) {
+            if ('channel-letters' === $category->slug) {
+                $shipping_options = array(50, 200, 250, 300);
+                break 2;
+            }
+        }
+    }
+}
+
+$requested_shipping_cost = isset($_POST['shipping_method']) ? floatval(wp_unslash($_POST['shipping_method'])) : 0;
+if (!in_array($requested_shipping_cost, $shipping_options, true)) {
+    wp_die(esc_html__('Please select a valid shipping method.', 'litsign'), esc_html__('Invalid order', 'litsign'), array('response' => 400));
+}
+
+$shipping_cost = $requested_shipping_cost;
+$tax = round(($sub_total / 100) * 10.3, 2);
+$grand_total = round($sub_total + $shipping_cost + $tax, 2);
+$product_data = wp_json_encode($cart_items);
 
 $order_cost = wp_json_encode(array(
    'grand_total' => $grand_total,
@@ -128,19 +188,23 @@ function place_order($product_data, $order_cost, $billing_data, $shipping_data, 
            'order_id' => sanitize_text_field($order_id),
            'user_id' => $user_id,
        ),
-   ));
+   ), true);
 
-   if ($new_order) {
-       $cart->empty();
-
-       if (is_email($b_email)) {
-           wp_mail(
-               $b_email,
-               'Successfully Placed Order at ' . site_url(),
-               'Thanks For Your Order we will check and delivery as fast we can'
-           );
-       }
+   if (is_wp_error($new_order) || !$new_order) {
+       return false;
    }
+
+   $cart->empty();
+
+   if (is_email($b_email)) {
+       wp_mail(
+           $b_email,
+           'Successfully Placed Order at ' . site_url(),
+           'Thanks For Your Order we will check and delivery as fast we can'
+       );
+   }
+
+   return true;
 }
 
 function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
@@ -241,18 +305,22 @@ function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
 
 
 if (WHOLESALE_PAYMENT_DISABLED) {
-    place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart);
+    if (!place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart)) {
+        wp_die(esc_html__('We could not create your order. Please try again.', 'litsign'), esc_html__('Order failed', 'litsign'), array('response' => 500));
+    }
 
-    wp_redirect(home_url() . '/?type=success&message=' . rawurlencode('Order placed successfully. Payment is temporarily unavailable.'));
+    wp_safe_redirect(home_url('/thank-you/'));
     exit;
 }
 
 $result = processPayment($grand_total, $card_number, $card_exp_month . $card_exp_year, $card_cvv, $address, $billing_zip);
 
 if ($result['status'] == 'success') {
-    place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart);
+    if (!place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart)) {
+        wp_die(esc_html__('We could not create your order. Please try again.', 'litsign'), esc_html__('Order failed', 'litsign'), array('response' => 500));
+    }
 
-    wp_redirect(home_url() . '/?type=success&message=' . rawurlencode($result['message']));
+    wp_safe_redirect(home_url('/thank-you/'));
     exit;
 } else {
     wp_redirect(home_url() . '/?type=danger&message=' . rawurlencode($result['message']));

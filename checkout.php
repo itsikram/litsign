@@ -65,7 +65,8 @@ get_header();
 
 <div class="container my-3 checkout-container">
     <h2 class="text-center fs-2 mb-4">Secure Checkout</h2>
-    <form action="<?php echo site_url(); ?>/payment" class="needs-validation">
+    <form action="<?php echo esc_url(home_url('/payment')); ?>" method="post" class="needs-validation">
+        <?php wp_nonce_field('wholesale_place_order', 'wholesale_order_nonce'); ?>
         <input type="hidden" name="sub_total" value="<?php echo $cart->sub_total; ?>" id="subTotal">
 
         <input type="hidden" name="grand_total" value="<?php echo $cart->sub_total + floatval($shipping_cost[0]) + $total_tax; ?>" data-sc="<?php echo floatval($shipping_cost[0]); ?>" id="grandTotal">

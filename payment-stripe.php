@@ -10,7 +10,7 @@
 
 define('STRIPE_API_KEY', 'sk_test_51NWbhtBkPgGRflkhwqvsaWM2JxFDJuBRXYFaS1L4pCd4L7baZUpofO5IhUYlD0WZv0wPOGQB6eBdvGp8GuohuWAK006rCVNTHg'); 
 define('STRIPE_PUBLISHABLE_KEY', 'pk_test_51NWbhtBkPgGRflkhjqfJ4sVRfodWxqCeaTsgGhizrruZR5eNkZG4ebdGHesHTVdTFXxGSo6Mcp88HALuANAvZD2Z00GbRxzgbD'); 
-define('STRIPE_SUCCESS_URL', site_url()); //Payment success URL 
+define('STRIPE_SUCCESS_URL', site_url().'/thank-you/'); //Payment success URL
 define('STRIPE_CANCEL_URL', site_url().'/?type=danger&message=Payment Failed'); //Payment cancel URL 
 
 
@@ -60,7 +60,7 @@ if(!empty($request->createCheckoutSession)){
             ]],
 
             'mode' => 'payment', 
-            'success_url' => STRIPE_SUCCESS_URL.'?session_id={CHECKOUT_SESSION_ID}&type=success&message=Succesfully Placed Booked', 
+            'success_url' => STRIPE_SUCCESS_URL.'?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => STRIPE_CANCEL_URL, 
             //'customer_email' => $billing_email,
             

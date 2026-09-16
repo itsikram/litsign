@@ -2,7 +2,7 @@
   --orange: #f36b21;
   --ink: #111820;
   color: #172027;
-  font-family: "gotham-medium", Arial, sans-serif;
+  font-family: "havetica-rounded-bold", "helvetica-condensed-bold";
   background: #fff;
 }
 .landing-page * {
@@ -475,7 +475,6 @@
 }
 
 /* Match the reference typography: condensed, heavy display copy and compact sans-serif details. */
-.landing-page,
 .landing-page input,
 .landing-page select,
 .landing-page button {

@@ -710,9 +710,14 @@
       $(".mobile-menu-container").slideDown("fast");
     });
 
-    $('.category-filter-toggler i').click(e => {
-      $('.menu-filter-menu-container').toggle()
-      $(e.currentTarget).toggleClass('fa-times')
+    $('.category-filter-toggler').click(e => {
+      const toggler = $(e.currentTarget);
+      const menu = toggler.siblings('.menu-filter-menu-container');
+      const isExpanded = toggler.attr('aria-expanded') === 'true';
+
+      toggler.attr('aria-expanded', String(!isExpanded));
+      menu.stop(true, true).slideToggle('fast');
+      toggler.toggleClass('is-open', !isExpanded);
     })
 
     // custom select

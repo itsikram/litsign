@@ -83,7 +83,7 @@ get_header();
 
 ?>
 
-<div class="container my-5">
+<div class="container my-5 cart-page">
     <div class="row  text-center">
         <div class="col">
             <h2 class="fs-2">
@@ -92,7 +92,7 @@ get_header();
         </div>
     </div>
     <div class="row my-3 text-center">
-        <div class="col-md-6 offset-md-3 d-inline-block text-center">
+        <div class="col-md-6 offset-md-3 d-inline-block text-center padding-mobile-0">
             <a href="<?php echo home_url(); ?>" class="btn btn-secondary px-5 mb-2 fw-bold py-2">Countinue Shopping</a>
             <?php if ($cart->have_items) : ?>
                 <a href="<?php echo home_url() . '/checkout'; ?>" class="btn mb-2 btn-danger checkout-button fw-bold px-5 py-2">Procced to Checkout</a>
@@ -101,7 +101,7 @@ get_header();
     </div>
     <?php if ($cart->have_items) { ?>
     <div class="row my-5">
-        <div class="col">
+        <div class="col padding-mobile-0">
 
             <?php foreach ($cart->get_items() as $cart_item) {
                 $cart_subtotal = $cart_subtotal + $cart_item->product_subtotal;
@@ -343,7 +343,7 @@ get_header();
         </div>
     </div>
 
-    <div class="row">
+    <div class="row cart-summary">
         <div class="col-md-4 offset-md-8">
             <div class="sub-total-container border-top d-flex justify-content-between p-2">
                 <span class="fw-bold"> Subtotal</span>

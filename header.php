@@ -193,10 +193,11 @@ if ($logo_url) {
 						?>
 						</nav>
 						<div class="mobile-menu-container hide-on-desktop">
-							<div class="text-end">
-								<span class="mobile-menu-close text-danger fs-2 p-2">
+							<div class="mobile-menu-header">
+								<span class="mobile-menu-title">Menu</span>
+								<button type="button" class="mobile-menu-close" aria-label="<?php esc_attr_e('Close menu', 'litsign'); ?>">
 									&times;
-								</span>
+								</button>
 							</div>
 							<nav aria-label="<?php esc_attr_e('Mobile navigation', 'litsign'); ?>">
 							<?php
@@ -244,7 +245,7 @@ if ($logo_url) {
 							} ?>
 						</div>
 						<div class="div-hamberger-container">
-							<img class="mobile-menu-trigger" src="<?php echo get_template_directory_uri() . '/img/harberger-icon.png'; ?>">
+							<img class="mobile-menu-trigger" src="<?php echo get_template_directory_uri() . '/img/harberger-icon.png'; ?>" alt="<?php esc_attr_e('Open menu', 'litsign'); ?>">
 						</div>
 					</div>
 					<div class="col-md-3 hide-on-mobile">

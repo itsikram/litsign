@@ -161,13 +161,15 @@ get_header();
 
 
             <div class="category-filter-menu-wrapper">
-                <span class="category-filter-toggler text-center">
-                    <i class="fa-solid fa-bars"></i>
-                </span>
+                <button type="button" class="category-filter-toggler" aria-expanded="false" aria-controls="category-filter-menu">
+                    <span class="category-filter-toggler-label">Browse categories</span>
+                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+                </button>
                 <?php
                 if (has_nav_menu('category-filter-menu')) {
                     wp_nav_menu(array(
                         'theme_location' => 'category-filter-menu',
+                        'container_id' => 'category-filter-menu',
                         //'container_class' => 'header-menu-container',
                         'menu_class' => 'filter-menu text-center',
 

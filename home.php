@@ -202,22 +202,6 @@ get_header();
                     <p class="text-center mt-3"><a class="btn btn-primary" href="<?php echo esc_url($contact_url); ?>">Request a Channel Letter Sign Quote</a></p>
                 <?php endif; ?>
             </header>
-            <?php if ($is_channel_letters) : ?>
-                <section class="channel-letters-seo-content" aria-labelledby="channel-letters-overview">
-                    <h2 id="channel-letters-overview">Custom Storefront Signs That Get Noticed</h2>
-                    <p>Our channel letter signs give retail storefronts a polished identity day and night. Choose custom channel letters with energy-efficient LED illumination, clear wiring diagrams, and a ready-to-install design.</p>
-                    <h2>Channel Letter Types</h2>
-                    <p>Available options include front-lit channel letters, reverse-lit (halo-lit) letters, and front-and-back lit combinations. We can also coordinate illuminated channel letters with a raceway when your storefront requires one.</p>
-                    <h2>Materials and LED Illumination</h2>
-                    <p>Channel letters use stainless steel faces and returns with clear Lexan backs, plus high-efficiency LED modules. Material, color, depth, and lighting choices can be matched to your storefront branding.</p>
-                    <h2>Manufacturing, Installation, and Warranty</h2>
-                    <p>Each sign is tested before shipment and includes wiring diagrams and an installation pattern. Outdoor channel letter signs are UL listed with sign section labels, and the listed LED modules and qualifying letters carry a five-year warranty.</p>
-                    <h2>Retail Storefront FAQ</h2>
-                    <details><summary>Are channel letter signs suitable for my storefront?</summary><p>Yes. Channel letters are designed for building facades and can be configured for daytime visibility and nighttime illumination.</p></details>
-                    <details><summary>Which lighting style should I choose?</summary><p>Front-lit, reverse-lit, and front-and-back lit options each create a different storefront effect. We can help you select the right look for your brand.</p></details>
-                    <details><summary>How do I start a channel letter sign project?</summary><p>Send your storefront details through our quote request and we will help with the sign configuration and next steps.</p></details>
-                </section>
-            <?php endif; ?>
             <div id="product-box-container" class="product-box-container d-flex flex-wrap">
 
                 <?php
@@ -263,12 +247,12 @@ get_header();
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-image-top">
-                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium', false, array(
+                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'product-card', false, array(
                                         'alt' => esc_attr($is_channel_letters ? 'Custom channel letter sign: ' . get_the_title() : get_the_title()),
                                         'loading' => $is_first_product ? 'eager' : 'lazy',
                                         'fetchpriority' => $is_first_product ? 'high' : 'auto',
                                         'decoding' => 'async',
-                                        'sizes' => '300px',
+                                        'sizes' => '(max-width: 767px) 290px, 290px',
                                     )); ?>
                                 </div>
                                 <?php $is_first_product = false; ?>
@@ -355,11 +339,11 @@ get_header();
                                 <?php
                                 $ref_term_image_id = attachment_url_to_postid($ref_term_image);
                                 if ($ref_term_image_id) {
-                                    echo wp_get_attachment_image($ref_term_image_id, 'medium', false, array(
+                                    echo wp_get_attachment_image($ref_term_image_id, 'product-card', false, array(
                                         'alt' => esc_attr($ref_term_title),
                                         'loading' => 'lazy',
                                         'decoding' => 'async',
-                                        'sizes' => '300px',
+                                        'sizes' => '(max-width: 767px) 290px, 290px',
                                     ));
                                 } else {
                                     echo '<img src="' . esc_url($ref_term_image) . '" alt="' . esc_attr($ref_term_title) . '" loading="lazy" decoding="async">';
@@ -432,11 +416,11 @@ get_header();
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-image-top">
-                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium', false, array(
+                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'product-card', false, array(
                                         'alt' => esc_attr(get_the_title()),
                                         'loading' => 'lazy',
                                         'decoding' => 'async',
-                                        'sizes' => '300px',
+                                        'sizes' => '(max-width: 767px) 290px, 290px',
                                     )); ?>
                                 </div>
                                 <div class="pb-details">
@@ -467,10 +451,55 @@ get_header();
 
             </div>
 
-
         </div>
     </div>
 </div>
+
+<?php if ($is_channel_letters) : ?>
+    <section class="channel-letters-seo-content" aria-labelledby="channel-letters-overview">
+        <div class="channel-letters-seo-intro">
+            <p class="channel-letters-seo-kicker">Designed for storefront visibility</p>
+            <h2 id="channel-letters-overview">Make Your Storefront Stand Out Day and Night</h2>
+            <p>Custom channel letter signs give retail businesses a polished identity with bright, energy-efficient LED illumination and a clean, dimensional finish.</p>
+            <a class="channel-letters-seo-cta" href="<?php echo esc_url($contact_url); ?>">Talk to a Sign Specialist <span aria-hidden="true">&rarr;</span></a>
+        </div>
+        <div class="channel-letters-seo-features">
+            <article>
+                <span class="channel-letters-seo-icon" aria-hidden="true">&#9733;</span>
+                <h3>Choose Your Look</h3>
+                <p>Front-lit, reverse-lit halo, and front-and-back lit options help you create the right storefront presence.</p>
+            </article>
+            <article>
+                <span class="channel-letters-seo-icon" aria-hidden="true">&#9670;</span>
+                <h3>Built to Last</h3>
+                <p>Stainless steel faces and returns, clear Lexan backs, and high-efficiency LED modules deliver lasting quality.</p>
+            </article>
+            <article>
+                <span class="channel-letters-seo-icon" aria-hidden="true">&#10003;</span>
+                <h3>Ready for Installation</h3>
+                <p>Every sign is tested before shipment and includes wiring diagrams and an installation pattern.</p>
+            </article>
+        </div>
+        <div class="channel-letters-seo-details">
+            <h2>Everything You Need to Plan Your Sign</h2>
+            <div class="channel-letters-seo-accordion">
+                <details>
+                    <summary>Materials, LED illumination, and warranty</summary>
+                    <p>Outdoor channel letter signs are UL listed with sign section labels. Listed LED modules and qualifying letters carry a five-year warranty.</p>
+                </details>
+                <details>
+                    <summary>Which channel letter style is right for my storefront?</summary>
+                    <p>Front-lit letters provide bold direct illumination, while reverse-lit letters create a halo effect. Front-and-back lit combinations offer both looks.</p>
+                </details>
+                <details>
+                    <summary>How do I start a custom channel letter project?</summary>
+                    <p>Share your storefront details through our quote request and our team will help you choose the sign configuration and next steps.</p>
+                </details>
+            </div>
+        </div>
+    </section>
+
+<?php endif; ?>
 
 
 <?php

@@ -42,7 +42,7 @@
     </div>
 
     <div class="footer-bg-image-1">
-        <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bg-1.png?ver=' . _S_VERSION); ?>" alt="" loading="lazy" decoding="async">
+        <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bg-1.png?ver=' . _S_VERSION); ?>" alt="" width="1635" height="325" loading="lazy" decoding="async">
     </div>
 
     <div class="footer-info py-4">
@@ -55,18 +55,18 @@
 
                             if ($logo_id) {
                             ?>
-                                <?php echo wp_get_attachment_image($logo_id, 'medium', false, array(
+                                <?php echo wp_get_attachment_image($logo_id, 'header-logo', false, array(
                                     'class' => 'header-logo',
                                     'alt' => get_bloginfo('name'),
                                     'loading' => 'lazy',
                                     'decoding' => 'async',
-                                    'sizes' => '300px',
+                                    'sizes' => '240px',
                                 )); ?>
 
                             <?php
                             } else {
                             ?>
-                                <img src="<?php echo esc_url(get_template_directory_uri() . '/img/logo.png'); ?>" alt="<?php echo esc_attr(get_bloginfo('name')); ?>" class="header-logo" loading="lazy" decoding="async">
+                                <img src="<?php echo esc_url(get_template_directory_uri() . '/img/logo.png'); ?>" alt="<?php echo esc_attr(get_bloginfo('name')); ?>" class="header-logo" width="2417" height="261" loading="lazy" decoding="async">
 
                             <?php
                             } ?>

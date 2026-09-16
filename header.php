@@ -10,13 +10,7 @@
  * @package litsign
  */
 
-$logo_url = get_theme_mod('custom_logo');
-
-if ($logo_url) {
-	$logo_url = wp_get_attachment_image_url($logo_url, 'full');
-} else {
-	$logo_url = get_template_directory_uri() . '/img/logo.png';
-}
+$logo_id = get_theme_mod('custom_logo');
 
 ?>
 <!doctype html>
@@ -146,25 +140,6 @@ if ($logo_url) {
 	</style>
 
 
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18454059893"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'AW-18454059893');
-</script>
-	
-	<!-- Google tag (gtag.js) --> <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18454059893"></script> <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'AW-18454059893'); </script> 
-	
-<script>
-  gtag('config', 'AW-18454059893/OK42COLkgPocEPW2yt9E', {
-    'phone_conversion_number': '866-436-2101'
-  });
-</script>
-
-
 	<?php wp_head(); ?>
 </head>
 
@@ -181,10 +156,17 @@ if ($logo_url) {
 						<div class="logo-container">
 							<a href="<?php echo home_url() . '/'; ?>">
 								<?php
-								if ($logo_url && get_theme_mod('custom_logo')) {
-									echo '<img src="' . esc_url($logo_url) . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" loading="eager" decoding="async" fetchpriority="high">';
+								if ($logo_id) {
+									echo wp_get_attachment_image($logo_id, 'header-logo', false, array(
+										'alt' => get_bloginfo('name'),
+										'class' => 'header-logo',
+										'loading' => 'eager',
+										'decoding' => 'async',
+										'fetchpriority' => 'high',
+										'sizes' => '240px',
+									));
 								} else {
-									echo '<img src="' . esc_url($logo_url) . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" loading="eager" decoding="async">';
+									echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async" fetchpriority="high">';
 								}
 								?>
 							</a>
@@ -254,7 +236,7 @@ if ($logo_url) {
 							} ?>
 						</div>
 						<div class="div-hamberger-container">
-							<img class="mobile-menu-trigger" src="<?php echo get_template_directory_uri() . '/img/harberger-icon.png'; ?>" alt="<?php esc_attr_e('Open menu', 'litsign'); ?>">
+							<img class="mobile-menu-trigger" src="<?php echo get_template_directory_uri() . '/img/harberger-icon.png'; ?>" alt="<?php esc_attr_e('Open menu', 'litsign'); ?>" width="128" height="128" decoding="async">
 						</div>
 					</div>
 					<div class="col-md-3 hide-on-mobile">

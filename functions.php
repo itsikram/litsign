@@ -248,13 +248,17 @@ function wholesale_setup()
 add_action('after_setup_theme', 'wholesale_setup');
 
 /**
- * Send contact notifications to the configured site admin and administrators.
+ * Send contact notifications to the configured site admin, administrators,
+ * and the quote-response inbox.
  *
  * @return string[]
  */
 function wholesale_contact_admin_recipients()
 {
-	$recipients = array(get_option('admin_email'));
+	$recipients = array(
+		get_option('admin_email'),
+		'TR@StorefrontSignOnline.com',
+	);
 	$administrators = get_users(array(
 		'role' => 'administrator',
 		'fields' => array('user_email'),

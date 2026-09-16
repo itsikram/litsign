@@ -515,7 +515,7 @@ if ($logo_url) {
 
 			$message = isset($_GET['message']) ? $_GET['message'] : '';
 		?>
-			<div class="container mt-3">
+			<div class="container mt-3 site-alert-container">
 				<div class="row">
 					<div class="col-md-6 offset-md-3 col-12 text-center">
 						<div class="alert alert-<?php echo $type; ?>">

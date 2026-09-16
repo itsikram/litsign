@@ -931,6 +931,8 @@ function wholesale_has_seo_plugin()
  */
 function wholesale_seo_description()
 {
+	$description = '';
+
 	if (is_singular('product')) {
 		$product_id = get_queried_object_id();
 		$description = get_post_meta($product_id, '_seo_description', true);
@@ -952,11 +954,17 @@ function wholesale_seo_description()
 		$term = get_term_by('slug', $term_slug, 'product_category');
 		$description = $term && !is_wp_error($term) && $term->description
 			? $term->description
-			: __('Factory-direct channel letters and custom signage, made in the USA since 2002 and shipped nationwide from Renton, WA.', 'litsign');
+			: __('Custom signage for retail and wholesale sign customers, serving businesses from Renton, WA.', 'litsign');
 	} elseif (is_front_page() || is_page_template('home.php') || (is_home() && !is_front_page())) {
-		$description = __('Factory-direct channel letters and custom signage, made in the USA since 2002 and shipped nationwide from Renton, WA.', 'litsign');
+		$description = __('Lit Sign Manufacturing builds custom signage for retail and wholesale sign customers from Renton, WA.', 'litsign');
 	} elseif (is_singular()) {
 		$description = get_post_meta(get_queried_object_id(), '_seo_description', true);
+
+		if (!$description) {
+			$page_defaults = wholesale_seo_page_defaults();
+			$page_slug = get_post_field('post_name', get_queried_object_id());
+			$description = isset($page_defaults[$page_slug]['description']) ? $page_defaults[$page_slug]['description'] : '';
+		}
 
 		if (!$description) {
 			$description = get_the_excerpt(get_queried_object_id());
@@ -986,6 +994,42 @@ function wholesale_seo_description()
 	$description = trim(preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $description)));
 
 	return $description ?: get_bloginfo('name');
+}
+
+/**
+ * Provide conservative SEO defaults for public pages that do not have
+ * plugin-managed metadata yet. These descriptions use only known site facts.
+ *
+ * @return array
+ */
+function wholesale_seo_page_defaults()
+{
+	return array(
+		'about' => array(
+			'title' => __('About Lit Sign Manufacturing | Custom Sign Manufacturer', 'litsign'),
+			'description' => __('Learn about Lit Sign Manufacturing, founded in 1998 by Tri Nguyen and serving retail and wholesale sign customers from Renton, WA.', 'litsign'),
+		),
+		'contact' => array(
+			'title' => __('Contact Lit Sign Manufacturing | Request a Sign Quote', 'litsign'),
+			'description' => __('Contact Lit Sign Manufacturing in Renton, WA about custom signage, wholesale orders, installation, and your next sign project.', 'litsign'),
+		),
+		'brands' => array(
+			'title' => __('Sign Brands and Products | Lit Sign Manufacturing', 'litsign'),
+			'description' => __('Explore sign products and brands available from Lit Sign Manufacturing for retail and wholesale sign customers.', 'litsign'),
+		),
+		'equipment' => array(
+			'title' => __('Sign Equipment | Lit Sign Manufacturing', 'litsign'),
+			'description' => __('Browse sign equipment and related products from Lit Sign Manufacturing for sign shops and business customers.', 'litsign'),
+		),
+		'parts' => array(
+			'title' => __('Sign Parts and Supplies | Lit Sign Manufacturing', 'litsign'),
+			'description' => __('Shop sign parts and supplies from Lit Sign Manufacturing for retail projects and wholesale sign production.', 'litsign'),
+		),
+		'sign-company-landing-page' => array(
+			'title' => __('Custom Sign Manufacturing | Lit Sign Manufacturing', 'litsign'),
+			'description' => __('Lit Sign Manufacturing creates custom signs for businesses and sign shops, with retail and wholesale service from Renton, WA.', 'litsign'),
+		),
+	);
 }
 
 /**
@@ -1025,21 +1069,38 @@ add_filter('document_title_parts', function ($parts) {
 		return $parts;
 	}
 
+	if (is_singular() && !is_singular('product')) {
+		$page_defaults = wholesale_seo_page_defaults();
+		$page_slug = get_post_field('post_name', get_queried_object_id());
+		$custom_title = get_post_meta(get_queried_object_id(), '_seo_title', true);
+
+		if (!$custom_title && isset($page_defaults[$page_slug]['title'])) {
+			$custom_title = $page_defaults[$page_slug]['title'];
+		}
+
+		if ($custom_title) {
+			$parts['title'] = $custom_title;
+			$parts['site'] = '';
+			$parts['tagline'] = '';
+			return $parts;
+		}
+	}
+
 	if (is_page_template('home.php') || (is_home() && !is_front_page()) || get_query_var('category_slug')) {
 		$term_slug = get_query_var('category_slug');
 		$term_slug = $term_slug ? sanitize_title($term_slug) : (isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : '');
 		$term = $term_slug ? get_term_by('slug', $term_slug, 'product_category') : false;
 		$parts['title'] = $term && !is_wp_error($term)
-			? sprintf(__('%s | Wholesale Pricing, Ships Nationwide | Store Front Sign Online', 'litsign'), $term->name)
-			: __('Wholesale Channel Letters & Custom Signage | Factory Direct Pricing | Store Front Sign Online', 'litsign');
+			? sprintf(__('%s | Wholesale Signage | Lit Sign Manufacturing', 'litsign'), $term->name)
+			: __('Wholesale Channel Letters & Custom Signage | Lit Sign Manufacturing', 'litsign');
 		$parts['site'] = '';
 		$parts['tagline'] = '';
 	} elseif (is_front_page() || is_home()) {
-		$parts['title'] = __('Wholesale Channel Letters & Custom Signage | Factory Direct Pricing | Store Front Sign Online', 'litsign');
+		$parts['title'] = __('Wholesale Channel Letters & Custom Signage | Lit Sign Manufacturing', 'litsign');
 		$parts['site'] = '';
 		$parts['tagline'] = '';
 	} elseif (is_singular('product')) {
-		$parts['title'] = sprintf(__('%s | Store Front Sign Online', 'litsign'), get_the_title());
+		$parts['title'] = sprintf(__('%s | Lit Sign Manufacturing', 'litsign'), get_the_title());
 		$parts['site'] = '';
 		$parts['tagline'] = '';
 	} else {
@@ -1084,6 +1145,9 @@ function wholesale_seo_head()
 	echo '<meta name="twitter:card" content="' . esc_attr($image ? 'summary_large_image' : 'summary') . '">' . "\n";
 	echo '<meta name="twitter:title" content="' . esc_attr($title) . '">' . "\n";
 	echo '<meta name="twitter:description" content="' . esc_attr($description) . '">' . "\n";
+	if ($image) {
+		echo '<meta name="twitter:image" content="' . esc_url($image) . '">' . "\n";
+	}
 
 	$graph = array(
 		'@context' => 'https://schema.org',
@@ -1093,7 +1157,8 @@ function wholesale_seo_head()
 		'description' => $description,
 		'publisher' => array(
 			'@type' => 'Organization',
-			'name' => 'Store Front Sign Online',
+			'name' => 'Lit Sign Manufacturing LLC',
+			'alternateName' => 'Store Front Sign Online',
 			'url' => home_url('/'),
 			'telephone' => '+1-866-436-2101',
 			'address' => array(
@@ -1208,9 +1273,126 @@ function wholesale_seo_head()
 		);
 	}
 
+	if (is_singular() && !is_singular('product')) {
+		$graph['breadcrumb'] = array(
+			'@type' => 'BreadcrumbList',
+			'itemListElement' => array(
+				array(
+					'@type' => 'ListItem',
+					'position' => 1,
+					'name' => __('Home', 'litsign'),
+					'item' => home_url('/'),
+				),
+				array(
+					'@type' => 'ListItem',
+					'position' => 2,
+					'name' => wp_strip_all_tags(get_the_title()),
+					'item' => $url,
+				),
+			),
+		);
+	}
+
 	echo '<script type="application/ld+json">' . wp_json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
 }
 add_action('wp_head', 'wholesale_seo_head', 1);
+
+/**
+ * Emit the business identity required for local and organization search
+ * features when no SEO plugin is managing schema.
+ */
+function wholesale_organization_schema()
+{
+	if (wholesale_has_seo_plugin()) {
+		return;
+	}
+
+	$organization_id = trailingslashit(home_url('/')) . '#organization';
+	$local_business_id = trailingslashit(home_url('/')) . '#localbusiness';
+	$organization = array(
+		'@type' => 'Organization',
+		'@id' => $organization_id,
+		'name' => 'Lit Sign Manufacturing LLC',
+		'alternateName' => 'Store Front Sign Online',
+		'url' => home_url('/'),
+		'logo' => get_theme_mod('custom_logo') ? wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full') : '',
+		'foundingDate' => '1998',
+		'founder' => array(
+			'@type' => 'Person',
+			'name' => 'Tri Nguyen',
+		),
+		'telephone' => '+1-866-436-2101',
+		'email' => 'TR@StorefrontSignOnline.com',
+	);
+	$local_business = array(
+		'@type' => 'LocalBusiness',
+		'@id' => $local_business_id,
+		'name' => 'Lit Sign Manufacturing LLC',
+		'url' => home_url('/'),
+		'parentOrganization' => array('@id' => $organization_id),
+		'telephone' => '+1-866-436-2101',
+		'email' => 'TR@StorefrontSignOnline.com',
+		'address' => array(
+			'@type' => 'PostalAddress',
+			'streetAddress' => '707 S. Grady Way Suite 600',
+			'addressLocality' => 'Renton',
+			'addressRegion' => 'WA',
+			'postalCode' => '98057',
+			'addressCountry' => 'US',
+		),
+	);
+
+	echo '<script type="application/ld+json">' . wp_json_encode(array(
+		'@context' => 'https://schema.org',
+		'@graph' => array($organization, $local_business),
+	), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
+}
+add_action('wp_head', 'wholesale_organization_schema', 2);
+
+/**
+ * Render visible breadcrumbs for public singular content.
+ */
+function wholesale_breadcrumbs()
+{
+	if (is_front_page() || is_home() || is_404() || is_search()) {
+		return;
+	}
+
+	$items = array(
+		array(
+			'name' => __('Home', 'litsign'),
+			'url' => home_url('/'),
+		),
+	);
+
+	if (is_singular('product')) {
+		$terms = get_the_terms(get_queried_object_id(), 'product_category');
+		if ($terms && !is_wp_error($terms)) {
+			$items[] = array(
+				'name' => $terms[0]->name,
+				'url' => wholesale_category_url($terms[0]->slug),
+			);
+		}
+	}
+
+	$items[] = array(
+		'name' => wp_strip_all_tags(get_the_title()),
+		'url' => get_permalink(),
+	);
+
+	echo '<nav class="site-breadcrumbs" aria-label="' . esc_attr__('Breadcrumbs', 'litsign') . '"><ol>';
+	foreach ($items as $index => $item) {
+		$is_current = count($items) - 1 === $index;
+		echo '<li>';
+		if ($is_current) {
+			echo '<span aria-current="page">' . esc_html($item['name']) . '</span>';
+		} else {
+			echo '<a href="' . esc_url($item['url']) . '">' . esc_html($item['name']) . '</a>';
+		}
+		echo '</li>';
+	}
+	echo '</ol></nav>';
+}
 
 function wholesale_seo_robots($robots)
 {

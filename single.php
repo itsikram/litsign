@@ -24,6 +24,7 @@ $product_attr_array = json_decode($product_attr_json);
 ?>
 
 <div class="container product-details">
+    <?php wholesale_breadcrumbs(); ?>
     <h2 class="fs-3 product-title my-3">
         <?php echo get_the_title(); ?>
     </h2>
@@ -317,5 +318,4 @@ const handleResult = function(result) {
 <?php
 
 get_footer();
-
 

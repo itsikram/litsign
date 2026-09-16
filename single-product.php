@@ -163,6 +163,7 @@ get_header();
 ?>
 
 <div class="container  product-details">
+    <?php wholesale_breadcrumbs(); ?>
     <main id="primary">
     <article <?php post_class('product-article'); ?>>
     <h1 class="fs-2 product-title my-3">

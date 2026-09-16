@@ -155,6 +155,15 @@ if ($logo_url) {
 
   gtag('config', 'AW-18454059893');
 </script>
+	
+	<!-- Google tag (gtag.js) --> <script async src="https://www.googletagmanager.com/gtag/js?id=AW-18454059893"></script> <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'AW-18454059893'); </script> 
+	
+<script>
+  gtag('config', 'AW-18454059893/OK42COLkgPocEPW2yt9E', {
+    'phone_conversion_number': '866-436-2101'
+  });
+</script>
+
 
 	<?php wp_head(); ?>
 </head>
@@ -298,7 +307,7 @@ if ($logo_url) {
 												</h4>
 												<a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="mm-link">
 													<span>
-														Channel Letters
+														Custom Channel Letter Signs
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>

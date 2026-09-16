@@ -156,7 +156,11 @@ function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
        );
    }
 
-   $url = 'https://api.convergepay.com/VirtualMerchant/process.do';
+//    $url = 'https://api.convergepay.com/VirtualMerchant/process.do';
+       // Switch endpoint based on a test-mode flag
+    $url = (defined('WHOLESALE_CONVERGE_TEST_MODE') && WHOLESALE_CONVERGE_TEST_MODE)
+        ? 'https://api.demo.convergepay.com/VirtualMerchantDemo/process.do'
+        : 'https://api.convergepay.com/VirtualMerchant/process.do';
    $data = array(
        'ssl_merchant_id' => $merchant_id,
        'ssl_user_id' => $user_id,

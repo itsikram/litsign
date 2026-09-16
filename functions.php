@@ -618,6 +618,7 @@ function wholesale_order_admin_columns($columns)
 {
 	$custom_columns = array(
 		'order_number' => __('Order #', 'litsign'),
+		'order_status' => __('Status', 'litsign'),
 		'customer' => __('Customer', 'litsign'),
 		'contact' => __('Contact', 'litsign'),
 		'items' => __('Items', 'litsign'),
@@ -654,6 +655,19 @@ function wholesale_order_admin_column_content($column, $post_id)
 				esc_url(get_edit_post_link($post_id)),
 				esc_html($order_number ?: $post_id)
 			);
+			break;
+
+		case 'order_status':
+			$status_labels = array(
+				'pending' => __('Pending Review', 'litsign'),
+				'on_hold' => __('On Hold', 'litsign'),
+				'processing' => __('Processing', 'litsign'),
+				'completed' => __('Completed', 'litsign'),
+				'failed' => __('Failed', 'litsign'),
+			);
+			$status = get_post_status($post_id);
+			$status_label = isset($status_labels[$status]) ? $status_labels[$status] : ucfirst(str_replace('_', ' ', $status));
+			echo esc_html($status_label);
 			break;
 
 		case 'customer':

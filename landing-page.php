@@ -8,8 +8,44 @@
 
 $theme_uri = get_template_directory_uri();
 $contact_url = get_page_by_path('contact') ? get_permalink(get_page_by_path('contact')) : home_url('/contact/');
+$landing_url = get_permalink();
 $logo_id = get_theme_mod('custom_logo');
 $logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'full') : $theme_uri . '/img/logo.png';
+
+if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['landing_quote_submit'])) {
+	$redirect_url = $landing_url ? $landing_url : home_url('/');
+
+	if (!isset($_POST['landing_quote_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['landing_quote_nonce'])), 'landing_quote')) {
+		wp_safe_redirect(add_query_arg('quote_status', 'error', $redirect_url) . '#quote');
+		exit;
+	}
+
+	$name = isset($_POST['name']) ? sanitize_text_field(wp_unslash($_POST['name'])) : '';
+	$business = isset($_POST['business']) ? sanitize_text_field(wp_unslash($_POST['business'])) : '';
+	$phone = isset($_POST['phone']) ? sanitize_text_field(wp_unslash($_POST['phone'])) : '';
+	$email = isset($_POST['email']) ? sanitize_email(wp_unslash($_POST['email'])) : '';
+	$sign_type = isset($_POST['sign_type']) ? sanitize_text_field(wp_unslash($_POST['sign_type'])) : '';
+
+	if (!$name || !$business || !$phone || !$sign_type || !is_email($email)) {
+		wp_safe_redirect(add_query_arg('quote_status', 'error', $redirect_url) . '#quote');
+		exit;
+	}
+
+	$subject = sprintf('New sign quote request from %s', $name);
+	$message = "Name: {$name}\n"
+		. "Business: {$business}\n"
+		. "Phone: {$phone}\n"
+		. "Email: {$email}\n"
+		. "Sign type: {$sign_type}\n";
+	$headers = array(
+		'Content-Type: text/plain; charset=UTF-8',
+		'Reply-To: ' . $name . ' <' . $email . '>',
+	);
+
+	$sent = wp_mail(get_option('admin_email'), $subject, $message, $headers);
+	wp_safe_redirect(add_query_arg('quote_status', $sent ? 'sent' : 'error', $redirect_url) . '#quote');
+	exit;
+}
 
 $solutions = array(
 	array('Channel Letters', 'Illuminated channel letters for maximum visibility day and night.'),
@@ -59,15 +95,21 @@ get_header();
 				</div>
 			</div>
 		</div>
-		<form class="landing-quote-card" id="quote" action="<?php echo esc_url($contact_url); ?>" method="get">
+		<form class="landing-quote-card" id="quote" action="<?php echo esc_url($landing_url ? $landing_url : home_url('/')); ?>" method="post">
 			<h2>Get your <span>free</span> custom sign quote</h2>
+			<?php wp_nonce_field('landing_quote', 'landing_quote_nonce'); ?>
+			<?php if (isset($_GET['quote_status']) && 'sent' === sanitize_key(wp_unslash($_GET['quote_status']))) : ?>
+				<p class="landing-quote-message landing-quote-message-success" role="status">Thanks! Your quote request has been sent. We will be in touch shortly.</p>
+			<?php elseif (isset($_GET['quote_status']) && 'error' === sanitize_key(wp_unslash($_GET['quote_status']))) : ?>
+				<p class="landing-quote-message landing-quote-message-error" role="alert">We could not send your request. Please check your details and try again.</p>
+			<?php endif; ?>
 			<div class="landing-quote-fields">
 				<label><span class="screen-reader-text">Your name</span><input type="text" name="name" placeholder="Your Name*" required></label>
 				<label><span class="screen-reader-text">Business name</span><input type="text" name="business" placeholder="Business Name*" required></label>
 				<label><span class="screen-reader-text">Phone number</span><input type="tel" name="phone" placeholder="Phone Number*" required></label>
 				<label><span class="screen-reader-text">Email address</span><input type="email" name="email" placeholder="Email Address*" required></label>
 				<label><span class="screen-reader-text">Sign type</span><select name="sign_type" required><option value="">Select Sign Type*</option><?php if ($landing_products->have_posts()) : while ($landing_products->have_posts()) : $landing_products->the_post(); ?><option><?php echo esc_html(get_the_title()); ?></option><?php endwhile; wp_reset_postdata(); else : foreach ($solutions as $solution) : ?><option><?php echo esc_html($solution[0]); ?></option><?php endforeach; endif; ?></select></label>
-				<button class="landing-button" type="submit">Get free quote</button>
+				<button class="landing-button" type="submit" name="landing_quote_submit" value="1">Get free quote</button>
 			</div>
 			<div class="landing-quote-points"><span>Free design support</span><span>No hidden charges</span><span>Quick response</span><span>100% satisfaction guarantee</span></div>
 		</form>

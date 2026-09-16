@@ -173,6 +173,20 @@
   cursor: pointer;
   padding: 12px 15px;
 }
+.landing-quote-message {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+.landing-quote-message-success {
+  color: #176b3a;
+  background: #eaf7ef;
+}
+.landing-quote-message-error {
+  color: #9b2525;
+  background: #fff0f0;
+}
 .landing-quote-points {
   display: flex;
   justify-content: space-around;
@@ -483,15 +497,8 @@
 
 .landing-page h1,
 .landing-page h2,
-.landing-page .landing-sign-mockup {
-  font-family: "anton", "Arial Narrow", Arial, sans-serif;
-  font-weight: 400;
-}
-
-.landing-page h3,
-.landing-page .landing-stat-grid strong {
-  font-family: "helvetica-condensed-bold", "Arial Narrow", Arial, sans-serif;
-  font-weight: 700;
+.landing-page h3 {
+  font-family: inherit;
 }
 
 .landing-page h1,

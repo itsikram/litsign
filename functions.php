@@ -1078,9 +1078,9 @@ function wholesale_seo_description()
 		$term = get_term_by('slug', $term_slug, 'product_category');
 		$description = $term && !is_wp_error($term) && $term->description
 			? $term->description
-			: __('Custom signage for retail and wholesale sign customers, serving businesses from Renton, WA.', 'litsign');
+			: __('Custom signage for retail storefronts, serving businesses from Renton, WA.', 'litsign');
 	} elseif (is_front_page() || is_page_template('home.php') || (is_home() && !is_front_page())) {
-		$description = __('Lit Sign Manufacturing builds custom signage for retail and wholesale sign customers from Renton, WA.', 'litsign');
+		$description = __('Lit Sign Manufacturing builds custom signage for retail storefronts from Renton, WA.', 'litsign');
 	} elseif (is_singular()) {
 		$description = get_post_meta(get_queried_object_id(), '_seo_description', true);
 
@@ -1131,15 +1131,15 @@ function wholesale_seo_page_defaults()
 	return array(
 		'about' => array(
 			'title' => __('About Lit Sign Manufacturing | Custom Sign Manufacturer', 'litsign'),
-			'description' => __('Learn about Lit Sign Manufacturing, founded in 1998 by Tri Nguyen and serving retail and wholesale sign customers from Renton, WA.', 'litsign'),
+			'description' => __('Learn about Lit Sign Manufacturing, founded in 1998 by Tri Nguyen and serving retail storefronts from Renton, WA.', 'litsign'),
 		),
 		'contact' => array(
 			'title' => __('Contact Lit Sign Manufacturing | Request a Sign Quote', 'litsign'),
-			'description' => __('Contact Lit Sign Manufacturing in Renton, WA about custom signage, wholesale orders, installation, and your next sign project.', 'litsign'),
+			'description' => __('Contact Lit Sign Manufacturing in Renton, WA about custom storefront signs, installation, and your next sign project.', 'litsign'),
 		),
 		'brands' => array(
 			'title' => __('Sign Brands and Products | Lit Sign Manufacturing', 'litsign'),
-			'description' => __('Explore sign products and brands available from Lit Sign Manufacturing for retail and wholesale sign customers.', 'litsign'),
+			'description' => __('Explore sign products and brands available from Lit Sign Manufacturing for retail storefronts.', 'litsign'),
 		),
 		'equipment' => array(
 			'title' => __('Sign Equipment | Lit Sign Manufacturing', 'litsign'),
@@ -1147,11 +1147,11 @@ function wholesale_seo_page_defaults()
 		),
 		'parts' => array(
 			'title' => __('Sign Parts and Supplies | Lit Sign Manufacturing', 'litsign'),
-			'description' => __('Shop sign parts and supplies from Lit Sign Manufacturing for retail projects and wholesale sign production.', 'litsign'),
+			'description' => __('Shop sign parts and supplies from Lit Sign Manufacturing for retail sign projects.', 'litsign'),
 		),
 		'sign-company-landing-page' => array(
 			'title' => __('Custom Sign Manufacturing | Lit Sign Manufacturing', 'litsign'),
-			'description' => __('Lit Sign Manufacturing creates custom signs for businesses and sign shops, with retail and wholesale service from Renton, WA.', 'litsign'),
+			'description' => __('Lit Sign Manufacturing creates custom signs for retail storefronts from Renton, WA.', 'litsign'),
 		),
 	);
 }
@@ -1215,12 +1215,12 @@ add_filter('document_title_parts', function ($parts) {
 		$term_slug = $term_slug ? sanitize_title($term_slug) : (isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : '');
 		$term = $term_slug ? get_term_by('slug', $term_slug, 'product_category') : false;
 		$parts['title'] = $term && !is_wp_error($term)
-			? sprintf(__('%s | Wholesale Signage | Lit Sign Manufacturing', 'litsign'), $term->name)
-			: __('Wholesale Channel Letters & Custom Signage | Lit Sign Manufacturing', 'litsign');
+			? sprintf(__('%s | Custom Storefront Signs', 'litsign'), $term->name)
+			: __('Custom Channel Letter Signs | Storefront Sign Online', 'litsign');
 		$parts['site'] = '';
 		$parts['tagline'] = '';
 	} elseif (is_front_page() || is_home()) {
-		$parts['title'] = __('Wholesale Channel Letters & Custom Signage | Lit Sign Manufacturing', 'litsign');
+		$parts['title'] = __('Custom Channel Letter Signs | Storefront Sign Online', 'litsign');
 		$parts['site'] = '';
 		$parts['tagline'] = '';
 	} elseif (is_singular('product')) {
@@ -1420,6 +1420,115 @@ function wholesale_seo_head()
 	echo '<script type="application/ld+json">' . wp_json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
 }
 add_action('wp_head', 'wholesale_seo_head', 1);
+
+/**
+ * Identify the public channel-letter category route.
+ */
+function wholesale_is_channel_letters_page()
+{
+	$term_slug = get_query_var('category_slug');
+
+	if (!$term_slug && is_page_template('home.php')) {
+		$term_slug = 'channel-letters';
+	}
+
+	return 'channel-letters' === sanitize_title($term_slug);
+}
+
+/**
+ * Keep Rank Math metadata aligned with the channel-letter landing page.
+ */
+function wholesale_rank_math_channel_letters_title($title)
+{
+	if (wholesale_is_channel_letters_page()) {
+		return __('Custom Channel Letter Signs | Storefront Sign Online', 'litsign');
+	}
+
+	return $title;
+}
+add_filter('rank_math/frontend/title', 'wholesale_rank_math_channel_letters_title');
+
+function wholesale_rank_math_channel_letters_description($description)
+{
+	if (wholesale_is_channel_letters_page()) {
+		return __('Custom channel letter signs for retail storefronts. Explore LED options, materials, installation details, and request a quote.', 'litsign');
+	}
+
+	return $description;
+}
+add_filter('rank_math/frontend/description', 'wholesale_rank_math_channel_letters_description');
+
+/**
+ * Add accurate service and business entities without duplicating Rank Math's
+ * Organization or LocalBusiness entities when they already exist.
+ */
+function wholesale_rank_math_json_ld($data, $jsonld)
+{
+	if (!is_array($data)) {
+		return $data;
+	}
+
+	$has_organization = false;
+	$has_local_business = false;
+
+	foreach ($data as $entity) {
+		if (!is_array($entity)) {
+			continue;
+		}
+
+		$types = isset($entity['@type']) ? (array) $entity['@type'] : array();
+		$has_organization = $has_organization || in_array('Organization', $types, true);
+		$has_local_business = $has_local_business || in_array('LocalBusiness', $types, true);
+	}
+
+	$organization_id = trailingslashit(home_url('/')) . '#organization';
+	$organization = array(
+		'@type' => 'Organization',
+		'@id' => $organization_id,
+		'name' => 'Lit Sign Manufacturing LLC',
+		'url' => home_url('/'),
+		'telephone' => '+1-866-436-2101',
+	);
+	$local_business = array(
+		'@type' => 'LocalBusiness',
+		'@id' => trailingslashit(home_url('/')) . '#localbusiness',
+		'name' => 'Lit Sign Manufacturing LLC',
+		'url' => home_url('/'),
+		'parentOrganization' => array('@id' => $organization_id),
+		'telephone' => '+1-866-436-2101',
+		'address' => array(
+			'@type' => 'PostalAddress',
+			'streetAddress' => '707 S. Grady Way Suite 600',
+			'addressLocality' => 'Renton',
+			'addressRegion' => 'WA',
+			'postalCode' => '98057',
+			'addressCountry' => 'US',
+		),
+	);
+
+	if (!$has_organization) {
+		$data['site-organization'] = $organization;
+	}
+
+	if (!$has_local_business) {
+		$data['site-local-business'] = $local_business;
+	}
+
+	if (wholesale_is_channel_letters_page()) {
+		$data['channel-letters-service'] = array(
+			'@type' => 'Service',
+			'@id' => trailingslashit(wholesale_category_url('channel-letters')) . '#service',
+			'name' => 'Custom Channel Letter Signs',
+			'serviceType' => 'Channel letter signs',
+			'description' => 'LED illuminated channel letters for retail storefronts, with front-lit, reverse-lit, and front-and-back lit options.',
+			'url' => wholesale_category_url('channel-letters'),
+			'provider' => array('@id' => $organization_id),
+		);
+	}
+
+	return $data;
+}
+add_filter('rank_math/json_ld', 'wholesale_rank_math_json_ld', 20, 2);
 
 /**
  * Emit the business identity required for local and organization search

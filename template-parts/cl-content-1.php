@@ -32,11 +32,11 @@
                     <li><strong>LED illuminated</strong></li>
                 </ul>
                 <p style="padding-left: 40px;"><strong>Buying Options</strong></p>
-                <p style="padding-left: 40px;"><img src="https://www.b2sign.com/image/item/230726/rw6efOzY.png" alt="Warning" width="450" /></p>
+                <p style="padding-left: 40px;"><img src="https://www.b2sign.com/image/item/230726/rw6efOzY.png" alt="Front-lit channel letter buying options" width="450" loading="lazy" decoding="async" /></p>
                 <p style="padding-left: 40px;">Front Lit</p>
                 <p style="padding-left: 40px;"><strong>Material Options</strong></p>
-                <p style="padding-left: 40px;"><img class="alignnone wp-image-245 " src="https://mystorefrontsigns.com/wp-content/uploads/2024/06/SIGN-spec-detail-2-1.png" alt="" width="450" height="267" /></p>
-                <p style="padding-left: 40px;"><img class="" src="https://www.b2sign.com/image/item/230725/Kz3iANVm.png" alt="Warning" width="27" height="25" /><strong>WARNING:</strong> This product can expose you to chemicals including Diisononyl phthalate (DINP), which is known to the State of California to cause cancer. For more information go to  <a href="https://www.P65Warnings.ca.gov" target="_blank" rel="noopener">www.P65Warnings.ca.gov </a>.</p>
+                <p style="padding-left: 40px;"><img class="alignnone wp-image-245 " src="https://mystorefrontsigns.com/wp-content/uploads/2024/06/SIGN-spec-detail-2-1.png" alt="Channel letter sign material options" width="450" height="267" loading="lazy" decoding="async" /></p>
+                <p style="padding-left: 40px;"><img class="" src="https://www.b2sign.com/image/item/230725/Kz3iANVm.png" alt="California Proposition 65 warning" width="27" height="25" loading="lazy" decoding="async" /><strong>WARNING:</strong> This product can expose you to chemicals including Diisononyl phthalate (DINP), which is known to the State of California to cause cancer. For more information go to  <a href="https://www.P65Warnings.ca.gov" target="_blank" rel="noopener">www.P65Warnings.ca.gov </a>.</p>
 
             </div>
         </div>
@@ -63,7 +63,7 @@
                                 </div>
                                 <div>1/8” Clear Lexan</div>
                             </div>
-                            <div><img src="https://www.b2sign.com/image/item/230817/3QYSyhl8.png" /></div>
+                            <div><img src="https://www.b2sign.com/image/item/230817/3QYSyhl8.png" alt="Clear Lexan channel letter back" loading="lazy" decoding="async" /></div>
                         </div>
                     </div>
                 </div>
@@ -85,10 +85,10 @@
                                 </div>
                                 <div>0.8mm/1mm stainless steel</div>
                             </div>
-                            <div><img src="https://www.b2sign.com/image/item/230817/Wyxn53DX.png" /></div>
+                            <div><img src="https://www.b2sign.com/image/item/230817/Wyxn53DX.png" alt="Stainless steel channel letter face" loading="lazy" decoding="async" /></div>
                             <div><a href="https://www.b2sign.com/item/download/L2UjHbpx"> Download Face Color Chart </a></div>
                         </div>
-                        <div><img src="https://www.b2sign.com/image/item/230817/HkmdZB4d.png" /></div>
+                        <div><img src="https://www.b2sign.com/image/item/230817/HkmdZB4d.png" alt="Channel letter face color chart" loading="lazy" decoding="async" /></div>
                     </div>
                 </div>
             </div>
@@ -109,10 +109,10 @@
                                 </div>
                                 <div>2" or 3" 0.8mm/1mm stainless steel Returns</div>
                             </div>
-                            <div><img src="https://www.b2sign.com/image/item/230817/RijfnE6r.png" /></div>
+                            <div><img src="https://www.b2sign.com/image/item/230817/RijfnE6r.png" alt="Stainless steel channel letter returns" loading="lazy" decoding="async" /></div>
                             <div><a href="https://www.b2sign.com/item/download/L2UjHbpx"> Download Return Color Chart </a></div>
                         </div>
-                        <div><img src="https://www.b2sign.com/image/item/230817/HkmdZB4d.png" /></div>
+                        <div><img src="https://www.b2sign.com/image/item/230817/HkmdZB4d.png" alt="Channel letter return color chart" loading="lazy" decoding="async" /></div>
                     </div>
                 </div>
             </div>
@@ -183,17 +183,17 @@
                                             <li>Self-tapping screws x20 (each segment)</li>
                                         </ul>
                                         <strong>Installation Guide:</strong>
-                                        <div><img class="" src="https://www.b2sign.com/image/item/240620/Oi7FPphd.jpg" width="557" height="418" />
+                                        <div><img class="" src="https://www.b2sign.com/image/item/240620/Oi7FPphd.jpg" alt="Channel letter raceway installation parts" width="557" height="418" loading="lazy" decoding="async" />
                                             <div>
                                                 <div>List out parts</div>
                                             </div>
                                         </div>
-                                        <div><img class="" src="https://www.b2sign.com/image/item/240620/2xljQILp.jpg" width="552" height="414" />
+                                        <div><img class="" src="https://www.b2sign.com/image/item/240620/2xljQILp.jpg" alt="Channel letter raceway assembly" width="552" height="414" loading="lazy" decoding="async" />
                                             <div>
                                                 <div>Assemble Raceway</div>
                                             </div>
                                         </div>
-                                        <div><img class="" src="https://www.b2sign.com/image/item/240620/N5m75sGP.jpg" width="532" height="399" />
+                                        <div><img class="" src="https://www.b2sign.com/image/item/240620/N5m75sGP.jpg" alt="Channel letter raceway hanger installation" width="532" height="399" loading="lazy" decoding="async" />
                                             <div>
                                                 <div>Put Hanger on</div>
                                             </div>
@@ -307,7 +307,7 @@
             <div id=":re:" class="MuiTabPanel-root MuiTabPanel-sizeMd MuiTabPanel-horizontal MuiTabPanel-variantPlain MuiTabPanel-colorNeutral MuiTabPanel-sizeMd css-1qoucup" role="tabpanel" aria-labelledby=":r9:">
                 <div class="_rich-text_1by3u_30">
                     <div>
-                        <div><img class="" src="https://www.b2sign.com/image/item/230814/yVkrUaTh.png" alt="pdf" width="83" height="83" /><a href="https://www.b2sign.com/item/download/lG1ary2h" target="_blank" rel="noopener">Channel Letter User Manual </a></div>
+                        <div><img class="" src="https://www.b2sign.com/image/item/230814/yVkrUaTh.png" alt="Channel letter user manual PDF" width="83" height="83" loading="lazy" decoding="async" /><a href="https://www.b2sign.com/item/download/lG1ary2h" target="_blank" rel="noopener">Channel Letter User Manual </a></div>
                     </div>
                 </div>
             </div>

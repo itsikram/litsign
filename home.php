@@ -44,6 +44,9 @@ $requested_category = $requested_category ? $requested_category : (isset($_REQUE
 $current_category = $requested_category ? sanitize_title($requested_category) : 'channel-letters';
 $is_default_category = !$requested_category;
 $current_term = get_term_by('slug', $current_category, 'product_category');
+$is_channel_letters = 'channel-letters' === $current_category;
+$contact_page = get_page_by_path('contact');
+$contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 
 $current_term_id = $current_term ?  $current_term->term_id : 0;
 $current_term_ref = get_term_meta($current_term_id, 'taxonomy-ref', true);
@@ -193,9 +196,28 @@ get_header();
             </div> -->
 
             <header class="shop-header">
-                <h1 class="text-center fs-2"><?php echo esc_html($current_term ? $current_term->name : __('Custom Signs', 'litsign')); ?></h1>
-                <p class="text-center fs-5 mb-0"><?php echo esc_html($current_term ? $current_term->description : __('Shop custom signage designed and built for your business.', 'litsign')); ?></p>
+                <h1 class="text-center fs-2"><?php echo esc_html($is_channel_letters ? __('Custom Channel Letter Signs', 'litsign') : ($current_term ? $current_term->name : __('Custom Signs', 'litsign'))); ?></h1>
+                <p class="text-center fs-5 mb-0"><?php echo esc_html($is_channel_letters ? __('Create a stronger storefront presence with custom LED channel letters made for retail businesses.', 'litsign') : ($current_term ? $current_term->description : __('Shop custom signage designed and built for your business.', 'litsign'))); ?></p>
+                <?php if ($is_channel_letters) : ?>
+                    <p class="text-center mt-3"><a class="btn btn-primary" href="<?php echo esc_url($contact_url); ?>">Request a Channel Letter Sign Quote</a></p>
+                <?php endif; ?>
             </header>
+            <?php if ($is_channel_letters) : ?>
+                <section class="channel-letters-seo-content" aria-labelledby="channel-letters-overview">
+                    <h2 id="channel-letters-overview">Custom Storefront Signs That Get Noticed</h2>
+                    <p>Our channel letter signs give retail storefronts a polished identity day and night. Choose custom channel letters with energy-efficient LED illumination, clear wiring diagrams, and a ready-to-install design.</p>
+                    <h2>Channel Letter Types</h2>
+                    <p>Available options include front-lit channel letters, reverse-lit (halo-lit) letters, and front-and-back lit combinations. We can also coordinate illuminated channel letters with a raceway when your storefront requires one.</p>
+                    <h2>Materials and LED Illumination</h2>
+                    <p>Channel letters use stainless steel faces and returns with clear Lexan backs, plus high-efficiency LED modules. Material, color, depth, and lighting choices can be matched to your storefront branding.</p>
+                    <h2>Manufacturing, Installation, and Warranty</h2>
+                    <p>Each sign is tested before shipment and includes wiring diagrams and an installation pattern. Outdoor channel letter signs are UL listed with sign section labels, and the listed LED modules and qualifying letters carry a five-year warranty.</p>
+                    <h2>Retail Storefront FAQ</h2>
+                    <details><summary>Are channel letter signs suitable for my storefront?</summary><p>Yes. Channel letters are designed for building facades and can be configured for daytime visibility and nighttime illumination.</p></details>
+                    <details><summary>Which lighting style should I choose?</summary><p>Front-lit, reverse-lit, and front-and-back lit options each create a different storefront effect. We can help you select the right look for your brand.</p></details>
+                    <details><summary>How do I start a channel letter sign project?</summary><p>Send your storefront details through our quote request and we will help with the sign configuration and next steps.</p></details>
+                </section>
+            <?php endif; ?>
             <div id="product-box-container" class="product-box-container d-flex flex-wrap">
 
                 <?php
@@ -242,7 +264,7 @@ get_header();
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-image-top">
                                     <?php echo wp_get_attachment_image($product_thumbnail_id, 'medium', false, array(
-                                        'alt' => esc_attr(get_the_title()),
+                                        'alt' => esc_attr($is_channel_letters ? 'Custom channel letter sign: ' . get_the_title() : get_the_title()),
                                         'loading' => $is_first_product ? 'eager' : 'lazy',
                                         'fetchpriority' => $is_first_product ? 'high' : 'auto',
                                         'decoding' => 'async',

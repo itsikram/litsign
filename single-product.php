@@ -200,7 +200,7 @@ get_header();
                         ?>
                             <div data-image="<?php echo $image; ?>" class="gallery-image-item">
 
-                                <img src="<?php echo esc_url($image); ?>" alt="<?php echo esc_attr(get_the_title()); ?>" loading="lazy" decoding="async">
+                                <img src="<?php echo esc_url($image); ?>" alt="<?php echo esc_attr($product_category_slug === 'channel-letters' ? 'Channel letter sign detail: ' . get_the_title() : get_the_title()); ?>" loading="lazy" decoding="async">
                             </div>
 
                         <?php

@@ -118,6 +118,7 @@ get_header();
 	<section class="landing-section" id="solutions">
 		<div class="landing-shell container">
 			<header class="landing-section-heading"><p class="landing-eyebrow">Stand out from the crowd</p><h2>Our <span>premium</span> sign solutions</h2><p>High quality custom signs that help your business stand out and grow.</p></header>
+			<p class="text-center"><a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>">Explore custom channel letter signs for your storefront</a></p>
 			<div class="landing-solution-grid product-box-container">
 				<?php if ($landing_products->have_posts()) : $index = 0; while ($landing_products->have_posts()) : $landing_products->the_post(); ?>
 					<article class="product-box landing-solution-card">

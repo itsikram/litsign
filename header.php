@@ -236,7 +236,11 @@ $logo_id = get_theme_mod('custom_logo');
 							} ?>
 						</div>
 						<div class="div-hamberger-container">
-							<img class="mobile-menu-trigger" src="<?php echo get_template_directory_uri() . '/img/harberger-icon.png'; ?>" alt="<?php esc_attr_e('Open menu', 'litsign'); ?>" width="128" height="128" decoding="async">
+							<button type="button" class="mobile-menu-trigger" aria-label="<?php esc_attr_e('Open menu', 'litsign'); ?>">
+								<span></span>
+								<span></span>
+								<span></span>
+							</button>
 						</div>
 					</div>
 					<div class="col-md-3 hide-on-mobile">

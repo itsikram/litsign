@@ -724,4 +724,62 @@ width: 25% !important;
   .dt-container .left-sidebar .left-sidebar-slider .left-slider-container {
     height: calc(100% - 44px);
   }
+
+  #costModal {
+    padding-right: 0 !important;
+  }
+
+  #costModal .modal-dialog {
+    width: auto;
+    max-width: none;
+    margin: 0.5rem;
+  }
+
+  #costModal .modal-content {
+    max-height: calc(100vh - 1rem);
+    overflow: hidden;
+  }
+
+  #costModal .modal-header,
+  #costModal .modal-footer {
+    flex-shrink: 0;
+    padding: 0.75rem;
+  }
+
+  #costModal .modal-title {
+    min-width: 0;
+    padding-right: 0.5rem;
+    font-size: 1rem;
+    line-height: 1.25;
+  }
+
+  #costModal .modal-body {
+    min-height: 0;
+    padding: 0.75rem;
+    overflow-y: auto;
+  }
+
+  #costModal .cost-breakdown-table {
+    width: 100%;
+    margin: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #costModal .cost-breakdown-table table {
+    min-width: 620px;
+    margin-bottom: 0;
+    font-size: 0.8rem;
+    white-space: nowrap;
+  }
+
+  #costModal .cost-breakdown-table th,
+  #costModal .cost-breakdown-table td {
+    padding: 0.45rem 0.5rem;
+    vertical-align: middle;
+  }
+
+  #costModal .modal-footer .btn {
+    min-width: 88px;
+  }
 }

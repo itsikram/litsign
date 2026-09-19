@@ -435,21 +435,23 @@ get_header();
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <table class="table table-bordered text-center">
-                    <thead>
-                        <tr>
-                            <th scope="col">Id</th>
-                            <th scope="col">Type</th>
-                            <th scope="col">Dimension</th>
-                            <th scope="col">Cost</th>
-                            <th scope="col">Face Cost</th>
-                            <th scope="col">Price</th>
-                        </tr>
-                    </thead>
-                    <tbody id="detailTableBody" data-haslitoption="<?php echo $is_lit_option ?>">
+                <div class="table-responsive cost-breakdown-table">
+                    <table class="table table-bordered text-center">
+                        <thead>
+                            <tr>
+                                <th scope="col">Id</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Dimension</th>
+                                <th scope="col">Cost</th>
+                                <th scope="col">Face Cost</th>
+                                <th scope="col">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailTableBody" data-haslitoption="<?php echo $is_lit_option ?>">
 
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

@@ -313,7 +313,7 @@ class Cart
 
 
         if(strlen($attachment_src) > 5) {
-            $attachment_src = "<a href='".$attachment_src."' target='_blank'>Open</a>";
+            $attachment_src = esc_url_raw($attachment_src);
         }
 
 

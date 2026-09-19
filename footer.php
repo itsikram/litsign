@@ -26,7 +26,7 @@
         <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bd-2.webp?ver=' . _S_VERSION); ?>" alt="" loading="lazy" decoding="async">
     </div>
     <div class="container mt-3 text-center">
-        <a href="<?php echo home_url(); ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
+        <a href="<?php echo home_url() . '/channel-letters'; ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
 
     </div>
 
@@ -104,6 +104,15 @@
                     </div>
 
                     <a href="tel:866-436-2101" class="btn btn-primary my-2">Call Now</a>
+                    
+                    <div class="footer-text-gray mt-3">
+                        Cell Phone:
+                    </div>
+                    <div class="footer-text-light footer-separator pb-3">
+                        206-618-6543 <br />
+                        <small style="font-size: 0.85em; color: #888;">Sending text messages is ok via this number</small>
+                    </div>
+                    
                     <div class="footer-text-gray mt-3">
                         Live Chat:
                     </div>
@@ -123,26 +132,57 @@
                         We value your input. If you have suggestions or feedback, let us know. Your message is important
                         to us.
                     </div>
-                    <button type="button" class="btn btn-primary my-3" id="feedbackmodalTrigger">
-                        Leave Feedback
+                    <button type="button" class="btn btn-primary my-3" id="feedbackmodalTrigger" data-toggle="modal" data-target="#feedbackModal">
+                        Leave a Review
                     </button>
 
                     <!-- Modal -->
-                    <div class="modal" id="feedbackModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+                    <div class="modal fade" id="feedbackModal" tabindex="-1" role="dialog" aria-labelledby="feedbackModalTitle" aria-hidden="true">
                         <div class="modal-dialog" role="document">
                             <div class="modal-content">
                                 <div class="modal-header">
-                                    <h5 class="modal-title" id="exampleModalLabel">Modal title</h5>
+                                    <h5 class="modal-title" id="feedbackModalTitle">Share your experience</h5>
                                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
                                 </div>
                                 <div class="modal-body">
-                                    ...
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                                    <button type="button" class="btn btn-primary">Save changes</button>
+                                    <?php
+                                    $review_status = isset($_GET['review_status']) ? sanitize_key(wp_unslash($_GET['review_status'])) : '';
+                                    if ('sent' === $review_status) :
+                                    ?>
+                                        <div class="alert alert-success" role="status">Thank you for sharing your review. Our team will review it shortly.</div>
+                                    <?php elseif ('error' === $review_status) : ?>
+                                        <div class="alert alert-danger" role="alert">Please complete every field and try again.</div>
+                                    <?php endif; ?>
+                                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                                        <input type="hidden" name="action" value="submit_review">
+                                        <?php wp_nonce_field('submit_review', 'review_nonce'); ?>
+                                        <div class="form-group">
+                                            <label for="review-name">Your name</label>
+                                            <input class="form-control" id="review-name" name="review_name" type="text" required autocomplete="name">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="review-email">Email address</label>
+                                            <input class="form-control" id="review-email" name="review_email" type="email" required autocomplete="email">
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="review-rating">Your rating</label>
+                                            <select class="form-control" id="review-rating" name="review_rating" required>
+                                                <option value="">Select a rating</option>
+                                                <option value="5">5 - Excellent</option>
+                                                <option value="4">4 - Very good</option>
+                                                <option value="3">3 - Good</option>
+                                                <option value="2">2 - Fair</option>
+                                                <option value="1">1 - Needs improvement</option>
+                                            </select>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="review-message">Your review</label>
+                                            <textarea class="form-control" id="review-message" name="review_message" rows="5" required></textarea>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Submit review</button>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -170,6 +210,14 @@
 </footer>
 
 </div><!-- #page -->
+
+<?php if (isset($_GET['review_status']) && in_array(sanitize_key(wp_unslash($_GET['review_status'])), array('sent', 'error'), true)) : ?>
+    <script>
+        jQuery(function ($) {
+            $('#feedbackModal').modal('show');
+        });
+    </script>
+<?php endif; ?>
 
 <?php wp_footer(); ?>
 

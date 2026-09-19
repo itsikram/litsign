@@ -144,16 +144,8 @@ get_header();
 
                                         }
 
-                                        if(preg_match('/u201d/i',$value)) {
-                                            ?>
-                                        <strong><?php echo $name; ?>: </strong><?php echo str_replace('u201d', '”',$value); ?> <br>
-
-                                            <?php
-                                            continue;
-                                        } 
-
                                     ?>
-                                        <strong><?php echo $name; ?>: </strong><?php echo $value; ?> <br>
+                                        <strong><?php echo esc_html($name); ?>: </strong><?php echo wholesale_format_order_detail_value($name, $value); ?> <br>
 
                                       <?php } ?>
                                       <?php  if($cart_item -> job_name) {

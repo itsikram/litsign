@@ -99,7 +99,7 @@ function render_order_attr_meta_box()
                                     continue;
                                 }
                                 $detail_label = esc_html((string) $name);
-                                $detail_value = is_scalar($value) ? esc_html(str_replace('u201d', '”', (string) $value)) : '';
+                                $detail_value = wholesale_format_order_detail_value($name, $value);
                             ?>
                                 <strong><?php echo $detail_label; ?>: </strong><?php echo $detail_value; ?> <br>
                             <?php }

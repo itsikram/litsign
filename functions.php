@@ -204,6 +204,22 @@ function wholesale_setup()
 		'capability_type' => 'post',
 		'map_meta_cap' => true,
 	));
+	register_post_type('review_submission', array(
+		'label' => 'Review Submissions',
+		'labels' => array(
+			'name' => 'Review Submissions',
+			'singular_name' => 'Review Submission',
+			'edit_item' => 'View Review Submission',
+		),
+		'public' => false,
+		'show_ui' => true,
+		'show_in_menu' => true,
+		'show_in_rest' => false,
+		'supports' => array('title', 'editor'),
+		'menu_icon' => 'dashicons-star-filled',
+		'capability_type' => 'post',
+		'map_meta_cap' => true,
+	));
 
 
 
@@ -270,6 +286,60 @@ function wholesale_contact_admin_recipients()
 
 	return array_values(array_unique(array_filter(array_map('sanitize_email', $recipients))));
 }
+
+/**
+ * Process a public review submission.
+ */
+function wholesale_handle_review_submission()
+{
+	$redirect_url = wp_get_referer() ? wp_get_referer() : home_url('/');
+	$nonce = isset($_POST['review_nonce']) ? sanitize_text_field(wp_unslash($_POST['review_nonce'])) : '';
+
+	if (!wp_verify_nonce($nonce, 'submit_review')) {
+		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . '#feedbackModal');
+		exit;
+	}
+
+	$name = isset($_POST['review_name']) ? sanitize_text_field(wp_unslash($_POST['review_name'])) : '';
+	$email = isset($_POST['review_email']) ? sanitize_email(wp_unslash($_POST['review_email'])) : '';
+	$rating = isset($_POST['review_rating']) ? absint($_POST['review_rating']) : 0;
+	$review = isset($_POST['review_message']) ? sanitize_textarea_field(wp_unslash($_POST['review_message'])) : '';
+
+	if (!$name || !is_email($email) || $rating < 1 || $rating > 5 || !$review) {
+		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . '#feedbackModal');
+		exit;
+	}
+
+	$submission_id = wp_insert_post(array(
+		'post_type' => 'review_submission',
+		'post_status' => 'pending',
+		'post_title' => sprintf('%d-star review from %s', $rating, $name),
+		'post_content' => $review,
+		'meta_input' => array(
+			'_review_name' => $name,
+			'_review_email' => $email,
+			'_review_rating' => $rating,
+		),
+	), true);
+
+	if (is_wp_error($submission_id)) {
+		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . '#feedbackModal');
+		exit;
+	}
+
+	$subject = sprintf('New %d-star customer review from %s', $rating, $name);
+	$body = "Name: {$name}\nEmail: {$email}\nRating: {$rating}/5\n\nReview:\n{$review}\n";
+	$headers = array(
+		'Content-Type: text/plain; charset=UTF-8',
+		'Reply-To: ' . $name . ' <' . $email . '>',
+	);
+	$sent = wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers);
+
+	wp_safe_redirect(add_query_arg('review_status', $sent ? 'sent' : 'error', $redirect_url) . '#feedbackModal');
+	exit;
+}
+add_action('admin_post_nopriv_submit_review', 'wholesale_handle_review_submission');
+add_action('admin_post_submit_review', 'wholesale_handle_review_submission');
 
 function wholesale_contact_submission_columns($columns)
 {
@@ -653,6 +723,31 @@ function wholesale_decode_order_meta_array($value)
 	return is_array($unserialized) ? $unserialized : array();
 }
 
+function wholesale_format_order_detail_value($name, $value)
+{
+	if (!is_scalar($value)) {
+		return '';
+	}
+
+	$value = str_replace('u201d', '”', (string) $value);
+	$link_fields = array('Design Url', 'My Artwork');
+
+	if (in_array((string) $name, $link_fields, true)) {
+		$url = '';
+		if (preg_match('/href\s*=\s*[\'"]([^\'"]+)[\'"]/i', $value, $matches)) {
+			$url = $matches[1];
+		} elseif (filter_var(trim($value), FILTER_VALIDATE_URL)) {
+			$url = trim($value);
+		}
+
+		if ($url) {
+			return '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">Open</a>';
+		}
+	}
+
+	return esc_html($value);
+}
+
 function wholesale_send_new_order_admin_email($post_id, $post, $update)
 {
 	if ($post->post_type !== 'order') {
@@ -707,7 +802,7 @@ function wholesale_send_new_order_admin_email($post_id, $post, $update)
 		if (!empty($product['product_details']) && is_array($product['product_details'])) {
 			foreach ($product['product_details'] as $name => $value) {
 				if ($value !== null && $value !== '') {
-					$details[] = esc_html($name . ': ' . $value);
+					$details[] = '<strong>' . esc_html($name) . ':</strong> ' . wholesale_format_order_detail_value($name, $value);
 				}
 			}
 		}

@@ -101,7 +101,7 @@ get_header();
                                             continue;
                                         }
                                         $label = esc_html($name);
-                                        $display_value = is_scalar($value) ? esc_html(str_replace('u201d', '”', (string) $value)) : '';
+                                        $display_value = wholesale_format_order_detail_value($name, $value);
                                     ?>
                                             <strong><?php echo $label; ?>: </strong><?php echo $display_value; ?> <br>
                                     <?php }

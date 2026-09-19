@@ -1174,7 +1174,7 @@ let updatePreview = (type = null, node = null) => {
 
     previewLayer.add(previewNode);
     previewNodeLists.push(previewNode);
-
+    previewLayer.batchDraw();
 }
 
 
@@ -2347,6 +2347,7 @@ let showLeftSlider = (data, type, column) => {
     document.getElementById('leftSidebarSlider').style.left = '100%';
     document.getElementById('leftSidebarSlider').style.opacity = '1';
     document.getElementById('leftSidebarSlider').style.width = (220 * column) + 'px';
+    document.getElementById('leftSidebarSlider').classList.add('is-open');
 
 }
 let hideLeftSlider = () => {
@@ -2354,6 +2355,7 @@ let hideLeftSlider = () => {
     let column = sliderWidth / 220
     document.getElementById('leftSidebarSlider').style.left = (column * -220) + 'px';
     document.getElementById('leftSidebarSlider').style.opacity = '0';
+    document.getElementById('leftSidebarSlider').classList.remove('is-open');
     document.querySelector('.left-slider-container').classList.remove('direction-right');
 
 }
@@ -2690,15 +2692,40 @@ var previewBackground = new Konva.Rect({
 const previewLayer = new Konva.Layer();
 previewStage.add(previewLayer)
 previewLayer.add(previewBackground);
+
+function resizePreviewStage() {
+    const width = previewContainer.clientWidth;
+    const height = previewContainer.clientHeight;
+    if (!width || !height) {
+        return;
+    }
+
+    previewCanvasWidth = width;
+    previewCanvasHeight = height;
+    previewStage.width(width);
+    previewStage.height(height);
+    previewBackground.width(width);
+    previewBackground.height(height);
+    const emptyStateText = previewStage.findOne('.preview-empty-state');
+    if (emptyStateText) {
+        emptyStateText.position({
+            x: (width - emptyStateText.width()) / 2,
+            y: (height - emptyStateText.height()) / 2
+        });
+    }
+    previewLayer.batchDraw();
+}
+
 let previewNoItemText = () => {
     let noItemText = new Konva.Text({
+        name: 'preview-empty-state',
         text: 'No item selected',
         fontSize: 22,
         fill: 'gray'
     })
 
-    noItemText.x((previewStage.width() / 2) - (noItemText.width() / 2))
-    noItemText.y((previewStage.height() / 2) - (noItemText.height()))
+    noItemText.x((previewStage.width() - noItemText.width()) / 2)
+    noItemText.y((previewStage.height() - noItemText.height()) / 2)
 
     previewLayer.add(noItemText)
     previewNodeLists.push(noItemText);
@@ -2742,7 +2769,7 @@ window.addEventListener('load', function (e) {
     //     // Set the source of the image
     //     imageObj.src = 'http://localhost/wholesale/wp-content/themes/wholesale/img/dual-color-black.jpeg'; // Replace with your image URL
     //   });
-    function addText(text, x = canvasWidth / 2, y = canvasHeight / 2, isUpdateId = false) {
+    function addText(text, x = stage.width() / 2, y = stage.height() / 2, isUpdateId = false) {
         dualColorBg = 'http://localhost/wholesale/wp-content/themes/wholesale/img/dual-color-black.jpeg'; //
         var imageObj = new Image();
         imageObj.src = dualColorBg;
@@ -3125,6 +3152,12 @@ window.addEventListener('load', function (e) {
 
                 break;
         }
+
+        // Center each new shape using the current stage size, including on mobile.
+        const shapeBounds = shape.getClientRect({ skipTransform: true });
+        shape.x(shape.x() + (stage.width() / 2) - (shapeBounds.x + shapeBounds.width / 2));
+        shape.y(shape.y() + (stage.height() / 2) - (shapeBounds.y + shapeBounds.height / 2));
+
         selectedNodeType = shape.getClassName();
 
         updatePreview(previewnType, shape);
@@ -3537,11 +3570,11 @@ window.addEventListener('load', function (e) {
 
     let addRaceway = e => {
         // Create the rectangle
-        var rectWidth = 600;
+        var rectWidth = Math.min(600, Math.max(80, stage.width() - 24));
         var rectHeight = 80;
         var raceway = new Konva.Rect({
-            x: (canvasWidth - rectWidth) / 2,
-            y: (canvasHeight - rectHeight) / 2,
+            x: (stage.width() - rectWidth) / 2,
+            y: (stage.height() - rectHeight) / 2,
             width: rectWidth,
             height: rectHeight,
             fill: '#D3D3D3',
@@ -3758,10 +3791,22 @@ window.addEventListener('load', function (e) {
 
     window.addEventListener('resize', function () {
         var width = container.clientWidth;
-        var height = container.clientWidth;
+        var height = container.clientHeight;
+        if (!width || !height) {
+            return;
+        }
+
+        canvasWidth = width;
+        canvasHeight = height;
         stage.width(width);
         stage.height(height);
+        background.width(width);
+        background.height(height);
+        layer.batchDraw();
+        resizePreviewStage();
     });
+
+    resizePreviewStage();
 
 
     infoButtons.forEach(button => {
@@ -4935,6 +4980,31 @@ window.addEventListener('load', function (e) {
 
 
     bottomBarListItems.forEach(element => {
+        const bottomBarItem = element.closest('.bottombar-left-item');
+        if (bottomBarItem && !bottomBarItem.dataset.mobileToggleBound) {
+            bottomBarItem.dataset.mobileToggleBound = 'true';
+            bottomBarItem.addEventListener('click', function (event) {
+                if (event.target.closest('.bottombar-list-item')) {
+                    return;
+                }
+
+                document.querySelectorAll('.bottombar-left-item.is-open').forEach(item => {
+                    if (item !== this) {
+                        item.classList.remove('is-open');
+                    }
+                });
+                this.classList.toggle('is-open');
+            });
+            bottomBarItem.addEventListener('touchend', function (event) {
+                if (event.target.closest('.bottombar-list-item')) {
+                    return;
+                }
+
+                event.preventDefault();
+                this.click();
+            }, { passive: false });
+        }
+
         element.addEventListener('click', function (e) {
 
             let type = element.dataset.type;
@@ -5062,6 +5132,7 @@ window.addEventListener('load', function (e) {
 
             }
 
+            element.closest('.bottombar-left-item').classList.remove('is-open');
 
         });
     });

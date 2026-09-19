@@ -333,13 +333,91 @@ function wholesale_handle_review_submission()
 		'Content-Type: text/plain; charset=UTF-8',
 		'Reply-To: ' . $name . ' <' . $email . '>',
 	);
-	$sent = wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers);
+	wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers);
 
-	wp_safe_redirect(add_query_arg('review_status', $sent ? 'sent' : 'error', $redirect_url) . '#feedbackModal');
+	wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . '#feedbackModal');
 	exit;
 }
 add_action('admin_post_nopriv_submit_review', 'wholesale_handle_review_submission');
 add_action('admin_post_submit_review', 'wholesale_handle_review_submission');
+
+function wholesale_review_submission_columns($columns)
+{
+	return array(
+		'cb' => isset($columns['cb']) ? $columns['cb'] : '<input type="checkbox">',
+		'title' => 'Review',
+		'review_name' => 'Name',
+		'review_email' => 'Email',
+		'review_rating' => 'Rating',
+		'date' => 'Received',
+	);
+}
+add_filter('manage_review_submission_posts_columns', 'wholesale_review_submission_columns');
+
+function wholesale_review_submission_column_content($column, $post_id)
+{
+	$meta_keys = array(
+		'review_name' => '_review_name',
+		'review_email' => '_review_email',
+		'review_rating' => '_review_rating',
+	);
+
+	if (!isset($meta_keys[$column])) {
+		return;
+	}
+
+	$value = get_post_meta($post_id, $meta_keys[$column], true);
+
+	if ('review_email' === $column && is_email($value)) {
+		printf('<a href="mailto:%s">%s</a>', esc_attr($value), esc_html($value));
+		return;
+	}
+
+	if ('review_rating' === $column) {
+		echo esc_html($value . '/5');
+		return;
+	}
+
+	echo esc_html($value);
+}
+add_action('manage_review_submission_posts_custom_column', 'wholesale_review_submission_column_content', 10, 2);
+
+function wholesale_review_submission_details_meta_box($post)
+{
+	$fields = array(
+		'Name' => '_review_name',
+		'Email' => '_review_email',
+		'Rating' => '_review_rating',
+	);
+
+	echo '<table class="widefat striped"><tbody>';
+	foreach ($fields as $label => $meta_key) {
+		$value = get_post_meta($post->ID, $meta_key, true);
+		echo '<tr><td><strong>' . esc_html($label) . '</strong></td><td>';
+		if ('_review_email' === $meta_key && is_email($value)) {
+			printf('<a href="mailto:%s">%s</a>', esc_attr($value), esc_html($value));
+		} elseif ('_review_rating' === $meta_key) {
+			echo esc_html($value . '/5');
+		} else {
+			echo esc_html($value);
+		}
+		echo '</td></tr>';
+	}
+	echo '</tbody></table>';
+}
+
+function wholesale_review_submission_register_meta_box()
+{
+	add_meta_box(
+		'review-submission-details',
+		'Review Details',
+		'wholesale_review_submission_details_meta_box',
+		'review_submission',
+		'normal',
+		'high'
+	);
+}
+add_action('add_meta_boxes_review_submission', 'wholesale_review_submission_register_meta_box');
 
 function wholesale_contact_submission_columns($columns)
 {

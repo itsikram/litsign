@@ -132,7 +132,7 @@
                         We value your input. If you have suggestions or feedback, let us know. Your message is important
                         to us.
                     </div>
-                    <button type="button" class="btn btn-primary my-3" id="feedbackmodalTrigger" data-toggle="modal" data-target="#feedbackModal">
+                    <button type="button" class="btn btn-primary my-3" id="feedbackmodalTrigger" data-bs-toggle="modal" data-bs-target="#feedbackModal">
                         Leave a Review
                     </button>
 
@@ -142,7 +142,7 @@
                             <div class="modal-content">
                                 <div class="modal-header">
                                     <h5 class="modal-title" id="feedbackModalTitle">Share your experience</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
                                         <span aria-hidden="true">&times;</span>
                                     </button>
                                 </div>
@@ -211,15 +211,19 @@
 
 </div><!-- #page -->
 
+<?php wp_footer(); ?>
+
 <?php if (isset($_GET['review_status']) && in_array(sanitize_key(wp_unslash($_GET['review_status'])), array('sent', 'error'), true)) : ?>
     <script>
         jQuery(function ($) {
-            $('#feedbackModal').modal('show');
+            var feedbackModal = document.getElementById('feedbackModal');
+
+            if (feedbackModal && window.bootstrap) {
+                bootstrap.Modal.getOrCreateInstance(feedbackModal).show();
+            }
         });
     </script>
 <?php endif; ?>
-
-<?php wp_footer(); ?>
 
 </body>
 

@@ -282,7 +282,7 @@ $logo_id = get_theme_mod('custom_logo');
 				<div class="row header-bottom">
 					<div class="col d-flex justify-content-center align-items-center header-bottom-container">
 						<div class="megamenu-container">
-							<button id="allProductsBtn">All Products <i class="fa-solid fa-chevron-down"> </i></button>
+							<button id="allProductsBtn" aria-expanded="false" aria-controls="megaMenu">All Products <i class="fa-solid fa-chevron-down"> </i></button>
 							<div id="megaMenu" class="mega-menu">
 								<div class="container p-3">
 									<div class="row">
@@ -492,6 +492,7 @@ $logo_id = get_theme_mod('custom_logo');
 									</div>
 								</div>
 							</div>
+							<div class="mega-menu-backdrop" aria-hidden="true"></div>
 						</div>
 
 						<?php wp_nav_menu(array(

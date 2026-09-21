@@ -239,6 +239,9 @@
   z-index: 99999999;
   display: none;
 }
+.mega-menu-backdrop {
+  display: none;
+}
 .header-bottom-container .megamenu-container #megaMenu .col-md-4 {
   padding: 15px;
 }
@@ -1439,10 +1442,33 @@
     background: #ffffff;
     padding: 0 20px 28px;
     top: 0;
-    z-index: 1050;
+    z-index: 1200;
     overflow-y: auto;
     box-shadow: -10px 0 30px rgba(15, 23, 42, 0.2);
     overscroll-behavior: contain;
+  }
+
+  .main-header {
+    position: relative;
+    z-index: 1100;
+  }
+
+  .main-header .header-bottom-container,
+  .main-header .header-bottom-container .megamenu-container {
+    position: relative;
+    z-index: 1101;
+  }
+
+  .main-header .header-bottom-container .megamenu-container #megaMenu {
+    z-index: 1201;
+  }
+
+  .main-header.mega-menu-open .mega-menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(15, 23, 42, 0.38);
   }
 
   .mobile-menu-container .mobile-menu-header {
@@ -1758,6 +1784,50 @@
   .home .header-bottom-container .megamenu-container #allProductsBtn {
     padding: 6px 16px 10px;
     font-size: 15px;
+  }
+
+  .home .header-bottom-container .megamenu-container {
+    width: 100%;
+  }
+
+  .home .header-bottom-container .megamenu-container #megaMenu {
+    left: 50%;
+    width: 100vw;
+    max-height: calc(100vh - 118px);
+    overflow-y: auto;
+    border-radius: 0 0 14px 14px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+    transform: translateX(-50%);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .home .header-bottom-container .megamenu-container #megaMenu > .container {
+    width: 100%;
+    max-width: none;
+    padding: 16px 14px 20px !important;
+  }
+
+  .home .header-bottom-container .megamenu-container #megaMenu .row {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .home .header-bottom-container .megamenu-container #megaMenu .col-md-4 {
+    padding: 8px 4px;
+  }
+
+  .home .header-bottom-container .megamenu-container #megaMenu .mm-heading {
+    padding: 8px 4px;
+    margin-bottom: 4px;
+    font-size: 16px;
+    border-bottom-color: #dbe4ee;
+  }
+
+  .home .header-bottom-container .megamenu-container #megaMenu .mm-link {
+    min-height: 42px;
+    padding: 8px 6px;
+    border-radius: 6px;
+    font-size: 14px;
   }
 
   .home .main-header + .container,

@@ -767,8 +767,20 @@
     })
 
     $('#allProductsBtn').click( e => {
-      $('#megaMenu').toggle();
+      const button = $(e.currentTarget);
+      const menu = $('#megaMenu');
+      const isOpen = menu.is(':visible');
+
+      menu.stop(true, true).toggle(!isOpen);
+      button.attr('aria-expanded', String(!isOpen));
+      $('.main-header').toggleClass('mega-menu-open', !isOpen);
     })
+
+    $('.mega-menu-backdrop').click(() => {
+      $('#megaMenu').stop(true, true).hide();
+      $('#allProductsBtn').attr('aria-expanded', 'false');
+      $('.main-header').removeClass('mega-menu-open');
+    });
 
 
     //checkout page data 

@@ -112,6 +112,8 @@
                         206-618-6543 <br />
                         <small style="font-size: 0.85em; color: #888;">Sending text messages is ok via this number</small>
                     </div>
+
+                    <a href="sms:2066186543" class="btn btn-primary my-2">Send Message</a>
                     
                     <div class="footer-text-gray mt-3">
                         Live Chat:

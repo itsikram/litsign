@@ -948,8 +948,9 @@ let updatePreview = (type = null, node = null) => {
     }
     for (let i = 0; i < previewNodeLists.length; i++) {
         previewNodeLists[i].destroy();
-        previewLayer.batchDraw();
     }
+    previewNodeLists.length = 0;
+    previewLayer.batchDraw();
 
     if (!type && !node) {
         previewNoItemText();
@@ -1349,60 +1350,55 @@ function updateNode(sNode, meta = null) {
 
 // Function to zoom the stage with center focus
 function zoomStage(scaleFactor) {
-    var oldScaleX = stage.scaleX();
-    var oldScaleY = stage.scaleY();
-
-    // Calculate the new scale
-    var newScaleX = oldScaleX * scaleFactor;
-    var newScaleY = oldScaleY * scaleFactor;
-
-    var oldPos = stage.position();
-
-
-    // Apply the new scale and position to the stage
-    stage.scale({ x: newScaleX, y: newScaleY });
-
-    // Get the center of the viewport
-    var center = {
+    const oldScale = stage.scaleX();
+    const newScale = Math.min(3, Math.max(0.5, oldScale * scaleFactor));
+    const scaleRatio = newScale / oldScale;
+    const oldPos = stage.position();
+    const center = {
         x: stage.width() / 2,
         y: stage.height() / 2
     };
-
-    // Calculate the new position of the stage to keep the center fixed
-    var newPos = {
-        x: center.x - (center.x - oldPos.x) * (newScaleX / oldScaleX),
-        y: center.y - (center.y - oldPos.y) * (newScaleY / oldScaleY)
+    const newPos = {
+        x: center.x - (center.x - oldPos.x) * scaleRatio,
+        y: center.y - (center.y - oldPos.y) * scaleRatio
     };
 
+    stage.scale({ x: newScale, y: newScale });
+    stage.position(newPos);
 
-    //stage.position(newPos);
     stage.batchDraw();
-    var stageCenterX = (stage.width() * stage.scaleX()) / 2;
-    var stageCenterY = (stage.height() * stage.scaleY()) / 2;
-
-
 
     background.scale({
-        x: 1 / newScaleX,
-        y: 1 / newScaleY,
+        x: 1 / newScale,
+        y: 1 / newScale,
     })
+
+    // Keep the dimension indicators at their current screen position while
+    // the stage position changes to keep the zoom centered.
+    const indicatorOffset = {
+        x: oldPos.x - newPos.x,
+        y: oldPos.y - newPos.y,
+    };
 
     if (heightArrows != null) {
         heightArrows.scale({
-            x: 1 / newScaleX,
-            y: 1 / newScaleY,
+            x: 1 / newScale,
+            y: 1 / newScale,
         })
-        let currentHeightPos = heightArrows.position()
-
-        // heightArrows.x(20 * newScaleX)
-        // heightArrows.y(20 * newScaleY)
+        heightArrows.position({
+            x: heightArrows.x() + indicatorOffset.x,
+            y: heightArrows.y() + indicatorOffset.y,
+        });
     }
     if (widthArrows != null) {
         widthArrows.scale({
-            x: 1 / newScaleX,
-            y: 1 / newScaleY,
+            x: 1 / newScale,
+            y: 1 / newScale,
         })
-
+        widthArrows.position({
+            x: widthArrows.x() + indicatorOffset.x,
+            y: widthArrows.y() + indicatorOffset.y,
+        });
     }
 
     nodeLists.forEach(function (nodeObject, key) {
@@ -1415,8 +1411,6 @@ function zoomStage(scaleFactor) {
     })
 
     layer.draw();
-
-    updateHeightWidthDisplay()
 
 }
 
@@ -3626,26 +3620,47 @@ window.addEventListener('load', function (e) {
 
         layer.add(racewayText);
 
-        raceway.on('dragmove', e => {
-            racewayText.x(raceway.x() + ((raceway.width() * raceway.scaleX()) - racewayText.width()) / 2);
-            racewayText.y(raceway.y() + (raceway.height() * raceway.scaleY() / 2) - (racewayText.height()) / 2);
-            updateHeightWidthDisplay()
+        let racewayUpdateFrame = null;
+        let scheduleRacewayUpdate = () => {
+            if (racewayUpdateFrame !== null) {
+                return;
+            }
 
-            selectedNode = raceway;
-            updateHeightWidthInput(selectedNode.height() * selectedNode.scaleY(), selectedNode.width() * selectedNode.scaleX());
-            updatePreview('raceway', raceway)
-            updateLeftsideBar()
+            racewayUpdateFrame = requestAnimationFrame(() => {
+                racewayUpdateFrame = null;
+                racewayText.x(raceway.x() + ((raceway.width() * raceway.scaleX()) - racewayText.width()) / 2);
+                racewayText.y(raceway.y() + (raceway.height() * raceway.scaleY() / 2) - (racewayText.height()) / 2);
+                selectedNode = raceway;
+                updateHeightWidthDisplay();
+                updateHeightWidthInput(raceway.height() * raceway.scaleY(), raceway.width() * raceway.scaleX(), 'raceway');
+                updatePreview('raceway', raceway);
+                layer.batchDraw();
+            });
+        };
 
+        let persistRaceway = () => {
             store.dispatch({
                 type: 'UPDATE_ELEMENT', payload: {
                     'id': raceway._id,
+                    'type': 'Raceway',
+                    'cost': ((pxToIn(raceway.width() * raceway.scaleX()) / 12) * 50).toFixed(2),
+                    'width': pxToIn(raceway.width() * raceway.scaleX()),
+                    'height': pxToIn(raceway.height() * raceway.scaleY()),
                     x: raceway.x(),
                     y: raceway.y(),
+                    scale: {
+                        x: raceway.scaleX(),
+                        y: raceway.scaleY()
+                    }
                 }
             });
+        };
 
-
+        raceway.on('dragmove', e => {
+            scheduleRacewayUpdate();
         });
+
+        raceway.on('dragend', persistRaceway);
 
         raceway.on('click', e => {
             selectedNode = raceway;
@@ -3656,39 +3671,12 @@ window.addEventListener('load', function (e) {
         })
 
         raceway.on('transform', e => {
-            racewayText.x(((raceway.x() + (raceway.width() * raceway.scaleX()) / 2)) - (racewayText.width() / 2));
-            racewayText.y(raceway.y() + (((raceway.height() * raceway.scaleY()) / 2) - (racewayText.height() / 2)));
-            updateLeftsideBar()
-            updateHeightWidthDisplay()
-            selectedNode = raceway;
-            updatePreview('raceway', raceway)
-
-            layer.batchDraw();
-            updateHeightWidthInput(8, raceway.width() * raceway.scaleX(), 'raceway')
-
-            store.dispatch({
-                type: 'UPDATE_ELEMENT', payload: {
-                    'id': raceway._id,
-                    text,
-                    'type': 'Raceway',
-                    'cost': ((pxToIn(raceway.width() * raceway.scaleX()) / 12).toFixed(0) * 50).toFixed(2),
-                    'width': pxToIn(raceway.width() * raceway.scaleX()),
-                    'height': pxToIn(raceway.height() * raceway.scaleY()),
-                    x: raceway.x(),
-                    y: raceway.y(),
-                    scale: {
-                        x: raceway.scaleX(),
-                        y: raceway.scaleY()
-                    },
-
-                }
-            });
-
+            scheduleRacewayUpdate();
         })
+        raceway.on('transformend', persistRaceway);
         // Center the text within the rectangle
         racewayText.x(raceway.x() + (raceway.width() - racewayText.width()) / 2);
         racewayText.y(raceway.y() + (raceway.height() - racewayText.height()) / 2);
-        layer.add(racewayText);
 
         nodeLists.push({ type: 'raceway', node: raceway, id: currentElementIndex });
 
@@ -3771,11 +3759,21 @@ window.addEventListener('load', function (e) {
         triggerTransformEvent();
     }
 
-    let handleDrawEvent = () => {
-        updateLeftsideBar();
+    let sidebarUpdateFrame = null;
+    let handleDrawEvent = (event) => {
+        if (event.target && event.target.getAttr && event.target.getAttr('textIndex')) {
+            return;
+        }
+        if (sidebarUpdateFrame !== null) {
+            return;
+        }
+        sidebarUpdateFrame = requestAnimationFrame(() => {
+            sidebarUpdateFrame = null;
+            updateLeftsideBar();
+        });
     }
 
-    stage.on('draw dragmove transfrom', handleDrawEvent);
+    stage.on('dragmove transform', handleDrawEvent);
 
 
     drawHeightArrows(20, `0"`);
@@ -3789,22 +3787,42 @@ window.addEventListener('load', function (e) {
 
     // start script 
 
+    let resizeFrame = null;
     window.addEventListener('resize', function () {
+        if (resizeFrame !== null) {
+            return;
+        }
+        resizeFrame = requestAnimationFrame(() => {
+            resizeFrame = null;
+            resizeEditor();
+        });
+    });
+
+    function resizeEditor() {
         var width = container.clientWidth;
         var height = container.clientHeight;
         if (!width || !height) {
             return;
         }
 
+        const previousWidth = stage.width();
+        const previousHeight = stage.height();
+        const currentScale = stage.scaleX();
+        const currentPosition = stage.position();
+
         canvasWidth = width;
         canvasHeight = height;
         stage.width(width);
         stage.height(height);
+        stage.position({
+            x: currentPosition.x + ((previousWidth - width) / 2) * currentScale,
+            y: currentPosition.y + ((previousHeight - height) / 2) * currentScale
+        });
         background.width(width);
         background.height(height);
         layer.batchDraw();
         resizePreviewStage();
-    });
+    }
 
     resizePreviewStage();
 

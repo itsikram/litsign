@@ -3,7 +3,7 @@ Theme Name: Wholesale
 Author: Ikramul Islam
 Author URI: https://facebook.com/programmerikram
 Description: Description
-Version: 3.5.5
+Version: 3.5.8
 Tested up to: 7.1
 Requires PHP: 8
 License: GNU General Public License v2 or later
@@ -66,8 +66,8 @@ Nicolas Gallagher and Jonathan Neal https://necolas.github.io/normalize.css/
  * 2. Prevent adjustments of font size after orientation changes in iOS.
  */
 html {
-	line-height: 1.15;
-	-webkit-text-size-adjust: 100%;
+  line-height: 1.15;
+  -webkit-text-size-adjust: 100%;
 }
 
 /* Sections
@@ -77,6 +77,5 @@ html {
  * Remove the margin in all browsers.
  */
 body {
-	margin: 0;
+  margin: 0;
 }
-

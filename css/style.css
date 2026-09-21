@@ -1978,6 +1978,14 @@ a.link-primary:focus,
     z-index: 1100;
   }
 
+  .main-header.mobile-menu-open::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1150;
+    background: rgba(15, 23, 42, 0.42);
+  }
+
   .main-header .header-bottom-container,
   .main-header .header-bottom-container .megamenu-container {
     position: relative;

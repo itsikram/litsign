@@ -700,14 +700,25 @@
 
     // handle mobile menu close button click
 
+    const closeMobileMenu = () => {
+      $(".mobile-menu-container").stop(true, true).slideUp();
+      $(".main-header").removeClass("mobile-menu-open");
+    };
+
     $(".mobile-menu-close, .mobile-menu-container .menu-item").click((e) => {
-      $(".mobile-menu-container").slideUp();
+      closeMobileMenu();
     });
 
     // handel hamberger menu click
 
     $(".mobile-menu-trigger").click((e) => {
-      $(".mobile-menu-container").slideDown("fast");
+      e.stopPropagation();
+      $(".mobile-menu-container").stop(true, true).slideDown("fast");
+      $(".main-header").addClass("mobile-menu-open");
+    });
+
+    $(".main-header").on("click", (e) => {
+      if (e.target === e.currentTarget) closeMobileMenu();
     });
 
     $('.category-filter-toggler').click(e => {

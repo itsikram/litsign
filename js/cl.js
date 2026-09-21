@@ -1590,9 +1590,12 @@ function updateHeightWidthInput(height, width, type) {
         }
 
         if (!height) {
-          sizeHeightInput.value = 8;
+          sizeHeightInput.value = maxRacewayHeightInches.toFixed(1);
         } else {
-          sizeHeightInput.value = nodeHeight;
+          sizeHeightInput.value = Math.min(
+            maxRacewayHeightInches,
+            parseFloat(pxToIn(nodeHeight)),
+          ).toFixed(1);
         }
       }
 

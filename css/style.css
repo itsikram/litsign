@@ -1111,7 +1111,8 @@
 .home-hero {
   position: relative;
   overflow: hidden;
-  background: #061c3b;
+  background: #172027;
+  font-family: inherit;
 }
 
 .home-hero-content {
@@ -1139,7 +1140,7 @@
   margin: 0 0 13px;
   color: #f4f7fb;
   font-size: clamp(0.78rem, 1.05vw, 1.08rem);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.055em;
   line-height: 1.2;
   text-transform: uppercase;
@@ -1149,13 +1150,13 @@
   margin: 0;
   color: #fff;
   font-size: clamp(2.55rem, 4.1vw, 4.3rem);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.035em;
   line-height: 1.02;
 }
 
 .home-hero-copy h1 span {
-  color: #ff692d;
+  color: #1fa8de;
 }
 
 .home-hero-lead {
@@ -1180,17 +1181,17 @@
   min-height: 54px;
   padding: 0 28px;
   border-radius: 5px;
-  background: #ff692d;
+  background: #1fa8de;
   color: #fff;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: none;
   transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
 .home-hero-shop-button:hover,
 .home-hero-shop-button:focus-visible {
-  background: #e9571e;
+  background: #155579;
   color: #fff;
   transform: translateY(-2px);
 }
@@ -1207,7 +1208,7 @@
 
 .home-hero-video-link:hover,
 .home-hero-video-link:focus-visible {
-  color: #ff692d;
+  color: #1fa8de;
 }
 
 .home-hero-play {
@@ -1242,7 +1243,7 @@
   gap: 16px;
   padding: 8px 28px;
   border-right: 1px solid #e4e8ee;
-  color: #15304f;
+  color: #172027;
 }
 
 .home-hero-feature:first-child {
@@ -1256,7 +1257,7 @@
 
 .home-hero-feature-icon {
   flex: 0 0 42px;
-  color: #12385f;
+  color: #1d6fa5;
   font-size: 2.05rem;
   text-align: center;
 }

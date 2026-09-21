@@ -1383,6 +1383,13 @@ a.link-primary:focus,
   background-size: cover;
   background-position: center center;
 }
+.footer .footer-bg-image-1 img,
+.footer .footer-bg-image-2 img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
 .footer .footer-cp-text-container {
   background: #222222;
   padding: 30px 0;
@@ -2442,7 +2449,7 @@ a.link-primary:focus,
     background-repeat: no-repeat;
   }
   .footer .footer-bg-image-2 {
-    min-height: 400px;
+    min-height: auto;
     background-size: 200%;
     background-repeat: no-repeat;
   }

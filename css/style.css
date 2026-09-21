@@ -6,6 +6,22 @@
   src: url("../webfonts/fa-solid-900.woff2") format("woff2");
 }
 
+:root {
+  --bs-primary: #1fa8de;
+  --bs-primary-rgb: 31, 168, 222;
+  --bs-link-color: #1fa8de;
+  --bs-link-color-rgb: 31, 168, 222;
+  --bs-link-hover-color: #1fa8de;
+  --bs-link-hover-color-rgb: 31, 168, 222;
+}
+
+a.link-primary,
+a.link-primary:hover,
+a.link-primary:focus,
+.text-primary {
+  color: #1fa8de !important;
+}
+
 #select-face,
 #select-trimcap,
 #select-return {

@@ -265,9 +265,8 @@ get_header();
                                 ?>
                                     <div class="cl-buttons-container text-center">
                                         <a href="<?php echo home_url() . '/channel-letter-builder/?product_id=' . get_the_ID(); ?>" class="start-from-scratch">
-                                            Start From Scratch
-                                            <br />
-                                            <small> (Optional - if you don’t have a file)</small>
+                                            <span>Start From Scratch</span>
+                                            <small>Optional if you don’t have a file</small>
                                         </a>
                                     </div>
                                 <?php } ?>

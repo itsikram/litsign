@@ -3385,17 +3385,43 @@ a.link-primary:focus,
 .product-details .start-from-scratch,
 .product-details .delete-current-design {
   display: inline-flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 3px;
   justify-content: center;
   width: 100%;
-  padding: 11px 16px;
+  min-height: 58px;
+  padding: 10px 16px;
   border-radius: 8px;
   font-weight: 700;
+  line-height: 1.25;
   text-decoration: none;
+}
+.product-details .start-from-scratch small {
+  display: block;
+  margin: 0;
+  color: #527184;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
 }
 .product-details .start-from-scratch {
   border: 1px solid #1fa8de;
   background: #effaff;
   color: #137da7;
+  transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.product-details .start-from-scratch:hover,
+.product-details .start-from-scratch:focus-visible {
+  border-color: #168fbe;
+  background: #e2f7fd;
+  color: #0d7299;
+  box-shadow: 0 6px 14px rgba(31, 168, 222, .16);
+  transform: translateY(-1px);
+}
+.product-details .start-from-scratch:focus-visible {
+  outline: 3px solid rgba(31, 168, 222, .2);
+  outline-offset: 2px;
 }
 .product-details .delete-current-design {
   color: #b33a3a;

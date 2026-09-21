@@ -1536,10 +1536,14 @@ function updateHeightWidthDisplay(skipDraw = false) {
       let arrowWidth = arrowPoints[6] - arrowPoints[0];
       let arrowHeight = arrowPoints[9] - arrowPoints[5];
 
-      minLeft = arrowPoints[0] + firstNode.node.x();
-      minRight = arrowPoints[6] + firstNode.node.x();
-      minTop = arrowPoints[5] + firstNode.node.y();
-      minBottom = arrowPoints[9] + firstNode.node.y();
+      minLeft =
+        arrowPoints[0] * firstNode.node.scaleX() + firstNode.node.x();
+      minRight =
+        arrowPoints[6] * firstNode.node.scaleX() + firstNode.node.x();
+      minTop =
+        arrowPoints[5] * firstNode.node.scaleY() + firstNode.node.y();
+      minBottom =
+        arrowPoints[9] * firstNode.node.scaleY() + firstNode.node.y();
 
       break;
 
@@ -1606,10 +1610,14 @@ function updateHeightWidthDisplay(skipDraw = false) {
         let arrowWidth = arrowPoints[6] - arrowPoints[0];
         let arrowHeight = arrowPoints[9] - arrowPoints[5];
 
-        nodeLeft = arrowPoints[0] + singleNode.node.x();
-        nodeRight = arrowPoints[6] + singleNode.node.x();
-        nodeTop = arrowPoints[5] + singleNode.node.y();
-        nodeBottom = arrowPoints[9] + singleNode.node.y();
+        nodeLeft =
+          arrowPoints[0] * singleNode.node.scaleX() + singleNode.node.x();
+        nodeRight =
+          arrowPoints[6] * singleNode.node.scaleX() + singleNode.node.x();
+        nodeTop =
+          arrowPoints[5] * singleNode.node.scaleY() + singleNode.node.y();
+        nodeBottom =
+          arrowPoints[9] * singleNode.node.scaleY() + singleNode.node.y();
 
         break;
 
@@ -3331,6 +3339,9 @@ window.addEventListener("load", function (e) {
       updateLeftsideBar();
       updateFocusedTransformer(shape);
     });
+    if (shape.getClassName() === "Line") {
+      shape.on("dragmove", scheduleHeightWidthDisplayUpdate);
+    }
     shape.on("dragend", persistShape);
 
     let shapeTransformFrame = null;
@@ -3490,16 +3501,7 @@ window.addEventListener("load", function (e) {
     });
 
     shape.on("transformend", (e) => {
-      if (shape.getClassName() === "Line") {
-        let shapeHeightInch = pxToIn(shape.height() * shape.scaleY());
-        let shapeWidthInch = pxToIn(shape.width() * shape.scaleX());
-
-        shape.points(updateArrowLine(shapeHeightInch * dpi, null, "height"));
-        shape.scaleY(1);
-
-        shape.points(updateArrowLine(null, shapeWidthInch * dpi, "width"));
-        shape.scaleX(1);
-      } else {
+      if (shape.getClassName() === "Rect") {
         shape.width(shape.width() * shape.scaleX());
         shape.height(shape.height() * shape.scaleY());
         shape.scaleX(1);
@@ -3778,6 +3780,17 @@ window.addEventListener("load", function (e) {
 
     let racewayUpdateFrame = null;
     let racewayCostUpdatePending = false;
+    let updateRacewayTextPosition = () => {
+      racewayText.x(
+        raceway.x() +
+          (raceway.width() * raceway.scaleX() - racewayText.width()) / 2,
+      );
+      racewayText.y(
+        raceway.y() +
+          (raceway.height() * raceway.scaleY()) / 2 -
+          racewayText.height() / 2,
+      );
+    };
     let scheduleRacewayUpdate = (updateCost = false) => {
       racewayCostUpdatePending = racewayCostUpdatePending || updateCost;
       if (racewayUpdateFrame !== null) {
@@ -3786,15 +3799,7 @@ window.addEventListener("load", function (e) {
 
       racewayUpdateFrame = requestAnimationFrame(() => {
         racewayUpdateFrame = null;
-        racewayText.x(
-          raceway.x() +
-            (raceway.width() * raceway.scaleX() - racewayText.width()) / 2,
-        );
-        racewayText.y(
-          raceway.y() +
-            (raceway.height() * raceway.scaleY()) / 2 -
-            racewayText.height() / 2,
-        );
+        updateRacewayTextPosition();
         if (racewayCostUpdatePending) {
           racewayCostUpdatePending = false;
           persistRaceway();
@@ -3826,9 +3831,6 @@ window.addEventListener("load", function (e) {
       updateHeightWidthDisplay();
     };
 
-    raceway.on("dragmove", (e) => {
-      scheduleRacewayUpdate();
-    });
     raceway.on("dragstart", () => {
       selectedNode = raceway;
       selectedNodeType = raceway.getClassName();
@@ -3836,8 +3838,12 @@ window.addEventListener("load", function (e) {
       updateLeftsideBar();
       updateFocusedTransformer(raceway);
     });
+    raceway.on("dragmove", updateRacewayTextPosition);
 
-    raceway.on("dragend", persistRaceway);
+    raceway.on("dragend", () => {
+      updateRacewayTextPosition();
+      persistRaceway();
+    });
 
     raceway.on("click", (e) => {
       selectedNode = raceway;
@@ -4178,9 +4184,6 @@ window.addEventListener("load", function (e) {
       });
     };
 
-    cloneNode.on("dragmove", () => {
-      scheduleCloneUpdate();
-    });
     cloneNode.on("dragstart", () => {
       selectedNode = cloneNode;
       selectedNodeType = cloneNode.getClassName();
@@ -4197,6 +4200,7 @@ window.addEventListener("load", function (e) {
     });
 
     cloneNode.on("dragend", () => {
+      scheduleCloneUpdate();
       store.dispatch({
         type: "UPDATE_ELEMENT",
         payload: {

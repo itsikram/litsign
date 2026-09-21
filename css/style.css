@@ -2809,8 +2809,7 @@ a.link-primary:focus,
 }
 
 .contact-form label {
-  display: grid;
-  gap: 7px;
+  display: block;
   color: #263746;
   font-size: 13px;
   font-weight: 700;
@@ -2824,7 +2823,9 @@ a.link-primary:focus,
 .contact-form input,
 .contact-form select,
 .contact-form textarea {
+  display: block;
   width: 100%;
+  margin-top: 7px;
   border: 1px solid #cbd5df;
   border-radius: 7px;
   background: #fff;

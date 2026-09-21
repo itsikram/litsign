@@ -3025,10 +3025,11 @@ window.addEventListener("load", function (e) {
       updateHeightWidthDisplay();
     };
 
-    textNode.on("dragmove", scheduleHeightWidthDisplayUpdate);
     textNode.on("dragstart", () => {
       selectedNode = textNode;
       selectedNodeType = textNode.getClassName();
+      updatePreview("text", textNode);
+      updateLeftsideBar();
       updateFocusedTransformer(textNode);
     });
     textNode.on("dragend", persistText);
@@ -3323,10 +3324,11 @@ window.addEventListener("load", function (e) {
       updateHeightWidthDisplay();
     };
 
-    shape.on("dragmove", scheduleHeightWidthDisplayUpdate);
     shape.on("dragstart", () => {
       selectedNode = shape;
       selectedNodeType = shape.getClassName();
+      updatePreview(previewnType, shape);
+      updateLeftsideBar();
       updateFocusedTransformer(shape);
     });
     shape.on("dragend", persistShape);
@@ -3356,7 +3358,7 @@ window.addEventListener("load", function (e) {
               previewnType,
             );
             break;
-          case "line":
+          case "Line":
             let arrowHeightInch = pxToIn(shape.height() * shape.scaleY());
             let arrowWidthInch = pxToIn(shape.width() * shape.scaleX());
             updateHeightWidthInput(arrowHeightInch, arrowWidthInch);
@@ -3417,7 +3419,7 @@ window.addEventListener("load", function (e) {
             },
           });
           break;
-        case "line":
+        case "Line":
           let points = shape.points() || [];
           let arrowHeightInch = pxToIn(shape.height() * shape.scaleY());
           let arrowWidthInch = pxToIn(shape.width() * shape.scaleX());
@@ -3505,7 +3507,14 @@ window.addEventListener("load", function (e) {
       }
 
       persistShapeTransform();
-      triggerTransformEvent();
+      let transformer = shape.getAttr("transformer");
+      if (transformer) {
+        transformer.nodes([shape]);
+        transformer.update();
+      }
+      updatePreview(previewnType, shape);
+      updateHeightWidthDisplay();
+      layer.batchDraw();
     });
 
     shape.on("click", (e) => {
@@ -3819,11 +3828,12 @@ window.addEventListener("load", function (e) {
 
     raceway.on("dragmove", (e) => {
       scheduleRacewayUpdate();
-      scheduleHeightWidthDisplayUpdate();
     });
     raceway.on("dragstart", () => {
       selectedNode = raceway;
       selectedNodeType = raceway.getClassName();
+      updatePreview("raceway", raceway);
+      updateLeftsideBar();
       updateFocusedTransformer(raceway);
     });
 
@@ -4170,11 +4180,19 @@ window.addEventListener("load", function (e) {
 
     cloneNode.on("dragmove", () => {
       scheduleCloneUpdate();
-      scheduleHeightWidthDisplayUpdate();
     });
     cloneNode.on("dragstart", () => {
       selectedNode = cloneNode;
       selectedNodeType = cloneNode.getClassName();
+      updatePreview(
+        cloneNode.getAttr("textIndex")
+          ? "raceway"
+          : cloneNode.getClassName() === "Text"
+            ? "text"
+            : "shape",
+        cloneNode,
+      );
+      updateLeftsideBar();
       updateFocusedTransformer(cloneNode);
     });
 
@@ -4187,6 +4205,7 @@ window.addEventListener("load", function (e) {
           y: cloneNode.y(),
         },
       });
+      updateHeightWidthDisplay();
     });
 
     let cloneTransformFrame = null;

@@ -102,6 +102,7 @@ let defaultColorData = {};
 const dpi = 10; // Assuming 96 DPI for inch to pixel conversion
 const ppi = 10;
 const triangleReduction = 1.15; // 1.32;
+const maxRacewayHeightInches = 8;
 
 const normalizeCost = (value, fallback = 0) => {
   const numericValue = Number(value);
@@ -109,6 +110,15 @@ const normalizeCost = (value, fallback = 0) => {
     return numericValue;
   }
   return fallback;
+};
+
+const clampRacewayHeight = (node) => {
+  if (!node || !node.getAttr("textIndex")) return;
+  const scaleY = node.scaleY() || 1;
+  const maxHeight = maxRacewayHeightInches * dpi;
+  if (node.height() * scaleY > maxHeight) {
+    node.height(maxHeight / scaleY);
+  }
 };
 
 let colorCost = 0;
@@ -170,6 +180,8 @@ updateSaveButtonState();
 
 const undoStack = [];
 const redoStack = [];
+let historyRestoring = false;
+let lastHistorySignature = null;
 
 // end constant
 
@@ -838,19 +850,92 @@ function maintainAspectRatio(newWidth = null, newHeight = null) {
   };
 }
 
-function saveState() {
-  const json = stage.toJSON();
-  undoStack.push(json);
-  redoStack.length = 0; // clear redo stack
+function getHistorySignature() {
+  return JSON.stringify({
+    elements: store.getState().elements,
+    extras: store.getState().extras,
+    nodes: nodeLists.map((item) => {
+      const attrs = { ...item.node.getAttrs() };
+      delete attrs.textIndex;
+      delete attrs.transformer;
+      return {
+        id: item.node._id,
+        type: item.type,
+        attrs,
+        text:
+          item.type === "raceway" && item.node.getAttr("textIndex")
+            ? item.node.getAttr("textIndex").getAttrs()
+            : null,
+      };
+    }),
+  });
 }
 
-function loadState(json) {
-  stage.destroyChildren();
-  Konva.Node.create(json, "container");
+function updateHistoryButtons() {
+  undoBtn.disabled = undoStack.length === 0;
+  redoBtn.disabled = redoStack.length === 0;
+}
+
+function createHistorySnapshot() {
+  return {
+    elements: JSON.parse(JSON.stringify(store.getState().elements)),
+    extras: JSON.parse(JSON.stringify(store.getState().extras)),
+    nodes: nodeLists.map((item) => {
+      const node = item.node.clone();
+      node.setAttr("transformer", null);
+      return {
+        id: item.id,
+        type: item.type,
+        node,
+        text:
+          item.type === "raceway" && item.node.getAttr("textIndex")
+            ? item.node.getAttr("textIndex").clone()
+            : null,
+      };
+    }),
+  };
+}
+
+function saveState() {
+  if (historyRestoring) return;
+  const signature = getHistorySignature();
+  if (signature === lastHistorySignature) return;
+  undoStack.push(createHistorySnapshot());
+  lastHistorySignature = signature;
+  redoStack.length = 0; // clear redo stack
+  updateHistoryButtons();
+}
+
+function loadState(snapshot) {
+  historyRestoring = true;
+  nodeLists.forEach((item) => {
+    const text = item.node.getAttr("textIndex");
+    item.node.destroy();
+    if (text && text.destroy) text.destroy();
+  });
+  stage.find("Transformer").forEach((transformer) => transformer.destroy());
+
+  nodeLists = [];
+  snapshot.nodes.forEach((item) => {
+    const node = item.node;
+    if (item.type === "raceway" && item.text) {
+      node.setAttr("textIndex", item.text);
+      layer.add(item.text);
+    }
+    layer.add(node);
+    nodeLists.push({ id: item.id, type: item.type, node });
+  });
+
+  store.dispatch({ type: "RESTORE_ELEMENT", payload: snapshot.elements });
+  store.dispatch({ type: "RESTORE_EXTRAS", payload: snapshot.extras });
   selectedNode = null;
   selectedNodeType = null;
-  stage.find("Transformer").destroy();
+  updateSaveButtonState();
+  updateBottombarOverlay();
   layer.draw();
+  updateHistoryButtons();
+  lastHistorySignature = getHistorySignature();
+  historyRestoring = false;
 }
 
 function updateBottombarOverlay() {
@@ -2986,6 +3071,7 @@ window.addEventListener("load", function (e) {
       updateHeightWidthDisplay();
     };
 
+    textNode.on("transformstart", saveState);
     textNode.on("transform", function () {
       updateNodeDimensionInputs(textNode, "text");
       scheduleTextTransformUpdate();
@@ -3020,6 +3106,7 @@ window.addEventListener("load", function (e) {
       scheduleHeightWidthDisplayUpdate();
     });
     textNode.on("dragstart", () => {
+      saveState();
       selectedNode = textNode;
       selectedNodeType = textNode.getClassName();
       updateNodeDimensionInputs(textNode, "text");
@@ -3319,6 +3406,7 @@ window.addEventListener("load", function (e) {
       scheduleHeightWidthDisplayUpdate();
     });
     shape.on("dragstart", () => {
+      saveState();
       selectedNode = shape;
       selectedNodeType = shape.getClassName();
       updateNodeDimensionInputs(shape);
@@ -3460,6 +3548,7 @@ window.addEventListener("load", function (e) {
       }
     };
 
+    shape.on("transformstart", saveState);
     shape.on("transform", (e) => {
       updateNodeDimensionInputs(shape);
       scheduleShapeTransformUpdate();
@@ -3760,6 +3849,7 @@ window.addEventListener("load", function (e) {
     };
 
     let persistRaceway = () => {
+      clampRacewayHeight(raceway);
       store.dispatch({
         type: "UPDATE_ELEMENT",
         payload: {
@@ -3783,6 +3873,7 @@ window.addEventListener("load", function (e) {
     };
 
     raceway.on("dragstart", () => {
+      saveState();
       selectedNode = raceway;
       selectedNodeType = raceway.getClassName();
       updateNodeDimensionInputs(raceway, "raceway");
@@ -3809,7 +3900,9 @@ window.addEventListener("load", function (e) {
       updateLeftsideBar();
     });
 
+    raceway.on("transformstart", saveState);
     raceway.on("transform", (e) => {
+      clampRacewayHeight(raceway);
       updateNodeDimensionInputs(raceway, "raceway");
       scheduleRacewayUpdate(true);
       scheduleHeightWidthDisplayUpdate();
@@ -3968,19 +4061,21 @@ window.addEventListener("load", function (e) {
   addTextBtn.addEventListener("click", function () {
     const text = textInput.value || "Channel";
     fontSize = parseFloat(sizeHeightInput.value) * dpi || 10 * dpi;
+    saveState();
     addText(text);
     textInput.value = text;
-    saveState();
     triggerTransformEvent();
   });
 
   addRacewayButton.addEventListener("click", function () {
+    saveState();
     addRaceway();
   });
 
   shapeButtons.forEach((el) => {
     el.addEventListener("click", (e) => {
       let shapeType = e.currentTarget.dataset.shape;
+      saveState();
       addShape(shapeType);
       const mouseoutEvent = new MouseEvent("mouseleave", {
         bubbles: true, // Allows the event to bubble up through the DOM
@@ -4008,6 +4103,7 @@ window.addEventListener("load", function (e) {
     });
   duplicateBtn.addEventListener("click", function (e) {
     if (selectedNode == null) return;
+    saveState();
 
     if (selectedNode.getClassName() == "Text") {
       fontSize = selectedNode.fontSize() * selectedNode.scaleX();
@@ -4150,6 +4246,7 @@ window.addEventListener("load", function (e) {
     };
 
     cloneNode.on("dragstart", () => {
+      saveState();
       selectedNode = cloneNode;
       selectedNodeType = cloneNode.getClassName();
       updateNodeDimensionInputs(cloneNode);
@@ -4245,6 +4342,7 @@ window.addEventListener("load", function (e) {
       });
     };
 
+    cloneNode.on("transformstart", saveState);
     cloneNode.on("transform", () => {
       updateNodeDimensionInputs(cloneNode);
       scheduleCloneTransformUpdate();
@@ -4330,22 +4428,32 @@ window.addEventListener("load", function (e) {
     selectedNode = cloneNode;
     updateFocusedTransformer(cloneNode);
   });
-  // undoBtn.addEventListener('click', function () {
-  //     if (undoStack.length > 0) {
-  //         const json = undoStack.pop();
-  //         redoStack.push(stage.toJSON());
-  //         loadState(json);
-  //     }
+  undoBtn.addEventListener("click", function () {
+    if (undoStack.length === 0) return;
+    const currentState = createHistorySnapshot();
+    const previousState = undoStack.pop();
+    redoStack.push(currentState);
+    loadState(previousState);
+  });
 
-  // });
+  redoBtn.addEventListener("click", function () {
+    if (redoStack.length === 0) return;
+    const currentState = createHistorySnapshot();
+    const nextState = redoStack.pop();
+    undoStack.push(currentState);
+    loadState(nextState);
+  });
 
-  // redoBtn.addEventListener('click', function () {
-  //     if (redoStack.length > 0) {
-  //         const json = redoStack.pop();
-  //         undoStack.push(stage.toJSON());
-  //         loadState(json);
-  //     }
-  // });
+  document.addEventListener("keydown", function (event) {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    if (event.key.toLowerCase() === "z") {
+      event.preventDefault();
+      (event.shiftKey ? redoBtn : undoBtn).click();
+    } else if (event.key.toLowerCase() === "y") {
+      event.preventDefault();
+      redoBtn.click();
+    }
+  });
 
   document.getElementById("zoomInBtn").addEventListener("click", function () {
     zoomStage(1.2);
@@ -4573,6 +4681,17 @@ window.addEventListener("load", function (e) {
           break;
 
         case "Rect":
+          if (selectedNode.getAttr("textIndex")) {
+            heightInInch = Math.min(heightInInch, maxRacewayHeightInches);
+            heightInPx = heightInInch * dpi;
+            sizeHeightInput.value = heightInInch;
+            selectedNode.scaleY(1);
+            selectedNode.height(heightInPx);
+            updateHeightWidthInput(null, widhtInPx, "raceway");
+            triggerTransformEvent();
+            break;
+          }
+
           if (heightInInch < minHeight) {
             sizeHeightInput.value = minHeight;
             return sizeHeightInput.dispatchEvent(changeEvent);
@@ -4916,10 +5035,11 @@ window.addEventListener("load", function (e) {
 
       case "Rect":
         if (selectedNode.getAttr("textIndex")) {
+          clampRacewayHeight(selectedNode);
           selectedNode.width(widthInPx * selectedNode.scaleX());
           selectedNode.scaleX(1);
           transformer.update();
-          sizeHeightInput.value = 8;
+          sizeHeightInput.value = maxRacewayHeightInches;
 
           triggerTransformEvent();
         } else {
@@ -5769,11 +5889,15 @@ window.addEventListener("load", function (e) {
           selectedNode.width(parseFloat(element.width) * dpi);
           triggerTransformEvent();
           if (height) {
-            selectedNode.height(height);
+            selectedNode.height(
+              Math.min(height, maxRacewayHeightInches * dpi),
+            );
+            clampRacewayHeight(selectedNode);
           }
           if (width) {
             selectedNode.width(width);
           }
+          triggerTransformEvent();
           break;
 
         case "Rectangle":

@@ -271,9 +271,9 @@ get_header();
             </div>
             <div class="right">
                 <div class="button-group mt-0 d-flex justify-content-end">
+                    <button title="Undo" id="undoBtn" disabled><i class="fa-solid fa-rotate-left"></i></button>
+                    <button title="Redo" id="redoBtn" disabled><i class="fa-solid fa-rotate-right"></i></button>
                     <button title="Clone" id="duplicateBtn"><i class="fa-solid fa-clone"></i></button>
-                    <!-- <button title="Undo" id="undoBtn"><i class="fa-solid fa-rotate-left"></i></button>
-                    <button title="Redo" id="redoBtn"><i class="fa-solid fa-rotate-right"></i></button> -->
                     <button title="Zoom In" id="zoomInBtn"><i
                             class="fa-solid fa-magnifying-glass-plus"></i></button>
                     <button title="Zoom Out" id="zoomOutBtn"><i

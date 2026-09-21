@@ -147,6 +147,14 @@ let nodeLists = [];
 let previewNodeLists = [];
 let currentPreviewNode = null;
 
+function updateSaveButtonState() {
+    const hasElements = nodeLists.length > 0;
+    saveBtn.disabled = !hasElements;
+    saveBtn.setAttribute('aria-disabled', String(!hasElements));
+}
+
+updateSaveButtonState();
+
 const undoStack = [];
 const redoStack = [];
 
@@ -1681,13 +1689,17 @@ function updateHeightWidthDisplay() {
     let xArrowWidth = (contentWidth * dpi) / 2;
     let middleY = minTop + xArrowHeight;
     let middleX = minLeft + xArrowWidth;
+    let verticalArrowX = (20 - stage.x()) / stage.scaleX();
+    let horizontalArrowY = (20 - stage.y()) / stage.scaleY();
 
-    topArrow.points([20, middleY - 15, 20, middleY - xArrowHeight]);
-    bottomArrow.points([20, middleY + 15, 20, middleY + xArrowHeight]);
+    topArrow.points([verticalArrowX, middleY - 15, verticalArrowX, middleY - xArrowHeight]);
+    bottomArrow.points([verticalArrowX, middleY + 15, verticalArrowX, middleY + xArrowHeight]);
+    heightDisplay.x(verticalArrowX - 20);
     heightDisplay.y(middleY - 10);
-    leftArrow.points([middleX - 35, 20, middleX - xArrowWidth, 20]);
-    rightArrow.points([middleX + 35, 20, middleX + xArrowWidth, 20]);
+    leftArrow.points([middleX - 35, horizontalArrowY, middleX - xArrowWidth, horizontalArrowY]);
+    rightArrow.points([middleX + 35, horizontalArrowY, middleX + xArrowWidth, horizontalArrowY]);
     widhtDisplay.x(middleX - 25);
+    widhtDisplay.y(horizontalArrowY - 10);
     widhtDisplay.text(`${contentWidth.toFixed(1)}"`);
     heightDisplay.text(`${contentHeight.toFixed(1)}"`);
     layer.batchDraw();
@@ -2950,6 +2962,7 @@ window.addEventListener('load', function (e) {
         })
 
         nodeLists.push({ type: 'text', node: textNode, id: currentElementIndex });
+        updateSaveButtonState();
 
         selectedNode = textNode
         selectedNodeType = textNode.getClassName();
@@ -3362,8 +3375,6 @@ window.addEventListener('load', function (e) {
 
 
         shape.on('transformend', e => {
-            persistShapeTransform();
-            
             if (shape.getClassName() === 'Line') {
                 let shapeHeightInch = pxToIn(shape.height() * shape.scaleY());
                 let shapeWidthInch = pxToIn(shape.width() * shape.scaleX());
@@ -3373,8 +3384,14 @@ window.addEventListener('load', function (e) {
 
                 shape.points(updateArrowLine(null, shapeWidthInch * dpi, 'width'));
                 shape.scaleX(1);
+            } else {
+                shape.width(shape.width() * shape.scaleX());
+                shape.height(shape.height() * shape.scaleY());
+                shape.scaleX(1);
+                shape.scaleY(1);
             }
-            
+
+            persistShapeTransform();
             triggerTransformEvent()
         })
 
@@ -3400,6 +3417,7 @@ window.addEventListener('load', function (e) {
         })
 
         nodeLists.push({ type: 'shape', node: shape, id: currentElementIndex });
+        updateSaveButtonState();
 
 
         layer.batchDraw();
@@ -3694,6 +3712,7 @@ window.addEventListener('load', function (e) {
         racewayText.y(raceway.y() + (raceway.height() - racewayText.height()) / 2);
 
         nodeLists.push({ type: 'raceway', node: raceway, id: currentElementIndex });
+        updateSaveButtonState();
 
 
         selectedNode = raceway;
@@ -4118,6 +4137,7 @@ window.addEventListener('load', function (e) {
         layer.batchDraw();
 
         nodeLists.push({ type: 'text', node: cloneNode, id: currentElementIndex });
+        updateSaveButtonState();
         updateHeightWidthDisplay()
 
         switch (cloneNode.getClassName()) {
@@ -4221,6 +4241,7 @@ window.addEventListener('load', function (e) {
                 type: 'REMOVE_ELEMENT', payload: { id: selectedNode._id }
             });
             nodeLists.splice(index, 1);
+            updateSaveButtonState();
 
             let transformer = selectedNode.getAttr('transformer');
             if (transformer) {

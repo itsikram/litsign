@@ -142,10 +142,10 @@
                     <div class="modal fade" id="feedbackModal" tabindex="-1" role="dialog" aria-labelledby="feedbackModalTitle" aria-hidden="true">
                         <div class="modal-dialog" role="document">
                             <div class="modal-content">
-                                <div class="modal-header">
+                                <div class="modal-header justify-content-between">
                                     <h5 class="modal-title" id="feedbackModalTitle">Share your experience</h5>
-                                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
+                                    <button type="button" class="close"  style="font-size: 24px; background: transparent !important; border: 0 !important; outline: 0 !important; color: red;" data-bs-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true" class="btn fs-1 text-danger">&times;</span>
                                     </button>
                                 </div>
                                 <div class="modal-body">
@@ -183,7 +183,7 @@
                                             <label for="review-message">Your review</label>
                                             <textarea class="form-control" id="review-message" name="review_message" rows="5" required></textarea>
                                         </div>
-                                        <button type="submit" class="btn btn-primary">Submit review</button>
+                                        <button type="submit" class="btn btn-primary mt-3">Submit review</button>
                                     </form>
                                 </div>
                             </div>

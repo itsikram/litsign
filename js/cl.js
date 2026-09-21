@@ -2865,18 +2865,27 @@ window.addEventListener('load', function (e) {
 
         textNode.setAttr('transformer', tr);
 
-        textNode.on('transform', function () {
-            selectedNode = textNode;
-            selectedNodeType = textNode.getClassName();
+        let textTransformFrame = null;
+        let scheduleTextTransformUpdate = () => {
+            if (textTransformFrame !== null) {
+                return;
+            }
+            textTransformFrame = requestAnimationFrame(() => {
+                textTransformFrame = null;
+                selectedNode = textNode;
+                selectedNodeType = textNode.getClassName();
+                textInput.value = textNode.text();
+                updatePreview('text', textNode);
+                updateHeightWidthInput(textNode.height() * textNode.scaleY(), textNode.width() * textNode.scaleX(), 'text')
+                isTextTransform = true;
+                updateLeftsideBar()
+                updateHeightWidthDisplay();
+                fontSize = textNode.fontSize() * textNode.scaleX();
+                layer.batchDraw();
+            });
+        };
 
-            textInput.value = textNode.text();
-            updatePreview('text', textNode);
-
-
-            updateHeightWidthInput(textNode.height() * textNode.scaleY(), textNode.width() * textNode.scaleX(), 'text')
-            isTextTransform = true;
-            updateLeftsideBar()
-
+        let persistTextTransform = () => {
             let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
             let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
             let textLength = ((textNode.text()).replace(' ', '')).length
@@ -2902,24 +2911,33 @@ window.addEventListener('load', function (e) {
                     }
                 }
             });
+        };
 
-            updateLeftsideBar();
-            updateHeightWidthDisplay();
-            fontSize = textNode.fontSize() * textNode.scaleX();
-
-
+        textNode.on('transform', function () {
+            scheduleTextTransformUpdate();
         });
 
-        textNode.on('dragmove', function () {
-            selectedNode = textNode;
-            selectedNodeType = textNode.getClassName();
-            textInput.value = textNode.text();
-            updateHeightWidthDisplay()
-            updatePreview('text', textNode);
+        textNode.on('transformend', persistTextTransform);
 
-            updateHeightWidthInput(textNode.height() * textNode.scaleY(), textNode.width() * textNode.scaleX(), 'text')
-            updateLeftsideBar()
+        let textDragFrame = null;
+        let scheduleTextUpdate = () => {
+            if (textDragFrame !== null) {
+                return;
+            }
+            textDragFrame = requestAnimationFrame(() => {
+                textDragFrame = null;
+                selectedNode = textNode;
+                selectedNodeType = textNode.getClassName();
+                textInput.value = textNode.text();
+                updateHeightWidthDisplay();
+                updatePreview('text', textNode);
+                updateHeightWidthInput(textNode.height() * textNode.scaleY(), textNode.width() * textNode.scaleX(), 'text');
+                updateLeftsideBar();
+                layer.batchDraw();
+            });
+        };
 
+        let persistText = () => {
             let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
             let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
             let textLength = ((textNode.text()).replace(' ', '')).length;
@@ -2936,8 +2954,13 @@ window.addEventListener('load', function (e) {
                     y: textNode.y(),
                 }
             });
+        };
 
+        textNode.on('dragmove', function () {
+            scheduleTextUpdate();
         });
+
+        textNode.on('dragend', persistText);
 
 
         textNode.on('click', e => {
@@ -3219,17 +3242,23 @@ window.addEventListener('load', function (e) {
         shape.setAttr('transformer', tr);
         selectedNode = shape;
 
-        shape.on('dragmove', function () {
-            selectedNode = shape;
-            selectedNodeType = shape.getClassName();
-            updatePreview(previewnType, shape);
-            updateHeightWidthDisplay();
-            updateLeftsideBar()
-            faceColor = shape.attrs.fill
-            returnColor = shape.attrs.shadowColor
-            trimcap = shape.attrs.stroke
+        let shapeDragFrame = null;
+        let scheduleShapeUpdate = () => {
+            if (shapeDragFrame !== null) {
+                return;
+            }
+            shapeDragFrame = requestAnimationFrame(() => {
+                shapeDragFrame = null;
+                selectedNode = shape;
+                selectedNodeType = shape.getClassName();
+                updateHeightWidthDisplay();
+                updatePreview(previewnType, shape);
+                updateLeftsideBar();
+                layer.batchDraw();
+            });
+        };
 
-
+        let persistShape = () => {
             store.dispatch({
                 type: 'UPDATE_ELEMENT', payload: {
                     'id': shape._id,
@@ -3237,16 +3266,47 @@ window.addEventListener('load', function (e) {
                     y: shape.y(),
                 }
             });
+        };
 
+        shape.on('dragmove', function () {
+            scheduleShapeUpdate();
         });
 
-        shape.on('transform', e => {
-            selectedNode = shape;
-            selectedNodeType = shape.getClassName();
-            updateHeightWidthDisplay()
-            updatePreview(previewnType, shape);
-            updateLeftsideBar()
+        shape.on('dragend', persistShape);
 
+        let shapeTransformFrame = null;
+        let scheduleShapeTransformUpdate = () => {
+            if (shapeTransformFrame !== null) {
+                return;
+            }
+            shapeTransformFrame = requestAnimationFrame(() => {
+                shapeTransformFrame = null;
+                selectedNode = shape;
+                selectedNodeType = shape.getClassName();
+                updateHeightWidthDisplay();
+                updatePreview(previewnType, shape);
+                updateLeftsideBar();
+                
+                switch (shape.getClassName()) {
+                    case 'RegularPolygon':
+                        let triHeightInch = pxToIn(shape.height() * shape.scaleY() / triangleReduction);
+                        let triWidthInch = pxToIn(shape.width() * shape.scaleX() / triangleReduction);
+                        updateHeightWidthInput(shape.height() * shape.scaleY() / triangleReduction, shape.width() * shape.scaleX() / triangleReduction, previewnType)
+                        break;
+                    case 'line':
+                        let arrowHeightInch = pxToIn(shape.height() * shape.scaleY());
+                        let arrowWidthInch = pxToIn(shape.width() * shape.scaleX());
+                        updateHeightWidthInput(arrowHeightInch, arrowWidthInch)
+                        break;
+                    default:
+                        updateHeightWidthInput(shape.height() * shape.scaleY(), shape.width() * shape.scaleX(), previewnType)
+                        break;
+                }
+                layer.batchDraw();
+            });
+        };
+
+        let persistShapeTransform = () => {
             let currentElementColorCost = getElementById(shape._id) ? getElementById(shape._id).faceCostPerInch : 0;
             switch (shape.getClassName()) {
                 case 'RegularPolygon':
@@ -3275,9 +3335,6 @@ window.addEventListener('load', function (e) {
                             },
                         }
                     });
-
-                    updateHeightWidthInput(shape.height() * shape.scaleY() / triangleReduction, shape.width() * shape.scaleX() / triangleReduction, previewnType)
-
                     break;
                 case 'line':
                     let points = shape.points() || [];
@@ -3307,13 +3364,9 @@ window.addEventListener('load', function (e) {
                             },
                         }
                     });
-
-                    updateHeightWidthInput(arrowHeightInch, arrowWidthInch)
                     break;
 
-
                 default:
-                    updateHeightWidthInput(shape.height() * shape.scaleY(), shape.width() * shape.scaleX(), previewnType)
                     let shapeHeightInch = pxToIn(shape.height() * shape.scaleY());
                     let shapeWidthInch = pxToIn(shape.width() * shape.scaleX());
                     let totalShapeCost = (costPerInch(shapeWidthInch));
@@ -3338,21 +3391,19 @@ window.addEventListener('load', function (e) {
                             },
                         }
                     });
-
-
                     break;
             }
+        };
 
-
-            faceColor = shape.attrs.fill
-            returnColor = shape.attrs.shadowColor
-            trimcap = shape.attrs.stroke
+        shape.on('transform', e => {
+            scheduleShapeTransformUpdate();
         })
 
 
         shape.on('transformend', e => {
-
-            if (selectedNode.getClassName() == 'Line') {
+            persistShapeTransform();
+            
+            if (shape.getClassName() === 'Line') {
                 let shapeHeightInch = pxToIn(shape.height() * shape.scaleY());
                 let shapeWidthInch = pxToIn(shape.width() * shape.scaleX());
 
@@ -3361,12 +3412,9 @@ window.addEventListener('load', function (e) {
 
                 shape.points(updateArrowLine(null, shapeWidthInch * dpi, 'width'));
                 shape.scaleX(1);
-
-
-                triggerTransformEvent()
-
-
             }
+            
+            triggerTransformEvent()
         })
 
         shape.on('click', e => {
@@ -4009,27 +4057,57 @@ window.addEventListener('load', function (e) {
 
         layer.draw()
 
+        let cloneDragFrame = null;
+        let scheduleCloneUpdate = () => {
+            if (cloneDragFrame !== null) {
+                return;
+            }
+            cloneDragFrame = requestAnimationFrame(() => {
+                cloneDragFrame = null;
+                if (clonedRacewayText) {
+                    clonedRacewayText.x(cloneNode.x() + ((cloneNode.width() * cloneNode.scaleX()) - clonedRacewayText.width()) / 2);
+                    clonedRacewayText.y(cloneNode.y() + (cloneNode.height() * cloneNode.scaleY() / 2) - (clonedRacewayText.height()) / 2);
+                }
+                selectedNode = cloneNode;
+                layer.batchDraw();
+            });
+        };
+
         cloneNode.on('dragmove', () => {
+            scheduleCloneUpdate();
+        });
 
-            if (clonedRacewayText) {
-                clonedRacewayText.x(cloneNode.x() + ((cloneNode.width() * cloneNode.scaleX()) - clonedRacewayText.width()) / 2);
-                clonedRacewayText.y(cloneNode.y() + (cloneNode.height() * cloneNode.scaleY() / 2) - (clonedRacewayText.height()) / 2);
+        cloneNode.on('dragend', () => {
+            store.dispatch({
+                type: 'UPDATE_ELEMENT', payload: {
+                    'id': cloneNode._id,
+                    x: cloneNode.x(),
+                    y: cloneNode.y(),
+                }
+            });
+        });
+
+        let cloneTransformFrame = null;
+        let scheduleCloneTransformUpdate = () => {
+            if (cloneTransformFrame !== null) {
+                return;
             }
+            cloneTransformFrame = requestAnimationFrame(() => {
+                cloneTransformFrame = null;
+                selectedNode = cloneNode
+                if (cloneNode._id == selectedNodeId) {
+                    cloneDimenstionText.text(getTextDimensions(cloneNode));
+                }
 
-            selectedNode = cloneNode
-        })
+                if (clonedRacewayText) {
+                    clonedRacewayText.x(cloneNode.x() + ((cloneNode.width() * cloneNode.scaleX()) - clonedRacewayText.width()) / 2);
+                    clonedRacewayText.y(cloneNode.y() + (cloneNode.height() * cloneNode.scaleY() / 2) - (clonedRacewayText.height()) / 2);
+                }
+                layer.batchDraw();
+            });
+        };
 
-        cloneNode.on('transform', () => {
-            selectedNode = cloneNode
-            if (cloneNode._id == selectedNodeId) {
-                cloneDimenstionText.text(getTextDimensions(cloneNode));
-            }
-
-            if (clonedRacewayText) {
-                clonedRacewayText.x(cloneNode.x() + ((cloneNode.width() * cloneNode.scaleX()) - clonedRacewayText.width()) / 2);
-                clonedRacewayText.y(cloneNode.y() + (cloneNode.height() * cloneNode.scaleY() / 2) - (clonedRacewayText.height()) / 2);
-            }
-
+        let persistCloneTransform = () => {
             let currentElementColorCost = getElementById(cloneNode._id).faceCostPerInch
             let clonedNodeHeight = (pxToIn(cloneNode.height() * cloneNode.scaleY()));
             let clonedNodeWidth = (pxToIn(cloneNode.width() * cloneNode.scaleX()));
@@ -4041,10 +4119,6 @@ window.addEventListener('load', function (e) {
                 clonedNodeTotalCost = costPerInch(clonedNodeHeight)
                 cloneNodeTotalColorCost = parseFloat(currentElementColorCost) * clonedNodeHeight
             }
-
-            // if(cloneNode.getClassName() == 'Line') {
-            //     cloneNodePoints = selectedNode.points() || []
-            // }
 
             store.dispatch({
                 type: 'UPDATE_ELEMENT', payload: {
@@ -4059,7 +4133,13 @@ window.addEventListener('load', function (e) {
                     points: cloneNodePoints
                 }
             });
-        })
+        };
+
+        cloneNode.on('transform', () => {
+            scheduleCloneTransformUpdate();
+        });
+
+        cloneNode.on('transformend', persistCloneTransform);
 
 
 

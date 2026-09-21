@@ -114,13 +114,13 @@ foreach ($cart_items as $cart_item) {
 
 // Never trust totals from hidden form fields; derive them from the server-side cart.
 $sub_total = round(floatval($cart->sub_total), 2);
-$shipping_options = array(12.5, 50, 62.5, 75);
+$shipping_options = array_map('floatval', explode(',', wholesale_get_setting('standard_shipping_options')));
 foreach ($cart_items as $cart_item) {
     $categories = get_the_terms(absint($cart_item->product_id), 'product_category');
     if (is_array($categories)) {
         foreach ($categories as $category) {
             if ('channel-letters' === $category->slug) {
-                $shipping_options = array(50, 200, 250, 300);
+                $shipping_options = array_map('floatval', explode(',', wholesale_get_setting('channel_shipping_options')));
                 break 2;
             }
         }
@@ -133,7 +133,7 @@ if (!in_array($requested_shipping_cost, $shipping_options, true)) {
 }
 
 $shipping_cost = $requested_shipping_cost;
-$tax = round(($sub_total / 100) * 10.3, 2);
+$tax = round(($sub_total / 100) * floatval(wholesale_get_setting('tax_rate')), 2);
 $grand_total = round($sub_total + $shipping_cost + $tax, 2);
 $product_data = wp_json_encode($cart_items);
 
@@ -209,9 +209,9 @@ function place_order($product_data, $order_cost, $billing_data, $shipping_data, 
 
 function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
 {
-   $merchant_id = defined('WHOLESALE_CONVERGE_MERCHANT_ID') ? constant('WHOLESALE_CONVERGE_MERCHANT_ID') : '';
-   $user_id = defined('WHOLESALE_CONVERGE_USER_ID') ? constant('WHOLESALE_CONVERGE_USER_ID') : '';
-   $pin = defined('WHOLESALE_CONVERGE_PIN') ? constant('WHOLESALE_CONVERGE_PIN') : '';
+   $merchant_id = wholesale_get_setting('merchant_id');
+   $user_id = wholesale_get_setting('gateway_user_id');
+   $pin = wholesale_get_setting('gateway_pin');
 
    if (empty($merchant_id) || empty($user_id) || empty($pin)) {
        return array(
@@ -222,7 +222,7 @@ function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
 
 //    $url = 'https://api.convergepay.com/VirtualMerchant/process.do';
        // Switch endpoint based on a test-mode flag
-    $url = (defined('WHOLESALE_CONVERGE_TEST_MODE') && WHOLESALE_CONVERGE_TEST_MODE)
+    $url = wholesale_setting_enabled('payment_test_mode')
         ? 'https://api.demo.convergepay.com/VirtualMerchantDemo/process.do'
         : 'https://api.convergepay.com/VirtualMerchant/process.do';
    $data = array(
@@ -304,7 +304,7 @@ function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
 
 
 
-if (WHOLESALE_PAYMENT_DISABLED) {
+if (wholesale_setting_enabled('payment_disabled')) {
     if (!place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart)) {
         wp_die(esc_html__('We could not create your order. Please try again.', 'litsign'), esc_html__('Order failed', 'litsign'), array('response' => 500));
     }

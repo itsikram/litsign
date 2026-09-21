@@ -1152,6 +1152,7 @@ get_header();
     </form>
     <?php
     $product_review_data = wholesale_product_review_data($product_id);
+    $show_product_reviews = wholesale_setting_enabled('show_product_reviews');
     $product_reviews = get_posts(array(
         'post_type' => 'review_submission',
         'post_status' => 'publish',
@@ -1164,6 +1165,7 @@ get_header();
     $can_review_product = is_user_logged_in() && wholesale_user_can_review_product(get_current_user_id(), $product_id);
     $review_status = isset($_GET['review_status']) ? sanitize_key(wp_unslash($_GET['review_status'])) : '';
     ?>
+    <?php if ($show_product_reviews) : ?>
     <section class="product-reviews" id="product-reviews" aria-labelledby="product-reviews-title">
         <?php if ('sent' === $review_status) : ?>
             <div class="product-review-alert" role="status">Thank you. Your review has been submitted for approval.</div>
@@ -1222,6 +1224,7 @@ get_header();
             <p class="product-review-note">Sign in with the account used for your order to leave a review after delivery.</p>
         <?php endif; ?>
     </section>
+    <?php endif; ?>
     </article>
     </main>
 </div>

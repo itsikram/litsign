@@ -14,7 +14,7 @@ global $cart;
 
 $product_category = 'adhesive-products';
 $turnaround = 1;
-$shipping_cost = array(12.5, 50, 62.5, 75);
+$shipping_cost = array_map('floatval', explode(',', wholesale_get_setting('standard_shipping_options')));
 
 
 if ($cart->have_items) {
@@ -38,7 +38,7 @@ if ($cart->have_items) {
 }
 
 if ($product_category == 'channel-letters') {
-    $shipping_cost = array(50, 200, 250, 300);
+    $shipping_cost = array_map('floatval', explode(',', wholesale_get_setting('channel_shipping_options')));
 }
 
 
@@ -52,7 +52,7 @@ $date->modify("+".$turnaround +6 ." days");
 $formatted_date = $date->format('D M. j');
 
 $cart_subtotal = $cart->sub_total;
-$total_tax = floatval(($cart_subtotal / 100) * 10.3);
+$total_tax = floatval(($cart_subtotal / 100) * floatval(wholesale_get_setting('tax_rate')));
 if(empty($cart -> get_items())) {
     wp_redirect(site_url().'/cart?type=warning&message=Your Cart is currently empty.');
 
@@ -260,7 +260,7 @@ get_header();
 
                 <h3 class="fs-3 my-3">3. Payment Method</h3>
 
-                <?php if (WHOLESALE_PAYMENT_DISABLED) : ?>
+                <?php if (wholesale_setting_enabled('payment_disabled')) : ?>
                     <div class="alert alert-info" role="status">
                         Payment is temporarily unavailable. You can place your order now and we will contact you about payment.
                     </div>

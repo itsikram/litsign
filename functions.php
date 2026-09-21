@@ -263,6 +263,140 @@ function wholesale_setup()
 }
 add_action('after_setup_theme', 'wholesale_setup');
 
+function wholesale_setting_defaults()
+{
+	return array(
+		'primary_color' => '#1fa8de',
+		'accent_color' => '#f5ad27',
+		'sale_price_color' => '#1fa8de',
+		'show_product_ratings' => 1,
+		'show_product_reviews' => 1,
+		'allow_verified_reviews' => 1,
+		'auto_publish_reviews' => 0,
+		'payment_disabled' => defined('WHOLESALE_PAYMENT_DISABLED') && WHOLESALE_PAYMENT_DISABLED ? 1 : 0,
+		'payment_test_mode' => defined('WHOLESALE_CONVERGE_TEST_MODE') && WHOLESALE_CONVERGE_TEST_MODE ? 1 : 0,
+		'merchant_id' => defined('WHOLESALE_CONVERGE_MERCHANT_ID') ? WHOLESALE_CONVERGE_MERCHANT_ID : '',
+		'gateway_user_id' => defined('WHOLESALE_CONVERGE_USER_ID') ? WHOLESALE_CONVERGE_USER_ID : '',
+		'gateway_pin' => defined('WHOLESALE_CONVERGE_PIN') ? WHOLESALE_CONVERGE_PIN : '',
+		'tax_rate' => '10.3',
+		'standard_shipping_options' => '12.5,50,62.5,75',
+		'channel_shipping_options' => '50,200,250,300',
+	);
+}
+
+function wholesale_get_setting($key)
+{
+	$defaults = wholesale_setting_defaults();
+	$value = get_option('wholesale_' . $key, null);
+	return null === $value && array_key_exists($key, $defaults) ? $defaults[$key] : $value;
+}
+
+function wholesale_setting_enabled($key)
+{
+	return (bool) wholesale_get_setting($key);
+}
+
+function wholesale_sanitize_hex_color($value)
+{
+	$sanitized = sanitize_hex_color($value);
+	return $sanitized ? $sanitized : wholesale_setting_defaults()['primary_color'];
+}
+
+function wholesale_sanitize_decimal_list($value)
+{
+	$values = array_filter(array_map('trim', explode(',', (string) $value)), 'is_numeric');
+	return implode(',', array_map(static function ($item) {
+		return number_format((float) $item, 2, '.', '');
+	}, $values));
+}
+
+function wholesale_register_settings()
+{
+	$defaults = wholesale_setting_defaults();
+	foreach ($defaults as $key => $default) {
+		register_setting('wholesale_settings', 'wholesale_' . $key, array(
+			'type' => is_int($default) ? 'integer' : 'string',
+			'sanitize_callback' => in_array($key, array('primary_color', 'accent_color', 'sale_price_color'), true)
+				? 'wholesale_sanitize_hex_color'
+				: ('tax_rate' === $key ? 'wholesale_sanitize_decimal' : ('standard_shipping_options' === $key || 'channel_shipping_options' === $key ? 'wholesale_sanitize_decimal_list' : 'sanitize_text_field')),
+		));
+	}
+}
+add_action('admin_init', 'wholesale_register_settings');
+
+function wholesale_sanitize_decimal($value)
+{
+	return is_numeric($value) && (float) $value >= 0 ? number_format((float) $value, 2, '.', '') : '0.00';
+}
+
+function wholesale_settings_page()
+{
+	if (!current_user_can('manage_options')) {
+		return;
+	}
+	?>
+	<div class="wrap">
+		<h1>Storefront Sign Settings</h1>
+		<p>Manage the website defaults that can be updated immediately without editing theme files.</p>
+		<form action="options.php" method="post">
+			<?php settings_fields('wholesale_settings'); ?>
+			<h2 class="title">Branding</h2>
+			<table class="form-table" role="presentation">
+				<tr><th><label for="wholesale_primary_color">Primary color</label></th><td><input type="color" id="wholesale_primary_color" name="wholesale_primary_color" value="<?php echo esc_attr(wholesale_get_setting('primary_color')); ?>"></td></tr>
+				<tr><th><label for="wholesale_accent_color">Rating/accent color</label></th><td><input type="color" id="wholesale_accent_color" name="wholesale_accent_color" value="<?php echo esc_attr(wholesale_get_setting('accent_color')); ?>"></td></tr>
+				<tr><th><label for="wholesale_sale_price_color">Sale price color</label></th><td><input type="color" id="wholesale_sale_price_color" name="wholesale_sale_price_color" value="<?php echo esc_attr(wholesale_get_setting('sale_price_color')); ?>"></td></tr>
+			</table>
+			<h2 class="title">Reviews</h2>
+			<table class="form-table" role="presentation">
+				<?php foreach (array(
+					'show_product_ratings' => 'Show ratings on product cards',
+					'show_product_reviews' => 'Show reviews on product pages',
+					'allow_verified_reviews' => 'Allow reviews from customers with completed orders',
+					'auto_publish_reviews' => 'Publish customer reviews automatically',
+				) as $key => $label) : ?>
+					<tr><th><?php echo esc_html($label); ?></th><td><input type="hidden" name="wholesale_<?php echo esc_attr($key); ?>" value="0"><label><input type="checkbox" name="wholesale_<?php echo esc_attr($key); ?>" value="1" <?php checked(wholesale_setting_enabled($key)); ?>> Enabled</label></td></tr>
+				<?php endforeach; ?>
+			</table>
+			<h2 class="title">Payment gateway</h2>
+			<table class="form-table" role="presentation">
+				<tr><th>Disable card payment</th><td><input type="hidden" name="wholesale_payment_disabled" value="0"><label><input type="checkbox" name="wholesale_payment_disabled" value="1" <?php checked(wholesale_setting_enabled('payment_disabled')); ?>> Create orders for manual payment instead</label></td></tr>
+				<tr><th>Test mode</th><td><input type="hidden" name="wholesale_payment_test_mode" value="0"><label><input type="checkbox" name="wholesale_payment_test_mode" value="1" <?php checked(wholesale_setting_enabled('payment_test_mode')); ?>> Use the Converge demo endpoint</label></td></tr>
+				<tr><th><label for="wholesale_merchant_id">Merchant ID</label></th><td><input class="regular-text" id="wholesale_merchant_id" name="wholesale_merchant_id" value="<?php echo esc_attr(wholesale_get_setting('merchant_id')); ?>"></td></tr>
+				<tr><th><label for="wholesale_gateway_user_id">Gateway user ID</label></th><td><input class="regular-text" id="wholesale_gateway_user_id" name="wholesale_gateway_user_id" value="<?php echo esc_attr(wholesale_get_setting('gateway_user_id')); ?>"></td></tr>
+				<tr><th><label for="wholesale_gateway_pin">Gateway PIN</label></th><td><input type="password" class="regular-text" id="wholesale_gateway_pin" name="wholesale_gateway_pin" value="<?php echo esc_attr(wholesale_get_setting('gateway_pin')); ?>" autocomplete="new-password"></td></tr>
+			</table>
+			<h2 class="title">Checkout defaults</h2>
+			<table class="form-table" role="presentation">
+				<tr><th><label for="wholesale_tax_rate">Tax rate (%)</label></th><td><input type="number" min="0" step="0.01" id="wholesale_tax_rate" name="wholesale_tax_rate" value="<?php echo esc_attr(wholesale_get_setting('tax_rate')); ?>"></td></tr>
+				<tr><th><label for="wholesale_standard_shipping_options">Standard shipping options</label></th><td><input class="regular-text" id="wholesale_standard_shipping_options" name="wholesale_standard_shipping_options" value="<?php echo esc_attr(wholesale_get_setting('standard_shipping_options')); ?>"><p class="description">Comma-separated amounts, from fastest to slowest.</p></td></tr>
+				<tr><th><label for="wholesale_channel_shipping_options">Channel-letter shipping options</label></th><td><input class="regular-text" id="wholesale_channel_shipping_options" name="wholesale_channel_shipping_options" value="<?php echo esc_attr(wholesale_get_setting('channel_shipping_options')); ?>"><p class="description">Comma-separated amounts, from fastest to slowest.</p></td></tr>
+			</table>
+			<?php submit_button('Save settings'); ?>
+		</form>
+	</div>
+	<?php
+}
+
+function wholesale_add_settings_page()
+{
+	add_options_page('Storefront Sign Settings', 'Storefront Sign', 'manage_options', 'wholesale-settings', 'wholesale_settings_page');
+}
+add_action('admin_menu', 'wholesale_add_settings_page');
+
+function wholesale_output_dynamic_settings()
+{
+	if (is_admin()) {
+		return;
+	}
+	$primary = wholesale_get_setting('primary_color');
+	$accent = wholesale_get_setting('accent_color');
+	$sale = wholesale_get_setting('sale_price_color');
+	?>
+	<style id="wholesale-dynamic-settings">:root{--bs-primary:<?php echo esc_html($primary); ?>;--bs-link-color:<?php echo esc_html($primary); ?>;--bs-link-hover-color:<?php echo esc_html($primary); ?>}.text-primary,.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($primary); ?>!important}.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($accent); ?>!important}.pb-price span{color:<?php echo esc_html($sale); ?>!important}</style>
+	<?php
+}
+add_action('wp_head', 'wholesale_output_dynamic_settings', 99);
+
 /**
  * Send contact notifications to the configured site admin, administrators,
  * and the quote-response inbox.
@@ -313,6 +447,10 @@ function wholesale_handle_review_submission()
 	}
 
 	if ($product_id) {
+		if (!wholesale_setting_enabled('allow_verified_reviews')) {
+			wp_safe_redirect(add_query_arg('review_status', 'disabled', $redirect_url) . $review_anchor);
+			exit;
+		}
 		if (!is_user_logged_in() || !wholesale_user_can_review_product(get_current_user_id(), $product_id)) {
 			wp_safe_redirect(add_query_arg('review_status', 'not_eligible', $redirect_url) . $review_anchor);
 			exit;
@@ -321,7 +459,7 @@ function wholesale_handle_review_submission()
 
 	$submission_id = wp_insert_post(array(
 		'post_type' => 'review_submission',
-		'post_status' => 'pending',
+		'post_status' => wholesale_setting_enabled('auto_publish_reviews') ? 'publish' : 'pending',
 		'post_title' => sprintf('%d-star review from %s', $rating, $name),
 		'post_content' => $review,
 		'meta_input' => array(
@@ -389,6 +527,9 @@ function wholesale_product_review_data($product_id)
 
 function wholesale_render_product_rating($product_id, $class = '')
 {
+	if (!wholesale_setting_enabled('show_product_ratings')) {
+		return;
+	}
 	$review_data = wholesale_product_review_data($product_id);
 	if (!$review_data['rating'] && !$review_data['count']) {
 		return;

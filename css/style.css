@@ -193,14 +193,14 @@
 }
 
 .site-breadcrumbs a {
-  color: #1d6fa5;
+  color: #1fa8de;
   text-decoration: none;
   transition: color 160ms ease;
 }
 
 .site-breadcrumbs a:hover,
 .site-breadcrumbs a:focus {
-  color: #155579;
+  color: #1fa8de;
   text-decoration: underline;
 }
 
@@ -1195,7 +1195,7 @@
 
 .home-hero-shop-button:hover,
 .home-hero-shop-button:focus-visible {
-  background: #155579;
+  background: #1fa8de;
   color: #fff;
   transform: translateY(-2px);
 }
@@ -1261,7 +1261,7 @@
 
 .home-hero-feature-icon {
   flex: 0 0 42px;
-  color: #1d6fa5;
+  color: #1fa8de;
   font-size: 2.05rem;
   text-align: center;
 }
@@ -2461,7 +2461,7 @@
 
 .contact-submit:hover,
 .contact-submit:focus {
-  background: #168cc0;
+  background: #1fa8de;
 }
 
 .contact-form-note {
@@ -2693,7 +2693,7 @@
 
 .channel-letters-seo-cta:hover,
 .channel-letters-seo-cta:focus {
-  background: #168cc0;
+  background: #1fa8de;
   color: #fff;
 }
 
@@ -2768,6 +2768,31 @@
 
 .channel-letters-seo-accordion p {
   padding-top: 10px;
+}
+
+/* Keep primary controls and links on the site's blue brand color. */
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.btn-link:not(.text-danger) {
+  background-color: #1fa8de;
+  border-color: #1fa8de;
+  color: #1fa8de;
+}
+
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active {
+  color: #fff;
+}
+
+.btn-link:not(.text-danger) {
+  background-color: transparent;
+  border-color: transparent;
 }
 
 @media only screen and (max-width: 767px) {

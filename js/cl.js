@@ -3960,6 +3960,18 @@ window.addEventListener("load", function (e) {
       resizeEditor();
     });
   });
+  if (typeof ResizeObserver !== "undefined") {
+    const editorResizeObserver = new ResizeObserver(() => {
+      if (resizeFrame !== null) {
+        return;
+      }
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = null;
+        resizeEditor();
+      });
+    });
+    editorResizeObserver.observe(container);
+  }
 
   function resizeEditor() {
     var width = container.clientWidth;
@@ -3984,6 +3996,7 @@ window.addEventListener("load", function (e) {
     background.width(width);
     background.height(height);
     layer.batchDraw();
+    scheduleHeightWidthDisplayUpdate();
     resizePreviewStage();
   }
 

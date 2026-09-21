@@ -872,8 +872,8 @@ function getHistorySignature() {
 }
 
 function updateHistoryButtons() {
-  undoBtn.disabled = undoStack.length === 0;
-  redoBtn.disabled = redoStack.length === 0;
+  if (undoBtn) undoBtn.disabled = undoStack.length === 0;
+  if (redoBtn) redoBtn.disabled = redoStack.length === 0;
 }
 
 function createHistorySnapshot() {
@@ -4465,30 +4465,30 @@ window.addEventListener("load", function (e) {
     selectedNode = cloneNode;
     updateFocusedTransformer(cloneNode);
   });
-  undoBtn.addEventListener("click", function () {
+  function undo() {
     if (undoStack.length === 0) return;
     const currentState = createHistorySnapshot();
     const previousState = undoStack.pop();
     redoStack.push(currentState);
     loadState(previousState);
-  });
+  }
 
-  redoBtn.addEventListener("click", function () {
+  function redo() {
     if (redoStack.length === 0) return;
     const currentState = createHistorySnapshot();
     const nextState = redoStack.pop();
     undoStack.push(currentState);
     loadState(nextState);
-  });
+  }
 
   document.addEventListener("keydown", function (event) {
     if (!(event.ctrlKey || event.metaKey)) return;
     if (event.key.toLowerCase() === "z") {
       event.preventDefault();
-      (event.shiftKey ? redoBtn : undoBtn).click();
+      event.shiftKey ? redo() : undo();
     } else if (event.key.toLowerCase() === "y") {
       event.preventDefault();
-      redoBtn.click();
+      redo();
     }
   });
 

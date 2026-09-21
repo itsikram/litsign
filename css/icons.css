@@ -46,6 +46,26 @@
   content: "\f2ed";
 }
 
+.fa-play::before {
+  content: "\f04b";
+}
+
+.fa-truck-fast::before {
+  content: "\f48b";
+}
+
+.fa-shield-halved::before {
+  content: "\f3ed";
+}
+
+.fa-gear::before {
+  content: "\f013";
+}
+
+.fa-star::before {
+  content: "\f005";
+}
+
 .fa-xmark::before {
   content: "\f00d";
 }

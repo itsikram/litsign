@@ -110,6 +110,44 @@ get_header();
 
 ?>
 
+<section class="home-hero" aria-labelledby="home-hero-title">
+    <div class="home-hero-content">
+        <div class="container home-hero-inner">
+            <div class="home-hero-copy">
+                <p class="home-hero-eyebrow">Premium quality signs &amp; letters</p>
+                <h1 id="home-hero-title">Make Your Brand<br><span>Stand Out</span></h1>
+                <p class="home-hero-lead">Custom channel letters, LED signs, acrylic signs and more.<br class="home-hero-desktop-break"> Built for businesses that want to be seen.</p>
+                <div class="home-hero-actions">
+                    <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>
+                    <a class="home-hero-video-link" href="#product-box-container">
+                        <span class="home-hero-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
+                        <span>Watch Video</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="home-hero-features" aria-label="Our service benefits">
+        <div class="container home-hero-feature-grid">
+            <div class="home-hero-feature">
+                <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-truck-fast"></i></span>
+                <span><strong>Fast &amp; Reliable Shipping</strong><small>Get your signs on time.</small></span>
+            </div>
+            <div class="home-hero-feature">
+                <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>
+                <span><strong>High Quality Products</strong><small>Built to last.</small></span>
+            </div>
+            <div class="home-hero-feature">
+                <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span>
+                <span><strong>Expert Support</strong><small>We're here to help.</small></span>
+            </div>
+            <div class="home-hero-feature">
+                <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-star"></i></span>
+                <span><strong>100% Satisfaction</strong><small>Your success is our priority.</small></span>
+            </div>
+        </div>
+    </div>
+</section>
 
 <div class="container my-3">
 

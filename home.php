@@ -119,10 +119,10 @@ get_header();
                 <p class="home-hero-lead">Custom channel letters, LED signs, acrylic signs and more.<br class="home-hero-desktop-break"> Built for businesses that want to be seen.</p>
                 <div class="home-hero-actions">
                     <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>
-                    <a class="home-hero-video-link" href="#product-box-container">
+                    <button class="home-hero-video-link" type="button" data-youtube-video="https://www.youtube-nocookie.com/embed?listType=search&amp;list=channel%20letter%20signs" aria-controls="homeVideoModal" aria-haspopup="dialog">
                         <span class="home-hero-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
                         <span>Watch Video</span>
-                    </a>
+                    </button>
                 </div>
             </div>
         </div>
@@ -148,6 +148,53 @@ get_header();
         </div>
     </div>
 </section>
+
+<div class="home-video-modal" id="homeVideoModal" hidden aria-hidden="true">
+    <div class="home-video-modal-backdrop" data-video-modal-close></div>
+    <div class="home-video-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="homeVideoModalTitle">
+        <div class="home-video-modal-header">
+            <h2 id="homeVideoModalTitle">Storefront Sign Online</h2>
+            <button type="button" class="home-video-modal-close" data-video-modal-close aria-label="Close video">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+        </div>
+        <div class="home-video-modal-frame">
+            <iframe title="Storefront Sign Online video" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const modal = document.getElementById('homeVideoModal');
+        const trigger = document.querySelector('.home-hero-video-link');
+        const frame = modal ? modal.querySelector('iframe') : null;
+        if (!modal || !trigger || !frame) return;
+
+        const closeModal = () => {
+            modal.hidden = true;
+            modal.setAttribute('aria-hidden', 'true');
+            frame.removeAttribute('src');
+            document.body.classList.remove('home-video-modal-open');
+        };
+
+        trigger.addEventListener('click', () => {
+            frame.src = trigger.dataset.youtubeVideo;
+            modal.hidden = false;
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('home-video-modal-open');
+            modal.querySelector('.home-video-modal-close').focus();
+        });
+
+        modal.querySelectorAll('[data-video-modal-close]').forEach((element) => {
+            element.addEventListener('click', closeModal);
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !modal.hidden) closeModal();
+        });
+    })();
+</script>
 
 <div class="container">
     <header class="shop-header">

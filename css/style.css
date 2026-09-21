@@ -877,7 +877,6 @@ a.link-primary:focus,
   .menu-item
   .sub-menu
   .menu-item {
-  text-indent: 5px;
   text-align: left;
   color: #010101;
   text-decoration: none;
@@ -1346,7 +1345,7 @@ a.link-primary:focus,
 }
 
 .home-hero-video-link {
-  display: inline-flex;
+  display: none !important;
   align-items: center;
   gap: 11px;
   color: #fff;
@@ -1370,6 +1369,81 @@ a.link-primary:focus,
   border: 2px solid #fff;
   border-radius: 50%;
   font-size: 0.82rem;
+}
+
+.home-video-modal[hidden] {
+  display: none;
+}
+
+.home-video-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+
+.home-video-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 18, 27, 0.82);
+}
+
+.home-video-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(900px, 100%);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+}
+
+.home-video-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+}
+
+.home-video-modal-header h2 {
+  margin: 0;
+  color: #172027;
+  font-size: 18px;
+}
+
+.home-video-modal-close {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #172027;
+  cursor: pointer;
+}
+
+.home-video-modal-close:hover,
+.home-video-modal-close:focus-visible {
+  background: #1fa8de;
+  color: #fff;
+}
+
+.home-video-modal-frame {
+  aspect-ratio: 16 / 9;
+  background: #0b1115;
+}
+
+.home-video-modal-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.home-video-modal-open {
+  overflow: hidden;
 }
 
 .home-hero-features {

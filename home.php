@@ -115,7 +115,7 @@ get_header();
         <div class="container home-hero-inner">
             <div class="home-hero-copy">
                 <p class="home-hero-eyebrow">Premium quality signs &amp; letters</p>
-                <h1 id="home-hero-title">Make Your Brand<br><span>Stand Out</span></h1>
+                <h1 id="home-hero-title">Make Your Brand <br class="home-hero-mobile-break"><span> Stand Out</span></h1>
                 <p class="home-hero-lead">Custom channel letters, LED signs, acrylic signs and more.<br class="home-hero-desktop-break"> Built for businesses that want to be seen.</p>
                 <div class="home-hero-actions">
                     <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>

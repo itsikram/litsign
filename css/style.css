@@ -3483,7 +3483,10 @@ a.link-primary:focus,
   line-height: 1.7;
 }
 .contact-page {
+  width: min(100% - 32px, 1240px);
   max-width: 1240px;
+  margin-right: auto;
+  margin-left: auto;
 }
 .contact-hero {
   min-height: 310px;

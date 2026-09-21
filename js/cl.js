@@ -988,28 +988,24 @@ let updatePreview = (type = null, node = null) => {
 
   switch (type) {
     case "text":
-      previewNode = new Konva.Text({
-        text: node.text() || selectedNode.text(),
-        fontFamily: activeFontCode,
-        fill: activeFaceCode,
-        stroke: activeTrimcapColorCode,
-        strokeWidth: strokeWidth,
-        shadowColor: activeReturnColorCode,
-        shadowOffsetX: activeReturnSizeCode / 1.5,
-        shadowOffsetY: activeReturnSizeCode / 1.5,
-        shadowBlur: activeReturnSizeCode / 1.5,
-        fontSize: 50,
+      previewNode = node.clone({ draggable: false });
+      previewNode.position({ x: 0, y: 0 });
+      const textBounds = previewNode.getClientRect({ skipTransform: true });
+      const availableWidth = Math.max(1, previewStage.width() - 20);
+      const availableHeight = Math.max(1, previewStage.height() - 20);
+      const previewScale = Math.min(
+        availableWidth / textBounds.width,
+        availableHeight / textBounds.height,
+      );
+      previewNode.scale({
+        x: previewNode.scaleX() * previewScale,
+        y: previewNode.scaleY() * previewScale,
       });
-      previewNode.y(previewStage.height() / 2 - previewNode.height() / 2);
-      previewNode.x(previewStage.width() / 2 - previewNode.width() / 2);
-      if (previewNode.text().length > 7) {
-        previewNode.setAttrs({
-          fontSize: 50 - previewNode.text().length * 1.7,
-          x: 10,
-          y: previewStage.height() / 2 - previewNode.height() / 2,
-        });
-      }
-      previewLayer.batchDraw();
+      const scaledBounds = previewNode.getClientRect({ skipTransform: false });
+      previewNode.position({
+        x: (previewStage.width() - scaledBounds.width) / 2 - scaledBounds.x,
+        y: (previewStage.height() - scaledBounds.height) / 2 - scaledBounds.y,
+      });
       break;
 
     case "rect":
@@ -3033,6 +3029,7 @@ window.addEventListener("load", function (e) {
       updateHeightWidthDisplay();
     };
 
+    textNode.on("dragmove", scheduleHeightWidthDisplayUpdate);
     textNode.on("dragstart", () => {
       selectedNode = textNode;
       selectedNodeType = textNode.getClassName();
@@ -3332,6 +3329,7 @@ window.addEventListener("load", function (e) {
       updateHeightWidthDisplay();
     };
 
+    shape.on("dragmove", scheduleHeightWidthDisplayUpdate);
     shape.on("dragstart", () => {
       selectedNode = shape;
       selectedNodeType = shape.getClassName();
@@ -3838,6 +3836,10 @@ window.addEventListener("load", function (e) {
       updateLeftsideBar();
       updateFocusedTransformer(raceway);
     });
+    raceway.on("dragmove", (e) => {
+      updateRacewayTextPosition();
+      scheduleHeightWidthDisplayUpdate();
+    });
     raceway.on("dragmove", updateRacewayTextPosition);
 
     raceway.on("dragend", () => {
@@ -4198,6 +4200,7 @@ window.addEventListener("load", function (e) {
       updateLeftsideBar();
       updateFocusedTransformer(cloneNode);
     });
+    cloneNode.on("dragmove", scheduleHeightWidthDisplayUpdate);
 
     cloneNode.on("dragend", () => {
       scheduleCloneUpdate();

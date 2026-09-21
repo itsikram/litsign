@@ -726,12 +726,74 @@ a.link-primary:focus,
   color: #fff;
 }
 
+.shop-header {
+  position: relative;
+  max-width: 980px;
+  margin: 28px auto 34px;
+  padding: 34px 32px 30px;
+  overflow: hidden;
+  border: 1px solid #dbeaf2;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(31, 168, 222, 0.12), transparent 34%),
+    linear-gradient(135deg, #ffffff 0%, #f5fbfe 100%);
+  box-shadow: 0 10px 28px rgba(23, 32, 39, 0.08);
+  text-align: center;
+}
+
+.shop-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 76px;
+  height: 4px;
+  border-radius: 0 0 6px 6px;
+  background: #1fa8de;
+  transform: translateX(-50%);
+}
+
+.shop-header h1 {
+  margin: 0;
+  color: #172027;
+  font-size: clamp(1.8rem, 3vw, 2.65rem) !important;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.shop-header p:not(.mt-3) {
+  max-width: 720px;
+  margin: 12px auto 0;
+  color: #526171;
+  font-size: clamp(0.98rem, 1.5vw, 1.12rem);
+  line-height: 1.6;
+}
+
+.shop-header .mt-3 {
+  margin-top: 22px !important;
+  margin-bottom: 0;
+}
+
+.shop-header .btn-primary {
+  min-height: 46px;
+  padding: 11px 22px;
+  border-radius: 7px;
+  box-shadow: 0 5px 12px rgba(31, 168, 222, 0.22);
+  font-weight: 700;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.shop-header .btn-primary:hover,
+.shop-header .btn-primary:focus-visible {
+  box-shadow: 0 8px 16px rgba(31, 168, 222, 0.3);
+  transform: translateY(-2px);
+}
+
 .category-filter-menu-wrapper {
   padding: 10px;
   background-color: rgba(0, 0, 0, 0.03);
-  margin-top: 95px;
   box-shadow: 0px 1px 5px gray;
-  margin-top: 95px;
   margin-bottom: 50px;
 }
 .category-filter-menu-wrapper .category-filter-toggler {
@@ -921,7 +983,6 @@ a.link-primary:focus,
 }
 
 .product-box-container {
-  padding-top: 20px;
   overflow: hidden;
 }
 .product-box-container .product-box {
@@ -1145,7 +1206,13 @@ a.link-primary:focus,
   display: flex;
   align-items: center;
   background:
-    linear-gradient(90deg, rgba(3, 24, 53, 0.97) 0%, rgba(3, 24, 53, 0.89) 31%, rgba(3, 24, 53, 0.36) 56%, rgba(3, 24, 53, 0.08) 100%),
+    linear-gradient(
+      90deg,
+      rgba(3, 24, 53, 0.97) 0%,
+      rgba(3, 24, 53, 0.89) 31%,
+      rgba(3, 24, 53, 0.36) 56%,
+      rgba(3, 24, 53, 0.08) 100%
+    ),
     url("../img/Hero-background.png") center center / cover no-repeat;
 }
 
@@ -1211,7 +1278,9 @@ a.link-primary:focus,
   font-size: 1rem;
   font-weight: 700;
   text-decoration: none;
-  transition: background-color 0.2s ease, transform 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
 }
 
 .home-hero-shop-button:hover,
@@ -1331,7 +1400,12 @@ a.link-primary:focus,
     min-height: 510px;
     align-items: flex-start;
     background:
-      linear-gradient(180deg, rgba(3, 24, 53, 0.98) 0%, rgba(3, 24, 53, 0.87) 48%, rgba(3, 24, 53, 0.42) 100%),
+      linear-gradient(
+        180deg,
+        rgba(3, 24, 53, 0.98) 0%,
+        rgba(3, 24, 53, 0.87) 48%,
+        rgba(3, 24, 53, 0.42) 100%
+      ),
       url("../img/Hero-background.png") 64% center / cover no-repeat;
   }
 
@@ -2817,6 +2891,26 @@ a.link-primary:focus,
 }
 
 @media only screen and (max-width: 767px) {
+  .shop-header {
+    margin: 18px 12px 24px;
+    padding: 28px 18px 24px;
+    border-radius: 12px;
+  }
+
+  .shop-header h1 {
+    font-size: 1.7rem !important;
+  }
+
+  .shop-header p:not(.mt-3) {
+    font-size: 0.95rem;
+  }
+
+  .shop-header .btn-primary {
+    width: 100%;
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
   .channel-letters-seo-content {
     margin-top: 38px;
   }

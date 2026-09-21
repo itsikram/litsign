@@ -149,6 +149,16 @@ get_header();
     </div>
 </section>
 
+<div class="container">
+    <header class="shop-header">
+        <h1 class="text-center fs-2"><?php echo esc_html($is_channel_letters ? __('Custom Channel Letter Signs', 'litsign') : ($current_term ? $current_term->name : __('Custom Signs', 'litsign'))); ?></h1>
+        <p class="text-center fs-5 mb-0"><?php echo esc_html($is_channel_letters ? __('Create a stronger storefront presence with custom LED channel letters made for retail businesses.', 'litsign') : ($current_term ? $current_term->description : __('Shop custom signage designed and built for your business.', 'litsign'))); ?></p>
+        <?php if ($is_channel_letters) : ?>
+            <p class="text-center mt-3"><a class="btn btn-primary" href="<?php echo esc_url($contact_url); ?>">Request a Channel Letter Sign Quote</a></p>
+        <?php endif; ?>
+    </header>
+</div>
+
 <div class="container my-3">
 
     <div class="row">
@@ -233,13 +243,6 @@ get_header();
                 </div>
             </div> -->
 
-            <header class="shop-header">
-                <h1 class="text-center fs-2"><?php echo esc_html($is_channel_letters ? __('Custom Channel Letter Signs', 'litsign') : ($current_term ? $current_term->name : __('Custom Signs', 'litsign'))); ?></h1>
-                <p class="text-center fs-5 mb-0"><?php echo esc_html($is_channel_letters ? __('Create a stronger storefront presence with custom LED channel letters made for retail businesses.', 'litsign') : ($current_term ? $current_term->description : __('Shop custom signage designed and built for your business.', 'litsign'))); ?></p>
-                <?php if ($is_channel_letters) : ?>
-                    <p class="text-center mt-3"><a class="btn btn-primary" href="<?php echo esc_url($contact_url); ?>">Request a Channel Letter Sign Quote</a></p>
-                <?php endif; ?>
-            </header>
             <div id="product-box-container" class="product-box-container d-flex flex-wrap">
 
                 <?php

@@ -1013,7 +1013,7 @@ a.link-primary:focus,
 }
 
 .product-box-container {
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 .product-box-container .product-box {
   width: 33%;

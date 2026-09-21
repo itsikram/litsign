@@ -832,7 +832,7 @@ function updateBottombarOverlay() {
 
 function drawWidthArrows(startY, textValue) {
 
-    let middleX = (stage.width() * stage.scaleX()) / 2;
+    let middleX = stage.width() / 2;
     let arrowWidth = stage.width() / 3;
 
     let widthArrow = new Konva.Group({
@@ -878,7 +878,7 @@ function drawWidthArrows(startY, textValue) {
 
     widthArrows = widthArrow
 
-    layer.draw();
+    layer.batchDraw();
 }
 
 function drawHeightArrows(startX, textValue = 0) {
@@ -932,7 +932,7 @@ function drawHeightArrows(startX, textValue = 0) {
     heightArrows = heightArrow;
 
     layer.add(heightArrow);
-    layer.draw();
+    layer.batchDraw();
 }
 
 
@@ -1373,34 +1373,6 @@ function zoomStage(scaleFactor) {
         y: 1 / newScale,
     })
 
-    // Keep the dimension indicators at their current screen position while
-    // the stage position changes to keep the zoom centered.
-    const indicatorOffset = {
-        x: oldPos.x - newPos.x,
-        y: oldPos.y - newPos.y,
-    };
-
-    if (heightArrows != null) {
-        heightArrows.scale({
-            x: 1 / newScale,
-            y: 1 / newScale,
-        })
-        heightArrows.position({
-            x: heightArrows.x() + indicatorOffset.x,
-            y: heightArrows.y() + indicatorOffset.y,
-        });
-    }
-    if (widthArrows != null) {
-        widthArrows.scale({
-            x: 1 / newScale,
-            y: 1 / newScale,
-        })
-        widthArrows.position({
-            x: widthArrows.x() + indicatorOffset.x,
-            y: widthArrows.y() + indicatorOffset.y,
-        });
-    }
-
     nodeLists.forEach(function (nodeObject, key) {
         let node = nodeObject.node;
         let transformer = node.getAttr('transformer')
@@ -1410,7 +1382,7 @@ function zoomStage(scaleFactor) {
         }
     })
 
-    layer.draw();
+    updateHeightWidthDisplay();
 
 }
 
@@ -1516,6 +1488,18 @@ function updateHeightWidthInput(height, width, type) {
 
 }
 
+let heightWidthDisplayFrame = null;
+function scheduleHeightWidthDisplayUpdate() {
+    if (heightWidthDisplayFrame !== null) {
+        return;
+    }
+
+    heightWidthDisplayFrame = requestAnimationFrame(() => {
+        heightWidthDisplayFrame = null;
+        updateHeightWidthDisplay();
+    });
+}
+
 function updateHeightWidthDisplay() {
 
     if (nodeLists.length < 1) {
@@ -1524,9 +1508,6 @@ function updateHeightWidthDisplay() {
         heightDisplay.text(`0"`);
         return;
     }
-
-    let stageScaleX = stage.scaleX();
-    let stageScaleY = stage.scaleY();
 
     let updatedHeight = nodeLists[0].node.height() * nodeLists[0].node.scaleY()
     let updatedWidth = nodeLists[0].node.width() * nodeLists[0].node.scaleX();
@@ -1690,34 +1671,26 @@ function updateHeightWidthDisplay() {
 
 
 
-        let topArrow = heightArrows.children[0];
-        let bottomArrow = heightArrows.children[1];
-
-        let leftArrow = widthArrows.children[0];
-        let rightArrow = widthArrows.children[1];
-
-        let xArrowHeight = ((contentHeight * dpi) / 2) * stageScaleY;
-        let xArrowWidth = ((contentWidth * dpi) / 2) * stageScaleX;
-
-        let middleY = ((minTop * stageScaleY) + xArrowHeight);
-        let middleX = (minLeft * stageScaleX) + xArrowWidth;
-
-        //[startX, middleY - 20, startX, middleY - arrowHeight]
-
-        topArrow.points([20, middleY - 15, 20, middleY - xArrowHeight])
-        bottomArrow.points([20, middleY + 15, 20, middleY + xArrowHeight])
-        heightDisplay.y(middleY - 10)
-
-        leftArrow.points([middleX - 35, 20, middleX - xArrowWidth, 20])
-        rightArrow.points([middleX + 35, 20, middleX + xArrowWidth, 20])
-        widhtDisplay.x(middleX - 25)
-
-        layer.draw()
-
-        widhtDisplay.text(`${contentWidth.toFixed(1)}"`);
-        heightDisplay.text(`${contentHeight.toFixed(1)}"`);
-
     })
+
+    let topArrow = heightArrows.children[0];
+    let bottomArrow = heightArrows.children[1];
+    let leftArrow = widthArrows.children[0];
+    let rightArrow = widthArrows.children[1];
+    let xArrowHeight = (contentHeight * dpi) / 2;
+    let xArrowWidth = (contentWidth * dpi) / 2;
+    let middleY = minTop + xArrowHeight;
+    let middleX = minLeft + xArrowWidth;
+
+    topArrow.points([20, middleY - 15, 20, middleY - xArrowHeight]);
+    bottomArrow.points([20, middleY + 15, 20, middleY + xArrowHeight]);
+    heightDisplay.y(middleY - 10);
+    leftArrow.points([middleX - 35, 20, middleX - xArrowWidth, 20]);
+    rightArrow.points([middleX + 35, 20, middleX + xArrowWidth, 20]);
+    widhtDisplay.x(middleX - 25);
+    widhtDisplay.text(`${contentWidth.toFixed(1)}"`);
+    heightDisplay.text(`${contentHeight.toFixed(1)}"`);
+    layer.batchDraw();
 }
 
 
@@ -2387,7 +2360,28 @@ let updateDimenstionDisplay = () => {
     elementDimenstionContainer.innerHTML = elementDimenstionText
 }
 
+const focusedTransformColor = '#2563eb';
+const unfocusedTransformColor = '#808080';
+
+let updateFocusedTransformer = (node) => {
+    stage.find('Transformer').forEach(transformer => {
+        const isFocused = node && transformer === node.getAttr('transformer');
+        transformer.borderStroke(isFocused ? focusedTransformColor : unfocusedTransformColor);
+        transformer.anchorStroke(isFocused ? focusedTransformColor : unfocusedTransformColor);
+        transformer.anchorFill(isFocused ? '#ffffff' : '#f0f0f0');
+
+        if (isFocused) {
+            transformer.show();
+        } else {
+            transformer.hide();
+        }
+    });
+
+    layer.batchDraw();
+};
+
 let updateLeftsideBar = () => {
+    updateFocusedTransformer(selectedNode);
     document.getElementById('cornerRadiusContainer').style.setProperty('display', 'none', 'important');
 
     if (selectedNode == null) {
@@ -2878,9 +2872,8 @@ window.addEventListener('load', function (e) {
                 updatePreview('text', textNode);
                 updateHeightWidthInput(textNode.height() * textNode.scaleY(), textNode.width() * textNode.scaleX(), 'text')
                 isTextTransform = true;
-                updateLeftsideBar()
-                updateHeightWidthDisplay();
                 fontSize = textNode.fontSize() * textNode.scaleX();
+                persistTextTransform();
                 layer.batchDraw();
             });
         };
@@ -2911,31 +2904,15 @@ window.addEventListener('load', function (e) {
                     }
                 }
             });
+            updateHeightWidthDisplay();
         };
 
         textNode.on('transform', function () {
             scheduleTextTransformUpdate();
+            scheduleHeightWidthDisplayUpdate();
         });
 
         textNode.on('transformend', persistTextTransform);
-
-        let textDragFrame = null;
-        let scheduleTextUpdate = () => {
-            if (textDragFrame !== null) {
-                return;
-            }
-            textDragFrame = requestAnimationFrame(() => {
-                textDragFrame = null;
-                selectedNode = textNode;
-                selectedNodeType = textNode.getClassName();
-                textInput.value = textNode.text();
-                updateHeightWidthDisplay();
-                updatePreview('text', textNode);
-                updateHeightWidthInput(textNode.height() * textNode.scaleY(), textNode.width() * textNode.scaleX(), 'text');
-                updateLeftsideBar();
-                layer.batchDraw();
-            });
-        };
 
         let persistText = () => {
             let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
@@ -2954,12 +2931,10 @@ window.addEventListener('load', function (e) {
                     y: textNode.y(),
                 }
             });
+            updateHeightWidthDisplay();
         };
 
-        textNode.on('dragmove', function () {
-            scheduleTextUpdate();
-        });
-
+        textNode.on('dragmove', scheduleHeightWidthDisplayUpdate);
         textNode.on('dragend', persistText);
 
 
@@ -3242,22 +3217,6 @@ window.addEventListener('load', function (e) {
         shape.setAttr('transformer', tr);
         selectedNode = shape;
 
-        let shapeDragFrame = null;
-        let scheduleShapeUpdate = () => {
-            if (shapeDragFrame !== null) {
-                return;
-            }
-            shapeDragFrame = requestAnimationFrame(() => {
-                shapeDragFrame = null;
-                selectedNode = shape;
-                selectedNodeType = shape.getClassName();
-                updateHeightWidthDisplay();
-                updatePreview(previewnType, shape);
-                updateLeftsideBar();
-                layer.batchDraw();
-            });
-        };
-
         let persistShape = () => {
             store.dispatch({
                 type: 'UPDATE_ELEMENT', payload: {
@@ -3266,12 +3225,10 @@ window.addEventListener('load', function (e) {
                     y: shape.y(),
                 }
             });
+            updateHeightWidthDisplay();
         };
 
-        shape.on('dragmove', function () {
-            scheduleShapeUpdate();
-        });
-
+        shape.on('dragmove', scheduleHeightWidthDisplayUpdate);
         shape.on('dragend', persistShape);
 
         let shapeTransformFrame = null;
@@ -3283,10 +3240,8 @@ window.addEventListener('load', function (e) {
                 shapeTransformFrame = null;
                 selectedNode = shape;
                 selectedNodeType = shape.getClassName();
-                updateHeightWidthDisplay();
                 updatePreview(previewnType, shape);
-                updateLeftsideBar();
-                
+
                 switch (shape.getClassName()) {
                     case 'RegularPolygon':
                         let triHeightInch = pxToIn(shape.height() * shape.scaleY() / triangleReduction);
@@ -3302,7 +3257,12 @@ window.addEventListener('load', function (e) {
                         updateHeightWidthInput(shape.height() * shape.scaleY(), shape.width() * shape.scaleX(), previewnType)
                         break;
                 }
-                layer.batchDraw();
+                let transformer = shape.getAttr('transformer');
+                if (transformer) {
+                    transformer.update();
+                }
+                layer.draw();
+                persistShapeTransform();
             });
         };
 
@@ -3397,6 +3357,7 @@ window.addEventListener('load', function (e) {
 
         shape.on('transform', e => {
             scheduleShapeTransformUpdate();
+            scheduleHeightWidthDisplayUpdate();
         })
 
 
@@ -3661,6 +3622,7 @@ window.addEventListener('load', function (e) {
             fontSize: 24,
             fontFamily: 'Arial',
             fill: 'gray',
+            listening: false,
 
         });
 
@@ -3669,7 +3631,9 @@ window.addEventListener('load', function (e) {
         layer.add(racewayText);
 
         let racewayUpdateFrame = null;
-        let scheduleRacewayUpdate = () => {
+        let racewayCostUpdatePending = false;
+        let scheduleRacewayUpdate = (updateCost = false) => {
+            racewayCostUpdatePending = racewayCostUpdatePending || updateCost;
             if (racewayUpdateFrame !== null) {
                 return;
             }
@@ -3678,10 +3642,10 @@ window.addEventListener('load', function (e) {
                 racewayUpdateFrame = null;
                 racewayText.x(raceway.x() + ((raceway.width() * raceway.scaleX()) - racewayText.width()) / 2);
                 racewayText.y(raceway.y() + (raceway.height() * raceway.scaleY() / 2) - (racewayText.height()) / 2);
-                selectedNode = raceway;
-                updateHeightWidthDisplay();
-                updateHeightWidthInput(raceway.height() * raceway.scaleY(), raceway.width() * raceway.scaleX(), 'raceway');
-                updatePreview('raceway', raceway);
+                if (racewayCostUpdatePending) {
+                    racewayCostUpdatePending = false;
+                    persistRaceway();
+                }
                 layer.batchDraw();
             });
         };
@@ -3702,10 +3666,12 @@ window.addEventListener('load', function (e) {
                     }
                 }
             });
+            updateHeightWidthDisplay();
         };
 
         raceway.on('dragmove', e => {
             scheduleRacewayUpdate();
+            scheduleHeightWidthDisplayUpdate();
         });
 
         raceway.on('dragend', persistRaceway);
@@ -3719,7 +3685,8 @@ window.addEventListener('load', function (e) {
         })
 
         raceway.on('transform', e => {
-            scheduleRacewayUpdate();
+            scheduleRacewayUpdate(true);
+            scheduleHeightWidthDisplayUpdate();
         })
         raceway.on('transformend', persistRaceway);
         // Center the text within the rectangle
@@ -3806,23 +3773,6 @@ window.addEventListener('load', function (e) {
         }
         triggerTransformEvent();
     }
-
-    let sidebarUpdateFrame = null;
-    let handleDrawEvent = (event) => {
-        if (event.target && event.target.getAttr && event.target.getAttr('textIndex')) {
-            return;
-        }
-        if (sidebarUpdateFrame !== null) {
-            return;
-        }
-        sidebarUpdateFrame = requestAnimationFrame(() => {
-            sidebarUpdateFrame = null;
-            updateLeftsideBar();
-        });
-    }
-
-    stage.on('dragmove transform', handleDrawEvent);
-
 
     drawHeightArrows(20, `0"`);
     drawWidthArrows(20, `0"`);
@@ -4075,6 +4025,7 @@ window.addEventListener('load', function (e) {
 
         cloneNode.on('dragmove', () => {
             scheduleCloneUpdate();
+            scheduleHeightWidthDisplayUpdate();
         });
 
         cloneNode.on('dragend', () => {
@@ -4137,6 +4088,7 @@ window.addEventListener('load', function (e) {
 
         cloneNode.on('transform', () => {
             scheduleCloneTransformUpdate();
+            scheduleHeightWidthDisplayUpdate();
         });
 
         cloneNode.on('transformend', persistCloneTransform);
@@ -4145,6 +4097,9 @@ window.addEventListener('load', function (e) {
 
 
         cloneNode.on('click', e => {
+            selectedNode = cloneNode;
+            updateFocusedTransformer(cloneNode);
+
             switch (cloneNode.getClassName()) {
                 case 'RegularPolygon':
                     let triWidth = cloneNode.width() * cloneNode.scaleX() / triangleReduction
@@ -4223,6 +4178,7 @@ window.addEventListener('load', function (e) {
             currentElementIndex = currentElementIndex + 1;
         }
         selectedNode = cloneNode;
+        updateFocusedTransformer(cloneNode);
 
     })
     // undoBtn.addEventListener('click', function () {

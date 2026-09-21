@@ -230,18 +230,18 @@ function render_order_attr_meta_box()
                                 $lit = $product_cl_data_array['extras']['lit'];
                                 $total_extras_cost = 0;
 
-                                if (isset($power_supply['value'])) {
-                                    $total_extras_cost += $power_supply['cost'];
+                                if (!empty($power_supply['qty'])) {
+                                    $total_extras_cost += floatval($power_supply['cost'] ?? 0);
                                 ?>
                                     <tr>
                                         <td colspan="13">Power Supply: <span class="fw-bold"><?php echo esc_html((string) $power_supply['value']); ?></span></td>
-                                        <td>$<?php echo esc_html(process_price($power_supply['cost'])); ?></td>
+                                        <td>$<?php echo esc_html(process_price(floatval($power_supply['cost'] ?? 0))); ?></td>
                                     </tr>
                                 <?php
 
                                 }
-                                if (isset($cable['value'])) {
-                                    $total_extras_cost += $cable['cost'];
+                                if (!empty($cable['qty'])) {
+                                    $total_extras_cost += floatval($cable['cost'] ?? 0);
 
                                 ?>
                                     <tr>
@@ -251,8 +251,8 @@ function render_order_attr_meta_box()
                                 <?php
 
                                 }
-                                if (isset($lit['value'])) {
-                                    $lit_cost = round(($total_element_cost / 100) * $lit['cost'], 2);
+                                if (!empty($lit['qty'])) {
+                                    $lit_cost = round(($total_element_cost / 100) * floatval($lit['cost'] ?? 0), 2);
                                     $total_extras_cost +=  $lit_cost;
 
                                 ?>

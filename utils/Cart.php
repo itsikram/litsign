@@ -54,7 +54,7 @@ class Cart
         $product_title = get_the_title($product_id);
         $product_thumbnail = $product_id ? wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'single-post-thumbnail')[0] : '';
         $product_price = isset($_REQUEST['total_cost']) ? floatval($_REQUEST['total_cost']) : '';
-        $turnaround_cost = isset($_REQUEST['$turnaround_cost']) ? floatval($_REQUEST['$turnaround_cost']) : 0;
+        $turnaround_cost = isset($_REQUEST['turnaround_cost']) ? floatval($_REQUEST['turnaround_cost']) : 0;
         $product_quantity = isset($_REQUEST['product_quantity']) ? $_REQUEST['product_quantity'] : 1;
         $job_name = isset($_REQUEST['job_name']) ? $_REQUEST['job_name'] : '';
         // chennel letter details

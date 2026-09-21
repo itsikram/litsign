@@ -103,6 +103,14 @@ const dpi = 10; // Assuming 96 DPI for inch to pixel conversion
 const ppi = 10;
 const triangleReduction = 1.15; // 1.32;
 
+const normalizeCost = (value, fallback = 0) => {
+  const numericValue = Number(value);
+  if (Number.isFinite(numericValue)) {
+    return numericValue;
+  }
+  return fallback;
+};
+
 let colorCost = 0;
 
 let currentElementIndex = 1;
@@ -468,6 +476,8 @@ const elementsReducer = (state = initialElement, action) => {
       console.log("payload radius", action.payload.radius);
       let newElement = {
         ...action.payload,
+        cost: normalizeCost(action.payload.cost),
+        colorCost: normalizeCost(action.payload.colorCost),
         fontSize,
         font,
         type: nodeType,
@@ -521,11 +531,26 @@ const elementsReducer = (state = initialElement, action) => {
       for (let i = 0; i < state.length; i++) {
         if (state[i].id == elementId) {
           let element = state[i];
-          let height = action.payload.height || element.height;
-          let width = action.payload.width || element.width;
-          let text = action.payload.text || element.text;
-          let cost = action.payload.cost || element.cost;
-          let radius = action.payload.radius / dpi || element.radius;
+          let height =
+            action.payload.height === undefined
+              ? element.height
+              : action.payload.height;
+          let width =
+            action.payload.width === undefined
+              ? element.width
+              : action.payload.width;
+          let text =
+            action.payload.text === undefined
+              ? element.text
+              : action.payload.text;
+          let cost =
+            action.payload.cost === undefined
+              ? element.cost
+              : normalizeCost(action.payload.cost);
+          let radius =
+            action.payload.radius === undefined
+              ? element.radius
+              : action.payload.radius / dpi;
           let colorCost =
             action.payload.colorCost == undefined
               ? element.colorCost
@@ -535,21 +560,19 @@ const elementsReducer = (state = initialElement, action) => {
               ? selectedNode.fontSize()
               : undefined;
 
-          console.log("payload:", action.payload.cost, cost);
-
           var updatedElement = {
             ...element,
+            ...action.payload,
             fontSize,
             type: nodeType,
             x,
             y,
-            ...action.payload,
             radius,
             height,
             width,
             text,
             cost,
-            colorCost,
+            colorCost: normalizeCost(colorCost),
           };
 
           state[i] = updatedElement;
@@ -653,13 +676,12 @@ const costPerInch = (
   size,
   costPerSize = getDataById(["cost-per-inch"], productClData)[0].options,
 ) => {
-  if (size < 8) {
-    return false;
-  } else if (size > 45) {
-    return false;
+  const numericSize = Number(size);
+  if (!Number.isFinite(numericSize) || numericSize < 8 || numericSize > 45) {
+    return 0;
   }
 
-  const sizeInch = parseInt(size);
+  const sizeInch = parseInt(numericSize, 10);
 
   const foundItem = costPerSize.find(
     (item) => item[`${sizeInch} Inch`] !== undefined,
@@ -667,7 +689,7 @@ const costPerInch = (
 
   if (foundItem) {
     const cost = parseFloat(foundItem[`${sizeInch} Inch`]);
-    return parseFloat(cost);
+    return normalizeCost(cost);
   } else {
     return 0;
   }
@@ -766,31 +788,25 @@ function pxToIn(px) {
   return inch.toFixed(1);
 }
 
+function getNodeDesignBounds(node) {
+  const bounds = node.getClientRect({
+    skipTransform: false,
+    skipStroke: true,
+    skipShadow: true,
+  });
+  const scaleX = stage.scaleX() || 1;
+  const scaleY = stage.scaleY() || 1;
+  return {
+    x: (bounds.x - stage.x()) / scaleX,
+    y: (bounds.y - stage.y()) / scaleY,
+    width: bounds.width / scaleX,
+    height: bounds.height / scaleY,
+  };
+}
+
 function getTextDimensions(node) {
-  const textWidthInPx = node.width() * node.scaleX();
-  const textHeightInPx = node.height() * node.scaleY();
-
-  switch (node.getClassName()) {
-    case "RegularPolygon":
-      let triHeight = (node.radius() * 2 * node.scaleY()) / triangleReduction;
-      let triWidth = (node.radius() * 2 * node.scaleX()) / triangleReduction;
-      return `H:${pxToIn(triHeight)} x W:${pxToIn(triWidth)}`;
-      break;
-    case "Line":
-      let arrowHeightInch =
-        ((node.points()[9] - node.points()[5]) / dpi) * node.scaleY();
-      let arrowWidthInch =
-        ((node.points()[6] - node.points()[0]) / dpi) * node.scaleX();
-
-      return `H:${arrowHeightInch.toFixed(1)} x W:${arrowWidthInch.toFixed(1)}`;
-
-      break;
-
-    default:
-      return `H:${pxToIn(textHeightInPx)} x W:${pxToIn(textWidthInPx)}`;
-
-      break;
-  }
+  const bounds = getNodeDesignBounds(node);
+  return `H:${pxToIn(bounds.height)} x W:${pxToIn(bounds.width)}`;
 }
 
 function maintainAspectRatio(newWidth = null, newHeight = null) {
@@ -985,6 +1001,72 @@ let updatePreview = (type = null, node = null) => {
     shadowBlur: activeReturnSizeCode / 1.5,
     cornerRadius: selectedNode ? selectedNode.attrs.cornerRadius / 2 : 0,
   };
+
+  const previewNodeBounds = (previewTarget) =>
+    previewTarget.getClientRect({
+      skipTransform: false,
+      skipStroke: false,
+      skipShadow: false,
+    });
+  const fitPreviewNode = (previewTarget) => {
+    const padding = 10;
+    const availableWidth = Math.max(1, previewStage.width() - padding * 2);
+    const availableHeight = Math.max(1, previewStage.height() - padding * 2);
+    const bounds = previewNodeBounds(previewTarget);
+    const fitScale = Math.min(
+      availableWidth / Math.max(1, bounds.width),
+      availableHeight / Math.max(1, bounds.height),
+    );
+
+    previewTarget.scale({
+      x: previewTarget.scaleX() * fitScale,
+      y: previewTarget.scaleY() * fitScale,
+    });
+
+    const fittedBounds = previewNodeBounds(previewTarget);
+    previewTarget.position({
+      x:
+        previewTarget.x() +
+        previewStage.width() / 2 -
+        (fittedBounds.x + fittedBounds.width / 2),
+      y:
+        previewTarget.y() +
+        previewStage.height() / 2 -
+        (fittedBounds.y + fittedBounds.height / 2),
+    });
+  };
+
+  if (node) {
+    if (type === "raceway" && node.getAttr("textIndex")) {
+      previewNode = new Konva.Group({ draggable: false });
+      const previewRaceway = node.clone({ draggable: false });
+      previewRaceway.x(0);
+      previewRaceway.y(0);
+      previewRaceway.setAttr("textIndex", undefined);
+      previewNode.add(previewRaceway);
+
+      const previewRacewayText = node.getAttr("textIndex").clone({
+        draggable: false,
+      });
+      previewRacewayText.x(
+        (node.width() * node.scaleX() - previewRacewayText.width()) / 2,
+      );
+      previewRacewayText.y(
+        (node.height() * node.scaleY() - previewRacewayText.height()) / 2,
+      );
+      previewNode.add(previewRacewayText);
+    } else {
+      previewNode = node.clone({ draggable: false });
+      previewNode.position({ x: 0, y: 0 });
+    }
+
+    fitPreviewNode(previewNode);
+    currentPreviewNode = previewNode;
+    previewLayer.add(previewNode);
+    previewNodeLists.push(previewNode);
+    previewLayer.batchDraw();
+    return;
+  }
 
   switch (type) {
     case "text":
@@ -1464,6 +1546,24 @@ function updateHeightWidthInput(height, width, type) {
   }
 }
 
+function updateNodeDimensionInputs(node, type = null) {
+  if (!node) {
+    return;
+  }
+
+  const bounds = getNodeDesignBounds(node);
+  const inputType =
+    type ||
+    (node.getClassName() === "Text"
+      ? "text"
+      : node.getClassName() === "Line"
+        ? "arrow"
+        : node.getAttr("textIndex")
+          ? "raceway"
+          : null);
+  updateHeightWidthInput(bounds.height, bounds.width, inputType);
+}
+
 let heightWidthDisplayFrame = null;
 function scheduleHeightWidthDisplayUpdate() {
   if (heightWidthDisplayFrame !== null) {
@@ -1483,182 +1583,32 @@ function updateHeightWidthDisplay(skipDraw = false) {
     return;
   }
 
-  let updatedHeight = nodeLists[0].node.height() * nodeLists[0].node.scaleY();
-  let updatedWidth = nodeLists[0].node.width() * nodeLists[0].node.scaleX();
+  const getStageBounds = (node) => {
+    const bounds = getNodeDesignBounds(node);
+    return {
+      left: bounds.x,
+      top: bounds.y,
+      right: bounds.x + bounds.width,
+      bottom: bounds.y + bounds.height,
+    };
+  };
 
-  let minLeft = 0;
-  let minRight = 0;
-  let minTop = 0;
-  let minBottom = 0;
-
-  let firstNode = nodeLists[0];
-  switch (firstNode.node.getClassName()) {
-    case "RegularPolygon":
-      minLeft =
-        nodeLists[0].node.x() -
-        (firstNode.node.radius() * firstNode.node.scaleX()) / triangleReduction;
-      minRight =
-        nodeLists[0].node.x() +
-        (firstNode.node.radius() * firstNode.node.scaleX()) / triangleReduction;
-
-      // minTop = nodeLists[0].node.y() - ((firstNode.node.radius() * firstNode.node.scaleY()) / triangleReduction)
-      minTop =
-        (nodeLists[0].node.y() -
-          (firstNode.node.height() * firstNode.node.scaleY()) / 2) /
-        triangleReduction;
-
-      minBottom =
-        (nodeLists[0].node.y() +
-          (firstNode.node.height() * firstNode.node.scaleY()) / 2) /
-        triangleReduction;
-
-      // minBottom = nodeLists[0].node.x() + ((firstNode.node.radius() * firstNode.node.scaleY()) / triangleReduction);
-      break;
-
-    case "Star":
-      let starWidth = firstNode.node.width() * firstNode.node.scaleX();
-      let starHeight = firstNode.node.height() * firstNode.node.scaleY();
-
-      minLeft = nodeLists[0].node.x() - starWidth / 2;
-      minRight = nodeLists[0].node.x() + starWidth / 2;
-      minTop = nodeLists[0].node.y() - starHeight / 2;
-      minBottom = nodeLists[0].node.y() + starHeight / 2;
-
-      break;
-
-    case "Line":
-      let arrowPoints = firstNode.node.points();
-
-      let arrowWidth = arrowPoints[6] - arrowPoints[0];
-      let arrowHeight = arrowPoints[9] - arrowPoints[5];
-
-      minLeft =
-        arrowPoints[0] * firstNode.node.scaleX() + firstNode.node.x();
-      minRight =
-        arrowPoints[6] * firstNode.node.scaleX() + firstNode.node.x();
-      minTop =
-        arrowPoints[5] * firstNode.node.scaleY() + firstNode.node.y();
-      minBottom =
-        arrowPoints[9] * firstNode.node.scaleY() + firstNode.node.y();
-
-      break;
-
-    case "Circle":
-      let circleWidth = firstNode.node.width() * firstNode.node.scaleX();
-      let circleHeight = firstNode.node.height() * firstNode.node.scaleY();
-
-      minLeft = firstNode.node.x() - circleWidth / 2;
-      minTop = firstNode.node.y() - circleHeight / 2;
-      minRight = firstNode.node.x() + circleWidth / 2;
-      minBottom = firstNode.node.y() + circleHeight / 2;
-
-      break;
-
-    default:
-      minLeft = nodeLists[0].node.x();
-      minRight = nodeLists[0].node.x() + updatedWidth;
-      minTop = nodeLists[0].node.y();
-      minBottom = nodeLists[0].node.y() + updatedHeight;
-
-      break;
-  }
+  const firstBounds = getStageBounds(nodeLists[0].node);
+  let minLeft = firstBounds.left;
+  let minTop = firstBounds.top;
+  let minRight = firstBounds.right;
+  let minBottom = firstBounds.bottom;
 
   nodeLists.forEach((singleNode) => {
-    let nodeLeft = 0;
-    let nodeTop = 0;
-    let nodeRight = 0;
-    let nodeBottom = 0;
-
-    switch (singleNode.node.getClassName()) {
-      case "RegularPolygon":
-        nodeLeft =
-          singleNode.node.x() -
-          (singleNode.node.radius() * singleNode.node.scaleX()) /
-            triangleReduction;
-        nodeRight =
-          singleNode.node.x() +
-          (singleNode.node.radius() * singleNode.node.scaleX()) /
-            triangleReduction;
-        nodeTop =
-          nodeLists[0].node.y() -
-          (firstNode.node.height() * firstNode.node.scaleY()) /
-            2 /
-            triangleReduction;
-        nodeBottom =
-          (nodeLists[0].node.y() +
-            (firstNode.node.height() * firstNode.node.scaleY()) / 2) /
-          triangleReduction;
-        break;
-
-      case "Star":
-        let starWidth = singleNode.node.width() * singleNode.node.scaleX();
-        let starHeight = singleNode.node.height() * singleNode.node.scaleY();
-
-        nodeLeft = singleNode.node.x() - starWidth / 2;
-        nodeTop = singleNode.node.y() - starHeight / 2;
-        nodeRight = singleNode.node.x() + starWidth / 2;
-        nodeBottom = singleNode.node.y() + starHeight / 2;
-
-        break;
-      case "Line":
-        let arrowPoints = singleNode.node.points();
-
-        let arrowWidth = arrowPoints[6] - arrowPoints[0];
-        let arrowHeight = arrowPoints[9] - arrowPoints[5];
-
-        nodeLeft =
-          arrowPoints[0] * singleNode.node.scaleX() + singleNode.node.x();
-        nodeRight =
-          arrowPoints[6] * singleNode.node.scaleX() + singleNode.node.x();
-        nodeTop =
-          arrowPoints[5] * singleNode.node.scaleY() + singleNode.node.y();
-        nodeBottom =
-          arrowPoints[9] * singleNode.node.scaleY() + singleNode.node.y();
-
-        break;
-
-      case "Circle":
-        let circleWidth = singleNode.node.width() * singleNode.node.scaleX();
-        let circleHeight = singleNode.node.height() * singleNode.node.scaleY();
-
-        nodeLeft = singleNode.node.x() - circleWidth / 2;
-        nodeTop = singleNode.node.y() - circleHeight / 2;
-        nodeRight = singleNode.node.x() + circleWidth / 2;
-        nodeBottom = singleNode.node.y() + circleHeight / 2;
-
-        break;
-
-      default:
-        nodeLeft = singleNode.node.x();
-        nodeTop = singleNode.node.y();
-        nodeRight =
-          singleNode.node.x() +
-          singleNode.node.width() * singleNode.node.scaleX();
-        nodeBottom =
-          singleNode.node.y() +
-          singleNode.node.height() * singleNode.node.scaleY();
-        break;
-    }
-
-    if (nodeLeft < minLeft) {
-      minLeft = nodeLeft;
-    }
-
-    if (nodeRight > minRight) {
-      minRight = nodeRight;
-    }
-
-    if (nodeTop < minTop) {
-      minTop = nodeTop;
-    }
-
-    if (nodeBottom > minBottom) {
-      minBottom = nodeBottom;
-    }
-
-    contentHeight = (minBottom - minTop) / dpi || 0;
-    contentWidth = (minRight - minLeft) / dpi || 0;
+    const bounds = getStageBounds(singleNode.node);
+    minLeft = Math.min(minLeft, bounds.left);
+    minTop = Math.min(minTop, bounds.top);
+    minRight = Math.max(minRight, bounds.right);
+    minBottom = Math.max(minBottom, bounds.bottom);
   });
+
+  contentHeight = (minBottom - minTop) / dpi || 0;
+  contentWidth = (minRight - minLeft) / dpi || 0;
 
   let topArrow = heightArrows.children[0];
   let bottomArrow = heightArrows.children[1];
@@ -2638,21 +2588,24 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     }
 
     let detailTableDimenstion = document.createElement("td");
-    detailTableDimenstion.innerText = `${parseFloat(elements[i].height).toFixed(1)} x ${parseFloat(elements[i].width).toFixed(1)}`;
+    const elementHeight = normalizeCost(elements[i].height);
+    const elementWidth = normalizeCost(elements[i].width);
+    const elementCost = normalizeCost(elements[i].cost);
+    const elementColorCost = normalizeCost(elements[i].colorCost);
+    detailTableDimenstion.innerText = `${elementHeight.toFixed(1)} x ${elementWidth.toFixed(1)}`;
     detailTableTR.appendChild(detailTableDimenstion);
 
     let detailTableCost = document.createElement("td");
-    detailTableCost.innerText =
-      "$" + `${parseFloat(elements[i].cost).toFixed(1)}`;
+    detailTableCost.innerText = "$" + elementCost.toFixed(1);
 
     detailTableTR.appendChild(detailTableCost);
     let detailTableColorCost = document.createElement("td");
-    detailTableColorCost.innerText =
-      "$" + parseFloat(elements[i].colorCost).toFixed(1);
+    detailTableColorCost.innerText = "$" + elementColorCost.toFixed(1);
     detailTableTR.appendChild(detailTableColorCost);
 
     let detailTableTotalCost = document.createElement("td");
-    detailTableTotalCost.innerText = `$${parseFloat(elements[i].cost + elements[i].colorCost).toFixed(2)}`;
+    detailTableTotalCost.innerText =
+      `$${(elementCost + elementColorCost).toFixed(2)}`;
     detailTableTR.appendChild(detailTableTotalCost);
 
     detailTableBody.appendChild(detailTableTR);
@@ -2669,7 +2622,8 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     let detailTablePsCost = document.createElement("td");
     detailTablePsTitle.setAttribute("colspan", 5);
 
-    detailTablePsCost.innerText = `$${parseFloat(extras.powerSupply.cost).toFixed(2)}`;
+    detailTablePsCost.innerText =
+      `$${normalizeCost(extras.powerSupply.cost).toFixed(2)}`;
     detailTableTR.appendChild(detailTablePsTitle);
     detailTableTR.appendChild(detailTablePsCost);
     detailTableBody.appendChild(detailTableTR);
@@ -2677,11 +2631,11 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
   if (extras.lit && extras.lit.qty > 0) {
     if (isLitOption) {
       let detailTableTR = document.createElement("tr");
-      let totalElementCost = parseFloat(
+      let totalElementCost = normalizeCost(
         detailTableBody.dataset.totalElementCost,
-      ).toFixed(2);
-      let litCostPercent = parseFloat(extras.lit.cost);
-      let litCost = (totalElementCost * parseFloat(extras.lit.cost)) / 100;
+      );
+      let litCostPercent = normalizeCost(extras.lit.cost);
+      let litCost = (totalElementCost * litCostPercent) / 100;
       let detailTableLitTitle = document.createElement("td");
       detailTableLitTitle.innerHTML =
         'Lit: <span class="fw-bold" >' + extras.lit.value + "</span>";
@@ -2707,7 +2661,8 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     let detailTableCableCost = document.createElement("td");
     detailTableCableTitle.setAttribute("colspan", 5);
 
-    detailTableCableCost.innerText = `$${parseFloat(extras.cable.cost).toFixed(2)}`;
+    detailTableCableCost.innerText =
+      `$${normalizeCost(extras.cable.cost).toFixed(2)}`;
     detailTableTR.appendChild(detailTableCableTitle);
     detailTableTR.appendChild(detailTableCableCost);
     detailTableBody.appendChild(detailTableTR);
@@ -2799,6 +2754,26 @@ function resizePreviewStage() {
       y: (height - emptyStateText.height()) / 2,
     });
   }
+  if (selectedNode) {
+    const previewType = selectedNode.getAttr("textIndex")
+      ? "raceway"
+      : selectedNode.getClassName() === "Text"
+        ? "text"
+        : selectedNode.getClassName() === "Rect"
+          ? "rect"
+          : selectedNode.getClassName() === "Circle"
+            ? "circle"
+            : selectedNode.getClassName() === "RegularPolygon"
+              ? "triangle"
+              : selectedNode.getClassName() === "Star"
+                ? "star"
+                : selectedNode.getClassName() === "Line"
+                  ? "arrow"
+                  : null;
+    if (previewType) {
+      updatePreview(previewType, selectedNode);
+    }
+  }
   previewLayer.batchDraw();
 }
 
@@ -2830,6 +2805,20 @@ const layer = new Konva.Layer();
 stage.add(layer);
 
 layer.add(background);
+
+const mobileDefaultZoom = 0.8;
+if (window.matchMedia("(max-width: 767.98px)").matches) {
+  stage.scale({ x: mobileDefaultZoom, y: mobileDefaultZoom });
+  stage.position({
+    x: (stage.width() * (1 - mobileDefaultZoom)) / 2,
+    y: (stage.height() * (1 - mobileDefaultZoom)) / 2,
+  });
+  background.scale({
+    x: 1 / mobileDefaultZoom,
+    y: 1 / mobileDefaultZoom,
+  });
+  stage.batchDraw();
+}
 
 window.addEventListener("load", function (e) {
   // document.getElementById('addPatternButton').addEventListener('click', function () {
@@ -2959,11 +2948,7 @@ window.addEventListener("load", function (e) {
         selectedNodeType = textNode.getClassName();
         textInput.value = textNode.text();
         updatePreview("text", textNode);
-        updateHeightWidthInput(
-          textNode.height() * textNode.scaleY(),
-          textNode.width() * textNode.scaleX(),
-          "text",
-        );
+        updateNodeDimensionInputs(textNode, "text");
         isTextTransform = true;
         fontSize = textNode.fontSize() * textNode.scaleX();
         persistTextTransform();
@@ -3002,6 +2987,7 @@ window.addEventListener("load", function (e) {
     };
 
     textNode.on("transform", function () {
+      updateNodeDimensionInputs(textNode, "text");
       scheduleTextTransformUpdate();
       scheduleHeightWidthDisplayUpdate();
     });
@@ -3029,10 +3015,14 @@ window.addEventListener("load", function (e) {
       updateHeightWidthDisplay();
     };
 
-    textNode.on("dragmove", scheduleHeightWidthDisplayUpdate);
+    textNode.on("dragmove", () => {
+      updateNodeDimensionInputs(textNode, "text");
+      scheduleHeightWidthDisplayUpdate();
+    });
     textNode.on("dragstart", () => {
       selectedNode = textNode;
       selectedNodeType = textNode.getClassName();
+      updateNodeDimensionInputs(textNode, "text");
       updatePreview("text", textNode);
       updateLeftsideBar();
       updateFocusedTransformer(textNode);
@@ -3045,13 +3035,7 @@ window.addEventListener("load", function (e) {
       textInput.value = textNode.text();
       updatePreview("text", textNode);
       updateLeftsideBar();
-      let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
-      let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
-      updateHeightWidthInput(
-        textNode.height() * textNode.scaleY(),
-        textNode.width() * textNode.scaleX(),
-        (type = "text"),
-      );
+      updateNodeDimensionInputs(textNode, "text");
     });
 
     nodeLists.push({ type: "text", node: textNode, id: currentElementIndex });
@@ -3306,7 +3290,7 @@ window.addEventListener("load", function (e) {
         }
         return newBoundBox;
       },
-      rotateEnabled: false,
+      rotateEnabled: true,
       borderStroke: "gray", // Set border color to gray
       borderDash: [4, 4], // Set dashed border (4 pixels dash, 4 pixels gap)
       borderStrokeWidth: 2, // Set border width
@@ -3324,22 +3308,24 @@ window.addEventListener("load", function (e) {
           id: shape._id,
           x: shape.x(),
           y: shape.y(),
+          rotation: shape.rotation(),
         },
       });
       updateHeightWidthDisplay();
     };
 
-    shape.on("dragmove", scheduleHeightWidthDisplayUpdate);
+    shape.on("dragmove", () => {
+      updateNodeDimensionInputs(shape);
+      scheduleHeightWidthDisplayUpdate();
+    });
     shape.on("dragstart", () => {
       selectedNode = shape;
       selectedNodeType = shape.getClassName();
+      updateNodeDimensionInputs(shape);
       updatePreview(previewnType, shape);
       updateLeftsideBar();
       updateFocusedTransformer(shape);
     });
-    if (shape.getClassName() === "Line") {
-      shape.on("dragmove", scheduleHeightWidthDisplayUpdate);
-    }
     shape.on("dragend", persistShape);
 
     let shapeTransformFrame = null;
@@ -3352,34 +3338,12 @@ window.addEventListener("load", function (e) {
         selectedNode = shape;
         selectedNodeType = shape.getClassName();
         updatePreview(previewnType, shape);
-
-        switch (shape.getClassName()) {
-          case "RegularPolygon":
-            let triHeightInch = pxToIn(
-              (shape.height() * shape.scaleY()) / triangleReduction,
-            );
-            let triWidthInch = pxToIn(
-              (shape.width() * shape.scaleX()) / triangleReduction,
-            );
-            updateHeightWidthInput(
-              (shape.height() * shape.scaleY()) / triangleReduction,
-              (shape.width() * shape.scaleX()) / triangleReduction,
-              previewnType,
-            );
-            break;
-          case "Line":
-            let arrowHeightInch = pxToIn(shape.height() * shape.scaleY());
-            let arrowWidthInch = pxToIn(shape.width() * shape.scaleX());
-            updateHeightWidthInput(arrowHeightInch, arrowWidthInch);
-            break;
-          default:
-            updateHeightWidthInput(
-              shape.height() * shape.scaleY(),
-              shape.width() * shape.scaleX(),
-              previewnType,
-            );
-            break;
-        }
+        const shapeBounds = getNodeDesignBounds(shape);
+        updateHeightWidthInput(
+          shapeBounds.height,
+          shapeBounds.width,
+          previewnType,
+        );
         let transformer = shape.getAttr("transformer");
         if (transformer) {
           transformer.update();
@@ -3421,6 +3385,7 @@ window.addEventListener("load", function (e) {
               faceCostPerInch: colorCost,
               x: shape.x(),
               y: shape.y(),
+              rotation: shape.rotation(),
               scale: {
                 x: shape.scaleX(),
                 y: shape.scaleY(),
@@ -3453,6 +3418,7 @@ window.addEventListener("load", function (e) {
               faceCostPerInch: colorCost,
               x: shape.x(),
               y: shape.y(),
+              rotation: shape.rotation(),
               scale: {
                 x: shape.scaleX(),
                 y: shape.scaleY(),
@@ -3483,6 +3449,7 @@ window.addEventListener("load", function (e) {
               faceCostPerInch: colorCost,
               x: shape.x(),
               y: shape.y(),
+              rotation: shape.rotation(),
               scale: {
                 x: shape.scaleX(),
                 y: shape.scaleY(),
@@ -3494,6 +3461,7 @@ window.addEventListener("load", function (e) {
     };
 
     shape.on("transform", (e) => {
+      updateNodeDimensionInputs(shape);
       scheduleShapeTransformUpdate();
       scheduleHeightWidthDisplayUpdate();
     });
@@ -3522,25 +3490,7 @@ window.addEventListener("load", function (e) {
       updatePreview(previewnType, shape);
       updateLeftsideBar();
 
-      updateHeightWidthInput(
-        shape.height() * shape.scaleY(),
-        shape.width() * shape.scaleX(),
-        previewnType,
-      );
-      if (shape.getClassName() != "RegularPolygon") {
-        //updateHeightWidthInput(shape.height() * shape.scaleY(), shape.width() * shape.scaleX(), previewnType)
-        updateHeightWidthInput(
-          shape.height() * shape.scaleY(),
-          shape.width() * shape.scaleX(),
-          previewnType,
-        );
-      } else {
-        updateHeightWidthInput(
-          (shape.height() * shape.scaleY()) / triangleReduction,
-          (shape.width() * shape.scaleX()) / triangleReduction,
-          previewnType,
-        );
-      }
+      updateNodeDimensionInputs(shape);
       selectedNodeType = shape.getClassName();
       faceColor = shape.attrs.fill;
       returnColor = shape.attrs.shadowColor;
@@ -3603,6 +3553,7 @@ window.addEventListener("load", function (e) {
             },
             faceCostPerInch: parseFloat(colorCost),
             colorCost: totalColorCost,
+            rotation: shape.rotation(),
           },
         });
 
@@ -3655,6 +3606,7 @@ window.addEventListener("load", function (e) {
               x: shape.scaleX(),
               y: shape.scaleY(),
             },
+            rotation: shape.rotation(),
             points: points,
           },
         });
@@ -3711,6 +3663,7 @@ window.addEventListener("load", function (e) {
             },
             faceCostPerInch: parseFloat(colorCost),
             colorCost: totalShapeColorCost,
+            rotation: shape.rotation(),
             radius,
           },
         });
@@ -3832,12 +3785,14 @@ window.addEventListener("load", function (e) {
     raceway.on("dragstart", () => {
       selectedNode = raceway;
       selectedNodeType = raceway.getClassName();
+      updateNodeDimensionInputs(raceway, "raceway");
       updatePreview("raceway", raceway);
       updateLeftsideBar();
       updateFocusedTransformer(raceway);
     });
     raceway.on("dragmove", (e) => {
       updateRacewayTextPosition();
+      updateNodeDimensionInputs(raceway, "raceway");
       scheduleHeightWidthDisplayUpdate();
     });
     raceway.on("dragmove", updateRacewayTextPosition);
@@ -3850,14 +3805,12 @@ window.addEventListener("load", function (e) {
     raceway.on("click", (e) => {
       selectedNode = raceway;
       updatePreview("raceway", raceway);
-      updateHeightWidthInput(
-        selectedNode.height() * selectedNode.scaleY(),
-        selectedNode.width() * selectedNode.scaleX(),
-      );
+      updateNodeDimensionInputs(raceway, "raceway");
       updateLeftsideBar();
     });
 
     raceway.on("transform", (e) => {
+      updateNodeDimensionInputs(raceway, "raceway");
       scheduleRacewayUpdate(true);
       scheduleHeightWidthDisplayUpdate();
     });
@@ -3884,11 +3837,7 @@ window.addEventListener("load", function (e) {
 
     selectedNode = raceway;
 
-    updateHeightWidthInput(
-      raceway.height() * raceway.scaleY(),
-      raceway.width() * raceway.scaleX(),
-      "raceway",
-    );
+    updateNodeDimensionInputs(raceway, "raceway");
     store.dispatch({
       type: "ADD_ELEMENT",
       payload: {
@@ -4155,7 +4104,8 @@ window.addEventListener("load", function (e) {
         }
         return newBoundBox;
       },
-      rotateEnabled: false,
+      rotateEnabled:
+        cloneNode.getClassName() !== "Text" && !cloneNode.getAttr("textIndex"),
       rotateLineVisible: false,
       borderStroke: "gray", // Set border color to gray
       borderDash: [4, 4], // Set dashed border (4 pixels dash, 4 pixels gap)
@@ -4202,6 +4152,7 @@ window.addEventListener("load", function (e) {
     cloneNode.on("dragstart", () => {
       selectedNode = cloneNode;
       selectedNodeType = cloneNode.getClassName();
+      updateNodeDimensionInputs(cloneNode);
       updatePreview(
         cloneNode.getAttr("textIndex")
           ? "raceway"
@@ -4213,7 +4164,10 @@ window.addEventListener("load", function (e) {
       updateLeftsideBar();
       updateFocusedTransformer(cloneNode);
     });
-    cloneNode.on("dragmove", scheduleHeightWidthDisplayUpdate);
+    cloneNode.on("dragmove", () => {
+      updateNodeDimensionInputs(cloneNode);
+      scheduleHeightWidthDisplayUpdate();
+    });
 
     cloneNode.on("dragend", () => {
       scheduleCloneUpdate();
@@ -4285,12 +4239,14 @@ window.addEventListener("load", function (e) {
           colorCost: cloneNodeTotalColorCost,
           x: cloneNode.x(),
           y: cloneNode.y(),
+          rotation: cloneNode.rotation(),
           points: cloneNodePoints,
         },
       });
     };
 
     cloneNode.on("transform", () => {
+      updateNodeDimensionInputs(cloneNode);
       scheduleCloneTransformUpdate();
       scheduleHeightWidthDisplayUpdate();
     });
@@ -4300,25 +4256,7 @@ window.addEventListener("load", function (e) {
     cloneNode.on("click", (e) => {
       selectedNode = cloneNode;
       updateFocusedTransformer(cloneNode);
-
-      switch (cloneNode.getClassName()) {
-        case "RegularPolygon":
-          let triWidth =
-            (cloneNode.width() * cloneNode.scaleX()) / triangleReduction;
-          let triHeight =
-            (cloneNode.height() * cloneNode.scaleY()) / triangleReduction;
-          updateHeightWidthInput(triHeight, triWidth, "triangle");
-
-          break;
-
-        default:
-          updateHeightWidthInput(
-            cloneNode.height() * cloneNode.scaleY(),
-            cloneNode.width() * cloneNode.scaleX(),
-            "triangle",
-          );
-          break;
-      }
+      updateNodeDimensionInputs(cloneNode);
     });
 
     layer.batchDraw();
@@ -4352,6 +4290,7 @@ window.addEventListener("load", function (e) {
             faceCostPerInch: colorCost,
             x: cloneNode.x() - cloneNode.radius(),
             y: cloneNode.y() + cloneNode.radius(),
+            rotation: cloneNode.rotation(),
           },
         });
 
@@ -4379,6 +4318,7 @@ window.addEventListener("load", function (e) {
             faceCostPerInch: colorCost,
             x: cloneNode.x(),
             y: cloneNode.y(),
+            rotation: cloneNode.rotation(),
           },
         });
         break;
@@ -5680,15 +5620,21 @@ window.addEventListener("load", function (e) {
     let extras = store.getState()["extras"];
     updateDetailTable(elements, extras);
     elements.forEach((element) => {
-      totalCost = totalCost + parseFloat(element.cost);
-      totalColorCost = totalColorCost + parseFloat(element.colorCost);
+      totalCost += normalizeCost(element.cost);
+      totalColorCost += normalizeCost(element.colorCost);
     });
 
-    let psCost = extras.powerSupply.qty > 0 ? extras.powerSupply.cost : 0;
+    let psCost =
+      extras.powerSupply.qty > 0
+        ? normalizeCost(extras.powerSupply.cost)
+        : 0;
     let litCostPecent =
-      extras.lit && extras.lit.qty > 0 ? parseFloat(extras.lit.cost) : 0;
+      extras.lit && extras.lit.qty > 0
+        ? normalizeCost(extras.lit.cost)
+        : 0;
     let litCost = ((totalCost + totalColorCost) * litCostPecent) / 100;
-    let cableCost = extras.cable.qty > 0 ? extras.cable.cost : 0;
+    let cableCost =
+      extras.cable.qty > 0 ? normalizeCost(extras.cable.cost) : 0;
 
     detailTableBody.dataset.totalElementCost = parseFloat(
       totalCost + totalColorCost,
@@ -5908,6 +5854,9 @@ window.addEventListener("load", function (e) {
       if (selectedNode) {
         selectedNode.x(parseFloat(element.x));
         selectedNode.y(parseFloat(element.y));
+        if (element.rotation !== undefined) {
+          selectedNode.rotation(parseFloat(element.rotation));
+        }
 
         if (selectedNode.getClassName() == "Rect") {
           if (radius) {

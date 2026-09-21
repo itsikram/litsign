@@ -95,13 +95,20 @@ if (isset($_REQUEST['save_design']) && $_REQUEST['design_id'] && $_REQUEST['desi
     update_post_meta($design_id, '_cl_data', stripslashes($design_data_query));
 
     $design_data_array = json_decode(stripslashes($design_data_query), true);
-    $extras = $design_data_array['extras'];
-    $elements = $design_data_array['elements'];
+    $extras = isset($design_data_array['extras']) && is_array($design_data_array['extras'])
+        ? $design_data_array['extras']
+        : [];
+    $elements = isset($design_data_array['elements']) && is_array($design_data_array['elements'])
+        ? $design_data_array['elements']
+        : [];
+    $safe_cost = static function ($value) {
+        return is_numeric($value) && is_finite((float) $value) ? (float) $value : 0.0;
+    };
     $product_cost = 0;
 
     for ($i = 0; count($elements) > $i; $i++) {
-        $dimenstion_cost =  $elements[$i]['cost'];
-        $face_cost = $elements[$i]['colorCost'];
+        $dimenstion_cost = $safe_cost($elements[$i]['cost'] ?? 0);
+        $face_cost = $safe_cost($elements[$i]['colorCost'] ?? 0);
         $product_cost = ($dimenstion_cost + $face_cost) + $product_cost;
     }
 
@@ -110,10 +117,16 @@ if (isset($_REQUEST['save_design']) && $_REQUEST['design_id'] && $_REQUEST['desi
 
     $extras_cost = 0;
 
-    $extras_cost +=  $extras['powerSupply']['cost'];
-    $extra_lit_percent = floatval($extras['lit']['cost']);
-    $extras_cost +=  ($product_cost * $extra_lit_percent) / 100;
-    $extras_cost +=  $extras['cable']['cost'];
+    if (!empty($extras['powerSupply']['qty'])) {
+        $extras_cost += $safe_cost($extras['powerSupply']['cost'] ?? 0);
+    }
+    $extra_lit_percent = !empty($extras['lit']['qty'])
+        ? $safe_cost($extras['lit']['cost'] ?? 0)
+        : 0;
+    $extras_cost += ($product_cost * $extra_lit_percent) / 100;
+    if (!empty($extras['cable']['qty'])) {
+        $extras_cost += $safe_cost($extras['cable']['cost'] ?? 0);
+    }
 
     $product_cost += $extras_cost;
 
@@ -269,7 +282,7 @@ get_header();
                         <div class="product-attibute-box mb-3">
                             <input type="hidden" value="<?php echo $product_trimcap_color; ?>" name="default_trimcap_color" id="trimcapColor">
                             <input type="hidden" value="<?php echo $is_same_return_color; ?>" name="is_same_return_color" id="returnColorSame">
-                            <input type="hidden" name="total_cost" value="<?php $product_min_price > 0 ? $product_min_price : $product_price; ?>" id="totalCost">
+                            <input type="hidden" name="total_cost" value="<?php echo $product_min_price > 0 ? $product_min_price : $product_price; ?>" id="totalCost">
                             <div class="row">
                                 <div class="col mobile-s-0">
                                     <div id="letter-output" class=" text-center fs-1 py-3">

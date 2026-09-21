@@ -296,7 +296,7 @@ function wholesale_handle_review_submission()
 	$nonce = isset($_POST['review_nonce']) ? sanitize_text_field(wp_unslash($_POST['review_nonce'])) : '';
 
 	if (!wp_verify_nonce($nonce, 'submit_review')) {
-		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . '#feedbackModal');
+		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . $review_anchor);
 		exit;
 	}
 
@@ -304,10 +304,19 @@ function wholesale_handle_review_submission()
 	$email = isset($_POST['review_email']) ? sanitize_email(wp_unslash($_POST['review_email'])) : '';
 	$rating = isset($_POST['review_rating']) ? absint($_POST['review_rating']) : 0;
 	$review = isset($_POST['review_message']) ? sanitize_textarea_field(wp_unslash($_POST['review_message'])) : '';
+	$product_id = isset($_POST['review_product_id']) ? absint($_POST['review_product_id']) : 0;
+	$review_anchor = $product_id ? '#product-reviews' : '#feedbackModal';
 
 	if (!$name || !is_email($email) || $rating < 1 || $rating > 5 || !$review) {
-		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . '#feedbackModal');
+		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . $review_anchor);
 		exit;
+	}
+
+	if ($product_id) {
+		if (!is_user_logged_in() || !wholesale_user_can_review_product(get_current_user_id(), $product_id)) {
+			wp_safe_redirect(add_query_arg('review_status', 'not_eligible', $redirect_url) . $review_anchor);
+			exit;
+		}
 	}
 
 	$submission_id = wp_insert_post(array(
@@ -319,11 +328,12 @@ function wholesale_handle_review_submission()
 			'_review_name' => $name,
 			'_review_email' => $email,
 			'_review_rating' => $rating,
+			'_review_product_id' => $product_id,
 		),
 	), true);
 
 	if (is_wp_error($submission_id)) {
-		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . '#feedbackModal');
+		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . $review_anchor);
 		exit;
 	}
 
@@ -335,11 +345,66 @@ function wholesale_handle_review_submission()
 	);
 	wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers);
 
-	wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . '#feedbackModal');
+	wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . $review_anchor);
 	exit;
 }
 add_action('admin_post_nopriv_submit_review', 'wholesale_handle_review_submission');
 add_action('admin_post_submit_review', 'wholesale_handle_review_submission');
+
+function wholesale_user_can_review_product($user_id, $product_id)
+{
+	$orders = get_posts(array(
+		'post_type' => 'order',
+		'post_status' => 'completed',
+		'posts_per_page' => -1,
+		'meta_key' => 'user_id',
+		'meta_value' => absint($user_id),
+	));
+
+	foreach ($orders as $order) {
+		$items = wholesale_decode_order_meta_array(get_post_meta($order->ID, 'product_json', true));
+		foreach ($items as $item) {
+			$details = isset($item['product_details']) && is_array($item['product_details']) ? $item['product_details'] : array();
+			if (isset($details['Product Id']) && absint($details['Product Id']) === absint($product_id)) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+function wholesale_product_review_data($product_id)
+{
+	$rating = min(5, max(0, (float) get_post_meta($product_id, '_product_review_rating', true)));
+	$count = max(0, absint(get_post_meta($product_id, '_product_review_count', true)));
+	$text = trim((string) get_post_meta($product_id, '_product_review_text', true));
+
+	return array(
+		'rating' => $rating,
+		'count' => $count,
+		'text' => $text,
+	);
+}
+
+function wholesale_render_product_rating($product_id, $class = '')
+{
+	$review_data = wholesale_product_review_data($product_id);
+	if (!$review_data['rating'] && !$review_data['count']) {
+		return;
+	}
+
+	$label = sprintf('%s out of 5 stars from %s reviews', number_format($review_data['rating'], 1), number_format_i18n($review_data['count']));
+	echo '<div class="product-rating ' . esc_attr($class) . '" aria-label="' . esc_attr($label) . '">';
+	echo '<span class="product-rating-stars" aria-hidden="true">';
+	for ($star = 1; $star <= 5; $star++) {
+		$state = $star <= floor($review_data['rating']) ? 'is-full' : (($star - 0.5) <= $review_data['rating'] ? 'is-half' : '');
+		echo '<span class="product-rating-star ' . esc_attr($state) . '">&#9733;</span>';
+	}
+	echo '</span><span class="product-rating-value">' . esc_html(number_format($review_data['rating'], 1)) . '</span>';
+	echo '<span class="product-rating-count">(' . esc_html(number_format_i18n($review_data['count'])) . ' reviews)</span>';
+	echo '</div>';
+}
 
 function wholesale_review_submission_columns($columns)
 {
@@ -349,6 +414,7 @@ function wholesale_review_submission_columns($columns)
 		'review_name' => 'Name',
 		'review_email' => 'Email',
 		'review_rating' => 'Rating',
+		'review_product' => 'Product',
 		'date' => 'Received',
 	);
 }
@@ -360,6 +426,7 @@ function wholesale_review_submission_column_content($column, $post_id)
 		'review_name' => '_review_name',
 		'review_email' => '_review_email',
 		'review_rating' => '_review_rating',
+		'review_product' => '_review_product_id',
 	);
 
 	if (!isset($meta_keys[$column])) {
@@ -378,6 +445,12 @@ function wholesale_review_submission_column_content($column, $post_id)
 		return;
 	}
 
+	if ('review_product' === $column) {
+		$product_title = $value ? get_the_title(absint($value)) : '';
+		echo esc_html($product_title ?: 'General feedback');
+		return;
+	}
+
 	echo esc_html($value);
 }
 add_action('manage_review_submission_posts_custom_column', 'wholesale_review_submission_column_content', 10, 2);
@@ -388,6 +461,7 @@ function wholesale_review_submission_details_meta_box($post)
 		'Name' => '_review_name',
 		'Email' => '_review_email',
 		'Rating' => '_review_rating',
+		'Product ID' => '_review_product_id',
 	);
 
 	echo '<table class="widefat striped"><tbody>';
@@ -398,6 +472,8 @@ function wholesale_review_submission_details_meta_box($post)
 			printf('<a href="mailto:%s">%s</a>', esc_attr($value), esc_html($value));
 		} elseif ('_review_rating' === $meta_key) {
 			echo esc_html($value . '/5');
+		} elseif ('_review_product_id' === $meta_key) {
+			echo esc_html($value ? (get_the_title(absint($value)) ?: 'Product #' . absint($value)) : 'General feedback');
 		} else {
 			echo esc_html($value);
 		}
@@ -2172,6 +2248,44 @@ add_action('cmb2_admin_init', function () {
 			'name' => __('Prouduct Short Description', 'tm'),
 			'id' => '_product_short_desc',
 			'type' => 'wysiwyg',
+		)
+	);
+
+	$product->add_field(
+		array(
+			'name' => __('Review Rating (0-5)', 'tm'),
+			'desc' => __('The rating shown on product cards, for example 4.8.', 'tm'),
+			'id' => '_product_review_rating',
+			'type' => 'text',
+			'attributes' => array(
+				'type' => 'number',
+				'min' => '0',
+				'max' => '5',
+				'step' => '0.1',
+			),
+		)
+	);
+
+	$product->add_field(
+		array(
+			'name' => __('Review Count', 'tm'),
+			'desc' => __('The number shown beside the rating on product cards.', 'tm'),
+			'id' => '_product_review_count',
+			'type' => 'text',
+			'attributes' => array(
+				'type' => 'number',
+				'min' => '0',
+				'step' => '1',
+			),
+		)
+	);
+
+	$product->add_field(
+		array(
+			'name' => __('Featured Review Text', 'tm'),
+			'desc' => __('Optional short review text displayed on the product page.', 'tm'),
+			'id' => '_product_review_text',
+			'type' => 'textarea_small',
 		)
 	);
 

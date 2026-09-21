@@ -1150,6 +1150,78 @@ get_header();
             </div>
         </div>
     </form>
+    <?php
+    $product_review_data = wholesale_product_review_data($product_id);
+    $product_reviews = get_posts(array(
+        'post_type' => 'review_submission',
+        'post_status' => 'publish',
+        'posts_per_page' => 6,
+        'meta_key' => '_review_product_id',
+        'meta_value' => $product_id,
+        'orderby' => 'date',
+        'order' => 'DESC',
+    ));
+    $can_review_product = is_user_logged_in() && wholesale_user_can_review_product(get_current_user_id(), $product_id);
+    $review_status = isset($_GET['review_status']) ? sanitize_key(wp_unslash($_GET['review_status'])) : '';
+    ?>
+    <section class="product-reviews" id="product-reviews" aria-labelledby="product-reviews-title">
+        <?php if ('sent' === $review_status) : ?>
+            <div class="product-review-alert" role="status">Thank you. Your review has been submitted for approval.</div>
+        <?php elseif ('not_eligible' === $review_status) : ?>
+            <div class="product-review-alert product-review-alert-error" role="alert">Reviews are available after this product has been delivered.</div>
+        <?php endif; ?>
+        <div class="product-reviews-heading">
+            <div>
+                <p class="product-section-eyebrow">Customer feedback</p>
+                <h2 id="product-reviews-title">Reviews for <?php echo esc_html(get_the_title()); ?></h2>
+            </div>
+            <?php wholesale_render_product_rating($product_id, 'product-reviews-summary'); ?>
+        </div>
+        <?php if ($product_review_data['text']) : ?>
+            <blockquote class="product-featured-review">
+                <span class="product-featured-review-mark" aria-hidden="true">“</span>
+                <p><?php echo esc_html($product_review_data['text']); ?></p>
+            </blockquote>
+        <?php endif; ?>
+        <?php if ($product_reviews) : ?>
+            <div class="product-review-list">
+                <?php foreach ($product_reviews as $product_review) :
+                    $review_rating = min(5, max(0, absint(get_post_meta($product_review->ID, '_review_rating', true))));
+                    $review_name = get_post_meta($product_review->ID, '_review_name', true);
+                ?>
+                    <article class="product-review-card">
+                        <div class="product-review-card-header">
+                            <strong><?php echo esc_html($review_name ?: 'Verified customer'); ?></strong>
+                            <span class="product-review-stars" aria-label="<?php echo esc_attr($review_rating . ' out of 5 stars'); ?>">
+                                <?php echo esc_html(str_repeat('★', $review_rating) . str_repeat('☆', 5 - $review_rating)); ?>
+                            </span>
+                        </div>
+                        <p><?php echo esc_html($product_review->post_content); ?></p>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        <?php if ($can_review_product) : ?>
+            <div class="product-review-form-card">
+                <h3>Share your experience</h3>
+                <p>Your completed order makes you eligible to review this product.</p>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="submit_review">
+                    <input type="hidden" name="review_product_id" value="<?php echo esc_attr($product_id); ?>">
+                    <?php wp_nonce_field('submit_review', 'review_nonce'); ?>
+                    <div class="product-review-form-grid">
+                        <label>Name<input type="text" name="review_name" required value="<?php echo esc_attr(wp_get_current_user()->display_name); ?>"></label>
+                        <label>Email<input type="email" name="review_email" required value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>"></label>
+                    </div>
+                    <label>Rating<select name="review_rating" required><option value="">Select a rating</option><option value="5">5 - Excellent</option><option value="4">4 - Very good</option><option value="3">3 - Good</option><option value="2">2 - Fair</option><option value="1">1 - Needs improvement</option></select></label>
+                    <label>Your review<textarea name="review_message" rows="4" required></textarea></label>
+                    <button type="submit" class="btn btn-primary">Submit review</button>
+                </form>
+            </div>
+        <?php elseif (!is_user_logged_in()) : ?>
+            <p class="product-review-note">Sign in with the account used for your order to leave a review after delivery.</p>
+        <?php endif; ?>
+    </section>
     </article>
     </main>
 </div>

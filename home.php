@@ -348,6 +348,7 @@ get_header();
                                     <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
                                         <?php echo esc_html(get_the_title()); ?>
                                     </h2>
+                                    <?php wholesale_render_product_rating(get_the_ID()); ?>
                                     <div class="pb-description-list">
                                         <?php echo wp_kses_post($short_desc); ?>
                                     </div>

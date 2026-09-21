@@ -881,15 +881,17 @@ function createHistorySnapshot() {
     elements: JSON.parse(JSON.stringify(store.getState().elements)),
     extras: JSON.parse(JSON.stringify(store.getState().extras)),
     nodes: nodeLists.map((item) => {
-      const node = item.node.clone();
-      node.setAttr("transformer", null);
+      const attrs = { ...item.node.getAttrs() };
+      delete attrs.textIndex;
+      delete attrs.transformer;
       return {
         id: item.id,
         type: item.type,
-        node,
+        attrs,
+        points: item.node.points ? item.node.points() : null,
         text:
           item.type === "raceway" && item.node.getAttr("textIndex")
-            ? item.node.getAttr("textIndex").clone()
+            ? item.node.getAttr("textIndex").getAttrs()
             : null,
       };
     }),
@@ -916,22 +918,54 @@ function loadState(snapshot) {
   stage.find("Transformer").forEach((transformer) => transformer.destroy());
 
   nodeLists = [];
-  snapshot.nodes.forEach((item) => {
-    const node = item.node;
-    if (item.type === "raceway" && item.text) {
-      node.setAttr("textIndex", item.text);
-      layer.add(item.text);
+  selectedNode = null;
+  const restoredElements = [];
+  snapshot.elements.forEach((element) => {
+    const nodeSnapshot = snapshot.nodes.find(
+      (item) => item.id === element.id,
+    );
+    const type = element.type || (nodeSnapshot ? nodeSnapshot.type : null);
+
+    if (type === "Text") {
+      addText(element.text || "", element.x, element.y, true);
+    } else if (type === "Raceway") {
+      addRaceway();
+    } else {
+      const shapeType = {
+        Rectangle: "rectangle",
+        Circle: "circle",
+        Triangle: "triangle",
+        Starburst: "star",
+        Arrow: "arrow",
+      }[type];
+      if (shapeType) addShape(shapeType);
     }
-    layer.add(node);
-    nodeLists.push({ id: item.id, type: item.type, node });
+
+    const node = selectedNode;
+    if (!node) return;
+    if (nodeSnapshot) {
+      const attrs = { ...nodeSnapshot.attrs };
+      delete attrs._id;
+      delete attrs.textIndex;
+      delete attrs.transformer;
+      node.setAttrs(attrs);
+      if (node.points && nodeSnapshot.points) node.points(nodeSnapshot.points);
+      if (type === "Raceway" && nodeSnapshot.text) {
+        const racewayText = node.getAttr("textIndex");
+        if (racewayText) racewayText.setAttrs(nodeSnapshot.text);
+      }
+    }
+    restoredElements.push({ ...element, id: node._id });
+    node.fire("click", { cancelBubble: true });
   });
 
-  store.dispatch({ type: "RESTORE_ELEMENT", payload: snapshot.elements });
+  store.dispatch({ type: "RESTORE_ELEMENT", payload: restoredElements });
   store.dispatch({ type: "RESTORE_EXTRAS", payload: snapshot.extras });
   selectedNode = null;
   selectedNodeType = null;
   updateSaveButtonState();
   updateBottombarOverlay();
+  updateHeightWidthDisplay();
   layer.draw();
   updateHistoryButtons();
   lastHistorySignature = getHistorySignature();

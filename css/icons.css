@@ -34,6 +34,14 @@
   content: "\f24d";
 }
 
+.fa-rotate-left::before {
+  content: "\f2ea";
+}
+
+.fa-rotate-right::before {
+  content: "\f2f9";
+}
+
 .fa-magnifying-glass-minus::before {
   content: "\f010";
 }

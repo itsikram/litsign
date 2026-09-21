@@ -157,13 +157,13 @@ $logo_id = get_theme_mod('custom_logo');
 							<a href="<?php echo home_url() . '/'; ?>">
 								<?php
 								if ($logo_id) {
-									echo wp_get_attachment_image($logo_id, 'header-logo', false, array(
+									echo wp_get_attachment_image($logo_id, 'full', false, array(
 										'alt' => get_bloginfo('name'),
 										'class' => 'header-logo',
 										'loading' => 'eager',
 										'decoding' => 'async',
 										'fetchpriority' => 'high',
-										'sizes' => '240px',
+										'sizes' => '(max-width: 767px) 300px, 500px',
 									));
 								} else {
 									echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async" fetchpriority="high">';

@@ -824,7 +824,6 @@ a.link-primary:focus,
   > .filter-menu
   > .menu-item
   > a {
-  padding: 9px 8px;
   color: #172027;
   font-size: 16px;
   font-weight: 700;
@@ -1062,6 +1061,11 @@ a.link-primary:focus,
   font-size: 18px !important;
   line-height: 1.35;
 }
+
+.product-box-container .product-box .pb-details > hr {
+  display: none;
+}
+
 .product-box-container .product-box .pb-details .pb-description-list ul {
   padding-left: 15px;
   margin-bottom: 12px;

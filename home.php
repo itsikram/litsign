@@ -206,7 +206,7 @@ get_header();
     </header>
 </div>
 
-<div class="container my-3">
+<div class="container my-3 product-listing-container">
 
     <div class="row">
         <div class="col-md-2">

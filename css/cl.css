@@ -45,11 +45,32 @@ body {
 }
 
 .main-color {
-  color: #1fa8de;
+  color: #1fa8de !important;
 }
 
 .main-bg-color {
+  background-color: #1fa8de !important;
+}
+
+#dtContainer .text-primary,
+#dtContainer a {
+  color: #1fa8de;
+}
+
+#dtContainer #saveBtn,
+#dtContainer #saveBtn:hover,
+#dtContainer #saveBtn:focus,
+#dtContainer #saveBtn:active {
   background-color: #1fa8de;
+  border-color: #1fa8de;
+  color: #fff;
+}
+
+#dtContainer #saveBtn:disabled {
+  background-color: #1fa8de;
+  border-color: #1fa8de;
+  color: #fff;
+  opacity: 0.65;
 }
 
 .bottombar-item-list-container,

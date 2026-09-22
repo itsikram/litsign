@@ -112,6 +112,13 @@ get_header();
                 if ($product_cl_data) {
                     $product_cl_data_array = json_decode(stripslashes($product_cl_data), true);
                 }
+                $is_channel_letter_product = has_term('channel-letters', 'product_category', $cart_item->product_id);
+                $edit_design_url = $is_channel_letter_product && $product_design_id
+                    ? trailingslashit(get_permalink($cart_item->product_id)) . 'channel-letter-builder/?' . http_build_query(array(
+                        'product_id' => absint($cart_item->product_id),
+                        'edit_design' => 'true',
+                    ))
+                    : '';
             ?>
                 <div class="cart-item border p-2">
                     <div class="row">
@@ -121,8 +128,10 @@ get_header();
                         <div class="col-md-9 ">
                             <div class="cart-title-container d-flex justify-content-between align-self-start border-bottom">
                                 <h4 class="fs-4 align-self-center"><?php echo $cart_item->product_title; ?></h4>
-                                <div class="align-self-center">
-                                    <!-- <a href="#" class="btn btn-link">Edit</a>| -->
+                                <div class="cart-item-actions align-self-center">
+                                    <?php if ($edit_design_url) : ?>
+                                        <a href="<?php echo esc_url($edit_design_url); ?>" class="btn btn-link text-primary">Edit Design</a>
+                                    <?php endif; ?>
                                     <a href="<?php echo get_permalink().'?remove_cart='.$cart_item -> cart_id; ?>" class="btn btn-link text-danger">Remove</a>
 
                                 </div>

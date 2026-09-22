@@ -189,7 +189,7 @@ function place_order($product_data, $order_cost, $billing_data, $shipping_data, 
    $new_order = wp_insert_post(array(
        'post_type' => 'order',
        'post_title' => sanitize_text_field($order_slug),
-       'post_status' => 'on_hold',
+       'post_status' => 'processing',
        'meta_input' => array(
            'product_json' => $product_data,
            'shipping_address' => $shipping_data,
@@ -208,14 +208,7 @@ function place_order($product_data, $order_cost, $billing_data, $shipping_data, 
    }
 
    $cart->empty();
-
-   if (is_email($b_email)) {
-       wp_mail(
-           $b_email,
-           'Successfully Placed Order at ' . site_url(),
-           'Thanks For Your Order we will check and delivery as fast we can'
-       );
-   }
+   wholesale_send_new_order_admin_email($new_order);
 
    return $new_order;
 }

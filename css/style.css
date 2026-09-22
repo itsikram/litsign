@@ -689,6 +689,36 @@ a.link-primary:focus,
 .main-header .header-menu-container .header-menu .menu-item:hover a {
   color: #1fa8de;
 }
+.main-header .header-builder-menu {
+  margin-top: 8px;
+}
+.main-header .header-bottom-container .header-builder-menu {
+  margin-top: 0;
+  margin-left: 16px;
+}
+.main-header .header-builder-menu .header-builder-cta {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid #1fa8de;
+  border-radius: 4px;
+  background: transparent;
+  color: #1fa8de !important;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none !important;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+.main-header .header-bottom-container .header-builder-menu .header-builder-cta {
+  white-space: nowrap;
+}
+.main-header .header-builder-menu .header-builder-cta:hover,
+.main-header .header-builder-menu .header-builder-cta:focus-visible {
+  border-color: #168dbb;
+  background: #eef8fc;
+  color: #168dbb !important;
+  text-decoration: none !important;
+}
 .main-header .header-account-form .account-action-button {
   padding: 5px 10px !important;
 }
@@ -1945,6 +1975,7 @@ a.link-primary:focus,
 .customer-review-section {
   padding: 58px 0 40px;
   background: #f3f4f6;
+  font-family: 'gotham-medium', 'nimbus-sans', 'Segoe UI', sans-serif;
 }
 
 .customer-review-header {
@@ -1965,10 +1996,12 @@ a.link-primary:focus,
 .customer-review-header p {
   margin: 8px 0 0;
   color: #4d6477;
+  font-family: 'gotham-medium', 'nimbus-sans', 'Segoe UI', sans-serif;
   font-size: clamp(0.95rem, 1.3vw, 1.25rem);
-  font-style: italic;
-  font-weight: 500;
+  font-style: normal;
+  font-weight: 600;
   line-height: 1.5;
+  letter-spacing: -0.02em;
 }
 
 .customer-review-slider {
@@ -2026,15 +2059,18 @@ a.link-primary:focus,
   margin: 0 auto;
   max-width: 590px;
   color: #1b2a3b;
+  font-family: 'gotham-medium', 'nimbus-sans', 'Segoe UI', sans-serif;
   font-size: clamp(1.1rem, 1.5vw, 1.8rem);
   font-weight: 500;
   line-height: 1.45;
+  letter-spacing: -0.025em;
   text-align: center;
 }
 
 .customer-review-author {
   margin: 22px 0 0;
   color: #273d52;
+  font-family: 'gotham-medium', 'nimbus-sans', 'Segoe UI', sans-serif;
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -3108,6 +3144,25 @@ a.link-primary:focus,
   .mobile-menu-container .header-menu .menu-item a:focus {
     padding-left: 10px;
     color: #1fa8de !important;
+  }
+
+  .mobile-menu-container .header-builder-menu {
+    margin-top: 18px;
+  }
+
+  .mobile-menu-container .header-builder-menu .header-builder-cta {
+    justify-content: center;
+    border: 0;
+    background: #1fa8de;
+    color: #fff !important;
+    text-align: center;
+  }
+
+  .mobile-menu-container .header-builder-menu .header-builder-cta:hover,
+  .mobile-menu-container .header-builder-menu .header-builder-cta:focus {
+    padding-left: 4px;
+    background: #168dbb;
+    color: #fff !important;
   }
 
   .mobile-menu-container nav > .header-menu + .header-menu {

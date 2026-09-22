@@ -35,14 +35,24 @@ get_header();
                 echo '<span class="text-primary">Pending Review</span>';
                 break;
 
+            case 'on-hold':
             case 'on_hold':
-                echo '<span class="text-warning">On Hold</span>';
+                echo '<span class="text-warning">On hold</span>';
+                break;
+            case 'processing':
+                echo '<span class="text-primary">Processing</span>';
                 break;
             case 'completed':
                 echo '<span class="text-success">Completed</span>';
                 break;
             case 'failed':
                 echo '<span class="text-danger">Failed</span>';
+                break;
+            case 'cancelled':
+                echo '<span class="text-secondary">Cancelled</span>';
+                break;
+            case 'refunded':
+                echo '<span class="text-info">Refunded</span>';
                 break;
             default:
                 echo '<span class="text-warning">' . esc_html($order_status) . '</span>';

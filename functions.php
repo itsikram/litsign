@@ -1007,10 +1007,13 @@ add_filter('wp_sitemaps_posts_query_args', 'wholesale_sitemap_excluded_page_ids'
 function register_order_post_statuses()
 {
 	$statuses = array(
-		'on_hold' => 'On Hold',
+		'on-hold' => 'On hold',
 		'processing' => 'Processing',
 		'completed' => 'Completed',
+		'cancelled' => 'Cancelled',
+		'refunded' => 'Refunded',
 		'failed' => 'Failed',
+		'on_hold' => 'On hold',
 	);
 
 	foreach ($statuses as $status => $label) {
@@ -1079,23 +1082,13 @@ function wholesale_format_order_detail_value($name, $value)
 	return esc_html($value);
 }
 
-function wholesale_send_new_order_admin_email($post_id, $post, $update)
+function wholesale_send_new_order_admin_email($post_id)
 {
-	if ($post->post_type !== 'order') {
+	if ('order' !== get_post_type($post_id)) {
 		return;
 	}
 
-	if (wp_is_post_revision($post_id) || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || $update) {
-		return;
-	}
-
-	$admin_email = 'mdikram295@gmail.com';  //get_option('admin_email');
-	if (empty($admin_email)) {
-		return;
-	}
-
-	$billing_data = json_decode(get_post_meta($post_id, 'billing_address', true), true);
-	$billing_data = is_array($billing_data) ? $billing_data : array();
+	$billing_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
 
 	$order_id = get_post_meta($post_id, 'order_id', true);
 	$order_cost = json_decode(get_post_meta($post_id, 'product_cost', true), true);
@@ -1107,9 +1100,7 @@ function wholesale_send_new_order_admin_email($post_id, $post, $update)
 	$order_total = isset($order_cost['grand_total']) ? floatval($order_cost['grand_total']) : 0;
 	$customer_email = isset($billing_data['billing_email']) ? $billing_data['billing_email'] : '';
 	$customer_name = trim((isset($billing_data['billing_fname']) ? $billing_data['billing_fname'] : '') . ' ' . (isset($billing_data['billing_lname']) ? $billing_data['billing_lname'] : ''));
-	$shipping_address = get_post_meta($post_id, 'shipping_address', true);
-	$shipping_data = json_decode($shipping_address, true);
-	$shipping_data = is_array($shipping_data) ? $shipping_data : array();
+	$shipping_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
 
 	$subject = sprintf('New Order Received - #%s', $order_id ?: $post_id);
 	$message = '<html><body>'
@@ -1159,16 +1150,33 @@ function wholesale_send_new_order_admin_email($post_id, $post, $update)
 
 	$headers = array(
 		'Content-Type: text/html; charset=UTF-8',
-		'From: Storefront Sign Online <TR@StorefrontSignOnline.com>',
-		'Reply-To: TR@StorefrontSignOnline.com'
+		'Reply-To: ' . get_option('admin_email'),
 	);
 
-	$receivers = [
-		$admin_email,
-		'mdikram295@gmail.com'
-	];
+	if (!get_post_meta($post_id, '_wholesale_admin_order_email_sent', true)) {
+		$admin_sent = wp_mail(wholesale_contact_admin_recipients(), $subject, $message, $headers);
+		if ($admin_sent) {
+			update_post_meta($post_id, '_wholesale_admin_order_email_sent', current_time('mysql'));
+		} else {
+			error_log('Wholesale order admin email failed for order #' . ($order_id ?: $post_id));
+		}
+	}
 
-	wp_mail($receivers, $subject, $message, $headers);
+	if (is_email($customer_email) && !get_post_meta($post_id, '_wholesale_customer_order_email_sent', true)) {
+		$customer_subject = sprintf(__('Your order #%s has been received', 'litsign'), $order_id ?: $post_id);
+		$customer_message = '<html><body>'
+			. '<p>' . esc_html(sprintf(__('Thank you%s for your order.', 'litsign'), $customer_name ? ' ' . $customer_name : '')) . '</p>'
+			. '<p>' . esc_html__('We have received your order and will begin processing it shortly.', 'litsign') . '</p>'
+			. '<p><strong>' . esc_html__('Order number:', 'litsign') . '</strong> #' . esc_html($order_id ?: $post_id) . '<br>'
+			. '<strong>' . esc_html__('Order total:', 'litsign') . '</strong> $' . number_format($order_total, 2, '.', ',') . '</p>'
+			. '</body></html>';
+		$customer_sent = wp_mail($customer_email, $customer_subject, $customer_message, $headers);
+		if ($customer_sent) {
+			update_post_meta($post_id, '_wholesale_customer_order_email_sent', current_time('mysql'));
+		} else {
+			error_log('Wholesale order customer email failed for order #' . ($order_id ?: $post_id));
+		}
+	}
 }
 
 function wholesale_format_order_email_data($data, $prefix)
@@ -1186,7 +1194,6 @@ function wholesale_format_order_email_data($data, $prefix)
 
 	return $formatted_data ? implode('<br>', $formatted_data) : 'N/A';
 }
-add_action('save_post_order', 'wholesale_send_new_order_admin_email', 20, 3);
 
 /**
  * Add the most useful order information to the admin order list.
@@ -1237,10 +1244,13 @@ function wholesale_order_admin_column_content($column, $post_id)
 		case 'order_status':
 			$status_labels = array(
 				'pending' => __('Pending Review', 'litsign'),
-				'on_hold' => __('On Hold', 'litsign'),
+				'on-hold' => __('On hold', 'litsign'),
 				'processing' => __('Processing', 'litsign'),
 				'completed' => __('Completed', 'litsign'),
+				'cancelled' => __('Cancelled', 'litsign'),
+				'refunded' => __('Refunded', 'litsign'),
 				'failed' => __('Failed', 'litsign'),
+				'on_hold' => __('On hold', 'litsign'),
 			);
 			$status = get_post_status($post_id);
 			$status_label = isset($status_labels[$status]) ? $status_labels[$status] : ucfirst(str_replace('_', ' ', $status));
@@ -1322,9 +1332,11 @@ function add_custom_status_to_dropdown()
 
 				})
 
-				$('#post_status').append('<option value="on_hold" ' + (selectedStatus === 'on_hold' ? 'selected="selected"' : '') + '>On Hold</option>');
+				$('#post_status').append('<option value="on-hold" ' + (selectedStatus === 'on-hold' ? 'selected="selected"' : '') + '>On hold</option>');
 				$('#post_status').append('<option value="processing" ' + (selectedStatus === 'processing' ? 'selected="selected"' : '') + '>Processing</option>');
 				$('#post_status').append('<option value="completed" ' + (selectedStatus === 'completed' ? 'selected="selected"' : '') + '>Completed</option>');
+				$('#post_status').append('<option value="cancelled" ' + (selectedStatus === 'cancelled' ? 'selected="selected"' : '') + '>Cancelled</option>');
+				$('#post_status').append('<option value="refunded" ' + (selectedStatus === 'refunded' ? 'selected="selected"' : '') + '>Refunded</option>');
 				$('#post_status').append('<option value="failed" ' + (selectedStatus === 'failed' ? 'selected="selected"' : '') + '>Failed</option>');
 			});
 		</script>
@@ -1337,16 +1349,16 @@ add_action('post_submitbox_misc_actions', 'add_custom_status_to_dropdown');
 function save_custom_post_status($post_id, $post)
 {
 	if ($post->post_type === 'order' && isset($_POST['post_status'])) {
-		$new_status = sanitize_text_field($_POST['hidden_post_status']);
-		$valid_statuses = array('on_hold', 'processing', 'completed', 'failed');
+		$posted_status = isset($_POST['hidden_post_status']) ? $_POST['hidden_post_status'] : $_POST['post_status'];
+		$new_status = sanitize_key(wp_unslash($posted_status));
+		$valid_statuses = array('pending', 'on-hold', 'processing', 'completed', 'cancelled', 'refunded', 'failed', 'on_hold');
 
-		if (in_array($new_status, $valid_statuses)) {
+		if (in_array($new_status, $valid_statuses, true)) {
 			remove_action('save_post', 'save_custom_post_status');
 			return wp_update_post(array(
 				'ID' => $post_id,
 				'post_status' => $new_status
 			));
-			add_action('save_post', 'save_custom_post_status');
 		}
 	}
 }
@@ -1358,10 +1370,13 @@ function register_custom_bulk_action($bulk_actions)
 	global $post_type;
 
 	if ($post_type == 'order') { // Replace 'order' with your custom post type ID
+		$bulk_actions['pending'] = __('Mark as Pending');
 		$bulk_actions['failed'] = __('Mark as Failed');
-		$bulk_actions['on_hold'] = __('Mark as On Hold');
+		$bulk_actions['on-hold'] = __('Mark as On hold');
 		$bulk_actions['processing'] = __('Mark as Processing');
 		$bulk_actions['completed'] = __('Mark as Completed');
+		$bulk_actions['cancelled'] = __('Mark as Cancelled');
+		$bulk_actions['refunded'] = __('Mark as Refunded');
 	}
 
 	return $bulk_actions;
@@ -1371,12 +1386,9 @@ add_filter('bulk_actions-edit-order', 'register_custom_bulk_action'); // Replace
 function handle_custom_bulk_action($redirect_to, $doaction, $post_ids)
 {
 
-	echo $doaction;
-
-	if ($doaction) {
+	$valid_statuses = array('pending', 'on-hold', 'processing', 'completed', 'cancelled', 'refunded', 'failed', 'on_hold');
+	if (in_array($doaction, $valid_statuses, true)) {
 		foreach ($post_ids as $post_id) {
-			// Perform your custom bulk action on each post here
-			$new_status = 'processing'; // Define your new status
 			wp_update_post(array(
 				'ID' => $post_id,
 				'post_status' => $doaction,

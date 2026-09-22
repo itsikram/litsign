@@ -61,8 +61,9 @@ if (is_user_logged_in()) {
                             <td>
 
                                 <?php switch($order_status){
+                                    case 'on-hold':
                                     case 'on_hold':
-                                            echo '<span class="badge bg-warning">On Hold</span>';
+                                            echo '<span class="badge bg-warning">On hold</span>';
                                         break;
                                     case 'completed':
                                         echo '<span class="badge bg-success">Completed</span>';
@@ -73,6 +74,14 @@ if (is_user_logged_in()) {
                                     case 'failed':
                                         echo '<span class="badge bg-danger">Failed</span>';
                                         break;
+                                    case 'cancelled':
+                                        echo '<span class="badge bg-secondary">Cancelled</span>';
+                                        break;
+                                    case 'refunded':
+                                        echo '<span class="badge bg-info">Refunded</span>';
+                                        break;
+                                    default:
+                                        echo '<span class="badge bg-secondary">' . esc_html(ucwords(str_replace('-', ' ', $order_status))) . '</span>';
                                 }
                                 ?>
                              

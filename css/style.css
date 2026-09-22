@@ -13,6 +13,41 @@
   --bs-link-color-rgb: 31, 168, 222;
   --bs-link-hover-color: #1fa8de;
   --bs-link-hover-color-rgb: 31, 168, 222;
+  --scroll-offset: 80px;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: var(--scroll-offset);
+}
+
+html.scroll-effects-enabled .scroll-reveal {
+  opacity: 0;
+  transform: translate3d(0, 24px, 0);
+  transition:
+    opacity 650ms cubic-bezier(.22, 1, .36, 1),
+    transform 650ms cubic-bezier(.22, 1, .36, 1);
+  transition-delay: var(--scroll-delay, 0ms);
+  will-change: opacity, transform;
+}
+
+html.scroll-effects-enabled .scroll-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  html.scroll-effects-enabled .scroll-reveal,
+  html.scroll-effects-enabled .scroll-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    will-change: auto;
+  }
 }
 
 a.link-primary,
@@ -554,10 +589,23 @@ a.link-primary:focus,
 }
 
 .main-header {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
   padding: 10px 0;
   background-color: #fff;
-  box-shadow: 2px -3px 5px 1px;
-  position: relative;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+  transition: padding 180ms ease, box-shadow 180ms ease, background-color 180ms ease;
+}
+.main-header.is-scrolled {
+  padding: 6px 0;
+  background-color: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.main-header.is-scrolled .header-bottom {
+  margin-top: 6px;
 }
 .main-header .header-bottom {
   border-top: 1px solid rgba(0, 0, 0, 0.1);
@@ -566,8 +614,8 @@ a.link-primary:focus,
 }
 .main-header .logo-container .header-logo {
   display: block;
-  width: auto;
-  height: 50px;
+  width: 400px;
+  height: auto;
   max-width: 100%;
   object-fit: contain;
 }
@@ -1191,6 +1239,9 @@ a.link-primary:focus,
   justify-content: space-between;
   color: #777;
 }
+.product-box-container .product-box .start-at-pricing .table tbody tr:last-child > * {
+  border-bottom: 0;
+}
 .product-reviews {
   margin: 44px 0 12px;
   padding: 32px;
@@ -1467,6 +1518,12 @@ a.link-primary:focus,
 }
 .footer .footer-separator {
   border-bottom: 1px dashed #a6a6a6;
+}
+.footer .modal {
+  z-index: 1260 !important;
+}
+.modal-backdrop {
+  z-index: 1250 !important;
 }
 
 .home
@@ -1757,8 +1814,299 @@ a.link-primary:focus,
   .product-listing-container {
     margin-top: 0 !important;
   }
+}
 
-  .contact-page {
+.error-404 {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 620px;
+    overflow: hidden;
+    padding: 72px 0;
+    background: linear-gradient(135deg, #f7fbfd 0%, #ffffff 58%, #edf8fc 100%);
+  }
+
+.error-404::before,
+.error-404::after {
+  position: absolute;
+  border: 1px solid rgba(31, 168, 222, 0.12);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+  .error-404::before {
+    top: -220px;
+    right: -130px;
+    width: 560px;
+    height: 560px;
+  }
+
+  .error-404::after {
+    bottom: -280px;
+    left: -180px;
+    width: 620px;
+    height: 620px;
+  }
+
+  .error-404-layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+    align-items: center;
+    gap: 64px;
+  }
+
+  .error-404-content {
+    max-width: 610px;
+  }
+
+  .error-404-eyebrow {
+    margin: 0 0 16px;
+    color: #1fa8de;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .error-404-title {
+    margin: 0;
+    color: #172027;
+    font-size: clamp(42px, 5vw, 68px);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.04;
+  }
+
+  .error-404-description {
+    max-width: 520px;
+    margin: 24px 0 30px;
+    color: #526171;
+    font-size: 17px;
+    line-height: 1.7;
+  }
+
+  .error-404-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  .error-404-actions .btn {
+    padding: 13px 24px;
+    border-radius: 5px;
+    box-shadow: 0 8px 18px rgba(31, 168, 222, 0.2);
+  }
+
+  .error-404-text-link {
+    color: #172027;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .error-404-text-link span {
+    margin-left: 7px;
+    color: #1fa8de;
+    font-size: 18px;
+    transition: margin-left 0.2s ease;
+  }
+
+  .error-404-text-link:hover,
+  .error-404-text-link:focus {
+    color: #1fa8de;
+  }
+
+  .error-404-text-link:hover span,
+  .error-404-text-link:focus span {
+    margin-left: 11px;
+  }
+
+  .error-404-search {
+    display: flex;
+    max-width: 450px;
+    margin-top: 44px;
+    border: 1px solid #dce8ed;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(23, 32, 39, 0.06);
+  }
+
+  .error-404-search input {
+    width: 100%;
+    min-width: 0;
+    padding: 14px 17px;
+    border: 0;
+    outline: 0;
+    color: #172027;
+    background: transparent;
+    font-size: 14px;
+  }
+
+  .error-404-search input::placeholder {
+    color: #91a0aa;
+  }
+
+  .error-404-search:focus-within {
+    border-color: #1fa8de;
+    box-shadow: 0 0 0 3px rgba(31, 168, 222, 0.12);
+  }
+
+  .error-404-search button {
+    width: 52px;
+    flex: 0 0 52px;
+    border: 0;
+    border-radius: 0 5px 5px 0;
+    color: #fff;
+    background: #1fa8de;
+    cursor: pointer;
+    font-size: 22px;
+  }
+
+  .error-404-search button:hover,
+  .error-404-search button:focus {
+    background: #168fbe;
+  }
+
+  .error-404-visual {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 390px;
+  }
+
+  .error-404-glow {
+    position: absolute;
+    width: 330px;
+    height: 330px;
+    border-radius: 50%;
+    background: rgba(31, 168, 222, 0.1);
+    filter: blur(2px);
+  }
+
+  .error-404-sign {
+    position: relative;
+    display: flex;
+    width: min(100%, 340px);
+    min-height: 245px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 36px 28px;
+    border: 8px solid #fff;
+    border-radius: 8px;
+    outline: 2px solid #1fa8de;
+    background: #172027;
+    box-shadow: 16px 18px 0 rgba(31, 168, 222, 0.2), 0 22px 40px rgba(23, 32, 39, 0.2);
+    transform: rotate(5deg);
+  }
+
+  .error-404-sign-number {
+    color: #fff;
+    font-size: clamp(76px, 10vw, 112px);
+    font-weight: 700;
+    letter-spacing: -0.08em;
+    line-height: 0.9;
+  }
+
+  .error-404-sign-copy {
+    margin-top: 16px;
+    color: #8ddaf4;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .error-404-sign-line {
+    width: 72px;
+    height: 3px;
+    margin-top: 20px;
+    background: #1fa8de;
+  }
+
+  .error-404-dot,
+  .error-404-cross {
+    position: absolute;
+    color: #1fa8de;
+  }
+
+  .error-404-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #1fa8de;
+    box-shadow: 0 0 0 7px rgba(31, 168, 222, 0.13);
+  }
+
+  .error-404-dot-one {
+    top: 53px;
+    right: 12%;
+  }
+
+  .error-404-dot-two {
+    bottom: 45px;
+    left: 8%;
+    background: #172027;
+  }
+
+  .error-404-cross {
+    font-size: 27px;
+    font-weight: 300;
+  }
+
+  .error-404-cross-one {
+    top: 86px;
+    left: 10%;
+    transform: rotate(17deg);
+  }
+
+  .error-404-cross-two {
+    right: 7%;
+    bottom: 84px;
+    transform: rotate(-14deg);
+  }
+
+  @media only screen and (max-width: 767px) {
+    .error-404 {
+      min-height: 0;
+      padding: 56px 0 70px;
+    }
+
+    .error-404-layout {
+      grid-template-columns: 1fr;
+      gap: 42px;
+    }
+
+    .error-404-title {
+      font-size: clamp(40px, 11vw, 58px);
+    }
+
+    .error-404-description {
+      font-size: 16px;
+    }
+
+    .error-404-search {
+      margin-top: 34px;
+    }
+
+    .error-404-visual {
+      min-height: 310px;
+    }
+
+    .error-404-sign {
+      width: min(82%, 320px);
+      min-height: 220px;
+    }
+}
+
+@media only screen and (max-width: 767px) {
+
+    .contact-page {
     width: 100% !important;
     max-width: 100% !important;
   }
@@ -2231,7 +2579,8 @@ a.link-primary:focus,
   }
 
   .main-header {
-    position: relative;
+    position: sticky;
+    top: 0;
     z-index: 1100;
   }
 
@@ -3141,7 +3490,7 @@ a.link-primary:focus,
 
 @media only screen and (max-width: 767px) {
   .footer .footer-logo-container {
-    width: 83.333333%;
+    width: 100%;
     margin-right: auto;
     margin-left: auto;
   }

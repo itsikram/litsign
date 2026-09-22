@@ -8,8 +8,35 @@
 // }
 
 
-if (isset($_REQUEST['product_id']) && $_REQUEST['product_id'] > 0) {
-    $product_id = $_REQUEST['product_id'];
+$channel_letter_products = new WP_Query(array(
+    'post_type' => 'product',
+    'posts_per_page' => -1,
+    'post_status' => 'publish',
+    'order' => 'ASC',
+    'meta_key' => '_order_by_index',
+    'orderby' => 'meta_value_num',
+    'tax_query' => array(
+        array(
+            'taxonomy' => 'product_category',
+            'field' => 'slug',
+            'terms' => 'channel-letters',
+        ),
+    ),
+    'meta_query' => array(
+        array(
+            'key' => '_show_in_list',
+            'value' => 'on',
+            'compare' => '=',
+        ),
+    ),
+));
+
+$product_id = isset($_REQUEST['product_id']) ? absint($_REQUEST['product_id']) : 0;
+if (!$product_id && !empty($channel_letter_products->posts)) {
+    $product_id = (int) $channel_letter_products->posts[0]->ID;
+}
+
+if ($product_id > 0) {
     $product_title = get_the_title($product_id);
     $product_cl_data = get_post_meta($product_id, 'product_cl_data', true);
 
@@ -267,7 +294,14 @@ get_header();
                 </button>
             </div>
             <div class="middle">
-                <h1 class="product-title text-truncate"> <?php echo $product_title; ?></h1>
+                <div class="product-heading">
+                    <span class="product-heading-label">Designing</span>
+                    <h1 class="product-title text-truncate"><?php echo esc_html($product_title); ?></h1>
+                    <button type="button" class="change-product-btn" data-bs-toggle="modal" data-bs-target="#changeProductModal">
+                        <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
+                        <span>Change product</span>
+                    </button>
+                </div>
             </div>
             <div class="right">
                 <div class="button-group mt-0 d-flex justify-content-end">
@@ -453,6 +487,57 @@ get_header();
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade change-product-modal" id="changeProductModal" tabindex="-1" aria-labelledby="changeProductModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <span class="change-product-eyebrow">Channel letter collection</span>
+                    <h2 class="modal-title" id="changeProductModalLabel">Choose a different product</h2>
+                    <p class="change-product-intro">Select a product to start a new design with the right materials and options.</p>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="change-product-notice">
+                    <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+                    <span>Changing products starts a fresh configuration. Your current design will stay unsaved.</span>
+                </div>
+                <div class="change-product-grid">
+                    <?php if ($channel_letter_products->have_posts()) : ?>
+                        <?php while ($channel_letter_products->have_posts()) : $channel_letter_products->the_post(); ?>
+                            <?php
+                            $change_product_id = get_the_ID();
+                            $is_current_product = ((int) $change_product_id === (int) $product_id);
+                            $change_product_image = get_post_thumbnail_id($change_product_id);
+                            $change_product_url = trailingslashit(get_permalink($change_product_id)) . 'channel-letter-builder/?product_id=' . $change_product_id;
+                            ?>
+                            <a class="change-product-card<?php echo $is_current_product ? ' is-current' : ''; ?>"
+                                href="<?php echo esc_url($change_product_url); ?>"
+                                <?php echo $is_current_product ? 'aria-current="true"' : ''; ?>>
+                                <span class="change-product-image">
+                                    <?php if ($change_product_image) : ?>
+                                        <?php echo wp_get_attachment_image($change_product_image, 'product-card', false, array('alt' => esc_attr(get_the_title($change_product_id)))); ?>
+                                    <?php else : ?>
+                                        <i class="fa-regular fa-image" aria-hidden="true"></i>
+                                    <?php endif; ?>
+                                </span>
+                                <span class="change-product-card-content">
+                                    <strong><?php echo esc_html(get_the_title($change_product_id)); ?></strong>
+                                    <span><?php echo $is_current_product ? 'Current product' : 'Start new design'; ?></span>
+                                </span>
+                                <i class="fa-solid <?php echo $is_current_product ? 'fa-circle-check' : 'fa-arrow-right'; ?> change-product-card-icon" aria-hidden="true"></i>
+                            </a>
+                        <?php endwhile; wp_reset_postdata(); ?>
+                    <?php else : ?>
+                        <p class="change-product-empty">No other channel letter products are available right now.</p>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
     </div>

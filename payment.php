@@ -48,6 +48,19 @@ if (
     wp_die(esc_html__('Please provide a complete and valid billing address.', 'litsign'), esc_html__('Invalid order', 'litsign'), array('response' => 400));
 }
 
+$create_account = isset($_POST['create_account']) && '1' === sanitize_text_field(wp_unslash($_POST['create_account']));
+$account_password = isset($_POST['account_password']) ? (string) wp_unslash($_POST['account_password']) : '';
+
+if ($create_account) {
+    if (is_user_logged_in()) {
+        $create_account = false;
+    } elseif (email_exists($billing_email)) {
+        wp_die(esc_html__('An account already exists for this email address. Please log in before placing your order.', 'litsign'), esc_html__('Account already exists', 'litsign'), array('response' => 400));
+    } elseif (strlen($account_password) < 8) {
+        wp_die(esc_html__('Your account password must be at least 8 characters.', 'litsign'), esc_html__('Invalid account password', 'litsign'), array('response' => 400));
+    }
+}
+
 $billing_data = wp_json_encode(array(
    'billing_email' => $billing_email,
    'billing_fname' => $billing_fname,
@@ -204,7 +217,41 @@ function place_order($product_data, $order_cost, $billing_data, $shipping_data, 
        );
    }
 
-   return true;
+   return $new_order;
+}
+
+function wholesale_create_checkout_account($email, $password, $first_name, $last_name, $telephone)
+{
+   $email_parts = explode('@', $email);
+   $username = sanitize_user($email_parts[0], true);
+   if ('' === $username) {
+       $username = 'customer';
+   }
+
+   while (username_exists($username)) {
+       $username = sanitize_user($username . wp_rand(100, 999), true);
+   }
+
+   $user_id = wp_insert_user(array(
+       'user_login' => $username,
+       'user_email' => $email,
+       'user_pass' => $password,
+       'first_name' => $first_name,
+       'last_name' => $last_name,
+       'role' => 'subscriber',
+       'meta_input' => array(
+           'telephone' => $telephone,
+       ),
+   ));
+
+   if (is_wp_error($user_id)) {
+       return $user_id;
+   }
+
+   wp_set_current_user($user_id);
+   wp_set_auth_cookie($user_id, true);
+
+   return $user_id;
 }
 
 function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
@@ -305,8 +352,17 @@ function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
 
 
 if (wholesale_setting_enabled('payment_disabled')) {
-    if (!place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart)) {
+    $new_order = place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart);
+    if (!$new_order) {
         wp_die(esc_html__('We could not create your order. Please try again.', 'litsign'), esc_html__('Order failed', 'litsign'), array('response' => 500));
+    }
+
+    if ($create_account) {
+        $new_user = wholesale_create_checkout_account($billing_email, $account_password, $billing_fname, $billing_lname, $billing_tel);
+        if (is_wp_error($new_user)) {
+            wp_die(esc_html__('Your order was placed, but we could not create your account. Please contact us for assistance.', 'litsign'), esc_html__('Account creation failed', 'litsign'), array('response' => 500));
+        }
+        update_post_meta($new_order, 'user_id', $new_user);
     }
 
     wp_safe_redirect(home_url('/thank-you/'));
@@ -316,8 +372,17 @@ if (wholesale_setting_enabled('payment_disabled')) {
 $result = processPayment($grand_total, $card_number, $card_exp_month . $card_exp_year, $card_cvv, $address, $billing_zip);
 
 if ($result['status'] == 'success') {
-    if (!place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart)) {
+    $new_order = place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart);
+    if (!$new_order) {
         wp_die(esc_html__('We could not create your order. Please try again.', 'litsign'), esc_html__('Order failed', 'litsign'), array('response' => 500));
+    }
+
+    if ($create_account) {
+        $new_user = wholesale_create_checkout_account($billing_email, $account_password, $billing_fname, $billing_lname, $billing_tel);
+        if (is_wp_error($new_user)) {
+            wp_die(esc_html__('Your order was placed, but we could not create your account. Please contact us for assistance.', 'litsign'), esc_html__('Account creation failed', 'litsign'), array('response' => 500));
+        }
+        update_post_meta($new_order, 'user_id', $new_user);
     }
 
     wp_safe_redirect(home_url('/thank-you/'));

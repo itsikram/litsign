@@ -421,6 +421,174 @@ width: 25% !important;
 .dt-container .editor-container .editor-topbar .middle .product-title {
   font-size: 20px;
 }
+.product-heading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  max-width: 100%;
+}
+.product-heading-label {
+  color: #7b8794;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.product-heading .product-title {
+  margin: 0;
+  max-width: 230px;
+}
+.change-product-btn {
+  align-items: center;
+  background: #eef9fd;
+  border: 1px solid #b9e6f5;
+  border-radius: 999px;
+  color: #168dbb;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 5px;
+  padding: 6px 10px;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  white-space: nowrap;
+}
+.change-product-btn:hover,
+.change-product-btn:focus-visible {
+  background: #1fa8de;
+  border-color: #1fa8de;
+  color: #fff;
+  outline: none;
+}
+.change-product-modal .modal-content {
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 18px 55px rgba(14, 53, 74, 0.2);
+  overflow: hidden;
+}
+.change-product-modal .modal-header {
+  align-items: flex-start;
+  background: linear-gradient(135deg, #f3fbfe 0%, #fff 70%);
+  border-bottom: 1px solid #e5eef2;
+  padding: 24px 28px 20px;
+}
+.change-product-modal .modal-title {
+  color: #17384a;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 3px 0 5px;
+}
+.change-product-eyebrow {
+  color: #1fa8de;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.change-product-intro {
+  color: #687b86;
+  font-size: 14px;
+  margin: 0;
+}
+.change-product-modal .modal-body {
+  padding: 20px 28px 28px;
+}
+.change-product-notice {
+  align-items: center;
+  background: #fff9ed;
+  border: 1px solid #f5dfae;
+  border-radius: 10px;
+  color: #806326;
+  display: flex;
+  font-size: 13px;
+  gap: 9px;
+  margin-bottom: 18px;
+  padding: 11px 13px;
+}
+.change-product-notice i {
+  color: #d69b19;
+  font-size: 15px;
+}
+.change-product-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: min(55vh, 470px);
+  overflow-y: auto;
+  padding: 2px;
+}
+.change-product-card {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dce9ee;
+  border-radius: 12px;
+  color: #17384a;
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px;
+  text-decoration: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.change-product-card:hover,
+.change-product-card:focus-visible {
+  border-color: #1fa8de;
+  box-shadow: 0 7px 20px rgba(31, 168, 222, 0.15);
+  color: #17384a;
+  outline: none;
+  text-decoration: none;
+  transform: translateY(-1px);
+}
+.change-product-card.is-current {
+  background: #f1fbfe;
+  border-color: #1fa8de;
+}
+.change-product-image {
+  align-items: center;
+  background: #f4f8fa;
+  border-radius: 8px;
+  display: flex;
+  flex: 0 0 66px;
+  height: 58px;
+  justify-content: center;
+  overflow: hidden;
+}
+.change-product-image img {
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+.change-product-image i {
+  color: #a6bac4;
+  font-size: 20px;
+}
+.change-product-card-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.change-product-card-content strong {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.change-product-card-content span {
+  color: #758995;
+  font-size: 12px;
+  margin-top: 3px;
+}
+.change-product-card-icon {
+  color: #1fa8de;
+  font-size: 14px;
+  margin-right: 3px;
+}
+.change-product-empty {
+  color: #687b86;
+  margin: 8px 0;
+}
 #leftSidebarSlider .choose-color-preview {
   background-size: cover !important;
 }
@@ -612,6 +780,35 @@ width: 25% !important;
   .dt-container .editor-container .editor-topbar .middle .product-title {
     margin: 0;
     font-size: 18px;
+    max-width: 180px;
+  }
+
+  .product-heading {
+    flex-wrap: wrap;
+    gap: 5px 7px;
+  }
+
+  .product-heading-label {
+    font-size: 9px;
+  }
+
+  .change-product-btn {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+
+  .change-product-modal .modal-header,
+  .change-product-modal .modal-body {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .change-product-modal .modal-title {
+    font-size: 20px;
+  }
+
+  .change-product-grid {
+    grid-template-columns: 1fr;
   }
 
   .dt-container .editor-container .editor-topbar .right {

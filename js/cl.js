@@ -1699,9 +1699,51 @@ function scheduleHeightWidthDisplayUpdate() {
 }
 
 function updateHeightWidthDisplay(skipDraw = false) {
+  const isMobileEditor = window.matchMedia("(max-width: 767.98px)").matches;
+  const viewportInsetX = isMobileEditor ? 15 : 30;
+  const viewportInsetY = isMobileEditor ? 15 : 20;
+  const verticalArrowX = (viewportInsetX - stage.x()) / stage.scaleX();
+  const horizontalArrowY = (viewportInsetY - stage.y()) / stage.scaleY();
+
   if (nodeLists.length < 1) {
+    const middleX = stage.width() / 2;
+    const middleY = stage.height() / 2;
+    const arrowWidth = stage.width() / 3;
+    const arrowHeight = stage.height() / 3;
+
+    heightArrows.children[0].points([
+      verticalArrowX,
+      middleY - 15,
+      verticalArrowX,
+      middleY - arrowHeight,
+    ]);
+    heightArrows.children[1].points([
+      verticalArrowX,
+      middleY + 15,
+      verticalArrowX,
+      middleY + arrowHeight,
+    ]);
+    heightDisplay.x(verticalArrowX - 20);
+    heightDisplay.y(middleY - 10);
+    widthArrows.children[0].points([
+      middleX - 35,
+      horizontalArrowY,
+      middleX - arrowWidth,
+      horizontalArrowY,
+    ]);
+    widthArrows.children[1].points([
+      middleX + 35,
+      horizontalArrowY,
+      middleX + arrowWidth,
+      horizontalArrowY,
+    ]);
+    widhtDisplay.x(middleX - 25);
+    widhtDisplay.y(horizontalArrowY - 10);
     widhtDisplay.text(`0"`);
     heightDisplay.text(`0"`);
+    if (!skipDraw) {
+      layer.batchDraw();
+    }
     return;
   }
 
@@ -1740,9 +1782,6 @@ function updateHeightWidthDisplay(skipDraw = false) {
   let xArrowWidth = (contentWidth * dpi) / 2;
   let middleY = minTop + xArrowHeight;
   let middleX = minLeft + xArrowWidth;
-  let verticalArrowX = (30 - stage.x()) / stage.scaleX();
-  let horizontalArrowY = (20 - stage.y()) / stage.scaleY();
-
   topArrow.points([
     verticalArrowX,
     middleY - 15,
@@ -4021,6 +4060,7 @@ window.addEventListener("load", function (e) {
 
   drawHeightArrows(20, `0"`);
   drawWidthArrows(20, `0"`);
+  updateHeightWidthDisplay();
   previewNoItemText();
   updateLeftsideBar();
   updateBottombarOverlay();

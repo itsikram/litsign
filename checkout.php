@@ -156,6 +156,19 @@ get_header();
                             Ship to the same address
                         </label>
                     </div>
+                    <?php if (!is_user_logged_in()) : ?>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" name="create_account" type="checkbox" value="1" id="createAccount">
+                            <label class="form-check-label" for="createAccount">
+                                Create an account for faster checkout next time
+                            </label>
+                        </div>
+                        <div id="accountPasswordGroup" class="form-group mt-2" hidden>
+                            <label for="accountPassword" class="form-label">Account Password</label>
+                            <input type="password" name="account_password" id="accountPassword" class="form-control" minlength="8" autocomplete="new-password">
+                            <small class="form-text text-muted">Use at least 8 characters.</small>
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <!-- Shipping Address  -->
                 <div class="shipping-address-container mt-3">
@@ -416,6 +429,24 @@ get_header();
 
 </div>
 
+<?php if (!is_user_logged_in()) : ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var checkbox = document.getElementById('createAccount');
+            var passwordGroup = document.getElementById('accountPasswordGroup');
+            var password = document.getElementById('accountPassword');
+
+            if (!checkbox || !passwordGroup || !password) {
+                return;
+            }
+
+            checkbox.addEventListener('change', function () {
+                passwordGroup.hidden = !checkbox.checked;
+                password.required = checkbox.checked;
+            });
+        });
+    </script>
+<?php endif; ?>
 
 
 <?php

@@ -1,5 +1,38 @@
 (function ($) {
   $(document).ready((e) => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const revealRoots = ['main', '#content', '.home', '.home-hero', '.landing-page', '.product-details', '.contact-page', '.site-main'];
+    const revealTargets = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'figure', 'img', 'svg', 'blockquote', '.card', '.btn', 'form', 'table', 'section', '.home-hero-copy', '.home-hero-actions', '.home-hero-feature'];
+    const revealSelector = revealRoots
+      .flatMap((root) => revealTargets.map((target) => `${root} ${target}`))
+      .concat('.footer > *')
+      .join(',');
+    const revealElements = [...document.querySelectorAll(revealSelector)].filter((element, index, elements) => {
+      return !element.closest('header, nav, .modal, .offcanvas, [aria-hidden="true"]')
+        && elements.indexOf(element) === index;
+    });
+
+    document.documentElement.classList.add('scroll-effects-enabled');
+
+    if (prefersReducedMotion || !('IntersectionObserver' in window)) {
+      revealElements.forEach((element) => element.classList.add('scroll-reveal', 'is-visible'));
+    } else {
+      revealElements.forEach((element, index) => {
+        element.classList.add('scroll-reveal');
+        element.style.setProperty('--scroll-delay', `${Math.min(index % 5, 4) * 60}ms`);
+      });
+
+      const revealObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px' });
+
+      revealElements.forEach((element) => revealObserver.observe(element));
+    }
 
     let discountPercent = parseInt($('#discountPercent').val());
     let pricePerSqft = parseFloat($('#pricePerSqft').val()|| 0).toFixed(2)
@@ -697,6 +730,13 @@
       $('#adhesiveLetterFilterBtn').trigger('click');
 
     }
+
+    const updateStickyHeader = () => {
+      $(".main-header").toggleClass("is-scrolled", window.scrollY > 12);
+    };
+
+    updateStickyHeader();
+    $(window).on("scroll", updateStickyHeader);
 
     // handle mobile menu close button click
 

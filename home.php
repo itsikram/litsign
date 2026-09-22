@@ -79,13 +79,13 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
     <div class="pb-image-top<?php echo $has_gallery ? ' has-gallery' : ''; ?>" data-gallery>
         <div class="pb-gallery-track">
             <?php foreach ($images as $index => $image) : ?>
+                <?php $image = wholesale_webp_url($image); ?>
                 <img class="pb-gallery-image<?php echo $index === 0 ? ' is-active' : ''; ?>"
                     <?php echo $index === 0 ? 'src="' . esc_url($image) . '"' : ''; ?>
                     data-gallery-src="<?php echo esc_url($image); ?>"
                     alt="<?php echo esc_attr($product_title); ?>"
                     loading="<?php echo $index === 0 ? esc_attr($loading) : 'lazy'; ?>"
                     decoding="async"
-                    <?php echo $index === 0 ? 'fetchpriority="high"' : ''; ?>
                     data-gallery-index="<?php echo esc_attr($index); ?>">
             <?php endforeach; ?>
         </div>

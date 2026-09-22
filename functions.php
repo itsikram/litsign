@@ -915,13 +915,149 @@ add_action('init', 'wholesale_trim_frontend_overhead');
 function wholesale_preload_front_page_hero()
 {
 	if (is_front_page()) {
+		// Browsers without AVIF support skip this preload and use the WebP from style.css.
 		printf(
-			'<link rel="preload" as="image" href="%s" type="image/png" fetchpriority="high">' . "\n",
-			esc_url(get_template_directory_uri() . '/img/Hero-background.png')
+			'<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n",
+			esc_url(get_template_directory_uri() . '/img/hero-1920.avif')
 		);
 	}
 }
 add_action('wp_head', 'wholesale_preload_front_page_hero', 1);
+
+/**
+ * Return a WebP copy of an uploaded JPEG/PNG, creating it next to the original
+ * on first use. Falls back to the original URL when conversion is unavailable.
+ */
+function wholesale_webp_url($url)
+{
+	static $cache = array();
+
+	if (!$url || !preg_match('/\.(png|jpe?g)$/i', wp_parse_url($url, PHP_URL_PATH) ?? '')) {
+		return $url;
+	}
+	if (isset($cache[$url])) {
+		return $cache[$url];
+	}
+
+	$uploads = wp_get_upload_dir();
+	$base_path = wp_parse_url($uploads['baseurl'], PHP_URL_PATH);
+	$url_path = wp_parse_url($url, PHP_URL_PATH);
+	if (!$base_path || 0 !== strpos($url_path, $base_path . '/')) {
+		return $cache[$url] = $url;
+	}
+
+	$file = $uploads['basedir'] . substr($url_path, strlen($base_path));
+	$webp_file = $file . '.webp';
+	$webp_url = preg_replace('/(\.(png|jpe?g))(\?.*)?$/i', '$1.webp', $url);
+
+	if (file_exists($webp_file) && filemtime($webp_file) >= filemtime($file)) {
+		return $cache[$url] = $webp_url;
+	}
+	if (!file_exists($file) || !function_exists('imagewebp') || filesize($file) > 8 * MB_IN_BYTES) {
+		return $cache[$url] = $url;
+	}
+
+	$image = preg_match('/\.png$/i', $file) ? @imagecreatefrompng($file) : @imagecreatefromjpeg($file);
+	if (!$image) {
+		return $cache[$url] = $url;
+	}
+	imagepalettetotruecolor($image);
+	imagealphablending($image, false);
+	imagesavealpha($image, true);
+	$saved = imagewebp($image, $webp_file, 80);
+	imagedestroy($image);
+
+	// Keep the original when WebP is not actually smaller.
+	if (!$saved || filesize($webp_file) >= filesize($file)) {
+		@unlink($webp_file);
+		return $cache[$url] = $url;
+	}
+
+	return $cache[$url] = $webp_url;
+}
+
+function wholesale_webp_srcset($srcset)
+{
+	return preg_replace_callback('/(\S+)(\s+\d+[wx])/', function ($matches) {
+		return wholesale_webp_url($matches[1]) . $matches[2];
+	}, $srcset);
+}
+
+function wholesale_webp_attachment_attributes($attr)
+{
+	if (is_admin()) {
+		return $attr;
+	}
+	if (!empty($attr['src'])) {
+		$attr['src'] = wholesale_webp_url($attr['src']);
+	}
+	if (!empty($attr['srcset'])) {
+		$attr['srcset'] = wholesale_webp_srcset($attr['srcset']);
+	}
+
+	return $attr;
+}
+add_filter('wp_get_attachment_image_attributes', 'wholesale_webp_attachment_attributes', 20);
+
+/**
+ * Print the theme's tiny stylesheets inline to save render-blocking requests.
+ */
+function wholesale_inline_small_styles($tag, $handle)
+{
+	$files = array(
+		'litsign-style' => '/style.css',
+		'font-awesome' => '/css/icons.css',
+	);
+
+	if (is_admin() || is_rtl() || !isset($files[$handle])) {
+		return $tag;
+	}
+
+	$css = @file_get_contents(get_template_directory() . $files[$handle]);
+	if (false === $css) {
+		return $tag;
+	}
+
+	$css = preg_replace('#/\*.*?\*/#s', '', $css);
+	$css = str_replace('url("../', 'url("' . get_template_directory_uri() . '/', $css);
+
+	return '<style id="' . esc_attr($handle) . '-inline-css">' . trim($css) . "</style>\n";
+}
+add_filter('style_loader_tag', 'wholesale_inline_small_styles', 10, 2);
+
+/**
+ * Keep render-blocking JavaScript out of the <head> on the public site.
+ *
+ * The social icons plugin loads jQuery UI, Modernizr and Shuffle on every page
+ * although the theme never outputs its icons, and jQuery itself only needs to
+ * be ready before the footer scripts that depend on it.
+ */
+function wholesale_optimize_frontend_scripts()
+{
+	if (is_admin() || is_customize_preview()) {
+		return;
+	}
+
+	foreach (array('SFSIjqueryModernizr', 'SFSIjqueryShuffle', 'SFSIjqueryrandom-shuffle', 'SFSICustomJs', 'SFSIPLUSjqueryModernizr') as $handle) {
+		wp_dequeue_script($handle);
+	}
+	wp_dequeue_style('SFSImainCss');
+
+	// single.php has inline scripts that expect jQuery to be loaded already.
+	if (is_singular('post')) {
+		return;
+	}
+
+	$scripts = wp_scripts();
+	$scripts->remove('jquery');
+	$scripts->add('jquery', false, array('jquery-core'), $scripts->registered['jquery-core']->ver);
+	foreach (array('jquery', 'jquery-core', 'jquery-ui-core') as $handle) {
+		if (isset($scripts->registered[$handle])) {
+			$scripts->add_data($handle, 'group', 1);
+		}
+	}
+}
+add_action('wp_enqueue_scripts', 'wholesale_optimize_frontend_scripts', 100);
 
 /**
  * Expose product categories as clean URLs while keeping the
@@ -2481,10 +2617,6 @@ function wholesale_resource_hints($urls, $relation_type)
 	}));
 
 	$urls[] = 'https://img1.wsimg.com';
-	$urls[] = array(
-		'href' => 'https://csp.secureserver.net',
-		'crossorigin' => true,
-	);
 
 	return $urls;
 }
@@ -3096,7 +3228,8 @@ function wholesale_configure_smtp_mailer($phpmailer)
 	$username = defined('WHOLESALE_SMTP_USERNAME') ? WHOLESALE_SMTP_USERNAME : '';
 	$password = defined('WHOLESALE_SMTP_PASSWORD') ? WHOLESALE_SMTP_PASSWORD : '';
 
-	if (!$host || !$username || !$password) {
+	// Skip SMTP until a real app password replaces the wp-config placeholder.
+	if (!$host || !$username || !$password || 'your-google-workspace-app-password' === $password) {
 		return;
 	}
 
@@ -3124,6 +3257,12 @@ add_filter('wp_mail_from', function ($from_email) {
 
 add_filter('wp_mail_from_name', function ($from_name) {
 	return get_bloginfo('name');
+});
+
+add_action('wp_mail_failed', function ($error) {
+	$data = $error->get_error_data();
+	$to = isset($data['to']) ? implode(', ', (array) $data['to']) : '';
+	error_log('wp_mail failed (' . $to . '): ' . $error->get_error_message());
 });
 
 function start_session()

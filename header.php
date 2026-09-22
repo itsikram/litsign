@@ -70,7 +70,8 @@ $logo_id = get_theme_mod('custom_logo');
 		@font-face {
 			font-family: 'nimbus-sans';
 			/*a name to be used later*/
-			src: url('<?php echo get_template_directory_uri() . '/fonts/NimbusSanL-Bol.otf'; ?>');
+			src: url('<?php echo get_template_directory_uri() . '/fonts/NimbusSanL-Bol.woff2'; ?>') format('woff2'),
+				url('<?php echo get_template_directory_uri() . '/fonts/NimbusSanL-Bol.otf'; ?>') format('opentype');
 			font-weight: bold;
 			font-display: swap;
 			/*URL to font*/
@@ -97,7 +98,8 @@ $logo_id = get_theme_mod('custom_logo');
 
 		@font-face {
 			font-family: 'gotham-medium';
-			src: url('<?php echo get_template_directory_uri() . '/fonts/gotham-medium.otf'; ?>');
+			src: url('<?php echo get_template_directory_uri() . '/fonts/gotham-medium.woff2'; ?>') format('woff2'),
+				url('<?php echo get_template_directory_uri() . '/fonts/gotham-medium.otf'; ?>') format('opentype');
 			font-weight: 900;
 			font-display: swap;
 		}
@@ -161,11 +163,11 @@ $logo_id = get_theme_mod('custom_logo');
 										'class' => 'header-logo',
 										'loading' => 'eager',
 										'decoding' => 'async',
-										'fetchpriority' => 'high',
+										'fetchpriority' => 'auto',
 										'sizes' => '(max-width: 767px) 300px, 500px',
 									));
 								} else {
-									echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async" fetchpriority="high">';
+									echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async">';
 								}
 								?>
 							</a>

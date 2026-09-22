@@ -1,31 +1,35 @@
 (function ($) {
 
     window.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter') {
-            console.log('Enter key was pressed!');
-            event.preventDefault();  // Prevent the default "Save" action in the browser
-
-        }
-    });
-
-    window.addEventListener('keydown', function (event) {
-        if (event.ctrlKey && (event.key === 's' || event.key === 'S')) {
+        if ($('body').hasClass('post-type-product') && event.ctrlKey && (event.key === 's' || event.key === 'S')) {
             event.preventDefault();  // Prevent the default "Save" action in the browser
             $('#publish').trigger('click')
-            console.log('Ctrl + S was pressed!');
-            // You can perform any action here
         }
     });
 
     window.addEventListener('keydown', function (event) {
-        if (event.ctrlKey && (event.key === 'd' || event.key === 'D')) {
+        if ($('body').hasClass('post-type-product') && event.ctrlKey && (event.key === 'd' || event.key === 'D')) {
             event.preventDefault();  // Prevent the default "Save" action in the browser
             $('.m4c-duplicate-post').trigger('click')
-            // You can perform any action here
         }
     });
 
     $(document).ready(e => {
+        if ($('body').hasClass('edit-php') && $('body').hasClass('post-type-order')) {
+            $(document).on('click', '#the-list .editinline', function () {
+                var row = $(this).closest('tr');
+                var status = row.find('.wholesale-order-status').data('status');
+
+                window.setTimeout(function () {
+                    $('#inline-edit select[name="order_status"]').val(status);
+                }, 0);
+            });
+        }
+
+        if (!$('body').hasClass('post-type-product')) {
+            return;
+        }
+
         // atrribute box button
 
         let hasCustomArtwork = $('#hasCustomArtwork').val();

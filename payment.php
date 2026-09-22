@@ -168,9 +168,27 @@ $estimate_delivery_time = isset($_REQUEST['estimate_delivery_time']) ? sanitize_
 
 
 
+function wholesale_generate_order_id()
+{
+    do {
+        $order_id = 'order_' . strtoupper(wp_generate_password(10, false, false));
+        $existing_order = get_posts(array(
+            'post_type' => 'order',
+            'post_status' => 'any',
+            'meta_key' => 'order_id',
+            'meta_value' => $order_id,
+            'posts_per_page' => 1,
+            'fields' => 'ids',
+            'no_found_rows' => true,
+        ));
+    } while (!empty($existing_order));
+
+    return $order_id;
+}
+
 function place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart)
 {
-   $order_id = wp_unique_id('order_');
+   $order_id = wholesale_generate_order_id();
    $user_id = is_user_logged_in() ? get_current_user_id() : null;
 
    $date = new DateTime();

@@ -445,17 +445,16 @@ get_header();
                         $product_thumbnail_id = get_post_thumbnail_id(get_the_ID());
                         $product_slug = get_post_field('post_name', get_the_ID(), 'raw');
 
-
                 ?>
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
+                            <?php wholesale_render_home_product_gallery(
+                                get_the_ID(),
+                                $is_channel_letters ? 'Custom channel letter sign: ' . get_the_title() : get_the_title(),
+                                $product_thumbnail_id,
+                                $is_first_product ? 'eager' : 'lazy'
+                            ); ?>
+                            <?php $is_first_product = false; ?>
                             <a href="<?php echo get_permalink(); ?>">
-                                <?php wholesale_render_home_product_gallery(
-                                    get_the_ID(),
-                                    $is_channel_letters ? 'Custom channel letter sign: ' . get_the_title() : get_the_title(),
-                                    $product_thumbnail_id,
-                                    $is_first_product ? 'eager' : 'lazy'
-                                ); ?>
-                                <?php $is_first_product = false; ?>
                                 <div class="pb-details">
                                     <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
                                         <?php echo esc_html(get_the_title()); ?>
@@ -615,8 +614,8 @@ get_header();
                         $product_slug = get_post_field('post_name', get_the_ID(), 'raw');
                 ?>
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
+                            <?php wholesale_render_home_product_gallery(get_the_ID(), get_the_title(), $product_thumbnail_id); ?>
                             <a href="<?php echo get_permalink(); ?>">
-                                <?php wholesale_render_home_product_gallery(get_the_ID(), get_the_title(), $product_thumbnail_id); ?>
                                 <div class="pb-details">
                                     <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
                                         <?php echo esc_html(get_the_title()); ?>

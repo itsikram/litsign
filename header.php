@@ -210,9 +210,6 @@ $logo_id = get_theme_mod('custom_logo');
 								'menu_class' => 'header-menu text-center'
 							));
 							?>
-							<ul class="header-menu text-center header-builder-menu">
-								<li class="menu-item"><a class="header-builder-cta" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a></li>
-							</ul>
 							<?php wp_nav_menu(array(
 								'theme_location' => 'header-bottom-menu',
 								//'container_class' => 'header-menu-container',
@@ -491,7 +488,7 @@ $logo_id = get_theme_mod('custom_logo');
 							'container_class' => 'header-menu-container hide-on-mobile',
 							'menu_class' => 'header-menu text-center'
 						)); 					?>
-						<div class="header-builder-menu hide-on-mobile">
+						<div class="header-builder-menu">
 							<a class="header-builder-cta" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
 						</div>
 

@@ -962,6 +962,7 @@ width: 25% !important;
     left: 0 !important;
     opacity: 1 !important;
     pointer-events: auto;
+    z-index: 999999999;
   }
 
   .dt-container .left-sidebar .left-sidebar-slider .left-slider-container {

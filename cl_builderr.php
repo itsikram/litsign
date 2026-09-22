@@ -311,6 +311,7 @@ get_header();
                     <button title="Zoom Out" id="zoomOutBtn"><i
                             class="fa-solid fa-magnifying-glass-minus"></i></button>
                     <button title="Delete" id="deleteBtn"><i class="fa-solid fa-trash-can"></i></button>
+                    <button title="Clear builder" aria-label="Clear builder" id="clearBuilderBtn"><i class="fa-solid fa-broom"></i></button>
                 </div>
             </div>
         </div>

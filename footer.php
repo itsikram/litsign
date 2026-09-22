@@ -104,11 +104,27 @@
                     </div>
                 </div>
 
-                <form class="newsletter-form" action="#" method="post" onsubmit="event.preventDefault();">
-                    <label class="screen-reader-text" for="newsletter-email">Email address</label>
-                    <input id="newsletter-email" type="email" name="email" placeholder="Enter your email address" aria-label="Email address">
-                    <button type="submit">Subscribe</button>
-                </form>
+                <div class="newsletter-actions">
+                    <?php
+                    $newsletter_status = isset($_GET['newsletter']) ? sanitize_key(wp_unslash($_GET['newsletter'])) : '';
+                    if ('success' === $newsletter_status) {
+                        echo '<div class="newsletter-message newsletter-message-success">Thank you! Your email has been added to our newsletter list.</div>';
+                    } elseif ('exists' === $newsletter_status) {
+                        echo '<div class="newsletter-message newsletter-message-info">This email is already subscribed to our newsletter.</div>';
+                    } elseif ('invalid' === $newsletter_status) {
+                        echo '<div class="newsletter-message newsletter-message-error">Please enter a valid email address.</div>';
+                    } elseif ('error' === $newsletter_status) {
+                        echo '<div class="newsletter-message newsletter-message-error">There was a problem saving your email. Please try again.</div>';
+                    }
+                    ?>
+                    <form class="newsletter-form" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" method="post">
+                        <?php wp_nonce_field('wholesale_newsletter_subscribe', 'newsletter_nonce'); ?>
+                        <input type="hidden" name="action" value="wholesale_newsletter_subscribe">
+                        <label class="screen-reader-text" for="newsletter-email">Email address</label>
+                        <input id="newsletter-email" type="email" name="newsletter_email" placeholder="Enter your email address" aria-label="Email address" required>
+                        <button type="submit">Subscribe</button>
+                    </form>
+                </div>
             </div>
         </div>
     </section>

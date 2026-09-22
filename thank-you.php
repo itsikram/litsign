@@ -13,8 +13,10 @@ $session_id = isset($_GET['session_id']) ? sanitize_text_field(wp_unslash($_GET[
 <main id="primary" class="site-main thank-you-page">
 	<div class="container">
 		<section class="thank-you-card" aria-labelledby="thank-you-title">
-			<div class="thank-you-icon" aria-hidden="true">
-				<span class="fa fa-check"></span>
+			<div class="thank-you-icon-wrap">
+				<div class="thank-you-icon" aria-hidden="true">
+					<span class="fa fa-check"></span>
+				</div>
 			</div>
 
 			<p class="thank-you-eyebrow">Order received</p>
@@ -42,14 +44,15 @@ $session_id = isset($_GET['session_id']) ? sanitize_text_field(wp_unslash($_GET[
 
 			<?php if ($session_id) : ?>
 				<p class="thank-you-reference">
-					Payment reference: <strong><?php echo esc_html($session_id); ?></strong>
+					<span>Payment reference</span>
+					<strong><?php echo esc_html($session_id); ?></strong>
 				</p>
 			<?php endif; ?>
 
 			<div class="thank-you-actions">
-				<a href="<?php echo esc_url(home_url('/')); ?>" class="btn btn-danger">Continue shopping</a>
+				<a href="<?php echo esc_url(home_url('/')); ?>" class="btn btn-primary">Continue shopping</a>
 				<?php if (is_user_logged_in()) : ?>
-					<a href="<?php echo esc_url(home_url('/my-orders/')); ?>" class="btn btn-outline-dark">View my orders</a>
+					<a href="<?php echo esc_url(home_url('/my-orders/')); ?>" class="btn btn-outline-primary">View my orders</a>
 				<?php endif; ?>
 			</div>
 		</section>

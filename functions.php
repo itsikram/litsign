@@ -263,6 +263,21 @@ function wholesale_setup()
 }
 add_action('after_setup_theme', 'wholesale_setup');
 
+function wholesale_hide_admin_bar_for_subscribers()
+{
+	if (!is_user_logged_in()) {
+		return;
+	}
+
+	$user = wp_get_current_user();
+	if (empty($user->roles) || !in_array('subscriber', (array) $user->roles, true)) {
+		return;
+	}
+
+	show_admin_bar(false);
+}
+add_action('after_setup_theme', 'wholesale_hide_admin_bar_for_subscribers');
+
 function wholesale_setting_defaults()
 {
 	return array(
@@ -382,6 +397,140 @@ function wholesale_add_settings_page()
 	add_options_page('Storefront Sign Settings', 'Storefront Sign', 'manage_options', 'wholesale-settings', 'wholesale_settings_page');
 }
 add_action('admin_menu', 'wholesale_add_settings_page');
+
+function wholesale_newsletter_table_name()
+{
+	global $wpdb;
+
+	return $wpdb->prefix . 'newsletter_emails';
+}
+
+function wholesale_newsletter_create_table()
+{
+	global $wpdb;
+
+	$table_name = wholesale_newsletter_table_name();
+	$charset_collate = $wpdb->get_charset_collate();
+
+	$sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
+		id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+		email VARCHAR(190) NOT NULL,
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (id),
+		UNIQUE KEY email_unique (email)
+	) {$charset_collate};";
+
+	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	dbDelta($sql);
+}
+add_action('init', 'wholesale_newsletter_create_table');
+register_activation_hook(__FILE__, 'wholesale_newsletter_create_table');
+
+function wholesale_newsletter_admin_page()
+{
+	if (!current_user_can('manage_options')) {
+		return;
+	}
+
+	global $wpdb;
+	$table_name = wholesale_newsletter_table_name();
+	$subscribers = $wpdb->get_results($wpdb->prepare(
+		"SELECT id, email, created_at FROM {$table_name} ORDER BY id DESC"
+	));
+	?>
+	<div class="wrap">
+		<h1>Newsletter Emails</h1>
+		<p class="description"><?php echo esc_html(sprintf(_n('%d email saved', '%d emails saved', count($subscribers), 'litsign'), count($subscribers))); ?></p>
+		<table class="widefat striped">
+			<thead>
+				<tr>
+					<th>ID</th>
+					<th>Email</th>
+					<th>Submitted</th>
+				</tr>
+			</thead>
+			<tbody>
+				<?php if (!empty($subscribers)) : ?>
+					<?php foreach ($subscribers as $subscriber) : ?>
+						<tr>
+							<td><?php echo esc_html((string) $subscriber->id); ?></td>
+							<td><?php echo esc_html($subscriber->email); ?></td>
+							<td><?php echo esc_html(date_i18n(get_option('date_format') . ' ' . get_option('time_format'), strtotime($subscriber->created_at))); ?></td>
+						</tr>
+					<?php endforeach; ?>
+				<?php else : ?>
+					<tr>
+						<td colspan="3">No newsletter emails have been saved yet.</td>
+					</tr>
+				<?php endif; ?>
+			</tbody>
+		</table>
+	</div>
+	<?php
+}
+
+function wholesale_newsletter_add_admin_page()
+{
+	add_menu_page(
+		'Newsletter Emails',
+		'Newsletter Emails',
+		'manage_options',
+		'wholesale-newsletter',
+		'wholesale_newsletter_admin_page',
+		'dashicons-email-alt',
+		26
+	);
+}
+add_action('admin_menu', 'wholesale_newsletter_add_admin_page');
+
+function wholesale_newsletter_get_redirect_url($status)
+{
+	$base_url = wp_get_referer() ?: home_url('/');
+	return add_query_arg('newsletter', $status, $base_url);
+}
+
+function wholesale_handle_newsletter_subscribe()
+{
+	if (!isset($_POST['newsletter_email']) || empty($_POST['newsletter_email'])) {
+		wp_safe_redirect(wholesale_newsletter_get_redirect_url('invalid'));
+		exit;
+	}
+
+	check_admin_referer('wholesale_newsletter_subscribe', 'newsletter_nonce');
+
+	$email = sanitize_email(wp_unslash($_POST['newsletter_email']));
+	$redirect_url = wholesale_newsletter_get_redirect_url('invalid');
+
+	if (!is_email($email)) {
+		wp_safe_redirect($redirect_url);
+		exit;
+	}
+
+	global $wpdb;
+	$table_name = wholesale_newsletter_table_name();
+	$existing = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$table_name} WHERE email = %s LIMIT 1", $email));
+
+	if (empty($existing)) {
+		$inserted = $wpdb->insert(
+			$table_name,
+			array('email' => $email),
+			array('%s')
+		);
+
+		if ($inserted === false) {
+			wp_safe_redirect(wholesale_newsletter_get_redirect_url('error'));
+			exit;
+		}
+		$redirect_url = wholesale_newsletter_get_redirect_url('success');
+	} else {
+		$redirect_url = wholesale_newsletter_get_redirect_url('exists');
+	}
+
+	wp_safe_redirect($redirect_url);
+	exit;
+}
+add_action('admin_post_nopriv_wholesale_newsletter_subscribe', 'wholesale_handle_newsletter_subscribe');
+add_action('admin_post_wholesale_newsletter_subscribe', 'wholesale_handle_newsletter_subscribe');
 
 function wholesale_output_dynamic_settings()
 {
@@ -1254,7 +1403,11 @@ function wholesale_order_admin_column_content($column, $post_id)
 			);
 			$status = get_post_status($post_id);
 			$status_label = isset($status_labels[$status]) ? $status_labels[$status] : ucfirst(str_replace('_', ' ', $status));
-			echo esc_html($status_label);
+			printf(
+				'<span class="wholesale-order-status" data-status="%s">%s</span>',
+				esc_attr($status),
+				esc_html($status_label)
+			);
 			break;
 
 		case 'customer':
@@ -1315,6 +1468,42 @@ function wholesale_order_admin_column_content($column, $post_id)
 }
 add_action('manage_order_posts_custom_column', 'wholesale_order_admin_column_content', 10, 2);
 
+/**
+ * Add all supported order statuses to the order list quick edit form.
+ */
+function wholesale_order_quick_edit_status($column_name, $post_type)
+{
+	if ('order' !== $post_type || 'order_status' !== $column_name) {
+		return;
+	}
+
+	$statuses = array(
+		'pending' => __('Pending Review', 'litsign'),
+		'on-hold' => __('On hold', 'litsign'),
+		'processing' => __('Processing', 'litsign'),
+		'completed' => __('Completed', 'litsign'),
+		'cancelled' => __('Cancelled', 'litsign'),
+		'refunded' => __('Refunded', 'litsign'),
+		'failed' => __('Failed', 'litsign'),
+		'on_hold' => __('On hold (legacy)', 'litsign'),
+	);
+	?>
+	<fieldset class="inline-edit-col-right">
+		<div class="inline-edit-col">
+			<label>
+				<span class="title"><?php esc_html_e('Order status', 'litsign'); ?></span>
+				<select name="order_status">
+					<?php foreach ($statuses as $status => $label) : ?>
+						<option value="<?php echo esc_attr($status); ?>"><?php echo esc_html($label); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+		</div>
+	</fieldset>
+	<?php
+}
+add_action('quick_edit_custom_box', 'wholesale_order_quick_edit_status', 10, 2);
+
 
 function add_custom_status_to_dropdown()
 {
@@ -1348,8 +1537,10 @@ add_action('post_submitbox_misc_actions', 'add_custom_status_to_dropdown');
 
 function save_custom_post_status($post_id, $post)
 {
-	if ($post->post_type === 'order' && isset($_POST['post_status'])) {
-		$posted_status = isset($_POST['hidden_post_status']) ? $_POST['hidden_post_status'] : $_POST['post_status'];
+	if ($post->post_type === 'order' && (isset($_POST['order_status']) || isset($_POST['post_status']))) {
+		$posted_status = isset($_POST['order_status'])
+			? $_POST['order_status']
+			: (isset($_POST['hidden_post_status']) ? $_POST['hidden_post_status'] : $_POST['post_status']);
 		$new_status = sanitize_key(wp_unslash($posted_status));
 		$valid_statuses = array('pending', 'on-hold', 'processing', 'completed', 'cancelled', 'refunded', 'failed', 'on_hold');
 
@@ -2274,6 +2465,10 @@ function my_enqueue($hook)
 	wp_enqueue_style('admin-style', get_template_directory_uri() . '/css/admin.css', array(), _S_VERSION);
 
 	if (in_array($hook, array('post.php', 'post-new.php'), true)) {
+		wp_enqueue_script('admin-script', get_template_directory_uri() . '/js/admin-script.js', array('jquery'), _S_VERSION, true);
+	}
+
+	if ('edit.php' === $hook && isset($_GET['post_type']) && 'order' === sanitize_key(wp_unslash($_GET['post_type']))) {
 		wp_enqueue_script('admin-script', get_template_directory_uri() . '/js/admin-script.js', array('jquery'), _S_VERSION, true);
 	}
 }

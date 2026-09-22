@@ -8,7 +8,8 @@
       .concat('.footer > *')
       .join(',');
     const revealElements = [...document.querySelectorAll(revealSelector)].filter((element, index, elements) => {
-      return !element.closest('header, nav, .modal, .offcanvas, [aria-hidden="true"]')
+      return !element.matches('.pb-gallery-image')
+        && !element.closest('header, nav, .modal, .offcanvas, [aria-hidden="true"]')
         && elements.indexOf(element) === index;
     });
 
@@ -55,7 +56,8 @@
       event.stopImmediatePropagation();
       preloadGallery(gallery);
       const currentIndex = Number(gallery.dataset.galleryIndex || 0);
-      setGalleryImage(gallery, currentIndex + (arrow.classList.contains('pb-gallery-prev') ? -1 : 1));
+      const isPrevious = arrow.classList.contains('pb-gallery-prev');
+      setGalleryImage(gallery, currentIndex + (isPrevious ? -1 : 1));
     });
 
     galleries.forEach((gallery) => {

@@ -40,6 +40,7 @@ const productPermalink = document.getElementById("productPermalink").value;
 const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
 const deleteBtn = document.getElementById("deleteBtn");
+const clearBuilderBtn = document.getElementById("clearBuilderBtn");
 const addRacewayButton = document.getElementById("addRacewayButton");
 let sliderCloseButton = document.getElementById("sliderCloseBtn");
 const infoButtons = document.querySelectorAll(".info-btn");
@@ -970,6 +971,19 @@ function loadState(snapshot) {
   updateHistoryButtons();
   lastHistorySignature = getHistorySignature();
   historyRestoring = false;
+}
+
+function clearSavedBuilderDesign() {
+  const savedDesignKeys = [];
+
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (key && /design|builder/i.test(key)) {
+      savedDesignKeys.push(key);
+    }
+  }
+
+  savedDesignKeys.forEach((key) => localStorage.removeItem(key));
 }
 
 function updateBottombarOverlay() {
@@ -4577,6 +4591,22 @@ window.addEventListener("load", function (e) {
     }
     updateHeightWidthInput(100, 100);
     updateHeightWidthDisplay();
+    updateLeftsideBar();
+    updateBottombarOverlay();
+  });
+
+  clearBuilderBtn.addEventListener("click", function () {
+    if (nodeLists.length > 0 || store.getState().elements.length > 0) {
+      saveState();
+    }
+
+    loadState({
+      elements: [],
+      extras: initialExtras,
+      nodes: [],
+    });
+    clearSavedBuilderDesign();
+    updatePreview(null, null);
     updateLeftsideBar();
     updateBottombarOverlay();
   });

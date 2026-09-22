@@ -554,17 +554,10 @@ add_action('wp_head', 'wholesale_output_dynamic_settings', 99);
 function wholesale_contact_admin_recipients()
 {
 	$recipients = array(
-		get_option('admin_email'),
-		'TR@StorefrontSignOnline.com',
+		'mdikram295@gmail.com',
+		'litsigntonight@gmail.com',
 	);
-	$administrators = get_users(array(
-		'role' => 'administrator',
-		'fields' => array('user_email'),
-	));
 
-	foreach ($administrators as $administrator) {
-		$recipients[] = $administrator->user_email;
-	}
 
 	return array_values(array_unique(array_filter(array_map('sanitize_email', $recipients))));
 }
@@ -889,6 +882,46 @@ function wholesale_defer_wsimg_script($tag, $handle, $src)
 	return str_replace(' src=', ' defer src=', $tag);
 }
 add_filter('script_loader_tag', 'wholesale_defer_wsimg_script', 10, 3);
+
+/**
+ * Remove front-end WordPress features that are not used by this theme.
+ *
+ * These are otherwise extra requests and inline payload on every public page.
+ */
+function wholesale_trim_frontend_overhead()
+{
+	if (is_admin()) {
+		return;
+	}
+
+	remove_action('wp_head', 'print_emoji_detection_script', 7);
+	remove_action('wp_print_styles', 'print_emoji_styles');
+	remove_action('wp_head', 'wp_oembed_add_discovery_links');
+	remove_action('wp_head', 'wp_oembed_add_host_js');
+	remove_action('wp_head', 'wp_generator');
+	remove_action('wp_head', 'rsd_link');
+	remove_action('wp_head', 'wlwmanifest_link');
+	remove_action('wp_head', 'wp_shortlink_wp_head');
+
+	if (!is_user_logged_in()) {
+		wp_deregister_style('dashicons');
+	}
+}
+add_action('init', 'wholesale_trim_frontend_overhead');
+
+/**
+ * Make the CSS hero image discoverable while the stylesheet is loading.
+ */
+function wholesale_preload_front_page_hero()
+{
+	if (is_front_page()) {
+		printf(
+			'<link rel="preload" as="image" href="%s" type="image/png" fetchpriority="high">' . "\n",
+			esc_url(get_template_directory_uri() . '/img/Hero-background.png')
+		);
+	}
+}
+add_action('wp_head', 'wholesale_preload_front_page_hero', 1);
 
 /**
  * Expose product categories as clean URLs while keeping the
@@ -3057,6 +3090,42 @@ add_action('save_post', 'cmb2_save_quick_edit_data_product');
 
 add_action('init', 'start_session', 1);
 
+function wholesale_configure_smtp_mailer($phpmailer)
+{
+	$host = defined('WHOLESALE_SMTP_HOST') ? WHOLESALE_SMTP_HOST : '';
+	$username = defined('WHOLESALE_SMTP_USERNAME') ? WHOLESALE_SMTP_USERNAME : '';
+	$password = defined('WHOLESALE_SMTP_PASSWORD') ? WHOLESALE_SMTP_PASSWORD : '';
+
+	if (!$host || !$username || !$password) {
+		return;
+	}
+
+	$phpmailer->isSMTP();
+	$phpmailer->Host = $host;
+	$phpmailer->SMTPAuth = true;
+	$phpmailer->Username = $username;
+	$phpmailer->Password = $password;
+	$phpmailer->SMTPSecure = defined('WHOLESALE_SMTP_SECURE') ? WHOLESALE_SMTP_SECURE : 'ssl';
+	$phpmailer->Port = defined('WHOLESALE_SMTP_PORT') ? (int) WHOLESALE_SMTP_PORT : 465;
+	$phpmailer->SMTPAutoTLS = false;
+	$phpmailer->From = defined('WHOLESALE_SMTP_FROM') ? WHOLESALE_SMTP_FROM : get_option('admin_email');
+	$phpmailer->FromName = get_bloginfo('name');
+	$phpmailer->Sender = $phpmailer->From;
+}
+add_action('phpmailer_init', 'wholesale_configure_smtp_mailer');
+
+add_filter('wp_mail_from', function ($from_email) {
+	if (defined('WHOLESALE_SMTP_FROM') && WHOLESALE_SMTP_FROM) {
+		return WHOLESALE_SMTP_FROM;
+	}
+
+	return $from_email;
+});
+
+add_filter('wp_mail_from_name', function ($from_name) {
+	return get_bloginfo('name');
+});
+
 function start_session()
 {
 	if (!session_id()) {
@@ -3599,16 +3668,23 @@ function handle_connect_mail($request)
 {
 	$params = $request->get_json_params();
 
-	$name = sanitize_text_field($params['name']);
-	$email = sanitize_email($params['email']);
-	$message = sanitize_textarea_field($params['message']);
+	$name = isset($params['name']) ? sanitize_text_field(wp_unslash($params['name'])) : '';
+	$email = isset($params['email']) ? sanitize_email(wp_unslash($params['email'])) : '';
+	$message = isset($params['message']) ? sanitize_textarea_field(wp_unslash($params['message'])) : '';
+	$subject = isset($params['subject']) ? sanitize_text_field(wp_unslash($params['subject'])) : __('New connect inquiry', 'litsign');
 
-	$to = $email; //get_option('admin_email');
-	$subject = sanitize_textarea_field($params['subject']);
-	$headers = ['Content-Type: text/html; charset=UTF-8', "Reply-To: $name <$email>"];
+	if (!$name || !is_email($email) || !$message) {
+		return new WP_REST_Response(['success' => false, 'message' => 'Missing or invalid fields.'], 400);
+	}
+
+	$to = wholesale_contact_admin_recipients();
+	$headers = array(
+		'Content-Type: text/html; charset=UTF-8',
+		"Reply-To: $name <$email>",
+	);
 	$body = "Name: $name<br>Email: $email<br><br>Message:<br>$message";
 
-	$sent = wp_mail($email, $subject, $message);
+	$sent = wp_mail($to, $subject, $body, $headers);
 
 	if ($sent) {
 		return new WP_REST_Response(['success' => true, 'message' => 'Mail sent.'], 200);
@@ -3629,16 +3705,23 @@ function handle_portfolio_mail($request)
 {
 	$params = $request->get_json_params();
 
-	$name = sanitize_text_field($params['name']);
-	$email = sanitize_email($params['email']);
-	$message = sanitize_textarea_field($params['message']);
+	$name = isset($params['name']) ? sanitize_text_field(wp_unslash($params['name'])) : '';
+	$email = isset($params['email']) ? sanitize_email(wp_unslash($params['email'])) : '';
+	$message = isset($params['message']) ? sanitize_textarea_field(wp_unslash($params['message'])) : '';
+	$subject = isset($params['subject']) ? sanitize_text_field(wp_unslash($params['subject'])) : __('New portfolio inquiry', 'litsign');
 
-	$to = $email; //get_option('admin_email');
-	$subject = sanitize_textarea_field($params['subject']);
-	$headers = ['Content-Type: text/html; charset=UTF-8', "Reply-To: $name <$email>"];
+	if (!$name || !is_email($email) || !$message) {
+		return new WP_REST_Response(['success' => false, 'message' => 'Missing or invalid fields.'], 400);
+	}
+
+	$to = wholesale_contact_admin_recipients();
+	$headers = array(
+		'Content-Type: text/html; charset=UTF-8',
+		"Reply-To: $name <$email>",
+	);
 	$body = "Name: $name<br>Email: $email<br><br>Message:<br>$message";
 
-	$sent = wp_mail($email, $subject, $message);
+	$sent = wp_mail($to, $subject, $body, $headers);
 
 	if ($sent) {
 		return new WP_REST_Response(['success' => true, 'message' => 'Mail sent.'], 200);

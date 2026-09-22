@@ -15,15 +15,6 @@
 
     document.documentElement.classList.add('scroll-effects-enabled');
 
-    const preloadGallery = (gallery) => {
-      gallery.querySelectorAll('.pb-gallery-image[data-gallery-src]').forEach((image) => {
-        if (!image.getAttribute('src')) {
-          image.setAttribute('src', image.dataset.gallerySrc);
-        }
-      });
-      gallery.dataset.galleryPreloaded = 'true';
-    };
-
     const galleries = [...document.querySelectorAll('[data-gallery]')];
     const setGalleryImage = (gallery, nextIndex) => {
       const images = [...gallery.querySelectorAll('.pb-gallery-image')];
@@ -54,29 +45,14 @@
 
       event.preventDefault();
       event.stopImmediatePropagation();
-      preloadGallery(gallery);
       const currentIndex = Number(gallery.dataset.galleryIndex || 0);
       const isPrevious = arrow.classList.contains('pb-gallery-prev');
       setGalleryImage(gallery, currentIndex + (isPrevious ? -1 : 1));
     });
 
     galleries.forEach((gallery) => {
-      gallery.addEventListener('pointerenter', () => preloadGallery(gallery), { once: true });
-      gallery.addEventListener('focusin', () => preloadGallery(gallery), { once: true });
       setGalleryImage(gallery, 0);
     });
-
-    if ('IntersectionObserver' in window) {
-      const galleryPreloadObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            preloadGallery(entry.target);
-            observer.unobserve(entry.target);
-          }
-        });
-      }, { rootMargin: '300px 0px' });
-      galleries.forEach((gallery) => galleryPreloadObserver.observe(gallery));
-    }
 
     if (prefersReducedMotion || !('IntersectionObserver' in window)) {
       revealElements.forEach((element) => element.classList.add('scroll-reveal', 'is-visible'));

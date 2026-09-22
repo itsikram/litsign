@@ -101,6 +101,8 @@
         return;
       }
 
+      $('.add-to-cart-btn').prop('disabled', parseFloat(price) <= 0);
+
       function formatNumberWithCommas(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
       }
@@ -926,13 +928,18 @@
     })
 
 
-    $('#addToCartBtn').click(e => {
+    $('.add-to-cart-btn').click(e => {
       let minSqft = parseFloat($('#minSqft').val());
       let totalSqft = parseFloat($('#totalSqft').val());
       let costBeforeDiscount = parseFloat($('#totalCost').val()).toFixed(2);
       let discountCost = ((costBeforeDiscount * discountPercent) / 100).toFixed(2)
       let costAfterDiscount = costBeforeDiscount - discountCost
       $('#totalCost').val(costAfterDiscount)
+      if (costBeforeDiscount <= 0) {
+        e.preventDefault();
+        $(e.currentTarget).prop('disabled', true);
+        return;
+      }
       if (totalSqft < minSqft) {
         e.preventDefault();
         alert('Minimum: ' + minSqft + 'sqft')

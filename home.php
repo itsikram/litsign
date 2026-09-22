@@ -25,6 +25,7 @@ function get_product_attribute_data($id, $attr)
                             // ));
                             //return $name . ': ' . ;
                         }
+
                     }
                 }
             }
@@ -37,6 +38,58 @@ function get_product_attribute_data($id, $attr)
 function get_variant_cost($product_cost, $variable_cost)
 {
     return round(floatval($product_cost) + floatval($variable_cost), 2);
+}
+
+function wholesale_render_home_product_gallery($product_id, $product_title, $thumbnail_id, $loading = 'lazy')
+{
+    $gallery_images = get_post_meta($product_id, '_product_gallery', true);
+    $gallery_images = is_array($gallery_images) ? array_values(array_filter($gallery_images, 'is_string')) : array();
+    $images = array();
+
+    if ($thumbnail_id) {
+        $featured_image = wp_get_attachment_image_url($thumbnail_id, 'product-card');
+        if ($featured_image) {
+            $images[] = $featured_image;
+        }
+    }
+
+    foreach ($gallery_images as $gallery_image) {
+        $gallery_image = esc_url_raw($gallery_image);
+        if ($gallery_image && !in_array($gallery_image, $images, true)) {
+            $images[] = $gallery_image;
+        }
+    }
+
+    if (empty($images)) {
+        echo '<div class="pb-image-top"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span></div>';
+        return;
+    }
+
+    $has_gallery = count($images) > 1;
+    ?>
+    <div class="pb-image-top<?php echo $has_gallery ? ' has-gallery' : ''; ?>" data-gallery>
+        <div class="pb-gallery-track">
+            <?php foreach ($images as $index => $image) : ?>
+                <img class="pb-gallery-image<?php echo $index === 0 ? ' is-active' : ''; ?>"
+                    src="<?php echo esc_url($image); ?>"
+                    alt="<?php echo esc_attr($product_title); ?>"
+                    loading="<?php echo $index === 0 ? esc_attr($loading) : 'lazy'; ?>"
+                    decoding="async"
+                    <?php echo $index === 0 ? 'fetchpriority="high"' : ''; ?>
+                    data-gallery-index="<?php echo esc_attr($index); ?>">
+            <?php endforeach; ?>
+        </div>
+        <?php if ($has_gallery) : ?>
+            <button type="button" class="pb-gallery-arrow pb-gallery-prev" aria-label="Previous product image">
+                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            </button>
+            <button type="button" class="pb-gallery-arrow pb-gallery-next" aria-label="Next product image">
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
+            <span class="pb-gallery-count" aria-live="polite">1 / <?php echo esc_html(count($images)); ?></span>
+        <?php endif; ?>
+    </div>
+    <?php
 }
 
 $requested_category = get_query_var('category_slug');
@@ -334,15 +387,12 @@ get_header();
                 ?>
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
                             <a href="<?php echo get_permalink(); ?>">
-                                <div class="pb-image-top">
-                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'product-card', false, array(
-                                        'alt' => esc_attr($is_channel_letters ? 'Custom channel letter sign: ' . get_the_title() : get_the_title()),
-                                        'loading' => $is_first_product ? 'eager' : 'lazy',
-                                        'fetchpriority' => $is_first_product ? 'high' : 'auto',
-                                        'decoding' => 'async',
-                                        'sizes' => '(max-width: 767px) 290px, 290px',
-                                    )); ?>
-                                </div>
+                                <?php wholesale_render_home_product_gallery(
+                                    get_the_ID(),
+                                    $is_channel_letters ? 'Custom channel letter sign: ' . get_the_title() : get_the_title(),
+                                    $product_thumbnail_id,
+                                    $is_first_product ? 'eager' : 'lazy'
+                                ); ?>
                                 <?php $is_first_product = false; ?>
                                 <div class="pb-details">
                                     <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
@@ -504,14 +554,7 @@ get_header();
                 ?>
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
                             <a href="<?php echo get_permalink(); ?>">
-                                <div class="pb-image-top">
-                                    <?php echo wp_get_attachment_image($product_thumbnail_id, 'product-card', false, array(
-                                        'alt' => esc_attr(get_the_title()),
-                                        'loading' => 'lazy',
-                                        'decoding' => 'async',
-                                        'sizes' => '(max-width: 767px) 290px, 290px',
-                                    )); ?>
-                                </div>
+                                <?php wholesale_render_home_product_gallery(get_the_ID(), get_the_title(), $product_thumbnail_id); ?>
                                 <div class="pb-details">
                                     <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
                                         <?php echo esc_html(get_the_title()); ?>

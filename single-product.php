@@ -170,6 +170,8 @@ if ($product_category_slug  == 'channel-letters') {
     $product_price =  intval($product_price) > 0 ? $product_price : '0';
 }
 
+$initial_product_cost = $product_min_price > 0 ? $product_min_price : $product_price;
+
 $product_gallery_images = get_post_meta(get_the_ID(), '_product_gallery', true);
 get_header();
 
@@ -1044,7 +1046,7 @@ get_header();
                                 </div>
                                 <div class="col-8 col-md-10 text-center">
                                     <!-- <a href="#" id="payNowBtn" class="btn btn-success">Order Now</a> -->
-                                    <button id="addToCartBtn" type="submit" class="btn btn-danger d-block w-100 fw-bold">Add To Cart</button>
+                                    <button id="addToCartBtn" type="submit" class="add-to-cart-btn btn btn-danger d-block w-100 fw-bold"<?php echo $initial_product_cost <= 0 ? ' disabled' : ''; ?>>Add To Cart</button>
                                 </div>
                             </div>
 
@@ -1064,7 +1066,7 @@ get_header();
                                 </div>
                                 <div class="col-8 col-md-10 text-center">
                                     <!-- <a href="#" id="payNowBtn" class="btn btn-success">Order Now</a> -->
-                                    <button id="addToCartBtn" type="submit" class="btn btn-danger d-block w-100 fw-bold">Add To Cart</button>
+                                    <button id="addToCartBtn" type="submit" class="add-to-cart-btn btn btn-danger d-block w-100 fw-bold"<?php echo $initial_product_cost <= 0 ? ' disabled' : ''; ?>>Add To Cart</button>
                                 </div>
                             </div>
 

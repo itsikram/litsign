@@ -580,6 +580,12 @@ width: 25% !important;
   font-size: 12px;
   margin-top: 3px;
 }
+.change-product-card-content .change-product-card-price {
+  color: #1686b3;
+  font-size: 13px;
+  font-weight: 700;
+  margin-top: 5px;
+}
 .change-product-card-icon {
   color: #1fa8de;
   font-size: 14px;

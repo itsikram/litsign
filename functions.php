@@ -434,9 +434,9 @@ function wholesale_newsletter_admin_page()
 
 	global $wpdb;
 	$table_name = wholesale_newsletter_table_name();
-	$subscribers = $wpdb->get_results($wpdb->prepare(
+	$subscribers = $wpdb->get_results(
 		"SELECT id, email, created_at FROM {$table_name} ORDER BY id DESC"
-	));
+	);
 	?>
 	<div class="wrap">
 		<h1>Newsletter Emails</h1>
@@ -485,8 +485,7 @@ add_action('admin_menu', 'wholesale_newsletter_add_admin_page');
 
 function wholesale_newsletter_get_redirect_url($status)
 {
-	$base_url = wp_get_referer() ?: home_url('/');
-	return add_query_arg('newsletter', $status, $base_url);
+	return add_query_arg('newsletter', $status, home_url('/'));
 }
 
 function wholesale_handle_newsletter_subscribe()
@@ -3657,3 +3656,26 @@ function allow_cross_origin_requests()
 	header("Access-Control-Allow-Headers: Content-Type");
 }
 add_action('init', 'allow_cross_origin_requests');
+
+
+
+
+
+
+add_action('wp_head', function () {
+    if (is_page('thank-you')) {
+        ?>
+        <!-- Event snippet for Purchase conversion page -->
+<script>
+  gtag('event', 'conversion', {
+      'send_to': 'AW-18454059893/UkFKCJGGp_kcEPW2yt9E',
+      'value': 1.0,
+      'currency': 'USD',
+      'transaction_id': ''
+      // 'new_customer': true /* calculate dynamically, populate with true/false */,
+  });
+</script>
+
+        <?php
+    }
+});

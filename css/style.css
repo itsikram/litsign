@@ -2366,7 +2366,7 @@ a.link-primary:focus,
 
 .newsletter-actions {
   display: flex;
-  flex: 0 1 500px;
+  /* flex: 0 1 500px; */
   flex-direction: column;
   justify-content: center;
   min-width: 0;
@@ -2431,7 +2431,7 @@ a.link-primary:focus,
 
 .newsletter-form {
   display: flex;
-  flex: 0 1 500px;
+  /* flex: 0 1 500px; */
   min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.7);
   border-radius: 12px;

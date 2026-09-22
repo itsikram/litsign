@@ -4196,40 +4196,10 @@ window.addEventListener("load", function (e) {
     if (selectedNode == null) return;
     saveState();
 
-    if (selectedNode.getClassName() == "Text") {
-      fontSize = selectedNode.fontSize() * selectedNode.scaleX();
-      fontFamily = selectedNode.attrs.fontFamily;
-      faceColor = selectedNode.attrs.fill;
-      trimCapColor = selectedNode.attrs.stroke;
-      trimCapSize = selectedNode.attrs.strokeWidth;
-      returnColor = selectedNode.attrs.shadowColor;
-      returnSize = selectedNode.attrs.shadowOffsetX;
-
-      let selectedElement = getElementById(selectedNode._id);
-
-      activeFaceTitle = selectedElement.faceColor.title;
-      activeFaceCode = selectedElement.faceColor.code;
-
-      activeReturnColorTitle = selectedElement.returnColor.title;
-      activeReturnColorCode = selectedElement.returnColor.code;
-
-      activeTrimcapColorTitle = selectedElement.trimcapColor.title;
-      activeTrimcapColorCode = selectedElement.trimcapColor.code;
-
-      activeReturnSizeTitle = selectedElement.returnSize.title;
-      activeReturnSizeCode = selectedElement.returnSize.code;
-
-      activeTrimcapSizeTitle = selectedElement.trimcapSize.title;
-      activeTrimcapSizeCode = selectedElement.trimcapSize.code;
-
-      colorCost = parseFloat(selectedElement.faceCostPerInch);
-      return addText(
-        selectedNode.text(),
-        selectedNode.x() + 100,
-        selectedNode.y() + 100,
-      );
-    }
     let selectedNodeId = selectedNode._id;
+    let selectedElement = getElementById(selectedNodeId);
+    if (!selectedElement) return;
+
     let cloneNode = selectedNode.clone({
       x: selectedNode.x() + 100, // Adjust position of the cloned arrow
       y: selectedNode.y() + 100, // Adjust position of the cloned arrow
@@ -4454,64 +4424,16 @@ window.addEventListener("load", function (e) {
     updateSaveButtonState();
     updateHeightWidthDisplay();
 
-    switch (cloneNode.getClassName()) {
-      case "RegularPolygon":
-        let triWidth =
-          (cloneNode.width() * cloneNode.scaleX()) / triangleReduction;
-        let triHeight =
-          (cloneNode.height() * cloneNode.scaleY()) / triangleReduction;
-        let totalTriCost = costPerInch(pxToIn(triWidth));
-        let totalTriColorCost = parseFloat(colorCost) * pxToIn(triWidth);
-        if (triWidth < triHeight) {
-          totalTriCost = costPerInch(pxToIn(triHeight));
-          totalTriColorCost = parseFloat(colorCost) * pxToIn(triHeight);
-        }
-        store.dispatch({
-          type: "ADD_ELEMENT",
-          payload: {
-            id: cloneNode._id,
-            width: pxToIn(triWidth),
-            height: pxToIn(triHeight),
-            text: text,
-            cost: totalTriCost,
-            colorCost: totalTriColorCost,
-            faceCostPerInch: colorCost,
-            faceCostPerInch: colorCost,
-            x: cloneNode.x() - cloneNode.radius(),
-            y: cloneNode.y() + cloneNode.radius(),
-            rotation: cloneNode.rotation(),
-          },
-        });
-
-        break;
-
-      default:
-        let widthInInch = pxToIn(cloneNode.width() * cloneNode.scaleX());
-        let heightInInch = pxToIn(cloneNode.height() * cloneNode.scaleY());
-
-        let totalCost = costPerInch(widthInInch);
-        let totalColorCost = parseFloat(colorCost) * widthInInch;
-        if (widthInInch < heightInInch) {
-          totalCost = costPerInch(heightInInch);
-          totalColorCost = parseFloat(colorCost) * heightInInch;
-        }
-        store.dispatch({
-          type: "ADD_ELEMENT",
-          payload: {
-            id: cloneNode._id,
-            width: pxToIn(cloneNode.width() * cloneNode.scaleX()),
-            height: pxToIn(cloneNode.height() * cloneNode.scaleY()),
-            text: text,
-            cost: totalCost,
-            colorCost: totalColorCost,
-            faceCostPerInch: colorCost,
-            x: cloneNode.x(),
-            y: cloneNode.y(),
-            rotation: cloneNode.rotation(),
-          },
-        });
-        break;
-    }
+    store.dispatch({
+      type: "ADD_ELEMENT",
+      payload: {
+        ...selectedElement,
+        id: cloneNode._id,
+        x: cloneNode.x(),
+        y: cloneNode.y(),
+        rotation: cloneNode.rotation(),
+      },
+    });
 
     if (selectedNode.getClassName() != "Text") {
       currentElementIndex = currentElementIndex + 1;

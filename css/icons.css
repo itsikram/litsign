@@ -38,6 +38,10 @@
   content: "\f24d";
 }
 
+.fa-broom::before {
+  content: "\f51a";
+}
+
 .fa-rotate-left::before {
   content: "\f2ea";
 }

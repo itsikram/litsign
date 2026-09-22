@@ -461,7 +461,7 @@ get_header();
 </p>
 <!-- Modal -->
 <div class="modal fade" id="costModal" tabindex="-1" aria-labelledby="costModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="costModalLabel">Cost Breakdown</h5>
@@ -516,6 +516,7 @@ get_header();
                             $change_product_id = get_the_ID();
                             $is_current_product = ((int) $change_product_id === (int) $product_id);
                             $change_product_image = get_post_thumbnail_id($change_product_id);
+                            $change_product_price = get_post_meta($change_product_id, '_starting_at_text', true);
                             $change_product_url = trailingslashit(get_permalink($change_product_id)) . 'channel-letter-builder/?product_id=' . $change_product_id;
                             ?>
                             <a class="change-product-card<?php echo $is_current_product ? ' is-current' : ''; ?>"
@@ -531,6 +532,11 @@ get_header();
                                 <span class="change-product-card-content">
                                     <strong><?php echo esc_html(get_the_title($change_product_id)); ?></strong>
                                     <span><?php echo $is_current_product ? 'Current product' : 'Start new design'; ?></span>
+                                    <?php if ($change_product_price) : ?>
+                                        <span class="change-product-card-price"><?php echo wp_kses_post($change_product_price); ?></span>
+                                    <?php else : ?>
+                                        <span class="change-product-card-price">Price available after configuration</span>
+                                    <?php endif; ?>
                                 </span>
                                 <i class="fa-solid <?php echo $is_current_product ? 'fa-circle-check' : 'fa-arrow-right'; ?> change-product-card-icon" aria-hidden="true"></i>
                             </a>

@@ -139,6 +139,17 @@ $logo_id = get_theme_mod('custom_logo');
 		}
 	</style>
 
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=AW-18454059893"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'AW-18454059893');
+</script>
+<!-- Event snippet for Purchase conversion page -->
+
 
 	<?php wp_head(); ?>
 </head>
@@ -242,8 +253,11 @@ $logo_id = get_theme_mod('custom_logo');
 							</form> -->
 							<div class="account-menu header-menu-container">
 								<ul class="header-menu text-end">
+
 									<li class="menu-item"><a href="<?php echo home_url() . '/cart'; ?>">Cart</a></li>
 									<li class="menu-item"><a href="<?php echo home_url() . '/checkout'; ?>">Checkout</a></li>
+																		<li class="menu-item"><a href="<?php echo esc_url(home_url('/login/')); ?>">Login</a></li>
+									<li class="menu-item"><a href="<?php echo esc_url(home_url('/signup/')); ?>">Register</a></li>
 								</ul>
 							</div>
 						<?php } else {

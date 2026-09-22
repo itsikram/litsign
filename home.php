@@ -55,6 +55,15 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
 
     foreach ($gallery_images as $gallery_image) {
         $gallery_image = esc_url_raw($gallery_image);
+        $gallery_host = wp_parse_url($gallery_image, PHP_URL_HOST);
+        if ($gallery_host === 'localhost' || $gallery_host === '127.0.0.1') {
+            $site_url_parts = wp_parse_url(home_url('/'));
+            $site_origin = ($site_url_parts['scheme'] ?? 'http') . '://' . ($site_url_parts['host'] ?? '');
+            if (!empty($site_url_parts['port'])) {
+                $site_origin .= ':' . $site_url_parts['port'];
+            }
+            $gallery_image = $site_origin . wp_parse_url($gallery_image, PHP_URL_PATH);
+        }
         if ($gallery_image && !in_array($gallery_image, $images, true)) {
             $images[] = $gallery_image;
         }
@@ -71,7 +80,8 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
         <div class="pb-gallery-track">
             <?php foreach ($images as $index => $image) : ?>
                 <img class="pb-gallery-image<?php echo $index === 0 ? ' is-active' : ''; ?>"
-                    src="<?php echo esc_url($image); ?>"
+                    <?php echo $index === 0 ? 'src="' . esc_url($image) . '"' : ''; ?>
+                    data-gallery-src="<?php echo esc_url($image); ?>"
                     alt="<?php echo esc_attr($product_title); ?>"
                     loading="<?php echo $index === 0 ? esc_attr($loading) : 'lazy'; ?>"
                     decoding="async"
@@ -247,6 +257,58 @@ get_header();
             if (event.key === 'Escape' && !modal.hidden) closeModal();
         });
     })();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const reviews = [
+            {
+                quote: '“Excellent service and high-quality products! Our new channel letters look amazing and brought more customers to our store.”',
+                author: '— Michael R., Phoenix, AZ'
+            },
+            {
+                quote: '“The entire process was smooth from start to finish. Our storefront sign looks premium and the team kept us informed every step of the way.”',
+                author: '— Amanda S., San Diego, CA'
+            },
+            {
+                quote: '“We upgraded our exterior branding and immediately noticed a stronger curb appeal. The product quality and support were outstanding.”',
+                author: '— Daniel T., Austin, TX'
+            },
+            {
+                quote: '“Their custom channel letters made our business stand out day and night. The craftsmanship was exactly what we hoped for.”',
+                author: '— Lauren K., Nashville, TN'
+            }
+        ];
+
+        const quoteEl = document.getElementById('customer-review-quote');
+        const authorEl = document.getElementById('customer-review-author');
+        const prevButton = document.querySelector('.customer-review-prev');
+        const nextButton = document.querySelector('.customer-review-next');
+        const dots = document.querySelectorAll('.customer-review-dot');
+
+        if (!quoteEl || !authorEl || !prevButton || !nextButton || dots.length === 0) return;
+
+        let currentIndex = 0;
+
+        const renderReview = (index) => {
+            currentIndex = (index + reviews.length) % reviews.length;
+            quoteEl.textContent = reviews[currentIndex].quote;
+            authorEl.textContent = reviews[currentIndex].author;
+
+            dots.forEach((dot, i) => {
+                const isActive = i === currentIndex;
+                dot.classList.toggle('is-active', isActive);
+                dot.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+        };
+
+        prevButton.addEventListener('click', () => renderReview(currentIndex - 1));
+        nextButton.addEventListener('click', () => renderReview(currentIndex + 1));
+
+        dots.forEach((dot) => {
+            dot.addEventListener('click', () => renderReview(Number(dot.dataset.reviewDot)));
+        });
+
+        renderReview(currentIndex);
+    });
 </script>
 
 <div class="container">
@@ -632,7 +694,6 @@ get_header();
     </section>
 
 <?php endif; ?>
-
 
 <?php
 

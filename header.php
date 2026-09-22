@@ -190,6 +190,19 @@ $logo_id = get_theme_mod('custom_logo');
 									&times;
 								</button>
 							</div>
+							<div class="account-menu mobile-account-menu">
+								<ul class="header-menu">
+									<?php if (!is_user_logged_in()) { ?>
+										<li class="menu-item"><a href="<?php echo esc_url(home_url('/login/')); ?>">Login</a></li>
+										<li class="menu-item"><a href="<?php echo esc_url(home_url('/signup/')); ?>">Register</a></li>
+									<?php } else { ?>
+										<li class="menu-item"><a href="<?php echo esc_url(home_url('/account/')); ?>">My Account</a></li>
+										<li class="menu-item"><a href="<?php echo esc_url(home_url('/my-orders/')); ?>">My Orders</a></li>
+									<?php } ?>
+									<li class="menu-item"><a href="<?php echo esc_url(home_url('/cart/')); ?>">Cart</a></li>
+									<li class="menu-item"><a href="<?php echo esc_url(home_url('/checkout/')); ?>">Checkout</a></li>
+								</ul>
+							</div>
 							<nav aria-label="<?php esc_attr_e('Mobile navigation', 'litsign'); ?>">
 							<?php
 							wp_nav_menu(array(
@@ -204,36 +217,6 @@ $logo_id = get_theme_mod('custom_logo');
 							));
 							?>
 							</nav>
-
-							<?php if (!is_user_logged_in()) { ?>
-								<!-- <form class="header-account-form" method="POST" action="/login';">
-									<div class="row align-items-center d-flex">
-
-										<div class="col-md-12 mb-sm-1 col-sm-12 text-center">
-											<button type="submit" class="btn btn-primary account-action-button p-0">login</button>
-											<a href="<?php echo site_url() . '/signup'; ?>" class="btn btn-danger account-action-button p-0">Register</a>
-										</div>
-
-									</div>
-								</form> -->
-								<div class="account-menu header-menu-container">
-									<ul class="header-menu text-end">
-										<li class="menu-item"><a href="<?php echo home_url() . '/cart'; ?>">Cart</a></li>
-										<li class="menu-item"><a href="<?php echo home_url() . '/checkout'; ?>">Checkout</a></li>
-									</ul>
-								</div>
-							<?php } else {
-							?>
-								<div class="account-menu">
-									<ul class="header-menu text-end">
-										<li class="menu-item"><a href="<?php echo home_url() . '/cart'; ?>">Cart</a></li>
-										<li class="menu-item"><a href="<?php echo site_url() . '/my-orders'; ?>">My Orders</a></li>
-										<li class="menu-item"><a href="<?php echo site_url() . '/account'; ?>"></i>My Account</a></li>
-									</ul>
-								</div>
-
-							<?php
-							} ?>
 						</div>
 						<div class="div-hamberger-container">
 							<button type="button" class="mobile-menu-trigger" aria-label="<?php esc_attr_e('Open menu', 'litsign'); ?>">
@@ -488,6 +471,12 @@ $logo_id = get_theme_mod('custom_logo');
 													</span>
 												</a>
 											</div>
+										</div>
+										<div class="mega-menu-footer">
+											<a class="mega-menu-builder-cta" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">
+												<span>Start building</span>
+												<i class="fa-solid fa-arrow-right" aria-hidden="true"></i>
+											</a>
 										</div>
 									</div>
 								</div>

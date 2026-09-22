@@ -743,7 +743,7 @@ function wholesale_defer_wsimg_script($tag, $handle, $src)
 add_filter('script_loader_tag', 'wholesale_defer_wsimg_script', 10, 3);
 
 /**
- * Expose product categories as clean top-level URLs while keeping the
+ * Expose product categories as clean URLs while keeping the
  * existing shop page and its category query compatible.
  */
 function wholesale_category_rewrites()
@@ -769,6 +769,18 @@ function wholesale_category_rewrites()
 	}
 }
 add_action('init', 'wholesale_category_rewrites', 20);
+function wholesale_refresh_category_rewrites()
+{
+	$rewrite_version = 'category-root-v2';
+
+	if ($rewrite_version === get_option('wholesale_category_rewrite_version')) {
+		return;
+	}
+
+	flush_rewrite_rules(false);
+	update_option('wholesale_category_rewrite_version', $rewrite_version);
+}
+add_action('init', 'wholesale_refresh_category_rewrites', 21);
 add_action('after_switch_theme', function () {
 	wholesale_category_rewrites();
 	wholesale_sitemap_rewrite();
@@ -803,6 +815,30 @@ function wholesale_category_url($term_slug)
 {
 	return trailingslashit(home_url(sanitize_title($term_slug)));
 }
+
+function wholesale_normalize_category_menu_urls($items, $args)
+{
+	if (empty($args->theme_location) || 'category-filter-menu' !== $args->theme_location) {
+		return $items;
+	}
+
+	foreach ($items as $item) {
+		$query = wp_parse_url($item->url, PHP_URL_QUERY);
+		parse_str((string) $query, $query_vars);
+
+		if (empty($query_vars['category_slug'])) {
+			continue;
+		}
+
+		$term = get_term_by('slug', sanitize_title($query_vars['category_slug']), 'product_category');
+		if ($term && !is_wp_error($term)) {
+			$item->url = wholesale_category_url($term->slug);
+		}
+	}
+
+	return $items;
+}
+add_filter('wp_nav_menu_objects', 'wholesale_normalize_category_menu_urls', 10, 2);
 
 function wholesale_category_redirect()
 {

@@ -45,6 +45,74 @@
         <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bg-1.png?ver=' . _S_VERSION); ?>" alt="" width="1635" height="325" loading="lazy" decoding="async">
     </div>
 
+    <section class="customer-review-section" aria-labelledby="customer-review-title">
+        <div class="container">
+            <div class="customer-review-header">
+                <h2 id="customer-review-title">What Our Customers Say</h2>
+                <p>Real Reviews. Real Results.</p>
+            </div>
+
+            <div class="customer-review-slider" aria-live="polite">
+                <button class="customer-review-nav customer-review-prev" type="button" aria-label="Previous customer review">
+                    <span aria-hidden="true">&#8249;</span>
+                </button>
+
+                <div class="customer-review-card">
+                    <div class="customer-review-brand-row">
+                        <span class="customer-review-google" aria-hidden="true">
+                            <svg viewBox="0 0 48 48" role="img" aria-label="Google logo" xmlns="http://www.w3.org/2000/svg">
+                                <path fill="#EA4335" d="M24 9.5c3.54 0 6.73 1.22 9.24 3.6l6.9-6.9C35.77 2.2 30.4 0 24 0 14.64 0 6.48 5.38 2.54 13.2l8.02 6.22C12.06 14.08 17.38 9.5 24 9.5Z"/>
+                                <path fill="#4285F4" d="M46.5 24.5c0-1.6-.15-3.13-.42-4.61H24v8.73h12.78c-.55 2.96-2.24 5.47-4.77 7.15l7.71 5.98C43.7 35.02 46.5 30.14 46.5 24.5Z"/>
+                                <path fill="#FBBC05" d="M32.01 35.77c-2.16 1.46-4.93 2.32-8.01 2.32-6.62 0-12.23-4.46-14.2-10.46l-8.07 6.25C4.9 42.42 13.58 48 24 48c7.19 0 13.24-2.36 17.66-6.41l-9.65-5.82Z"/>
+                                <path fill="#34A853" d="M9.8 27.63A14.48 14.48 0 0 1 9.2 24c0-1.66.29-3.27.8-4.78L2.54 13c-1.56 3.11-2.54 6.66-2.54 10.98s.98 7.87 2.54 10.98l7.46-5.79Z"/>
+                                <path fill="#EA4335" d="M24 9.5c3.86 0 7.31 1.33 10.04 3.94l7.52-7.52C37.31 2.07 31.47 0 24 0 14.64 0 6.48 5.38 2.54 13.2l8.02 6.22C12.06 14.08 17.38 9.5 24 9.5Z" opacity="0.2"/>
+                            </svg>
+                        </span>
+                        <span class="customer-review-stars" aria-label="5 out of 5 stars">★★★★★</span>
+                    </div>
+
+                    <blockquote class="customer-review-quote" id="customer-review-quote">
+                        “Excellent service and high-quality products! Our new channel letters look amazing and brought more customers to our store.”
+                    </blockquote>
+                    <p class="customer-review-author" id="customer-review-author">— Michael R., Phoenix, AZ</p>
+                </div>
+
+                <button class="customer-review-nav customer-review-next" type="button" aria-label="Next customer review">
+                    <span aria-hidden="true">&#8250;</span>
+                </button>
+            </div>
+
+            <div class="customer-review-dots" aria-label="Customer review navigation">
+                <button class="customer-review-dot is-active" type="button" aria-label="Show review 1" data-review-dot="0"></button>
+                <button class="customer-review-dot" type="button" aria-label="Show review 2" data-review-dot="1"></button>
+                <button class="customer-review-dot" type="button" aria-label="Show review 3" data-review-dot="2"></button>
+                <button class="customer-review-dot" type="button" aria-label="Show review 4" data-review-dot="3"></button>
+            </div>
+        </div>
+    </section>
+
+    <section class="newsletter-section" aria-label="Newsletter signup">
+        <div class="container">
+            <div class="newsletter-inner">
+                <div class="newsletter-copy">
+                    <div class="newsletter-icon" aria-hidden="true">
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                    <div>
+                        <h3>Subscribe to Our Newsletter</h3>
+                        <p>Get the latest updates, special offers and new product releases.</p>
+                    </div>
+                </div>
+
+                <form class="newsletter-form" action="#" method="post" onsubmit="event.preventDefault();">
+                    <label class="screen-reader-text" for="newsletter-email">Email address</label>
+                    <input id="newsletter-email" type="email" name="email" placeholder="Enter your email address" aria-label="Email address">
+                    <button type="submit">Subscribe</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
     <div class="footer-info py-4">
         <div class="container">
             <div class="row">

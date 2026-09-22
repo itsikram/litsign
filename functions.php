@@ -1168,6 +1168,16 @@ function wholesale_category_redirect()
 			exit;
 		}
 	}
+
+	// The core taxonomy archive duplicates the clean /{category}/ route.
+	if (is_tax('product_category')) {
+		$term = get_queried_object();
+
+		if ($term instanceof WP_Term) {
+			wp_safe_redirect(wholesale_category_url($term->slug), 301);
+			exit;
+		}
+	}
 }
 add_action('template_redirect', 'wholesale_category_redirect', 1);
 
@@ -1220,7 +1230,7 @@ function wholesale_render_sitemap()
 	$last_modified = $last_modified ? mysql2date('c', $last_modified, true) : '';
 	$add_url(home_url('/'), $last_modified, 'daily', '1.0');
 
-	$private_pages = array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders', 'my_orders');
+	$private_pages = wholesale_seo_noindex_page_slugs();
 	$page_query = new WP_Query(array(
 		'post_type' => array('page', 'post', 'product'),
 		'post_status' => 'publish',
@@ -1249,6 +1259,11 @@ function wholesale_render_sitemap()
 
 	if (!is_wp_error($terms)) {
 		foreach ($terms as $term) {
+			// The channel-letter route canonicalizes to the home page.
+			if ('channel-letters' === $term->slug) {
+				continue;
+			}
+
 			$term_url = wholesale_category_url($term->slug);
 			$add_url($term_url, '', 'weekly', '0.7');
 		}
@@ -1303,7 +1318,7 @@ function wholesale_sitemap_excluded_page_ids($args, $post_type)
 		return $args;
 	}
 
-	$private_pages = array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders', 'my_orders');
+	$private_pages = wholesale_seo_noindex_page_slugs();
 	$excluded_ids = array();
 
 	foreach ($private_pages as $slug) {
@@ -2003,6 +2018,11 @@ function wholesale_has_seo_plugin()
  */
 function wholesale_seo_description()
 {
+	$keyword_meta = wholesale_seo_keyword_meta();
+	if (!empty($keyword_meta['description'])) {
+		return $keyword_meta['description'];
+	}
+
 	$description = '';
 
 	if (is_singular('product')) {
@@ -2026,7 +2046,9 @@ function wholesale_seo_description()
 		$term = get_term_by('slug', $term_slug, 'product_category');
 		$description = $term && !is_wp_error($term) && $term->description
 			? $term->description
-			: __('Custom signage for retail storefronts, serving businesses from Renton, WA.', 'litsign');
+			: ($term && !is_wp_error($term)
+				? sprintf(__('Shop custom %s from Store Front Sign Online. Signs and print products for retail storefronts and businesses.', 'litsign'), strtolower($term->name))
+				: __('Custom signage for retail storefronts, serving businesses from Renton, WA.', 'litsign'));
 	} elseif (is_front_page() || is_page_template('home.php') || (is_home() && !is_front_page())) {
 		$description = __('Lit Sign Manufacturing builds custom signage for retail storefronts from Renton, WA.', 'litsign');
 	} elseif (is_singular()) {
@@ -2105,10 +2127,101 @@ function wholesale_seo_page_defaults()
 }
 
 /**
+ * Keyword-targeted titles and descriptions for the channel-letter pages.
+ *
+ * These take priority over theme defaults and Rank Math's stored values so
+ * the pages that compete for "channel letter signs", "storefront signs", and
+ * "custom channel letters" searches stay consistent. Keys are product slugs.
+ *
+ * @return array
+ */
+function wholesale_seo_channel_letter_products()
+{
+	return array(
+		'standard-channel-letter-front-lit' => array(
+			'title' => __('Front Lit Channel Letters | Custom LED Storefront Signs', 'litsign'),
+			'description' => __('Custom front lit channel letters with acrylic faces, trimcaps, and .040 aluminum returns. Made in USA. Design your LED storefront sign online.', 'litsign'),
+		),
+		'standard-channel-letter-back-lit' => array(
+			'title' => __('Back Lit Channel Letters | Custom Halo Storefront Signs', 'litsign'),
+			'description' => __('Custom back lit channel letters with acrylic faces, trimcaps, and .040 aluminum returns for a glowing halo effect. Made in USA. Design your sign online.', 'litsign'),
+		),
+		'standard-channel-letter-front-back-lit' => array(
+			'title' => __('Front & Back Lit Channel Letters | Dual Lit Storefront Signs', 'litsign'),
+			'description' => __('Dual lit custom channel letters that light up front and back. Acrylic faces, trimcaps, and .040 aluminum returns. Made in USA. Design your sign online.', 'litsign'),
+		),
+		'hidden-back-halo-lit' => array(
+			'title' => __('Halo Lit Channel Letters, Hidden Back | Custom Storefront Signs', 'litsign'),
+			'description' => __('Hidden back halo lit channel letters with welded stainless steel faces and returns, sanded and painted. Made in USA. Design your custom storefront sign online.', 'litsign'),
+		),
+		'halo-reverse-acrylic-lit-channel-letters' => array(
+			'title' => __('Reverse Lit Halo Channel Letters, Acrylic Back | Storefront Signs', 'litsign'),
+			'description' => __('Reverse lit halo channel letters with an exposed acrylic back and welded stainless steel faces and returns. Made in USA. Design your storefront sign online.', 'litsign'),
+		),
+		'exposed-acrylic-face-lit-borderless-no-trimcap' => array(
+			'title' => __('Borderless Acrylic Face Lit Channel Letters | Storefront Signs', 'litsign'),
+			'description' => __('Borderless face lit channel letters with no trimcap: acrylic faces with welded stainless steel returns in multiple colors. Made in USA. Design your sign online.', 'litsign'),
+		),
+		'inset-acrylic-face-lit-with-border-no-trimcap' => array(
+			'title' => __('Inset Acrylic Face Lit Channel Letters | Custom Storefront Signs', 'litsign'),
+			'description' => __('Inset acrylic face lit channel letters with a border and no trimcap, built on welded stainless steel returns. Made in USA. Design your storefront sign online.', 'litsign'),
+		),
+	);
+}
+
+/**
+ * Return keyword-targeted title and description for the current request.
+ *
+ * @return array Empty when the request has no targeted metadata.
+ */
+function wholesale_seo_keyword_meta()
+{
+	if (wholesale_is_channel_letters_page()) {
+		return array(
+			'title' => __('Custom Channel Letter Signs & Store Front Signs', 'litsign'),
+			'description' => __('Custom LED channel letter signs for your storefront: front lit, back lit, halo lit, and acrylic face lit letters. UL listed, made in USA, and ready to install.', 'litsign'),
+		);
+	}
+
+	if (is_singular('product')) {
+		$products = wholesale_seo_channel_letter_products();
+		$slug = get_post_field('post_name', get_queried_object_id());
+
+		return isset($products[$slug]) ? $products[$slug] : array();
+	}
+
+	if (is_page('channel-letter-builder')) {
+		return array(
+			'title' => __('Channel Letter Sign Builder | Design Custom Channel Letters Online', 'litsign'),
+			'description' => __('Design custom channel letters online. Choose your letter style, lighting, colors, and size, then preview and price your storefront sign before you order.', 'litsign'),
+		);
+	}
+
+	if (get_query_var('category_slug')) {
+		$term = get_term_by('slug', sanitize_title(get_query_var('category_slug')), 'product_category');
+
+		if ($term && !is_wp_error($term) && 'signs-letters' === $term->slug) {
+			return array(
+				'title' => __('Storefront Signs & Channel Letters | Store Front Sign Online', 'litsign'),
+				'description' => __('Shop custom storefront signs and LED channel letters for retail businesses. Compare lit letter styles and build your sign online.', 'litsign'),
+			);
+		}
+	}
+
+	return array();
+}
+
+/**
  * Return the canonical URL for the custom product shop.
  */
 function wholesale_seo_url()
 {
+	// The home page and /channel-letters/ render the same listing, so both
+	// consolidate ranking signals on the home page.
+	if (wholesale_is_channel_letters_page()) {
+		return home_url('/');
+	}
+
 	if (is_page_template('home.php') || (is_home() && !is_front_page()) || get_query_var('category_slug')) {
 		$term_slug = get_query_var('category_slug');
 		$term_slug = $term_slug ? sanitize_title($term_slug) : (isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : '');
@@ -2128,17 +2241,32 @@ function wholesale_seo_url()
  */
 function wholesale_seo_is_noindex()
 {
-	$private_pages = array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders');
-
 	return is_404()
 		|| is_search()
-		|| is_page(array_merge($private_pages, array('my_orders')))
-		|| is_singular('order');
+		|| is_page(wholesale_seo_noindex_page_slugs())
+		|| is_singular(array('order', 'cnn'))
+		|| is_post_type_archive('order')
+		|| get_query_var('wholesale_thank_you');
+}
+
+/**
+ * Pages that are private, transactional, internal, or placeholder content.
+ *
+ * @return array
+ */
+function wholesale_seo_noindex_page_slugs()
+{
+	return array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders', 'my_orders', 'orders', 'sample-page', 'sample-page-2', 'b2-calculator');
 }
 
 add_filter('document_title_parts', function ($parts) {
 	if (wholesale_has_seo_plugin()) {
 		return $parts;
+	}
+
+	$keyword_meta = wholesale_seo_keyword_meta();
+	if (!empty($keyword_meta['title'])) {
+		return array('title' => $keyword_meta['title']);
 	}
 
 	if (is_singular() && !is_singular('product')) {
@@ -2181,6 +2309,76 @@ add_filter('document_title_parts', function ($parts) {
 
 	return $parts;
 });
+
+/**
+ * Build the schema.org Product entity for a product page.
+ *
+ * @return array
+ */
+function wholesale_product_schema($product_id, $url, $image = '')
+{
+	$product = array(
+		'@type' => 'Product',
+		'@id' => trailingslashit($url) . '#product',
+		'name' => wp_strip_all_tags(get_the_title($product_id)),
+		'url' => $url,
+		'description' => wholesale_seo_description(),
+		'image' => $image ? array($image) : array(),
+		'brand' => array(
+			'@type' => 'Brand',
+			'name' => get_bloginfo('name'),
+		),
+		'sku' => (string) get_post_field('post_name', $product_id),
+	);
+
+	$terms = get_the_terms($product_id, 'product_category');
+	if ($terms && !is_wp_error($terms)) {
+		$product['category'] = implode(', ', wp_list_pluck($terms, 'name'));
+	}
+
+	$offer = array(
+		'@type' => 'Offer',
+		'priceCurrency' => 'USD',
+		'availability' => 'https://schema.org/InStock',
+		'url' => $url,
+	);
+	$price = floatval(get_post_meta($product_id, '_min_sqft', true)) * floatval(get_post_meta($product_id, '_price_per_sqft', true));
+
+	if ($price > 0) {
+		$offer['price'] = number_format($price, 2, '.', '');
+	} else {
+		// Channel letters are priced per inch, e.g. "<del>$13</del> $11.70 Per Inch".
+		$starting_at = wp_strip_all_tags(preg_replace('#<del>.*?</del>#is', '', (string) get_post_meta($product_id, '_starting_at_text', true)));
+
+		if (preg_match('/\$\s*([0-9]+(?:\.[0-9]+)?)/', $starting_at, $match)) {
+			$offer['price'] = number_format((float) $match[1], 2, '.', '');
+
+			if (false !== stripos($starting_at, 'per inch')) {
+				$offer['priceSpecification'] = array(
+					'@type' => 'UnitPriceSpecification',
+					'price' => $offer['price'],
+					'priceCurrency' => 'USD',
+					'referenceQuantity' => array(
+						'@type' => 'QuantitativeValue',
+						'value' => 1,
+						'unitCode' => 'INH',
+						'unitText' => 'inch',
+					),
+				);
+			}
+		} else {
+			$offer['priceSpecification'] = array(
+				'@type' => 'PriceSpecification',
+				'priceCurrency' => 'USD',
+				'description' => __('Pricing varies by size and configuration.', 'litsign'),
+			);
+		}
+	}
+
+	$product['offers'] = $offer;
+
+	return $product;
+}
 
 /**
  * Emit canonical, robots, Open Graph, Twitter, and JSON-LD metadata.
@@ -2247,43 +2445,8 @@ function wholesale_seo_head()
 	if (is_singular('product')) {
 		$product_id = get_queried_object_id();
 		$product_name = get_the_title($product_id);
-		$product_description = wholesale_seo_description();
-		$price = floatval(get_post_meta($product_id, '_min_sqft', true)) * floatval(get_post_meta($product_id, '_price_per_sqft', true));
-		$graph['name'] = $product_name;
-		$graph['description'] = $product_description;
-		$graph['image'] = $image ? array($image) : array();
-		$graph['brand'] = array(
-			'@type' => 'Brand',
-			'name' => get_bloginfo('name'),
-		);
-		$graph['sku'] = (string) get_post_field('post_name', $product_id);
-
+		$graph = array_merge($graph, wholesale_product_schema($product_id, $url, $image));
 		$terms = get_the_terms($product_id, 'product_category');
-		if ($terms && !is_wp_error($terms)) {
-			$graph['category'] = implode(', ', wp_list_pluck($terms, 'name'));
-		}
-
-		if ($price > 0) {
-			$graph['offers'] = array(
-				'@type' => 'Offer',
-				'priceCurrency' => 'USD',
-				'price' => number_format($price, 2, '.', ''),
-				'availability' => 'https://schema.org/InStock',
-				'url' => $url,
-			);
-		} else {
-			$graph['offers'] = array(
-				'@type' => 'Offer',
-				'priceCurrency' => 'USD',
-				'availability' => 'https://schema.org/InStock',
-				'url' => $url,
-				'priceSpecification' => array(
-					'@type' => 'PriceSpecification',
-					'priceCurrency' => 'USD',
-					'description' => __('Pricing varies by size and configuration.', 'litsign'),
-				),
-			);
-		}
 
 		$breadcrumb_items = array(
 			array('@type' => 'ListItem', 'position' => 1, 'name' => __('Home', 'litsign'), 'item' => home_url('/')),
@@ -2384,12 +2547,19 @@ function wholesale_is_channel_letters_page()
 }
 
 /**
- * Keep Rank Math metadata aligned with the channel-letter landing page.
+ * Keep Rank Math metadata aligned with the keyword-targeted pages.
  */
 function wholesale_rank_math_channel_letters_title($title)
 {
-	if (wholesale_is_channel_letters_page()) {
-		return __('Custom Channel Letter Signs | Storefront Sign Online', 'litsign');
+	$keyword_meta = wholesale_seo_keyword_meta();
+	if (!empty($keyword_meta['title'])) {
+		return $keyword_meta['title'];
+	}
+
+	// Rank Math does not know the theme's /{category}/ routes.
+	$term = get_query_var('category_slug') ? get_term_by('slug', sanitize_title(get_query_var('category_slug')), 'product_category') : false;
+	if ($term && !is_wp_error($term)) {
+		return sprintf(__('%s | Custom Storefront Signs', 'litsign'), $term->name);
 	}
 
 	return $title;
@@ -2398,13 +2568,55 @@ add_filter('rank_math/frontend/title', 'wholesale_rank_math_channel_letters_titl
 
 function wholesale_rank_math_channel_letters_description($description)
 {
-	if (wholesale_is_channel_letters_page()) {
-		return __('Custom channel letter signs for retail storefronts. Explore LED options, materials, installation details, and request a quote.', 'litsign');
+	$keyword_meta = wholesale_seo_keyword_meta();
+	if (!empty($keyword_meta['description'])) {
+		return $keyword_meta['description'];
 	}
 
-	return $description;
+	return get_query_var('category_slug') ? wholesale_seo_description() : $description;
 }
 add_filter('rank_math/frontend/description', 'wholesale_rank_math_channel_letters_description');
+
+function wholesale_rank_math_canonical($canonical)
+{
+	if (wholesale_is_channel_letters_page() || get_query_var('category_slug')) {
+		return wholesale_seo_url();
+	}
+
+	return $canonical;
+}
+add_filter('rank_math/frontend/canonical', 'wholesale_rank_math_canonical');
+
+function wholesale_rank_math_robots($robots)
+{
+	if (wholesale_seo_is_noindex()) {
+		$robots['index'] = 'noindex';
+		$robots['follow'] = 'follow';
+	}
+
+	return $robots;
+}
+add_filter('rank_math/frontend/robots', 'wholesale_rank_math_robots');
+
+/**
+ * Keep private order records and placeholder pages out of Rank Math sitemaps.
+ */
+function wholesale_rank_math_sitemap_exclude_post_type($exclude, $type)
+{
+	return in_array($type, array('order', 'cnn'), true) ? true : $exclude;
+}
+add_filter('rank_math/sitemap/exclude_post_type', 'wholesale_rank_math_sitemap_exclude_post_type', 10, 2);
+
+function wholesale_rank_math_sitemap_entry($url, $type, $object)
+{
+	if ('post' === $type && $object instanceof WP_Post && 'page' === $object->post_type
+		&& in_array($object->post_name, wholesale_seo_noindex_page_slugs(), true)) {
+		return false;
+	}
+
+	return $url;
+}
+add_filter('rank_math/sitemap/entry', 'wholesale_rank_math_sitemap_entry', 10, 3);
 
 /**
  * Add accurate service and business entities without duplicating Rank Math's
@@ -2418,6 +2630,7 @@ function wholesale_rank_math_json_ld($data, $jsonld)
 
 	$has_organization = false;
 	$has_local_business = false;
+	$has_product = false;
 
 	foreach ($data as $entity) {
 		if (!is_array($entity)) {
@@ -2427,6 +2640,13 @@ function wholesale_rank_math_json_ld($data, $jsonld)
 		$types = isset($entity['@type']) ? (array) $entity['@type'] : array();
 		$has_organization = $has_organization || in_array('Organization', $types, true);
 		$has_local_business = $has_local_business || in_array('LocalBusiness', $types, true);
+		$has_product = $has_product || in_array('Product', $types, true);
+	}
+
+	if (is_singular('product') && !$has_product) {
+		$product_id = get_queried_object_id();
+		$image = get_the_post_thumbnail_url($product_id, 'large');
+		$data['wholesale-product'] = wholesale_product_schema($product_id, get_permalink($product_id), $image ? $image : '');
 	}
 
 	$organization_id = trailingslashit(home_url('/')) . '#organization';
@@ -2525,7 +2745,17 @@ function wholesale_organization_schema()
 
 	echo '<script type="application/ld+json">' . wp_json_encode(array(
 		'@context' => 'https://schema.org',
-		'@graph' => array($organization, $local_business),
+		'@graph' => array(
+			array(
+				'@type' => 'WebSite',
+				'@id' => trailingslashit(home_url('/')) . '#website',
+				'name' => get_bloginfo('name'),
+				'url' => home_url('/'),
+				'publisher' => array('@id' => $organization_id),
+			),
+			$organization,
+			$local_business,
+		),
 	), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
 }
 add_action('wp_head', 'wholesale_organization_schema', 2);

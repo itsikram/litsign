@@ -43,6 +43,8 @@ if (file_exists(dirname(__FILE__) . '/cmb2/init.php')) {
 if (file_exists(dirname(__FILE__) . '/template/display_admin_orders.php')) {
 	require_once(dirname(__FILE__) . '/template/display_admin_orders.php');
 }
+require_once(dirname(__FILE__) . '/inc/orders.php');
+require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
 /**
  * Sets up theme defaults and registers support for various WordPress features.
@@ -219,6 +221,24 @@ function wholesale_setup()
 		'show_in_rest' => false,
 		'supports' => array('title', 'editor'),
 		'menu_icon' => 'dashicons-star-filled',
+		'capability_type' => 'post',
+		'map_meta_cap' => true,
+	));
+	register_post_type('payment_ticket', array(
+		'label' => 'Payment Tickets',
+		'labels' => array(
+			'name' => 'Payment Tickets',
+			'singular_name' => 'Payment Ticket',
+			'add_new' => 'New Ticket',
+			'add_new_item' => 'New Payment Ticket',
+			'edit_item' => 'Edit Payment Ticket',
+		),
+		'public' => false,
+		'show_ui' => true,
+		'show_in_menu' => true,
+		'show_in_rest' => false,
+		'supports' => array('title'),
+		'menu_icon' => 'dashicons-tickets-alt',
 		'capability_type' => 'post',
 		'map_meta_cap' => true,
 	));

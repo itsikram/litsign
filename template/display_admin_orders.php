@@ -357,6 +357,10 @@ function render_order_meta_box()
         </h2>
         <h2 style="padding: 0; line-height: 1.5"> <b>Estimate Delivery Time:</b> <?php echo esc_html($estimate_delivery_time); ?></h2>
         <h2 style="padding: 0; line-height: 1.5"> <b>Order Id:</b> <a href="<?php echo esc_url(get_permalink()); ?>"><?php echo esc_html($order_id); ?></a></h2>
+        <?php $ticket_id = (int) get_post_meta($post_id, '_ticket_id', true); ?>
+        <?php if ($ticket_id) : ?>
+            <h2 style="padding: 0; line-height: 1.5"> <b>Paid via:</b> <a href="<?php echo esc_url(get_edit_post_link($ticket_id)); ?>">Payment Ticket #<?php echo esc_html((string) $ticket_id); ?></a></h2>
+        <?php endif; ?>
         <hr>
     </div>
 

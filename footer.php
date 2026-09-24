@@ -30,6 +30,8 @@
 
     </div>
 
+    <?php // home.php sets this so the channel letter landing page stays focused on channel letters. ?>
+    <?php if (empty($GLOBALS['wholesale_channel_letter_landing'])) : ?>
     <div class="container py-5">
         <div class="row">
             <div class="col">
@@ -40,6 +42,7 @@
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <div class="footer-bg-image-1">
         <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bg-1.png?ver=' . _S_VERSION); ?>" alt="" width="1635" height="325" loading="lazy" decoding="async">
@@ -284,7 +287,7 @@
             <div class="row">
                 <div class="col">
                     <p class="cp-text text-center">
-                        Copyright © 2024 Storefrontsignonline, Inc.
+                        Copyright © <?php echo esc_html(wp_date('Y')); ?> Storefrontsignonline, Inc.
                         All Rights Reserved.
                         <a href="<?php echo site_url(); ?>/terms-conditions/">Terms & Conditions</a>
 

@@ -35,6 +35,30 @@ function get_product_attribute_data($id, $attr)
     }
 }
 
+// Stroke icons for the channel letter landing sections (the icon font is a small subset).
+function wholesale_home_icon($name)
+{
+    $paths = array(
+        'flag'    => '<path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/>',
+        'badge'   => '<path d="M12 2l2.4 1.8 3-.2 1 2.8 2.6 1.6-.8 2.9.8 2.9-2.6 1.6-1 2.8-3-.2L12 22l-2.4-1.8-3 .2-1-2.8L3 16l.8-2.9L3 10.2l2.6-1.6 1-2.8 3 .2z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+        'shield'  => '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>',
+        'plug'    => '<path d="M9 2v6M15 2v6"/><path d="M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v5"/>',
+        'phone'   => '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/>',
+        'pen'     => '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+        'message' => '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+        'mail'    => '<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 7l-10 6L2 7"/>',
+        'clock'   => '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+        'pin'     => '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+        'arrow'   => '<path d="M5 12h14M13 6l6 6-6 6"/>',
+    );
+
+    if (!isset($paths[$name])) {
+        return '';
+    }
+
+    return '<svg class="cl-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
+}
+
 function get_variant_cost($product_cost, $variable_cost)
 {
     return round(floatval($product_cost) + floatval($variable_cost), 2);
@@ -105,11 +129,12 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
 $requested_category = get_query_var('category_slug');
 $requested_category = $requested_category ? $requested_category : (isset($_REQUEST['category_slug']) ? wp_unslash($_REQUEST['category_slug']) : '');
 $current_category = $requested_category ? sanitize_title($requested_category) : 'channel-letters';
-$is_default_category = !$requested_category;
 $current_term = get_term_by('slug', $current_category, 'product_category');
 $is_channel_letters = 'channel-letters' === $current_category;
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
+$builder_url = home_url('/channel-letter-builder/');
+$GLOBALS['wholesale_channel_letter_landing'] = $is_channel_letters;
 
 $current_term_id = $current_term ?  $current_term->term_id : 0;
 $current_term_ref = get_term_meta($current_term_id, 'taxonomy-ref', true);
@@ -173,16 +198,26 @@ get_header();
 
 ?>
 
-<section class="home-hero" aria-labelledby="home-hero-title">
+<section class="home-hero<?php echo $is_channel_letters ? ' home-hero--cl' : ''; ?>" aria-labelledby="home-hero-title">
     <div class="home-hero-content">
         <div class="container home-hero-inner">
             <div class="home-hero-copy">
-                <p class="home-hero-eyebrow">Premium quality signs &amp; letters</p>
                 <?php if ($is_channel_letters) : ?>
-                    <h1 id="home-hero-title" class="home-hero-title">Custom Channel Letter Signs <br class="home-hero-mobile-break"><span>That Stand Out</span></h1>
+                    <p class="home-hero-eyebrow">Made in USA &middot; UL listed &middot; 5-year LED warranty</p>
+                    <h1 id="home-hero-title" class="home-hero-title">Custom LED Channel Letter Signs <span>for Your Storefront</span></h1>
+                    <p class="home-hero-lead">Pick your style, see your price online, and receive letters that are tested before shipping and ready to install&nbsp;&mdash; wiring diagram and installation pattern included.</p>
+                    <div class="home-hero-actions home-hero-actions--cl">
+                        <a class="home-hero-shop-button" href="#product-box-container">See Styles &amp; Prices <span aria-hidden="true">&rarr;</span></a>
+                        <a class="home-hero-secondary-button" href="<?php echo esc_url($builder_url); ?>"><?php echo wholesale_home_icon('pen'); ?> Design Your Sign Online</a>
+                    </div>
+                    <p class="home-hero-help">
+                        <?php echo wholesale_home_icon('phone'); ?>
+                        Questions? Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
+                        <span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PST</span>
+                    </p>
                 <?php else : ?>
+                    <p class="home-hero-eyebrow">Premium quality signs &amp; letters</p>
                     <h2 id="home-hero-title" class="home-hero-title">Make Your Brand <br class="home-hero-mobile-break"><span> Stand Out</span></h2>
-                <?php endif; ?>
                 <p class="home-hero-lead">Custom LED channel letters, storefront signs, acrylic signs and more.<br class="home-hero-desktop-break"> Built for businesses that want to be seen.</p>
                 <div class="home-hero-actions">
                     <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>
@@ -191,10 +226,31 @@ get_header();
                         <span>Watch Video</span>
                     </button>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
     <div class="home-hero-features" aria-label="Our service benefits">
+        <?php if ($is_channel_letters) : ?>
+        <div class="container home-hero-feature-grid">
+            <div class="home-hero-feature">
+                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('flag'); ?></span>
+                <span><strong>Made in USA</strong><small>Built to order for your business.</small></span>
+            </div>
+            <div class="home-hero-feature">
+                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('badge'); ?></span>
+                <span><strong>UL Listed</strong><small>Outdoor signs ship with UL labels.</small></span>
+            </div>
+            <div class="home-hero-feature">
+                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('shield'); ?></span>
+                <span><strong>5-Year LED Warranty</strong><small>On listed LED modules &amp; power supplies.</small></span>
+            </div>
+            <div class="home-hero-feature">
+                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('plug'); ?></span>
+                <span><strong>Tested Before Shipping</strong><small>Arrives ready to install.</small></span>
+            </div>
+        </div>
+        <?php else : ?>
         <div class="container home-hero-feature-grid">
             <div class="home-hero-feature">
                 <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-truck-fast"></i></span>
@@ -213,6 +269,7 @@ get_header();
                 <span><strong>100% Satisfaction</strong><small>Your success is our priority.</small></span>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -315,6 +372,16 @@ get_header();
     });
 </script>
 
+<?php if ($is_channel_letters) : ?>
+<div class="container">
+    <header class="cl-shop-header">
+        <p class="cl-kicker">Step 1 &middot; Choose your style</p>
+        <h2 class="cl-section-title">Channel Letter Styles &amp; Starting Prices</h2>
+        <p class="cl-section-lead">Every style is built to order. Open a style to pick your letter height, colors and wording and see your exact price before checkout.</p>
+        <p class="cl-shop-header-help">Not sure which style fits your storefront? <a href="tel:+18664362101">Call 866-436-2101</a> or <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
+    </header>
+</div>
+<?php else : ?>
 <div class="container">
     <header class="shop-header">
         <?php $shop_heading_tag = $is_channel_letters ? 'h2' : 'h1'; ?>
@@ -325,10 +392,12 @@ get_header();
         <?php endif; ?>
     </header>
 </div>
+<?php endif; ?>
 
-<div class="container my-3 product-listing-container">
+<div class="container my-3 product-listing-container<?php echo $is_channel_letters ? ' product-listing-container--cl' : ''; ?>">
 
     <div class="row">
+        <?php if (!$is_channel_letters) : ?>
         <div class="col-md-2">
             <!-- <div class="category-filter-container">
 
@@ -398,7 +467,8 @@ get_header();
             </div>
 
         </div>
-        <div class="col-md-10">
+        <?php endif; ?>
+        <div class="<?php echo $is_channel_letters ? 'col-12' : 'col-md-10'; ?>">
 
             <!-- <div class="category-selecteor-container container mt-3">
                 <div class="row">
@@ -526,6 +596,9 @@ get_header();
                                         }; ?>
 
                                     </div>
+                                    <?php if ($is_channel_letters) : ?>
+                                        <span class="pb-cta">Get your price <?php echo wholesale_home_icon('arrow'); ?></span>
+                                    <?php endif; ?>
 
                                 </div>
                             </a>
@@ -537,7 +610,7 @@ get_header();
                     <p class="text-muted text-center w-100">No Product Found</p> <?php
                                                                                 } ?>
 
-                <?php if ($ref_term == true): ?>
+                <?php if ($ref_term && !$is_channel_letters) : ?>
                     <div class="product-box" data-product-category="adhesive-products">
                         <a href="<?php echo esc_url(wholesale_category_url($ref_term->slug)); ?>">
                             <div class="pb-image-top">
@@ -578,74 +651,6 @@ get_header();
                     </div>
                 <?php endif; ?>
 
-                <?php
-                // Adhesive products
-                $product_query = new WP_Query(array(
-                    "post_type" => "product",
-                    "post_per_page" => 99,
-                    'order' => 'ASC',
-                    'meta_key' => '_order_by_index',
-                    'orderby' => 'meta_value_num',
-                    'nopaging' => true,
-                    'tax_query' => array(
-                        array(
-                            'taxonomy' => 'product_category',
-                            'field' => 'slug',
-                            'terms' => 'adhesive-products',
-                        )
-                    ),
-                    'meta_query' => array(
-                        array(
-                            'key'     => '_show_in_list', // The custom field key
-                            'value'   => 'on', // The custom field value you want to match
-                            'compare' => '=', // Comparison operator (default is '=')
-                        ),
-                    ),
-                ));
-
-                if ($is_default_category):
-
-                    while ($product_query->have_posts()) {
-                        $product_query->the_post();
-                        global $post;
-
-                        $short_desc = get_post_meta(get_the_ID(), "_product_list_desc", true);
-                        $price_per_sqft = get_post_meta(get_the_ID(), "_price_per_sqft", true);
-                        $starting_at_text = get_post_meta(get_the_ID(), "_starting_at_text", true);
-                        $terms = get_the_terms(get_the_ID(), 'product_category');
-
-                        $product_category_slug = isset($terms[0]) ? $terms[0]->slug : '';
-                        $product_thumbnail_id = get_post_thumbnail_id(get_the_ID());
-                        $product_slug = get_post_field('post_name', get_the_ID(), 'raw');
-                ?>
-                        <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
-                            <?php wholesale_render_home_product_gallery(get_the_ID(), get_the_title(), $product_thumbnail_id); ?>
-                            <a href="<?php echo get_permalink(); ?>">
-                                <div class="pb-details">
-                                    <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
-                                        <?php echo esc_html(get_the_title()); ?>
-                                    </h2>
-                                    <div class="pb-description-list">
-                                        <?php echo wp_kses_post($short_desc); ?>
-                                    </div>
-                                    <hr>
-                                    <p class="pb-pricing d-flex justify-content-between">
-                                        <span class="pb-title-short fs-6">
-                                            Starting at
-                                        </span>
-                                        <span class="pb-price">
-                                            <?php echo $starting_at_text; ?>
-                                        </span>
-                                    </p>
-                                </div>
-                            </a>
-
-                        </div>
-
-
-                <?php
-                    }
-                endif; ?>
 
             </div>
 
@@ -654,49 +659,108 @@ get_header();
 </div>
 
 <?php if ($is_channel_letters) : ?>
-    <section class="channel-letters-seo-content" aria-labelledby="channel-letters-overview">
-        <div class="channel-letters-seo-intro">
-            <p class="channel-letters-seo-kicker">Designed for storefront visibility</p>
-            <h2 id="channel-letters-overview">Make Your Storefront Stand Out Day and Night</h2>
-            <p>Custom channel letter signs give retail businesses a polished identity with bright, energy-efficient LED illumination and a clean, dimensional finish.</p>
-            <a class="channel-letters-seo-cta" href="<?php echo esc_url($contact_url); ?>">Talk to a Sign Specialist <span aria-hidden="true">&rarr;</span></a>
+    <section class="cl-steps" aria-labelledby="cl-steps-title">
+        <div class="container">
+            <p class="cl-kicker">Simple ordering</p>
+            <h2 id="cl-steps-title" class="cl-section-title">How Ordering Your Sign Works</h2>
+            <ol class="cl-steps-list">
+                <li>
+                    <span class="cl-step-number" aria-hidden="true">1</span>
+                    <h3>Choose a style</h3>
+                    <p>Front lit, back lit, dual lit, halo lit or acrylic face lit &mdash; compare the styles above.</p>
+                </li>
+                <li>
+                    <span class="cl-step-number" aria-hidden="true">2</span>
+                    <h3>Customize &amp; see your price</h3>
+                    <p>Enter your wording, letter height and colors, or <a href="<?php echo esc_url($builder_url); ?>">use the online sign builder</a>. Your price updates as you go.</p>
+                </li>
+                <li>
+                    <span class="cl-step-number" aria-hidden="true">3</span>
+                    <h3>We build &amp; test it</h3>
+                    <p>Your letters are made in the USA, and every sign is tested before it ships.</p>
+                </li>
+                <li>
+                    <span class="cl-step-number" aria-hidden="true">4</span>
+                    <h3>Ready to install</h3>
+                    <p>Your sign arrives with a wiring diagram and installation pattern. Choose standard, 3-day, 2-day or overnight shipping at checkout.</p>
+                </li>
+            </ol>
         </div>
-        <div class="channel-letters-seo-features">
-            <article>
-                <span class="channel-letters-seo-icon" aria-hidden="true">&#9733;</span>
-                <h3>Choose Your Look</h3>
-                <p>Front-lit, reverse-lit halo, and front-and-back lit options help you create the right storefront presence.</p>
-            </article>
-            <article>
-                <span class="channel-letters-seo-icon" aria-hidden="true">&#9670;</span>
-                <h3>Built to Last</h3>
-                <p>Stainless steel faces and returns, clear Lexan backs, and high-efficiency LED modules deliver lasting quality.</p>
-            </article>
-            <article>
-                <span class="channel-letters-seo-icon" aria-hidden="true">&#10003;</span>
-                <h3>Ready for Installation</h3>
-                <p>Every sign is tested before shipment and includes wiring diagrams and an installation pattern.</p>
-            </article>
+    </section>
+
+    <section class="cl-quality" aria-labelledby="cl-quality-title">
+        <div class="container cl-quality-inner">
+            <div class="cl-quality-copy">
+                <p class="cl-kicker">Built to last</p>
+                <h2 id="cl-quality-title" class="cl-section-title">Commercial-Grade Signs for Your Storefront</h2>
+                <p class="cl-section-lead">Custom channel letters give your business a polished look, with bright, energy-efficient LED lighting that stands out day and night.</p>
+                <a class="cl-button" href="#product-box-container">Compare Styles &amp; Prices <?php echo wholesale_home_icon('arrow'); ?></a>
+            </div>
+            <ul class="cl-quality-list">
+                <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong> outdoor channel letter signs with sign section labels.</span></li>
+                <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong> on listed LED modules, power supplies and qualifying letters.</span></li>
+                <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in USA</strong> with .040 aluminum or welded stainless steel returns and acrylic faces.</span></li>
+                <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong>, with a wiring diagram and installation pattern included.</span></li>
+            </ul>
         </div>
-        <div class="channel-letters-seo-details">
-            <h2>Everything You Need to Plan Your Sign</h2>
-            <div class="channel-letters-seo-accordion">
-                <details>
-                    <summary>Materials, LED illumination, and warranty</summary>
-                    <p>Outdoor channel letter signs are UL listed with sign section labels. Listed LED modules and qualifying letters carry a five-year warranty.</p>
-                </details>
+    </section>
+
+    <section class="cl-help" aria-labelledby="cl-help-title">
+        <div class="container cl-help-inner">
+            <div class="cl-help-copy">
+                <h2 id="cl-help-title">Talk to a Real Sign Specialist</h2>
+                <p>Have a logo, a storefront photo or a question about sizing? We&rsquo;ll help you pick the right sign before you order.</p>
+                <ul class="cl-help-details">
+                    <li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+                    <li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
+                </ul>
+            </div>
+            <div class="cl-help-actions">
+                <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+                <a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+                <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+                <a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
+            </div>
+        </div>
+    </section>
+
+    <section class="cl-faq" aria-labelledby="cl-faq-title">
+        <div class="container">
+            <p class="cl-kicker">Before you order</p>
+            <h2 id="cl-faq-title" class="cl-section-title">Frequently Asked Questions</h2>
+            <div class="cl-faq-list">
                 <details>
                     <summary>Which channel letter style is right for my storefront?</summary>
-                    <p>Front-lit letters provide bold direct illumination, while reverse-lit letters create a halo effect. Front-and-back lit combinations offer both looks.</p>
+                    <p>Front-lit letters give bold, direct illumination. Back-lit and halo-lit letters glow onto the wall behind them for a softer, upscale look. Front-and-back lit letters combine both. Not sure? Call us at <a href="tel:+18664362101">866-436-2101</a> and we&rsquo;ll help you choose.</p>
                 </details>
                 <details>
-                    <summary>How do I start a custom channel letter project?</summary>
-                    <p>Share your storefront details through our quote request and our team will help you choose the sign configuration and next steps.</p>
+                    <summary>How do I know what my sign will cost?</summary>
+                    <p>Each style lists its starting price. Open a style, enter your wording, letter height and colors, and you&rsquo;ll see your full price before checkout. For large or unusual projects, <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
+                </details>
+                <details>
+                    <summary>What materials and warranty do I get?</summary>
+                    <p>Outdoor channel letter signs are UL listed with sign section labels. Listed LED modules, power supplies and qualifying letters carry a five-year warranty.</p>
+                </details>
+                <details>
+                    <summary>How long will it take to get my sign?</summary>
+                    <p>Every sign is made to order. Your estimated ship date is shown at checkout, and after manufacturing you can choose standard (3&ndash;6 business days), 3-day, 2-day or overnight shipping.</p>
+                </details>
+                <details>
+                    <summary>Is my sign ready to install when it arrives?</summary>
+                    <p>Yes. Every sign is tested before shipment and includes a wiring diagram and an installation pattern for your installer.</p>
+                </details>
+                <details>
+                    <summary>Can I pick up my order?</summary>
+                    <p>Pickup isn&rsquo;t available &mdash; every order ships directly to you.</p>
                 </details>
             </div>
         </div>
     </section>
 
+    <nav class="cl-mobile-bar" aria-label="Quick actions">
+        <a class="cl-mobile-bar-call" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> Call Us</a>
+        <a class="cl-mobile-bar-shop" href="#product-box-container">See Prices</a>
+    </nav>
 <?php endif; ?>
 
 <?php

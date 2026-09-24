@@ -8,8 +8,9 @@
       .concat('.footer > *')
       .join(',');
     const revealElements = [...document.querySelectorAll(revealSelector)].filter((element, index, elements) => {
-      return !element.matches('.pb-gallery-image')
-        && !element.closest('header, nav, .modal, .offcanvas, [aria-hidden="true"]')
+      // The hero stays static so ad visitors see the headline and CTAs immediately.
+      return !element.matches('.pb-gallery-image, .cl-icon, .home-hero')
+        && !element.closest('header, nav, .modal, .offcanvas, .home-hero-content, [aria-hidden="true"]')
         && elements.indexOf(element) === index;
     });
 

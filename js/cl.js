@@ -188,8 +188,6 @@ let lastHistorySignature = null;
 
 // start utils
 
-document.getElementById("leftSidebar").style.height =
-  document.querySelector(".editor-container").clientHeight;
 
 async function waitForWindowLoad() {
   await new Promise((resolve) => {
@@ -911,8 +909,21 @@ function saveState() {
   updateHistoryButtons();
 }
 
+// addText / addShape / addRaceway are defined inside the window "load" handler;
+// it registers them here so undo/redo (loadState) can rebuild elements.
+const clBuilderActions = {};
+
 function loadState(snapshot) {
   historyRestoring = true;
+  try {
+    restoreSnapshot(snapshot);
+  } finally {
+    // Never leave history switched off if a restore fails part-way.
+    historyRestoring = false;
+  }
+}
+
+function restoreSnapshot(snapshot) {
   nodeLists.forEach((item) => {
     const text = item.node.getAttr("textIndex");
     item.node.destroy();
@@ -922,6 +933,8 @@ function loadState(snapshot) {
 
   nodeLists = [];
   selectedNode = null;
+  // Start from an empty store so re-adding elements never looks up destroyed nodes.
+  store.dispatch({ type: "RESTORE_ELEMENT", payload: [] });
   const restoredElements = [];
   snapshot.elements.forEach((element) => {
     const nodeSnapshot = snapshot.nodes.find(
@@ -930,9 +943,9 @@ function loadState(snapshot) {
     const type = element.type || (nodeSnapshot ? nodeSnapshot.type : null);
 
     if (type === "Text") {
-      addText(element.text || "", element.x, element.y, true);
+      clBuilderActions.addText(element.text || "", element.x, element.y, true);
     } else if (type === "Raceway") {
-      addRaceway();
+      clBuilderActions.addRaceway();
     } else {
       const shapeType = {
         Rectangle: "rectangle",
@@ -941,7 +954,7 @@ function loadState(snapshot) {
         Starburst: "star",
         Arrow: "arrow",
       }[type];
-      if (shapeType) addShape(shapeType);
+      if (shapeType) clBuilderActions.addShape(shapeType);
     }
 
     const node = selectedNode;
@@ -972,7 +985,6 @@ function loadState(snapshot) {
   layer.draw();
   updateHistoryButtons();
   lastHistorySignature = getHistorySignature();
-  historyRestoring = false;
 }
 
 function clearSavedBuilderDesign() {
@@ -2743,8 +2755,12 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
       elements[i].text != undefined && elements[i].text.length > 0
         ? "Channel Letter"
         : "Raceway";
+    const elementNode = getNodeById(elements[i].id);
+    if (!elementNode) {
+      continue;
+    }
     if (elements[i].text == undefined) {
-      let currentNodeType = getNodeById(elements[i].id).getClassName();
+      let currentNodeType = elementNode.getClassName();
       if (currentNodeType == "Rect") {
         currentNodeType = "Rectangle";
       }
@@ -4143,8 +4159,11 @@ window.addEventListener("load", function (e) {
       const infoContent = this.parentElement.querySelector(".info-btn-content");
 
       if (infoContent) {
-        infoContent.style.display =
-          infoContent.style.display === "none" ? "block" : "none";
+        const isOpen = getComputedStyle(infoContent).display !== "none";
+        document.querySelectorAll(".info-btn-content").forEach((info) => {
+          info.style.display = "none";
+        });
+        infoContent.style.display = isOpen ? "none" : "block";
       }
 
       // Do something with the .info-btn-content (e.g., toggle visibility)
@@ -4175,25 +4194,47 @@ window.addEventListener("load", function (e) {
         cancelable: true, // Allows the event to be canceled
       });
       document.querySelector(".shape-dropdown").dispatchEvent(mouseoutEvent);
+      setShapeMenuOpen(false);
       triggerTransformEvent();
     });
   });
 
-  document
-    .querySelector(".shape-dropdown")
-    .addEventListener("mouseenter", (e) => {
-      document.querySelector(
-        ".shape-dropdown .shapes-container",
-      ).style.display = "block";
-    });
-
-  document
-    .querySelector(".shape-dropdown")
-    .addEventListener("mouseleave", (e) => {
-      document.querySelector(
-        ".shape-dropdown .shapes-container",
-      ).style.display = "none";
-    });
+  // Shape menu: opens on hover for mouse users and on click/tap for everyone.
+  const shapeDropdown = document.querySelector(".shape-dropdown");
+  const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  function setShapeMenuOpen(open) {
+    shapeDropdown.classList.toggle("is-open", open);
+    shapeDropdown.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  if (canHover) {
+    shapeDropdown.addEventListener("mouseenter", () => setShapeMenuOpen(true));
+    shapeDropdown.addEventListener("mouseleave", () => setShapeMenuOpen(false));
+  }
+  shapeDropdown.addEventListener("click", (e) => {
+    if (e.target.closest(".shape")) {
+      return;
+    }
+    setShapeMenuOpen(!shapeDropdown.classList.contains("is-open"));
+  });
+  shapeDropdown.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target === shapeDropdown) {
+      e.preventDefault();
+      setShapeMenuOpen(!shapeDropdown.classList.contains("is-open"));
+      const first = shapeDropdown.querySelector(".shape");
+      if (shapeDropdown.classList.contains("is-open") && first) {
+        first.focus();
+      }
+    } else if ((e.key === "Enter" || e.key === " ") && e.target.closest(".shape")) {
+      e.preventDefault();
+      e.target.closest(".shape").click();
+      shapeDropdown.focus();
+    }
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".shape-dropdown")) {
+      setShapeMenuOpen(false);
+    }
+  });
   duplicateBtn.addEventListener("click", function (e) {
     if (selectedNode == null) return;
     saveState();
@@ -4458,6 +4499,9 @@ window.addEventListener("load", function (e) {
     undoStack.push(currentState);
     loadState(nextState);
   }
+
+  if (undoBtn) undoBtn.addEventListener("click", undo);
+  if (redoBtn) redoBtn.addEventListener("click", redo);
 
   document.addEventListener("keydown", function (event) {
     if (!(event.ctrlKey || event.metaKey)) return;
@@ -5575,9 +5619,6 @@ window.addEventListener("load", function (e) {
     sliderItems.forEach((sliderItem) => {});
   });
 
-  let editorContaier = document.getElementById("editorContainer").clientHeight;
-  document.getElementById("dtContainer").style.height =
-    editorContaier + 100 + "px";
 
   window.addEventListener("keydown", function (e) {
     if (e.key === "Delete") {
@@ -5790,7 +5831,8 @@ window.addEventListener("load", function (e) {
     detailTableBody.dataset.totalElementCost = parseFloat(
       totalCost + totalColorCost,
     );
-    totalCost = totalCost + psCost + litCost + cableCost;
+    // Power supply, lighting and cable are only charged once there is something to power.
+    totalCost = elements.length ? totalCost + psCost + litCost + cableCost : 0;
 
     document.getElementById("displayCost").innerText =
       "$" + (totalCost + totalColorCost).toFixed(2);
@@ -6054,5 +6096,79 @@ window.addEventListener("load", function (e) {
     }
   }
 
+  clBuilderActions.addText = addText;
+  clBuilderActions.addShape = addShape;
+  clBuilderActions.addRaceway = addRaceway;
+
   // end script
 });
+
+// Touch and keyboard support for the builder's panels and menus.
+(function () {
+  const slider = document.getElementById("leftSidebarSlider");
+  const backdrop = document.getElementById("clSheetBackdrop");
+
+  function closeBottomMenus(except) {
+    document.querySelectorAll(".bottombar-left-item.is-open").forEach((item) => {
+      if (item !== except) {
+        item.classList.remove("is-open");
+      }
+    });
+  }
+
+  function closeInfoPopovers() {
+    document.querySelectorAll(".info-btn-content").forEach((info) => {
+      info.style.display = "none";
+    });
+  }
+
+  // Power supply / lighting / cable menus close when tapping anywhere else.
+  document.addEventListener("click", (event) => {
+    closeBottomMenus(event.target.closest(".bottombar-left-item"));
+    if (!event.target.closest(".info-btn-container")) {
+      closeInfoPopovers();
+    }
+  });
+
+  // The phone bottom sheet closes from its backdrop.
+  if (backdrop && slider) {
+    backdrop.addEventListener("click", () => hideLeftSlider());
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      if (slider && slider.classList.contains("is-open")) {
+        hideLeftSlider();
+      }
+      closeBottomMenus(null);
+      closeInfoPopovers();
+      const shapeMenu = document.querySelector(".shape-dropdown.is-open");
+      if (shapeMenu) {
+        shapeMenu.classList.remove("is-open");
+        shapeMenu.setAttribute("aria-expanded", "false");
+      }
+      return;
+    }
+
+    // Enter / Space activate the builder's clickable rows and chips.
+    const target = event.target;
+    if (
+      (event.key === "Enter" || event.key === " ") &&
+      target.matches(".cl-option-value, .bottombar-left-item, .info-btn, .slider-choose-item, .bottombar-list-item")
+    ) {
+      event.preventDefault();
+      target.click();
+    }
+  });
+
+  // Options inside the picker are reachable by keyboard.
+  if (slider && typeof MutationObserver !== "undefined") {
+    new MutationObserver(() => {
+      slider.querySelectorAll(".slider-choose-item:not([tabindex])").forEach((item) => {
+        item.setAttribute("tabindex", "0");
+        item.setAttribute("role", "button");
+      });
+      document.body.classList.toggle("cl-sheet-open", slider.classList.contains("is-open"));
+    }).observe(slider, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+  }
+})();

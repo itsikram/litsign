@@ -849,56 +849,6 @@
     margin-top: -65px !important;
   }
 
-  #dtContainer {
-    min-height: 1500px;
-
-    #leftSidebar {
-      width: 100%;
-    }
-
-    #editorContainer {
-      width: 100% !important;
-      .editor-topbar {
-        margin-top: 20px !important;
-        .left,.middle,.right {
-          width: 100% !important;
-          text-align: center !important;
-        }
-
-
-        .middle {
-          padding: 10px 0 !important;
-        }
-        .right {
-          .button-group {
-            justify-content: center !important;
-          }
-        }
-
-      }
-
-      .container {
-
-      }
-      .editor-bottombar {
-        padding-bottom: 140px !important;
-
-        .bottom-left {
-          width: 100% !important;
-
-        }
-
-        .bottom-right {
-          width: 100% !important;
-          margin-left: -100% !important;
-          margin-bottom: -200px !important;
-        }
-
-
-      }
-    }
-
-  }
   
 
   .mobile-menu-container {

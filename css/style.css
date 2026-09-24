@@ -3425,41 +3425,6 @@ a.review-author-name:hover {
   .home .site-alert-container + .container {
     margin-top: -65px !important;
   }
-  #dtContainer {
-    min-height: 1500px;
-  }
-  #dtContainer #leftSidebar {
-    width: 100%;
-  }
-  #dtContainer #editorContainer {
-    width: 100% !important;
-  }
-  #dtContainer #editorContainer .editor-topbar {
-    margin-top: 20px !important;
-  }
-  #dtContainer #editorContainer .editor-topbar .left,
-  #dtContainer #editorContainer .editor-topbar .middle,
-  #dtContainer #editorContainer .editor-topbar .right {
-    width: 100% !important;
-    text-align: center !important;
-  }
-  #dtContainer #editorContainer .editor-topbar .middle {
-    padding: 10px 0 !important;
-  }
-  #dtContainer #editorContainer .editor-topbar .right .button-group {
-    justify-content: center !important;
-  }
-  #dtContainer #editorContainer .editor-bottombar {
-    padding-bottom: 140px !important;
-  }
-  #dtContainer #editorContainer .editor-bottombar .bottom-left {
-    width: 100% !important;
-  }
-  #dtContainer #editorContainer .editor-bottombar .bottom-right {
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-bottom: -200px !important;
-  }
   .mobile-menu-container {
     position: fixed;
     right: 0;

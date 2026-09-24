@@ -101,40 +101,10 @@ if (
     update_post_meta($design_id, '_cl_data', stripslashes($design_data_query));
 
     $design_data_array = json_decode(stripslashes($design_data_query), true);
-    $extras = isset($design_data_array['extras']) && is_array($design_data_array['extras'])
-        ? $design_data_array['extras']
-        : [];
-    $elements = isset($design_data_array['elements']) && is_array($design_data_array['elements'])
-        ? $design_data_array['elements']
-        : [];
-    $safe_cost = static function ($value) {
-        return is_numeric($value) && is_finite((float) $value) ? (float) $value : 0.0;
-    };
-    $product_cost = 0;
-
-    for ($i = 0; count($elements) > $i; $i++) {
-        $dimenstion_cost = $safe_cost($elements[$i]['cost'] ?? 0);
-        $face_cost = $safe_cost($elements[$i]['colorCost'] ?? 0);
-        $product_cost = ($dimenstion_cost + $face_cost) + $product_cost;
-    }
-
     $design_data_array['design_url'] = $design_url;
     $design_data_array['design_id'] = $design_id;
 
-    $extras_cost = 0;
-
-    if (!empty($extras['powerSupply']['qty'])) {
-        $extras_cost += $safe_cost($extras['powerSupply']['cost'] ?? 0);
-    }
-    $extra_lit_percent = !empty($extras['lit']['qty'])
-        ? $safe_cost($extras['lit']['cost'] ?? 0)
-        : 0;
-    $extras_cost += ($product_cost * $extra_lit_percent) / 100;
-    if (!empty($extras['cable']['qty'])) {
-        $extras_cost += $safe_cost($extras['cable']['cost'] ?? 0);
-    }
-
-    $product_cost += $extras_cost;
+    $product_cost = wholesale_cl_design_total($design_data_array);
 
     $design_data_array['total_cost'] = $product_cost;
     $design_data_array['product_id'] = $product_id;

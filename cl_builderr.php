@@ -36,6 +36,7 @@ if (!$product_id && !empty($channel_letter_products->posts)) {
     $product_id = (int) $channel_letter_products->posts[0]->ID;
 }
 
+$ticket_builder = null;
 if ($product_id > 0) {
     $product_title = get_the_title($product_id);
     $product_cl_data = get_post_meta($product_id, 'product_cl_data', true);
@@ -65,15 +66,22 @@ if ($product_id > 0) {
     ));
 
 
-    if (isset($_REQUEST['edit_design'])) {
-        if (!isset($_SESSION['design_data_' . $product_id])) {
-            wp_redirect(get_permalink($product_id));
+    // Admin designing for a payment ticket line (wp-admin → Payment Tickets).
+    $ticket_builder = function_exists('wholesale_ticket_builder_context') ? wholesale_ticket_builder_context($product_id) : null;
+
+    if ($ticket_builder) {
+        $edit_product_data = $ticket_builder['design_data'];
+    } else {
+        if (isset($_REQUEST['edit_design'])) {
+            if (!isset($_SESSION['design_data_' . $product_id])) {
+                wp_redirect(get_permalink($product_id));
+            }
         }
-    }
-    if (isset($_SESSION['design_data_' . $product_id])) {
-        $product_data = $_SESSION['design_data_' . $product_id];
-        $edit_product_data = stripslashes($_SESSION['design_data_' . $product_id]);
-        $product_data_array = json_decode($edit_product_data, true);
+        if (isset($_SESSION['design_data_' . $product_id])) {
+            $product_data = $_SESSION['design_data_' . $product_id];
+            $edit_product_data = stripslashes($_SESSION['design_data_' . $product_id]);
+            $product_data_array = json_decode($edit_product_data, true);
+        }
     }
 } else {
     wp_redirect(home_url());
@@ -85,7 +93,19 @@ get_header();
 ?>
 
 <input type="hidden" id="faceColorPicker" value="#ffffff">
-<input type="hidden" id="productPermalink" value="<?php echo get_permalink($product_id); ?>">
+<input type="hidden" id="productPermalink" value="<?php echo esc_url($ticket_builder ? $ticket_builder['save_url'] : get_permalink($product_id)); ?>">
+
+<?php if ($ticket_builder) : ?>
+    <div class="wpt-builder-bar" role="status">
+        <span><strong>Payment ticket <?php echo esc_html($ticket_builder['ticket']['number']); ?></strong> · line <?php echo esc_html((string) $ticket_builder['line_number']); ?> · <?php echo esc_html($ticket_builder['ticket']['customer_name'] ?: $ticket_builder['ticket']['title']); ?></span>
+        <span>Design the letters, then click <strong>Save design to ticket</strong>.</span>
+        <a href="<?php echo esc_url($ticket_builder['back_url']); ?>">Back to ticket without saving</a>
+    </div>
+    <style>
+        .wpt-builder-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 10px 16px; background: #14202c; color: #fff; font-size: 14px; }
+        .wpt-builder-bar a { margin-left: auto; color: #8fd6f5; font-weight: 600; }
+    </style>
+<?php endif; ?>
 
 
 <input type="hidden" name="hasTrimcap" value="<?php echo $has_trimcap; ?>" id="hasTrimcap">
@@ -100,7 +120,7 @@ get_header();
 
 <input type="hidden" id="returnSizeInput" value="3" min="0" step="1">
 <input type="hidden" name="product_cl_data" value='<?php echo $product_cl_data; ?>' id="productClData">
-<input type="hidden" name="edit_design_data" value='<?php echo $edit_product_data; ?>' id="editDesignData">
+<input type="hidden" name="edit_design_data" value="<?php echo esc_attr((string) $edit_product_data); ?>" id="editDesignData">
 
 
 <input type="hidden" id="standarPsCost" value="<?php echo $standard_ps_cost ? $standard_ps_cost : 90; ?>">
@@ -450,7 +470,7 @@ get_header();
                 <button data-bs-toggle="modal" data-bs-target="#costModal" id="detailBtn"
                     class="btn bg-transparent btn-secondary text-dark">Details</button>
                 <!-- <button id="helpBtn" class="btn bg-transparent btn-secondary text-dark">Help</button> -->
-                <button class="btn btn-primary" id="saveBtn">Save Design</button>
+                <button class="btn btn-primary" id="saveBtn"><?php echo $ticket_builder ? 'Save design to ticket' : 'Save Design'; ?></button>
             </div>
         </div>
     </div>
@@ -518,6 +538,9 @@ get_header();
                             $change_product_image = get_post_thumbnail_id($change_product_id);
                             $change_product_price = get_post_meta($change_product_id, '_starting_at_text', true);
                             $change_product_url = trailingslashit(get_permalink($change_product_id)) . 'channel-letter-builder/?product_id=' . $change_product_id;
+                            if ($ticket_builder) {
+                                $change_product_url = add_query_arg($ticket_builder['switch_query'], $change_product_url);
+                            }
                             ?>
                             <a class="change-product-card<?php echo $is_current_product ? ' is-current' : ''; ?>"
                                 href="<?php echo esc_url($change_product_url); ?>"

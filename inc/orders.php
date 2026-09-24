@@ -175,3 +175,78 @@ function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
        'message' => 'Payment failed.',
    );
 }
+
+/**
+ * Price of a channel letter builder design, computed on the server from the
+ * saved design state: element sizes and face colors, plus power supply, lit
+ * (a percentage of the letters) and cable extras.
+ */
+function wholesale_cl_design_total($design)
+{
+    $safe_cost = static function ($value) {
+        return is_numeric($value) && is_finite((float) $value) ? (float) $value : 0.0;
+    };
+    $elements = isset($design['elements']) && is_array($design['elements']) ? $design['elements'] : array();
+    $extras = isset($design['extras']) && is_array($design['extras']) ? $design['extras'] : array();
+
+    $product_cost = 0;
+    foreach ($elements as $element) {
+        $product_cost += $safe_cost($element['cost'] ?? 0) + $safe_cost($element['colorCost'] ?? 0);
+    }
+
+    $extras_cost = 0;
+    if (!empty($extras['powerSupply']['qty'])) {
+        $extras_cost += $safe_cost($extras['powerSupply']['cost'] ?? 0);
+    }
+    $extra_lit_percent = !empty($extras['lit']['qty']) ? $safe_cost($extras['lit']['cost'] ?? 0) : 0;
+    $extras_cost += ($product_cost * $extra_lit_percent) / 100;
+    if (!empty($extras['cable']['qty'])) {
+        $extras_cost += $safe_cost($extras['cable']['cost'] ?? 0);
+    }
+
+    return $product_cost + $extras_cost;
+}
+
+/**
+ * Human-readable lines describing a builder design, e.g.
+ * 'Letters "PHO" — 12" H × 30" W, Font: Arial, Face: Red'.
+ *
+ * @return string[]
+ */
+function wholesale_cl_design_summary($design)
+{
+    $types = array('Text' => 'Letters', 'Circle' => 'Oval', 'Star' => 'Starburst', 'RegularPolygon' => 'Triangle', 'Line' => 'Arrow', 'Rect' => 'Rectangle');
+    $elements = isset($design['elements']) && is_array($design['elements']) ? $design['elements'] : array();
+    $extras = isset($design['extras']) && is_array($design['extras']) ? $design['extras'] : array();
+    $lines = array();
+
+    foreach ($elements as $element) {
+        if (!is_array($element)) {
+            continue;
+        }
+        $type = isset($element['type']) ? (string) $element['type'] : '';
+        $label = $types[$type] ?? ($type ?: 'Element');
+        if (isset($element['text']) && '' !== trim((string) $element['text'])) {
+            $label .= ' "' . trim((string) $element['text']) . '"';
+        }
+
+        $parts = array();
+        if (!empty($element['height']) || !empty($element['width'])) {
+            $parts[] = round((float) ($element['height'] ?? 0), 1) . '" H × ' . round((float) ($element['width'] ?? 0), 1) . '" W';
+        }
+        foreach (array('font' => 'Font', 'faceColor' => 'Face', 'returnColor' => 'Return', 'trimcapColor' => 'Trimcap') as $key => $name) {
+            if (!empty($element[$key]['title'])) {
+                $parts[] = $name . ': ' . $element[$key]['title'];
+            }
+        }
+        $lines[] = sanitize_text_field($label . ($parts ? ' — ' . implode(', ', $parts) : ''));
+    }
+
+    foreach (array('powerSupply' => 'Power supply', 'lit' => 'Lighting', 'cable' => 'Cable') as $key => $name) {
+        if (!empty($extras[$key]['qty']) && !empty($extras[$key]['value'])) {
+            $lines[] = sanitize_text_field($name . ': ' . $extras[$key]['value']);
+        }
+    }
+
+    return array_slice($lines, 0, 40);
+}

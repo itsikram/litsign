@@ -2,93 +2,95 @@
 // template name: Account
 
 if (!is_user_logged_in()) {
-    wp_redirect(site_url().'/login');
-
+    wp_safe_redirect(home_url('/login/'));
+    exit;
 }
 
-if (isset($_REQUEST['logout'])) {
+$account_redirect = static function ($type, $message) {
+    wp_safe_redirect(add_query_arg(array('type' => $type, 'message' => rawurlencode($message)), get_permalink()));
+    exit;
+};
+
+if (isset($_GET['logout'])) {
+    check_admin_referer('wholesale_account_logout');
     wp_logout();
+    wp_safe_redirect(home_url('/'));
+    exit;
 }
 
 
 $user_data = get_userdata(get_current_user_id());
-$user_id = $user_data->data->ID;
+$user_id = $user_data->ID;
 
-if (isset($_REQUEST['account_details'])) {
-    $fname = isset($_REQUEST['fName']) ? sanitize_text_field($_REQUEST['fName']) : '';
-    $lname = isset($_REQUEST['fName']) ? sanitize_text_field($_REQUEST['lName']) : '';
-    $email = isset($_REQUEST['email']) ? sanitize_text_field($_REQUEST['email']) : '';
-    $website = isset($_REQUEST['website']) ? sanitize_text_field($_REQUEST['website']) : '';
-    $telephone = isset($_REQUEST['email']) ? sanitize_text_field($_REQUEST['telephone']) : '';
+if ('POST' === $_SERVER['REQUEST_METHOD'] && (isset($_POST['account_details']) || isset($_POST['user_address']) || isset($_POST['change_password']))) {
+    check_admin_referer('wholesale_account_update', 'wholesale_account_nonce');
+}
 
+if (isset($_POST['account_details'])) {
+    $fname = isset($_POST['fName']) ? sanitize_text_field(wp_unslash($_POST['fName'])) : '';
+    $lname = isset($_POST['lName']) ? sanitize_text_field(wp_unslash($_POST['lName'])) : '';
+    $email = isset($_POST['email']) ? sanitize_email(wp_unslash($_POST['email'])) : '';
+    $website = isset($_POST['website']) ? esc_url_raw(wp_unslash($_POST['website'])) : '';
+    $telephone = isset($_POST['telephone']) ? sanitize_text_field(wp_unslash($_POST['telephone'])) : '';
 
-    try {
-        wp_update_user(
-            array(
-                "ID" => $user_id,
-                "first_name" => $fname,
-                "last_name" => $lname,
-                "user_email" => $email,
-                "meta_input" => array(
-                    "telephone" => $telephone,
-                    "website" => $website
-                )
+    if (!is_email($email)) {
+        $account_redirect('danger', 'Please enter a valid email address.');
+    }
+
+    $email_owner = email_exists($email);
+    if ($email_owner && (int) $email_owner !== (int) $user_id) {
+        $account_redirect('danger', 'That email address is already used by another account.');
+    }
+
+    $updated = wp_update_user(
+        array(
+            "ID" => $user_id,
+            "first_name" => $fname,
+            "last_name" => $lname,
+            "user_email" => $email,
+            "meta_input" => array(
+                "telephone" => $telephone,
+                "website" => $website
             )
-        );
+        )
+    );
 
-        wp_redirect(get_permalink() . '?type=success&message=Account Details Updated Successfully');
-    } catch (Exception $e) {
-        throw new Exception($e->getMessage());
+    if (is_wp_error($updated)) {
+        $account_redirect('danger', $updated->get_error_message());
     }
+
+    $account_redirect('success', 'Account Details Updated Successfully');
 }
 
-if (isset($_REQUEST['user_address'])) {
-    $city = $_REQUEST['city'] ? sanitize_text_field($_REQUEST['city']) : '';
-    $state = $_REQUEST['state'] ? sanitize_text_field($_REQUEST['state']) : "";
-    $zip = $_REQUEST['zip'] ? sanitize_text_field($_REQUEST['zip']) : '';
-    $street_one = $_REQUEST['street_one'] ? sanitize_text_field($_REQUEST['street_one']) : '';
-    $street_two = $_REQUEST['street_two'] ? sanitize_text_field($_REQUEST['street_two']) : '';
-
-    try {
-
-        update_user_meta($user_id, 'city', $city);
-        update_user_meta($user_id, 'state', $state);
-        update_user_meta($user_id, 'zip', $zip,);
-        update_user_meta($user_id, 'street_one', $street_one);
-        update_user_meta($user_id, 'street_two', $street_two);
-
-        wp_redirect(get_permalink() . '?type=success&message=Address Updated Successfully');
-    } catch (Exception $e) {
-        throw new Exception($e->getMessage());
+if (isset($_POST['user_address'])) {
+    foreach (array('city', 'state', 'zip', 'street_one', 'street_two') as $address_field) {
+        $address_value = isset($_POST[$address_field]) ? sanitize_text_field(wp_unslash($_POST[$address_field])) : '';
+        update_user_meta($user_id, $address_field, $address_value);
     }
+
+    $account_redirect('success', 'Address Updated Successfully');
 }
 
 
-if (isset($_REQUEST['change_password'])) {
-    $current_passwod = isset($_REQUEST['current_password']) ? sanitize_text_field($_REQUEST['current_password']) : '';
-    $new_password = isset($_REQUEST['new_password']) ? sanitize_text_field($_REQUEST['new_password']) : "";
-    $confirm_password = isset($_REQUEST['confirm_password']) ? sanitize_text_field($_REQUEST['confirm_password']) : "";
+if (isset($_POST['change_password'])) {
+    // Passwords are used verbatim; sanitizing would silently change them.
+    $current_passwod = isset($_POST['current_password']) ? (string) wp_unslash($_POST['current_password']) : '';
+    $new_password = isset($_POST['new_password']) ? (string) wp_unslash($_POST['new_password']) : '';
+    $confirm_password = isset($_POST['confirm_password']) ? (string) wp_unslash($_POST['confirm_password']) : '';
 
-
-    if (wp_check_password($current_passwod, $user_data->data->user_pass, $user_id)) {
-
-        if($new_password === $confirm_password){
-            wp_update_user(array(
-                'ID' => $user_id,
-                'user_pass' => $new_password
-            ));
-    
-            wp_redirect(get_permalink() . '?type=success&message=Passwords updated successfully');
-        }else {
-            wp_redirect(get_permalink() . '?type=danger&message=Your New Password and Confirm Password is not same');
-
-        }
-
-
-    }else {
-        wp_redirect(get_permalink() . '?type=danger&message=Your password is incorrect');
-
+    if (!wp_check_password($current_passwod, $user_data->user_pass, $user_id)) {
+        $account_redirect('danger', 'Your password is incorrect');
     }
+    if ($new_password !== $confirm_password) {
+        $account_redirect('danger', 'Your New Password and Confirm Password is not same');
+    }
+    if (strlen($new_password) < 8) {
+        $account_redirect('danger', 'Your new password must be at least 8 characters.');
+    }
+
+    wp_set_password($new_password, $user_id);
+    wp_set_auth_cookie($user_id, true);
+    $account_redirect('success', 'Passwords updated successfully');
 }
 
 // define variable for user data
@@ -145,7 +147,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                 <button class="nav-link active text-start" data-bs-toggle="pill" data-bs-target="#v-pills-account" type="button" role="tab" aria-controls="v-pills-account" aria-selected="true">Account Details</button>
                                 <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#v-pills-address" type="button" role="tab" aria-controls="v-pills-address" aria-selected="false">Address</button>
                                 <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#v-pills-password" type="button" role="tab" aria-controls="v-pills-password" aria-selected="false">Password</button>
-                                <a href="<?php echo esc_url(get_permalink() . '?logout=true'); ?>" class="nav-link text-start account-logout" id="v-pills-settings-tab" role="tab" aria-selected="false">Logout</a>
+                                <a href="<?php echo esc_url(wp_nonce_url(add_query_arg('logout', 'true', get_permalink()), 'wholesale_account_logout')); ?>" class="nav-link text-start account-logout" id="v-pills-settings-tab" role="tab" aria-selected="false">Logout</a>
                             </div>
                         </div>
                         <div class="col-md-9">
@@ -155,21 +157,22 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                     <div class="card card-body">
                                         <h3>Account Details</h3>
                                         <form method="POST">
-                                            <input type="hidden" name="account_details">
+                                            <input type="hidden" name="account_details" value="1">
+                                            <?php wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce'); ?>
 
                                             <div class="row mb-2">
                                                 <div class="col-md-6">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">First
                                                             name</label>
-                                                        <input type="text" value="<?php echo $user_first_name; ?>" placeholder="First name" name="fName" class="form-control">
+                                                        <input type="text" value="<?php echo esc_attr($user_first_name); ?>" placeholder="First name" name="fName" class="form-control">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">Last
                                                             name</label>
-                                                        <input type="text" value="<?php echo $user_last_name; ?>" placeholder="Last name" name="lName" class="form-control">
+                                                        <input type="text" value="<?php echo esc_attr($user_last_name); ?>" placeholder="Last name" name="lName" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -183,7 +186,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                                                     @
                                                                 </div>
                                                             </div>
-                                                            <input disabled type="text" value="<?php echo $user_data->data->user_login; ?>" class="form-control">
+                                                            <input disabled type="text" value="<?php echo esc_attr($user_data->data->user_login); ?>" class="form-control">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -193,7 +196,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                                 <div class="col">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">Email</label>
-                                                        <input type="text" value="<?php echo $user_data->data->user_email; ?>" placeholder="Email" name="email" class="form-control">
+                                                        <input type="text" value="<?php echo esc_attr($user_data->data->user_email); ?>" placeholder="Email" name="email" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -208,7 +211,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                                                     +1
                                                                 </div>
                                                             </div>
-                                                            <input type="tel" name="telephone" value="<?php echo $suer_telephone; ?>" class="telephone form-control">
+                                                            <input type="tel" name="telephone" value="<?php echo esc_attr($suer_telephone); ?>" class="telephone form-control">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -218,7 +221,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                                 <div class="col">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">Website</label>
-                                                        <input type="text" value="<?php echo $user_website ?>" placeholder="https://your-website.com" name="website" class="form-control">
+                                                        <input type="text" value="<?php echo esc_attr($user_website); ?>" placeholder="https://your-website.com" name="website" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -237,24 +240,25 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                     <div class="card card-body">
                                         <h3>Address</h3>
                                         <form method="POST">
-                                            <input type="hidden" name="user_address">
+                                            <input type="hidden" name="user_address" value="1">
+                                            <?php wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce'); ?>
                                             <div class="row mb-2">
                                                 <div class="col-md-4">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">City</label>
-                                                        <input type="text" value="<?php echo $user_city; ?>" placeholder="New York" name="city" class="form-control">
+                                                        <input type="text" value="<?php echo esc_attr($user_city); ?>" placeholder="New York" name="city" class="form-control">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-4">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">State</label>
-                                                        <input type="text" value="<?php echo $user_state; ?>" placeholder="" name="state" class="form-control">
+                                                        <input type="text" value="<?php echo esc_attr($user_state); ?>" placeholder="" name="state" class="form-control">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-4">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">Zip Code</label>
-                                                        <input type="text" value="<?php echo $user_zip; ?>" placeholder="" name="zip" class="form-control">
+                                                        <input type="text" value="<?php echo esc_attr($user_zip); ?>" placeholder="" name="zip" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -264,7 +268,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                                 <div class="col">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">Street 1</label>
-                                                        <input type="text" value="<?php echo $user_street_one; ?>" name="street_one" class="form-control">
+                                                        <input type="text" value="<?php echo esc_attr($user_street_one); ?>" name="street_one" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -273,7 +277,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                                 <div class="col">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">Street 2</label>
-                                                        <input type="text" value="<?php echo $user_street_two; ?>" name="street_two" class="form-control">
+                                                        <input type="text" value="<?php echo esc_attr($user_street_two); ?>" name="street_two" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -282,7 +286,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                                 <div class="col">
                                                     <div class="form-group">
                                                         <label for="input-fName" class="form-label mb-0">country</label>
-                                                        <input type="text" disabled value="<?php echo $user_country; ?>" name="country" class="form-control">
+                                                        <input type="text" disabled value="<?php echo esc_attr($user_country); ?>" name="country" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -298,7 +302,8 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                     <div class="card card-body">
                                         <h3>Change Password</h3>
                                         <form method="POST">
-                                            <input type="hidden" name="change_password">
+                                            <input type="hidden" name="change_password" value="1">
+                                            <?php wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce'); ?>
                                             <div class="row mb-2">
                                                 <div class="form-group">
                                                     <label for="input-fName" class="form-label mb-0">Current Password</label>

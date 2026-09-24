@@ -116,6 +116,9 @@ get_header();
                                             <strong><?php echo $label; ?>: </strong><?php echo $display_value; ?> <br>
                                     <?php }
                                     ?>
+                                    <?php if (!empty($product['job_name'])) : ?>
+                                        <strong>Job Name: </strong><?php echo esc_html($product['job_name']); ?> <br>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="cart-item-quantity-container d-flex justify-content-end py-2 border-bottom">

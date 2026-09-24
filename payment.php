@@ -92,6 +92,11 @@ if ('on' === $same_shipping_address) {
    $shipping_country = isset($_REQUEST['shipping_country']) ? sanitize_text_field(wp_unslash($_REQUEST['shipping_country'])) : '';
    $shipping_tel = isset($_REQUEST['shipping_tel']) ? sanitize_text_field(wp_unslash($_REQUEST['shipping_tel'])) : '';
 
+   if ('' === $shipping_fname || '' === $shipping_lname || '' === $shipping_address || '' === $shipping_city || '' === $shipping_state || '' === $shipping_zip) {
+       wp_safe_redirect(home_url('/checkout/?type=danger&message=' . rawurlencode('Please provide a complete shipping address.')));
+       exit;
+   }
+
    $shipping_data = wp_json_encode(array(
        'shipping_fname' => $shipping_fname,
        'shipping_lname' => $shipping_lname,
@@ -158,13 +163,34 @@ $order_cost = wp_json_encode(array(
 ));
 
 $card_type = isset($_REQUEST['card_type']) ? sanitize_text_field(wp_unslash($_REQUEST['card_type'])) : '';
-$card_number = isset($_REQUEST['card_number']) ? sanitize_text_field(wp_unslash($_REQUEST['card_number'])) : '';
-$card_cvv = isset($_REQUEST['card_cvv']) ? sanitize_text_field(wp_unslash($_REQUEST['card_cvv'])) : '';
-$card_exp_month = isset($_REQUEST['card_exp_month']) ? sanitize_text_field(wp_unslash($_REQUEST['card_exp_month'])) : '';
-$card_exp_year = isset($_REQUEST['card_exp_year']) ? sanitize_text_field(wp_unslash($_REQUEST['card_exp_year'])) : '';
+$card_number = isset($_POST['card_number']) ? preg_replace('/\D+/', '', (string) wp_unslash($_POST['card_number'])) : '';
+$card_cvv = isset($_POST['card_cvv']) ? preg_replace('/\D+/', '', (string) wp_unslash($_POST['card_cvv'])) : '';
+$card_exp_month = isset($_POST['card_exp_month']) ? preg_replace('/\D+/', '', (string) wp_unslash($_POST['card_exp_month'])) : '';
+$card_exp_year = isset($_POST['card_exp_year']) ? preg_replace('/\D+/', '', (string) wp_unslash($_POST['card_exp_year'])) : '';
 
 $order_comment = isset($_REQUEST['comment']) ? sanitize_textarea_field(wp_unslash($_REQUEST['comment'])) : '';
 $estimate_delivery_time = isset($_REQUEST['estimate_delivery_time']) ? sanitize_text_field(wp_unslash($_REQUEST['estimate_delivery_time'])) : '';
+
+$checkout_error_url = static function ($message) {
+    return home_url('/checkout/?type=danger&message=' . rawurlencode($message));
+};
+
+if (!wholesale_setting_enabled('payment_disabled')) {
+    $exp_month_number = (int) $card_exp_month;
+    $exp_year_number = 2000 + (int) $card_exp_year;
+    $card_is_expired = $exp_year_number < (int) gmdate('Y')
+        || ($exp_year_number === (int) gmdate('Y') && $exp_month_number < (int) gmdate('n'));
+
+    if (
+        strlen($card_number) < 12 || strlen($card_number) > 19
+        || strlen($card_cvv) < 3 || strlen($card_cvv) > 4
+        || 2 !== strlen($card_exp_month) || $exp_month_number < 1 || $exp_month_number > 12
+        || 2 !== strlen($card_exp_year) || $card_is_expired
+    ) {
+        wp_safe_redirect($checkout_error_url('Please check your card number, CVV and expiration date.'));
+        exit;
+    }
+}
 
 
 
@@ -380,12 +406,23 @@ if (wholesale_setting_enabled('payment_disabled')) {
     exit;
 }
 
-$result = processPayment($grand_total, $card_number, $card_exp_month . $card_exp_year, $card_cvv, $address, $billing_zip);
+$result = processPayment(number_format($grand_total, 2, '.', ''), $card_number, $card_exp_month . $card_exp_year, $card_cvv, $address, $billing_zip);
 
 if ($result['status'] == 'success') {
     $new_order = place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart);
     if (!$new_order) {
-        wp_die(esc_html__('We could not create your order. Please try again.', 'litsign'), esc_html__('Order failed', 'litsign'), array('response' => 500));
+        // The card was charged, so never ask the customer to "try again" here.
+        error_log(sprintf('Wholesale: payment of $%s approved for %s but the order could not be saved. Cart: %s', number_format($grand_total, 2, '.', ''), $billing_email, $product_data));
+        wp_mail(
+            wholesale_contact_admin_recipients(),
+            'URGENT: payment approved but order was not saved',
+            sprintf("A card payment of $%s was approved for %s %s (%s), but the order could not be saved.
+
+Billing: %s
+Shipping: %s
+Items: %s", number_format($grand_total, 2, '.', ''), $billing_fname, $billing_lname, $billing_email, $billing_data, $shipping_data, $product_data)
+        );
+        wp_die(esc_html__('Your payment was received, but we could not finish saving your order. Please do not pay again - our team has been notified and will contact you shortly.', 'litsign'), esc_html__('Order needs attention', 'litsign'), array('response' => 500));
     }
 
     if ($create_account) {
@@ -399,6 +436,6 @@ if ($result['status'] == 'success') {
     wp_safe_redirect(home_url('/thank-you/'));
     exit;
 } else {
-    wp_redirect(home_url() . '/?type=danger&message=' . rawurlencode($result['message']));
+    wp_safe_redirect($checkout_error_url($result['message']));
     exit;
 }

@@ -916,48 +916,16 @@
     $('.shipping-radio[name="shipping_method"]').change(function () {
     let newShippingCost = parseFloat($(this).val());
     let checkoutSubTotal = parseFloat($('#subTotal').val()) || 0;
-    let productTurnaround = parseInt($('#productTurnaround').val());
-    let productCategory = $('#productCategory').val();
+    let productTurnaround = parseInt($('#productTurnaround').val()) || 0;
 
-    if (productCategory != 'adhesive-products') {
-      switch (newShippingCost) {
-        case 50:
-          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 5)}`);
-          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 5));
-          break;
-        case 200:
-          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 3)}`);
-          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 3));
-          break;
-        case 250:
-          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 2)}`);
-          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 2));
-          break;
-        case 300:
-          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround)}`);
-          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround));
-          break;
-      }
-    } else {
-      switch (newShippingCost) {
-        case 12.5:
-          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 5)}`);
-          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 5));
-          break;
-        case 50:
-          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 3)}`);
-          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 3));
-          break;
-        case 62.5:
-          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround + 2)}`);
-          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround + 2));
-          break;
-        case 75:
-          $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${formatDateWithAddedDays(productTurnaround)}`);
-          $('#estimateDeliveryTime').val(formatDateWithAddedDays(productTurnaround));
-          break;
-      }
-    }
+    // Options are listed standard -> overnight, so the delivery offset follows the option position
+    // rather than hard-coded prices (which admins can change in settings).
+    let shippingDayOffsets = [5, 3, 2, 0];
+    let shippingIndex = $('.shipping-radio[name="shipping_method"]').index(this);
+    let dayOffset = shippingDayOffsets[Math.min(Math.max(shippingIndex, 0), shippingDayOffsets.length - 1)];
+    let deliveryDate = formatDateWithAddedDays(productTurnaround + dayOffset);
+    $('#estimateDeliveryText').text(`Order in the next 12 hrs and your order will ship by ${deliveryDate}`);
+    $('#estimateDeliveryTime').val(deliveryDate);
 
     let totalTax = parseFloat($('#totalTax').val()) || 0;
     let grandTotal = parseFloat(checkoutSubTotal + newShippingCost + totalTax);

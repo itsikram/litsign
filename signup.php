@@ -3,50 +3,67 @@
 
 
 if (is_user_logged_in()) {
-    wp_redirect(site_url());
+    wp_safe_redirect(home_url('/'));
+    exit;
 }
 
-if (isset($_REQUEST['email'])) {
+$signup_error = static function ($message) {
+    wp_safe_redirect(add_query_arg(array('type' => 'danger', 'message' => rawurlencode($message)), get_permalink()));
+    exit;
+};
 
+if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['email'])) {
+    check_admin_referer('wholesale_signup', 'wholesale_signup_nonce');
 
-    $email = isset($_REQUEST['email']) ? $_REQUEST['email'] : '';
-    $username = isset($_REQUEST['username']) ? $_REQUEST['username'] : '';
-    $password = isset($_REQUEST['password']) ? $_REQUEST['password'] : '';
-    $fname = isset($_REQUEST['fname']) ? $_REQUEST['fname'] : '';
-    $lname = isset($_REQUEST['lname']) ? $_REQUEST['lname'] : '';
-    $website = isset($_REQUEST['website']) ? $_REQUEST['website'] : '';
-    $telephone = isset($_REQUEST['telephone']) ? $_REQUEST['telephone'] : '';
+    $email = sanitize_email(wp_unslash($_POST['email']));
+    $username = isset($_POST['username']) ? sanitize_user(wp_unslash($_POST['username']), true) : '';
+    $password = isset($_POST['password']) ? (string) wp_unslash($_POST['password']) : '';
+    $confirm_password = isset($_POST['confirm_password']) ? (string) wp_unslash($_POST['confirm_password']) : '';
+    $fname = isset($_POST['fname']) ? sanitize_text_field(wp_unslash($_POST['fname'])) : '';
+    $lname = isset($_POST['lname']) ? sanitize_text_field(wp_unslash($_POST['lname'])) : '';
+    $website = isset($_POST['website']) ? esc_url_raw(wp_unslash($_POST['website'])) : '';
+    $telephone = isset($_POST['telephone']) ? sanitize_text_field(wp_unslash($_POST['telephone'])) : '';
 
+    if (!is_email($email)) {
+        $signup_error('Please enter a valid email address.');
+    }
+    if ('' === $username) {
+        $signup_error('Please choose a username using letters, numbers, spaces, or . - _ @');
+    }
     if (email_exists($email)) {
-        return wp_redirect(get_permalink() . '?type=danger&message=Email Already Exist');
+        $signup_error('Email Already Exist');
     }
     if (username_exists($username)) {
-        return wp_redirect(get_permalink() . '?type=danger&message=Username Already Exist');
+        $signup_error('Username Already Exist');
+    }
+    if (strlen($password) < 8) {
+        $signup_error('Your password must be at least 8 characters.');
+    }
+    if ($password !== $confirm_password) {
+        $signup_error('Your Password and Confirm Password do not match.');
     }
 
-
-    try {
-
-        wp_insert_user(
-            array(
-                'user_login' => $username,
-                'user_email' => $email,
-                'user_pass' => $password,
-                'first_name' => $fname,
-                'last_name' => $lname,
-                'meta_input' => array(
-                    // 'first_name' => $fname,
-                    // 'last_name ' => $lname,
-                    'website' => $website,
-                    'telephone' => $telephone
-                )
+    $new_user_id = wp_insert_user(
+        array(
+            'user_login' => $username,
+            'user_email' => $email,
+            'user_pass' => $password,
+            'first_name' => $fname,
+            'last_name' => $lname,
+            'role' => 'subscriber',
+            'meta_input' => array(
+                'website' => $website,
+                'telephone' => $telephone
             )
-        );
+        )
+    );
 
-        wp_redirect(site_url() . '/login?type=success&message=Account Created Successfully');
-    } catch (Exception $e) {
-        print_r($e->getMessage());
+    if (is_wp_error($new_user_id)) {
+        $signup_error($new_user_id->get_error_message());
     }
+
+    wp_safe_redirect(home_url('/login/?type=success&message=' . rawurlencode('Account Created Successfully')));
+    exit;
 }
 
 
@@ -67,9 +84,10 @@ get_header();
                 </div>
                 <div class="card-body">
                     <form method="POST">
+                        <?php wp_nonce_field('wholesale_signup', 'wholesale_signup_nonce'); ?>
                         <div class="form-group mb-2">
                             <label class="form-label">Email</label>
-                            <input type="text" required name="email" placeholder="Enter your Email" class="form-control">
+                            <input type="email" required name="email" placeholder="Enter your Email" class="form-control">
                         </div>
                         <div class="form-group mb-2">
                             <label class="form-label">Username</label>

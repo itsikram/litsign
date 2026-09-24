@@ -2,34 +2,48 @@
 // template name: login
 
 
+// Only ever send people back to a page on this site.
+$redirect_url = isset($_REQUEST['redirect_ulr']) ? wp_validate_redirect(esc_url_raw(wp_unslash($_REQUEST['redirect_ulr'])), home_url('/')) : home_url('/');
+
 if (is_user_logged_in()) {
-    wp_redirect(site_url());
+    wp_safe_redirect($redirect_url);
+    exit;
 }
 
-if (isset($_REQUEST['email'])) {
-    $email = $_REQUEST['email'];
-    $pass = isset($_REQUEST['password']) ? $_REQUEST['password'] : '';
-    $redirect_url = isset($_REQUEST['redirect_ulr']) ? $_REQUEST['redirect_ulr'] : home_url();
+if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['email'])) {
+    check_admin_referer('wholesale_login', 'wholesale_login_nonce');
 
+    $login = sanitize_text_field(wp_unslash($_POST['email']));
+    $pass = isset($_POST['password']) ? (string) wp_unslash($_POST['password']) : '';
 
-    $is_login = wp_signon(
+    // wp_signon() only accepts usernames on older WordPress; resolve an email to its username.
+    if (is_email($login)) {
+        $login_user = get_user_by('email', $login);
+        if ($login_user) {
+            $login = $login_user->user_login;
+        }
+    }
+
+    $signed_in_user = wp_signon(
         array(
-            'user_login' => $email,
+            'user_login' => $login,
             'user_password' => $pass,
             'remember' => true,
-        )
+        ),
+        is_ssl()
     );
 
-
-
-    if(is_user_logged_in()) {
-        
-        wp_redirect($redirect_url);
-
-    }else {
-        wp_redirect(get_permalink() . '?type=danger&message="Invalid Credential"&redirect_ulr='.$redirect_url);
-
+    if (!is_wp_error($signed_in_user)) {
+        wp_safe_redirect($redirect_url);
+        exit;
     }
+
+    wp_safe_redirect(add_query_arg(array(
+        'type' => 'danger',
+        'message' => rawurlencode('Invalid email/username or password.'),
+        'redirect_ulr' => rawurlencode($redirect_url),
+    ), get_permalink()));
+    exit;
 }
 get_header();
 
@@ -45,6 +59,8 @@ get_header();
                 </div>
                 <div class="card-body">
                     <form method="POST">
+                        <?php wp_nonce_field('wholesale_login', 'wholesale_login_nonce'); ?>
+                        <input type="hidden" name="redirect_ulr" value="<?php echo esc_attr($redirect_url); ?>">
                         <div class="form-group mb-2">
                             <label for="" class="form-label">Email</label>
                             <input type="text" required name="email" placeholder="Enter your email or username"

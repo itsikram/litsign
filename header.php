@@ -503,15 +503,18 @@ $logo_id = get_theme_mod('custom_logo');
 		</header>
 
 		<?php if (isset($_GET['type'])) {
-			$type = $_GET['type'];
+			$type = sanitize_key(wp_unslash($_GET['type']));
+			if (!in_array($type, array('success', 'danger', 'warning', 'info'), true)) {
+				$type = 'info';
+			}
 
-			$message = isset($_GET['message']) ? $_GET['message'] : '';
+			$message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
 		?>
 			<div class="container mt-3 site-alert-container">
 				<div class="row">
 					<div class="col-md-6 offset-md-3 col-12 text-center">
-						<div class="alert alert-<?php echo $type; ?>">
-							<?php echo $message; ?>
+						<div class="alert alert-<?php echo esc_attr($type); ?>">
+							<?php echo esc_html($message); ?>
 						</div>
 					</div>
 				</div>

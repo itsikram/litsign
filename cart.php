@@ -24,20 +24,19 @@ function formate_price($price)
 }
 
 if(isset($_REQUEST['remove_cart'])){
-    $cart_id = $_REQUEST['remove_cart'];
+    $cart_id = sanitize_text_field(wp_unslash($_REQUEST['remove_cart']));
     $cart -> remove_item($cart_id);
-    wp_redirect(get_permalink());
+    wp_safe_redirect(get_permalink());
+    exit;
 }
 
 if(isset($_REQUEST['update_quantity'])){
-    $quantity = $_REQUEST['update_quantity'];
-    $cart_id = $_REQUEST['cart_id'];
+    $quantity = absint($_REQUEST['update_quantity']);
+    $cart_id = isset($_REQUEST['cart_id']) ? sanitize_text_field(wp_unslash($_REQUEST['cart_id'])) : '';
     $cart ->update_quantity($cart_id, $quantity);
-    wp_redirect(get_permalink());
+    wp_safe_redirect(get_permalink());
+    exit;
 }
-
-
-
 
 if(isset($_REQUEST['product_id'])){
     $cart -> add_item();
@@ -48,31 +47,19 @@ $cart_subtotal = 0;
 
 $product_category = 'adhesive-products';
 $turnaround = 1;
-$shipping_cost = array(12.5, 50, 62.5, 75);
+$shipping_cost = array_map('floatval', explode(',', wholesale_get_setting('standard_shipping_options')));
 
 
 if ($cart->have_items) {
     foreach ($cart->get_items() as $item) {
-        $product_turnaround = get_post_meta($item->product_id, '_product_turnaround', true);
-
-        if (intval($product_turnaround) > $turnaround) {
-            $turnaround = $product_turnaround;
+        if (has_term('channel-letters', 'product_category', $item->product_id)) {
+            $product_category = 'channel-letters';
         }
-
-        $get_category = get_the_terms($item->product_id, 'product_category');
-        $category_slug = $get_category[0]->slug;
-
-        if ($category_slug == 'channel-letters') {
-            $product_category = $category_slug;
-        }
-
-?>
-<?php
     }
 }
 
 if ($product_category == 'channel-letters') {
-    $shipping_cost = array(50, 200, 250, 300);
+    $shipping_cost = array_map('floatval', explode(',', wholesale_get_setting('channel_shipping_options')));
 }
 
 
@@ -112,6 +99,9 @@ get_header();
                 if ($product_cl_data) {
                     $product_cl_data_array = json_decode(stripslashes($product_cl_data), true);
                 }
+                if (!is_array($product_cl_data_array) || empty($product_cl_data_array['elements']) || !is_array($product_cl_data_array['elements'])) {
+                    $product_cl_data = '';
+                }
                 $is_channel_letter_product = has_term('channel-letters', 'product_category', $cart_item->product_id);
                 $edit_design_url = $is_channel_letter_product && $product_design_id
                     ? trailingslashit(get_permalink($cart_item->product_id)) . 'channel-letter-builder/?' . http_build_query(array(
@@ -123,16 +113,16 @@ get_header();
                 <div class="cart-item border p-2">
                     <div class="row">
                         <div class="col-md-3 cart-image">
-                            <img class="cart-item-image w-100" src="<?php echo $cart_item->product_thumbnail; ?>" alt="">
+                            <img class="cart-item-image w-100" src="<?php echo esc_url($cart_item->product_thumbnail); ?>" alt="<?php echo esc_attr($cart_item->product_title); ?>">
                         </div>
                         <div class="col-md-9 ">
                             <div class="cart-title-container d-flex justify-content-between align-self-start border-bottom">
-                                <h4 class="fs-4 align-self-center"><?php echo $cart_item->product_title; ?></h4>
+                                <h4 class="fs-4 align-self-center"><?php echo esc_html($cart_item->product_title); ?></h4>
                                 <div class="cart-item-actions align-self-center">
                                     <?php if ($edit_design_url) : ?>
                                         <a href="<?php echo esc_url($edit_design_url); ?>" class="btn btn-link text-primary">Edit Design</a>
                                     <?php endif; ?>
-                                    <a href="<?php echo get_permalink().'?remove_cart='.$cart_item -> cart_id; ?>" class="btn btn-link text-danger">Remove</a>
+                                    <a href="<?php echo esc_url(add_query_arg('remove_cart', $cart_item->cart_id, get_permalink())); ?>" class="btn btn-link text-danger">Remove</a>
 
                                 </div>
                             </div>
@@ -140,7 +130,7 @@ get_header();
                                 <span class="text-primary cart-details-toggler cursor-pinter">+ Details</span>
                                 <div class="cart-item-price">
                                     <span class="d-inline-block fw-bold" style="margin-right: 90px">Item Price</span>
-                                    <span>$<?php echo  number_format($cart_item->product_subtotal / $cart_item->product_quantity,2,'.',','); ?></span>
+                                    <span>$<?php echo  number_format($cart_item->product_subtotal / max(1, (int) $cart_item->product_quantity),2,'.',','); ?></span>
                                 </div>
                             </div>
                             <div class="cart-details-container border-bottom py-2">
@@ -159,7 +149,7 @@ get_header();
                                       <?php } ?>
                                       <?php  if($cart_item -> job_name) {
                                             ?>
-                                            <strong><?php echo 'Job Name' ?>: </strong><?php echo $cart_item -> job_name? $cart_item -> job_name: ''; ?> <br>
+                                            <strong><?php echo 'Job Name' ?>: </strong><?php echo esc_html($cart_item->job_name); ?> <br>
                                             <?php
                                         }?>
                                 </div>
@@ -169,8 +159,8 @@ get_header();
                                     <label class="d-inline-block fw-bold" style="margin-right: 20px">Quantity</label>
                                     <div class="quantiy-input-container">
                                         <form action="">
-                                        <input type="hidden" name="cart_id" value="<?php echo $cart_item -> cart_id; ?>">
-                                        <input type="number" value="<?php echo $cart_item->product_quantity; ?>" name="update_quantity" style="width: 50px" id="">
+                                        <input type="hidden" name="cart_id" value="<?php echo esc_attr($cart_item->cart_id); ?>">
+                                        <input type="number" min="1" step="1" required value="<?php echo esc_attr(max(1, (int) $cart_item->product_quantity)); ?>" name="update_quantity" style="width: 60px">
                                         <input type="submit" value="Update">
                                         </form>
 
@@ -267,16 +257,16 @@ get_header();
                                             <tr>
 
                                                 <td><?php echo $key + 1; ?></td>
-                                                <td><?php echo $element_type; ?></td>
-                                                <td><?php echo $item_dimenstion; ?></td>
-                                                <td><?php echo $cl_text; ?></td>
-                                                <td><?php echo $item_font; ?></td>
-                                                <td><?php echo $item_face_color; ?></td>
-                                                <td><?php echo $item_return_color; ?></td>
-                                                <td><?php echo $item_trimcap_color; ?></td>
-                                                <td><?php echo $item_return_size; ?></td>
-                                                <td><?php echo $item_trimcap_size; ?></td>
-                                                <td><?php echo $item_radius; ?></td>
+                                                <td><?php echo esc_html($element_type); ?></td>
+                                                <td><?php echo esc_html($item_dimenstion); ?></td>
+                                                <td><?php echo esc_html((string) $cl_text); ?></td>
+                                                <td><?php echo esc_html((string) $item_font); ?></td>
+                                                <td><?php echo esc_html((string) $item_face_color); ?></td>
+                                                <td><?php echo esc_html((string) $item_return_color); ?></td>
+                                                <td><?php echo esc_html((string) $item_trimcap_color); ?></td>
+                                                <td><?php echo esc_html((string) $item_return_size); ?></td>
+                                                <td><?php echo esc_html((string) $item_trimcap_size); ?></td>
+                                                <td><?php echo esc_html((string) $item_radius); ?></td>
                                                 <td><?php echo formate_price($item_cost); ?></td>
                                                 <td><?php echo formate_price($item_face_cost); ?></td>
                                                 <td><?php echo formate_price($item_total_cost); ?></td>
@@ -284,16 +274,16 @@ get_header();
                                             </tr>
 
                                         <?php }
-                                        $power_supply = $product_cl_data_array['extras']['powerSupply'];
-                                        $cable = $product_cl_data_array['extras']['cable'];
-                                        $lit = $product_cl_data_array['extras']['lit'];
+                                        $power_supply = $product_cl_data_array['extras']['powerSupply'] ?? array();
+                                        $cable = $product_cl_data_array['extras']['cable'] ?? array();
+                                        $lit = $product_cl_data_array['extras']['lit'] ?? array();
                                         $total_extras_cost = 0;
 
                                         if (!empty($power_supply['qty'])) {
                                             $total_extras_cost += floatval($power_supply['cost'] ?? 0);
                                         ?>
                                             <tr>
-                                                <td colspan="13">Power Supply: <span class="fw-bold"><?php echo $power_supply['value']; ?></span></td>
+                                                <td colspan="13">Power Supply: <span class="fw-bold"><?php echo esc_html($power_supply['value']); ?></span></td>
                                                 <td>$<?php echo floatval($power_supply['cost'] ?? 0) > 0 ? formate_price($power_supply['cost']) : "0"; ?></td>
                                             </tr>
                                         <?php
@@ -304,8 +294,8 @@ get_header();
 
                                         ?>
                                             <tr>
-                                                <td colspan="13">Cable: <span class="fw-bold"><?php echo $cable['value']; ?></span></td>
-                                                <td>$<?php echo $cable['cost'] > 0 ?  formate_price( $cable['cost']) : "0"; ?></td>
+                                                <td colspan="13">Cable: <span class="fw-bold"><?php echo esc_html($cable['value']); ?></span></td>
+                                                <td>$<?php echo floatval($cable['cost'] ?? 0) > 0 ?  formate_price( $cable['cost']) : "0"; ?></td>
                                             </tr>
                                         <?php
 
@@ -316,8 +306,8 @@ get_header();
 
                                         ?>
                                             <tr>
-                                                <td colspan="13">Lit: <span class="fw-bold"><?php echo $lit['value']; ?></span></td>
-                                                <td>$<?php echo $lit_cost > 0 ? formate_price( $lit_cost) : 0; ?> (<?php echo $lit['cost']; ?>%)</td>
+                                                <td colspan="13">Lit: <span class="fw-bold"><?php echo esc_html($lit['value']); ?></span></td>
+                                                <td>$<?php echo $lit_cost > 0 ? formate_price( $lit_cost) : 0; ?> (<?php echo esc_html(floatval($lit['cost'] ?? 0)); ?>%)</td>
                                             </tr>
                                         <?php
 
@@ -351,7 +341,7 @@ get_header();
                 <span> $<?php echo  number_format($cart->sub_total,2,'.',','); ?> </span>
             </div>
             <div class="shipping-container border-top d-flex justify-content-between p-2">
-                <span class="fw-bold"> Shipping (Standard)</span> <span class="fw-normal">$<?php echo $shipping_cost[0]; ?> </span>
+                <span class="fw-bold"> Shipping (Standard)</span> <span class="fw-normal">$<?php echo number_format($shipping_cost[0], 2, '.', ','); ?> </span>
             </div>
             <div class="grand-total-container border-top d-flex justify-content-between p-2">
                 <span class="fw-bold"> Grand Total</span>

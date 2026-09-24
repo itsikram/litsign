@@ -1,5 +1,6 @@
 <?php
 
+require_once get_template_directory() . '/utils/Cart.php';
 
 function format_price($price)
 {
@@ -79,17 +80,22 @@ $design_data_array = [];
 $design_data_str = '';
 $design_id  = null;
 
-if (isset($_REQUEST['save_design']) && $_REQUEST['design_id'] && $_REQUEST['design_data']) {
+if (
+    isset($_REQUEST['save_design'], $_REQUEST['design_id'], $_REQUEST['design_data'])
+    && Cart::is_session_design($_REQUEST['design_id'])
+) {
+    $design_id = absint($_REQUEST['design_id']);
 
-    if (isset($_SESSION['design_data_' . $product_id])) {
-        $old_design_data = stripslashes($_SESSION['design_data_' . $product_id]);
-        $old_design_data_array = json_decode($old_design_data, true);
-        $old_design_id = $old_design_data_array['design_id'];
-        wp_delete_attachment($old_design_id, true);
+    if (!empty($_SESSION['design_data_' . $product_id])) {
+        $old_design_data_array = json_decode(stripslashes($_SESSION['design_data_' . $product_id]), true);
+        $old_design_id = is_array($old_design_data_array) && isset($old_design_data_array['design_id']) ? absint($old_design_data_array['design_id']) : 0;
+        // Only ever delete a design image this visitor uploaded, and never the one being saved.
+        if ($old_design_id && $old_design_id !== $design_id && Cart::is_session_design($old_design_id)) {
+            wp_delete_attachment($old_design_id, true);
+        }
         $_SESSION['design_data_' . $product_id] = '';
     }
 
-    $design_id = $_REQUEST['design_id'];
     $design_url = wp_get_attachment_url($design_id);
     $design_data_query = $_REQUEST['design_data'];
     update_post_meta($design_id, '_cl_data', stripslashes($design_data_query));
@@ -1054,7 +1060,7 @@ get_header();
                         ?>
                             <!-- <div class="row d-flex align-items-end">
                                 <div class="col text-center">
-                                    <a href="<?php echo site_url() . '/login?redirect_ulr=' . get_permalink(); ?>" class="btn btn-primary">Login to Order This Product</a>
+                                    <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink()), home_url('/login/'))); ?>" class="btn btn-primary">Login to Order This Product</a>
                                 </div>
                             </div> -->
                             <div class="row d-flex align-items-end">

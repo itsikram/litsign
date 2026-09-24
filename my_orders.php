@@ -1,13 +1,13 @@
 <?php
 // Template Name: My Orders
-get_header();
-
-$user_id = 0;
-if (is_user_logged_in()) {
-    $user_id = get_current_user_id();
-} else {
-    wp_redirect(home_url());
+if (!is_user_logged_in()) {
+    wp_safe_redirect(add_query_arg('redirect_ulr', rawurlencode(get_permalink()), home_url('/login/')));
+    exit;
 }
+
+$user_id = get_current_user_id();
+
+get_header();
 
 ?>
 
@@ -17,6 +17,7 @@ if (is_user_logged_in()) {
     <?php
                 $args = array(
                     'post_type'      => 'order', // Custom post type
+                    'post_status'    => array('pending', 'on-hold', 'on_hold', 'processing', 'completed', 'cancelled', 'refunded', 'failed'),
                     'meta_key'       => 'user_id', // Meta key
                     'meta_value'     => $user_id, // Meta value
                     'meta_compare'   => '=', // Comparison operator (optional, default is '=')

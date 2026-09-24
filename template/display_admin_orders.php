@@ -73,7 +73,6 @@ function render_order_attr_meta_box()
         $product_cl_data_array = array();
         if ($product_cl_data) {
             $product_cl_data_array = json_decode(stripslashes($product_cl_data), true);
-            print_r($product_cl_data_array);
         }
 
     ?>
@@ -114,6 +113,9 @@ function render_order_attr_meta_box()
                                 <strong><?php echo $detail_label; ?>: </strong><?php echo $detail_value; ?> <br>
                             <?php }
                             ?>
+                            <?php if (!empty($product['job_name'])) : ?>
+                                <strong>Job Name: </strong><?php echo esc_html($product['job_name']); ?> <br>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <div class="cart-item-quantity-container d-flex justify-content-end py-2 border-bottom">

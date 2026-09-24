@@ -180,8 +180,10 @@ function wholesale_setup()
 	register_post_type('order', array(
 		'label' => 'Order',
 		'public' => true,
+		'exclude_from_search' => true, // Orders contain customer details; never list them in site search.
+		'show_in_nav_menus' => false,
 		'supports' => array('title', 'editor', 'thumbnail'),
-		'has_archive' => true, // Enable archive for the custom post type
+		'has_archive' => false,
 		'rewrite' => array('slug' => 'order'), // Custom slug for your post type
 		'query_var' => 'store_order',
 		'show_in_rest' => true, // Enable block editor support
@@ -568,6 +570,7 @@ function wholesale_contact_admin_recipients()
 function wholesale_handle_review_submission()
 {
 	$redirect_url = wp_get_referer() ? wp_get_referer() : home_url('/');
+	$review_anchor = !empty($_POST['review_product_id']) ? '#product-reviews' : '#feedbackModal';
 	$nonce = isset($_POST['review_nonce']) ? sanitize_text_field(wp_unslash($_POST['review_nonce'])) : '';
 
 	if (!wp_verify_nonce($nonce, 'submit_review')) {
@@ -1361,6 +1364,63 @@ function register_order_post_statuses()
 }
 add_action('init', 'register_order_post_statuses');
 
+/**
+ * Orders hold customer names, emails, phones and addresses. Only the customer who placed an
+ * order (or staff who can edit it) may view it on the front end.
+ */
+function wholesale_protect_order_pages()
+{
+	if (is_post_type_archive('order')) {
+		wholesale_render_404();
+	}
+
+	if (!is_singular('order')) {
+		return;
+	}
+
+	$order_post_id = get_queried_object_id();
+	if (current_user_can('edit_post', $order_post_id)) {
+		return;
+	}
+
+	if (!is_user_logged_in()) {
+		wp_safe_redirect(add_query_arg('redirect_ulr', rawurlencode(get_permalink($order_post_id)), home_url('/login/')));
+		exit;
+	}
+
+	$order_owner = absint(get_post_meta($order_post_id, 'user_id', true));
+	if ($order_owner && $order_owner === get_current_user_id()) {
+		return;
+	}
+
+	wholesale_render_404();
+}
+add_action('template_redirect', 'wholesale_protect_order_pages', 5);
+
+function wholesale_render_404()
+{
+	global $wp_query;
+
+	$wp_query->set_404();
+	status_header(404);
+	nocache_headers();
+	include get_query_template('404');
+	exit;
+}
+
+/**
+ * Keep orders out of the public REST API; staff still use it through the block editor.
+ */
+function wholesale_protect_order_rest_routes($response, $handler, $request)
+{
+	if (0 === strpos($request->get_route(), '/wp/v2/order') && !current_user_can('edit_posts')) {
+		return new WP_Error('rest_forbidden', __('Sorry, you are not allowed to view orders.', 'litsign'), array('status' => rest_authorization_required_code()));
+	}
+
+	return $response;
+}
+add_filter('rest_request_before_callbacks', 'wholesale_protect_order_rest_routes', 10, 3);
+
 function wholesale_decode_order_meta_array($value)
 {
 	if (is_array($value)) {
@@ -1452,6 +1512,10 @@ function wholesale_send_new_order_admin_email($post_id)
 		$subtotal = isset($product['product_subtotal']) ? floatval($product['product_subtotal']) : 0;
 		$unit_price = $quantity > 0 ? $subtotal / $quantity : $subtotal;
 		$details = array();
+
+		if (!empty($product['job_name'])) {
+			$details[] = '<strong>Job Name:</strong> ' . esc_html($product['job_name']);
+		}
 
 		if (!empty($product['product_details']) && is_array($product['product_details'])) {
 			foreach ($product['product_details'] as $name => $value) {
@@ -1969,18 +2033,9 @@ function wholesale_store_design_attachment($file)
 
 function wholesale_upload_design()
 {
+	// Guests and customers (subscribers) both use the channel-letter builder; the nonce plus
+	// strict image validation in wholesale_store_design_attachment() protect this endpoint.
 	check_ajax_referer('wholesale_upload_design', 'nonce');
-
-	$is_guest_request = !is_user_logged_in();
-	$is_valid_guest_nonce = $is_guest_request && isset($_POST['nonce']) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), 'wholesale_upload_design');
-
-	if ($is_guest_request && !$is_valid_guest_nonce) {
-		wp_send_json_error(array('message' => __('Guest design uploads require a valid security nonce.', 'litsign')), 403);
-	}
-
-	if (is_user_logged_in() && !current_user_can('upload_files')) {
-		wp_send_json_error(array('message' => __('You do not have permission to upload designs.', 'litsign')), 403);
-	}
 
 	if (empty($_FILES['file'])) {
 		wp_send_json_error(array('message' => __('No design image was provided.', 'litsign')), 400);
@@ -1990,6 +2045,14 @@ function wholesale_upload_design()
 	if (is_wp_error($attachment_id)) {
 		wp_send_json_error(array('message' => $attachment_id->get_error_message()), 400);
 	}
+
+	// Remember which design images this visitor uploaded so product pages only accept
+	// (and only ever delete) their own designs.
+	if (!isset($_SESSION['wholesale_design_uploads']) || !is_array($_SESSION['wholesale_design_uploads'])) {
+		$_SESSION['wholesale_design_uploads'] = array();
+	}
+	$_SESSION['wholesale_design_uploads'][] = absint($attachment_id);
+	$_SESSION['wholesale_design_uploads'] = array_slice(array_unique($_SESSION['wholesale_design_uploads']), -50);
 
 	wp_send_json_success(array(
 		'id' => absint($attachment_id),
@@ -3820,24 +3883,6 @@ function save_product_cl_meta($post_id)
 }
 add_action('save_post', 'save_product_cl_meta');
 
-function allow_unauthenticated_media_route($result)
-{
-	// Check if we are in the media POST route
-	$route = $_SERVER['REQUEST_URI'];
-	if (strpos($route, '/wp-json/wp/v2/media') !== false && $_SERVER['REQUEST_METHOD'] === 'POST') {
-		return true; // Bypass authentication
-	}
-
-	if (!empty($_SERVER['REQUEST_URI']) && strpos($_SERVER['REQUEST_URI'], '/wp-json/wp/v2/media/') !== false) {
-		// Bypass authentication for this specific route
-		return true;
-	}
-
-	return $result;
-}
-add_filter('rest_authentication_errors', 'allow_unauthenticated_media_route');
-
-
 function custom_cron_intervals($schedules)
 {
 	$schedules['every_five_minutes'] = array(
@@ -4104,7 +4149,6 @@ function allow_cross_origin_requests()
 {
 	header("Access-Control-Allow-Origin: *");
 	header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
-	header("Content-Type: audio/mpeg");
 	header("Access-Control-Allow-Headers: Content-Type");
 }
 add_action('init', 'allow_cross_origin_requests');
@@ -4131,3 +4175,32 @@ add_action('wp_head', function () {
         <?php
     }
 });
+
+/**
+ * Basic hardening: this site was compromised through admin access, so remove
+ * the common brute-force and account-discovery entry points.
+ */
+if (!defined('DISALLOW_FILE_EDIT')) {
+	// Stops a stolen admin login from editing theme/plugin PHP in wp-admin.
+	define('DISALLOW_FILE_EDIT', true);
+}
+
+add_filter('xmlrpc_enabled', '__return_false');
+add_filter('xmlrpc_methods', '__return_empty_array');
+
+// Hide usernames from anonymous REST requests (/wp-json/wp/v2/users).
+add_filter('rest_endpoints', function ($endpoints) {
+	if (!is_user_logged_in()) {
+		unset($endpoints['/wp/v2/users'], $endpoints['/wp/v2/users/(?P<id>[\d]+)']);
+	}
+
+	return $endpoints;
+});
+
+// Block ?author=N scans, which redirect to /author/<username>/.
+add_action('template_redirect', function () {
+	if (!is_admin() && isset($_GET['author']) && !is_user_logged_in()) {
+		wp_safe_redirect(home_url('/'), 301);
+		exit;
+	}
+}, 1);

@@ -1570,6 +1570,18 @@ function updateNode(sNode, meta = null) {
   layer.batchDraw();
 }
 
+// The white design area lives inside the zoomed/shifted stage; place it so it
+// always covers exactly the visible canvas, whatever the zoom level.
+function syncCanvasBackground() {
+  const scale = stage.scaleX();
+  background.position({
+    x: -stage.x() / scale,
+    y: -stage.y() / scale,
+  });
+  background.size({ width: stage.width(), height: stage.height() });
+  background.scale({ x: 1 / scale, y: 1 / scale });
+}
+
 // Function to zoom the stage with center focus
 function zoomStage(scaleFactor) {
   const oldScale = stage.scaleX();
@@ -1588,12 +1600,8 @@ function zoomStage(scaleFactor) {
   stage.scale({ x: newScale, y: newScale });
   stage.position(newPos);
 
+  syncCanvasBackground();
   stage.batchDraw();
-
-  background.scale({
-    x: 1 / newScale,
-    y: 1 / newScale,
-  });
 
   nodeLists.forEach(function (nodeObject, key) {
     let node = nodeObject.node;
@@ -3006,10 +3014,7 @@ if (window.matchMedia("(max-width: 767.98px)").matches) {
     x: (stage.width() * (1 - mobileDefaultZoom)) / 2,
     y: (stage.height() * (1 - mobileDefaultZoom)) / 2,
   });
-  background.scale({
-    x: 1 / mobileDefaultZoom,
-    y: 1 / mobileDefaultZoom,
-  });
+  syncCanvasBackground();
   stage.batchDraw();
 }
 
@@ -4144,8 +4149,7 @@ window.addEventListener("load", function (e) {
       x: currentPosition.x + ((previousWidth - width) / 2) * currentScale,
       y: currentPosition.y + ((previousHeight - height) / 2) * currentScale,
     });
-    background.width(width);
-    background.height(height);
+    syncCanvasBackground();
     layer.batchDraw();
     scheduleHeightWidthDisplayUpdate();
     resizePreviewStage();

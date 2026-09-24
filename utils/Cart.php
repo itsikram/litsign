@@ -90,12 +90,18 @@ class Cart
         $product_title = get_the_title($product_id);
         $thumbnail_src = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'single-post-thumbnail');
         $product_thumbnail = $thumbnail_src ? $thumbnail_src[0] : '';
-        $product_price = isset($request['total_cost']) ? floatval($request['total_cost']) : 0;
-        $turnaround_cost = isset($request['turnaround_cost']) ? max(0, floatval($request['turnaround_cost'])) : 0;
-        $product_quantity = isset($request['product_quantity']) ? max(1, absint($request['product_quantity'])) : 1;
-
-        if (!is_finite($product_price) || $product_price <= 0) {
-            $this->redirect_with_error($product_id, 'Please choose your product options so we can calculate a price.');
+        // The price is calculated on the server from the product settings; the browser's
+        // total_cost is only used to tell the customer if the price they saw was out of date.
+        $design = wholesale_product_is_channel_letter($product_id) ? wholesale_session_cl_design($product_id) : null;
+        $quote = wholesale_price_quote($product_id, $request, $design);
+        if (!$quote['ok']) {
+            $this->redirect_with_error($product_id, $quote['error']);
+        }
+        $product_quantity = $quote['quantity'];
+        $turnaround_cost = $quote['turnaround'];
+        $shown_price = isset($request['total_cost']) ? floatval($request['total_cost']) : 0;
+        if ($shown_price > 0 && abs($shown_price - ($quote['total'] - $turnaround_cost)) > 0.01) {
+            $_SESSION['wholesale_cart_notice'] = sprintf('The price for %s was updated to $%s based on the options you chose.', get_the_title($product_id), number_format($quote['total'], 2));
         }
         $job_name = isset($request['job_name']) ? $request['job_name'] : '';
         // chennel letter details
@@ -345,7 +351,9 @@ class Cart
         $cart_items_json = json_encode(array(
             'product_id' => $product_id,
             'product_title' => $product_title,
-            'product_subtotal' => $product_price + $turnaround_cost,
+            'product_subtotal' => $quote['total'],
+            'unit_price' => $quote['unit_price'],
+            'discount' => $quote['discount'],
             'product_quantity' => $product_quantity,
             'product_thumbnail' => $product_thumbnail,
 			'turnaround_cost' => $turnaround_cost,

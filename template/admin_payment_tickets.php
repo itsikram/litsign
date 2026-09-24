@@ -565,7 +565,7 @@ function wholesale_ticket_save_builder_design()
     update_post_meta($design_id, '_cl_data', wp_slash(wp_json_encode($design, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)));
     update_post_meta($design_id, '_wholesale_ticket_id', $ticket_id);
 
-    $total = round(wholesale_cl_design_total($design), 2);
+    $total = round(wholesale_cl_design_total($design, $product_id), 2);
     $item = $ticket['items'][$index];
     if ((int) $item['product_id'] !== $product_id) {
         $item['product_id'] = $product_id;
@@ -1386,24 +1386,18 @@ function wholesale_ticket_pay_redirect($token, $message = '')
     exit;
 }
 
-function wholesale_handle_ticket_payment()
+/**
+ * Billing details from the ticket pay form.
+ *
+ * @return array|WP_Error
+ */
+function wholesale_ticket_billing_from_request($post)
 {
-    $token = isset($_POST['ticket_token']) ? preg_replace('/[^A-Za-z0-9]/', '', (string) wp_unslash($_POST['ticket_token'])) : '';
-    $ticket_id = wholesale_find_ticket_by_token($token);
-    if (!$ticket_id) {
-        wp_die(esc_html__('This payment link is not valid.', 'litsign'), esc_html__('Invalid payment link', 'litsign'), array('response' => 404));
-    }
-
-    $nonce = isset($_POST['wholesale_ticket_pay_nonce']) ? sanitize_text_field(wp_unslash($_POST['wholesale_ticket_pay_nonce'])) : '';
-    if (!wp_verify_nonce($nonce, 'wholesale_pay_ticket_' . $ticket_id)) {
-        wholesale_ticket_pay_redirect($token, 'Your session expired. Please try again.');
-    }
-
-    $field = static function ($key) {
-        return isset($_POST[$key]) ? sanitize_text_field(wp_unslash($_POST[$key])) : '';
+    $field = static function ($key) use ($post) {
+        return isset($post[$key]) && !is_array($post[$key]) ? sanitize_text_field(wp_unslash($post[$key])) : '';
     };
     $billing = array(
-        'billing_email' => isset($_POST['billing_email']) ? sanitize_email(wp_unslash($_POST['billing_email'])) : '',
+        'billing_email' => isset($post['billing_email']) ? sanitize_email(wp_unslash($post['billing_email'])) : '',
         'billing_fname' => $field('billing_fname'),
         'billing_lname' => $field('billing_lname'),
         'billing_company' => $field('billing_company'),
@@ -1417,62 +1411,27 @@ function wholesale_handle_ticket_payment()
     );
 
     if (!is_email($billing['billing_email']) || '' === $billing['billing_fname'] || '' === $billing['billing_lname'] || '' === $billing['billing_address'] || '' === $billing['billing_city'] || '' === $billing['billing_state'] || '' === $billing['billing_zip']) {
-        wholesale_ticket_pay_redirect($token, 'Please provide a complete and valid billing address.');
+        return new WP_Error('billing', 'Please provide a complete and valid billing address.');
     }
+    return $billing;
+}
 
-    $payment_disabled = wholesale_setting_enabled('payment_disabled');
-    $card_number = isset($_POST['card_number']) ? preg_replace('/\D+/', '', (string) wp_unslash($_POST['card_number'])) : '';
-    $card_cvv = isset($_POST['card_cvv']) ? preg_replace('/\D+/', '', (string) wp_unslash($_POST['card_cvv'])) : '';
-    $card_exp_month = isset($_POST['card_exp_month']) ? preg_replace('/\D+/', '', (string) wp_unslash($_POST['card_exp_month'])) : '';
-    $card_exp_year = isset($_POST['card_exp_year']) ? preg_replace('/\D+/', '', (string) wp_unslash($_POST['card_exp_year'])) : '';
-
-    if (!$payment_disabled) {
-        $exp_month_number = (int) $card_exp_month;
-        $exp_year_number = 2000 + (int) $card_exp_year;
-        $card_is_expired = $exp_year_number < (int) gmdate('Y')
-            || ($exp_year_number === (int) gmdate('Y') && $exp_month_number < (int) gmdate('n'));
-
-        if (
-            strlen($card_number) < 12 || strlen($card_number) > 19
-            || strlen($card_cvv) < 3 || strlen($card_cvv) > 4
-            || 2 !== strlen($card_exp_month) || $exp_month_number < 1 || $exp_month_number > 12
-            || 2 !== strlen($card_exp_year) || $card_is_expired
-        ) {
-            wholesale_ticket_pay_redirect($token, 'Please check your card number, CVV and expiration date.');
-        }
-    }
-
-    // add_option() is atomic, so two submits of the same ticket can never both reach the gateway.
-    $lock_key = 'wholesale_ticket_lock_' . $ticket_id;
-    $lock_time = (int) get_option($lock_key);
-    if ($lock_time && $lock_time < time() - 120) {
-        delete_option($lock_key);
-    }
-    if (!add_option($lock_key, time(), '', 'no')) {
-        wholesale_ticket_pay_redirect($token, 'Your payment is already being processed. Please wait a moment before trying again.');
-    }
-
-    // Re-read after taking the lock: the amount and status always come from the server.
+/**
+ * Marks a ticket paid (card) or accepted (manual payment) and creates its order.
+ *
+ * @return int|false Order ID.
+ */
+function wholesale_ticket_finalize($ticket_id, $billing, $paid_by_card, $payment_meta = array())
+{
     $ticket = wholesale_get_ticket($ticket_id);
-    if ('sent' !== $ticket['status'] || wholesale_ticket_is_expired($ticket) || $ticket['amount'] <= 0 || empty($ticket['items'])) {
-        delete_option($lock_key);
-        wholesale_ticket_pay_redirect($token);
-    }
-
     $amount = $ticket['amount'];
     $totals = $ticket['totals'];
     $billing_data = wp_json_encode($billing);
+    $payment_disabled = !$paid_by_card;
 
-    if (!$payment_disabled) {
-        $result = processPayment(number_format($amount, 2, '.', ''), $card_number, $card_exp_month . $card_exp_year, $card_cvv, trim($billing['billing_address'] . ', ' . $billing['billing_city'] . ', ' . $billing['billing_country']), $billing['billing_zip']);
-        if ('success' !== $result['status']) {
-            delete_option($lock_key);
-            wholesale_ticket_log($ticket_id, 'payment_failed', $result['message']);
-            wholesale_ticket_pay_redirect($token, $result['message']);
-        }
-        // The card is charged from here on. Mark the ticket paid first so it can never be charged twice.
+    if ($paid_by_card) {
         update_post_meta($ticket_id, '_ticket_status', 'paid');
-        wholesale_ticket_log($ticket_id, 'paid', wholesale_format_ticket_amount($amount));
+        wholesale_ticket_log($ticket_id, 'paid', wholesale_format_ticket_amount($amount) . (!empty($payment_meta['_payment_txn_id']) ? ' (Converge ' . $payment_meta['_payment_txn_id'] . ')' : ''));
     } else {
         update_post_meta($ticket_id, '_ticket_status', 'accepted');
         wholesale_ticket_log($ticket_id, 'accepted', wholesale_format_ticket_amount($amount));
@@ -1532,25 +1491,65 @@ function wholesale_handle_ticket_payment()
     }
 
     // wp_slash() keeps quotes inside the JSON intact when WordPress unslashes meta on save.
-    $order = wholesale_insert_order(wp_slash(wp_json_encode($order_items)), wp_slash($order_cost), wp_slash($billing_data), wp_slash($billing_data), implode("\n", $comment), '', array('_ticket_id' => $ticket_id));
+    $order = wholesale_insert_order(wp_slash(wp_json_encode($order_items)), wp_slash($order_cost), wp_slash($billing_data), wp_slash($billing_data), implode("\n", $comment), '', array_merge(array('_ticket_id' => $ticket_id, '_payment_status' => $paid_by_card ? 'paid' : 'manual'), $payment_meta));
+
+    if ($order) {
+        update_post_meta($ticket_id, '_ticket_order_id', $order);
+        wholesale_send_new_order_admin_email($order);
+    }
+    return $order;
+}
+
+/**
+ * No-JavaScript form post. Card payments go through the secure Converge window
+ * (inc/payments.php), so this only confirms tickets when card payment is turned off.
+ */
+function wholesale_handle_ticket_payment()
+{
+    $token = isset($_POST['ticket_token']) ? preg_replace('/[^A-Za-z0-9]/', '', (string) wp_unslash($_POST['ticket_token'])) : '';
+    $ticket_id = wholesale_find_ticket_by_token($token);
+    if (!$ticket_id) {
+        wp_die(esc_html__('This payment link is not valid.', 'litsign'), esc_html__('Invalid payment link', 'litsign'), array('response' => 404));
+    }
+
+    $nonce = isset($_POST['wholesale_ticket_pay_nonce']) ? sanitize_text_field(wp_unslash($_POST['wholesale_ticket_pay_nonce'])) : '';
+    if (!wp_verify_nonce($nonce, 'wholesale_pay_ticket_' . $ticket_id)) {
+        wholesale_ticket_pay_redirect($token, 'Your session expired. Please try again.');
+    }
+
+    if (!wholesale_setting_enabled('payment_disabled')) {
+        wholesale_ticket_pay_redirect($token, 'Please enable JavaScript to open our secure card payment window, or call us to pay by phone.');
+    }
+
+    $billing = wholesale_ticket_billing_from_request($_POST);
+    if (is_wp_error($billing)) {
+        wholesale_ticket_pay_redirect($token, $billing->get_error_message());
+    }
+
+    // add_option() is atomic, so two submits of the same ticket can never both be accepted.
+    $lock_key = 'wholesale_ticket_lock_' . $ticket_id;
+    $lock_time = (int) get_option($lock_key);
+    if ($lock_time && $lock_time < time() - 120) {
+        delete_option($lock_key);
+    }
+    if (!add_option($lock_key, time(), '', 'no')) {
+        wholesale_ticket_pay_redirect($token, 'Your order is already being processed. Please wait a moment.');
+    }
+
+    $ticket = wholesale_get_ticket($ticket_id);
+    if ('sent' !== $ticket['status'] || wholesale_ticket_is_expired($ticket) || $ticket['amount'] <= 0 || empty($ticket['items'])) {
+        delete_option($lock_key);
+        wholesale_ticket_pay_redirect($token);
+    }
+
+    $order = wholesale_ticket_finalize($ticket_id, $billing, false);
     delete_option($lock_key);
 
     if (!$order) {
-        error_log(sprintf('Wholesale: payment ticket %s (%s) paid by %s but the order could not be saved.', $ticket['number'], number_format($amount, 2, '.', ''), $billing['billing_email']));
-        wp_mail(
-            wholesale_contact_admin_recipients(),
-            'URGENT: payment ticket paid but order was not saved',
-            sprintf("Payment ticket %s (%s) for %s was %s, but the order could not be saved.\n\nCustomer: %s %s (%s)\nBilling: %s\n\nOpen the ticket: %s",
-                $ticket['number'], $ticket['title'], wholesale_format_ticket_amount($amount), $payment_disabled ? 'accepted' : 'PAID BY CARD',
-                $billing['billing_fname'], $billing['billing_lname'], $billing['billing_email'], $billing_data, admin_url('post.php?post=' . $ticket_id . '&action=edit'))
-        );
-        wp_die(esc_html__('Your payment was received, but we could not finish saving your order. Please do not pay again - our team has been notified and will contact you shortly.', 'litsign'), esc_html__('Order needs attention', 'litsign'), array('response' => 500));
+        wp_die(esc_html__('We could not save your order. Please call us and we will take care of it.', 'litsign'), esc_html__('Order needs attention', 'litsign'), array('response' => 500));
     }
 
-    update_post_meta($ticket_id, '_ticket_order_id', $order);
-    wholesale_send_new_order_admin_email($order);
-
-    wp_safe_redirect(home_url('/thank-you/'));
+    wp_safe_redirect(wholesale_thank_you_url($order));
     exit;
 }
 add_action('admin_post_nopriv_wholesale_pay_ticket', 'wholesale_handle_ticket_payment');

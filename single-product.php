@@ -104,7 +104,7 @@ if (
     $design_data_array['design_url'] = $design_url;
     $design_data_array['design_id'] = $design_id;
 
-    $product_cost = wholesale_cl_design_total($design_data_array);
+    $product_cost = wholesale_cl_design_total($design_data_array, $product_id);
 
     $design_data_array['total_cost'] = $product_cost;
     $design_data_array['product_id'] = $product_id;
@@ -1050,6 +1050,14 @@ get_header();
                         <?php
                         } ?>
 
+                        <ul class="product-assurance">
+                            <li>Price shown is the price you pay &mdash; no surprises at checkout</li>
+                            <li>Secure checkout<?php echo wholesale_setting_enabled('payment_disabled') ? '' : ' by Elavon Converge'; ?></li>
+                            <?php if ('channel-letters' === $product_category_slug) : ?>
+                                <li>UL listed, tested before shipping, 5-year LED warranty</li>
+                            <?php endif; ?>
+                            <li>Questions? <a href="tel:+18664362101">866-436-2101</a> &middot; Mon&ndash;Fri 8am&ndash;5pm PST</li>
+                        </ul>
                     </div>
                 </div>
             </div>

@@ -319,57 +319,6 @@ get_header();
         });
     })();
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const reviews = [
-            {
-                quote: '“Excellent service and high-quality products! Our new channel letters look amazing and brought more customers to our store.”',
-                author: '— Michael R., Phoenix, AZ'
-            },
-            {
-                quote: '“The entire process was smooth from start to finish. Our storefront sign looks premium and the team kept us informed every step of the way.”',
-                author: '— Amanda S., San Diego, CA'
-            },
-            {
-                quote: '“We upgraded our exterior branding and immediately noticed a stronger curb appeal. The product quality and support were outstanding.”',
-                author: '— Daniel T., Austin, TX'
-            },
-            {
-                quote: '“Their custom channel letters made our business stand out day and night. The craftsmanship was exactly what we hoped for.”',
-                author: '— Lauren K., Nashville, TN'
-            }
-        ];
-
-        const quoteEl = document.getElementById('customer-review-quote');
-        const authorEl = document.getElementById('customer-review-author');
-        const prevButton = document.querySelector('.customer-review-prev');
-        const nextButton = document.querySelector('.customer-review-next');
-        const dots = document.querySelectorAll('.customer-review-dot');
-
-        if (!quoteEl || !authorEl || !prevButton || !nextButton || dots.length === 0) return;
-
-        let currentIndex = 0;
-
-        const renderReview = (index) => {
-            currentIndex = (index + reviews.length) % reviews.length;
-            quoteEl.textContent = reviews[currentIndex].quote;
-            authorEl.textContent = reviews[currentIndex].author;
-
-            dots.forEach((dot, i) => {
-                const isActive = i === currentIndex;
-                dot.classList.toggle('is-active', isActive);
-                dot.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-            });
-        };
-
-        prevButton.addEventListener('click', () => renderReview(currentIndex - 1));
-        nextButton.addEventListener('click', () => renderReview(currentIndex + 1));
-
-        dots.forEach((dot) => {
-            dot.addEventListener('click', () => renderReview(Number(dot.dataset.reviewDot)));
-        });
-
-        renderReview(currentIndex);
-    });
 </script>
 
 <?php if ($is_channel_letters) : ?>

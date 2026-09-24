@@ -199,42 +199,19 @@ get_header();
 							<?php if ($payment_disabled) : ?>
 								<p class="wpt-payform__info">Online card payment is temporarily unavailable. Confirm your order and we'll contact you to arrange payment.</p>
 							<?php else : ?>
-								<p><label for="cardNumber">Card number</label><input required type="text" name="card_number" id="cardNumber" inputmode="numeric" autocomplete="cc-number" pattern="[0-9 ]{12,23}" maxlength="23" placeholder="1234 5678 9012 3456"></p>
-								<div class="wpt-payform__row wpt-payform__row--3">
-									<p><label for="expMonth">Month</label>
-										<select required name="card_exp_month" id="expMonth" autocomplete="cc-exp-month">
-											<option value="">MM</option>
-											<?php for ($month = 1; $month <= 12; $month++) : ?>
-												<option value="<?php echo esc_attr(sprintf('%02d', $month)); ?>"><?php echo esc_html(sprintf('%02d', $month)); ?></option>
-											<?php endfor; ?>
-										</select></p>
-									<p><label for="expYear">Year</label>
-										<select required name="card_exp_year" id="expYear" autocomplete="cc-exp-year">
-											<option value="">YYYY</option>
-											<?php for ($exp_year = (int) gmdate('Y'); $exp_year <= (int) gmdate('Y') + 12; $exp_year++) : ?>
-												<option value="<?php echo esc_attr(substr((string) $exp_year, -2)); ?>"><?php echo esc_html((string) $exp_year); ?></option>
-											<?php endfor; ?>
-										</select></p>
-									<p><label for="cardCvv">CVV</label><input required type="text" name="card_cvv" id="cardCvv" inputmode="numeric" autocomplete="cc-csc" pattern="[0-9]{3,4}" maxlength="4" placeholder="123"></p>
-								</div>
+								<p class="wpt-payform__info">When you click <strong>Pay</strong>, a secure window from our card processor (Elavon Converge) opens for your card details. Your card number never passes through this website.</p>
 							<?php endif; ?>
 						</fieldset>
 
-						<button type="submit" class="wpt-payform__submit" id="ticketPaySubmit" <?php disabled($is_preview); ?>>
+						<p class="wpt-payform__status" data-pay-status role="alert" hidden></p>
+						<button type="submit" class="wpt-payform__submit" id="ticketPaySubmit" data-pay-button <?php disabled($is_preview); ?>>
 							<?php echo $payment_disabled ? 'Confirm order' : esc_html('Pay ' . $amount_label); ?>
 						</button>
 						<p class="wpt-payform__secure">
 							<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>
-							<?php echo $payment_disabled ? 'No payment is taken online.' : 'Secure payment. Your card details go straight to our card processor and are never stored on this website.'; ?>
+							<?php echo $payment_disabled ? 'No payment is taken online.' : 'Secure payment through Elavon Converge. Your card details are entered in their secure window and never reach this website.'; ?>
 						</p>
 					</form>
-					<script>
-						document.getElementById('ticketPayForm').addEventListener('submit', function () {
-							var button = document.getElementById('ticketPaySubmit');
-							button.disabled = true;
-							button.textContent = 'Processing…';
-						});
-					</script>
 				<?php endif; ?>
 
 				<p class="wpt-paybox__help">Questions about this request? Call <strong><?php echo esc_html($business['phone']); ?></strong> or email <strong><?php echo esc_html($business['email']); ?></strong>.</p>

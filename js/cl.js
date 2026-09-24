@@ -493,7 +493,7 @@ const elementsReducer = (state = initialElement, action) => {
         colorCost: normalizeCost(action.payload.colorCost),
         fontSize,
         font,
-        type: nodeType,
+        type: action.payload.type || nodeType,
         // faceColor: {
         //     title: activeFaceTitle,
         //     code: activeFaceCode
@@ -577,7 +577,9 @@ const elementsReducer = (state = initialElement, action) => {
             ...element,
             ...action.payload,
             fontSize,
-            type: nodeType,
+            // Keep the element's own type: the selected node can be a different element
+            // (e.g. a raceway persisting while a letter is selected).
+            type: action.payload.type || element.type || nodeType,
             x,
             y,
             radius,
@@ -1937,7 +1939,7 @@ let handleChooseItemClick = (
       if (itemCost) {
         switch (selectedNode.getClassName()) {
           case "Text":
-            let totalLength = selectedNode.text().replace(" ", "").length;
+            let totalLength = selectedNode.text().replace(/\s/g, "").length;
             let singleHeightInch =
               (selectedNode.height() * selectedNode.scaleY()) / dpi;
             let totalTextHeightInch = singleHeightInch * totalLength;
@@ -3134,9 +3136,9 @@ window.addEventListener("load", function (e) {
     let persistTextTransform = () => {
       let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
       let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
-      let textLength = textNode.text().replace(" ", "").length;
+      let textLength = textNode.text().replace(/\s/g, "").length;
 
-      let totalLength = textNode.text().replace(" ", "").length;
+      let totalLength = textNode.text().replace(/\s/g, "").length;
       let singleHeightInch = (textNode.height() * textNode.scaleY()) / dpi;
       let totalHeightInch = singleHeightInch * totalLength;
       totalColorCost = parseFloat(totalHeightInch * parseFloat(colorCost));
@@ -3173,7 +3175,7 @@ window.addEventListener("load", function (e) {
     let persistText = () => {
       let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
       let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
-      let textLength = textNode.text().replace(" ", "").length;
+      let textLength = textNode.text().replace(/\s/g, "").length;
       totalColorCost = heightInInch * textLength * parseFloat(colorCost);
       store.dispatch({
         type: "UPDATE_ELEMENT",
@@ -3228,9 +3230,9 @@ window.addEventListener("load", function (e) {
 
     let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
     let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
-    let textLength = textNode.text().replace(" ", "").length;
+    let textLength = textNode.text().replace(/\s/g, "").length;
 
-    let totalLength = textNode.text().replace(" ", "").length;
+    let totalLength = textNode.text().replace(/\s/g, "").length;
     let singleHeightInch =
       parseFloat(textNode.height() * textNode.scaleY()) / dpi;
     let totalHeightInch = singleHeightInch * totalLength;
@@ -4208,7 +4210,7 @@ window.addEventListener("load", function (e) {
     let enabledAnchors = undefined;
 
     let text = cloneNode.getClassName() == "Text" ? cloneNode.text() : " ";
-    let textLength = text.replace(" ", "").length || 1;
+    let textLength = text.replace(/\s/g, "").length || 1;
 
     if (cloneNode.getAttr("textIndex")) {
       let selectedRacewayText = cloneNode.getAttr("textIndex");
@@ -4545,7 +4547,7 @@ window.addEventListener("load", function (e) {
         let widhtInInch = (selectedNode.width() * selectedNode.scaleX()) / dpi;
 
         let currentElement = getElementById(selectedNode._id);
-        let totalLength = selectedNode.text().replace(" ", "").length;
+        let totalLength = selectedNode.text().replace(/\s/g, "").length;
         let singleHeightInch =
           (selectedNode.height() * selectedNode.scaleY()) / dpi;
         let totalHeightInch = singleHeightInch * totalLength;
@@ -4693,11 +4695,11 @@ window.addEventListener("load", function (e) {
               height: heightInInch,
               cost:
                 costPerInch(heightInInch) *
-                (text.replace(" ", "") ? text.replace(" ", "").length : 1),
+                (text.replace(" ", "") ? text.replace(/\s/g, "").length : 1),
               text,
               colorCost:
                 heightInInch *
-                text.replace(" ", "").length *
+                text.replace(/\s/g, "").length *
                 parseFloat(colorCost),
               faceCostPerInch: parseFloat(colorCost),
             },

@@ -10,7 +10,7 @@
     const revealElements = [...document.querySelectorAll(revealSelector)].filter((element, index, elements) => {
       // The hero stays static so ad visitors see the headline and CTAs immediately.
       return !element.matches('.pb-gallery-image, .cl-icon, .home-hero')
-        && !element.closest('header, nav, .modal, .offcanvas, .home-hero-content, [aria-hidden="true"]')
+        && !element.closest('header, nav, .modal, .offcanvas, .home-hero-content, .checkout-page, .cart-page-v2, .account-page-v2, .order-confirmation, [aria-hidden="true"]')
         && elements.indexOf(element) === index;
     });
 
@@ -394,7 +394,7 @@
           let sizeInch = $(".select-height").attr("data-selected-size");
           let letterCharacters = $("#letterInput")
             .val()
-            .replace(" ", "").length;
+            .replace(/\s/g, "").length;
           let totalSizeInch = sizeInch * letterCharacters;
           let toalSizeFt = totalSizeInch / 12;
           let totalLftCost = selectedAttrVal * toalSizeFt;
@@ -544,7 +544,7 @@
     // letter input change action
     $("#letterInput").on('input',(e) => {
       let updatedText = e.target.value;
-      let letterCharacters = e.target.value.replace(" ", "").length;
+      let letterCharacters = e.target.value.replace(/\s/g, "").length;
       //let minInchPrice = $('#select-size option:nth-child(1)').attr('value') || 0;
       $("#letter-output").text(letterCharacters ? updatedText : "ENTER YOUR TEXT");
       let letterPricePerInch = $("#select-height").val()
@@ -567,7 +567,7 @@
 
     // action select size change
     $("#select-height").change((e) => {
-      let letterCharacters = $("#letterInput").val().replace(" ", "").length;
+      let letterCharacters = $("#letterInput").val().replace(/\s/g, "").length;
       let pricePerInch = parseFloat(e.target.value);
       let totalPrice = letterCharacters * pricePerInch;
       let updatedSize = $(`#select-height option[value*=${parseInt(pricePerInch)}]`).data('size')
@@ -1004,3 +1004,170 @@
     }
   });
 })(jQuery);
+
+// Footer review slider (rendered by inc/reviews.php on every page).
+(() => {
+  const init = () => {
+    document.querySelectorAll('[data-review-slider]').forEach((slider) => {
+      const track = slider.querySelector('[data-review-track]');
+      const prev = slider.querySelector('[data-review-prev]');
+      const next = slider.querySelector('[data-review-next]');
+      const dotsWrap = slider.querySelector('[data-review-dots]');
+      if (!track) return;
+
+      const cards = [...track.children];
+      const step = () => (cards[0] ? cards[0].getBoundingClientRect().width + parseFloat(getComputedStyle(track).columnGap || 0) : track.clientWidth);
+      const perView = () => Math.max(1, Math.round(track.clientWidth / step()));
+      const pageCount = () => Math.max(1, Math.ceil(cards.length / perView()));
+      const maxScroll = () => track.scrollWidth - track.clientWidth;
+      const currentPage = () => {
+        // The last page is usually partial, so its scroll position is clamped to the end.
+        if (track.scrollLeft >= maxScroll() - 4) return pageCount() - 1;
+        return Math.round(track.scrollLeft / (step() * perView()));
+      };
+      const goTo = (page) => {
+        const pages = pageCount();
+        const target = ((page % pages) + pages) % pages;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        track.scrollTo({ left: Math.min(target * step() * perView(), maxScroll()), behavior: reduceMotion ? 'auto' : 'smooth' });
+      };
+
+      const renderDots = () => {
+        if (!dotsWrap) return;
+        const pages = pageCount();
+        dotsWrap.innerHTML = '';
+        slider.classList.toggle('is-static', pages < 2);
+        if (pages < 2) return;
+        for (let i = 0; i < pages; i++) {
+          const dot = document.createElement('button');
+          dot.type = 'button';
+          dot.className = 'review-dot';
+          dot.tabIndex = -1;
+          dot.addEventListener('click', () => goTo(i));
+          dotsWrap.appendChild(dot);
+        }
+        updateDots();
+      };
+
+      const updateDots = () => {
+        if (!dotsWrap) return;
+        const active = Math.min(currentPage(), pageCount() - 1);
+        [...dotsWrap.children].forEach((dot, i) => dot.classList.toggle('is-active', i === active));
+      };
+
+      prev && prev.addEventListener('click', () => goTo(currentPage() - 1));
+      next && next.addEventListener('click', () => goTo(currentPage() + 1));
+      track.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowRight') { event.preventDefault(); goTo(currentPage() + 1); }
+        if (event.key === 'ArrowLeft') { event.preventDefault(); goTo(currentPage() - 1); }
+      });
+
+      let scrollTimer;
+      track.addEventListener('scroll', () => {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(updateDots, 80);
+      }, { passive: true });
+
+      let resizeTimer;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(renderDots, 150);
+      });
+
+      renderDots();
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+// Live price from the server (inc/pricing.php) so the product page shows exactly what the cart charges.
+(() => {
+  const init = () => {
+    const productIdInput = document.querySelector('form input[name="product_id"]');
+    const pricingBox = document.querySelector('.product-pricing-box');
+    if (!productIdInput || !pricingBox || !window.wholesaleShop) return;
+
+    const form = productIdInput.closest('form');
+    const money = (value) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const addButtons = form.querySelectorAll('.add-to-cart-btn');
+
+    let message = pricingBox.querySelector('.price-quote-message');
+    if (!message) {
+      message = document.createElement('p');
+      message.className = 'price-quote-message';
+      message.setAttribute('role', 'status');
+      message.hidden = true;
+      pricingBox.querySelector('.total-container')?.after(message);
+    }
+
+    let turnaroundRow = pricingBox.querySelector('.price-turnaround-row');
+    if (!turnaroundRow) {
+      turnaroundRow = document.createElement('div');
+      turnaroundRow.className = 'row price-turnaround-row';
+      turnaroundRow.hidden = true;
+      turnaroundRow.innerHTML = '<div class="col-6"><span class="fs-6">Same-day production</span></div><div class="col-6 price-subtotal-container"><span class="fs-6 d-block">+$<span class="price-turnaround"></span></span></div>';
+      const anchor = pricingBox.querySelector('.totalSaving-container') || pricingBox.querySelector('.subtotal-container');
+      anchor?.after(turnaroundRow);
+    }
+
+    let timer;
+    let requestId = 0;
+    const refresh = () => {
+      clearTimeout(timer);
+      timer = setTimeout(async () => {
+        const data = new FormData(form);
+        data.delete('custom-artwork');
+        data.append('action', 'wholesale_price_quote');
+        const thisRequest = ++requestId;
+        pricingBox.classList.add('is-updating');
+        try {
+          const response = await fetch(window.wholesaleShop.ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' });
+          const quote = await response.json();
+          if (thisRequest !== requestId) return;
+
+          if (!quote.ok) {
+            message.textContent = quote.error;
+            message.hidden = false;
+            addButtons.forEach((button) => { button.disabled = true; });
+            return;
+          }
+
+          message.hidden = true;
+          pricingBox.querySelectorAll('.price-subtotal').forEach((el) => { el.textContent = money(quote.subtotal); });
+          pricingBox.querySelectorAll('.price-saving').forEach((el) => { el.textContent = money(quote.discount); });
+          pricingBox.querySelectorAll('.price-total').forEach((el) => { el.textContent = money(quote.total); });
+          turnaroundRow.hidden = !(quote.turnaround > 0);
+          turnaroundRow.querySelector('.price-turnaround').textContent = money(quote.turnaround);
+          // The add-to-cart handler applies the discount to this value before submitting.
+          form.querySelectorAll('#totalCost').forEach((input) => { input.value = quote.subtotal.toFixed(2); });
+          addButtons.forEach((button) => { button.disabled = false; });
+        } catch (error) {
+          // Keep the browser-side estimate; the cart still prices the item on the server.
+        } finally {
+          if (thisRequest === requestId) pricingBox.classList.remove('is-updating');
+        }
+      }, 250);
+    };
+
+    form.addEventListener('change', refresh);
+    form.addEventListener('input', (event) => {
+      if (event.target.matches('#letterInput, input[type="number"]')) refresh();
+    });
+    // Custom color pickers update hidden selects without bubbling a native change event.
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('.custom-select li')) refresh();
+    });
+    refresh();
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();

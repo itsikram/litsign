@@ -1,7 +1,7 @@
 <?php
 /**
- * Order creation and card payment helpers shared by cart checkout (payment.php)
- * and payment tickets (page-pay.php).
+ * Order creation helpers shared by cart checkout and payment tickets.
+ * Card payments live in inc/payments.php.
  *
  * @package litsign
  */
@@ -81,130 +81,15 @@ function place_order($product_data, $order_cost, $billing_data, $shipping_data, 
    return $new_order;
 }
 
-function processPayment($amount, $cardNumber, $expDate, $cvv, $address, $zip)
-{
-   $merchant_id = wholesale_get_setting('merchant_id');
-   $user_id = wholesale_get_setting('gateway_user_id');
-   $pin = wholesale_get_setting('gateway_pin');
-
-   if (empty($merchant_id) || empty($user_id) || empty($pin)) {
-       return array(
-           'status' => 'failed',
-           'message' => 'Payment gateway is not configured.'
-       );
-   }
-
-//    $url = 'https://api.convergepay.com/VirtualMerchant/process.do';
-       // Switch endpoint based on a test-mode flag
-    $url = wholesale_setting_enabled('payment_test_mode')
-        ? 'https://api.demo.convergepay.com/VirtualMerchantDemo/process.do'
-        : 'https://api.convergepay.com/VirtualMerchant/process.do';
-   $data = array(
-       'ssl_merchant_id' => $merchant_id,
-       'ssl_user_id' => $user_id,
-       'ssl_pin' => $pin,
-       'ssl_show_form' => 'false',
-       'ssl_result_format' => 'ASCII',
-       'ssl_transaction_type' => 'ccsale',
-       'ssl_amount' => $amount,
-       'ssl_card_number' => $cardNumber,
-       'ssl_exp_date' => $expDate,
-       'ssl_cvv2cvc2' => $cvv,
-       'ssl_avs_address' => $address,
-       'ssl_avs_zip' => $zip,
-   );
-
-   $response = wp_remote_post($url, array(
-       'timeout' => 45,
-       'sslverify' => true,
-       'headers' => array('Content-Type' => 'application/x-www-form-urlencoded; charset=utf-8'),
-       'body' => $data,
-   ));
-
-   if (is_wp_error($response)) {
-       return array(
-           'status' => 'failed',
-           'message' => 'Payment gateway request failed.'
-       );
-   }
-
-   $response_body = wp_remote_retrieve_body($response);
-   if (empty($response_body)) {
-       return array(
-           'status' => 'failed',
-           'message' => 'Payment gateway returned an empty response.'
-       );
-   }
-
-   $parts = preg_split('/\s+(?=\w+=)/', (string) $response_body);
-   $decoded_response = array();
-
-   foreach ($parts as $part) {
-       $pair = explode('=', $part, 2);
-       if (count($pair) === 2) {
-           $decoded_response[$pair[0]] = $pair[1];
-       }
-   }
-
-   $object = (object) $decoded_response;
-
-   if (str_contains($response_body, 'APPROVAL')) {
-       return array(
-           'status' => 'success',
-           'message' => 'Order Placed Successfully',
-       );
-   }
-
-   if (strpos($response_body, 'DECLINED') !== false) {
-       return array(
-           'status' => 'failed',
-           'message' => 'Payment declined.',
-       );
-   }
-
-   if (preg_match('/errorCode=(\d+)/', $response_body, $matches)) {
-       return array(
-           'status' => 'failed',
-           'status_code' => $matches[1],
-           'message' => isset($object->errorName) ? sanitize_text_field((string) $object->errorName) : 'Payment failed.',
-       );
-   }
-
-   return array(
-       'status' => 'failed',
-       'message' => 'Payment failed.',
-   );
-}
-
 /**
- * Price of a channel letter builder design, computed on the server from the
- * saved design state: element sizes and face colors, plus power supply, lit
- * (a percentage of the letters) and cable extras.
+ * Price of a channel letter builder design from the product's rate table
+ * (see wholesale_cl_design_quote() in inc/pricing.php). Returns 0 when the design
+ * can't be priced.
  */
-function wholesale_cl_design_total($design)
+function wholesale_cl_design_total($design, $product_id)
 {
-    $safe_cost = static function ($value) {
-        return is_numeric($value) && is_finite((float) $value) ? (float) $value : 0.0;
-    };
-    $elements = isset($design['elements']) && is_array($design['elements']) ? $design['elements'] : array();
-    $extras = isset($design['extras']) && is_array($design['extras']) ? $design['extras'] : array();
-
-    $product_cost = 0;
-    foreach ($elements as $element) {
-        $product_cost += $safe_cost($element['cost'] ?? 0) + $safe_cost($element['colorCost'] ?? 0);
-    }
-
-    $extras_cost = 0;
-    if (!empty($extras['powerSupply']['qty'])) {
-        $extras_cost += $safe_cost($extras['powerSupply']['cost'] ?? 0);
-    }
-    $extra_lit_percent = !empty($extras['lit']['qty']) ? $safe_cost($extras['lit']['cost'] ?? 0) : 0;
-    $extras_cost += ($product_cost * $extra_lit_percent) / 100;
-    if (!empty($extras['cable']['qty'])) {
-        $extras_cost += $safe_cost($extras['cable']['cost'] ?? 0);
-    }
-
-    return $product_cost + $extras_cost;
+    $total = wholesale_cl_design_quote($product_id, is_array($design) ? $design : array());
+    return is_wp_error($total) ? 0.0 : (float) $total;
 }
 
 /**
@@ -250,3 +135,159 @@ function wholesale_cl_design_summary($design)
 
     return array_slice($lines, 0, 40);
 }
+
+/**
+ * Customer-facing specs for a cart/order line: label => escaped HTML value.
+ * Internal fields are skipped; design and artwork files become links.
+ *
+ * @param object|array $item Cart item (object) or decoded order item (array).
+ * @return array<string,string>
+ */
+function wholesale_item_specs($item)
+{
+    $item = (array) $item;
+    $details = isset($item['product_details']) ? (array) $item['product_details'] : array();
+    $skip = array('Product Id', 'Shipping Type', 'Turnaround Option');
+    $specs = array();
+
+    if (!empty($item['job_name'])) {
+        $specs['Job name'] = esc_html($item['job_name']);
+    }
+    foreach ($details as $label => $value) {
+        if (in_array($label, $skip, true) || null === $value || '' === $value || !is_scalar($value)) {
+            continue;
+        }
+        $specs[$label] = wholesale_format_order_detail_value($label, $value);
+    }
+    if (!empty($details['Turnaround Option']) && 'Same Day' === $details['Turnaround Option']) {
+        $specs['Turnaround'] = 'Same-day production';
+    }
+
+    return $specs;
+}
+
+/**
+ * Customer-facing order number: "order_SN6LTHF5IA" -> "SN6LTHF5IA".
+ */
+function wholesale_order_number($order_post_id)
+{
+    $order_id = (string) get_post_meta($order_post_id, 'order_id', true);
+    return strtoupper(preg_replace('/^order_/i', '', $order_id ?: (string) $order_post_id));
+}
+
+/**
+ * Branded HTML confirmation email for the customer.
+ */
+function wholesale_customer_order_email_html($post_id)
+{
+    $items = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
+    $cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
+    $billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+    $ship_by = get_post_meta($post_id, 'estimate_delivery_time', true);
+    $payment_status = get_post_meta($post_id, '_payment_status', true);
+    $card_last4 = get_post_meta($post_id, '_payment_card_last4', true);
+    $number = wholesale_order_number($post_id);
+    $money = static function ($value) {
+        return '$' . number_format((float) $value, 2);
+    };
+    $font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
+
+    $rows = '';
+    foreach ($items as $item) {
+        $specs = wholesale_item_specs($item);
+        unset($specs['Design Url'], $specs['My Artwork']);
+        $spec_text = array();
+        foreach (array_slice($specs, 0, 12, true) as $label => $value) {
+            $spec_text[] = esc_html($label) . ': ' . wp_strip_all_tags($value);
+        }
+        $rows .= '<tr>'
+            . '<td style="padding:12px 0;border-bottom:1px solid #e3e9ef;' . $font . 'font-size:14px;color:#172027;"><strong>' . esc_html($item['product_title'] ?? '') . '</strong>'
+            . '<br><span style="color:#5b6b7b;font-size:13px;">Qty ' . esc_html($item['product_quantity'] ?? 1) . ($spec_text ? ' &middot; ' . implode(' &middot; ', $spec_text) : '') . '</span></td>'
+            . '<td align="right" style="padding:12px 0;border-bottom:1px solid #e3e9ef;' . $font . 'font-size:14px;color:#172027;white-space:nowrap;">' . esc_html($money($item['product_subtotal'] ?? 0)) . '</td>'
+            . '</tr>';
+    }
+
+    $total_row = static function ($label, $value, $strong = false) use ($font) {
+        $style = $font . ($strong ? 'font-size:16px;font-weight:700;color:#172027;padding-top:10px;' : 'font-size:14px;color:#5b6b7b;');
+        return '<tr><td style="' . $style . '">' . esc_html($label) . '</td><td align="right" style="' . $style . '">' . esc_html($value) . '</td></tr>';
+    };
+
+    $payment_line = in_array($payment_status, array('paid', 'needs_review'), true)
+        ? 'Paid by card' . ($card_last4 ? ' ending ' . $card_last4 : '')
+        : ('paid_offline' === $payment_status ? 'Paid' : 'Our team will contact you to arrange payment before production starts.');
+
+    return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="margin:0;padding:0;background:#f5f8fb;">'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f8fb;padding:24px 12px;"><tr><td align="center">'
+        . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e3e9ef;border-radius:12px;">'
+        . '<tr><td style="padding:24px 28px;border-bottom:4px solid #1fa8de;' . $font . 'font-size:20px;font-weight:700;color:#0d2e4d;">Storefront Sign Online</td></tr>'
+        . '<tr><td style="padding:28px;' . $font . 'color:#172027;">'
+        . '<h1 style="margin:0 0 8px;font-size:22px;">Thank you' . (!empty($billing['billing_fname']) ? ', ' . esc_html($billing['billing_fname']) : '') . '! Your order is confirmed.</h1>'
+        . '<p style="margin:0 0 20px;font-size:15px;color:#5b6b7b;">Order <strong style="color:#172027;">#' . esc_html($number) . '</strong>' . ($ship_by ? ' &middot; Estimated to ship by <strong style="color:#172027;">' . esc_html($ship_by) . '</strong>' : '') . '</p>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' . $rows . '</table>'
+        . '<table role="presentation" width="100%" cellpadding="4" cellspacing="0" style="margin-top:12px;">'
+        . $total_row('Subtotal', $money($cost['sub_total'] ?? 0))
+        . $total_row('Shipping' . (!empty($cost['shipping_method']) ? ' - ' . $cost['shipping_method'] : ''), $money($cost['shipping_cost'] ?? 0))
+        . $total_row('Tax', $money($cost['tax'] ?? 0))
+        . $total_row('Total', $money($cost['grand_total'] ?? 0), true)
+        . '</table>'
+        . '<p style="margin:20px 0 0;padding:14px 16px;background:#eef7fc;border-radius:8px;font-size:14px;color:#0d2e4d;"><strong>Payment:</strong> ' . esc_html($payment_line) . '</p>'
+        . '<h2 style="margin:28px 0 10px;font-size:16px;">What happens next</h2>'
+        . '<ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:#34506a;">'
+        . '<li>We review your order and contact you if anything needs a closer look.</li>'
+        . '<li>We build your sign and test it before it ships.</li>'
+        . '<li>You receive tracking details by email when it ships.</li>'
+        . '</ol>'
+        . '<p style="margin:24px 0 0;font-size:14px;color:#5b6b7b;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or reply to this email with your order number.</p>'
+        . '</td></tr>'
+        . '<tr><td style="padding:18px 28px;border-top:1px solid #e3e9ef;' . $font . 'font-size:12px;color:#8a97a5;">Storefront Sign Online &middot; 707 S. Grady Way, Suite 600, Renton, WA 98057</td></tr>'
+        . '</table></td></tr></table></body></html>';
+}
+
+/**
+ * Order statuses as customers and staff see them.
+ *
+ * @return array<string,array{label:string,tone:string,step:int,note:string}>
+ */
+function wholesale_order_status_info()
+{
+    return array(
+        'pending' => array('label' => 'Pending review', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are reviewing the details.'),
+        'processing' => array('label' => 'In production', 'tone' => 'info', 'step' => 2, 'note' => 'Your sign is being made.'),
+        'on-hold' => array('label' => 'On hold', 'tone' => 'warn', 'step' => 1, 'note' => 'We need something from you. Our team will contact you, or call 866-436-2101.'),
+        'on_hold' => array('label' => 'On hold', 'tone' => 'warn', 'step' => 1, 'note' => 'We need something from you. Our team will contact you, or call 866-436-2101.'),
+        'completed' => array('label' => 'Shipped', 'tone' => 'success', 'step' => 3, 'note' => 'Your sign is on its way.'),
+        'cancelled' => array('label' => 'Cancelled', 'tone' => 'muted', 'step' => 0, 'note' => 'This order was cancelled.'),
+        'refunded' => array('label' => 'Refunded', 'tone' => 'muted', 'step' => 0, 'note' => 'This order was refunded.'),
+        'failed' => array('label' => 'Payment failed', 'tone' => 'danger', 'step' => 0, 'note' => 'Payment did not go through. Please contact us.'),
+    );
+}
+
+function wholesale_order_status_badge($status)
+{
+    $info = wholesale_order_status_info();
+    $item = isset($info[$status]) ? $info[$status] : array('label' => ucwords(str_replace(array('-', '_'), ' ', (string) $status)), 'tone' => 'muted');
+    return '<span class="order-badge order-badge--' . esc_attr($item['tone']) . '">' . esc_html($item['label']) . '</span>';
+}
+
+/**
+ * Tracking link for common carriers.
+ */
+function wholesale_tracking_url($carrier, $number)
+{
+    $number = rawurlencode(trim((string) $number));
+    switch (strtolower((string) $carrier)) {
+        case 'ups':
+            return 'https://www.ups.com/track?tracknum=' . $number;
+        case 'fedex':
+            return 'https://www.fedex.com/fedextrack/?trknbr=' . $number;
+        case 'usps':
+            return 'https://tools.usps.com/go/TrackConfirmAction?tLabels=' . $number;
+        default:
+            return '';
+    }
+}
+
+// Browser tab title for an order page: "Order #SN6LTHF5IA" instead of the internal post title.
+add_filter('pre_get_document_title', function ($title) {
+    return is_singular('order') ? 'Order #' . wholesale_order_number(get_queried_object_id()) . ' | ' . get_bloginfo('name') : $title;
+}, 99);

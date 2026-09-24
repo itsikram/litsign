@@ -158,6 +158,8 @@
 .wpt-payform__row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .wpt-payform__row--3 { grid-template-columns: 1.3fr 1fr 1fr; }
 .wpt-payform__info { padding: 12px 14px; border-radius: 8px; background: #e6f5fc; color: var(--pay-accent-ink); font-size: 14px; line-height: 1.5; }
+.wpt-payform__status { margin: 0 0 12px; padding: 12px 14px; border-radius: 8px; background: #fdecec; color: #9b1c1c; font-size: 14px; line-height: 1.5; }
+.wpt-payform__status[data-type="info"] { background: #e6f5fc; color: var(--pay-accent-ink); }
 .wpt-payform__submit {
     min-height: 52px;
     border: 0;

@@ -44,6 +44,10 @@ if (file_exists(dirname(__FILE__) . '/template/display_admin_orders.php')) {
 	require_once(dirname(__FILE__) . '/template/display_admin_orders.php');
 }
 require_once(dirname(__FILE__) . '/inc/orders.php');
+require_once(dirname(__FILE__) . '/inc/reviews.php');
+require_once(dirname(__FILE__) . '/inc/pricing.php');
+require_once(dirname(__FILE__) . '/inc/payments.php');
+require_once(dirname(__FILE__) . '/inc/admin-orders.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
 /**
@@ -318,6 +322,9 @@ function wholesale_setting_defaults()
 		'tax_rate' => '10.3',
 		'standard_shipping_options' => '12.5,50,62.5,75',
 		'channel_shipping_options' => '50,200,250,300',
+		'google_places_api_key' => defined('WHOLESALE_GOOGLE_PLACES_API_KEY') ? WHOLESALE_GOOGLE_PLACES_API_KEY : '',
+		'google_place_id' => '',
+		'email_status_updates' => 1,
 	);
 }
 
@@ -393,6 +400,26 @@ function wholesale_settings_page()
 				) as $key => $label) : ?>
 					<tr><th><?php echo esc_html($label); ?></th><td><input type="hidden" name="wholesale_<?php echo esc_attr($key); ?>" value="0"><label><input type="checkbox" name="wholesale_<?php echo esc_attr($key); ?>" value="1" <?php checked(wholesale_setting_enabled($key)); ?>> Enabled</label></td></tr>
 				<?php endforeach; ?>
+			</table>
+			<h2 class="title">Customer emails</h2>
+			<table class="form-table" role="presentation">
+				<tr><th>Order status emails</th><td><input type="hidden" name="wholesale_email_status_updates" value="0"><label><input type="checkbox" name="wholesale_email_status_updates" value="1" <?php checked(wholesale_setting_enabled('email_status_updates')); ?>> Email customers when their order goes into production, ships (with tracking), is put on hold, cancelled or refunded</label></td></tr>
+			</table>
+			<h2 class="title" id="google-reviews">Google reviews</h2>
+			<p>Shows your Google Business rating and latest reviews in the site-wide review slider, next to reviews you approve under <a href="<?php echo esc_url(admin_url('edit.php?post_type=review_submission')); ?>">Customer Reviews</a>.</p>
+			<table class="form-table" role="presentation">
+				<tr><th><label for="wholesale_google_places_api_key">Google Places API key</label></th><td><input type="password" class="regular-text" id="wholesale_google_places_api_key" name="wholesale_google_places_api_key" value="<?php echo esc_attr(wholesale_get_setting('google_places_api_key')); ?>" autocomplete="off"><p class="description">Create it in Google Cloud Console with the <strong>Places API (New)</strong> enabled, and restrict it to that API.</p></td></tr>
+				<tr><th><label for="wholesale_google_place_id">Google Place ID</label></th><td><input class="regular-text" id="wholesale_google_place_id" name="wholesale_google_place_id" value="<?php echo esc_attr(wholesale_get_setting('google_place_id')); ?>" placeholder="ChIJ..."><p class="description">Find it with Google's <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener">Place ID finder</a>.</p></td></tr>
+				<?php $google_status = wholesale_google_reviews(); ?>
+				<?php if ($google_status) : ?>
+					<tr><th>Status</th><td>
+						<?php if (!empty($google_status['error'])) : ?>
+							<p style="color:#b32d2e;"><strong>Last refresh failed:</strong> <?php echo esc_html($google_status['error']); ?></p>
+						<?php endif; ?>
+						<p><?php echo esc_html(sprintf('%s stars from %s reviews; %d shown in the slider. Checked %s ago.', number_format((float) $google_status['rating'], 1), number_format_i18n((int) $google_status['count']), count($google_status['reviews']), human_time_diff((int) $google_status['checked'], time()))); ?></p>
+						<p><a class="button" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=wholesale_refresh_google_reviews'), 'wholesale_refresh_google_reviews')); ?>">Refresh now</a></p>
+					</td></tr>
+				<?php endif; ?>
 			</table>
 			<h2 class="title">Payment gateway</h2>
 			<table class="form-table" role="presentation">
@@ -1514,11 +1541,13 @@ function wholesale_send_new_order_admin_email($post_id)
 	$customer_name = trim((isset($billing_data['billing_fname']) ? $billing_data['billing_fname'] : '') . ' ' . (isset($billing_data['billing_lname']) ? $billing_data['billing_lname'] : ''));
 	$shipping_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
 
-	$subject = sprintf('New Order Received - #%s', $order_id ?: $post_id);
+	$payment_status = get_post_meta($post_id, '_payment_status', true);
+	$payment_labels = array('paid' => 'PAID by card', 'needs_review' => 'Card payment - VERIFY IN CONVERGE', 'manual' => 'Not paid - collect payment manually');
+	$subject = sprintf('New Order #%s - %s', wholesale_order_number($post_id), isset($payment_labels[$payment_status]) ? $payment_labels[$payment_status] : 'payment status unknown');
 	$message = '<html><body>'
 		. '<h2>New Order Notification</h2>'
 		. '<p>A new order has been received on your website.</p>'
-		. '<p><strong>Order ID:</strong> #' . esc_html($order_id ?: $post_id) . '</p>'
+		. '<p><strong>Order ID:</strong> #' . esc_html(wholesale_order_number($post_id)) . '<br><strong>Payment:</strong> ' . esc_html(isset($payment_labels[$payment_status]) ? $payment_labels[$payment_status] : 'Unknown') . (get_post_meta($post_id, '_payment_txn_id', true) ? ' (Converge transaction ' . esc_html(get_post_meta($post_id, '_payment_txn_id', true)) . ')' : '') . '</p>'
 		. '<p><strong>Customer:</strong> ' . esc_html($customer_name ?: 'N/A') . '<br>'
 		. '<strong>Email:</strong> ' . esc_html($customer_email ?: 'N/A') . '<br>'
 		. '<strong>Order Time:</strong> ' . esc_html($order_time ?: 'N/A') . '<br>'
@@ -1579,13 +1608,10 @@ function wholesale_send_new_order_admin_email($post_id)
 	}
 
 	if (is_email($customer_email) && !get_post_meta($post_id, '_wholesale_customer_order_email_sent', true)) {
-		$customer_subject = sprintf(__('Your order #%s has been received', 'litsign'), $order_id ?: $post_id);
-		$customer_message = '<html><body>'
-			. '<p>' . esc_html(sprintf(__('Thank you%s for your order.', 'litsign'), $customer_name ? ' ' . $customer_name : '')) . '</p>'
-			. '<p>' . esc_html__('We have received your order and will begin processing it shortly.', 'litsign') . '</p>'
-			. '<p><strong>' . esc_html__('Order number:', 'litsign') . '</strong> #' . esc_html($order_id ?: $post_id) . '<br>'
-			. '<strong>' . esc_html__('Order total:', 'litsign') . '</strong> $' . number_format($order_total, 2, '.', ',') . '</p>'
-			. '</body></html>';
+		$customer_subject = sprintf(__('Order #%s confirmed - Storefront Sign Online', 'litsign'), wholesale_order_number($post_id));
+		$customer_message = wholesale_customer_order_email_html($post_id);
+		// Customers reply to the sales inbox, not the WordPress admin address.
+		$headers = array('Content-Type: text/html; charset=UTF-8', 'Reply-To: Storefront Sign Online <TR@StorefrontSignOnline.com>');
 		$customer_sent = wp_mail($customer_email, $customer_subject, $customer_message, $headers);
 		if ($customer_sent) {
 			update_post_meta($post_id, '_wholesale_customer_order_email_sent', current_time('mysql'));
@@ -1914,6 +1940,9 @@ function litsign_scripts()
 	wp_enqueue_style('font-awesome', $theme_uri . '/css/icons.css', array(), $asset_version('/css/icons.css'));
 	wp_enqueue_style('litsign-style', get_stylesheet_uri(), array(), $asset_version('/style.css'));
 	wp_enqueue_style('custom-style', $theme_uri . '/css/style.css', array(), $asset_version('/css/style.css'));
+	if (is_page(array('cart', 'checkout', 'account', 'my-orders', 'login', 'signup')) || is_singular('order') || get_query_var('wholesale_thank_you')) {
+		wp_enqueue_style('wholesale-shop', $theme_uri . '/css/shop.css', array('custom-style'), $asset_version('/css/shop.css'));
+	}
 	if (is_page_template('landing-page.php')) {
 		wp_enqueue_style('landing-page', $theme_uri . '/css/landing-page.css', array('litsign-style', 'custom-style'), $asset_version('/css/landing-page.css'));
 	}
@@ -1924,6 +1953,7 @@ function litsign_scripts()
 	wp_enqueue_script('bootsrap', $theme_uri . '/js/bootstrap.min.js', array('jquery'), $asset_version('/js/bootstrap.min.js'), true);
 	//wp_enqueue_script('stripe', 'https://js.stripe.com/v3/', array(), _S_VERSION, false);
 	wp_enqueue_script('custom-script', $theme_uri . '/js/main.js', array('jquery'), $asset_version('/js/main.js'), true);
+	wp_localize_script('custom-script', 'wholesaleShop', array('ajaxUrl' => admin_url('admin-ajax.php')));
 
 	if (is_singular() && comments_open() && get_option('thread_comments')) {
 		wp_enqueue_script('comment-reply');
@@ -4178,23 +4208,6 @@ add_action('init', 'allow_cross_origin_requests');
 
 
 
-add_action('wp_head', function () {
-    if (is_page('thank-you')) {
-        ?>
-        <!-- Event snippet for Purchase conversion page -->
-<script>
-  gtag('event', 'conversion', {
-      'send_to': 'AW-18454059893/UkFKCJGGp_kcEPW2yt9E',
-      'value': 1.0,
-      'currency': 'USD',
-      'transaction_id': ''
-      // 'new_customer': true /* calculate dynamically, populate with true/false */,
-  });
-</script>
-
-        <?php
-    }
-});
 
 /**
  * Basic hardening: this site was compromised through admin access, so remove

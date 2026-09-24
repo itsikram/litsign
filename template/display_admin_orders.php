@@ -330,71 +330,64 @@ add_action('add_meta_boxes', 'add_order_contact_meta_box');
 function render_order_meta_box()
 {
     $post_id = get_the_ID();
-    $shipping_address = json_decode(get_post_meta($post_id, 'shipping_address', true), true);
-    $billing_address = json_decode(get_post_meta($post_id, 'billing_address', true), true);
-    $product_cost = json_decode(get_post_meta($post_id, 'product_cost', true), true);
-    $order_comment = get_post_meta($post_id, 'order_comment', true);
-    $order_id = get_post_meta($post_id, 'order_id', true);
-    $estimate_delivery_time = get_post_meta($post_id, 'estimate_delivery_time', true);
-    $order_time = get_post_meta($post_id, 'order_time', true);
+    $shipping = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
+    $billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+    $cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
+    $comment = get_post_meta($post_id, 'order_comment', true);
+    $ticket_id = (int) get_post_meta($post_id, '_ticket_id', true);
+    $money = static function ($value) {
+        return '$' . number_format((float) $value, 2);
+    };
+    $address = static function ($data, $prefix) {
+        $lines = array(
+            trim(($data[$prefix . 'fname'] ?? '') . ' ' . ($data[$prefix . 'lname'] ?? '')),
+            $data[$prefix . 'company'] ?? '',
+            trim(($data[$prefix . 'address'] ?? '') . (!empty($data[$prefix . 'address_2']) ? ', ' . $data[$prefix . 'address_2'] : '')),
+            trim(($data[$prefix . 'city'] ?? '') . ', ' . ($data[$prefix . 'state'] ?? '') . ' ' . ($data[$prefix . 'zip'] ?? ''), ', '),
+            $data[$prefix . 'country'] ?? '',
+        );
+        return implode('<br>', array_map('esc_html', array_filter($lines)));
+    };
+    $ship_prefix = isset($shipping['shipping_fname']) ? 'shipping_' : 'billing_';
     ?>
-
-    <div class="order-cost">
-        <h1>Order Details</h1>
-        <h2 style="padding: 0; line-height: 1.5"> <b>Grand Total: </b> $<?php echo esc_html(number_format((float) ($product_cost['grand_total'] ? $product_cost['grand_total'] : 0), 2, '.', ',')); ?></h2>
-        <h2 style="padding: 0; line-height: 1.5"> <b>Sub Total: </b>
-            $<?php echo esc_html(number_format((float) $product_cost['sub_total'], 2, '.', ',')); ?>
-
-        </h2>
-        <h2 style="padding: 0; line-height: 1.5"> <b>Shipping Cost: </b>
-            $<?php echo esc_html(number_format((float) $product_cost['shipping_cost'], 2, '.', ',')); ?>
-        </h2>
-        <h2 style="padding: 0; line-height: 1.5"> <b>tax:</b>
-            $<?php echo esc_html(number_format((float) ($product_cost['tax'] ? $product_cost['tax'] : 0), 2, '.', ',')); ?>
-
-        </h2>
-        <h2 style="padding: 0; line-height: 1.5"> <b>Order Time:</b><?php echo esc_html($order_time); ?>
-        </h2>
-        <h2 style="padding: 0; line-height: 1.5"> <b>Estimate Delivery Time:</b> <?php echo esc_html($estimate_delivery_time); ?></h2>
-        <h2 style="padding: 0; line-height: 1.5"> <b>Order Id:</b> <a href="<?php echo esc_url(get_permalink()); ?>"><?php echo esc_html($order_id); ?></a></h2>
-        <?php $ticket_id = (int) get_post_meta($post_id, '_ticket_id', true); ?>
-        <?php if ($ticket_id) : ?>
-            <h2 style="padding: 0; line-height: 1.5"> <b>Paid via:</b> <a href="<?php echo esc_url(get_edit_post_link($ticket_id)); ?>">Payment Ticket #<?php echo esc_html((string) $ticket_id); ?></a></h2>
-        <?php endif; ?>
-        <hr>
+    <style>
+        .wo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+        .wo-grid h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #646970; }
+        .wo-grid dl { display: grid; grid-template-columns: auto auto; gap: 4px 12px; margin: 0; }
+        .wo-grid dd { margin: 0; text-align: right; }
+        .wo-grid .wo-total { font-weight: 700; font-size: 14px; }
+        @media (max-width: 1100px) { .wo-grid { grid-template-columns: 1fr; } }
+    </style>
+    <div class="wo-grid">
+        <div>
+            <h3>Totals</h3>
+            <dl>
+                <dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd>
+                <dt>Shipping<?php echo !empty($cost['shipping_method']) ? ' (' . esc_html($cost['shipping_method']) . ')' : ''; ?></dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd>
+                <dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd>
+                <dt class="wo-total">Total</dt><dd class="wo-total"><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd>
+            </dl>
+            <p>Order #<?php echo esc_html(wholesale_order_number($post_id)); ?> &middot; placed <?php echo esc_html(get_the_date('M j, Y g:ia', $post_id)); ?><br>
+                Estimated ship date: <strong><?php echo esc_html(get_post_meta($post_id, 'estimate_delivery_time', true) ?: '—'); ?></strong>
+                <?php if ($ticket_id) : ?><br>Paid via <a href="<?php echo esc_url(get_edit_post_link($ticket_id)); ?>">payment ticket #<?php echo esc_html((string) $ticket_id); ?></a><?php endif; ?></p>
+        </div>
+        <div>
+            <h3>Customer</h3>
+            <p><?php echo $address($billing, 'billing_'); // Escaped per line. ?></p>
+            <p>
+                <?php if (!empty($billing['billing_email'])) : ?><a href="mailto:<?php echo esc_attr($billing['billing_email']); ?>"><?php echo esc_html($billing['billing_email']); ?></a><br><?php endif; ?>
+                <?php if (!empty($billing['billing_tel'])) : ?><a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $billing['billing_tel'])); ?>"><?php echo esc_html($billing['billing_tel']); ?></a><?php endif; ?>
+            </p>
+        </div>
+        <div>
+            <h3>Ship to</h3>
+            <p><?php echo $address($shipping, $ship_prefix); // Escaped per line. ?></p>
+            <?php if (!empty($shipping[$ship_prefix . 'tel'])) : ?><p><?php echo esc_html($shipping[$ship_prefix . 'tel']); ?></p><?php endif; ?>
+        </div>
     </div>
-
-    <div class="billing-details">
-        <h1>Billing Details</h1>
-
-        <?php
-        foreach ($billing_address as $key => $value) {
-            $label = ucwords(str_replace('billing_', ' ', (string) $key));
-            $display_value = is_scalar($value) ? esc_html((string) $value) : '';
-        ?>
-            <b> <?php echo esc_html($label); ?>:</b> <?php echo $display_value; ?> <br />
-
-        <?php
-
-        } ?>
-        <hr />
-    </div>
-    <div class="shipping-details">
-        <h1>Shipping Details</h1>
-
-        <?php
-        foreach ($shipping_address as $key => $value) {
-            $label = ucwords(str_replace('billing_', ' ', str_replace('shipping_', ' ', (string) $key)));
-            $display_value = is_scalar($value) ? esc_html((string) $value) : '';
-        ?>
-            <b> <?php echo esc_html($label); ?>:</b> <?php echo $display_value; ?> <br />
-
-        <?php
-
-        } ?>
-        <hr />
-    </div>
-
-<?php
-
+    <?php if ($comment) : ?>
+        <h3 style="margin-top:16px;">Customer notes</h3>
+        <p><?php echo nl2br(esc_html($comment)); ?></p>
+    <?php endif; ?>
+    <?php
 }

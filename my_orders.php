@@ -5,110 +5,82 @@ if (!is_user_logged_in()) {
     exit;
 }
 
-$user_id = get_current_user_id();
+$orders = get_posts(array(
+    'post_type' => 'order',
+    'post_status' => array_keys(wholesale_order_status_info()),
+    'meta_key' => 'user_id',
+    'meta_value' => get_current_user_id(),
+    'posts_per_page' => -1,
+    'orderby' => 'date',
+    'order' => 'DESC',
+));
 
 get_header();
-
 ?>
 
-<div class="container mt-5">
-    <h2 class="mb-4">Order Details</h2>
+<main id="primary" class="account-page-v2">
+    <div class="container account-container">
+        <header class="acct-head">
+            <div>
+                <h1>My orders</h1>
+                <p>Track your signs and review past orders.</p>
+            </div>
+            <a class="cart-secondary" href="<?php echo esc_url(home_url('/account/')); ?>">Account details</a>
+        </header>
 
-    <?php
-                $args = array(
-                    'post_type'      => 'order', // Custom post type
-                    'post_status'    => array('pending', 'on-hold', 'on_hold', 'processing', 'completed', 'cancelled', 'refunded', 'failed'),
-                    'meta_key'       => 'user_id', // Meta key
-                    'meta_value'     => $user_id, // Meta value
-                    'meta_compare'   => '=', // Comparison operator (optional, default is '=')
-                    'posts_per_page' => -1, // Retrieve all matching posts, -1 for unlimited
-                );
+        <?php if (!$orders) : ?>
+            <section class="checkout-card cart-empty">
+                <h2>No orders yet</h2>
+                <p>When you place an order it will appear here with its status and tracking.</p>
+                <div class="cart-empty-actions">
+                    <a class="checkout-pay" href="<?php echo esc_url(home_url('/#product-box-container')); ?>">Shop Channel Letters</a>
+                </div>
+            </section>
+        <?php else : ?>
+            <ul class="order-list">
+                <?php foreach ($orders as $order) :
+                    $items = wholesale_decode_order_meta_array(get_post_meta($order->ID, 'product_json', true));
+                    $cost = wholesale_decode_order_meta_array(get_post_meta($order->ID, 'product_cost', true));
+                    $first = $items ? reset($items) : array();
+                    $image = !empty($first['product_details']['Design Url']) ? $first['product_details']['Design Url'] : ($first['product_thumbnail'] ?? '');
+                    $tracking = get_post_meta($order->ID, '_tracking_number', true);
+                    ?>
+                    <li class="checkout-card order-row">
+                        <?php if ($image) : ?>
+                            <img src="<?php echo esc_url($image); ?>" alt="" width="72" height="72" loading="lazy">
+                        <?php endif; ?>
+                        <div class="order-row-main">
+                            <div class="order-row-top">
+                                <a class="order-row-number" href="<?php echo esc_url(get_permalink($order)); ?>">Order #<?php echo esc_html(wholesale_order_number($order->ID)); ?></a>
+                                <?php echo wholesale_order_status_badge($order->post_status); // Escaped in the helper. ?>
+                            </div>
+                            <p class="order-row-items">
+                                <?php echo esc_html(implode(', ', array_map(static function ($item) {
+                                    return ($item['product_title'] ?? '') . (($item['product_quantity'] ?? 1) > 1 ? ' × ' . $item['product_quantity'] : '');
+                                }, $items))); ?>
+                            </p>
+                            <p class="order-row-meta">
+                                Placed <?php echo esc_html(get_the_date('M j, Y', $order)); ?>
+                                <?php if ('completed' !== $order->post_status && get_post_meta($order->ID, 'estimate_delivery_time', true)) : ?>
+                                    &middot; Estimated to ship by <?php echo esc_html(get_post_meta($order->ID, 'estimate_delivery_time', true)); ?>
+                                <?php endif; ?>
+                                <?php if ($tracking) : ?>
+                                    &middot; Tracking <?php echo esc_html($tracking); ?>
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                        <div class="order-row-side">
+                            <strong><?php echo esc_html('$' . number_format((float) ($cost['grand_total'] ?? 0), 2)); ?></strong>
+                            <a href="<?php echo esc_url(get_permalink($order)); ?>">View details</a>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
 
-                $query = new WP_Query($args);
-
-                if ($query->have_posts()) {?>
-
-    <div class="responsive-table">
-        <table class="table table-striped table-bordered">
-            <thead class="table-dark">
-                <tr>
-                    <th scope="col">Order ID</th>
-                    <th scope="col">Contact Number</th>
-                    <th scope="col">Order Date</th>
-
-                    <th scope="col">Estimated Delivery Date</th>
-                    <th scope="col">Status</th>
-                </tr>
-            </thead>
-            <tbody>
+        <p class="account-help">Questions about an order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST).</p>
+    </div>
+</main>
 
 <?php
-                    while ($query->have_posts()) {
-                        $query->the_post();
-                        $post_id = get_the_ID();
-                        $order_id = get_post_meta($post_id,'order_id',true);
-                        $order_status = get_post_status();
-                        $order_time = get_post_meta($post_id,'order_time',true);
-                        $estimate_delivery_time = get_post_meta($post_id,'estimate_delivery_time',true);
-
-                        $contact_number = json_decode(get_post_meta($post_id,'billing_address',true),true)['billing_tel'];
-                        
-                ?>
-                        <tr>
-                            <td><a href="<?php echo esc_url(get_permalink()); ?>">#<?php echo esc_html($order_id); ?></a></td>
-                            <td><?php echo esc_html((string) $contact_number); ?></td>
-                            <td><?php echo esc_html((string) $order_time); ?></td>
-                            <td><?php echo esc_html((string) $estimate_delivery_time); ?></td>
-                            <td>
-
-                                <?php switch($order_status){
-                                    case 'on-hold':
-                                    case 'on_hold':
-                                            echo '<span class="badge bg-warning">On hold</span>';
-                                        break;
-                                    case 'completed':
-                                        echo '<span class="badge bg-success">Completed</span>';
-                                        break;
-                                    case 'processing':
-                                        echo '<span class="badge bg-primary">Processing</span>';
-                                        break;
-                                    case 'failed':
-                                        echo '<span class="badge bg-danger">Failed</span>';
-                                        break;
-                                    case 'cancelled':
-                                        echo '<span class="badge bg-secondary">Cancelled</span>';
-                                        break;
-                                    case 'refunded':
-                                        echo '<span class="badge bg-info">Refunded</span>';
-                                        break;
-                                    default:
-                                        echo '<span class="badge bg-secondary">' . esc_html(ucwords(str_replace('-', ' ', $order_status))) . '</span>';
-                                }
-                                ?>
-                             
-                            </td>
-                        </tr>
-
-
-
-
-                <?php
-                    }
-                    wp_reset_postdata(); // Restore global post data after custom query loop
-                
-
-                ?>
-
-            </tbody>
-        </table>
-    </div>
-    <?php 
-    } else {
-        echo '<p class="text-secondary">No Order Details Found</p>';
-    }?>
-
-</div>
-
-
-
-<?php get_footer(); ?>
+get_footer();

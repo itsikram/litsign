@@ -125,7 +125,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
         <div class="col-lg-10">
             <div class="d-flex justify-content-between align-items-center flex-wrap mb-3 account-topbar">
                 <div>
-                    <p class="mb-1 account-greeting">Hi, <?php echo esc_html($user_data->data->user_nicename); ?></p>
+                    <p class="mb-1 account-greeting">Hi, <?php echo esc_html($user_first_name ? $user_first_name : $user_data->data->display_name); ?></p>
                     <h2 class="mb-0 account-page-title">My Account</h2>
                 </div>
             </div>
@@ -147,6 +147,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                 <button class="nav-link active text-start" data-bs-toggle="pill" data-bs-target="#v-pills-account" type="button" role="tab" aria-controls="v-pills-account" aria-selected="true">Account Details</button>
                                 <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#v-pills-address" type="button" role="tab" aria-controls="v-pills-address" aria-selected="false">Address</button>
                                 <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#v-pills-password" type="button" role="tab" aria-controls="v-pills-password" aria-selected="false">Password</button>
+                                <a href="<?php echo esc_url(home_url('/my-orders/')); ?>" class="nav-link text-start">My Orders</a>
                                 <a href="<?php echo esc_url(wp_nonce_url(add_query_arg('logout', 'true', get_permalink()), 'wholesale_account_logout')); ?>" class="nav-link text-start account-logout" id="v-pills-settings-tab" role="tab" aria-selected="false">Logout</a>
                             </div>
                         </div>

@@ -12,17 +12,25 @@
  * Data
  * ------------------------------------------------------------------------ */
 
+/**
+ * Business details shown to customers, from Settings → Storefront Sign → Payment tickets.
+ */
 function wholesale_ticket_business()
 {
     $logo_id = get_theme_mod('custom_logo');
+    $defaults = wholesale_setting_defaults();
+    $setting = static function ($key) use ($defaults) {
+        $value = trim((string) wholesale_get_setting($key));
+        return '' !== $value ? $value : $defaults[$key];
+    };
 
     return array(
-        'name' => 'Lit Sign Manufacturing',
-        'site' => 'StorefrontSignOnline.com',
-        'phone' => '866-436-2101',
-        'email' => 'TR@StorefrontSignOnline.com',
-        'address' => '707 S. Grady Way Suite 600, Renton, WA 98057',
+        'name' => $setting('ticket_business_name'),
+        'phone' => $setting('ticket_business_phone'),
+        'email' => $setting('ticket_business_email'),
+        'address' => $setting('ticket_business_address'),
         'logo' => $logo_id ? (string) wp_get_attachment_image_url($logo_id, 'full') : '',
+        'color' => (string) wholesale_get_setting('primary_color'),
     );
 }
 
@@ -328,7 +336,19 @@ function wholesale_get_ticket($ticket_id)
     }
     $items = array_map('wholesale_ticket_normalize_item', array_values($items), array_keys(array_values($items)));
 
-    $totals = wholesale_ticket_calculate_totals($items, (float) $meta('_ticket_discount'), (float) $meta('_ticket_shipping'), (float) $meta('_ticket_tax_rate'));
+    // A ticket that has never been saved starts from the defaults in Settings → Storefront Sign.
+    $is_new = '' === $status && 'auto-draft' === get_post_status($ticket_id);
+    $tax_rate = (float) $meta('_ticket_tax_rate');
+    $message = (string) $meta('_ticket_description');
+    $due = (string) $meta('_ticket_due');
+    if ($is_new) {
+        $tax_rate = wholesale_setting_enabled('ticket_default_tax') ? (float) wholesale_get_setting('tax_rate') : 0;
+        $message = (string) wholesale_get_setting('ticket_default_message');
+        $due_days = absint(wholesale_get_setting('ticket_due_days'));
+        $due = $due_days ? wp_date('Y-m-d', time() + $due_days * DAY_IN_SECONDS) : '';
+    }
+
+    $totals = wholesale_ticket_calculate_totals($items, (float) $meta('_ticket_discount'), (float) $meta('_ticket_shipping'), $tax_rate);
     $log = $meta('_ticket_log');
 
     return array(
@@ -340,13 +360,13 @@ function wholesale_get_ticket($ticket_id)
         'customer_company' => (string) $meta('_ticket_customer_company'),
         'customer_email' => (string) $meta('_ticket_customer_email'),
         'customer_phone' => (string) $meta('_ticket_customer_phone'),
-        'message' => (string) $meta('_ticket_description'),
+        'message' => $message,
         'internal_note' => (string) $meta('_ticket_internal_note'),
         'proof_id' => (int) $meta('_ticket_proof_id'),
         'items' => $items,
         'totals' => $totals,
         'amount' => $totals['grand_total'],
-        'due' => (string) $meta('_ticket_due'),
+        'due' => $due,
         'status' => $status ? $status : 'draft',
         'token' => (string) $meta('_ticket_token'),
         'sent_at' => (string) $meta('_ticket_sent_at'),
@@ -1070,13 +1090,21 @@ function wholesale_send_ticket($ticket_id)
     $ticket['status'] = 'sent';
 
     $business = wholesale_ticket_business();
-    $subject = sprintf('Payment request %s from %s: %s', $ticket['number'], $business['name'], wholesale_format_ticket_amount($ticket['amount']));
+    $subject_template = trim((string) wholesale_get_setting('ticket_email_subject'));
+    $subject = strtr($subject_template ? $subject_template : wholesale_setting_defaults()['ticket_email_subject'], array(
+        '{number}' => $ticket['number'],
+        '{title}' => $ticket['title'],
+        '{amount}' => wholesale_format_ticket_amount($ticket['amount']),
+        '{business}' => $business['name'],
+    ));
     $headers = array(
         'Content-Type: text/html; charset=UTF-8',
-        'Reply-To: ' . get_option('admin_email'),
+        'Reply-To: ' . (is_email($business['email']) ? $business['name'] . ' <' . $business['email'] . '>' : get_option('admin_email')),
     );
-    foreach (wholesale_contact_admin_recipients() as $admin_email) {
-        $headers[] = 'Bcc: ' . $admin_email;
+    if (wholesale_setting_enabled('ticket_bcc_admins')) {
+        foreach (wholesale_contact_admin_recipients() as $admin_email) {
+            $headers[] = 'Bcc: ' . $admin_email;
+        }
     }
 
     if (!wp_mail($ticket['customer_email'], $subject, wholesale_ticket_email_html($ticket), $headers)) {
@@ -1140,7 +1168,7 @@ function wholesale_ticket_email_html($ticket)
     return '<!doctype html><html><body style="margin:0;background:#f3f5f8;font-family:Arial,Helvetica,sans-serif;color:#1d2733;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f5f8;padding:24px 12px;"><tr><td align="center">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e3e8ee;">'
-        . '<tr><td style="padding:24px 28px;border-bottom:4px solid #1fa8de;">'
+        . '<tr><td style="padding:24px 28px;border-bottom:4px solid ' . esc_attr($business['color']) . ';">'
         . ($business['logo'] ? '<img src="' . esc_url($business['logo']) . '" alt="' . esc_attr($business['name']) . '" style="max-height:44px;max-width:220px;">' : '<strong style="font-size:18px;">' . esc_html($business['name']) . '</strong>')
         . '</td></tr>'
         . '<tr><td style="padding:28px 28px 8px;">'
@@ -1157,7 +1185,7 @@ function wholesale_ticket_email_html($ticket)
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-top:8px;">' . $summary . '</table>'
         . '</td></tr>'
         . '<tr><td style="padding:24px 28px 8px;">'
-        . '<p style="margin:0 0 20px;"><a href="' . esc_url($pay_url) . '" style="display:inline-block;background:#1fa8de;color:#ffffff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;">Review &amp; pay ' . esc_html(wholesale_format_ticket_amount($ticket['amount'])) . '</a></p>'
+        . '<p style="margin:0 0 20px;"><a href="' . esc_url($pay_url) . '" style="display:inline-block;background:' . esc_attr($business['color']) . ';color:#ffffff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;">Review &amp; pay ' . esc_html(wholesale_format_ticket_amount($ticket['amount'])) . '</a></p>'
         . $proof
         . ($ticket['due'] ? '<p style="margin:0 0 12px;color:#5b6573;font-size:13px;">Please pay by ' . esc_html(date_i18n('F j, Y', strtotime($ticket['due']))) . '.</p>' : '')
         . '<p style="margin:0 0 12px;color:#5b6573;font-size:13px;">Button not working? Copy this link: <a href="' . esc_url($pay_url) . '" style="color:#0c7fae;word-break:break-all;">' . esc_html($pay_url) . '</a></p>'

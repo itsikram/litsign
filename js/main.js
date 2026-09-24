@@ -10,7 +10,7 @@
     const revealElements = [...document.querySelectorAll(revealSelector)].filter((element, index, elements) => {
       // The hero stays static so ad visitors see the headline and CTAs immediately.
       return !element.matches('.pb-gallery-image, .cl-icon, .home-hero')
-        && !element.closest('header, nav, .modal, .offcanvas, .home-hero-content, .checkout-page, .cart-page-v2, .account-page-v2, .order-confirmation, [aria-hidden="true"]')
+        && !element.closest('header, nav, .modal, .offcanvas, .home-hero-content, .checkout-page, .cart-page-v2, .account-page-v2, .order-confirmation, .footer-cp-text-container, [aria-hidden="true"]')
         && elements.indexOf(element) === index;
     });
 
@@ -868,7 +868,25 @@
       menu.stop(true, true).toggle(!isOpen);
       button.attr('aria-expanded', String(!isOpen));
       $('.main-header').toggleClass('mega-menu-open', !isOpen);
+      if (!isOpen) sizeMegaMenu();
     })
+
+    // Fit the menu into the space left below the sticky header so it scrolls on small screens.
+    function sizeMegaMenu() {
+      const menu = document.getElementById('megaMenu');
+      if (!menu || menu.offsetParent === null) return;
+      const available = window.innerHeight - menu.getBoundingClientRect().top - 12;
+      menu.style.setProperty('--mega-menu-max-height', Math.max(available, 200) + 'px');
+    }
+
+    $(window).on('resize orientationchange', sizeMegaMenu);
+
+    // The review modal sits inside the footer's scroll-reveal block, whose transform
+    // pins position:fixed to the footer. Hoist it to <body> so it opens over the viewport.
+    const feedbackModalEl = document.getElementById('feedbackModal');
+    if (feedbackModalEl && feedbackModalEl.parentElement !== document.body) {
+      document.body.appendChild(feedbackModalEl);
+    }
 
     $('.mega-menu-backdrop').click(() => {
       $('#megaMenu').stop(true, true).hide();

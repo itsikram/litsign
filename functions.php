@@ -325,6 +325,16 @@ function wholesale_setting_defaults()
 		'google_places_api_key' => defined('WHOLESALE_GOOGLE_PLACES_API_KEY') ? WHOLESALE_GOOGLE_PLACES_API_KEY : '',
 		'google_place_id' => '',
 		'email_status_updates' => 1,
+		'payment_method' => 'lightbox',
+		'ticket_business_name' => 'Lit Sign Manufacturing',
+		'ticket_business_phone' => '866-436-2101',
+		'ticket_business_email' => 'TR@StorefrontSignOnline.com',
+		'ticket_business_address' => '707 S. Grady Way Suite 600, Renton, WA 98057',
+		'ticket_email_subject' => 'Payment request {number} from {business}: {amount}',
+		'ticket_bcc_admins' => 1,
+		'ticket_default_message' => '',
+		'ticket_default_tax' => 0,
+		'ticket_due_days' => 0,
 	);
 }
 
@@ -360,13 +370,39 @@ function wholesale_register_settings()
 	foreach ($defaults as $key => $default) {
 		register_setting('wholesale_settings', 'wholesale_' . $key, array(
 			'type' => is_int($default) ? 'integer' : 'string',
-			'sanitize_callback' => in_array($key, array('primary_color', 'accent_color', 'sale_price_color'), true)
-				? 'wholesale_sanitize_hex_color'
-				: ('tax_rate' === $key ? 'wholesale_sanitize_decimal' : ('standard_shipping_options' === $key || 'channel_shipping_options' === $key ? 'wholesale_sanitize_decimal_list' : 'sanitize_text_field')),
+			'sanitize_callback' => wholesale_setting_sanitizer($key),
 		));
 	}
 }
+
+function wholesale_setting_sanitizer($key)
+{
+	$sanitizers = array(
+		'primary_color' => 'wholesale_sanitize_hex_color',
+		'accent_color' => 'wholesale_sanitize_hex_color',
+		'sale_price_color' => 'wholesale_sanitize_hex_color',
+		'payment_method' => 'wholesale_sanitize_payment_method',
+		'tax_rate' => 'wholesale_sanitize_decimal',
+		'standard_shipping_options' => 'wholesale_sanitize_decimal_list',
+		'channel_shipping_options' => 'wholesale_sanitize_decimal_list',
+		'ticket_business_email' => 'sanitize_email',
+		'ticket_default_message' => 'sanitize_textarea_field',
+		'ticket_due_days' => 'wholesale_sanitize_days',
+	);
+
+	return $sanitizers[$key] ?? 'sanitize_text_field';
+}
 add_action('admin_init', 'wholesale_register_settings');
+
+function wholesale_sanitize_days($value)
+{
+	return min(365, max(0, (int) $value));
+}
+
+function wholesale_sanitize_payment_method($value)
+{
+	return 'direct' === $value ? 'direct' : 'lightbox';
+}
 
 function wholesale_sanitize_decimal($value)
 {
@@ -405,6 +441,19 @@ function wholesale_settings_page()
 			<table class="form-table" role="presentation">
 				<tr><th>Order status emails</th><td><input type="hidden" name="wholesale_email_status_updates" value="0"><label><input type="checkbox" name="wholesale_email_status_updates" value="1" <?php checked(wholesale_setting_enabled('email_status_updates')); ?>> Email customers when their order goes into production, ships (with tracking), is put on hold, cancelled or refunded</label></td></tr>
 			</table>
+			<h2 class="title" id="payment-tickets">Payment tickets</h2>
+			<p>Used by <a href="<?php echo esc_url(admin_url('edit.php?post_type=payment_ticket')); ?>">Payment Tickets</a>: the customer's payment page, the payment request email and new tickets.</p>
+			<table class="form-table" role="presentation">
+				<tr><th><label for="wholesale_ticket_business_name">Business name</label></th><td><input class="regular-text" id="wholesale_ticket_business_name" name="wholesale_ticket_business_name" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_name')); ?>"></td></tr>
+				<tr><th><label for="wholesale_ticket_business_phone">Phone</label></th><td><input class="regular-text" id="wholesale_ticket_business_phone" name="wholesale_ticket_business_phone" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_phone')); ?>"></td></tr>
+				<tr><th><label for="wholesale_ticket_business_email">Email</label></th><td><input type="email" class="regular-text" id="wholesale_ticket_business_email" name="wholesale_ticket_business_email" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_email')); ?>"><p class="description">Shown to customers and used as the Reply-To address, so their replies reach you.</p></td></tr>
+				<tr><th><label for="wholesale_ticket_business_address">Address</label></th><td><input class="large-text" id="wholesale_ticket_business_address" name="wholesale_ticket_business_address" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_address')); ?>"><p class="description">Shown in the "From" section of the payment page and in the email footer.</p></td></tr>
+				<tr><th><label for="wholesale_ticket_email_subject">Email subject</label></th><td><input class="large-text" id="wholesale_ticket_email_subject" name="wholesale_ticket_email_subject" value="<?php echo esc_attr(wholesale_get_setting('ticket_email_subject')); ?>"><p class="description">Placeholders: <code>{number}</code> ticket number, <code>{title}</code> project name, <code>{amount}</code> total due, <code>{business}</code> business name.</p></td></tr>
+				<tr><th>Copy to admins</th><td><input type="hidden" name="wholesale_ticket_bcc_admins" value="0"><label><input type="checkbox" name="wholesale_ticket_bcc_admins" value="1" <?php checked(wholesale_setting_enabled('ticket_bcc_admins')); ?>> Send the admin inboxes a blind copy of every payment request</label></td></tr>
+				<tr><th><label for="wholesale_ticket_default_message">Default message</label></th><td><textarea class="large-text" rows="3" id="wholesale_ticket_default_message" name="wholesale_ticket_default_message" placeholder="e.g. Thanks for choosing us! Production starts once payment is received."><?php echo esc_textarea(wholesale_get_setting('ticket_default_message')); ?></textarea><p class="description">Pre-filled as the message to the customer on new tickets. You can still change it on each ticket.</p></td></tr>
+				<tr><th>Sales tax on new tickets</th><td><input type="hidden" name="wholesale_ticket_default_tax" value="0"><label><input type="checkbox" name="wholesale_ticket_default_tax" value="1" <?php checked(wholesale_setting_enabled('ticket_default_tax')); ?>> Start new tickets with the checkout tax rate (<?php echo esc_html(wholesale_get_setting('tax_rate')); ?>%)</label></td></tr>
+				<tr><th><label for="wholesale_ticket_due_days">Pay-by period</label></th><td><input type="number" min="0" step="1" class="small-text" id="wholesale_ticket_due_days" name="wholesale_ticket_due_days" value="<?php echo esc_attr((string) wholesale_get_setting('ticket_due_days')); ?>"> days<p class="description">New tickets get a pay-by date this many days ahead, and the link stops accepting payment after it. Use 0 for no pay-by date.</p></td></tr>
+			</table>
 			<h2 class="title" id="google-reviews">Google reviews</h2>
 			<p>Shows your Google Business rating and latest reviews in the site-wide review slider, next to reviews you approve under <a href="<?php echo esc_url(admin_url('edit.php?post_type=review_submission')); ?>">Customer Reviews</a>.</p>
 			<table class="form-table" role="presentation">
@@ -424,6 +473,14 @@ function wholesale_settings_page()
 			<h2 class="title">Payment gateway</h2>
 			<table class="form-table" role="presentation">
 				<tr><th>Disable card payment</th><td><input type="hidden" name="wholesale_payment_disabled" value="0"><label><input type="checkbox" name="wholesale_payment_disabled" value="1" <?php checked(wholesale_setting_enabled('payment_disabled')); ?>> Create orders for manual payment instead</label></td></tr>
+				<tr><th>Card payment method</th><td>
+					<fieldset>
+						<label><input type="radio" name="wholesale_payment_method" value="lightbox" <?php checked('lightbox', wholesale_payment_method()); ?>> <strong>Converge secure window (Lightbox)</strong> &mdash; recommended</label>
+						<p class="description" style="margin:2px 0 10px 24px;">Customers type their card into Elavon's own secure window, so card numbers never pass through this website. Your Converge user must have <em>Hosted Payments</em> enabled.</p>
+						<label><input type="radio" name="wholesale_payment_method" value="direct" <?php checked('direct', wholesale_payment_method()); ?>> <strong>Card fields on this website (direct)</strong></label>
+						<p class="description" style="margin:2px 0 0 24px;">The previous method: card fields on the checkout page, charged by this server through the Converge API. Card numbers pass through (but are never stored on) this server, which puts the site in a stricter PCI compliance scope.</p>
+					</fieldset>
+				</td></tr>
 				<tr><th>Test mode</th><td><input type="hidden" name="wholesale_payment_test_mode" value="0"><label><input type="checkbox" name="wholesale_payment_test_mode" value="1" <?php checked(wholesale_setting_enabled('payment_test_mode')); ?>> Use the Converge demo endpoint</label></td></tr>
 				<tr><th><label for="wholesale_merchant_id">Merchant ID</label></th><td><input class="regular-text" id="wholesale_merchant_id" name="wholesale_merchant_id" value="<?php echo esc_attr(wholesale_get_setting('merchant_id')); ?>"></td></tr>
 				<tr><th><label for="wholesale_gateway_user_id">Gateway user ID</label></th><td><input class="regular-text" id="wholesale_gateway_user_id" name="wholesale_gateway_user_id" value="<?php echo esc_attr(wholesale_get_setting('gateway_user_id')); ?>"></td></tr>

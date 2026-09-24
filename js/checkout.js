@@ -91,7 +91,8 @@
       if (!form.reportValidity()) return;
 
       showStatus('');
-      setBusy(true, settings.cardEnabled ? 'Opening secure payment…' : 'Placing your order…');
+      const busyLabel = !settings.cardEnabled ? 'Placing your order…' : (settings.method === 'direct' ? 'Processing payment…' : 'Opening secure payment…');
+      setBusy(true, busyLabel);
 
       const data = new FormData(form);
       data.append('kind', kind);

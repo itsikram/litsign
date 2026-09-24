@@ -9,11 +9,119 @@
  *  3. wholesale_payment_complete: on approval the server looks the transaction up with
  *     Converge (txnquery), checks amount + invoice, and only then creates the order.
  *
+ * Settings → Storefront Sign → "Card payment method" can instead use the older direct
+ * method: card fields on our own page, charged server-to-server (wholesale_converge_direct_sale).
+ *
  * @package litsign
  */
 
 if (!defined('ABSPATH')) {
 	exit;
+}
+
+/**
+ * 'lightbox' (Converge secure window) or 'direct' (card fields on our page).
+ */
+function wholesale_payment_method()
+{
+	return 'direct' === wholesale_get_setting('payment_method') ? 'direct' : 'lightbox';
+}
+
+/**
+ * Direct method: validate the card fields from the form. Returns the card data or WP_Error.
+ * Card data is only held in memory for the one gateway request and is never stored or logged.
+ */
+function wholesale_direct_card_from_request($post)
+{
+	$digits = static function ($key) use ($post) {
+		return isset($post[$key]) ? preg_replace('/\D+/', '', (string) wp_unslash($post[$key])) : '';
+	};
+	$card = array(
+		'number' => $digits('card_number'),
+		'cvv' => $digits('card_cvv'),
+		'month' => $digits('card_exp_month'),
+		'year' => $digits('card_exp_year'),
+	);
+	$exp_year = 2000 + (int) $card['year'];
+	$expired = $exp_year < (int) gmdate('Y') || ($exp_year === (int) gmdate('Y') && (int) $card['month'] < (int) gmdate('n'));
+
+	if (strlen($card['number']) < 12 || strlen($card['number']) > 19) {
+		return new WP_Error('card', 'Please check your card number.');
+	}
+	if (strlen($card['cvv']) < 3 || strlen($card['cvv']) > 4) {
+		return new WP_Error('card', 'Please check your card security code (CVV).');
+	}
+	if (2 !== strlen($card['month']) || (int) $card['month'] < 1 || (int) $card['month'] > 12 || 2 !== strlen($card['year']) || $expired) {
+		return new WP_Error('card', 'Please check your card expiration date.');
+	}
+	return $card;
+}
+
+/**
+ * Direct method: charge the card server-to-server (Converge process.do, ccsale).
+ *
+ * @return array{ok:bool,message:string,txn_id:string,approval_code:string,card_last4:string}
+ */
+function wholesale_converge_direct_sale($amount, $card, $billing, $invoice)
+{
+	$result = array('ok' => false, 'message' => 'Payment failed. No charge was made.', 'txn_id' => '', 'approval_code' => '', 'card_last4' => substr($card['number'], -4));
+	$credentials = wholesale_converge_credentials();
+	if (!$credentials) {
+		$result['message'] = 'Online card payment is not available right now. Please call us at 866-436-2101 to place your order.';
+		return $result;
+	}
+
+	$path = wholesale_setting_enabled('payment_test_mode') ? '/VirtualMerchantDemo/process.do' : '/VirtualMerchant/process.do';
+	$response = wp_remote_post(wholesale_converge_host() . $path, array(
+		'timeout' => 45,
+		'body' => array_merge($credentials, array(
+			'ssl_show_form' => 'false',
+			'ssl_result_format' => 'ASCII',
+			'ssl_transaction_type' => 'ccsale',
+			'ssl_amount' => number_format((float) $amount, 2, '.', ''),
+			'ssl_card_number' => $card['number'],
+			'ssl_exp_date' => $card['month'] . $card['year'],
+			'ssl_cvv2cvc2_indicator' => '1',
+			'ssl_cvv2cvc2' => $card['cvv'],
+			'ssl_invoice_number' => $invoice,
+			'ssl_first_name' => mb_substr($billing['billing_fname'] ?? '', 0, 20),
+			'ssl_last_name' => mb_substr($billing['billing_lname'] ?? '', 0, 30),
+			'ssl_avs_address' => mb_substr($billing['billing_address'] ?? '', 0, 30),
+			'ssl_avs_zip' => mb_substr($billing['billing_zip'] ?? '', 0, 9),
+			'ssl_email' => $billing['billing_email'] ?? '',
+		)),
+	));
+
+	if (is_wp_error($response)) {
+		// A timeout can happen after Converge approved the charge, so staff must check.
+		error_log('Wholesale: direct Converge sale request failed for invoice ' . $invoice . ': ' . $response->get_error_message());
+		$result['message'] = 'We could not reach our payment processor. Please call us at 866-436-2101 before trying again, so you are not charged twice.';
+		return $result;
+	}
+
+	$fields = array();
+	foreach (preg_split('/\r\n|\n|\s+(?=\w+=)/', trim(wp_remote_retrieve_body($response))) as $line) {
+		$pair = explode('=', $line, 2);
+		if (2 === count($pair)) {
+			$fields[trim($pair[0])] = trim($pair[1]);
+		}
+	}
+
+	if (isset($fields['ssl_result']) && '0' === $fields['ssl_result']) {
+		$result['ok'] = true;
+		$result['message'] = 'Approved';
+		$result['txn_id'] = $fields['ssl_txn_id'] ?? '';
+		$result['approval_code'] = $fields['ssl_approval_code'] ?? '';
+		return $result;
+	}
+
+	if (!empty($fields['errorCode'])) {
+		error_log('Wholesale: direct Converge sale error ' . $fields['errorCode'] . ' (' . ($fields['errorName'] ?? '') . ') for invoice ' . $invoice);
+		$result['message'] = 'Payment could not be processed: ' . sanitize_text_field($fields['errorMessage'] ?? $fields['errorName'] ?? 'unknown error') . '. No charge was made.';
+	} elseif (!empty($fields['ssl_result_message'])) {
+		$result['message'] = 'Your card was declined (' . sanitize_text_field($fields['ssl_result_message']) . '). No charge was made. Please try another card.';
+	}
+	return $result;
 }
 
 /**
@@ -82,7 +190,14 @@ function wholesale_converge_session_token($amount, $invoice, $billing)
 	$body = is_wp_error($response) ? '' : trim(wp_remote_retrieve_body($response));
 	// A token is a single opaque string; anything with spaces or tags is an error page/message.
 	if (is_wp_error($response) || 200 !== wp_remote_retrieve_response_code($response) || '' === $body || preg_match('/[\s<]/', $body)) {
-		error_log('Wholesale: Converge session token request failed: ' . (is_wp_error($response) ? $response->get_error_message() : substr($body, 0, 300)));
+		$code = is_wp_error($response) ? 0 : (int) wp_remote_retrieve_response_code($response);
+		error_log(sprintf(
+			'Wholesale: Converge session token request failed (HTTP %d, %s endpoint): %s%s',
+			$code,
+			wholesale_setting_enabled('payment_test_mode') ? 'demo' : 'live',
+			is_wp_error($response) ? $response->get_error_message() : substr(wp_strip_all_tags($body), 0, 300),
+			403 === $code ? ' — the Converge user is not enabled for Hosted Payments (or demo/live credentials are mixed up).' : ''
+		));
 		return new WP_Error('token_failed', 'We could not connect to our secure payment processor. Please try again in a minute, or call us at 866-436-2101.');
 	}
 
@@ -458,6 +573,11 @@ function wholesale_ajax_payment_start()
 	}
 
 	$ref = 'SSO' . strtoupper(wp_generate_password(12, false, false));
+
+	if ('direct' === wholesale_payment_method()) {
+		wholesale_direct_payment($kind, $payload, $amount, $billing, $ref, $password);
+	}
+
 	$session_token = wholesale_converge_session_token($amount, $ref, $billing);
 	if (is_wp_error($session_token)) {
 		wholesale_payment_json_error($session_token->get_error_message(), 502);
@@ -479,7 +599,84 @@ function wholesale_ajax_payment_start()
 	));
 }
 add_action('wp_ajax_wholesale_payment_start', 'wholesale_ajax_payment_start');
+
+/**
+ * Direct method: charge the card fields from the form, then create the order. Always exits.
+ */
+function wholesale_direct_payment($kind, $payload, $amount, $billing, $ref, $password)
+{
+	$card = wholesale_direct_card_from_request($_POST);
+	if (is_wp_error($card)) {
+		wholesale_payment_json_error($card->get_error_message());
+	}
+
+	// One charge at a time per visitor: a double click can never charge twice.
+	$lock = 'wholesale_direct_lock_' . md5(session_id() . ('ticket' === $kind ? $payload['ticket_id'] : ''));
+	if ((int) get_option($lock) < time() - 120) {
+		delete_option($lock);
+	}
+	if (!add_option($lock, time(), '', 'no')) {
+		wholesale_payment_json_error('Your payment is already being processed. Please wait a moment.');
+	}
+
+	$sale = wholesale_converge_direct_sale($amount, $card, $billing, $ref);
+	unset($card);
+	if (!$sale['ok']) {
+		delete_option($lock);
+		if ('ticket' === $kind) {
+			wholesale_ticket_log($payload['ticket_id'], 'payment_failed', $sale['message']);
+		}
+		wholesale_payment_json_error($sale['message'], 402);
+	}
+
+	$pending = array_merge($payload, array('kind' => $kind, 'amount' => $amount));
+	$order = wholesale_payment_finalize($pending, $ref, array(
+		'_payment_status' => 'paid',
+		'_payment_method' => 'direct',
+		'_payment_txn_id' => $sale['txn_id'],
+		'_payment_ref' => $ref,
+		'_payment_card_last4' => $sale['card_last4'],
+		'_payment_amount' => $amount,
+		'_payment_approval_code' => $sale['approval_code'],
+	), $password);
+	delete_option($lock);
+
+	wp_send_json(array('ok' => true, 'redirect' => wholesale_thank_you_url($order)));
+}
 add_action('wp_ajax_nopriv_wholesale_payment_start', 'wholesale_ajax_payment_start');
+
+/**
+ * Creates the order for a paid checkout or ticket. Sends a JSON error (and alerts staff)
+ * if the order can't be saved, because the customer has already been charged.
+ *
+ * @return int Order ID.
+ */
+function wholesale_payment_finalize($pending, $ref, $payment_meta, $password = '')
+{
+	if ('cart' === $pending['kind']) {
+		$cart = wholesale_get_cart();
+		$order = wholesale_checkout_create_order($pending['checkout'], $cart, $payment_meta);
+		if ($order) {
+			wholesale_checkout_attach_account($order, $pending['checkout'], $password);
+		}
+		$customer = $pending['checkout']['billing'];
+	} else {
+		$order = wholesale_ticket_finalize($pending['ticket_id'], $pending['billing'], true, $payment_meta);
+		$customer = $pending['billing'];
+	}
+
+	delete_transient('wholesale_payment_' . $ref);
+
+	if (!$order) {
+		$txn_id = $payment_meta['_payment_txn_id'] ?? '';
+		error_log(sprintf('Wholesale: Converge payment %s ($%s) approved for %s but the order could not be saved.', $txn_id, number_format($pending['amount'], 2), $customer['billing_email']));
+		unset($pending['checkout']['items']);
+		wp_mail(wholesale_contact_admin_recipients(), 'URGENT: payment approved but order was not saved', sprintf("Converge transaction %s for $%s was approved for %s %s (%s), but the order could not be saved.\n\nDetails: %s", $txn_id, number_format($pending['amount'], 2), $customer['billing_fname'], $customer['billing_lname'], $customer['billing_email'], wp_json_encode($pending)));
+		wholesale_payment_json_error('Your payment was received, but we could not finish saving your order. Please do not pay again. Our team has been notified and will contact you shortly.', 500);
+	}
+
+	return $order;
+}
 
 /**
  * AJAX step 2: after Converge approves, verify the transaction and create the order.
@@ -511,38 +708,19 @@ function wholesale_ajax_payment_complete()
 	}
 
 	$card = isset($_POST['card']) ? preg_replace('/[^0-9*Xx]/', '', (string) wp_unslash($_POST['card'])) : '';
-	$payment_meta = array(
+	$password = isset($_POST['account_password']) ? (string) wp_unslash($_POST['account_password']) : '';
+	$order = wholesale_payment_finalize($pending, $ref, array(
 		'_payment_status' => true === $verified ? 'paid' : 'needs_review',
+		'_payment_method' => 'lightbox',
 		'_payment_txn_id' => $txn_id,
 		'_payment_ref' => $ref,
 		'_payment_card_last4' => substr($card, -4),
 		'_payment_amount' => $pending['amount'],
 		'_payment_approval_code' => isset($_POST['approval_code']) ? sanitize_text_field(wp_unslash($_POST['approval_code'])) : '',
-	);
-
-	if ('cart' === $pending['kind']) {
-		$cart = wholesale_get_cart();
-		$password = isset($_POST['account_password']) ? (string) wp_unslash($_POST['account_password']) : '';
-		$order = wholesale_checkout_create_order($pending['checkout'], $cart, $payment_meta);
-		if ($order) {
-			wholesale_checkout_attach_account($order, $pending['checkout'], $password);
-		}
-		$customer = $pending['checkout']['billing'];
-	} else {
-		$order = wholesale_ticket_finalize($pending['ticket_id'], $pending['billing'], true, $payment_meta);
-		$customer = $pending['billing'];
-	}
-
-	delete_transient('wholesale_payment_' . $ref);
-
-	if (!$order) {
-		error_log(sprintf('Wholesale: Converge payment %s ($%s) approved for %s but the order could not be saved.', $txn_id, number_format($pending['amount'], 2), $customer['billing_email']));
-		wp_mail(wholesale_contact_admin_recipients(), 'URGENT: payment approved but order was not saved', sprintf("Converge transaction %s for $%s was approved for %s %s (%s), but the order could not be saved.\n\nDetails: %s", $txn_id, number_format($pending['amount'], 2), $customer['billing_fname'], $customer['billing_lname'], $customer['billing_email'], wp_json_encode($pending)));
-		wholesale_payment_json_error('Your payment was received, but we could not finish saving your order. Please do not pay again. Our team has been notified and will contact you shortly.', 500);
-	}
+	), $password);
 
 	if (true !== $verified) {
-		wp_mail(wholesale_contact_admin_recipients(), 'Check payment for order #' . get_post_meta($order, 'order_id', true), sprintf("The order was created, but Converge could not be reached to double-check transaction %s ($%s): %s\n\nPlease confirm the payment in Converge.\n\n%s", $txn_id, number_format($pending['amount'], 2), $verified->get_error_message(), admin_url('post.php?post=' . $order . '&action=edit')));
+		wp_mail(wholesale_contact_admin_recipients(), 'Check payment for order #' . wholesale_order_number($order), sprintf("The order was created, but Converge could not be reached to double-check transaction %s ($%s): %s\n\nPlease confirm the payment in Converge.\n\n%s", $txn_id, number_format($pending['amount'], 2), $verified->get_error_message(), admin_url('post.php?post=' . $order . '&action=edit')));
 	}
 
 	wp_send_json(array('ok' => true, 'redirect' => wholesale_thank_you_url($order)));
@@ -577,6 +755,7 @@ function wholesale_enqueue_payment_script()
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'nonce' => wp_create_nonce('wholesale_payment'),
 		'cardEnabled' => !wholesale_setting_enabled('payment_disabled'),
+		'method' => wholesale_payment_method(),
 	));
 }
 add_action('wp_enqueue_scripts', 'wholesale_enqueue_payment_script');

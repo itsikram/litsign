@@ -535,6 +535,16 @@ a.link-primary:focus,
 .mega-menu-backdrop {
   display: none;
 }
+@media only screen and (max-width: 991px) {
+  .header-bottom-container .megamenu-container #megaMenu {
+    max-height: var(--mega-menu-max-height, calc(100vh - 140px));
+    max-height: var(--mega-menu-max-height, calc(100dvh - 140px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+}
 .header-bottom-container .megamenu-container #megaMenu .col-md-4 {
   padding: 24px 26px;
 }
@@ -1898,6 +1908,49 @@ a.link-primary:focus,
 }
 .modal-backdrop {
   z-index: -1 !important;
+}
+/* Review modal: the global backdrop is hidden behind the page, so dim with the modal itself. */
+#feedbackModal {
+  background: rgba(15, 23, 42, 0.55);
+}
+#feedbackModal .modal-content {
+  border: 0;
+  border-radius: 14px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+}
+#feedbackModal .modal-title {
+  color: #172027;
+  font-weight: 700;
+}
+#feedbackModal .form-group {
+  margin-bottom: 14px;
+}
+#feedbackModal label {
+  margin-bottom: 6px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 600;
+}
+#feedbackModal .form-control {
+  min-height: 44px;
+  font-size: 16px;
+}
+@media only screen and (max-width: 575px) {
+  #feedbackModal .modal-dialog {
+    margin: 12px;
+    margin-top: max(12px, env(safe-area-inset-top));
+  }
+  #feedbackModal .modal-header,
+  #feedbackModal .modal-body {
+    padding: 14px 16px;
+  }
+  #feedbackModal textarea.form-control {
+    min-height: 110px;
+  }
+  #feedbackModal button[type="submit"] {
+    width: 100%;
+    min-height: 46px;
+  }
 }
 
 .home
@@ -3818,8 +3871,6 @@ a.review-author-name:hover {
   .home .header-bottom-container .megamenu-container #megaMenu {
     left: 50%;
     width: 100vw;
-    max-height: calc(100vh - 118px);
-    overflow-y: auto;
     border-radius: 0 0 14px 14px;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
     transform: translateX(-50%);

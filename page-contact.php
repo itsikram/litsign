@@ -129,10 +129,46 @@ get_header();
 					<label for="contact-project-type">What type of sign are you interested in? <span aria-hidden="true">*</span>
 						<select id="contact-project-type" name="contact_project_type" required>
 							<option value="">Select an option</option>
-							<option value="Front-lit channel letters">Front-lit channel letters</option>
-							<option value="Reverse-lit channel letters">Reverse-lit channel letters</option>
-							<option value="Front-and-back lit channel letters">Front-and-back lit channel letters</option>
-							<option value="Not sure yet">I’m not sure yet</option>
+							<optgroup label="Channel letters">
+								<option value="Front-lit channel letters">Front-lit channel letters</option>
+								<option value="Reverse-lit channel letters">Back-lit channel letters</option>
+								<option value="Front-and-back lit channel letters">Front-and-back lit channel letters</option>
+								<option value="Halo-lit channel letters">Halo-lit (hidden back) channel letters</option>
+								<option value="Exposed acrylic halo-lit letters">Exposed acrylic back / halo-lit letters</option>
+								<option value="Inset acrylic face-lit letters">Inset acrylic face-lit letters</option>
+								<option value="Borderless acrylic face-lit letters">Borderless acrylic face-lit letters</option>
+								<option value="Non-lit dimensional letters">Non-lit dimensional letters</option>
+							</optgroup>
+							<optgroup label="Storefront &amp; building signs">
+								<option value="Lightbox / cabinet sign">Lightbox / cabinet sign</option>
+								<option value="Blade / projecting sign">Blade / projecting sign</option>
+								<option value="Monument or pylon sign">Monument or pylon sign</option>
+								<option value="Neon / LED neon sign">Neon / LED neon sign</option>
+								<option value="Window graphics / clings">Window graphics / clings</option>
+								<option value="Rigid signs &amp; magnets">Rigid signs &amp; magnets</option>
+							</optgroup>
+							<optgroup label="Banners &amp; large format prints">
+								<option value="Vinyl banners">Vinyl banners</option>
+								<option value="Mesh banners">Mesh banners</option>
+								<option value="Fabric banners">Fabric banners</option>
+								<option value="Backlit banners / film">Backlit banners / film</option>
+								<option value="Pole banners">Pole banners</option>
+								<option value="Posters / wall art">Posters / wall art</option>
+							</optgroup>
+							<optgroup label="Displays, flags &amp; events">
+								<option value="Advertising flags">Advertising flags</option>
+								<option value="Banner stands">Banner stands</option>
+								<option value="A-frames &amp; sidewalk signs">A-frames &amp; sidewalk signs</option>
+								<option value="Trade show displays">Trade show displays</option>
+								<option value="Step and repeat backdrops">Step and repeat backdrops</option>
+								<option value="Table throws">Table throws</option>
+								<option value="Event tents">Event tents</option>
+							</optgroup>
+							<optgroup label="Other">
+								<option value="Multiple sign types">Multiple sign types</option>
+								<option value="Something else">Something else</option>
+								<option value="Not sure yet">I’m not sure yet</option>
+							</optgroup>
 						</select>
 					</label>
 					<label for="contact-message">Tell us about your storefront <span aria-hidden="true">*</span>

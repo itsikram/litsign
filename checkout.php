@@ -14,6 +14,7 @@ $tax_rate = (float) wholesale_get_setting('tax_rate');
 $tax = round($sub_total * $tax_rate / 100, 2);
 $first_shipping = $shipping_options ? $shipping_options[0] : 0;
 $card_enabled = !wholesale_setting_enabled('payment_disabled');
+$direct_card = $card_enabled && 'direct' === wholesale_payment_method();
 $message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
 
 // Prefill for signed-in customers.
@@ -177,7 +178,46 @@ get_header();
 
                 <section class="checkout-card" aria-labelledby="checkout-payment">
                     <h2 id="checkout-payment"><span class="checkout-step-number">4</span> Payment</h2>
-                    <?php if ($card_enabled) : ?>
+                    <?php if ($direct_card) : ?>
+                        <div class="checkout-secure">
+                            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>
+                            <div>
+                                <strong>Pay by card</strong>
+                                <p>Your payment is processed securely by Elavon Converge over an encrypted connection. We never store your card number.</p>
+                                <p class="checkout-cards">Visa &middot; Mastercard &middot; American Express &middot; Discover</p>
+                            </div>
+                        </div>
+                        <div class="checkout-grid checkout-card-fields">
+                            <p class="checkout-field checkout-field--full">
+                                <label for="cardNumber">Card number</label>
+                                <input type="text" id="cardNumber" name="card_number" required inputmode="numeric" autocomplete="cc-number" pattern="[0-9 ]{12,23}" maxlength="23" placeholder="1234 5678 9012 3456">
+                            </p>
+                            <div class="checkout-grid checkout-grid--pair">
+                                <p class="checkout-field">
+                                    <label for="expMonth">Expiry month</label>
+                                    <select id="expMonth" name="card_exp_month" required autocomplete="cc-exp-month">
+                                        <option value="">MM</option>
+                                        <?php for ($month = 1; $month <= 12; $month++) : ?>
+                                            <option value="<?php echo esc_attr(sprintf('%02d', $month)); ?>"><?php echo esc_html(sprintf('%02d', $month)); ?></option>
+                                        <?php endfor; ?>
+                                    </select>
+                                </p>
+                                <p class="checkout-field">
+                                    <label for="expYear">Expiry year</label>
+                                    <select id="expYear" name="card_exp_year" required autocomplete="cc-exp-year">
+                                        <option value="">YYYY</option>
+                                        <?php for ($exp_year = (int) gmdate('Y'); $exp_year <= (int) gmdate('Y') + 12; $exp_year++) : ?>
+                                            <option value="<?php echo esc_attr(substr((string) $exp_year, -2)); ?>"><?php echo esc_html((string) $exp_year); ?></option>
+                                        <?php endfor; ?>
+                                    </select>
+                                </p>
+                            </div>
+                            <p class="checkout-field">
+                                <label for="cardCvv">Security code (CVV)</label>
+                                <input type="text" id="cardCvv" name="card_cvv" required inputmode="numeric" autocomplete="cc-csc" pattern="[0-9]{3,4}" maxlength="4" placeholder="123">
+                            </p>
+                        </div>
+                    <?php elseif ($card_enabled) : ?>
                         <div class="checkout-secure">
                             <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>
                             <div>

@@ -154,6 +154,7 @@
 }
 
 .checkout-field input,
+.checkout-field select,
 .checkout-field textarea {
   width: 100%;
   min-height: 44px;
@@ -171,6 +172,7 @@
 }
 
 .checkout-field input:focus,
+.checkout-field select:focus,
 .checkout-field textarea:focus {
   border-color: var(--shop-brand);
   outline: none;
@@ -1008,4 +1010,8 @@ a.checkout-pay:hover {
     justify-content: space-between;
     width: 100%;
   }
+}
+
+.checkout-card-fields {
+  margin-bottom: 18px;
 }

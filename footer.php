@@ -162,7 +162,7 @@
                         Live Chat:
                     </div>
                     <div class="footer-text-light footer-separator pb-3">
-                        Offline
+                        Online
                     </div>
                     <div class="footer-text-gray mt-3">
                         Email
@@ -187,9 +187,7 @@
                             <div class="modal-content">
                                 <div class="modal-header justify-content-between">
                                     <h5 class="modal-title" id="feedbackModalTitle">Share your experience</h5>
-                                    <button type="button" class="close"  style="font-size: 24px; background: transparent !important; border: 0 !important; outline: 0 !important; color: red;" data-bs-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true" class="btn fs-1 text-danger">&times;</span>
-                                    </button>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
                                     <?php

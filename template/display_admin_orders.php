@@ -1,343 +1,201 @@
 <?php
-function add_custom_order_meta_box()
-{
-    add_meta_box(
-        'order_attr_details',
-        'Product Attributes Details',
-        'render_order_attr_meta_box',
-        'order',
-        'normal',
-        'default'
-    );
-}
-add_action('add_meta_boxes', 'add_custom_order_meta_box');
+/**
+ * Order edit screen: the items box and the editable customer & shipping box.
+ * Status, payment and activity boxes live in inc/admin-orders.php.
+ *
+ * @package litsign
+ */
 
+add_action('add_meta_boxes_order', function () {
+    add_meta_box('order_attr_details', 'Items', 'render_order_attr_meta_box', 'order', 'normal', 'high');
+    add_meta_box('order_details', 'Customer & shipping', 'render_order_meta_box', 'order', 'normal', 'high');
+});
 
 function process_price($price)
 {
-    if ($price) {
-        return number_format($price, 2, '.', ',');
-    }
+    return '' === $price || null === $price ? '' : number_format((float) $price, 2, '.', ',');
 }
 
-
-function render_order_attr_meta_box()
+/**
+ * Channel letter builder breakdown for one order item: one row per letter/shape plus extras.
+ */
+function wholesale_render_cl_breakdown($design)
 {
-
-    $data = wholesale_decode_order_meta_array(get_post_meta(get_the_ID(), 'product_json', true));
-
-
-?>
-    <h1 class="text-center text-capitalize mb-5">
-        <small>Status: </small>
-
-        <?php
-        $order_status = get_post_status(get_the_ID());
-
-        switch ($order_status) {
-            case 'pending':
-                echo '<span class="text-primary">Pending Review</span>';
-                break;
-
-            case 'on-hold':
-            case 'on_hold':
-                echo '<span class="text-warning">On hold</span>';
-                break;
-            case 'processing':
-                echo '<span class="text-primary">Processing</span>';
-                break;
-            case 'completed':
-                echo '<span class="text-success">Completed</span>';
-                break;
-            case 'failed':
-                echo '<span class="text-danger">Failed</span>';
-                break;
-            case 'cancelled':
-                echo '<span class="text-secondary">Cancelled</span>';
-                break;
-            case 'refunded':
-                echo '<span class="text-info">Refunded</span>';
-                break;
-            default:
-                echo '<span class="text-warning">' . esc_html($order_status) . '</span>';
-        }
-        ?>
-    </h1>
-    <?php
-
-    // Function to print array values line by line
-    function printProduct($product)
-    {
-        $product_design_id = $product['design_id'] > 0 ? $product['design_id'] : 0;
-        $product_cl_data = get_post_meta($product_design_id, '_cl_data', true);
-        $product_cl_data_array = array();
-        if ($product_cl_data) {
-            $product_cl_data_array = json_decode(stripslashes($product_cl_data), true);
-        }
-
+    $elements = isset($design['elements']) && is_array($design['elements']) ? $design['elements'] : array();
+    $extras = isset($design['extras']) && is_array($design['extras']) ? $design['extras'] : array();
+    if (!$elements) {
+        return;
+    }
+    $types = array('Text' => 'Channel letter', 'Circle' => 'Oval', 'Star' => 'Starburst', 'RegularPolygon' => 'Triangle', 'Line' => 'Arrow', 'Rect' => 'Rectangle');
+    $title = static function ($element, $key) {
+        return isset($element[$key]['title']) ? (string) $element[$key]['title'] : '—';
+    };
+    $element_total = 0;
     ?>
-
-        <div class="cart-item border p-2">
-
-
-            <div class="row">
-                <div class="col-md-3 cart-image">
-                    <img class="cart-item-image w-100" src="<?php echo esc_url($product['product_thumbnail']); ?>" alt="<?php echo esc_attr($product['product_title']); ?>">
-                </div>
-                <div class="col-md-9 ">
-                    <div class="cart-title-container d-flex justify-content-between align-self-start border-bottom">
-                        <h4 class="fs-4 align-self-center"><?php echo esc_html($product['product_title']); ?></h4>
-                        <div class="align-self-center">
-                            <!-- <a href="#" class="btn btn-link">Edit</a>| -->
-                            <!-- <a href="<?php echo get_permalink() . '?remove_cart=' . $product['cart_id']; ?>" class="btn btn-link">Remove</a> -->
-
-                        </div>
-                    </div>
-                    <div class="cart-info-container d-flex justify-content-between border-bottom py-2">
-                        <span class="text-primary cart-details-toggler cursor-pinter">+ Details</span>
-                        <div class="cart-item-price">
-                            <span class="d-inline-block fw-bold" style="margin-right: 90px">Item Price</span>
-                            <span>$<?php echo esc_html(number_format((float) ($product['product_subtotal'] / max(1, (int) $product['product_quantity'])), 2, '.', ',')); ?></span>
-                        </div>
-                    </div>
-                    <div class="cart-details-container border-bottom py-2">
-                        <div>
-
-                            <?php foreach ($product['product_details'] as $name => $value) {
-                                if ($value == null) {
-                                    continue;
-                                }
-                                $detail_label = esc_html((string) $name);
-                                $detail_value = wholesale_format_order_detail_value($name, $value);
-                            ?>
-                                <strong><?php echo $detail_label; ?>: </strong><?php echo $detail_value; ?> <br>
-                            <?php }
-                            ?>
-                            <?php if (!empty($product['job_name'])) : ?>
-                                <strong>Job Name: </strong><?php echo esc_html($product['job_name']); ?> <br>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    <div class="cart-item-quantity-container d-flex justify-content-end py-2 border-bottom">
-                        <div class="d-flex">
-                            <label class="d-inline-block fw-bold" style="margin-right: 20px">Quantity</label>
-                            <div class="quantiy-input-container">
-                                <form action="">
-                                    <input type="hidden" name="cart_id" value="<?php echo esc_attr($product['cart_id']); ?>">
-                                    <input type="text" readonly value="<?php echo esc_attr($product['product_quantity']); ?>" name="update_quantity" style="width: 50px" id="">
-                                </form>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="cart-total-price-container d-flex justify-content-end  border-bottom border-top py-2">
-                        <div class="cart-item-total-price">
-                            <span class="d-inline-block fw-bold" style="margin-right: 90px">Total Price</span>
-                            <span>$<?php echo esc_html(number_format((float) $product['product_subtotal'], 2, '.', ',')); ?></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <?php if ($product_cl_data) {
-            ?>
-               <div class="row mt-3 px-2 border-top">
-                    <h4 class="fs-4 text-center py-2">Channel Letter Elements Details</h4>
-                    <div class="responsive-table">
-                        <table class="table table-bordered text-center">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Index</th>
-                                    <th scope="col">Type</th>
-                                    <th scope="col">Dimension</th>
-                                    <th scope="col">Text</th>
-                                    <th scope="col">Font</th>
-                                    <th scope="col">Face Color</th>
-                                    <th scope="col">Return Color</th>
-                                    <th scope="col">Trimcap Color</th>
-                                    <th scope="col">Return Size</th>
-                                    <th scope="col">Trimcap Size</th>
-                                    <th scope="col">Radius</th>
-                                    <th scope="col">Cost</th>
-                                    <th scope="col">Face Cost</th>
-                                    <th scope="col">Price</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-
-                                <?php
-                                $total_element_cost = 0;
-                                $total_objects = count($product_cl_data_array['elements']);
-                                foreach ($product_cl_data_array['elements'] as $key => $single_item) {
-                                    $element_type = '';
-
-                                    switch ($single_item['type']) {
-                                        case 'Text':
-                                            $element_type = 'Channel Letter';
-                                            break;
-
-                                        case 'Circle':
-                                            $element_type = 'Oval';
-
-                                            break;
-                                        case 'Star':
-                                            $element_type = 'Starburst';
-
-                                            break;
-                                        case 'RegularPolygon':
-                                            $element_type = 'Triangle';
-
-                                            break;
-                                        case 'Line':
-                                            $element_type = 'Arrow';
-                                            break;
-                                        case 'Rect':
-                                            $element_type = 'Rectangle';
-                                            break;
-                                        default:
-
-                                            $element_type = $single_item['type'];
-                                            break;
-                                    }
-
-                                    $cl_text = isset($single_item['text']) ? $single_item['text'] : '-';
-                                    $item_height = isset($single_item['height']) ? round($single_item['height'], 2) : '-';
-                                    $item_width = isset($single_item['width']) ? round($single_item['width'], 2) : '-';
-                                    $item_font = isset($single_item['font']) ? $single_item['font']['title'] : '-';
-                                    $item_face_color = isset($single_item['faceColor']) ? $single_item['faceColor']['title'] : '-';
-                                    $item_trimcap_color = isset($single_item['trimcapColor']) ? $single_item['trimcapColor']['title'] : '-';
-                                    $item_return_color = isset($single_item['returnColor']) ? $single_item['returnColor']['title'] : '-';
-                                    $item_trimcap_size = isset($single_item['trimcapSize']) ? $single_item['trimcapSize']['title'] : '-';
-                                    $item_return_size = isset($single_item['returnSize']) ? $single_item['returnSize']['title'] : '-';
-                                    $item_radius = isset($single_item['radius']) ? $single_item['radius'] : '-';
-                                    $item_face_cost = isset($single_item['colorCost']) ? round($single_item['colorCost'], 2) : '-';
-                                    $item_cost = isset($single_item['cost']) ? round($single_item['cost'], 2) : '-';
-                                    $item_dimenstion = "$item_height x $item_width";
-                                    $item_total_cost = round(floatval($item_cost) + floatval($item_face_cost), 2);
-                                    $total_element_cost += $item_total_cost;
-                                ?>
-                                    <tr>
-
-                                        <td><?php echo esc_html((string) ($key + 1)); ?></td>
-                                        <td><?php echo esc_html((string) $element_type); ?></td>
-                                        <td><?php echo esc_html((string) $item_dimenstion); ?></td>
-                                        <td><?php echo esc_html((string) $cl_text); ?></td>
-                                        <td><?php echo esc_html((string) $item_font); ?></td>
-                                        <td><?php echo esc_html((string) $item_face_color); ?></td>
-                                        <td><?php echo esc_html((string) $item_return_color); ?></td>
-                                        <td><?php echo esc_html((string) $item_trimcap_color); ?></td>
-                                        <td><?php echo esc_html((string) $item_return_size); ?></td>
-                                        <td><?php echo esc_html((string) $item_trimcap_size); ?></td>
-                                        <td><?php echo esc_html((string) $item_radius); ?></td>
-                                        <td><?php echo esc_html(process_price($item_cost)); ?></td>
-                                        <td><?php echo esc_html(process_price($item_face_cost)); ?></td>
-                                        <td><?php echo esc_html(process_price($item_total_cost)); ?></td>
-
-                                    </tr>
-
-                                <?php }
-                                $power_supply = $product_cl_data_array['extras']['powerSupply'];
-                                $cable = $product_cl_data_array['extras']['cable'];
-                                $lit = $product_cl_data_array['extras']['lit'];
-                                $total_extras_cost = 0;
-
-                                if (!empty($power_supply['qty'])) {
-                                    $total_extras_cost += floatval($power_supply['cost'] ?? 0);
-                                ?>
-                                    <tr>
-                                        <td colspan="13">Power Supply: <span class="fw-bold"><?php echo esc_html((string) $power_supply['value']); ?></span></td>
-                                        <td>$<?php echo esc_html(process_price(floatval($power_supply['cost'] ?? 0))); ?></td>
-                                    </tr>
-                                <?php
-
-                                }
-                                if (!empty($cable['qty'])) {
-                                    $total_extras_cost += floatval($cable['cost'] ?? 0);
-
-                                ?>
-                                    <tr>
-                                        <td colspan="13">Power Supply: <span class="fw-bold"><?php echo esc_html((string) $cable['value']); ?></span></td>
-                                        <td>$<?php echo esc_html(process_price($cable['cost'])); ?></td>
-                                    </tr>
-                                <?php
-
-                                }
-                                if (!empty($lit['qty'])) {
-                                    $lit_cost = round(($total_element_cost / 100) * floatval($lit['cost'] ?? 0), 2);
-                                    $total_extras_cost +=  $lit_cost;
-
-                                ?>
-                                    <tr>
-                                        <td colspan="13">Lit: <span class="fw-bold"><?php echo esc_html((string) $lit['value']); ?></span></td>
-                                        <td>$<?php echo esc_html(process_price($lit_cost)); ?> (<?php echo esc_html((string) $lit['cost']); ?>%)</td>
-                                    </tr>
-                                <?php
-
-                                }
-
-                                $total_order_cost = round($total_element_cost + $total_extras_cost, 2);
-                                ?>
-
-
-                                <tr>
-                                    <td class="fw-bold" colspan="7" id="dtTotalObjDisplay">Total : <span class="text-primary"> <?php echo esc_html((string) $total_objects); ?> </span> Objects</td>
-                                    <td colspan="7" id="dtTotalPriceDisplay">Total Price: <span class="text-success fw-bold">$<?php echo esc_html(process_price($total_order_cost)); ?></span></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                </div> 
-
-            <?php
-
-            }; ?>
-
-
-
-
+    <details class="wo-cl">
+        <summary>Channel letter breakdown (<?php echo esc_html(count($elements)); ?> <?php echo 1 === count($elements) ? 'element' : 'elements'; ?>)</summary>
+        <div class="wo-table-scroll">
+            <table class="widefat striped wo-cl-table">
+                <thead>
+                    <tr>
+                        <th>#</th><th>Type</th><th>Text</th><th>H × W (in)</th><th>Font</th><th>Face</th><th>Return</th><th>Trimcap</th><th>Return size</th><th>Trimcap size</th><th>Radius</th><th class="num">Cost</th><th class="num">Face cost</th><th class="num">Price</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($elements as $i => $element) :
+                        $type = isset($element['type']) ? (string) $element['type'] : '';
+                        $cost = isset($element['cost']) ? (float) $element['cost'] : 0;
+                        $face_cost = isset($element['colorCost']) ? (float) $element['colorCost'] : 0;
+                        $element_total += $cost + $face_cost; ?>
+                        <tr>
+                            <td><?php echo esc_html((string) ($i + 1)); ?></td>
+                            <td><?php echo esc_html($types[$type] ?? $type); ?></td>
+                            <td><?php echo esc_html(isset($element['text']) ? (string) $element['text'] : '—'); ?></td>
+                            <td><?php echo esc_html(round((float) ($element['height'] ?? 0), 2) . ' × ' . round((float) ($element['width'] ?? 0), 2)); ?></td>
+                            <td><?php echo esc_html($title($element, 'font')); ?></td>
+                            <td><?php echo esc_html($title($element, 'faceColor')); ?></td>
+                            <td><?php echo esc_html($title($element, 'returnColor')); ?></td>
+                            <td><?php echo esc_html($title($element, 'trimcapColor')); ?></td>
+                            <td><?php echo esc_html($title($element, 'returnSize')); ?></td>
+                            <td><?php echo esc_html($title($element, 'trimcapSize')); ?></td>
+                            <td><?php echo esc_html(isset($element['radius']) ? (string) $element['radius'] : '—'); ?></td>
+                            <td class="num">$<?php echo esc_html(process_price($cost)); ?></td>
+                            <td class="num">$<?php echo esc_html(process_price($face_cost)); ?></td>
+                            <td class="num">$<?php echo esc_html(process_price($cost + $face_cost)); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+                <tfoot>
+                    <?php
+                    $extras_total = 0;
+                    foreach (array('powerSupply' => 'Power supply', 'cable' => 'Cable', 'lit' => 'Lighting') as $key => $label) :
+                        $extra = isset($extras[$key]) && is_array($extras[$key]) ? $extras[$key] : array();
+                        if (empty($extra['qty'])) {
+                            continue;
+                        }
+                        // Lighting is priced as a percentage of the letters.
+                        $extra_cost = 'lit' === $key ? round($element_total / 100 * (float) ($extra['cost'] ?? 0), 2) : (float) ($extra['cost'] ?? 0);
+                        $extras_total += $extra_cost; ?>
+                        <tr>
+                            <td colspan="13"><?php echo esc_html($label); ?>: <strong><?php echo esc_html((string) ($extra['value'] ?? '')); ?></strong><?php echo 'lit' === $key ? ' (' . esc_html((string) ($extra['cost'] ?? 0)) . '%)' : ''; ?></td>
+                            <td class="num">$<?php echo esc_html(process_price($extra_cost)); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    <tr>
+                        <th colspan="13">Builder total</th>
+                        <th class="num">$<?php echo esc_html(process_price($element_total + $extras_total)); ?></th>
+                    </tr>
+                </tfoot>
+            </table>
         </div>
-
+    </details>
     <?php
-        echo '<hr/>';
-    }
-
-    echo '<div class="cart-item-container">';
-
-    foreach ($data as $product) {
-        printProduct($product);
-    }
-
-    echo '</div>';
 }
 
-
-function add_order_contact_meta_box()
+function render_order_attr_meta_box($post)
 {
-    add_meta_box(
-        'order_details',
-        'Order Details',
-        'render_order_meta_box',
-        'order',
-        'normal',
-        'default'
-    );
-}
-add_action('add_meta_boxes', 'add_order_contact_meta_box');
-
-
-function render_order_meta_box()
-{
-    $post_id = get_the_ID();
-    $shipping = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
-    $billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
-    $cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
-    $comment = get_post_meta($post_id, 'order_comment', true);
-    $ticket_id = (int) get_post_meta($post_id, '_ticket_id', true);
+    $items = wholesale_decode_order_meta_array(get_post_meta($post->ID, 'product_json', true));
+    $cost = wholesale_decode_order_meta_array(get_post_meta($post->ID, 'product_cost', true));
     $money = static function ($value) {
         return '$' . number_format((float) $value, 2);
     };
+
+    if (!$items) {
+        echo '<p>This order has no items.</p>';
+        return;
+    }
+    ?>
+    <ul class="wo-items">
+        <?php foreach ($items as $item) :
+            $qty = max(1, (int) ($item['product_quantity'] ?? 1));
+            $subtotal = (float) ($item['product_subtotal'] ?? 0);
+            $specs = wholesale_item_specs($item);
+            $design_id = absint($item['design_id'] ?? 0);
+            $design = $design_id ? json_decode(stripslashes((string) get_post_meta($design_id, '_cl_data', true)), true) : null;
+            $product_id = absint($item['product_id'] ?? 0); ?>
+            <li class="wo-item">
+                <?php if (!empty($item['product_thumbnail'])) : ?>
+                    <img class="wo-item__image" src="<?php echo esc_url($item['product_thumbnail']); ?>" alt="" loading="lazy">
+                <?php endif; ?>
+                <div class="wo-item__body">
+                    <div class="wo-item__head">
+                        <div>
+                            <strong class="wo-item__title"><?php echo esc_html(wp_specialchars_decode((string) ($item['product_title'] ?? ''), ENT_QUOTES)); ?></strong>
+                            <?php if ($product_id && get_post($product_id)) : ?>
+                                <a class="wo-item__link" href="<?php echo esc_url(get_edit_post_link($product_id)); ?>">Edit product</a>
+                            <?php endif; ?>
+                        </div>
+                        <div class="wo-item__price">
+                            <span><?php echo esc_html($qty . ' × ' . $money($subtotal / $qty)); ?></span>
+                            <strong><?php echo esc_html($money($subtotal)); ?></strong>
+                        </div>
+                    </div>
+                    <?php if ($specs) : ?>
+                        <dl class="wo-specs">
+                            <?php foreach ($specs as $label => $value) : ?>
+                                <div><dt><?php echo esc_html($label); ?></dt><dd><?php echo $value; // Escaped by wholesale_item_specs(). ?></dd></div>
+                            <?php endforeach; ?>
+                        </dl>
+                    <?php endif; ?>
+                    <?php if (is_array($design)) {
+                        wholesale_render_cl_breakdown($design);
+                    } ?>
+                </div>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+
+    <dl class="wo-totals">
+        <div><dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd></div>
+        <div><dt>Shipping<?php echo !empty($cost['shipping_method']) ? ' <small>' . esc_html($cost['shipping_method']) . '</small>' : ''; ?></dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
+        <div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd></div>
+        <div class="wo-totals__grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+    </dl>
+    <?php
+}
+
+/**
+ * Editable address fields, keyed by the suffix after the "billing_"/"shipping_" prefix.
+ */
+function wholesale_order_address_fields($with_email)
+{
+    $fields = array(
+        'fname' => 'First name',
+        'lname' => 'Last name',
+        'company' => 'Company',
+        'email' => 'Email',
+        'tel' => 'Phone',
+        'address' => 'Address',
+        'address_2' => 'Apt, suite, etc.',
+        'city' => 'City',
+        'state' => 'State',
+        'zip' => 'ZIP',
+        'country' => 'Country',
+    );
+    if (!$with_email) {
+        unset($fields['email']);
+    }
+    return $fields;
+}
+
+/**
+ * Which prefix an order's shipping address uses. Older orders copied the billing keys.
+ */
+function wholesale_order_shipping_prefix($shipping)
+{
+    return isset($shipping['shipping_fname']) || !isset($shipping['billing_fname']) ? 'shipping_' : 'billing_';
+}
+
+function render_order_meta_box($post)
+{
+    $post_id = $post->ID;
+    $shipping = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
+    $billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+    $comment = get_post_meta($post_id, 'order_comment', true);
+    $staff_note = get_post_meta($post_id, '_staff_note', true);
+    $ship_date = get_post_meta($post_id, 'estimate_delivery_time', true);
+    $ship_prefix = wholesale_order_shipping_prefix($shipping);
+
     $address = static function ($data, $prefix) {
         $lines = array(
             trim(($data[$prefix . 'fname'] ?? '') . ' ' . ($data[$prefix . 'lname'] ?? '')),
@@ -346,48 +204,75 @@ function render_order_meta_box()
             trim(($data[$prefix . 'city'] ?? '') . ', ' . ($data[$prefix . 'state'] ?? '') . ' ' . ($data[$prefix . 'zip'] ?? ''), ', '),
             $data[$prefix . 'country'] ?? '',
         );
-        return implode('<br>', array_map('esc_html', array_filter($lines)));
+        $lines = array_filter($lines);
+        return $lines ? implode('<br>', array_map('esc_html', $lines)) : '<span class="wo-muted">Not provided</span>';
     };
-    $ship_prefix = isset($shipping['shipping_fname']) ? 'shipping_' : 'billing_';
+    $inputs = static function ($data, $prefix, $name, $with_email) {
+        foreach (wholesale_order_address_fields($with_email) as $key => $label) {
+            $id = 'wo_' . $name . '_' . $key;
+            $wide = in_array($key, array('company', 'address', 'email'), true) ? ' wo-field--wide' : '';
+            printf(
+                '<p class="wo-field%1$s"><label for="%2$s">%3$s</label><input type="%4$s" id="%2$s" name="wo_%5$s[%6$s]" value="%7$s"></p>',
+                esc_attr($wide),
+                esc_attr($id),
+                esc_html($label),
+                'email' === $key ? 'email' : ('tel' === $key ? 'tel' : 'text'),
+                esc_attr($name),
+                esc_attr($key),
+                esc_attr((string) ($data[$prefix . $key] ?? ''))
+            );
+        }
+    };
     ?>
-    <style>
-        .wo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-        .wo-grid h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: #646970; }
-        .wo-grid dl { display: grid; grid-template-columns: auto auto; gap: 4px 12px; margin: 0; }
-        .wo-grid dd { margin: 0; text-align: right; }
-        .wo-grid .wo-total { font-weight: 700; font-size: 14px; }
-        @media (max-width: 1100px) { .wo-grid { grid-template-columns: 1fr; } }
-    </style>
-    <div class="wo-grid">
-        <div>
-            <h3>Totals</h3>
-            <dl>
-                <dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd>
-                <dt>Shipping<?php echo !empty($cost['shipping_method']) ? ' (' . esc_html($cost['shipping_method']) . ')' : ''; ?></dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd>
-                <dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd>
-                <dt class="wo-total">Total</dt><dd class="wo-total"><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd>
-            </dl>
-            <p>Order #<?php echo esc_html(wholesale_order_number($post_id)); ?> &middot; placed <?php echo esc_html(get_the_date('M j, Y g:ia', $post_id)); ?><br>
-                Estimated ship date: <strong><?php echo esc_html(get_post_meta($post_id, 'estimate_delivery_time', true) ?: '—'); ?></strong>
-                <?php if ($ticket_id) : ?><br>Paid via <a href="<?php echo esc_url(get_edit_post_link($ticket_id)); ?>">payment ticket #<?php echo esc_html((string) $ticket_id); ?></a><?php endif; ?></p>
+    <div class="wo-details" data-editing="0">
+        <input type="hidden" name="wo_details_edited" value="0">
+        <div class="wo-details__bar">
+            <button type="button" class="button wo-details__edit"><span class="dashicons dashicons-edit" aria-hidden="true"></span> Edit details</button>
+            <button type="button" class="button-link wo-details__cancel">Cancel editing</button>
         </div>
-        <div>
-            <h3>Customer</h3>
-            <p><?php echo $address($billing, 'billing_'); // Escaped per line. ?></p>
-            <p>
-                <?php if (!empty($billing['billing_email'])) : ?><a href="mailto:<?php echo esc_attr($billing['billing_email']); ?>"><?php echo esc_html($billing['billing_email']); ?></a><br><?php endif; ?>
-                <?php if (!empty($billing['billing_tel'])) : ?><a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $billing['billing_tel'])); ?>"><?php echo esc_html($billing['billing_tel']); ?></a><?php endif; ?>
-            </p>
+
+        <div class="wo-grid">
+            <section>
+                <h3>Customer</h3>
+                <div class="wo-view">
+                    <p><?php echo $address($billing, 'billing_'); // Escaped per line. ?></p>
+                    <p>
+                        <?php if (!empty($billing['billing_email'])) : ?><a href="mailto:<?php echo esc_attr($billing['billing_email']); ?>"><?php echo esc_html($billing['billing_email']); ?></a><br><?php endif; ?>
+                        <?php if (!empty($billing['billing_tel'])) : ?><a href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $billing['billing_tel'])); ?>"><?php echo esc_html($billing['billing_tel']); ?></a><?php endif; ?>
+                    </p>
+                </div>
+                <div class="wo-edit wo-fields"><?php $inputs($billing, 'billing_', 'billing', true); ?></div>
+            </section>
+
+            <section>
+                <h3>Ship to</h3>
+                <div class="wo-view">
+                    <p><?php echo $address($shipping, $ship_prefix); // Escaped per line. ?></p>
+                    <?php if (!empty($shipping[$ship_prefix . 'tel'])) : ?><p><?php echo esc_html($shipping[$ship_prefix . 'tel']); ?></p><?php endif; ?>
+                </div>
+                <div class="wo-edit">
+                    <p><button type="button" class="button-link wo-copy-billing">Copy from customer</button></p>
+                    <div class="wo-fields"><?php $inputs($shipping, $ship_prefix, 'shipping', false); ?></div>
+                </div>
+            </section>
+
+            <section>
+                <h3>Delivery</h3>
+                <div class="wo-view">
+                    <p>Estimated ship date<br><strong><?php echo esc_html($ship_date ?: '—'); ?></strong></p>
+                </div>
+                <div class="wo-edit wo-fields">
+                    <p class="wo-field wo-field--wide"><label for="wo_ship_date">Estimated ship date</label><input type="text" id="wo_ship_date" name="wo_ship_date" value="<?php echo esc_attr($ship_date); ?>" placeholder="e.g. Fri Oct. 9"></p>
+                </div>
+                <h3>Customer notes</h3>
+                <p><?php echo $comment ? nl2br(esc_html($comment)) : '<span class="wo-muted">None</span>'; ?></p>
+            </section>
         </div>
-        <div>
-            <h3>Ship to</h3>
-            <p><?php echo $address($shipping, $ship_prefix); // Escaped per line. ?></p>
-            <?php if (!empty($shipping[$ship_prefix . 'tel'])) : ?><p><?php echo esc_html($shipping[$ship_prefix . 'tel']); ?></p><?php endif; ?>
+
+        <div class="wo-staff-note">
+            <label for="wo_staff_note"><strong>Internal note</strong> <span class="wo-muted">— only staff can see this</span></label>
+            <textarea id="wo_staff_note" name="wo_staff_note" rows="3" placeholder="Proof approved by phone, rush requested, etc."><?php echo esc_textarea($staff_note); ?></textarea>
         </div>
     </div>
-    <?php if ($comment) : ?>
-        <h3 style="margin-top:16px;">Customer notes</h3>
-        <p><?php echo nl2br(esc_html($comment)); ?></p>
-    <?php endif; ?>
     <?php
 }

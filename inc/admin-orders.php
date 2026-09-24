@@ -90,26 +90,165 @@ add_filter('posts_search', function ($search, $query) {
 }, 10, 2);
 
 // ------------------------------------------------------------------
-// Order edit screen: payment & fulfillment
+// Order edit screen: header, status, payment and activity
 // ------------------------------------------------------------------
 
+// Orders are records, not content: use the classic screen so the status box and details form work.
+add_filter('use_block_editor_for_post_type', function ($use, $post_type) {
+	return 'order' === $post_type ? false : $use;
+}, 10, 2);
+
 add_action('add_meta_boxes_order', function () {
-	add_meta_box('wholesale-fulfillment', 'Payment & fulfillment', 'wholesale_render_fulfillment_box', 'order', 'side', 'high');
+	remove_meta_box('submitdiv', 'order', 'side');
+	remove_meta_box('slugdiv', 'order', 'normal');
+	add_meta_box('wholesale-order-status', 'Order status', 'wholesale_render_status_box', 'order', 'side', 'high');
+	add_meta_box('wholesale-fulfillment', 'Payment', 'wholesale_render_fulfillment_box', 'order', 'side', 'high');
+	add_meta_box('wholesale-order-activity', 'Activity', 'wholesale_render_activity_box', 'order', 'side', 'default');
 });
+
+/**
+ * What the customer is told when an order moves to each status (see wholesale_send_status_email()).
+ */
+function wholesale_status_email_hints()
+{
+	return array(
+		'pending' => 'No email is sent.',
+		'processing' => 'Customer is emailed that the order is in production.',
+		'on-hold' => 'Customer is emailed to call or reply with the missing detail.',
+		'on_hold' => 'Customer is emailed to call or reply with the missing detail.',
+		'completed' => 'Customer is emailed a shipped notice with the tracking link.',
+		'cancelled' => 'Customer is emailed that the order was cancelled.',
+		'refunded' => 'Customer is emailed that the refund was issued.',
+		'failed' => 'No email is sent.',
+	);
+}
+
+// Summary header above the boxes: order number, badges, customer and quick actions.
+add_action('edit_form_top', function ($post) {
+	if ('order' !== $post->post_type) {
+		return;
+	}
+	$billing = wholesale_decode_order_meta_array(get_post_meta($post->ID, 'billing_address', true));
+	$name = trim(($billing['billing_fname'] ?? '') . ' ' . ($billing['billing_lname'] ?? ''));
+	$email = $billing['billing_email'] ?? '';
+	$phone = $billing['billing_tel'] ?? '';
+	?>
+	<div class="wo-header">
+		<div class="wo-header__main">
+			<h2 class="wo-header__title">Order #<?php echo esc_html(wholesale_order_number($post->ID)); ?></h2>
+			<?php echo wholesale_order_status_badge($post->post_status); // Escaped in the helper. ?>
+			<?php echo wholesale_payment_badge($post->ID); // Escaped in the helper. ?>
+		</div>
+		<p class="wo-header__meta">
+			Placed <?php echo esc_html(get_the_date('M j, Y \a\t g:ia', $post)); ?>
+			<?php if ($name) : ?>&middot; <?php echo esc_html($name); ?><?php endif; ?>
+			<?php if (!empty($billing['billing_company'])) : ?>(<?php echo esc_html($billing['billing_company']); ?>)<?php endif; ?>
+			&middot; <strong>$<?php echo esc_html(number_format(wholesale_order_total($post->ID), 2)); ?></strong>
+		</p>
+		<div class="wo-header__actions">
+			<?php if (is_email($email)) : ?>
+				<a class="button" href="mailto:<?php echo esc_attr($email); ?>?subject=<?php echo rawurlencode('Your order #' . wholesale_order_number($post->ID)); ?>"><span class="dashicons dashicons-email" aria-hidden="true"></span> Email customer</a>
+			<?php endif; ?>
+			<?php if ($phone) : ?>
+				<a class="button" href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $phone)); ?>"><span class="dashicons dashicons-phone" aria-hidden="true"></span> <?php echo esc_html($phone); ?></a>
+			<?php endif; ?>
+			<a class="button" href="<?php echo esc_url(get_permalink($post)); ?>" target="_blank" rel="noopener"><span class="dashicons dashicons-external" aria-hidden="true"></span> Customer view</a>
+		</div>
+	</div>
+	<?php
+});
+
+function wholesale_render_status_box($post)
+{
+	$status = $post->post_status;
+	$info = wholesale_order_status_info();
+	$hints = wholesale_status_email_hints();
+	$emails_on = wholesale_setting_enabled('email_status_updates');
+	$carrier = get_post_meta($post->ID, '_tracking_carrier', true);
+	$tracking = get_post_meta($post->ID, '_tracking_number', true);
+	$tracking_url = wholesale_tracking_url($carrier, $tracking);
+	// "on_hold" is a legacy duplicate of "on-hold"; only offer it on orders that already use it.
+	$options = array('pending', 'processing', 'on-hold', 'completed', 'cancelled', 'refunded', 'failed');
+	if ('on_hold' === $status) {
+		$options[array_search('on-hold', $options, true)] = 'on_hold';
+	}
+	wp_nonce_field('wholesale_fulfillment', 'wholesale_fulfillment_nonce');
+	?>
+	<div class="wo-status" data-current="<?php echo esc_attr($status); ?>">
+		<input type="hidden" name="original_post_status" value="<?php echo esc_attr($status); ?>">
+		<p class="wo-status__row">
+			<label for="wo_post_status"><strong>Status</strong></label>
+			<select name="post_status" id="wo_post_status">
+				<?php foreach ($options as $value) : ?>
+					<option value="<?php echo esc_attr($value); ?>" data-hint="<?php echo esc_attr($hints[$value] ?? ''); ?>" <?php selected($status, $value); ?>><?php echo esc_html($info[$value]['label'] ?? $value); ?></option>
+				<?php endforeach; ?>
+				<?php if (!in_array($status, $options, true)) : ?>
+					<option value="<?php echo esc_attr($status); ?>" selected><?php echo esc_html(ucwords(str_replace(array('-', '_'), ' ', $status))); ?></option>
+				<?php endif; ?>
+			</select>
+		</p>
+
+		<div class="wo-status__tracking">
+			<p class="wo-status__row">
+				<label for="wholesale_tracking_carrier"><strong>Carrier</strong></label>
+				<select name="wholesale_tracking_carrier" id="wholesale_tracking_carrier">
+					<?php foreach (array('' => 'Select…', 'ups' => 'UPS', 'fedex' => 'FedEx', 'usps' => 'USPS', 'freight' => 'Freight / other') as $value => $label) : ?>
+						<option value="<?php echo esc_attr($value); ?>" <?php selected($carrier, $value); ?>><?php echo esc_html($label); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</p>
+			<p class="wo-status__row">
+				<label for="wholesale_tracking_number"><strong>Tracking #</strong></label>
+				<input type="text" name="wholesale_tracking_number" id="wholesale_tracking_number" value="<?php echo esc_attr($tracking); ?>" autocomplete="off">
+			</p>
+			<?php if ($tracking_url) : ?>
+				<p class="wo-status__track"><a href="<?php echo esc_url($tracking_url); ?>" target="_blank" rel="noopener">Track this package &rarr;</a></p>
+			<?php endif; ?>
+			<p class="wo-status__warning" hidden>Add a tracking number so the shipped email includes a tracking link.</p>
+		</div>
+
+		<?php if ($emails_on) : ?>
+			<div class="wo-status__notify" hidden>
+				<label><input type="checkbox" name="wholesale_notify_customer" value="1" checked> Email the customer about this change</label>
+				<p class="description wo-status__hint"></p>
+			</div>
+		<?php else : ?>
+			<p class="description">Status emails are off. <a href="<?php echo esc_url(admin_url('options-general.php?page=wholesale-settings')); ?>">Settings</a></p>
+		<?php endif; ?>
+	</div>
+	<div class="wo-status__footer">
+		<?php if (current_user_can('delete_post', $post->ID)) : ?>
+			<a class="submitdelete" href="<?php echo esc_url(get_delete_post_link($post->ID)); ?>">Move to Trash</a>
+		<?php endif; ?>
+		<span class="spinner"></span>
+		<button type="submit" name="save" id="publish" class="button button-primary button-large">Update order</button>
+	</div>
+	<?php
+}
 
 function wholesale_render_fulfillment_box($post)
 {
 	$payment_status = get_post_meta($post->ID, '_payment_status', true);
 	$txn = get_post_meta($post->ID, '_payment_txn_id', true);
-	$carrier = get_post_meta($post->ID, '_tracking_carrier', true);
-	wp_nonce_field('wholesale_fulfillment', 'wholesale_fulfillment_nonce');
+	$last4 = get_post_meta($post->ID, '_payment_card_last4', true);
+	$approval = get_post_meta($post->ID, '_payment_approval_code', true);
+	$ticket_id = (int) get_post_meta($post->ID, '_ticket_id', true);
+	$verified_by = (int) get_post_meta($post->ID, '_payment_verified_by', true);
 	?>
 	<div class="wholesale-fulfillment">
-		<p><strong>Total:</strong> $<?php echo esc_html(number_format(wholesale_order_total($post->ID), 2)); ?> <?php echo wholesale_payment_badge($post->ID); // Escaped in the helper. ?></p>
-		<?php if ($txn) : ?>
-			<p>Converge transaction <code><?php echo esc_html($txn); ?></code><br>
-				<?php echo get_post_meta($post->ID, '_payment_card_last4', true) ? 'Card ending ' . esc_html(get_post_meta($post->ID, '_payment_card_last4', true)) . '<br>' : ''; ?>
-				<?php echo get_post_meta($post->ID, '_payment_approval_code', true) ? 'Approval code ' . esc_html(get_post_meta($post->ID, '_payment_approval_code', true)) : ''; ?></p>
+		<p class="wo-pay__total"><span class="wo-pay__amount">$<?php echo esc_html(number_format(wholesale_order_total($post->ID), 2)); ?></span> <?php echo wholesale_payment_badge($post->ID); // Escaped in the helper. ?></p>
+		<?php if ($txn || $last4 || $approval) : ?>
+			<dl class="wo-pay__facts">
+				<?php if ($txn) : ?><dt>Converge txn</dt><dd><code><?php echo esc_html($txn); ?></code></dd><?php endif; ?>
+				<?php if ($last4) : ?><dt>Card</dt><dd>&bull;&bull;&bull;&bull; <?php echo esc_html($last4); ?></dd><?php endif; ?>
+				<?php if ($approval) : ?><dt>Approval</dt><dd><?php echo esc_html($approval); ?></dd><?php endif; ?>
+			</dl>
+		<?php endif; ?>
+		<?php if ($ticket_id) : ?>
+			<p>Paid via <a href="<?php echo esc_url(get_edit_post_link($ticket_id)); ?>">payment ticket #<?php echo esc_html((string) $ticket_id); ?></a></p>
+		<?php endif; ?>
+		<?php if ($verified_by && ($user = get_userdata($verified_by))) : ?>
+			<p class="description">Payment confirmed by <?php echo esc_html($user->display_name); ?>.</p>
 		<?php endif; ?>
 		<?php if ('needs_review' === $payment_status) : ?>
 			<p class="wholesale-fulfillment-warning">Converge could not be reached to double-check this payment. Confirm the transaction in Converge before starting production.</p>
@@ -118,21 +257,71 @@ function wholesale_render_fulfillment_box($post)
 			<p class="wholesale-fulfillment-warning">No card payment was taken. Collect payment before production.</p>
 			<p><label><input type="checkbox" name="wholesale_payment_verified" value="1"> Payment collected</label></p>
 		<?php endif; ?>
-
-		<hr>
-		<p><label for="wholesale_tracking_carrier"><strong>Shipping carrier</strong></label><br>
-			<select name="wholesale_tracking_carrier" id="wholesale_tracking_carrier">
-				<?php foreach (array('' => 'Select…', 'ups' => 'UPS', 'fedex' => 'FedEx', 'usps' => 'USPS', 'freight' => 'Freight / other') as $value => $label) : ?>
-					<option value="<?php echo esc_attr($value); ?>" <?php selected($carrier, $value); ?>><?php echo esc_html($label); ?></option>
-				<?php endforeach; ?>
-			</select></p>
-		<p><label for="wholesale_tracking_number"><strong>Tracking number</strong></label><br>
-			<input type="text" class="widefat" name="wholesale_tracking_number" id="wholesale_tracking_number" value="<?php echo esc_attr(get_post_meta($post->ID, '_tracking_number', true)); ?>"></p>
-		<p class="description">Mark the order <strong>Completed</strong> to email the customer a "shipped" notice with this tracking link.</p>
-		<p><label><input type="checkbox" name="wholesale_skip_status_email" value="1"> Don't email the customer about this update</label></p>
-		<p><a href="<?php echo esc_url(get_permalink($post)); ?>" target="_blank">View order page &rarr;</a></p>
 	</div>
 	<?php
+}
+
+function wholesale_render_activity_box($post)
+{
+	$info = wholesale_order_status_info();
+	$label = static function ($status) use ($info) {
+		return $info[$status]['label'] ?? ucwords(str_replace(array('-', '_'), ' ', (string) $status));
+	};
+	$events = array(array('time' => get_post_time('U', true, $post), 'text' => 'Order placed'));
+	foreach (get_post_meta($post->ID, '_status_log') as $entry) {
+		if (!is_array($entry) || empty($entry['time'])) {
+			continue;
+		}
+		$user = !empty($entry['user']) ? get_userdata((int) $entry['user']) : null;
+		$events[] = array(
+			'time' => (int) $entry['time'],
+			'text' => 'Status: ' . $label($entry['from'] ?? '') . ' → ' . $label($entry['to'] ?? '') . ($user ? ' by ' . $user->display_name : ''),
+		);
+	}
+	foreach (get_post_meta($post->ID, '_status_email_log') as $entry) {
+		// Stored as "Y-m-d H:i:s status" in site time.
+		$parts = explode(' ', (string) $entry);
+		if (count($parts) < 3) {
+			continue;
+		}
+		$events[] = array(
+			'time' => (int) get_gmt_from_date($parts[0] . ' ' . $parts[1], 'U'),
+			'text' => 'Customer emailed: ' . $label($parts[2]),
+		);
+	}
+	usort($events, static function ($a, $b) {
+		return $b['time'] <=> $a['time'];
+	});
+	?>
+	<ol class="wo-activity">
+		<?php foreach (array_slice($events, 0, 25) as $event) : ?>
+			<li><span><?php echo esc_html($event['text']); ?></span><time><?php echo esc_html(wp_date('M j, g:ia', $event['time'])); ?></time></li>
+		<?php endforeach; ?>
+	</ol>
+	<?php
+}
+
+// Log every status change, whether from this screen, quick edit or bulk actions.
+add_action('transition_post_status', function ($new_status, $old_status, $post) {
+	if ('order' !== $post->post_type || $new_status === $old_status || in_array($old_status, array('new', 'auto-draft', 'draft'), true)) {
+		return;
+	}
+	add_post_meta($post->ID, '_status_log', array('time' => time(), 'user' => get_current_user_id(), 'from' => $old_status, 'to' => $new_status));
+}, 10, 3);
+
+/**
+ * Merge edited address fields into an order's stored address array.
+ */
+function wholesale_merge_order_address($stored, $posted, $prefix, $with_email)
+{
+	foreach (wholesale_order_address_fields($with_email) as $key => $label) {
+		if (!isset($posted[$key]) || !is_scalar($posted[$key])) {
+			continue;
+		}
+		$value = wp_unslash((string) $posted[$key]);
+		$stored[$prefix . $key] = 'email' === $key ? sanitize_email($value) : sanitize_text_field($value);
+	}
+	return $stored;
 }
 
 // Runs before the theme's status handler (priority 10) so status emails see the new tracking number.
@@ -146,10 +335,110 @@ add_action('save_post_order', function ($post_id) {
 		update_post_meta($post_id, '_payment_status', 'manual' === get_post_meta($post_id, '_payment_status', true) ? 'paid_offline' : 'paid');
 		update_post_meta($post_id, '_payment_verified_by', get_current_user_id());
 	}
-	if (!empty($_POST['wholesale_skip_status_email'])) {
+	if (empty($_POST['wholesale_notify_customer'])) {
 		$GLOBALS['wholesale_skip_status_email'] = true;
 	}
+	if (isset($_POST['wo_staff_note'])) {
+		update_post_meta($post_id, '_staff_note', sanitize_textarea_field(wp_unslash($_POST['wo_staff_note'])));
+	}
+
+	// Addresses and ship date are only rewritten when staff opened the edit form.
+	if (empty($_POST['wo_details_edited'])) {
+		return;
+	}
+	$billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+	$shipping = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
+	if (isset($_POST['wo_billing']) && is_array($_POST['wo_billing'])) {
+		$billing = wholesale_merge_order_address($billing, $_POST['wo_billing'], 'billing_', true);
+		update_post_meta($post_id, 'billing_address', wp_slash(wp_json_encode($billing)));
+	}
+	if (isset($_POST['wo_shipping']) && is_array($_POST['wo_shipping'])) {
+		$shipping = wholesale_merge_order_address($shipping, $_POST['wo_shipping'], wholesale_order_shipping_prefix($shipping), false);
+		update_post_meta($post_id, 'shipping_address', wp_slash(wp_json_encode($shipping)));
+	}
+	if (isset($_POST['wo_ship_date'])) {
+		update_post_meta($post_id, 'estimate_delivery_time', sanitize_text_field(wp_unslash($_POST['wo_ship_date'])));
+	}
 }, 5);
+
+// Status box behaviour: email hint and tracking prompt follow the selected status; details box edit toggle.
+add_action('admin_footer-post.php', function () {
+	if ('order' !== get_current_screen()->post_type) {
+		return;
+	}
+	?>
+	<script>
+		(function () {
+			var box = document.querySelector('.wo-status');
+			var select = document.getElementById('wo_post_status');
+			if (box && select) {
+				var notify = box.querySelector('.wo-status__notify');
+				var hint = box.querySelector('.wo-status__hint');
+				var tracking = document.getElementById('wholesale_tracking_number');
+				var warning = box.querySelector('.wo-status__warning');
+				var sync = function () {
+					var changed = select.value !== box.dataset.current;
+					var shipped = select.value === 'completed';
+					if (notify) {
+						notify.hidden = !changed;
+						hint.textContent = select.options[select.selectedIndex].dataset.hint || '';
+					}
+					box.classList.toggle('is-shipping', shipped);
+					warning.hidden = !(changed && shipped && !tracking.value.trim());
+				};
+				select.addEventListener('change', sync);
+				tracking.addEventListener('input', sync);
+				sync();
+			}
+
+			var details = document.querySelector('.wo-details');
+			if (details) {
+				var flag = details.querySelector('[name="wo_details_edited"]');
+				var setEditing = function (on) {
+					details.dataset.editing = on ? '1' : '0';
+					flag.value = on ? '1' : '0';
+					if (on) {
+						details.querySelector('.wo-edit input').focus();
+					}
+				};
+				details.querySelector('.wo-details__edit').addEventListener('click', function () { setEditing(true); });
+				details.querySelector('.wo-details__cancel').addEventListener('click', function () {
+					details.querySelectorAll('.wo-edit input').forEach(function (input) { input.value = input.defaultValue; });
+					setEditing(false);
+				});
+				details.querySelector('.wo-copy-billing').addEventListener('click', function () {
+					details.querySelectorAll('[name^="wo_shipping["]').forEach(function (input) {
+						var source = details.querySelector('[name="' + input.name.replace('wo_shipping', 'wo_billing') + '"]');
+						if (source) {
+							input.value = source.value;
+						}
+					});
+				});
+			}
+
+			// Show the spinner and block double submits while saving.
+			var form = document.getElementById('post');
+			if (form) {
+				form.addEventListener('submit', function () {
+					var button = document.getElementById('publish');
+					if (button) {
+						button.disabled = true;
+						button.previousElementSibling.classList.add('is-active');
+					}
+				});
+			}
+		})();
+	</script>
+	<?php
+});
+
+// Clear notice after saving an order.
+add_filter('post_updated_messages', function ($messages) {
+	$messages['order'] = array_fill(0, 11, '');
+	$messages['order'][1] = 'Order updated.';
+	$messages['order'][4] = 'Order updated.';
+	return $messages;
+});
 
 // ------------------------------------------------------------------
 // Customer emails when an order's status changes
@@ -409,6 +698,89 @@ add_action('admin_head', function () {
 		.wholesale-widget-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f1; }
 		.wholesale-widget-list li > span:last-child { margin-left: auto; font-weight: 600; }
 		.wholesale-review-stars { color: #f5ad27; letter-spacing: 1px; }
+
+		/* Order edit screen */
+		.post-type-order.post-php .wrap > h1.wp-heading-inline, .post-type-order.post-php .wrap > .page-title-action { display: none; }
+		.wo-header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 12px 0 16px; padding: 16px 20px; background: #fff; border: 1px solid #dcdcde; border-radius: 8px; }
+		.wo-header__main { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+		.wo-header__title { margin: 0 4px 0 0 !important; padding: 0 !important; font-size: 22px !important; line-height: 1.3 !important; }
+		.wo-header__meta { flex-basis: 100%; order: 3; margin: 0; color: #50575e; }
+		.wo-header__actions { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+		.wo-header__actions .dashicons, .wo-details__edit .dashicons { font-size: 16px; width: 16px; height: 16px; vertical-align: text-top; }
+		.post-type-order .postbox .inside { margin-top: 0; }
+		.wo-muted { color: #787c82; }
+
+		.wo-status__row { display: grid; grid-template-columns: 76px 1fr; align-items: center; gap: 8px; margin: 0 0 10px; }
+		.wo-status__row select, .wo-status__row input { width: 100%; max-width: none; }
+		.wo-status__tracking { margin: 0 -12px 10px; padding: 10px 12px 2px; background: #f6f7f7; border-block: 1px solid #f0f0f1; }
+		.wo-status.is-shipping .wo-status__tracking { background: #eef7fc; border-color: #c5e3f3; }
+		.wo-status__track { margin: -4px 0 10px 84px; }
+		.wo-status__warning { margin: 0 0 10px; padding: 6px 8px; border-left: 3px solid #dba617; background: #fcf9e8; }
+		.wo-status__notify { margin: 0 0 8px; }
+		.wo-status__notify .description { margin: 4px 0 0 24px; }
+		.wo-status__footer { display: flex; align-items: center; gap: 8px; margin: 12px -12px -12px; padding: 10px 12px; background: #f6f7f7; border-top: 1px solid #dcdcde; }
+		.wo-status__footer .submitdelete { color: #b32d2e; margin-right: auto; }
+		.wo-status__footer .spinner { float: none; margin: 0; }
+
+		.wo-pay__total { display: flex; align-items: center; justify-content: space-between; margin-top: 0; }
+		.wo-pay__amount { font-size: 20px; font-weight: 600; }
+		.wo-pay__facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0 0 10px; }
+		.wo-pay__facts dt { color: #646970; }
+		.wo-pay__facts dd { margin: 0; overflow-wrap: anywhere; }
+
+		.wo-activity { margin: 0; list-style: none; }
+		.wo-activity li { display: grid; gap: 2px; margin: 0; padding: 7px 0 7px 14px; border-left: 2px solid #dcdcde; position: relative; }
+		.wo-activity li::before { content: ""; position: absolute; left: -5px; top: 12px; width: 8px; height: 8px; border-radius: 50%; background: #8c8f94; }
+		.wo-activity li:first-child::before { background: #2271b1; }
+		.wo-activity time { color: #787c82; font-size: 12px; }
+
+		.wo-items { margin: 0; }
+		.wo-item { display: flex; gap: 16px; margin: 0; padding: 16px 0; border-bottom: 1px solid #f0f0f1; }
+		.wo-item:first-child { padding-top: 4px; }
+		.wo-item__image { flex: 0 0 88px; width: 88px; height: 88px; object-fit: contain; border: 1px solid #f0f0f1; border-radius: 6px; background: #f6f7f7; }
+		.wo-item__body { flex: 1; min-width: 0; }
+		.wo-item__head { display: flex; justify-content: space-between; gap: 16px; }
+		.wo-item__title { font-size: 14px; }
+		.wo-item__link { display: inline-block; margin-left: 8px; font-size: 12px; }
+		.wo-item__price { text-align: right; white-space: nowrap; }
+		.wo-item__price span { display: block; color: #646970; }
+		.wo-item__price strong { font-size: 14px; }
+		.wo-specs { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 16px; margin: 10px 0 0; }
+		.wo-specs div { min-width: 0; }
+		.wo-specs dt { color: #646970; font-size: 12px; }
+		.wo-specs dd { margin: 0; overflow-wrap: anywhere; }
+		.wo-cl { margin-top: 12px; }
+		.wo-cl summary { cursor: pointer; color: #2271b1; font-weight: 600; }
+		.wo-table-scroll { margin-top: 8px; overflow-x: auto; }
+		.wo-cl-table th, .wo-cl-table td { white-space: nowrap; }
+		.wo-cl-table .num { text-align: right; }
+		.wo-totals { max-width: 320px; margin: 12px 0 0 auto; }
+		.wo-totals div { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; }
+		.wo-totals dt small { color: #787c82; }
+		.wo-totals dd { margin: 0; }
+		.wo-totals__grand { margin-top: 4px; padding-top: 8px !important; border-top: 1px solid #dcdcde; font-size: 15px; font-weight: 600; }
+
+		.wo-details__bar { display: flex; justify-content: flex-end; align-items: center; gap: 12px; margin-bottom: 4px; }
+		.wo-details__cancel, .wo-details[data-editing="1"] .wo-details__edit, .wo-details[data-editing="1"] .wo-view, .wo-details[data-editing="0"] .wo-edit { display: none; }
+		.wo-details[data-editing="1"] .wo-details__cancel { display: inline; }
+		.wo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 24px; }
+		.wo-grid h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #646970; }
+		.wo-grid section > h3:not(:first-child) { margin-top: 16px; }
+		.wo-grid p { margin-top: 0; }
+		.wo-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+		.wo-field { margin: 0; }
+		.wo-field--wide { grid-column: 1 / -1; }
+		.wo-field label { display: block; margin-bottom: 2px; font-size: 12px; color: #50575e; }
+		.wo-field input { width: 100%; }
+		.wo-staff-note { margin-top: 16px; padding-top: 12px; border-top: 1px solid #f0f0f1; }
+		.wo-staff-note textarea { display: block; width: 100%; margin-top: 6px; }
+		@media (max-width: 1100px) { .wo-grid { grid-template-columns: 1fr; } }
+		@media (max-width: 600px) {
+			.wo-header__actions { margin-left: 0; }
+			.wo-item { flex-direction: column; }
+			.wo-item__head { flex-direction: column; gap: 4px; }
+			.wo-item__price { text-align: left; }
+		}
 	</style>
 	<?php
 });

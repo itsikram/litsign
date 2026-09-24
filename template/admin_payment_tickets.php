@@ -1097,9 +1097,11 @@ function wholesale_send_ticket($ticket_id)
         '{amount}' => wholesale_format_ticket_amount($ticket['amount']),
         '{business}' => $business['name'],
     ));
+    // wp_mail() splits Reply-To on commas, so a name like "Lit Sign, LLC" must lose them.
+    $reply_name = trim(str_replace(array(',', '"', '<', '>'), '', $business['name']));
     $headers = array(
         'Content-Type: text/html; charset=UTF-8',
-        'Reply-To: ' . (is_email($business['email']) ? $business['name'] . ' <' . $business['email'] . '>' : get_option('admin_email')),
+        'Reply-To: ' . (is_email($business['email']) ? $reply_name . ' <' . $business['email'] . '>' : get_option('admin_email')),
     );
     if (wholesale_setting_enabled('ticket_bcc_admins')) {
         foreach (wholesale_contact_admin_recipients() as $admin_email) {
@@ -1107,9 +1109,11 @@ function wholesale_send_ticket($ticket_id)
         }
     }
 
-    if (!wp_mail($ticket['customer_email'], $subject, wholesale_ticket_email_html($ticket), $headers)) {
-        error_log('Wholesale: payment ticket email failed for ticket #' . $ticket_id);
-        wholesale_ticket_log($ticket_id, 'email_failed', $ticket['customer_email']);
+    $result = wholesale_send_html_mail($ticket['customer_email'], $subject, wholesale_ticket_email_html($ticket), $headers, $business['name']);
+    if (true !== $result) {
+        error_log('Wholesale: payment ticket email failed for ticket #' . $ticket_id . ': ' . $result);
+        wholesale_ticket_log($ticket_id, 'email_failed', $ticket['customer_email'] . ' · ' . $result);
+        set_transient('wholesale_ticket_mail_error_' . get_current_user_id(), $result, 5 * MINUTE_IN_SECONDS);
         return 'send_failed';
     }
 
@@ -1234,7 +1238,23 @@ function wholesale_ticket_admin_notice()
         return;
     }
 
-    printf('<div class="notice notice-%s is-dismissible"><p>%s</p></div>', esc_attr($notices[$code][0]), esc_html($notices[$code][1]));
+    $message = $notices[$code][1];
+    if ('send_failed' === $code) {
+        $error_key = 'wholesale_ticket_mail_error_' . get_current_user_id();
+        $mail_error = get_transient($error_key);
+        delete_transient($error_key);
+        if ($mail_error) {
+            $message .= ' Reason: ' . $mail_error;
+        }
+    }
+
+    printf('<div class="notice notice-%s is-dismissible"><p>%s</p>%s</div>',
+        esc_attr($notices[$code][0]),
+        esc_html($message),
+        'send_failed' === $code && current_user_can('manage_options')
+            ? '<p><a href="' . esc_url(admin_url('options-general.php?page=wholesale-settings#email-delivery')) . '">Check email delivery settings and send a test email</a></p>'
+            : ''
+    );
 }
 add_action('admin_notices', 'wholesale_ticket_admin_notice');
 

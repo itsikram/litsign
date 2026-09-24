@@ -188,7 +188,7 @@ function wholesale_setup()
 		'public' => true,
 		'exclude_from_search' => true, // Orders contain customer details; never list them in site search.
 		'show_in_nav_menus' => false,
-		'supports' => array('title', 'editor', 'thumbnail'),
+		'supports' => false, // The order edit screen is built from meta boxes (inc/admin-orders.php).
 		'has_archive' => false,
 		'rewrite' => array('slug' => 'order'), // Custom slug for your post type
 		'query_var' => 'store_order',
@@ -493,6 +493,44 @@ function wholesale_settings_page()
 				<tr><th><label for="wholesale_channel_shipping_options">Channel-letter shipping options</label></th><td><input class="regular-text" id="wholesale_channel_shipping_options" name="wholesale_channel_shipping_options" value="<?php echo esc_attr(wholesale_get_setting('channel_shipping_options')); ?>"><p class="description">Comma-separated amounts, from fastest to slowest.</p></td></tr>
 			</table>
 			<?php submit_button('Save settings'); ?>
+		</form>
+
+		<?php
+		$mail_status = wholesale_mail_status();
+		$test_key = 'wholesale_test_email_result_' . get_current_user_id();
+		$test_result = get_transient($test_key);
+		delete_transient($test_key);
+		?>
+		<hr>
+		<h2 class="title" id="email-delivery">Email delivery</h2>
+		<p>Payment requests, order confirmations and status updates are all sent this way.</p>
+		<?php if (is_array($test_result)) : ?>
+			<div class="notice notice-<?php echo $test_result['ok'] ? 'success' : 'error'; ?> inline">
+				<p><?php echo $test_result['ok']
+					? esc_html(sprintf('Test email accepted for delivery to %s. If it does not arrive within a few minutes, check the spam folder.', $test_result['to']))
+					: esc_html('Test email failed: ' . $test_result['message']); ?></p>
+			</div>
+		<?php endif; ?>
+		<table class="form-table" role="presentation">
+			<tr><th>Sending method</th><td>
+				<?php if ('smtp' === $mail_status['mode']) : ?>
+					<p><strong style="color:#1a7a47;">SMTP</strong> through <code><?php echo esc_html($mail_status['host']); ?></code> as <code><?php echo esc_html($mail_status['username']); ?></code></p>
+				<?php else : ?>
+					<p><strong style="color:#b32d2e;">Not configured.</strong> Emails fall back to the web server's PHP <code>mail()</code>, which Gmail and Outlook often reject or send to spam.</p>
+					<p class="description"><?php echo esc_html($mail_status['problem']); ?></p>
+				<?php endif; ?>
+			</td></tr>
+			<tr><th>From address</th><td><code><?php echo esc_html($mail_status['from']); ?></code></td></tr>
+		</table>
+		<form action="<?php echo esc_url(admin_url('admin-post.php')); ?>" method="post">
+			<input type="hidden" name="action" value="wholesale_send_test_email">
+			<?php wp_nonce_field('wholesale_send_test_email'); ?>
+			<p>
+				<label for="wholesale_test_email_to"><strong>Send a test email to</strong></label><br>
+				<input type="email" class="regular-text" id="wholesale_test_email_to" name="wholesale_test_email_to" value="<?php echo esc_attr(is_array($test_result) && $test_result['to'] ? $test_result['to'] : wp_get_current_user()->user_email); ?>" required>
+				<button type="submit" class="button">Send test email</button>
+			</p>
+			<p class="description">Use an address outside your own domain (for example a personal Gmail) to see what customers receive.</p>
 		</form>
 	</div>
 	<?php
@@ -1741,18 +1779,9 @@ function wholesale_order_admin_column_content($column, $post_id)
 			break;
 
 		case 'order_status':
-			$status_labels = array(
-				'pending' => __('Pending Review', 'litsign'),
-				'on-hold' => __('On hold', 'litsign'),
-				'processing' => __('Processing', 'litsign'),
-				'completed' => __('Completed', 'litsign'),
-				'cancelled' => __('Cancelled', 'litsign'),
-				'refunded' => __('Refunded', 'litsign'),
-				'failed' => __('Failed', 'litsign'),
-				'on_hold' => __('On hold', 'litsign'),
-			);
 			$status = get_post_status($post_id);
-			$status_label = isset($status_labels[$status]) ? $status_labels[$status] : ucfirst(str_replace('_', ' ', $status));
+			$status_info = wholesale_order_status_info();
+			$status_label = isset($status_info[$status]) ? $status_info[$status]['label'] : ucfirst(str_replace('_', ' ', $status));
 			printf(
 				'<span class="wholesale-order-status" data-status="%s">%s</span>',
 				esc_attr($status),
@@ -1827,16 +1856,8 @@ function wholesale_order_quick_edit_status($column_name, $post_type)
 		return;
 	}
 
-	$statuses = array(
-		'pending' => __('Pending Review', 'litsign'),
-		'on-hold' => __('On hold', 'litsign'),
-		'processing' => __('Processing', 'litsign'),
-		'completed' => __('Completed', 'litsign'),
-		'cancelled' => __('Cancelled', 'litsign'),
-		'refunded' => __('Refunded', 'litsign'),
-		'failed' => __('Failed', 'litsign'),
-		'on_hold' => __('On hold (legacy)', 'litsign'),
-	);
+	$statuses = wp_list_pluck(wholesale_order_status_info(), 'label');
+	$statuses['on_hold'] .= ' (legacy)';
 	?>
 	<fieldset class="inline-edit-col-right">
 		<div class="inline-edit-col">
@@ -1853,36 +1874,6 @@ function wholesale_order_quick_edit_status($column_name, $post_type)
 	<?php
 }
 add_action('quick_edit_custom_box', 'wholesale_order_quick_edit_status', 10, 2);
-
-
-function add_custom_status_to_dropdown()
-{
-	global $post;
-
-	if ($post->post_type === 'order') {
-		?>
-		<script>
-			jQuery(document).ready(function ($) {
-				var selectedStatus = $('#hidden_post_status').val();
-
-				$('#post_status').change(e => {
-
-					$('#hidden_post_status').val(e.target.value);
-
-				})
-
-				$('#post_status').append('<option value="on-hold" ' + (selectedStatus === 'on-hold' ? 'selected="selected"' : '') + '>On hold</option>');
-				$('#post_status').append('<option value="processing" ' + (selectedStatus === 'processing' ? 'selected="selected"' : '') + '>Processing</option>');
-				$('#post_status').append('<option value="completed" ' + (selectedStatus === 'completed' ? 'selected="selected"' : '') + '>Completed</option>');
-				$('#post_status').append('<option value="cancelled" ' + (selectedStatus === 'cancelled' ? 'selected="selected"' : '') + '>Cancelled</option>');
-				$('#post_status').append('<option value="refunded" ' + (selectedStatus === 'refunded' ? 'selected="selected"' : '') + '>Refunded</option>');
-				$('#post_status').append('<option value="failed" ' + (selectedStatus === 'failed' ? 'selected="selected"' : '') + '>Failed</option>');
-			});
-		</script>
-		<?php
-	}
-}
-add_action('post_submitbox_misc_actions', 'add_custom_status_to_dropdown');
 
 
 function save_custom_post_status($post_id, $post)
@@ -1911,13 +1902,11 @@ function register_custom_bulk_action($bulk_actions)
 	global $post_type;
 
 	if ($post_type == 'order') { // Replace 'order' with your custom post type ID
-		$bulk_actions['pending'] = __('Mark as Pending');
-		$bulk_actions['failed'] = __('Mark as Failed');
-		$bulk_actions['on-hold'] = __('Mark as On hold');
-		$bulk_actions['processing'] = __('Mark as Processing');
-		$bulk_actions['completed'] = __('Mark as Completed');
-		$bulk_actions['cancelled'] = __('Mark as Cancelled');
-		$bulk_actions['refunded'] = __('Mark as Refunded');
+		foreach (wholesale_order_status_info() as $status => $info) {
+			if ('on_hold' !== $status) {
+				$bulk_actions[$status] = sprintf(__('Mark as %s', 'litsign'), $info['label']);
+			}
+		}
 	}
 
 	return $bulk_actions;
@@ -3664,6 +3653,123 @@ add_action('wp_mail_failed', function ($error) {
 	$to = isset($data['to']) ? implode(', ', (array) $data['to']) : '';
 	error_log('wp_mail failed (' . $to . '): ' . $error->get_error_message());
 });
+
+/**
+ * How this site sends email, for the settings page and failure messages.
+ *
+ * @return array mode ('smtp' or 'php_mail'), host, from, and a problem string when
+ *               the SMTP settings in wp-config.php are missing or still the placeholder.
+ */
+function wholesale_mail_status()
+{
+	$host = defined('WHOLESALE_SMTP_HOST') ? (string) WHOLESALE_SMTP_HOST : '';
+	$username = defined('WHOLESALE_SMTP_USERNAME') ? (string) WHOLESALE_SMTP_USERNAME : '';
+	$password = defined('WHOLESALE_SMTP_PASSWORD') ? (string) WHOLESALE_SMTP_PASSWORD : '';
+	$problem = '';
+
+	if (!$host || !$username || !$password) {
+		$problem = 'WHOLESALE_SMTP_HOST, WHOLESALE_SMTP_USERNAME and WHOLESALE_SMTP_PASSWORD are not all set in wp-config.php.';
+	} elseif ('your-google-workspace-app-password' === $password) {
+		$problem = 'WHOLESALE_SMTP_PASSWORD in wp-config.php is still the placeholder. Create a Google Workspace app password for ' . $username . ' and put it there.';
+	}
+
+	return array(
+		'mode' => $problem ? 'php_mail' : 'smtp',
+		'host' => $host,
+		'username' => $username,
+		'from' => defined('WHOLESALE_SMTP_FROM') && WHOLESALE_SMTP_FROM ? WHOLESALE_SMTP_FROM : get_option('admin_email'),
+		'problem' => $problem,
+	);
+}
+
+/**
+ * Plain-text version of an HTML email, sent alongside it (mail providers trust
+ * multipart messages more than HTML-only ones).
+ */
+function wholesale_html_to_text($html)
+{
+	$text = preg_replace('#<(head|style|script)\b[^>]*>.*?</\1>#is', '', (string) $html);
+	$text = preg_replace_callback('#<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>#is', static function ($link) {
+		$label = trim(wp_strip_all_tags($link[2]));
+		return ('' === $label || html_entity_decode($label) === html_entity_decode($link[1])) ? $link[1] : $label . ' (' . $link[1] . ')';
+	}, $text);
+	$text = preg_replace('#<br\s*/?>|</(p|tr|h[1-6]|div|li)>#i', "\n", $text);
+	$text = preg_replace('#</t[dh]>#i', '  ', $text);
+	$text = html_entity_decode(wp_strip_all_tags($text, false), ENT_QUOTES, 'UTF-8');
+	$text = preg_replace("/[ \t]+/", ' ', $text);
+	$text = preg_replace("/ *\n */", "\n", $text);
+
+	return trim(preg_replace("/\n{3,}/", "\n\n", $text));
+}
+
+/**
+ * Send an HTML email with a plain-text alternative.
+ *
+ * @return true|string True when the mail server accepted it, otherwise the reason it failed.
+ */
+function wholesale_send_html_mail($to, $subject, $html, $headers = array(), $from_name = '')
+{
+	$error = '';
+	$capture_error = static function ($wp_error) use (&$error) {
+		$error = $wp_error->get_error_message();
+	};
+	$add_text_part = static function ($phpmailer) use ($html, $from_name) {
+		$phpmailer->AltBody = wholesale_html_to_text($html);
+		if ('' !== $from_name) {
+			$phpmailer->FromName = $from_name;
+		}
+	};
+
+	add_action('wp_mail_failed', $capture_error);
+	// After wholesale_configure_smtp_mailer (priority 10) so the sender name sticks.
+	add_action('phpmailer_init', $add_text_part, 20);
+	$sent = wp_mail($to, $subject, $html, $headers);
+	remove_action('wp_mail_failed', $capture_error);
+	remove_action('phpmailer_init', $add_text_part, 20);
+
+	if ($sent) {
+		return true;
+	}
+
+	$status = wholesale_mail_status();
+	if ('' === $error) {
+		$error = 'The mail server did not accept the message.';
+	}
+	if ($status['problem']) {
+		$error .= ' ' . $status['problem'];
+	}
+
+	return $error;
+}
+
+function wholesale_handle_test_email()
+{
+	if (!current_user_can('manage_options')) {
+		wp_die(esc_html__('You are not allowed to do this.', 'litsign'), '', array('response' => 403));
+	}
+	check_admin_referer('wholesale_send_test_email');
+
+	$to = isset($_POST['wholesale_test_email_to']) ? sanitize_email(wp_unslash($_POST['wholesale_test_email_to'])) : '';
+	if (!is_email($to)) {
+		$result = 'Enter a valid email address to send the test to.';
+	} else {
+		$status = wholesale_mail_status();
+		$html = '<p>This is a test email from ' . esc_html(get_bloginfo('name')) . '.</p>'
+			. '<p>If you are reading this, payment request and order emails can reach this inbox.</p>'
+			. '<p>Sent through: ' . esc_html('smtp' === $status['mode'] ? 'SMTP (' . $status['host'] . ' as ' . $status['username'] . ')' : 'the server\'s PHP mail() function') . '<br>From: ' . esc_html($status['from']) . '</p>';
+		$result = wholesale_send_html_mail($to, 'Test email from ' . get_bloginfo('name'), $html, array('Content-Type: text/html; charset=UTF-8'));
+	}
+
+	set_transient('wholesale_test_email_result_' . get_current_user_id(), array(
+		'to' => $to,
+		'ok' => true === $result,
+		'message' => true === $result ? '' : (string) $result,
+	), 5 * MINUTE_IN_SECONDS);
+
+	wp_safe_redirect(admin_url('options-general.php?page=wholesale-settings') . '#email-delivery');
+	exit;
+}
+add_action('admin_post_wholesale_send_test_email', 'wholesale_handle_test_email');
 
 function start_session()
 {

@@ -10,7 +10,7 @@
     const revealElements = [...document.querySelectorAll(revealSelector)].filter((element, index, elements) => {
       // The hero stays static so ad visitors see the headline and CTAs immediately.
       return !element.matches('.pb-gallery-image, .cl-icon, .home-hero')
-        && !element.closest('header, nav, .modal, .offcanvas, .home-hero-content, .checkout-page, .cart-page-v2, .account-page-v2, .order-confirmation, .footer-cp-text-container, [aria-hidden="true"]')
+        && !element.closest('header, nav, .modal, .offcanvas, .home-hero-content, .cla-hero, .cla-quote-wrap, .checkout-page, .cart-page-v2, .account-page-v2, .order-confirmation, .footer-cp-text-container, [aria-hidden="true"]')
         && elements.indexOf(element) === index;
     });
 

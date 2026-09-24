@@ -8,6 +8,26 @@
 $contact_url = get_permalink();
 $quote_status = isset($_GET['quote_status']) ? sanitize_key(wp_unslash($_GET['quote_status'])) : '';
 
+// Photos and artwork customers can attach to a quote request.
+$quote_file_mimes = array(
+	'jpg|jpeg|jpe' => 'image/jpeg',
+	'png' => 'image/png',
+	'webp' => 'image/webp',
+	'heic' => 'image/heic',
+	'pdf' => 'application/pdf',
+);
+$quote_file_max_count = 5;
+$quote_file_max_bytes = min(10 * MB_IN_BYTES, wp_max_upload_size());
+$quote_file_max_total = 25 * MB_IN_BYTES;
+// Email providers reject large messages, so bigger uploads are sent as links only.
+$quote_file_attach_limit = 15 * MB_IN_BYTES;
+
+// A request larger than post_max_size arrives with an empty $_POST.
+if ('POST' === $_SERVER['REQUEST_METHOD'] && empty($_POST) && !empty($_SERVER['CONTENT_LENGTH'])) {
+	wp_safe_redirect(add_query_arg('quote_status', 'file_error', $contact_url ? $contact_url : home_url('/contact/')) . '#contact-form');
+	exit;
+}
+
 if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'])) {
 	$redirect_url = $contact_url ? $contact_url : home_url('/contact/');
 	$nonce = isset($_POST['contact_quote_nonce']) ? sanitize_text_field(wp_unslash($_POST['contact_quote_nonce'])) : '';
@@ -30,6 +50,76 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 		exit;
 	}
 
+	// Normalize the multi-file field into one array per file.
+	$incoming_files = array();
+	if (!empty($_FILES['contact_files']['name']) && is_array($_FILES['contact_files']['name'])) {
+		foreach (array_keys($_FILES['contact_files']['name']) as $index) {
+			if (UPLOAD_ERR_NO_FILE === (int) $_FILES['contact_files']['error'][$index]) {
+				continue;
+			}
+			$incoming_files[] = array(
+				'name' => $_FILES['contact_files']['name'][$index],
+				'type' => $_FILES['contact_files']['type'][$index],
+				'tmp_name' => $_FILES['contact_files']['tmp_name'][$index],
+				'error' => (int) $_FILES['contact_files']['error'][$index],
+				'size' => (int) $_FILES['contact_files']['size'][$index],
+			);
+		}
+	}
+
+	$file_fail = function () use ($redirect_url) {
+		wp_safe_redirect(add_query_arg('quote_status', 'file_error', $redirect_url) . '#contact-form');
+		exit;
+	};
+
+	if (count($incoming_files) > $quote_file_max_count || array_sum(wp_list_pluck($incoming_files, 'size')) > $quote_file_max_total) {
+		$file_fail();
+	}
+	foreach ($incoming_files as $file) {
+		if (UPLOAD_ERR_OK !== $file['error'] || $file['size'] > $quote_file_max_bytes) {
+			$file_fail();
+		}
+	}
+
+	$uploaded_files = array();
+	if ($incoming_files) {
+		require_once ABSPATH . 'wp-admin/includes/file.php';
+
+		// Keep quote files in their own folder under random names so they can't be guessed.
+		$quote_upload_dir = function ($dirs) {
+			$dirs['subdir'] = '/quote-files' . $dirs['subdir'];
+			$dirs['path'] = $dirs['basedir'] . $dirs['subdir'];
+			$dirs['url'] = $dirs['baseurl'] . $dirs['subdir'];
+			return $dirs;
+		};
+		add_filter('upload_dir', $quote_upload_dir);
+
+		foreach ($incoming_files as $file) {
+			$original_name = sanitize_file_name(wp_basename($file['name']));
+			$file['name'] = wp_generate_password(12, false) . '-' . $original_name;
+			$upload = wp_handle_upload($file, array(
+				'test_form' => false,
+				'mimes' => $quote_file_mimes,
+			));
+
+			if (!empty($upload['error'])) {
+				remove_filter('upload_dir', $quote_upload_dir);
+				foreach ($uploaded_files as $done) {
+					wp_delete_file($done['file']);
+				}
+				$file_fail();
+			}
+
+			$uploaded_files[] = array(
+				'name' => $original_name,
+				'file' => $upload['file'],
+				'url' => $upload['url'],
+				'size' => $file['size'],
+			);
+		}
+		remove_filter('upload_dir', $quote_upload_dir);
+	}
+
 	$subject = sprintf('New storefront sign quote request from %s', $name);
 	$body = "Name: {$name}\n"
 		. "Business: {$business}\n"
@@ -37,6 +127,12 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 		. "Email: {$email}\n"
 		. "Project type: {$project_type}\n\n"
 		. "Project details:\n{$message}\n";
+	if ($uploaded_files) {
+		$body .= "\nAttached files:\n";
+		foreach ($uploaded_files as $uploaded) {
+			$body .= '- ' . $uploaded['name'] . ' (' . size_format($uploaded['size']) . '): ' . $uploaded['url'] . "\n";
+		}
+	}
 	$headers = array(
 		'Content-Type: text/plain; charset=UTF-8',
 		'Reply-To: ' . $name . ' <' . $email . '>',
@@ -54,6 +150,9 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 			'_contact_email' => $email,
 			'_contact_project_type' => $project_type,
 			'_contact_message' => $message,
+			'_contact_files' => array_map(function ($uploaded) {
+				return array('name' => $uploaded['name'], 'url' => $uploaded['url']);
+			}, $uploaded_files),
 		),
 	), true);
 
@@ -62,8 +161,12 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 		exit;
 	}
 
+	$attachments = array_sum(wp_list_pluck($uploaded_files, 'size')) <= $quote_file_attach_limit
+		? wp_list_pluck($uploaded_files, 'file')
+		: array();
+
 	$headers[] = 'From: ' . get_option('admin_email');
-	$sent = wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers);
+	$sent = wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers, $attachments);
 	wp_safe_redirect(add_query_arg('quote_status', $sent ? 'sent' : 'error', $redirect_url) . '#contact-form');
 	exit;
 }
@@ -102,11 +205,13 @@ get_header();
 
 				<?php if ('sent' === $quote_status) : ?>
 					<div class="contact-message contact-message-success" role="status">Thanks! Your request has been sent. Our team will be in touch soon.</div>
+				<?php elseif ('file_error' === $quote_status) : ?>
+					<div class="contact-message contact-message-error" role="alert">One of your files couldn’t be uploaded. Please attach up to <?php echo esc_html($quote_file_max_count); ?> JPG, PNG, WEBP, HEIC or PDF files, each under <?php echo esc_html(size_format($quote_file_max_bytes)); ?>, and try again.</div>
 				<?php elseif ('error' === $quote_status) : ?>
 					<div class="contact-message contact-message-error" role="alert">Please complete all required fields and try again. If the problem continues, call us directly.</div>
 				<?php endif; ?>
 
-				<form method="post" action="<?php echo esc_url($contact_url); ?>" class="contact-form">
+				<form method="post" action="<?php echo esc_url($contact_url); ?>" class="contact-form" enctype="multipart/form-data" data-contact-form>
 					<?php wp_nonce_field('contact_quote', 'contact_quote_nonce'); ?>
 					<p class="contact-honeypot" aria-hidden="true">
 						<label for="contact-website">Website</label>
@@ -174,7 +279,23 @@ get_header();
 					<label for="contact-message">Tell us about your storefront <span aria-hidden="true">*</span>
 						<textarea id="contact-message" name="contact_message" rows="6" required placeholder="Share your location, approximate sign size, timeline, or any other helpful details."></textarea>
 					</label>
-					<button class="contact-submit" type="submit" name="contact_quote_submit" value="1">Request my quote <span aria-hidden="true">&rarr;</span></button>
+					<div class="contact-upload" data-contact-upload data-max-count="<?php echo esc_attr($quote_file_max_count); ?>" data-max-bytes="<?php echo esc_attr($quote_file_max_bytes); ?>" data-max-total="<?php echo esc_attr($quote_file_max_total); ?>">
+						<div class="contact-upload-label">
+							<span id="contact-files-label">Photos, logo or artwork</span>
+							<small>Optional</small>
+						</div>
+						<input class="contact-upload-input" type="file" id="contact-files" name="contact_files[]" multiple accept=".jpg,.jpeg,.png,.webp,.heic,.pdf,image/jpeg,image/png,image/webp,image/heic,application/pdf" aria-labelledby="contact-files-label" aria-describedby="contact-files-hint">
+						<label class="contact-upload-drop" for="contact-files" data-contact-drop>
+							<span class="contact-upload-icon">
+								<svg aria-hidden="true" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M20 16v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2"/></svg>
+							</span>
+							<span class="contact-upload-title"><strong>Drag &amp; drop files here</strong> or <u>browse</u></span>
+							<span class="contact-upload-hint" id="contact-files-hint">Storefront photos, your logo, or a sketch. Up to <?php echo esc_html($quote_file_max_count); ?> files &middot; JPG, PNG, WEBP, HEIC or PDF &middot; <?php echo esc_html(size_format($quote_file_max_bytes)); ?> each</span>
+						</label>
+						<p class="contact-upload-error" role="alert" data-contact-upload-error hidden></p>
+						<ul class="contact-upload-list" data-contact-upload-list aria-live="polite"></ul>
+					</div>
+					<button class="contact-submit" type="submit" name="contact_quote_submit" value="1" data-contact-submit>Request my quote <span aria-hidden="true">&rarr;</span></button>
 					<p class="contact-form-note">By submitting this form, you’re requesting a conversation about your sign project. We’ll only use your details to respond to your inquiry.</p>
 				</form>
 			</section>
@@ -212,5 +333,175 @@ get_header();
 		</section>
 	</div>
 </main>
+
+<script>
+	(function () {
+		var form = document.querySelector('[data-contact-form]');
+		var upload = form && form.querySelector('[data-contact-upload]');
+		if (!upload || typeof DataTransfer === 'undefined') {
+			return;
+		}
+
+		var input = upload.querySelector('input[type="file"]');
+		var drop = upload.querySelector('[data-contact-drop]');
+		var list = upload.querySelector('[data-contact-upload-list]');
+		var errorBox = upload.querySelector('[data-contact-upload-error]');
+		var submit = form.querySelector('[data-contact-submit]');
+		var maxCount = parseInt(upload.getAttribute('data-max-count'), 10);
+		var maxBytes = parseInt(upload.getAttribute('data-max-bytes'), 10);
+		var maxTotal = parseInt(upload.getAttribute('data-max-total'), 10);
+		var allowed = /\.(jpe?g|png|webp|heic|pdf)$/i;
+		var files = [];
+		var previews = [];
+
+		function formatSize(bytes) {
+			return bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + ' KB' : (bytes / 1048576).toFixed(1) + ' MB';
+		}
+
+		function showError(message) {
+			errorBox.textContent = message;
+			errorBox.hidden = !message;
+		}
+
+		function sync() {
+			var transfer = new DataTransfer();
+			files.forEach(function (file) {
+				transfer.items.add(file);
+			});
+			input.files = transfer.files;
+		}
+
+		function render() {
+			previews.forEach(function (url) {
+				URL.revokeObjectURL(url);
+			});
+			previews = [];
+			list.innerHTML = '';
+
+			files.forEach(function (file, index) {
+				var item = document.createElement('li');
+				item.className = 'contact-upload-item';
+
+				var thumb = document.createElement('span');
+				thumb.className = 'contact-upload-thumb';
+				if (/^image\/(jpeg|png|webp)$/.test(file.type)) {
+					var url = URL.createObjectURL(file);
+					previews.push(url);
+					var img = document.createElement('img');
+					img.src = url;
+					img.alt = '';
+					thumb.appendChild(img);
+				} else {
+					thumb.textContent = (file.name.split('.').pop() || 'file').toUpperCase();
+					thumb.classList.add('is-doc');
+				}
+
+				var meta = document.createElement('span');
+				meta.className = 'contact-upload-meta';
+				var name = document.createElement('strong');
+				name.textContent = file.name;
+				var size = document.createElement('small');
+				size.textContent = formatSize(file.size);
+				meta.appendChild(name);
+				meta.appendChild(size);
+
+				var remove = document.createElement('button');
+				remove.type = 'button';
+				remove.className = 'contact-upload-remove';
+				remove.setAttribute('aria-label', 'Remove ' + file.name);
+				remove.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+				remove.addEventListener('click', function () {
+					files.splice(index, 1);
+					showError('');
+					sync();
+					render();
+					input.focus();
+				});
+
+				item.appendChild(thumb);
+				item.appendChild(meta);
+				item.appendChild(remove);
+				list.appendChild(item);
+			});
+
+			upload.classList.toggle('has-files', files.length > 0);
+			drop.classList.toggle('is-full', files.length >= maxCount);
+		}
+
+		function addFiles(incoming) {
+			var problems = [];
+			var total = files.reduce(function (sum, file) {
+				return sum + file.size;
+			}, 0);
+
+			Array.prototype.forEach.call(incoming, function (file) {
+				var duplicate = files.some(function (existing) {
+					return existing.name === file.name && existing.size === file.size;
+				});
+				if (duplicate) {
+					return;
+				}
+				if (files.length >= maxCount) {
+					problems.push('You can attach up to ' + maxCount + ' files.');
+				} else if (!allowed.test(file.name)) {
+					problems.push(file.name + ' isn’t a supported file type.');
+				} else if (file.size > maxBytes) {
+					problems.push(file.name + ' is larger than ' + formatSize(maxBytes) + '.');
+				} else if (total + file.size > maxTotal) {
+					problems.push('Files can total up to ' + formatSize(maxTotal) + '.');
+				} else {
+					files.push(file);
+					total += file.size;
+				}
+			});
+
+			showError(problems.filter(function (problem, i) {
+				return problems.indexOf(problem) === i;
+			}).join(' '));
+			sync();
+			render();
+		}
+
+		input.addEventListener('change', function () {
+			// The input now only holds the new picks; merge them into the kept list.
+			var picked = Array.prototype.slice.call(input.files);
+			sync();
+			addFiles(picked);
+		});
+
+		['dragenter', 'dragover'].forEach(function (type) {
+			drop.addEventListener(type, function (event) {
+				event.preventDefault();
+				drop.classList.add('is-dragging');
+			});
+		});
+		['dragleave', 'drop'].forEach(function (type) {
+			drop.addEventListener(type, function (event) {
+				event.preventDefault();
+				if ('dragleave' === type && drop.contains(event.relatedTarget)) {
+					return;
+				}
+				drop.classList.remove('is-dragging');
+			});
+		});
+		drop.addEventListener('drop', function (event) {
+			if (event.dataTransfer && event.dataTransfer.files.length) {
+				addFiles(event.dataTransfer.files);
+			}
+		});
+
+		form.addEventListener('submit', function () {
+			if (!submit || !form.checkValidity()) {
+				return;
+			}
+			// Leave the button's value in the request, then show progress.
+			window.setTimeout(function () {
+				submit.disabled = true;
+				submit.classList.add('is-loading');
+				submit.firstChild.textContent = files.length ? 'Uploading files… ' : 'Sending… ';
+			}, 0);
+		});
+	})();
+</script>
 
 <?php get_footer(); ?>

@@ -5678,3 +5678,234 @@ a.review-author-name:hover {
 }
 
 /*# sourceMappingURL=style.css.map */
+
+/* Contact page: quote file uploads */
+.contact-upload {
+  display: grid;
+  gap: 10px;
+}
+.contact-upload-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  color: #263746;
+  font-size: 13px;
+  font-weight: 700;
+}
+.contact-upload-label small {
+  color: #8a99a8;
+  font-size: 12px;
+  font-weight: 500;
+}
+.contact-form .contact-upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  border: 0;
+  white-space: nowrap;
+}
+.contact-form .contact-upload-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 26px 18px;
+  border: 2px dashed #bfd7e4;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fbfdfe 0%, #f3f9fc 100%);
+  color: #475569;
+  cursor: pointer;
+  font-weight: 400;
+  text-align: center;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+.contact-form .contact-upload-drop:hover,
+.contact-form .contact-upload-drop.is-dragging {
+  border-color: #1fa8de;
+  background: #eef8fd;
+}
+.contact-form .contact-upload-drop.is-dragging {
+  box-shadow: 0 0 0 4px rgba(31, 168, 222, .13);
+}
+.contact-upload-input:focus-visible + .contact-upload-drop {
+  border-color: #1fa8de;
+  box-shadow: 0 0 0 4px rgba(31, 168, 222, .18);
+}
+.contact-form .contact-upload-drop .contact-upload-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 50px;
+  height: 50px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: #fff;
+  color: #1fa8de;
+  box-shadow: 0 6px 16px rgba(31, 168, 222, .18);
+  transition: transform 200ms ease;
+}
+.contact-upload-drop:hover .contact-upload-icon,
+.contact-upload-drop.is-dragging .contact-upload-icon {
+  transform: translateY(-3px);
+}
+.contact-form .contact-upload-drop .contact-upload-title {
+  color: #172027;
+  font-size: 15px;
+}
+.contact-upload-title u {
+  color: #1fa8de;
+  font-weight: 700;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+.contact-form .contact-upload-drop .contact-upload-hint {
+  max-width: 420px;
+  color: #718096;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.has-files .contact-upload-drop {
+  flex-direction: row;
+  justify-content: center;
+  padding: 14px 18px;
+}
+.has-files .contact-upload-drop .contact-upload-icon {
+  width: 38px;
+  height: 38px;
+  margin: 0;
+}
+.has-files .contact-upload-drop .contact-upload-hint {
+  display: none;
+}
+.contact-form .contact-upload-drop.is-full {
+  display: none;
+}
+.contact-upload-error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fff0f0;
+  color: #9a3030;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.contact-upload-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.contact-upload-list:empty {
+  display: none;
+}
+.contact-upload-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 8px;
+  border: 1px solid #e2eaf0;
+  border-radius: 10px;
+  background: #fff;
+  animation: contact-upload-in 200ms ease;
+}
+@keyframes contact-upload-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.contact-upload-thumb {
+  display: grid;
+  flex: 0 0 46px;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #eef4f8;
+}
+.contact-upload-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.contact-upload-thumb.is-doc {
+  background: #fdecec;
+  color: #c24141;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.contact-upload-meta {
+  display: grid;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.contact-upload-meta strong {
+  overflow: hidden;
+  color: #172027;
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.contact-upload-meta small {
+  color: #8a99a8;
+  font-size: 12px;
+}
+.contact-upload-remove {
+  display: grid;
+  flex: 0 0 34px;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #8a99a8;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+.contact-upload-remove:hover,
+.contact-upload-remove:focus-visible {
+  background: #fff0f0;
+  color: #c24141;
+  outline: 0;
+}
+.contact-submit.is-loading {
+  cursor: progress;
+  opacity: .85;
+}
+.contact-submit.is-loading span {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, .45);
+  border-top-color: #fff;
+  border-radius: 50%;
+  font-size: 0;
+  animation: contact-spin 700ms linear infinite;
+}
+@keyframes contact-spin {
+  to { transform: rotate(360deg); }
+}
+@media (max-width: 575px) {
+  .contact-form .contact-upload-drop {
+    padding: 20px 14px;
+  }
+  .contact-upload-title {
+    font-size: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .contact-upload-item,
+  .contact-upload-icon,
+  .contact-submit.is-loading span {
+    animation: none;
+    transition: none;
+  }
+}

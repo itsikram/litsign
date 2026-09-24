@@ -167,6 +167,10 @@ function get_nested_terms($taxonomy = 'product_category', $args = array())
     $parent_terms = get_terms($args);
     $nested_terms = array();
 
+    if (is_wp_error($parent_terms)) {
+        return $nested_terms;
+    }
+
     foreach ($parent_terms as $parent) {
         // Get child terms.
         $child_args = array(

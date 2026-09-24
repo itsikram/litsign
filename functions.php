@@ -324,6 +324,7 @@ function wholesale_setting_defaults()
 		'channel_shipping_options' => '50,200,250,300',
 		'google_places_api_key' => defined('WHOLESALE_GOOGLE_PLACES_API_KEY') ? WHOLESALE_GOOGLE_PLACES_API_KEY : '',
 		'google_place_id' => '',
+		'google_ads_lead_label' => '',
 		'email_status_updates' => 1,
 		'payment_method' => 'lightbox',
 		'ticket_business_name' => 'Lit Sign Manufacturing',
@@ -453,6 +454,10 @@ function wholesale_settings_page()
 				<tr><th><label for="wholesale_ticket_default_message">Default message</label></th><td><textarea class="large-text" rows="3" id="wholesale_ticket_default_message" name="wholesale_ticket_default_message" placeholder="e.g. Thanks for choosing us! Production starts once payment is received."><?php echo esc_textarea(wholesale_get_setting('ticket_default_message')); ?></textarea><p class="description">Pre-filled as the message to the customer on new tickets. You can still change it on each ticket.</p></td></tr>
 				<tr><th>Sales tax on new tickets</th><td><input type="hidden" name="wholesale_ticket_default_tax" value="0"><label><input type="checkbox" name="wholesale_ticket_default_tax" value="1" <?php checked(wholesale_setting_enabled('ticket_default_tax')); ?>> Start new tickets with the checkout tax rate (<?php echo esc_html(wholesale_get_setting('tax_rate')); ?>%)</label></td></tr>
 				<tr><th><label for="wholesale_ticket_due_days">Pay-by period</label></th><td><input type="number" min="0" step="1" class="small-text" id="wholesale_ticket_due_days" name="wholesale_ticket_due_days" value="<?php echo esc_attr((string) wholesale_get_setting('ticket_due_days')); ?>"> days<p class="description">New tickets get a pay-by date this many days ahead, and the link stops accepting payment after it. Use 0 for no pay-by date.</p></td></tr>
+			</table>
+			<h2 class="title" id="google-ads">Google Ads</h2>
+			<table class="form-table" role="presentation">
+				<tr><th><label for="wholesale_google_ads_lead_label">Quote request conversion label</label></th><td><input class="regular-text" id="wholesale_google_ads_lead_label" name="wholesale_google_ads_lead_label" value="<?php echo esc_attr(wholesale_get_setting('google_ads_lead_label')); ?>" placeholder="AbC-D_efG-h12_34-567"><p class="description">Sent when someone submits the quote form on a page using the <strong>Channel Letters Ads Landing</strong> template. In Google Ads, create a "Submit lead form" conversion action and paste the part after <code>AW-18454059893/</code> from its event snippet.</p></td></tr>
 			</table>
 			<h2 class="title" id="google-reviews">Google reviews</h2>
 			<p>Shows your Google Business rating and latest reviews in the site-wide review slider, next to reviews you approve under <a href="<?php echo esc_url(admin_url('edit.php?post_type=review_submission')); ?>">Customer Reviews</a>.</p>
@@ -957,6 +962,10 @@ function wholesale_contact_submission_details_meta_box($post)
 		'Phone' => '_contact_phone',
 		'Email' => '_contact_email',
 		'Project type' => '_contact_project_type',
+		'ZIP code' => '_contact_zip',
+		'Logo' => '_contact_logo',
+		'Files' => '_contact_files',
+		'Ad source' => '_contact_source',
 	);
 
 	echo '<table class="widefat striped"><tbody>';
@@ -965,6 +974,16 @@ function wholesale_contact_submission_details_meta_box($post)
 		echo '<tr><td><strong>' . esc_html($label) . '</strong></td><td>';
 		if ('_contact_email' === $meta_key && is_email($value)) {
 			echo '<a href="mailto:' . esc_attr($value) . '">' . esc_html($value) . '</a>';
+		} elseif ('_contact_logo' === $meta_key && $value) {
+			echo '<a href="' . esc_url($value) . '" target="_blank" rel="noopener">View uploaded logo</a>';
+		} elseif ('_contact_files' === $meta_key) {
+			$links = array();
+			foreach ((array) $value as $file) {
+				if (!empty($file['url'])) {
+					$links[] = '<a href="' . esc_url($file['url']) . '" target="_blank" rel="noopener">' . esc_html($file['name']) . '</a>';
+				}
+			}
+			echo $links ? implode('<br>', $links) : '';
 		} elseif ('_contact_phone' === $meta_key) {
 			echo '<a href="tel:' . esc_attr(preg_replace('/[^0-9+]/', '', $value)) . '">' . esc_html($value) . '</a>';
 		} else {
@@ -1196,7 +1215,12 @@ function wholesale_optimize_frontend_scripts()
 	$scripts = wp_scripts();
 	$scripts->remove('jquery');
 	$scripts->add('jquery', false, array('jquery-core'), $scripts->registered['jquery-core']->ver);
-	foreach (array('jquery', 'jquery-core', 'jquery-ui-core') as $handle) {
+	// Core registers jquery-migrate without a dependency, so a plugin that
+	// enqueues it directly would print it in the head before jQuery exists.
+	if (isset($scripts->registered['jquery-migrate'])) {
+		$scripts->registered['jquery-migrate']->deps = array('jquery-core');
+	}
+	foreach (array('jquery', 'jquery-core', 'jquery-migrate', 'jquery-ui-core') as $handle) {
 		if (isset($scripts->registered[$handle])) {
 			$scripts->add_data($handle, 'group', 1);
 		}
@@ -1992,6 +2016,9 @@ function litsign_scripts()
 	if (is_page_template('landing-page.php')) {
 		wp_enqueue_style('landing-page', $theme_uri . '/css/landing-page.css', array('litsign-style', 'custom-style'), $asset_version('/css/landing-page.css'));
 	}
+	if (is_page_template('page-channel-letters-ads.php')) {
+		wp_enqueue_style('cl-ads', $theme_uri . '/css/cl-ads.css', array('litsign-style', 'custom-style'), $asset_version('/css/cl-ads.css'));
+	}
 	//wp_enqueue_style('zebra_dialog', get_template_directory_uri() . '/css/zebra_dialog.css', array(), _S_VERSION);
 
 	wp_style_add_data('litsign-style', 'rtl', 'replace');
@@ -2403,6 +2430,7 @@ function wholesale_seo_is_noindex()
 	return is_404()
 		|| is_search()
 		|| is_page(wholesale_seo_noindex_page_slugs())
+		|| is_page_template('page-channel-letters-ads.php')
 		|| is_singular(array('order', 'cnn'))
 		|| is_post_type_archive('order')
 		|| get_query_var('wholesale_thank_you');

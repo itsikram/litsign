@@ -1252,7 +1252,7 @@ function wholesale_ticket_admin_notice()
         esc_attr($notices[$code][0]),
         esc_html($message),
         'send_failed' === $code && current_user_can('manage_options')
-            ? '<p><a href="' . esc_url(admin_url('options-general.php?page=wholesale-settings#email-delivery')) . '">Check email delivery settings and send a test email</a></p>'
+            ? '<p><a href="' . esc_url(admin_url('admin.php?page=wholesale-emails-smtp')) . '">Check email delivery settings and send a test email</a></p>'
             : ''
     );
 }

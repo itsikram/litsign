@@ -63,7 +63,7 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['landing_quote_submit'
 
 	wp_mail(wholesale_contact_admin_recipients(), $subject, $message, $headers);
 	wholesale_send_quote_confirmation($submission_id);
-	wp_safe_redirect(add_query_arg('quote_status', 'sent', $redirect_url) . '#quote');
+	wp_safe_redirect(add_query_arg(wholesale_quote_lead_args($submission_id), $redirect_url) . '#quote');
 	exit;
 }
 
@@ -93,6 +93,8 @@ $landing_products = new WP_Query(array(
 		),
 	),
 ));
+
+wholesale_track_quote_lead('landing_page');
 
 get_header();
 ?>

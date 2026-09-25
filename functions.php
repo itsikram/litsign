@@ -326,7 +326,7 @@ function wholesale_setting_defaults()
 		'channel_shipping_options' => '50,200,250,300',
 		'google_places_api_key' => defined('WHOLESALE_GOOGLE_PLACES_API_KEY') ? WHOLESALE_GOOGLE_PLACES_API_KEY : '',
 		'google_place_id' => '',
-		'google_ads_lead_label' => '',
+		'google_ads_lead_label' => '-4S9CMyui4EdEPW2yt9E',
 		'email_status_updates' => 1,
 		'payment_method' => 'lightbox',
 		'ticket_business_name' => 'Lit Sign Manufacturing',
@@ -1020,6 +1020,57 @@ function wholesale_deferred_conversion_tracking()
 	<?php
 }
 add_action('wp_footer', 'wholesale_deferred_conversion_tracking', 20);
+
+/**
+ * Query args for the "quote sent" redirect that let the next page view fire the
+ * lead conversion for this visitor only.
+ */
+function wholesale_quote_lead_args($submission_id)
+{
+	return array(
+		'quote_status' => 'sent',
+		'lead' => (int) $submission_id,
+		'lk' => wp_hash('cla_lead_' . (int) $submission_id),
+	);
+}
+
+/**
+ * Fire the Google Ads "Request quote" conversion once, for the visitor who just
+ * sent a quote form (see wholesale_quote_lead_args()). Runs after the deferred gtag config.
+ */
+function wholesale_track_quote_lead($source)
+{
+	$lead_id = isset($_GET['lead']) ? absint($_GET['lead']) : 0;
+	$lead_key = isset($_GET['lk']) ? sanitize_text_field(wp_unslash($_GET['lk'])) : '';
+	$status = isset($_GET['quote_status']) ? sanitize_key(wp_unslash($_GET['quote_status'])) : '';
+	if ('sent' !== $status || !$lead_id || !hash_equals(wp_hash('cla_lead_' . $lead_id), $lead_key)
+		|| 'contact_submission' !== get_post_type($lead_id) || get_post_meta($lead_id, '_conversion_tracked', true)) {
+		return;
+	}
+	update_post_meta($lead_id, '_conversion_tracked', current_time('mysql'));
+
+	add_action('wp_footer', function () use ($lead_id, $source) {
+		$label = trim((string) wholesale_get_setting('google_ads_lead_label'));
+		$label = '' !== $label ? $label : wholesale_setting_defaults()['google_ads_lead_label'];
+		$email = (string) get_post_meta($lead_id, '_contact_email', true);
+		$digits = preg_replace('/\D/', '', (string) get_post_meta($lead_id, '_contact_phone', true));
+		$phone = 10 === strlen($digits) ? '+1' . $digits : (11 === strlen($digits) && '1' === $digits[0] ? '+' . $digits : '');
+		?>
+		<script>
+			window.addEventListener('load', function () {
+				window.dataLayer = window.dataLayer || [];
+				window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+				window.gtag('set', 'user_data', <?php echo wp_json_encode(array_filter(array('email' => $email, 'phone_number' => $phone))); ?>);
+				window.gtag('event', 'conversion', {
+					send_to: <?php echo wp_json_encode('AW-18454059893/' . $label); ?>,
+					transaction_id: <?php echo wp_json_encode('lead-' . $lead_id); ?>
+				});
+				window.gtag('event', 'generate_lead', { lead_source: <?php echo wp_json_encode($source); ?> });
+			});
+		</script>
+		<?php
+	}, 21);
+}
 
 /**
  * Do not let the GoDaddy widget become a parser-blocking request.

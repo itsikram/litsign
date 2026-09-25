@@ -160,11 +160,7 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 	wholesale_send_quote_confirmation($submission_id);
 
 	// The quote is saved even when mail fails, so the visitor still sees success.
-	wp_safe_redirect(add_query_arg(array(
-		'quote_status' => 'sent',
-		'lead' => $submission_id,
-		'lk' => wp_hash('cla_lead_' . $submission_id),
-	), $return_url) . '#quote');
+	wp_safe_redirect(add_query_arg(wholesale_quote_lead_args($submission_id), $return_url) . '#quote');
 	exit;
 }
 
@@ -174,38 +170,14 @@ $variant = $variants[$variant_key];
 $quote_status = isset($_GET['quote_status']) ? sanitize_key(wp_unslash($_GET['quote_status'])) : '';
 $gclid = isset($_GET['gclid']) ? preg_replace('/[^A-Za-z0-9_-]/', '', wp_unslash($_GET['gclid'])) : '';
 
-// Fire the lead conversion once, only for the visitor who just sent the quote.
 $lead_id = isset($_GET['lead']) ? absint($_GET['lead']) : 0;
 $lead_key = isset($_GET['lk']) ? sanitize_text_field(wp_unslash($_GET['lk'])) : '';
 $lead_valid = 'sent' === $quote_status && $lead_id
 	&& hash_equals(wp_hash('cla_lead_' . $lead_id), $lead_key)
 	&& 'contact_submission' === get_post_type($lead_id);
 
-if ($lead_valid && !get_post_meta($lead_id, '_conversion_tracked', true)) {
-	update_post_meta($lead_id, '_conversion_tracked', current_time('mysql'));
-	add_action('wp_footer', function () use ($lead_id) {
-		$label = trim((string) wholesale_get_setting('google_ads_lead_label'));
-		$email = (string) get_post_meta($lead_id, '_contact_email', true);
-		$digits = preg_replace('/\D/', '', (string) get_post_meta($lead_id, '_contact_phone', true));
-		$phone = 10 === strlen($digits) ? '+1' . $digits : (11 === strlen($digits) && '1' === $digits[0] ? '+' . $digits : '');
-		?>
-		<script>
-			window.addEventListener('load', function () {
-				window.dataLayer = window.dataLayer || [];
-				window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
-				window.gtag('set', 'user_data', <?php echo wp_json_encode(array_filter(array('email' => $email, 'phone_number' => $phone))); ?>);
-				<?php if ($label) : ?>
-				window.gtag('event', 'conversion', {
-					send_to: <?php echo wp_json_encode('AW-18454059893/' . $label); ?>,
-					transaction_id: <?php echo wp_json_encode('lead-' . $lead_id); ?>
-				});
-				<?php endif; ?>
-				window.gtag('event', 'generate_lead', { lead_source: 'channel_letters_ads' });
-			});
-		</script>
-		<?php
-	}, 21);
-}
+// Fire the lead conversion once, only for the visitor who just sent the quote.
+wholesale_track_quote_lead('channel_letters_ads');
 
 $styles = new WP_Query(array(
 	'post_type' => 'product',

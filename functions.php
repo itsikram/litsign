@@ -1104,12 +1104,22 @@ function wholesale_trim_frontend_overhead()
 	remove_action('wp_head', 'rsd_link');
 	remove_action('wp_head', 'wlwmanifest_link');
 	remove_action('wp_head', 'wp_shortlink_wp_head');
-
-	if (!is_user_logged_in()) {
-		wp_deregister_style('dashicons');
-	}
 }
 add_action('init', 'wholesale_trim_frontend_overhead');
+
+/**
+ * Drop Dashicons for logged-out visitors on public pages.
+ *
+ * Dequeued (not deregistered) on wp_enqueue_scripts so wp-login.php, whose
+ * "login" stylesheet depends on dashicons, keeps working.
+ */
+function wholesale_dequeue_dashicons()
+{
+	if (!is_user_logged_in()) {
+		wp_dequeue_style('dashicons');
+	}
+}
+add_action('wp_enqueue_scripts', 'wholesale_dequeue_dashicons', 100);
 
 /**
  * Make the CSS hero image discoverable while the stylesheet is loading.

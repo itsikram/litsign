@@ -13,7 +13,10 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('WHOLESALE_EMAIL_LOG_DB_VERSION', '1');
+define('WHOLESALE_EMAIL_LOG_DB_VERSION', '2');
+
+// A failed email is tried again after each of these delays, then given up on.
+define('WHOLESALE_EMAIL_RETRY_DELAYS', array(5 * MINUTE_IN_SECONDS, 30 * MINUTE_IN_SECONDS, 2 * HOUR_IN_SECONDS));
 
 /* ---------------------------------------------------------------------------
  * SMTP settings
@@ -48,6 +51,9 @@ function wholesale_mail_settings_defaults()
 		'from_name' => '',
 		'log_enabled' => true,
 		'log_retention' => 90,
+		'auto_retry' => true,
+		// Where store notifications (new orders, quotes, contact forms, reviews) go.
+		'notify_recipients' => '',
 	);
 }
 
@@ -271,9 +277,12 @@ function wholesale_email_log_install()
 		source VARCHAR(190) NOT NULL DEFAULT '',
 		status VARCHAR(20) NOT NULL DEFAULT 'pending',
 		error TEXT NULL,
+		attempts SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+		next_retry DATETIME NULL,
 		PRIMARY KEY  (id),
 		KEY status_created (status, created_at),
-		KEY created_at (created_at)
+		KEY created_at (created_at),
+		KEY next_retry (next_retry)
 	) {$charset_collate};");
 
 	update_option('wholesale_email_log_db_version', WHOLESALE_EMAIL_LOG_DB_VERSION);
@@ -316,12 +325,23 @@ function wholesale_email_log_source()
  */
 function wholesale_email_log_start($atts)
 {
+	global $wpdb;
 	$GLOBALS['wholesale_email_log_current'] = 0;
+
+	// An automatic retry updates its original row instead of adding a new one.
+	if (!empty($GLOBALS['wholesale_email_log_retry_id'])) {
+		$id = (int) $GLOBALS['wholesale_email_log_retry_id'];
+		$GLOBALS['wholesale_email_log_retry_id'] = 0;
+		$table = wholesale_email_log_table();
+		$wpdb->query($wpdb->prepare("UPDATE {$table} SET status = 'pending', attempts = attempts + 1, next_retry = NULL WHERE id = %d", $id));
+		$GLOBALS['wholesale_email_log_current'] = $id;
+		return $atts;
+	}
+
 	if (!wholesale_mail_settings()['log_enabled']) {
 		return $atts;
 	}
 
-	global $wpdb;
 	$to = isset($atts['to']) ? $atts['to'] : '';
 	$headers = isset($atts['headers']) ? $atts['headers'] : '';
 	$attachments = isset($atts['attachments']) ? (array) $atts['attachments'] : array();
@@ -334,7 +354,8 @@ function wholesale_email_log_start($atts)
 		// Cap huge bodies so the log cannot bloat the database.
 		'message' => strlen($message) > 512000 ? substr($message, 0, 512000) : $message,
 		'headers' => is_array($headers) ? implode("\n", $headers) : (string) $headers,
-		'attachments' => implode("\n", array_map('basename', array_filter(array_map('strval', $attachments)))),
+		// Full paths, so retries can attach the files again.
+		'attachments' => implode("\n", array_filter(array_map('strval', $attachments))),
 		'source' => wholesale_email_log_source(),
 		'status' => 'pending',
 	));
@@ -365,13 +386,93 @@ add_action('phpmailer_init', function ($phpmailer) {
 }, 9999);
 
 add_action('wp_mail_succeeded', function () {
-	wholesale_email_log_update(array('status' => 'sent', 'error' => null));
+	wholesale_email_log_update(array('status' => 'sent', 'error' => null, 'next_retry' => null));
 	$GLOBALS['wholesale_email_log_current'] = 0;
 });
 
 add_action('wp_mail_failed', function ($error) {
+	$id = isset($GLOBALS['wholesale_email_log_current']) ? (int) $GLOBALS['wholesale_email_log_current'] : 0;
 	wholesale_email_log_update(array('status' => 'failed', 'error' => $error->get_error_message()));
 	$GLOBALS['wholesale_email_log_current'] = 0;
+	if ($id) {
+		wholesale_email_schedule_retry($id);
+	}
+});
+
+/**
+ * Queue a failed email to be tried again, unless retries are off, it has used
+ * them all, or it has no valid recipient (trying again cannot fix that).
+ */
+function wholesale_email_schedule_retry($id)
+{
+	if (!wholesale_mail_settings()['auto_retry']) {
+		return;
+	}
+	$row = wholesale_email_log_get($id);
+	$delays = WHOLESALE_EMAIL_RETRY_DELAYS;
+	if (!$row || (int) $row['attempts'] > count($delays)) {
+		return;
+	}
+	$valid = array_filter(array_map('trim', explode(',', $row['to_email'])), static function ($address) {
+		return is_email(preg_match('/<([^>]+)>/', $address, $m) ? $m[1] : $address);
+	});
+	if (!$valid) {
+		return;
+	}
+
+	global $wpdb;
+	$wpdb->update(wholesale_email_log_table(), array('next_retry' => gmdate('Y-m-d H:i:s', time() + $delays[(int) $row['attempts'] - 1])), array('id' => $id));
+}
+
+/**
+ * Send a logged email again. With $in_place, the attempt updates the same log
+ * row (automatic retries); otherwise it is logged as a new email.
+ */
+function wholesale_email_log_send_row($row, $in_place)
+{
+	$headers = array_filter(array_map('trim', explode("\n", (string) $row['headers'])));
+	$has_type = (bool) preg_grep('/^content-type:/i', $headers);
+	if (!$has_type && wholesale_email_log_is_html($row)) {
+		$headers[] = 'Content-Type: text/html; charset=UTF-8';
+	}
+
+	// Only re-attach files that still exist in the uploads folder.
+	$uploads = wp_normalize_path(trailingslashit(wp_upload_dir()['basedir']));
+	$attachments = array_filter(explode("\n", (string) $row['attachments']), static function ($path) use ($uploads) {
+		$real = '' !== trim($path) ? realpath($path) : false;
+		return $real && 0 === strpos(wp_normalize_path($real), $uploads) && is_file($real);
+	});
+
+	$GLOBALS['wholesale_email_log_retry_id'] = $in_place ? (int) $row['id'] : 0;
+	$sent = wp_mail($row['to_email'], $row['subject'], $row['message'], $headers, array_values($attachments));
+	$GLOBALS['wholesale_email_log_retry_id'] = 0;
+
+	return $sent;
+}
+
+/**
+ * Try again every failed email whose retry time has come.
+ */
+function wholesale_email_process_retries()
+{
+	global $wpdb;
+	$table = wholesale_email_log_table();
+	$ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$table} WHERE status = 'failed' AND next_retry IS NOT NULL AND next_retry <= %s ORDER BY next_retry ASC LIMIT 20", current_time('mysql', true)));
+
+	foreach ($ids as $id) {
+		// Claim the row first so an overlapping cron run cannot send it twice.
+		$claimed = $wpdb->query($wpdb->prepare("UPDATE {$table} SET next_retry = NULL WHERE id = %d AND next_retry IS NOT NULL", $id));
+		$row = $claimed ? wholesale_email_log_get($id) : null;
+		if ($row) {
+			wholesale_email_log_send_row($row, true);
+		}
+	}
+}
+add_action('wholesale_email_process_retries', 'wholesale_email_process_retries');
+
+add_filter('cron_schedules', function ($schedules) {
+	$schedules['wholesale_five_minutes'] = array('interval' => 5 * MINUTE_IN_SECONDS, 'display' => 'Every five minutes');
+	return $schedules;
 });
 
 function wholesale_email_log_prune()
@@ -391,6 +492,9 @@ add_action('init', function () {
 	if (!wp_next_scheduled('wholesale_email_log_prune')) {
 		wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'wholesale_email_log_prune');
 	}
+	if (!wp_next_scheduled('wholesale_email_process_retries')) {
+		wp_schedule_event(time() + MINUTE_IN_SECONDS, 'wholesale_five_minutes', 'wholesale_email_process_retries');
+	}
 });
 
 function wholesale_email_log_get($id)
@@ -409,7 +513,8 @@ function wholesale_email_log_is_html($row)
 }
 
 /**
- * Send a logged email again (attachments are not kept, so they are not re-sent).
+ * Manual "Resend": logged as a new email, and any automatic retry of the original
+ * is cancelled so the recipient does not get it twice.
  */
 function wholesale_email_log_resend($id)
 {
@@ -418,13 +523,10 @@ function wholesale_email_log_resend($id)
 		return false;
 	}
 
-	$headers = array_filter(array_map('trim', explode("\n", (string) $row['headers'])));
-	$has_type = (bool) preg_grep('/^content-type:/i', $headers);
-	if (!$has_type && wholesale_email_log_is_html($row)) {
-		$headers[] = 'Content-Type: text/html; charset=UTF-8';
-	}
+	global $wpdb;
+	$wpdb->update(wholesale_email_log_table(), array('next_retry' => null), array('id' => (int) $id));
 
-	return wp_mail($row['to_email'], $row['subject'], $row['message'], $headers);
+	return wholesale_email_log_send_row($row, false);
 }
 
 /* ---------------------------------------------------------------------------
@@ -496,6 +598,8 @@ function wholesale_handle_save_smtp_settings()
 	}
 
 	$from_email = sanitize_email(isset($post['from_email']) ? $post['from_email'] : '');
+	$recipient_input = preg_split('/[\s,;]+/', isset($post['notify_recipients']) ? (string) $post['notify_recipients'] : '', -1, PREG_SPLIT_NO_EMPTY);
+	$recipients = array_values(array_unique(array_filter(array_map('sanitize_email', $recipient_input), 'is_email')));
 
 	$settings = array(
 		'enabled' => isset($post['mailer']) && 'smtp' === $post['mailer'],
@@ -510,6 +614,8 @@ function wholesale_handle_save_smtp_settings()
 		'from_name' => sanitize_text_field(isset($post['from_name']) ? $post['from_name'] : ''),
 		'log_enabled' => !empty($post['log_enabled']),
 		'log_retention' => min(3650, isset($post['log_retention']) ? absint($post['log_retention']) : 90),
+		'auto_retry' => !empty($post['auto_retry']),
+		'notify_recipients' => implode(', ', $recipients),
 	);
 
 	update_option('wholesale_mail_settings', $settings, false);
@@ -517,6 +623,9 @@ function wholesale_handle_save_smtp_settings()
 	$message = 'SMTP settings saved.';
 	if ($settings['enabled'] && '' === $host) {
 		wholesale_email_redirect('smtp', 'Settings saved, but SMTP stays off until you enter an SMTP host.', 'warning');
+	}
+	if (count($recipients) < count(array_unique($recipient_input))) {
+		wholesale_email_redirect('smtp', 'Settings saved, but some notification recipients were not valid email addresses and were left out.', 'warning');
 	}
 	if (isset($post['from_email']) && '' !== trim($post['from_email']) && '' === $from_email) {
 		wholesale_email_redirect('smtp', 'Settings saved, but the From email address was not valid, so the site admin email is used.', 'warning');
@@ -668,10 +777,10 @@ function wholesale_ajax_email_log_view()
 		'from' => $row['from_email'],
 		'mailer' => $row['mailer'],
 		'source' => $row['source'],
-		'status' => $row['status'],
-		'error' => (string) $row['error'],
+		'status' => wholesale_email_status_meta($row['status'], $row)['key'],
+		'error' => (string) $row['error'] . (!empty($row['next_retry']) ? ' Will try again ' . get_date_from_gmt($row['next_retry'], 'M j, g:i a') . '.' : ''),
 		'headers' => (string) $row['headers'],
-		'attachments' => (string) $row['attachments'],
+		'attachments' => implode(', ', array_map('basename', array_filter(explode("\n", (string) $row['attachments'])))),
 		'is_html' => (bool) wholesale_email_log_is_html($row),
 		'message' => (string) $row['message'],
 		'resend_url' => wp_nonce_url(admin_url('admin-post.php?action=wholesale_email_log&op=resend&id=' . (int) $row['id']), 'wholesale_email_log'),
@@ -683,15 +792,23 @@ add_action('wp_ajax_wholesale_email_log_view', 'wholesale_ajax_email_log_view');
  * Admin page
  * ------------------------------------------------------------------------ */
 
-function wholesale_email_status_meta($status)
+function wholesale_email_status_meta($status, $row = array())
 {
-	$map = array(
-		'sent' => array('label' => 'Sent', 'title' => 'Accepted by the mail server for delivery'),
-		'failed' => array('label' => 'Failed', 'title' => 'The mail server refused it or could not be reached'),
-		'pending' => array('label' => 'No result', 'title' => 'wp_mail() started but never reported success or failure'),
-	);
+	if ('failed' === $status && !empty($row['next_retry'])) {
+		return array('key' => 'retrying', 'label' => 'Retrying', 'title' => sprintf('Attempt %d failed. Trying again %s.', (int) $row['attempts'], get_date_from_gmt($row['next_retry'], 'M j, g:i a')));
+	}
 
-	return isset($map[$status]) ? $map[$status] : array('label' => ucfirst($status), 'title' => '');
+	$map = array(
+		'sent' => array('key' => 'sent', 'label' => 'Sent', 'title' => 'Accepted by the mail server for delivery'),
+		'failed' => array('key' => 'failed', 'label' => 'Failed', 'title' => 'The mail server refused it or could not be reached'),
+		'pending' => array('key' => 'pending', 'label' => 'No result', 'title' => 'wp_mail() started but never reported success or failure'),
+	);
+	$meta = isset($map[$status]) ? $map[$status] : array('key' => $status, 'label' => ucfirst($status), 'title' => '');
+	if (!empty($row['attempts']) && $row['attempts'] > 1) {
+		$meta['title'] .= sprintf(' (after %d attempts)', (int) $row['attempts']);
+	}
+
+	return $meta;
 }
 
 function wholesale_email_admin_page()
@@ -787,7 +904,7 @@ function wholesale_email_log_tab()
 	};
 
 	$total = (int) $wpdb->get_var($prepare("SELECT COUNT(*) FROM {$table} WHERE {$where_sql}"));
-	$rows = $wpdb->get_results($prepare("SELECT id, created_at, to_email, subject, from_email, mailer, source, status, error, attachments FROM {$table} WHERE {$where_sql} ORDER BY id DESC LIMIT {$per_page} OFFSET " . (($paged - 1) * $per_page)), ARRAY_A);
+	$rows = $wpdb->get_results($prepare("SELECT id, created_at, to_email, subject, from_email, mailer, source, status, error, attachments, attempts, next_retry FROM {$table} WHERE {$where_sql} ORDER BY id DESC LIMIT {$per_page} OFFSET " . (($paged - 1) * $per_page)), ARRAY_A);
 	$pages = (int) ceil($total / $per_page);
 
 	$counts = array('sent' => 0, 'failed' => 0, 'pending' => 0);
@@ -890,18 +1007,18 @@ function wholesale_email_log_tab()
 							</td></tr>
 						<?php endif; ?>
 						<?php foreach ($rows as $row) :
-							$meta = wholesale_email_status_meta($row['status']);
+							$meta = wholesale_email_status_meta($row['status'], $row);
 							$time = strtotime($row['created_at'] . ' UTC');
 							?>
 							<tr class="is-<?php echo esc_attr($row['status']); ?>">
 								<td class="wsm-col-check"><input type="checkbox" name="ids[]" value="<?php echo (int) $row['id']; ?>" aria-label="Select email"></td>
-								<td class="wsm-col-status"><span class="wsm-pill is-<?php echo esc_attr($row['status']); ?>" title="<?php echo esc_attr($meta['title']); ?>"><?php echo esc_html($meta['label']); ?></span></td>
+								<td class="wsm-col-status"><span class="wsm-pill is-<?php echo esc_attr($meta['key']); ?>" title="<?php echo esc_attr($meta['title']); ?>"><?php echo esc_html($meta['label']); ?></span><?php if ($row['attempts'] > 1) : ?><span class="wsm-attempts"><?php echo esc_html(sprintf('%d attempts', $row['attempts'])); ?></span><?php endif; ?></td>
 								<td class="wsm-col-to">
 									<span class="wsm-to" title="<?php echo esc_attr($row['to_email']); ?>"><?php echo esc_html($row['to_email']); ?></span>
 								</td>
 								<td class="wsm-col-subject">
 									<button type="button" class="wsm-subject" data-view="<?php echo (int) $row['id']; ?>"><?php echo esc_html('' !== $row['subject'] ? $row['subject'] : '(no subject)'); ?></button>
-									<?php if ($row['attachments']) : ?><span class="dashicons dashicons-paperclip wsm-clip" title="<?php echo esc_attr($row['attachments']); ?>"></span><?php endif; ?>
+									<?php if ($row['attachments']) : ?><span class="dashicons dashicons-paperclip wsm-clip" title="<?php echo esc_attr(implode(', ', array_map('basename', explode("\n", $row['attachments'])))); ?>"></span><?php endif; ?>
 									<?php if ('failed' === $row['status'] && $row['error']) : ?>
 										<span class="wsm-error-line"><?php echo esc_html(wp_trim_words($row['error'], 18)); ?></span>
 									<?php elseif ($row['source']) : ?>
@@ -972,7 +1089,7 @@ function wholesale_email_log_tab()
 				<div data-pane-body="headers" hidden><pre data-field="headers"></pre></div>
 			</div>
 			<footer class="wsm-modal-foot">
-				<span class="wsm-muted">Attachments are not stored, so they are not included when resending.</span>
+				<span class="wsm-muted">Resending re-attaches files that are still in the uploads folder.</span>
 				<a class="button button-primary" data-field="resend" href="#">Resend email</a>
 			</footer>
 		</div>
@@ -982,7 +1099,7 @@ function wholesale_email_log_tab()
 	(function () {
 		var nonce = <?php echo wp_json_encode($nonce); ?>;
 		var modal = document.getElementById('wsm-modal');
-		var labels = {sent: 'Sent', failed: 'Failed', pending: 'No result'};
+		var labels = {sent: 'Sent', failed: 'Failed', pending: 'No result', retrying: 'Retrying'};
 		var field = function (name) { return modal.querySelector('[data-field="' + name + '"]'); };
 
 		document.querySelectorAll('[data-confirm]').forEach(function (el) {
@@ -1214,6 +1331,25 @@ function wholesale_email_smtp_tab($status)
 						<p class="wsm-muted">0 keeps them forever.</p>
 					</div>
 				</div>
+				<div class="wsm-inline-toggle">
+					<label class="wsm-switch is-small">
+						<input type="checkbox" name="auto_retry" value="1" <?php checked($settings['auto_retry']); ?>>
+						<span class="wsm-switch-ui"></span>
+					</label>
+					<span><strong>Retry failed emails automatically</strong> after 5 minutes, 30 minutes and 2 hours (needs the email log on)</span>
+				</div>
+			</div>
+
+			<div class="wsm-section">
+				<div class="wsm-section-head">
+					<div>
+						<h2>Store notifications</h2>
+						<p>New orders, quote requests, contact forms and reviews are emailed to these addresses. Order confirmations and status updates still go to the customer.</p>
+					</div>
+				</div>
+				<label class="wsm-label" for="wsm-recipients">Notification recipients</label>
+				<textarea id="wsm-recipients" name="notify_recipients" rows="3" class="wsm-textarea" spellcheck="false"><?php echo esc_textarea(implode("\n", wholesale_contact_admin_recipients())); ?></textarea>
+				<p class="wsm-muted">One email address per line (or separated by commas).</p>
 			</div>
 
 			<div class="wsm-form-foot">
@@ -1385,7 +1521,8 @@ function wholesale_email_admin_styles()
 		.wsm-pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 		.wsm-pill.is-sent{background:#e7f6ea;color:var(--wsm-green)}
 		.wsm-pill.is-failed{background:#fbeaea;color:var(--wsm-red)}
-		.wsm-pill.is-pending{background:#fcf6e0;color:#8a6d00}
+		.wsm-pill.is-pending,.wsm-pill.is-retrying{background:#fcf6e0;color:#8a6d00}
+		.wsm-attempts{display:block;font-size:11px;color:var(--wsm-muted);margin-top:4px}
 		.wsm-actions{display:flex;gap:4px;justify-content:flex-end}
 		.wsm-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--wsm-muted);cursor:pointer;text-decoration:none}
 		.wsm-icon-btn:hover{background:var(--wsm-soft);border-color:var(--wsm-border);color:var(--wsm-text)}
@@ -1427,6 +1564,7 @@ function wholesale_email_admin_styles()
 		.wsm-section-head p{margin:4px 0 0;color:var(--wsm-muted)}
 		.wsm-label{display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;margin:0 0 6px}
 		.wsm-form input[type=text],.wsm-form input[type=email],.wsm-form input[type=number],.wsm-form input[type=password],.wsm-side input[type=email]{width:100%;min-height:38px;border-radius:6px;border-color:#c3c4c7;padding:0 12px}
+		.wsm-textarea{width:100%;border-radius:6px;border-color:#c3c4c7;padding:8px 12px;font-family:Consolas,Monaco,monospace}
 		.wsm-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 		.wsm-field{min-width:0}.wsm-grow{flex:1 1 220px}.wsm-port{flex:0 0 120px}
 		.wsm-providers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}

@@ -507,11 +507,12 @@ function wholesale_send_status_email($post_id, $status)
 		. '<p style="margin:20px 0 0;color:#5b6b7b;font-size:14px;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST).</p>'
 		. '</td></tr></table></td></tr></table></body></html>';
 
-	wp_mail($email, sprintf($subject, $number), $html, array(
+	$sent = wp_mail($email, sprintf($subject, $number), $html, array(
 		'Content-Type: text/html; charset=UTF-8',
 		'Reply-To: Storefront Sign Online <TR@StorefrontSignOnline.com>',
 	));
-	add_post_meta($post_id, '_status_email_log', current_time('mysql') . ' ' . $status);
+	// A failed send is retried automatically from the email log (Emails menu).
+	add_post_meta($post_id, '_status_email_log', current_time('mysql') . ' ' . $status . ($sent ? '' : ' (send failed, will retry)'));
 }
 
 // ------------------------------------------------------------------

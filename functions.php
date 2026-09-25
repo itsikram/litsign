@@ -679,7 +679,9 @@ add_action('wp_head', 'wholesale_output_dynamic_settings', 99);
  */
 function wholesale_contact_admin_recipients()
 {
-	$recipients = array(
+	// Set in Emails → SMTP Settings → Store notifications; these are the defaults.
+	$saved = function_exists('wholesale_mail_settings') ? trim((string) wholesale_mail_settings()['notify_recipients']) : '';
+	$recipients = '' !== $saved ? preg_split('/[\s,;]+/', $saved, -1, PREG_SPLIT_NO_EMPTY) : array(
 		'mdikram295@gmail.com',
 		'litsigntonight@gmail.com',
 	);

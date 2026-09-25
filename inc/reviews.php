@@ -127,8 +127,9 @@ function wholesale_site_reviews($limit = 12)
 			'photo' => '',
 			'when' => sprintf('%s ago', human_time_diff(get_post_time('U', true, $post), time())),
 			'url' => '',
-			// Product reviews are only accepted from customers with a completed order.
-			'verified' => $product_id > 0,
+			// Product reviews sent through the site are only accepted from customers with a
+			// completed order. Reviews an admin added or imported have a _review_source.
+			'verified' => $product_id > 0 && '' === get_post_meta($post->ID, '_review_source', true),
 			'product' => $product_id ? get_the_title($product_id) : '',
 		);
 	}

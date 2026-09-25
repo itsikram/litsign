@@ -696,6 +696,10 @@ add_filter('manage_review_submission_posts_columns', function ($columns) {
 
 add_action('manage_review_submission_posts_custom_column', function ($column, $post_id) {
 	if ('review_status' === $column) {
+		if (wholesale_review_is_sample($post_id)) {
+			echo '<span class="order-badge order-badge--muted">Sample (hidden)</span>';
+			return;
+		}
 		echo 'publish' === get_post_status($post_id)
 			? '<span class="order-badge order-badge--success">Shown</span>'
 			: '<span class="order-badge order-badge--warn">Awaiting approval</span>';

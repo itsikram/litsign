@@ -1722,6 +1722,41 @@ a.link-primary:focus,
   letter-spacing: 1px;
   white-space: nowrap;
 }
+.product-review-date {
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+.product-reviews h3.product-review-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  color: #0f172a;
+}
+.product-review-author {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  align-items: baseline;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 0.9rem;
+}
+.product-review-author strong {
+  color: #0f172a;
+}
+.product-review-author span {
+  color: #64748b;
+}
+.product-review-sample {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
 .product-review-form-card {
   margin-top: 22px;
 }

@@ -1145,15 +1145,7 @@ get_header();
     <?php
     $product_review_data = wholesale_product_review_data($product_id);
     $show_product_reviews = wholesale_setting_enabled('show_product_reviews');
-    $product_reviews = get_posts(array(
-        'post_type' => 'review_submission',
-        'post_status' => 'publish',
-        'posts_per_page' => 6,
-        'meta_key' => '_review_product_id',
-        'meta_value' => $product_id,
-        'orderby' => 'date',
-        'order' => 'DESC',
-    ));
+    $product_reviews = wholesale_product_reviews($product_id, 6);
     $can_review_product = is_user_logged_in() && wholesale_user_can_review_product(get_current_user_id(), $product_id);
     $review_status = isset($_GET['review_status']) ? sanitize_key(wp_unslash($_GET['review_status'])) : '';
     ?>
@@ -1182,15 +1174,32 @@ get_header();
                 <?php foreach ($product_reviews as $product_review) :
                     $review_rating = min(5, max(0, absint(get_post_meta($product_review->ID, '_review_rating', true))));
                     $review_name = get_post_meta($product_review->ID, '_review_name', true);
+                    $review_title = get_post_meta($product_review->ID, '_review_title', true);
+                    $review_byline = implode(' · ', array_filter(array(
+                        get_post_meta($product_review->ID, '_review_company', true),
+                        get_post_meta($product_review->ID, '_review_location', true),
+                    )));
                 ?>
                     <article class="product-review-card">
+                        <?php if (wholesale_review_is_sample($product_review->ID)) : ?>
+                            <span class="product-review-sample">Sample review · preview only</span>
+                        <?php endif; ?>
                         <div class="product-review-card-header">
-                            <strong><?php echo esc_html($review_name ?: 'Verified customer'); ?></strong>
                             <span class="product-review-stars" aria-label="<?php echo esc_attr($review_rating . ' out of 5 stars'); ?>">
                                 <?php echo esc_html(str_repeat('★', $review_rating) . str_repeat('☆', 5 - $review_rating)); ?>
                             </span>
+                            <time class="product-review-date" datetime="<?php echo esc_attr(get_the_date('Y-m-d', $product_review)); ?>"><?php echo esc_html(get_the_date('M j, Y', $product_review)); ?></time>
                         </div>
+                        <?php if ($review_title) : ?>
+                            <h3 class="product-review-title"><?php echo esc_html($review_title); ?></h3>
+                        <?php endif; ?>
                         <p><?php echo esc_html($product_review->post_content); ?></p>
+                        <div class="product-review-author">
+                            <strong><?php echo esc_html($review_name ?: 'Verified customer'); ?></strong>
+                            <?php if ($review_byline) : ?>
+                                <span><?php echo esc_html($review_byline); ?></span>
+                            <?php endif; ?>
+                        </div>
                     </article>
                 <?php endforeach; ?>
             </div>

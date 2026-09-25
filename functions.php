@@ -45,6 +45,7 @@ if (file_exists(dirname(__FILE__) . '/template/display_admin_orders.php')) {
 }
 require_once(dirname(__FILE__) . '/inc/orders.php');
 require_once(dirname(__FILE__) . '/inc/reviews.php');
+require_once(dirname(__FILE__) . '/inc/review-manager.php');
 require_once(dirname(__FILE__) . '/inc/pricing.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');
 require_once(dirname(__FILE__) . '/inc/admin-orders.php');
@@ -790,16 +791,17 @@ function wholesale_user_can_review_product($user_id, $product_id)
 	return false;
 }
 
+/**
+ * Rating and count come live from the product's approved reviews.
+ */
 function wholesale_product_review_data($product_id)
 {
-	$rating = min(5, max(0, (float) get_post_meta($product_id, '_product_review_rating', true)));
-	$count = max(0, absint(get_post_meta($product_id, '_product_review_count', true)));
-	$text = trim((string) get_post_meta($product_id, '_product_review_text', true));
+	$stats = wholesale_product_review_stats($product_id);
 
 	return array(
-		'rating' => $rating,
-		'count' => $count,
-		'text' => $text,
+		'rating' => $stats['average'],
+		'count' => $stats['published'],
+		'text' => trim((string) get_post_meta($product_id, '_product_review_text', true)),
 	);
 }
 
@@ -3289,35 +3291,6 @@ add_action('cmb2_admin_init', function () {
 			'name' => __('Prouduct Short Description', 'tm'),
 			'id' => '_product_short_desc',
 			'type' => 'wysiwyg',
-		)
-	);
-
-	$product->add_field(
-		array(
-			'name' => __('Review Rating (0-5)', 'tm'),
-			'desc' => __('The rating shown on product cards, for example 4.8.', 'tm'),
-			'id' => '_product_review_rating',
-			'type' => 'text',
-			'attributes' => array(
-				'type' => 'number',
-				'min' => '0',
-				'max' => '5',
-				'step' => '0.1',
-			),
-		)
-	);
-
-	$product->add_field(
-		array(
-			'name' => __('Review Count', 'tm'),
-			'desc' => __('The number shown beside the rating on product cards.', 'tm'),
-			'id' => '_product_review_count',
-			'type' => 'text',
-			'attributes' => array(
-				'type' => 'number',
-				'min' => '0',
-				'step' => '1',
-			),
 		)
 	);
 

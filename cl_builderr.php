@@ -256,7 +256,8 @@ get_header();
             <div class="middle">
                 <div class="product-heading">
                     <span class="product-heading-label">Designing</span>
-                    <h1 class="product-title text-truncate"><?php echo esc_html($product_title); ?></h1>
+                    <h1 class="visually-hidden">Channel Letter Sign Builder: Design Custom Channel Letters Online</h1>
+                    <p class="product-title text-truncate"><?php echo esc_html($product_title); ?></p>
                     <button type="button" class="change-product-btn" data-bs-toggle="modal" data-bs-target="#changeProductModal">
                         <span>Change product</span>
                         <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>

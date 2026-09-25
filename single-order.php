@@ -17,8 +17,6 @@ $note = isset($status_info[$status]) ? $status_info[$status]['note'] : '';
 $tracking = get_post_meta($post_id, '_tracking_number', true);
 $carrier = get_post_meta($post_id, '_tracking_carrier', true);
 $tracking_url = $tracking ? wholesale_tracking_url($carrier, $tracking) : '';
-$payment_status = get_post_meta($post_id, '_payment_status', true);
-$card_last4 = get_post_meta($post_id, '_payment_card_last4', true);
 $is_staff = current_user_can('edit_post', $post_id);
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
@@ -86,6 +84,8 @@ get_header();
                     $specs = wholesale_item_specs($item);
                     $design = !empty($item['design_id']) ? json_decode((string) get_post_meta((int) $item['design_id'], '_cl_data', true), true) : null;
                     $quantity = max(1, (int) ($item['product_quantity'] ?? 1));
+                    $product_id = absint($item['product_id'] ?? ($details['Product Id'] ?? 0));
+                    $product_url = $product_id && 'product' === get_post_type($product_id) && 'publish' === get_post_status($product_id) ? get_permalink($product_id) : '';
                     ?>
                     <article class="checkout-card cart-line">
                         <div class="cart-line-image">
@@ -141,6 +141,12 @@ get_header();
                                     </dl>
                                 </details>
                             <?php endif; ?>
+
+                            <?php if ($product_url) : ?>
+                                <div class="cart-line-actions">
+                                    <a class="order-view-product" href="<?php echo esc_url($product_url); ?>">View product</a>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </article>
                 <?php endforeach; ?>
@@ -155,7 +161,7 @@ get_header();
                     <div class="checkout-grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
                 </dl>
                 <dl class="confirmation-meta">
-                    <div><dt>Payment</dt><dd><?php echo esc_html(in_array($payment_status, array('paid', 'needs_review'), true) ? 'Paid by card' . ($card_last4 ? ' ending ' . $card_last4 : '') : ('paid_offline' === $payment_status ? 'Paid' : 'To be arranged with our team')); ?></dd></div>
+                    <div><dt>Payment</dt><dd><?php echo esc_html(wholesale_payment_customer_text($post_id)); ?></dd></div>
                     <?php if (!empty($cost['shipping_method'])) : ?>
                         <div><dt>Shipping method</dt><dd><?php echo esc_html($cost['shipping_method']); ?></dd></div>
                     <?php endif; ?>

@@ -184,8 +184,6 @@ function wholesale_customer_order_email_html($post_id)
     $cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
     $billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
     $ship_by = get_post_meta($post_id, 'estimate_delivery_time', true);
-    $payment_status = get_post_meta($post_id, '_payment_status', true);
-    $card_last4 = get_post_meta($post_id, '_payment_card_last4', true);
     $number = wholesale_order_number($post_id);
     $money = static function ($value) {
         return '$' . number_format((float) $value, 2);
@@ -212,9 +210,7 @@ function wholesale_customer_order_email_html($post_id)
         return '<tr><td style="' . $style . '">' . esc_html($label) . '</td><td align="right" style="' . $style . '">' . esc_html($value) . '</td></tr>';
     };
 
-    $payment_line = in_array($payment_status, array('paid', 'needs_review'), true)
-        ? 'Paid by card' . ($card_last4 ? ' ending ' . $card_last4 : '')
-        : ('paid_offline' === $payment_status ? 'Paid' : 'Our team will contact you to arrange payment before production starts.');
+    $payment_line = wholesale_payment_customer_text($post_id, 'Our team will contact you to arrange payment before production starts.');
 
     return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="margin:0;padding:0;background:#f5f8fb;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f8fb;padding:24px 12px;"><tr><td align="center">'
@@ -261,6 +257,25 @@ function wholesale_order_status_info()
         'refunded' => array('label' => 'Refunded', 'tone' => 'muted', 'step' => 0, 'note' => 'This order was refunded.'),
         'failed' => array('label' => 'Payment failed', 'tone' => 'danger', 'step' => 0, 'note' => 'Payment did not go through. Please contact us.'),
     );
+}
+
+/**
+ * How an order's payment is described to the customer. $unpaid is shown while payment is still owed.
+ */
+function wholesale_payment_customer_text($post_id, $unpaid = 'To be arranged with our team')
+{
+    $status = wholesale_get_payment_status($post_id);
+    $last4 = get_post_meta($post_id, '_payment_card_last4', true);
+    if (in_array($status, array('paid', 'needs_review'), true)) {
+        return 'Paid by card' . ($last4 ? ' ending ' . $last4 : '');
+    }
+    if ('paid_offline' === $status) {
+        return 'Paid';
+    }
+    if ('refunded' === $status) {
+        return 'Refunded';
+    }
+    return $unpaid;
 }
 
 function wholesale_order_status_badge($status)

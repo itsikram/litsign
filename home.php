@@ -330,7 +330,7 @@ get_header();
     <header class="cl-shop-header">
         <p class="cl-kicker">Step 1 &middot; Choose your style</p>
         <h2 class="cl-section-title">Channel Letter Styles &amp; Starting Prices</h2>
-        <p class="cl-section-lead">Every style is built to order. Open a style to pick your letter height, colors and wording and see your exact price before checkout.</p>
+        <p class="cl-section-lead">Every custom storefront sign is built to order. Open a style to pick your letter height, colors and wording and see your exact price before checkout.</p>
         <p class="cl-shop-header-help">Not sure which style fits your storefront? <a href="tel:+18664362101">Call 866-436-2101</a> or <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
     </header>
 </div>
@@ -612,6 +612,64 @@ get_header();
 </div>
 
 <?php if ($is_channel_letters) : ?>
+    <?php
+    // Lighting guide rows. Links and starting prices come from each product, so they
+    // stay in step with the price the customer sees on the product page.
+    $cl_compare_styles = array(
+        'standard-channel-letter-front-lit' => array('Front lit (face lit)', 'Light shines through the colored acrylic face.', 'The brightest, easiest-to-read storefront sign at night.'),
+        'standard-channel-letter-back-lit' => array('Back lit', 'Light glows onto the wall behind the letters.', 'A softer glow around each letter.'),
+        'standard-channel-letter-front-back-lit' => array('Front &amp; back lit (dual lit)', 'Light shines through the face and onto the wall.', 'A lit face plus a halo for maximum presence.'),
+        'hidden-back-halo-lit' => array('Halo lit', 'Solid stainless steel face; light shines out the back.', 'An upscale look for salons, offices and boutiques.'),
+        'halo-reverse-acrylic-lit-channel-letters' => array('Reverse lit', 'Exposed acrylic back casts a halo on the wall.', 'A halo glow with a painted metal face.'),
+        'inset-acrylic-face-lit-with-border-no-trimcap' => array('Trimless with border', 'Inset acrylic face with a metal border, no trimcap.', 'A clean face lit look without plastic trimcap.'),
+        'exposed-acrylic-face-lit-borderless-no-trimcap' => array('Borderless', 'Exposed acrylic face with no trimcap or border.', 'The sleekest modern face lit letter.'),
+    );
+    $cl_compare_rows = array();
+    foreach ($cl_compare_styles as $cl_slug => $cl_style) {
+        $cl_product = get_page_by_path($cl_slug, OBJECT, 'product');
+        if (!$cl_product || 'publish' !== $cl_product->post_status) {
+            continue;
+        }
+        $cl_compare_rows[] = array(
+            'style' => $cl_style,
+            'url' => get_permalink($cl_product),
+            'price' => get_post_meta($cl_product->ID, '_starting_at_text', true),
+        );
+    }
+    ?>
+    <?php if ($cl_compare_rows) : ?>
+    <section class="cl-compare" aria-labelledby="cl-compare-title">
+        <div class="container">
+            <p class="cl-kicker">Compare lighting styles</p>
+            <h2 id="cl-compare-title" class="cl-section-title">Front Lit, Back Lit, Halo Lit or Reverse Lit Channel Letters?</h2>
+            <p class="cl-section-lead">Every custom channel letter sign is priced by letter height. Here is how the styles differ and where each one starts.</p>
+            <div class="cl-compare-table-wrap">
+                <table class="cl-compare-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Style</th>
+                            <th scope="col">How it lights</th>
+                            <th scope="col">Best for</th>
+                            <th scope="col">Starting at</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($cl_compare_rows as $cl_row) : ?>
+                            <tr>
+                                <th scope="row"><a href="<?php echo esc_url($cl_row['url']); ?>"><?php echo wp_kses_post($cl_row['style'][0]); ?></a></th>
+                                <td><?php echo esc_html($cl_row['style'][1]); ?></td>
+                                <td><?php echo esc_html($cl_row['style'][2]); ?></td>
+                                <td class="cl-compare-price"><?php echo wp_kses_post($cl_row['price']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <p class="cl-compare-note">Your exact price depends on letter height, number of letters and options such as a raceway. You&rsquo;ll see it before checkout.</p>
+        </div>
+    </section>
+    <?php endif; ?>
+
     <section class="cl-steps" aria-labelledby="cl-steps-title">
         <div class="container">
             <p class="cl-kicker">Simple ordering</p>
@@ -620,7 +678,7 @@ get_header();
                 <li>
                     <span class="cl-step-number" aria-hidden="true">1</span>
                     <h3>Choose a style</h3>
-                    <p>Front lit, back lit, dual lit, halo lit or acrylic face lit &mdash; compare the styles above.</p>
+                    <p>Front lit, back lit, dual lit, halo lit, reverse lit or trimless &mdash; compare the styles above.</p>
                 </li>
                 <li>
                     <span class="cl-step-number" aria-hidden="true">2</span>
@@ -687,8 +745,24 @@ get_header();
                     <p>Front-lit letters give bold, direct illumination. Back-lit and halo-lit letters glow onto the wall behind them for a softer, upscale look. Front-and-back lit letters combine both. Not sure? Call us at <a href="tel:+18664362101">866-436-2101</a> and we&rsquo;ll help you choose.</p>
                 </details>
                 <details>
-                    <summary>How do I know what my sign will cost?</summary>
-                    <p>Each style lists its starting price. Open a style, enter your wording, letter height and colors, and you&rsquo;ll see your full price before checkout. For large or unusual projects, <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
+                    <summary>How much do channel letters cost?</summary>
+                    <p>Channel letters are priced by letter height, so each style lists a starting price per inch. Open a style, enter your wording, letter height and colors, and you&rsquo;ll see your full price before checkout. For large or unusual projects, <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
+                </details>
+                <details>
+                    <summary>What is the difference between halo lit and reverse lit channel letters?</summary>
+                    <p>Both glow onto the wall behind the letters. Halo lit letters have a hidden back with welded stainless steel faces and returns. Reverse lit letters have an exposed acrylic back that the light shines through. Standard back lit letters give a similar glow with acrylic faces and trimcaps.</p>
+                </details>
+                <details>
+                    <summary>What are trimless channel letters?</summary>
+                    <p>Trimless letters have no plastic trimcap around the acrylic face. Choose an inset face with a metal border, or a borderless exposed face for the sleekest look. Both use welded stainless steel returns.</p>
+                </details>
+                <details>
+                    <summary>Should I mount my letters on a raceway or directly on the wall?</summary>
+                    <p>A raceway is a metal box that holds the wiring and mounts the letters as one unit, so fewer holes go into your building. You can add a raceway to front lit, back lit and dual lit letters, or add one in the <a href="<?php echo esc_url($builder_url); ?>">online sign builder</a>. Letters without a raceway mount directly to the wall using the included installation pattern.</p>
+                </details>
+                <details>
+                    <summary>What letter heights can I order?</summary>
+                    <p>Letter heights start at 8 inches. The largest size depends on the style; choose a height on any product page to see what&rsquo;s available.</p>
                 </details>
                 <details>
                     <summary>What materials and warranty do I get?</summary>

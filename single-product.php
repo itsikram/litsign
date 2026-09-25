@@ -157,9 +157,16 @@ get_header();
     <?php wholesale_breadcrumbs(); ?>
     <main id="primary">
     <article <?php post_class('product-article'); ?>>
+    <?php $product_seo = wholesale_seo_channel_letter_product(get_the_ID()); ?>
+    <?php if (!empty($product_seo['heading'])) : ?>
+        <p class="product-title-type"><?php echo esc_html(get_the_title()); ?></p>
+    <?php endif; ?>
     <h1 class="fs-2 product-title my-3">
-        <?php echo esc_html(get_the_title()); ?>
+        <?php echo esc_html(!empty($product_seo['heading']) ? $product_seo['heading'] : get_the_title()); ?>
     </h1>
+    <?php if (!empty($product_seo['intro'])) : ?>
+        <p class="product-seo-intro"><?php echo esc_html($product_seo['intro']); ?></p>
+    <?php endif; ?>
     <?php
     $product_intro = trim((string) $short_desc);
     if (!$product_intro && $terms && !is_wp_error($terms)) {

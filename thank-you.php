@@ -11,8 +11,6 @@ $items = $order ? wholesale_decode_order_meta_array(get_post_meta($order, 'produ
 $cost = $order ? wholesale_decode_order_meta_array(get_post_meta($order, 'product_cost', true)) : array();
 $billing = $order ? wholesale_decode_order_meta_array(get_post_meta($order, 'billing_address', true)) : array();
 $shipping = $order ? wholesale_decode_order_meta_array(get_post_meta($order, 'shipping_address', true)) : array();
-$payment_status = $order ? get_post_meta($order, '_payment_status', true) : '';
-$card_last4 = $order ? get_post_meta($order, '_payment_card_last4', true) : '';
 $ship_by = $order ? get_post_meta($order, 'estimate_delivery_time', true) : '';
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
@@ -82,13 +80,7 @@ get_header();
                     <dl class="confirmation-meta">
                         <div>
                             <dt>Payment</dt>
-                            <dd><?php
-                                if ('paid' === $payment_status || 'needs_review' === $payment_status) {
-                                    echo esc_html('Paid by card' . ($card_last4 ? ' ending ' . $card_last4 : ''));
-                                } else {
-                                    echo esc_html('paid_offline' === $payment_status ? 'Paid' : 'We will contact you to arrange payment');
-                                }
-                            ?></dd>
+                            <dd><?php echo esc_html(wholesale_payment_customer_text($order, 'We will contact you to arrange payment')); ?></dd>
                         </div>
                         <?php if (!empty($cost['shipping_method'])) : ?>
                             <div><dt>Shipping method</dt><dd><?php echo esc_html($cost['shipping_method']); ?></dd></div>

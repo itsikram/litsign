@@ -10,18 +10,37 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-function wholesale_payment_badge($post_id)
+/**
+ * Every payment status an order can have: key => array(label, badge tone).
+ */
+function wholesale_payment_statuses()
 {
-	$labels = array(
+	return array(
 		'paid' => array('Paid', 'success'),
 		'paid_offline' => array('Paid (offline)', 'success'),
 		'needs_review' => array('Verify payment', 'danger'),
 		'manual' => array('Collect payment', 'warn'),
+		'refunded' => array('Refunded', 'muted'),
 	);
+}
+
+/**
+ * The order's payment status. Older ticket orders were saved without one, so it is
+ * read from the ticket: paid by card means paid, accepted means payment is still owed.
+ */
+function wholesale_get_payment_status($post_id)
+{
 	$status = get_post_meta($post_id, '_payment_status', true);
-	if (!$status && get_post_meta($post_id, '_ticket_id', true)) {
-		$status = 'paid';
+	if (!$status && ($ticket_id = (int) get_post_meta($post_id, '_ticket_id', true))) {
+		$status = 'paid' === get_post_meta($ticket_id, '_ticket_status', true) ? 'paid' : 'manual';
 	}
+	return (string) $status;
+}
+
+function wholesale_payment_badge($post_id)
+{
+	$labels = wholesale_payment_statuses();
+	$status = wholesale_get_payment_status($post_id);
 	list($label, $tone) = isset($labels[$status]) ? $labels[$status] : array('Not recorded', 'muted');
 	return '<span class="order-badge order-badge--' . esc_attr($tone) . '">' . esc_html($label) . '</span>';
 }
@@ -228,8 +247,8 @@ function wholesale_render_status_box($post)
 
 function wholesale_render_fulfillment_box($post)
 {
-	$payment_status = get_post_meta($post->ID, '_payment_status', true);
-	$txn = get_post_meta($post->ID, '_payment_txn_id', true);
+	$payment_status = wholesale_get_payment_status($post->ID);
+	$txn =get_post_meta($post->ID, '_payment_txn_id', true);
 	$last4 = get_post_meta($post->ID, '_payment_card_last4', true);
 	$approval = get_post_meta($post->ID, '_payment_approval_code', true);
 	$ticket_id = (int) get_post_meta($post->ID, '_ticket_id', true);
@@ -248,15 +267,24 @@ function wholesale_render_fulfillment_box($post)
 			<p>Paid via <a href="<?php echo esc_url(get_edit_post_link($ticket_id)); ?>">payment ticket #<?php echo esc_html((string) $ticket_id); ?></a></p>
 		<?php endif; ?>
 		<?php if ($verified_by && ($user = get_userdata($verified_by))) : ?>
-			<p class="description">Payment confirmed by <?php echo esc_html($user->display_name); ?>.</p>
+			<p class="description">Payment status last set by <?php echo esc_html($user->display_name); ?>.</p>
 		<?php endif; ?>
 		<?php if ('needs_review' === $payment_status) : ?>
 			<p class="wholesale-fulfillment-warning">Converge could not be reached to double-check this payment. Confirm the transaction in Converge before starting production.</p>
-			<p><label><input type="checkbox" name="wholesale_payment_verified" value="1"> I confirmed this payment in Converge</label></p>
 		<?php elseif ('manual' === $payment_status) : ?>
 			<p class="wholesale-fulfillment-warning">No card payment was taken. Collect payment before production.</p>
-			<p><label><input type="checkbox" name="wholesale_payment_verified" value="1"> Payment collected</label></p>
 		<?php endif; ?>
+		<p class="wo-status__row">
+			<label for="wholesale_payment_status"><strong>Payment status</strong></label>
+			<select name="wholesale_payment_status" id="wholesale_payment_status">
+				<?php if (!$payment_status) : ?>
+					<option value="" selected>Not recorded</option>
+				<?php endif; ?>
+				<?php foreach (wholesale_payment_statuses() as $value => $item) : ?>
+					<option value="<?php echo esc_attr($value); ?>" <?php selected($payment_status, $value); ?>><?php echo esc_html($item[0]); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</p>
 	</div>
 	<?php
 }
@@ -331,8 +359,9 @@ add_action('save_post_order', function ($post_id) {
 	}
 	update_post_meta($post_id, '_tracking_carrier', sanitize_key(wp_unslash($_POST['wholesale_tracking_carrier'] ?? '')));
 	update_post_meta($post_id, '_tracking_number', sanitize_text_field(wp_unslash($_POST['wholesale_tracking_number'] ?? '')));
-	if (!empty($_POST['wholesale_payment_verified'])) {
-		update_post_meta($post_id, '_payment_status', 'manual' === get_post_meta($post_id, '_payment_status', true) ? 'paid_offline' : 'paid');
+	$payment_status = sanitize_key(wp_unslash($_POST['wholesale_payment_status'] ?? ''));
+	if (isset(wholesale_payment_statuses()[$payment_status]) && $payment_status !== get_post_meta($post_id, '_payment_status', true)) {
+		update_post_meta($post_id, '_payment_status', $payment_status);
 		update_post_meta($post_id, '_payment_verified_by', get_current_user_id());
 	}
 	if (empty($_POST['wholesale_notify_customer'])) {

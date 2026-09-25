@@ -578,6 +578,20 @@
   text-decoration: none;
 }
 
+.cart-line-actions .order-view-product {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid #cfd8e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.cart-line-actions .order-view-product:hover {
+  border-color: var(--shop-brand-dark);
+}
+
 .cart-line-actions .cart-remove {
   margin-left: auto;
   color: #b42318;

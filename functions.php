@@ -1647,8 +1647,8 @@ function wholesale_send_new_order_admin_email($post_id)
 	$customer_name = trim((isset($billing_data['billing_fname']) ? $billing_data['billing_fname'] : '') . ' ' . (isset($billing_data['billing_lname']) ? $billing_data['billing_lname'] : ''));
 	$shipping_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
 
-	$payment_status = get_post_meta($post_id, '_payment_status', true);
-	$payment_labels = array('paid' => 'PAID by card', 'needs_review' => 'Card payment - VERIFY IN CONVERGE', 'manual' => 'Not paid - collect payment manually');
+	$payment_status = wholesale_get_payment_status($post_id);
+	$payment_labels = array('paid' => 'PAID by card', 'paid_offline' => 'PAID (offline)', 'needs_review' => 'Card payment - VERIFY IN CONVERGE', 'manual' => 'Not paid - collect payment manually', 'refunded' => 'Refunded');
 	$subject = sprintf('New Order #%s - %s', wholesale_order_number($post_id), isset($payment_labels[$payment_status]) ? $payment_labels[$payment_status] : 'payment status unknown');
 	$message = '<html><body>'
 		. '<h2>New Order Notification</h2>'
@@ -2301,11 +2301,14 @@ function wholesale_seo_page_defaults()
 }
 
 /**
- * Keyword-targeted titles and descriptions for the channel-letter pages.
+ * Keyword-targeted titles, descriptions, headings, and intros for the
+ * channel-letter pages.
  *
  * These take priority over theme defaults and Rank Math's stored values so
  * the pages that compete for "channel letter signs", "storefront signs", and
- * "custom channel letters" searches stay consistent. Keys are product slugs.
+ * "custom channel letters" searches stay consistent. Each product owns one
+ * primary keyword (its heading) so the styles don't compete with each other.
+ * Keys are product slugs.
  *
  * @return array
  */
@@ -2313,34 +2316,61 @@ function wholesale_seo_channel_letter_products()
 {
 	return array(
 		'standard-channel-letter-front-lit' => array(
-			'title' => __('Front Lit Channel Letters | Custom LED Storefront Signs', 'litsign'),
-			'description' => __('Custom front lit channel letters with acrylic faces, trimcaps, and .040 aluminum returns. Made in USA. Design your LED storefront sign online.', 'litsign'),
+			'title' => __('Front Lit Channel Letters | Custom LED Face Lit Signs', 'litsign'),
+			'description' => __('Custom front lit channel letters (face lit) with acrylic faces, trimcaps, and .040 aluminum returns. UL listed, made in USA. Design and price your LED sign online.', 'litsign'),
+			'heading' => __('Front Lit Channel Letters', 'litsign'),
+			'intro' => __('Front lit channel letters, also called face lit letters, shine LED light through a colored acrylic face so your business name reads bright and clear day and night. Each letter is built with an acrylic face, trimcap, and .040 aluminum returns.', 'litsign'),
 		),
 		'standard-channel-letter-back-lit' => array(
-			'title' => __('Back Lit Channel Letters | Custom Halo Storefront Signs', 'litsign'),
-			'description' => __('Custom back lit channel letters with acrylic faces, trimcaps, and .040 aluminum returns for a glowing halo effect. Made in USA. Design your sign online.', 'litsign'),
+			'title' => __('Back Lit Channel Letters | Custom Backlit Storefront Signs', 'litsign'),
+			'description' => __('Custom back lit channel letters that cast a soft backlit glow on the wall behind each letter. Acrylic faces, trimcaps, .040 aluminum returns. Made in USA.', 'litsign'),
+			'heading' => __('Back Lit Channel Letters', 'litsign'),
+			'intro' => __('Back lit channel letters light the wall behind them, surrounding each letter with a soft backlit glow. They are built with acrylic faces, trimcaps, and .040 aluminum returns.', 'litsign'),
 		),
 		'standard-channel-letter-front-back-lit' => array(
-			'title' => __('Front & Back Lit Channel Letters | Dual Lit Storefront Signs', 'litsign'),
-			'description' => __('Dual lit custom channel letters that light up front and back. Acrylic faces, trimcaps, and .040 aluminum returns. Made in USA. Design your sign online.', 'litsign'),
+			'title' => __('Front & Back Lit Channel Letters | Dual Lit LED Signs', 'litsign'),
+			'description' => __('Dual lit channel letters that light up through the face and onto the wall behind. Acrylic faces, trimcaps, .040 aluminum returns. Made in USA. Design your sign online.', 'litsign'),
+			'heading' => __('Front and Back Lit Channel Letters', 'litsign'),
+			'intro' => __('Front and back lit channel letters, also called dual lit letters, shine through the acrylic face and onto the wall behind, combining a bright face with a halo glow. Each letter has an acrylic face, trimcap, and .040 aluminum returns.', 'litsign'),
 		),
 		'hidden-back-halo-lit' => array(
-			'title' => __('Halo Lit Channel Letters, Hidden Back | Custom Storefront Signs', 'litsign'),
-			'description' => __('Hidden back halo lit channel letters with welded stainless steel faces and returns, sanded and painted. Made in USA. Design your custom storefront sign online.', 'litsign'),
+			'title' => __('Halo Lit Channel Letters | Custom Halo Lit Signs', 'litsign'),
+			'description' => __('Custom halo lit channel letters with welded stainless steel faces and returns that glow onto the wall behind for an upscale look. Made in USA. Design your sign online.', 'litsign'),
+			'heading' => __('Halo Lit Channel Letters', 'litsign'),
+			'intro' => __('Halo lit channel letters have solid stainless steel faces, so the LED light shines out the back and draws a glowing halo on the wall around each letter. Faces and returns are welded stainless steel, sanded, and painted.', 'litsign'),
 		),
 		'halo-reverse-acrylic-lit-channel-letters' => array(
-			'title' => __('Reverse Lit Halo Channel Letters, Acrylic Back | Storefront Signs', 'litsign'),
-			'description' => __('Reverse lit halo channel letters with an exposed acrylic back and welded stainless steel faces and returns. Made in USA. Design your storefront sign online.', 'litsign'),
+			'title' => __('Reverse Lit Channel Letters | Acrylic Back Halo Letters', 'litsign'),
+			'description' => __('Reverse lit channel letters with an exposed acrylic back that casts a halo of light onto your wall. Welded stainless steel faces and returns. Made in USA.', 'litsign'),
+			'heading' => __('Reverse Lit Channel Letters', 'litsign'),
+			'intro' => __('Reverse lit channel letters glow from behind through an exposed acrylic back, casting a halo of light onto the wall. Faces and returns are welded stainless steel, sanded, and painted in multiple colors.', 'litsign'),
 		),
 		'exposed-acrylic-face-lit-borderless-no-trimcap' => array(
-			'title' => __('Borderless Acrylic Face Lit Channel Letters | Storefront Signs', 'litsign'),
-			'description' => __('Borderless face lit channel letters with no trimcap: acrylic faces with welded stainless steel returns in multiple colors. Made in USA. Design your sign online.', 'litsign'),
+			'title' => __('Borderless Channel Letters | Trimless Face Lit Signs', 'litsign'),
+			'description' => __('Borderless channel letters with an exposed acrylic face and no trimcap for a sleek, trimless face lit look. Welded stainless steel returns in multiple colors. Made in USA.', 'litsign'),
+			'heading' => __('Borderless Channel Letters', 'litsign'),
+			'intro' => __('Borderless channel letters have an exposed acrylic face with no trimcap and no border, giving a sleek, trimless face lit look. Returns are welded stainless steel, sanded, and painted in multiple colors.', 'litsign'),
 		),
 		'inset-acrylic-face-lit-with-border-no-trimcap' => array(
-			'title' => __('Inset Acrylic Face Lit Channel Letters | Custom Storefront Signs', 'litsign'),
-			'description' => __('Inset acrylic face lit channel letters with a border and no trimcap, built on welded stainless steel returns. Made in USA. Design your storefront sign online.', 'litsign'),
+			'title' => __('Trimless Channel Letters with Border | Face Lit Letters', 'litsign'),
+			'description' => __('Trimless channel letters with an inset acrylic face and a metal border instead of a trimcap. Face lit, on welded stainless steel returns. Made in USA.', 'litsign'),
+			'heading' => __('Trimless Channel Letters with Border', 'litsign'),
+			'intro' => __('Trimless channel letters with an inset acrylic face sit inside a clean metal border instead of a plastic trimcap. They are face lit and built on welded stainless steel returns, sanded and painted.', 'litsign'),
 		),
 	);
+}
+
+/**
+ * Keyword-targeted SEO entry for a channel-letter product, or an empty array.
+ *
+ * @return array
+ */
+function wholesale_seo_channel_letter_product($product_id)
+{
+	$products = wholesale_seo_channel_letter_products();
+	$slug = get_post_field('post_name', $product_id);
+
+	return isset($products[$slug]) ? $products[$slug] : array();
 }
 
 /**
@@ -2352,16 +2382,13 @@ function wholesale_seo_keyword_meta()
 {
 	if (wholesale_is_channel_letters_page()) {
 		return array(
-			'title' => __('Custom Channel Letter Signs & Store Front Signs', 'litsign'),
-			'description' => __('Custom LED channel letter signs for your storefront: front lit, back lit, halo lit, and acrylic face lit letters. UL listed, made in USA, and ready to install.', 'litsign'),
+			'title' => __('Custom Channel Letter Signs | LED Storefront Signs Online', 'litsign'),
+			'description' => __('Buy custom LED channel letters online: front lit, back lit, halo lit, reverse lit, and trimless letters. See your price per inch, UL listed, made in USA.', 'litsign'),
 		);
 	}
 
 	if (is_singular('product')) {
-		$products = wholesale_seo_channel_letter_products();
-		$slug = get_post_field('post_name', get_queried_object_id());
-
-		return isset($products[$slug]) ? $products[$slug] : array();
+		return wholesale_seo_channel_letter_product(get_queried_object_id());
 	}
 
 	if (is_page('channel-letter-builder')) {

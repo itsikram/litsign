@@ -157,6 +157,7 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 	);
 
 	wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers, $logo_path ? array($logo_path) : array());
+	wholesale_send_quote_confirmation($submission_id);
 
 	// The quote is saved even when mail fails, so the visitor still sees success.
 	wp_safe_redirect(add_query_arg(array(

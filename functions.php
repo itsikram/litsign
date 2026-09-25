@@ -49,6 +49,7 @@ require_once(dirname(__FILE__) . '/inc/pricing.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');
 require_once(dirname(__FILE__) . '/inc/admin-orders.php');
 require_once(dirname(__FILE__) . '/inc/email-log.php');
+require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
 /**
@@ -333,7 +334,10 @@ function wholesale_setting_defaults()
 		'ticket_business_email' => 'TR@StorefrontSignOnline.com',
 		'ticket_business_address' => '707 S. Grady Way Suite 600, Renton, WA 98057',
 		'ticket_email_subject' => 'Payment request {number} from {business}: {amount}',
-		'ticket_bcc_admins' => 1,
+		'ticket_auto_send' => 1,
+		'quote_autoreply' => 1,
+		'quote_autoreply_subject' => 'We received your quote request - {store}',
+		'quote_autoreply_message' => "Thanks for reaching out! A sign specialist is reviewing your request and will get back to you within one business day with pricing and next steps.\n\nIf you have more photos, measurements or artwork, just reply to this email and attach them.",
 		'ticket_default_message' => '',
 		'ticket_default_tax' => 0,
 		'ticket_due_days' => 0,
@@ -389,6 +393,7 @@ function wholesale_setting_sanitizer($key)
 		'channel_shipping_options' => 'wholesale_sanitize_decimal_list',
 		'ticket_business_email' => 'sanitize_email',
 		'ticket_default_message' => 'sanitize_textarea_field',
+		'quote_autoreply_message' => 'sanitize_textarea_field',
 		'ticket_due_days' => 'wholesale_sanitize_days',
 	);
 
@@ -442,6 +447,9 @@ function wholesale_settings_page()
 			<h2 class="title">Customer emails</h2>
 			<table class="form-table" role="presentation">
 				<tr><th>Order status emails</th><td><input type="hidden" name="wholesale_email_status_updates" value="0"><label><input type="checkbox" name="wholesale_email_status_updates" value="1" <?php checked(wholesale_setting_enabled('email_status_updates')); ?>> Email customers when their order goes into production, ships (with tracking), is put on hold, cancelled or refunded</label></td></tr>
+				<tr><th>Quote request confirmation</th><td><input type="hidden" name="wholesale_quote_autoreply" value="0"><label><input type="checkbox" name="wholesale_quote_autoreply" value="1" <?php checked(wholesale_setting_enabled('quote_autoreply')); ?>> Email customers a confirmation with a copy of their request as soon as they submit a quote form</label><p class="description">Reply to a request from its screen under <a href="<?php echo esc_url(admin_url('edit.php?post_type=contact_submission')); ?>">Contact Submissions</a>.</p></td></tr>
+				<tr><th><label for="wholesale_quote_autoreply_subject">Confirmation subject</label></th><td><input class="large-text" id="wholesale_quote_autoreply_subject" name="wholesale_quote_autoreply_subject" value="<?php echo esc_attr(wholesale_get_setting('quote_autoreply_subject')); ?>"></td></tr>
+				<tr><th><label for="wholesale_quote_autoreply_message">Confirmation message</label></th><td><textarea class="large-text" rows="4" id="wholesale_quote_autoreply_message" name="wholesale_quote_autoreply_message"><?php echo esc_textarea(wholesale_get_setting('quote_autoreply_message')); ?></textarea><p class="description">Placeholders: <code>{name}</code> customer's first name, <code>{store}</code> business name (from Payment tickets below), <code>{project}</code> project type. A copy of what they sent is added below the message.</p></td></tr>
 			</table>
 			<h2 class="title" id="payment-tickets">Payment tickets</h2>
 			<p>Used by <a href="<?php echo esc_url(admin_url('edit.php?post_type=payment_ticket')); ?>">Payment Tickets</a>: the customer's payment page, the payment request email and new tickets.</p>
@@ -451,7 +459,7 @@ function wholesale_settings_page()
 				<tr><th><label for="wholesale_ticket_business_email">Email</label></th><td><input type="email" class="regular-text" id="wholesale_ticket_business_email" name="wholesale_ticket_business_email" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_email')); ?>"><p class="description">Shown to customers and used as the Reply-To address, so their replies reach you.</p></td></tr>
 				<tr><th><label for="wholesale_ticket_business_address">Address</label></th><td><input class="large-text" id="wholesale_ticket_business_address" name="wholesale_ticket_business_address" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_address')); ?>"><p class="description">Shown in the "From" section of the payment page and in the email footer.</p></td></tr>
 				<tr><th><label for="wholesale_ticket_email_subject">Email subject</label></th><td><input class="large-text" id="wholesale_ticket_email_subject" name="wholesale_ticket_email_subject" value="<?php echo esc_attr(wholesale_get_setting('ticket_email_subject')); ?>"><p class="description">Placeholders: <code>{number}</code> ticket number, <code>{title}</code> project name, <code>{amount}</code> total due, <code>{business}</code> business name.</p></td></tr>
-				<tr><th>Copy to admins</th><td><input type="hidden" name="wholesale_ticket_bcc_admins" value="0"><label><input type="checkbox" name="wholesale_ticket_bcc_admins" value="1" <?php checked(wholesale_setting_enabled('ticket_bcc_admins')); ?>> Send the admin inboxes a blind copy of every payment request</label></td></tr>
+				<tr><th>Email new tickets automatically</th><td><input type="hidden" name="wholesale_ticket_auto_send" value="0"><label><input type="checkbox" name="wholesale_ticket_auto_send" value="1" <?php checked(wholesale_setting_enabled('ticket_auto_send')); ?>> Email the customer as soon as a new ticket is saved with a customer, items and a total</label><p class="description">Use "Save draft without sending" on a ticket to keep working on it first. Customers also get a receipt when they pay, and the <a href="<?php echo esc_url(admin_url('admin.php?page=wholesale-emails-smtp')); ?>">store notification recipients</a> get a blind copy of every payment request and receipt.</p></td></tr>
 				<tr><th><label for="wholesale_ticket_default_message">Default message</label></th><td><textarea class="large-text" rows="3" id="wholesale_ticket_default_message" name="wholesale_ticket_default_message" placeholder="e.g. Thanks for choosing us! Production starts once payment is received."><?php echo esc_textarea(wholesale_get_setting('ticket_default_message')); ?></textarea><p class="description">Pre-filled as the message to the customer on new tickets. You can still change it on each ticket.</p></td></tr>
 				<tr><th>Sales tax on new tickets</th><td><input type="hidden" name="wholesale_ticket_default_tax" value="0"><label><input type="checkbox" name="wholesale_ticket_default_tax" value="1" <?php checked(wholesale_setting_enabled('ticket_default_tax')); ?>> Start new tickets with the checkout tax rate (<?php echo esc_html(wholesale_get_setting('tax_rate')); ?>%)</label></td></tr>
 				<tr><th><label for="wholesale_ticket_due_days">Pay-by period</label></th><td><input type="number" min="0" step="1" class="small-text" id="wholesale_ticket_due_days" name="wholesale_ticket_due_days" value="<?php echo esc_attr((string) wholesale_get_setting('ticket_due_days')); ?>"> days<p class="description">New tickets get a pay-by date this many days ahead, and the link stops accepting payment after it. Use 0 for no pay-by date.</p></td></tr>
@@ -1705,7 +1713,8 @@ function wholesale_send_new_order_admin_email($post_id)
 		}
 	}
 
-	if (is_email($customer_email) && !get_post_meta($post_id, '_wholesale_customer_order_email_sent', true)) {
+	// Paid tickets email their own receipt (wholesale_send_ticket_receipt()).
+	if (is_email($customer_email) && !get_post_meta($post_id, '_wholesale_customer_order_email_sent', true) && !get_post_meta($post_id, '_ticket_id', true)) {
 		$customer_subject = sprintf(__('Order #%s confirmed - Storefront Sign Online', 'litsign'), wholesale_order_number($post_id));
 		$customer_message = wholesale_customer_order_email_html($post_id);
 		// Customers reply to the sales inbox, not the WordPress admin address.

@@ -447,6 +447,14 @@ function wholesale_email_log_send_row($row, $in_place)
 	$sent = wp_mail($row['to_email'], $row['subject'], $row['message'], $headers, array_values($attachments));
 	$GLOBALS['wholesale_email_log_retry_id'] = 0;
 
+	if ($sent && $in_place) {
+		/**
+		 * A failed email was delivered by an automatic retry, so features that
+		 * recorded the failure (tickets, quote replies) can mark it as sent.
+		 */
+		do_action('wholesale_email_retry_succeeded', $row);
+	}
+
 	return $sent;
 }
 

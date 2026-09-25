@@ -42,8 +42,28 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['landing_quote_submit'
 		'Reply-To: ' . $name . ' <' . $email . '>',
 	);
 
-	$sent = wp_mail(get_option('admin_email'), $subject, $message, $headers);
-	wp_safe_redirect(add_query_arg('quote_status', $sent ? 'sent' : 'error', $redirect_url) . '#quote');
+	// Saved like the other quote forms, so the team can reply from Contact Submissions.
+	$submission_id = wp_insert_post(array(
+		'post_type' => 'contact_submission',
+		'post_status' => 'publish',
+		'post_title' => sprintf('%s - %s', $name, current_time('Y-m-d H:i')),
+		'post_content' => '',
+		'meta_input' => array(
+			'_contact_name' => $name,
+			'_contact_business' => $business,
+			'_contact_phone' => $phone,
+			'_contact_email' => $email,
+			'_contact_project_type' => $sign_type,
+		),
+	), true);
+	if (is_wp_error($submission_id)) {
+		wp_safe_redirect(add_query_arg('quote_status', 'error', $redirect_url) . '#quote');
+		exit;
+	}
+
+	wp_mail(wholesale_contact_admin_recipients(), $subject, $message, $headers);
+	wholesale_send_quote_confirmation($submission_id);
+	wp_safe_redirect(add_query_arg('quote_status', 'sent', $redirect_url) . '#quote');
 	exit;
 }
 

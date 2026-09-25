@@ -409,6 +409,7 @@ function wholesale_ticket_log_labels()
         'sent' => 'Sent to customer',
         'resent' => 'Resent to customer',
         'email_failed' => 'Email could not be sent',
+        'receipt_sent' => 'Receipt emailed to customer',
         'viewed' => 'Opened by customer',
         'payment_failed' => 'Payment attempt failed',
         'paid' => 'Paid by card',
@@ -861,7 +862,11 @@ function wholesale_render_ticket_summary_box($post)
                     <span class="dashicons dashicons-email-alt" aria-hidden="true"></span>
                     <?php echo 'sent' === $ticket['status'] ? 'Save &amp; resend' : 'Save &amp; send to customer'; ?>
                 </button>
-                <button type="submit" name="wpt_action" value="save" class="button button-large">Save <?php echo 'draft' === $ticket['status'] ? 'draft' : 'changes'; ?></button>
+                <?php if ('draft' === $ticket['status']) : ?>
+                    <button type="submit" name="wpt_action" value="draft" class="button button-large">Save draft<?php echo wholesale_setting_enabled('ticket_auto_send') ? ' without sending' : ''; ?></button>
+                <?php else : ?>
+                    <button type="submit" name="wpt_action" value="save" class="button button-large">Save changes</button>
+                <?php endif; ?>
             </div>
         <?php else : ?>
             <div class="wpt-summary__actions">
@@ -1023,7 +1028,10 @@ function wholesale_save_ticket($post_id)
         return;
     }
 
-    wholesale_ticket_set_notice('send' === $action ? wholesale_send_ticket($post_id) : 'saved');
+    // With "email new tickets automatically" on, saving a draft sends it; "Save draft
+    // without sending" (action 'draft') keeps it as a draft.
+    $auto_send = 'save' === $action && 'draft' === $ticket['status'] && wholesale_setting_enabled('ticket_auto_send');
+    wholesale_ticket_set_notice('send' === $action || $auto_send ? wholesale_send_ticket($post_id) : 'saved');
 }
 add_action('save_post_payment_ticket', 'wholesale_save_ticket');
 
@@ -1097,22 +1105,13 @@ function wholesale_send_ticket($ticket_id)
         '{amount}' => wholesale_format_ticket_amount($ticket['amount']),
         '{business}' => $business['name'],
     ));
-    // wp_mail() splits Reply-To on commas, so a name like "Lit Sign, LLC" must lose them.
-    $reply_name = trim(str_replace(array(',', '"', '<', '>'), '', $business['name']));
-    $headers = array(
-        'Content-Type: text/html; charset=UTF-8',
-        'Reply-To: ' . (is_email($business['email']) ? $reply_name . ' <' . $business['email'] . '>' : get_option('admin_email')),
-    );
-    if (wholesale_setting_enabled('ticket_bcc_admins')) {
-        foreach (wholesale_contact_admin_recipients() as $admin_email) {
-            $headers[] = 'Bcc: ' . $admin_email;
-        }
-    }
+    $headers = wholesale_ticket_email_headers($ticket_id);
 
     $result = wholesale_send_html_mail($ticket['customer_email'], $subject, wholesale_ticket_email_html($ticket), $headers, $business['name']);
+    wholesale_ticket_mark_published($ticket_id);
     if (true !== $result) {
         error_log('Wholesale: payment ticket email failed for ticket #' . $ticket_id . ': ' . $result);
-        wholesale_ticket_log($ticket_id, 'email_failed', $ticket['customer_email'] . ' · ' . $result);
+        wholesale_ticket_log($ticket_id, 'email_failed', $ticket['customer_email'] . ' · ' . $result . ' (retrying automatically)');
         set_transient('wholesale_ticket_mail_error_' . get_current_user_id(), $result, 5 * MINUTE_IN_SECONDS);
         return 'send_failed';
     }
@@ -1123,10 +1122,101 @@ function wholesale_send_ticket($ticket_id)
     return 'sent';
 }
 
-function wholesale_ticket_email_html($ticket)
+/**
+ * Headers for emails to a ticket's customer: replies go to the business inbox,
+ * the store notification recipients get a blind copy, and the ticket ID lets an
+ * automatic retry (inc/email-log.php) update the ticket.
+ */
+function wholesale_ticket_email_headers($ticket_id)
 {
+    $headers = wholesale_customer_email_headers(array('X-Wholesale-Ticket: ' . (int) $ticket_id));
+    foreach (wholesale_contact_admin_recipients() as $admin_email) {
+        $headers[] = 'Bcc: ' . $admin_email;
+    }
+
+    return $headers;
+}
+
+/**
+ * Show a sent ticket as published in the ticket list. Written directly so the
+ * save_post hooks (which may be running right now) do not fire again.
+ */
+function wholesale_ticket_mark_published($ticket_id)
+{
+    global $wpdb;
+    if ('publish' !== get_post_status($ticket_id)) {
+        $wpdb->update($wpdb->posts, array('post_status' => 'publish'), array('ID' => (int) $ticket_id));
+        clean_post_cache($ticket_id);
+    }
+}
+
+/**
+ * A payment request that failed and was then delivered by an automatic retry.
+ */
+add_action('wholesale_email_retry_succeeded', function ($row) {
+    if (!preg_match('/^X-Wholesale-Ticket:\s*(\d+)/mi', (string) $row['headers'], $m) || 'payment_ticket' !== get_post_type((int) $m[1])) {
+        return;
+    }
+    $ticket_id = (int) $m[1];
+    $ticket = wholesale_get_ticket($ticket_id);
+    if (0 === strpos($row['subject'], 'Receipt')) {
+        wholesale_ticket_log($ticket_id, 'receipt_sent', $ticket['customer_email'] . ' · delivered by automatic retry');
+        return;
+    }
+    update_post_meta($ticket_id, '_ticket_sent_at', current_time('mysql'));
+    wholesale_ticket_log($ticket_id, 'sent', $ticket['customer_email'] . ' · delivered by automatic retry');
+});
+
+/**
+ * Email the customer a receipt once they pay (or accept) a ticket.
+ */
+function wholesale_send_ticket_receipt($ticket_id, $order_id, $paid_by_card, $payment_meta = array())
+{
+    $ticket = wholesale_get_ticket($ticket_id);
+    if (!is_email($ticket['customer_email'])) {
+        return;
+    }
+
     $business = wholesale_ticket_business();
-    $pay_url = wholesale_ticket_payment_url($ticket);
+    $amount = wholesale_format_ticket_amount($ticket['amount']);
+    $order_number = $order_id ? wholesale_order_number($order_id) : '';
+    $details = array(
+        'Payment request' => $ticket['number'],
+        'Order number' => $order_number ? '#' . $order_number : '',
+        $paid_by_card ? 'Amount paid' : 'Amount due' => $amount,
+        'Date' => date_i18n('F j, Y g:i a'),
+        'Payment' => $paid_by_card ? 'Card' . (!empty($payment_meta['_payment_txn_id']) ? ' (transaction ' . $payment_meta['_payment_txn_id'] . ')' : '') : 'We will contact you to arrange payment',
+    );
+    $detail_rows = '';
+    foreach (array_filter($details) as $label => $value) {
+        $detail_rows .= '<tr><td style="padding:5px 16px;color:#5b6573;width:140px;">' . esc_html($label) . '</td><td style="padding:5px 16px 5px 0;font-weight:bold;">' . esc_html($value) . '</td></tr>';
+    }
+
+    $intro = $paid_by_card
+        ? 'Thank you, ' . $ticket['customer_name'] . '! We received your payment of ' . $amount . ' and your order is now in our production queue. We will email you again when it ships.'
+        : 'Thank you, ' . $ticket['customer_name'] . '! Your order is confirmed. Our team will contact you shortly to arrange payment of ' . $amount . ', and production starts once it is received.';
+    $content = '<p style="margin:0 0 16px;line-height:1.6;">' . esc_html($intro) . '</p>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:#f8fafc;border:1px solid #e3e8ee;border-radius:8px;font-size:14px;"><tr><td colspan="2" style="height:8px;"></td></tr>' . $detail_rows . '<tr><td colspan="2" style="height:8px;"></td></tr></table>'
+        . wholesale_ticket_items_email_html($ticket, $paid_by_card ? 'Total paid' : 'Total due')
+        . '<div style="height:20px;"></div>';
+
+    $subject = sprintf('Receipt for %s from %s: %s %s', $ticket['number'], $business['name'], $amount, $paid_by_card ? 'paid' : 'confirmed');
+    $html = wholesale_branded_email_html(
+        ($paid_by_card ? 'Payment receipt ' : 'Order confirmation ') . $ticket['number'],
+        $paid_by_card ? 'Payment received. Thank you!' : 'Your order is confirmed',
+        $content,
+        $order_id ? array('url' => wholesale_track_order_url($order_id), 'label' => 'Track your order') : array()
+    );
+
+    $result = wholesale_send_html_mail($ticket['customer_email'], $subject, $html, wholesale_ticket_email_headers($ticket_id), $business['name']);
+    wholesale_ticket_log($ticket_id, true === $result ? 'receipt_sent' : 'email_failed', $ticket['customer_email'] . (true === $result ? '' : ' · receipt: ' . $result . ' (retrying automatically)'));
+}
+
+/**
+ * The ticket's line items and totals as email tables (payment request and receipt).
+ */
+function wholesale_ticket_items_email_html($ticket, $total_label = 'Total due')
+{
     $totals = $ticket['totals'];
     $cell = 'padding:12px 10px;border-bottom:1px solid #e3e8ee;vertical-align:top;';
     $money_cell = $cell . 'text-align:right;white-space:nowrap;';
@@ -1162,7 +1252,19 @@ function wholesale_ticket_email_html($ticket)
     if ($totals['tax'] > 0) {
         $summary .= $total_row('Tax (' . rtrim(rtrim(number_format($totals['tax_rate'], 3), '0'), '.') . '%)', wholesale_format_ticket_amount($totals['tax']));
     }
-    $summary .= $total_row('Total due', wholesale_format_ticket_amount($totals['grand_total']), true);
+    $summary .= $total_row($total_label, wholesale_format_ticket_amount($totals['grand_total']), true);
+
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-collapse:collapse;">'
+        . '<tr><th align="left" style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Item</th><th style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Qty</th><th align="right" style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Price</th><th align="right" style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Amount</th></tr>'
+        . $rows
+        . '</table>'
+        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-top:8px;">' . $summary . '</table>';
+}
+
+function wholesale_ticket_email_html($ticket)
+{
+    $business = wholesale_ticket_business();
+    $pay_url = wholesale_ticket_payment_url($ticket);
 
     $proof = '';
     if ($ticket['proof_id'] && ($proof_url = wp_get_attachment_url($ticket['proof_id']))) {
@@ -1182,11 +1284,7 @@ function wholesale_ticket_email_html($ticket)
         . ($ticket['message'] ? '<p style="margin:0 0 16px;line-height:1.6;">' . nl2br(esc_html($ticket['message'])) . '</p>' : '<p style="margin:0 0 16px;line-height:1.6;">Here is the payment request for your custom order. You can review the details and pay securely online.</p>')
         . '</td></tr>'
         . '<tr><td style="padding:0 18px;">'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-collapse:collapse;">'
-        . '<tr><th align="left" style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Item</th><th style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Qty</th><th align="right" style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Price</th><th align="right" style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Amount</th></tr>'
-        . $rows
-        . '</table>'
-        . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-top:8px;">' . $summary . '</table>'
+        . wholesale_ticket_items_email_html($ticket)
         . '</td></tr>'
         . '<tr><td style="padding:24px 28px 8px;">'
         . '<p style="margin:0 0 20px;"><a href="' . esc_url($pay_url) . '" style="display:inline-block;background:' . esc_attr($business['color']) . ';color:#ffffff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;">Review &amp; pay ' . esc_html(wholesale_format_ticket_amount($ticket['amount'])) . '</a></p>'
@@ -1232,7 +1330,7 @@ function wholesale_ticket_admin_notice()
         'no_items' => array('error', 'Saved, but not sent: add at least one product or custom item.'),
         'zero_total' => array('error', 'Saved, but not sent: the total due must be more than $0.00.'),
         'locked' => array('error', 'Not sent: this ticket is already paid, accepted or cancelled.'),
-        'send_failed' => array('error', 'The payment link is active, but the email could not be sent. Copy the link from the Payment ticket box and send it to the customer yourself.'),
+        'send_failed' => array('error', 'The payment link is active, but the email could not be sent. It will be retried automatically over the next few hours (see Emails → Email Log); to reach the customer now, copy the link from the Payment ticket box and send it yourself.'),
     );
     if (!isset($notices[$code])) {
         return;
@@ -1545,6 +1643,7 @@ function wholesale_ticket_finalize($ticket_id, $billing, $paid_by_card, $payment
         update_post_meta($ticket_id, '_ticket_order_id', $order);
         wholesale_send_new_order_admin_email($order);
     }
+    wholesale_send_ticket_receipt($ticket_id, $order, $paid_by_card, $payment_meta);
     return $order;
 }
 

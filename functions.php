@@ -3713,6 +3713,130 @@ function cmb2_save_quick_edit_data_product($post_id)
 add_action('save_post', 'cmb2_save_quick_edit_data_product');
 
 
+/**
+ * Bulk toggle of the "Has Upload Artwork Option" (_has_upload_artwork) field
+ * from the Products list: bulk actions for selected products, plus buttons that
+ * apply to every product at once.
+ */
+function wholesale_set_product_artwork_upload($post_ids, $enable)
+{
+	$count = 0;
+	foreach ($post_ids as $post_id) {
+		$post_id = (int) $post_id;
+		if ('product' !== get_post_type($post_id) || !current_user_can('edit_post', $post_id)) {
+			continue;
+		}
+		// CMB2 checkboxes store 'on' when checked and nothing when unchecked.
+		if ($enable) {
+			update_post_meta($post_id, '_has_upload_artwork', 'on');
+		} else {
+			delete_post_meta($post_id, '_has_upload_artwork');
+		}
+		$count++;
+	}
+	return $count;
+}
+
+add_filter('bulk_actions-edit-product', function ($bulk_actions) {
+	$bulk_actions['enable_artwork_upload'] = __('Enable artwork upload', 'tm');
+	$bulk_actions['disable_artwork_upload'] = __('Disable artwork upload', 'tm');
+	return $bulk_actions;
+});
+
+add_filter('handle_bulk_actions-edit-product', function ($redirect_to, $doaction, $post_ids) {
+	if (!in_array($doaction, array('enable_artwork_upload', 'disable_artwork_upload'), true)) {
+		return $redirect_to;
+	}
+	$enable = 'enable_artwork_upload' === $doaction;
+	$count = wholesale_set_product_artwork_upload($post_ids, $enable);
+
+	return add_query_arg(array(
+		'artwork_upload_updated' => $count,
+		'artwork_upload_state' => $enable ? 'on' : 'off',
+	), $redirect_to);
+}, 10, 3);
+
+// "Enable/Disable artwork upload for all products" buttons above the list table.
+add_action('manage_posts_extra_tablenav', function ($which) {
+	global $typenow;
+	if ('top' !== $which || 'product' !== $typenow || !current_user_can('edit_others_posts')) {
+		return;
+	}
+	foreach (array('on' => __('Enable artwork for all products', 'tm'), 'off' => __('Disable artwork for all products', 'tm')) as $state => $label) {
+		$url = wp_nonce_url(
+			admin_url('admin-post.php?action=wholesale_artwork_upload_all&state=' . $state),
+			'wholesale_artwork_upload_all'
+		);
+		$confirm = 'on' === $state
+			? __('Enable custom artwork upload on ALL products?', 'tm')
+			: __('Disable custom artwork upload on ALL products?', 'tm');
+		printf(
+			'<a href="%s" class="button" style="margin-left:4px" onclick="return confirm(%s);">%s</a>',
+			esc_url($url),
+			esc_attr(wp_json_encode($confirm)),
+			esc_html($label)
+		);
+	}
+});
+
+add_action('admin_post_wholesale_artwork_upload_all', function () {
+	if (!current_user_can('edit_others_posts')) {
+		wp_die(__('You are not allowed to do this.', 'tm'), 403);
+	}
+	check_admin_referer('wholesale_artwork_upload_all');
+
+	$enable = isset($_GET['state']) && 'on' === $_GET['state'];
+	$post_ids = get_posts(array(
+		'post_type' => 'product',
+		'post_status' => 'any',
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	));
+	$count = wholesale_set_product_artwork_upload($post_ids, $enable);
+
+	wp_safe_redirect(add_query_arg(array(
+		'post_type' => 'product',
+		'artwork_upload_updated' => $count,
+		'artwork_upload_state' => $enable ? 'on' : 'off',
+	), admin_url('edit.php')));
+	exit;
+});
+
+add_action('admin_notices', function () {
+	global $pagenow, $typenow;
+	if ('edit.php' !== $pagenow || 'product' !== $typenow || !isset($_GET['artwork_upload_updated'])) {
+		return;
+	}
+	$count = (int) $_GET['artwork_upload_updated'];
+	$enabled = isset($_GET['artwork_upload_state']) && 'on' === $_GET['artwork_upload_state'];
+	$message = $enabled
+		? _n('Artwork upload enabled on %d product.', 'Artwork upload enabled on %d products.', $count, 'tm')
+		: _n('Artwork upload disabled on %d product.', 'Artwork upload disabled on %d products.', $count, 'tm');
+	printf('<div class="notice notice-success is-dismissible"><p>%s</p></div>', esc_html(sprintf($message, $count)));
+});
+
+add_filter('removable_query_args', function ($args) {
+	$args[] = 'artwork_upload_updated';
+	$args[] = 'artwork_upload_state';
+	return $args;
+});
+
+// "Artwork Upload" column so admins can see which products have it enabled.
+add_filter('manage_product_posts_columns', function ($columns) {
+	$columns['_has_upload_artwork'] = __('Artwork Upload', 'tm');
+	return $columns;
+});
+
+add_action('manage_product_posts_custom_column', function ($column_name, $post_id) {
+	if ('_has_upload_artwork' === $column_name) {
+		echo 'on' === get_post_meta($post_id, '_has_upload_artwork', true)
+			? '<span style="color:#008a20">&#10003; ' . esc_html__('Enabled', 'tm') . '</span>'
+			: '<span style="color:#a7aaad">&mdash;</span>';
+	}
+}, 10, 2);
+
+
 add_action('init', 'start_session', 1);
 
 add_action('wp_mail_failed', function ($error) {

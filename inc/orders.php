@@ -237,6 +237,7 @@ function wholesale_customer_order_email_html($post_id)
         . '<li>We build your sign and test it before it ships.</li>'
         . '<li>You receive tracking details by email when it ships.</li>'
         . '</ol>'
+        . '<p style="margin:20px 0 0;"><a href="' . esc_url(wholesale_track_order_url($post_id)) . '" style="display:inline-block;padding:12px 22px;background:#1fa8de;border-radius:8px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Track your order</a></p>'
         . '<p style="margin:24px 0 0;font-size:14px;color:#5b6b7b;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or reply to this email with your order number.</p>'
         . '</td></tr>'
         . '<tr><td style="padding:18px 28px;border-top:1px solid #e3e9ef;' . $font . 'font-size:12px;color:#8a97a5;">Storefront Sign Online &middot; 707 S. Grady Way, Suite 600, Renton, WA 98057</td></tr>'
@@ -285,6 +286,98 @@ function wholesale_tracking_url($carrier, $number)
         default:
             return '';
     }
+}
+
+/**
+ * Public order tracking page URL, optionally prefilled with an order number.
+ */
+function wholesale_track_order_url($order_post_id = 0)
+{
+    $url = home_url('/track-order/');
+    return $order_post_id ? add_query_arg('order', wholesale_order_number($order_post_id), $url) : $url;
+}
+
+/**
+ * Normalize what a customer types as an order number: "#sn6lthf5ia", "order_SN6LTHF5IA" -> "SN6LTHF5IA".
+ */
+function wholesale_normalize_order_number($input)
+{
+    $number = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $input));
+    if (strlen($number) > 10 && 0 === strpos($number, 'ORDER')) {
+        $number = substr($number, 5);
+    }
+    return substr($number, 0, 32);
+}
+
+/**
+ * Find an order for the public tracking page. The email must match the order's billing
+ * (or shipping) email, so an order number alone reveals nothing.
+ *
+ * @return int Order post ID, or 0 when there is no match.
+ */
+function wholesale_find_order_for_tracking($number, $email)
+{
+    $number = wholesale_normalize_order_number($number);
+    $email = strtolower(trim((string) $email));
+    if ('' === $number || !is_email($email)) {
+        return 0;
+    }
+
+    $ids = get_posts(array(
+        'post_type' => 'order',
+        'post_status' => array_keys(wholesale_order_status_info()),
+        'meta_key' => 'order_id',
+        'meta_value' => 'order_' . $number,
+        'posts_per_page' => 1,
+        'fields' => 'ids',
+        'no_found_rows' => true,
+    ));
+    if (!$ids) {
+        return 0;
+    }
+
+    $billing = wholesale_decode_order_meta_array(get_post_meta($ids[0], 'billing_address', true));
+    $shipping = wholesale_decode_order_meta_array(get_post_meta($ids[0], 'shipping_address', true));
+    foreach (array($billing['billing_email'] ?? '', $shipping['shipping_email'] ?? '') as $order_email) {
+        if ('' !== $order_email && hash_equals(strtolower(trim((string) $order_email)), $email)) {
+            return (int) $ids[0];
+        }
+    }
+    return 0;
+}
+
+/**
+ * Customer-facing history of an order, oldest first: placed, then each status change.
+ *
+ * @return array<int,array{time:int,status:string,label:string,note:string}>
+ */
+function wholesale_order_timeline($order_post_id)
+{
+    $info = wholesale_order_status_info();
+    $events = array(array(
+        'time' => (int) get_post_time('U', true, $order_post_id),
+        'status' => 'placed',
+        'label' => 'Order placed',
+        'note' => 'We received your order.',
+    ));
+
+    $log = get_post_meta($order_post_id, '_status_log');
+    usort($log, static function ($a, $b) {
+        return ((int) ($a['time'] ?? 0)) <=> ((int) ($b['time'] ?? 0));
+    });
+    foreach ($log as $entry) {
+        $to = $entry['to'] ?? '';
+        if (!isset($info[$to])) {
+            continue;
+        }
+        $events[] = array(
+            'time' => (int) ($entry['time'] ?? 0),
+            'status' => $to,
+            'label' => $info[$to]['label'],
+            'note' => $info[$to]['note'],
+        );
+    }
+    return $events;
 }
 
 // Browser tab title for an order page: "Order #SN6LTHF5IA" instead of the internal post title.

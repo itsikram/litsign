@@ -25,7 +25,7 @@
 
         <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bd-2.webp?ver=' . _S_VERSION); ?>" alt="" loading="lazy" decoding="async">
     </div>
-    <div class="container mt-3 text-center">
+    <div class="container my-3 text-center">
         <a href="<?php echo home_url() . '/channel-letters'; ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
 
     </div>

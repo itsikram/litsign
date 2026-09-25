@@ -48,6 +48,8 @@ get_header();
                 <div class="confirmation-actions">
                     <?php if (is_user_logged_in()) : ?>
                         <a class="checkout-pay" href="<?php echo esc_url(home_url('/my-orders/')); ?>">View my orders</a>
+                    <?php elseif ($order) : ?>
+                        <a class="checkout-pay" href="<?php echo esc_url(wholesale_track_order_url($order)); ?>">Track this order</a>
                     <?php endif; ?>
                     <a class="cart-secondary" href="<?php echo esc_url(home_url('/')); ?>">Back to home</a>
                 </div>

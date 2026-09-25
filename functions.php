@@ -2010,7 +2010,7 @@ function litsign_scripts()
 	wp_enqueue_style('font-awesome', $theme_uri . '/css/icons.css', array(), $asset_version('/css/icons.css'));
 	wp_enqueue_style('litsign-style', get_stylesheet_uri(), array(), $asset_version('/style.css'));
 	wp_enqueue_style('custom-style', $theme_uri . '/css/style.css', array(), $asset_version('/css/style.css'));
-	if (is_page(array('cart', 'checkout', 'account', 'my-orders', 'login', 'signup')) || is_singular('order') || get_query_var('wholesale_thank_you')) {
+	if (is_page(array('cart', 'checkout', 'account', 'my-orders', 'track-order', 'login', 'signup')) || is_singular('order') || get_query_var('wholesale_thank_you')) {
 		wp_enqueue_style('wholesale-shop', $theme_uri . '/css/shop.css', array('custom-style'), $asset_version('/css/shop.css'));
 	}
 	if (is_page_template('landing-page.php')) {
@@ -2443,7 +2443,7 @@ function wholesale_seo_is_noindex()
  */
 function wholesale_seo_noindex_page_slugs()
 {
-	return array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders', 'my_orders', 'orders', 'sample-page', 'sample-page-2', 'b2-calculator');
+	return array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders', 'my_orders', 'orders', 'track-order', 'sample-page', 'sample-page-2', 'b2-calculator');
 }
 
 add_filter('document_title_parts', function ($parts) {

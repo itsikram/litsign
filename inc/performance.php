@@ -79,3 +79,20 @@ function wholesale_preload_landing_hero()
 	printf('<link rel="preload" as="image" href="%s" type="image/webp" media="(min-width: 768px)" fetchpriority="high">' . "\n", esc_url($img . 'landing-hero-1440.webp'));
 }
 add_action('wp_head', 'wholesale_preload_landing_hero', 1);
+
+/**
+ * On the home page the guide styles only apply below the fold, so load that
+ * stylesheet without blocking the first paint (it stays blocking on pages
+ * whose hero uses it).
+ */
+function wholesale_async_home_guide_styles($tag, $handle)
+{
+	if ('wholesale-seo-pages' !== $handle || !is_front_page()) {
+		return $tag;
+	}
+
+	$async = str_replace("media='all'", "media='print' onload=\"this.media='all'\"", $tag);
+
+	return $async . '<noscript>' . $tag . '</noscript>';
+}
+add_filter('style_loader_tag', 'wholesale_async_home_guide_styles', 10, 2);

@@ -564,3 +564,78 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 	</section>
 	<?php
 }
+
+/**
+ * Add alt text to <img> tags that have none (or an empty one) in stored HTML,
+ * such as the supplier product descriptions on channel letter pages.
+ * Images are numbered so each alt is distinct.
+ */
+function wholesale_seo_fill_missing_alt($html, $label)
+{
+	$html = (string) $html;
+	if ('' === $html || false === stripos($html, '<img')) {
+		return $html;
+	}
+
+	$count = 0;
+
+	return preg_replace_callback('/<img\b[^>]*>/i', static function ($match) use ($label, &$count) {
+		$tag = $match[0];
+		// Keep a non-empty alt; alt="" counts as missing here.
+		if (preg_match('/\balt\s*=\s*(?:"[^"]*[^"\s][^"]*"|\'[^\']*[^\'\s][^\']*\')/i', $tag)) {
+			return $tag;
+		}
+
+		$count++;
+		$alt = esc_attr(sprintf('%s, image %d', $label, $count));
+		$tag = preg_replace('/\s+alt\s*=\s*(["\'])\s*\1/i', '', $tag);
+
+		return preg_replace('/^<img\b/i', '<img alt="' . $alt . '"', $tag);
+	}, $html);
+}
+
+/**
+ * Readable alt text for a media library image, or '' when nothing reliable is
+ * known (for example customer design uploads with generated file names).
+ */
+function wholesale_seo_attachment_alt($attachment_id)
+{
+	$product_title = static function ($product_id) {
+		$seo = wholesale_seo_channel_letter_product($product_id);
+		if (!empty($seo['heading'])) {
+			return $seo['heading'];
+		}
+		return preg_replace('/\s+Copy$/', '', wp_strip_all_tags(get_the_title($product_id)));
+	};
+
+	// Customer uploads (builder designs, artwork files) are never labeled.
+	$title = (string) get_the_title($attachment_id);
+	if (preg_match('/^(?:clDesign|custom-artwork|guest-design)/i', $title) || preg_match('/[0-9a-f]{10,}/i', $title)) {
+		return '';
+	}
+
+	// Readable file titles such as "trimcap-info" or "hero-bg"; generated
+	// names like "0ov9xJYW-s1000" are not.
+	$readable = '';
+	if (!preg_match('/^(?:[A-Za-z0-9]{8}[-_]s1000|clDesign|IMG_|DSC|image\d*$|\d+$)/', $title) && preg_match('/[a-z]{3,}/i', $title)) {
+		$readable = ucfirst(trim(preg_replace('/\s+/', ' ', str_replace(array('-', '_'), ' ', preg_replace('/\.(jpe?g|png|webp|gif)$/i', '', $title)))));
+	}
+
+	$featured_on = get_posts(array(
+		'post_type' => 'product',
+		'post_status' => 'publish',
+		'posts_per_page' => 1,
+		'fields' => 'ids',
+		'meta_key' => '_thumbnail_id',
+		'meta_value' => (int) $attachment_id,
+	));
+	$parent = (int) wp_get_post_parent_id($attachment_id);
+	$product_id = $featured_on ? (int) $featured_on[0] : ($parent && 'product' === get_post_type($parent) ? $parent : 0);
+
+	if ($product_id) {
+		$name = $product_title($product_id);
+		return $readable && !$featured_on ? sprintf('%s: %s', $name, strtolower($readable)) : $name;
+	}
+
+	return $readable;
+}

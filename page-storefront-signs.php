@@ -127,7 +127,7 @@ get_header();
 								echo get_the_post_thumbnail($type_product, 'medium_large', array(
 									'loading' => 'lazy',
 									'decoding' => 'async',
-									'alt' => '',
+									'alt' => wp_strip_all_tags(html_entity_decode($type[2], ENT_QUOTES, 'UTF-8')),
 									'sizes' => '(max-width: 575px) 100vw, (max-width: 991px) 50vw, 25vw',
 								));
 							}

@@ -161,6 +161,7 @@ get_header();
     <main id="primary">
     <article <?php post_class('product-article'); ?>>
     <?php $product_seo = wholesale_seo_channel_letter_product(get_the_ID()); ?>
+    <?php $product_image_label = !empty($product_seo['heading']) ? $product_seo['heading'] : wp_strip_all_tags(get_the_title()); ?>
     <?php if (!empty($product_seo['heading'])) : ?>
         <p class="product-title-type"><?php echo esc_html(get_the_title()); ?></p>
     <?php endif; ?>
@@ -347,7 +348,7 @@ get_header();
                                                                 <?php echo $info_content_face_text; ?>
                                                             </p>
                                                             <div class="option-info-img-container">
-                                                                <img src="<?php echo $info_content_face_image; ?>" alt="" class="option-info-img">
+                                                                <img src="<?php echo $info_content_face_image; ?>" alt="Channel letter face" class="option-info-img">
                                                             </div>
                                                         </div>
                                                     </span>
@@ -361,7 +362,7 @@ get_header();
                                                                 <?php echo $info_content_trimcap_text; ?>
                                                             </p>
                                                             <div class="option-info-img-container">
-                                                                <img src="<?php echo $info_content_trimcap_image; ?>" alt="" class="option-info-img">
+                                                                <img src="<?php echo $info_content_trimcap_image; ?>" alt="Channel letter trimcap" class="option-info-img">
                                                             </div>
                                                         </div>
                                                     </span>
@@ -375,7 +376,7 @@ get_header();
                                                                 <?php echo $info_content_return_text; ?>
                                                             </p>
                                                             <div class="option-info-img-container">
-                                                                <img src="<?php echo $info_content_return_image; ?>" alt="" class="option-info-img">
+                                                                <img src="<?php echo $info_content_return_image; ?>" alt="Channel letter return" class="option-info-img">
                                                             </div>
                                                         </div>
                                                     </span>
@@ -640,7 +641,7 @@ get_header();
                                                             <?php echo $info_content_face_text; ?>
                                                         </p>
                                                         <div class="option-info-img-container">
-                                                            <img src="<?php echo $info_content_face_image; ?>" alt="" class="option-info-img">
+                                                            <img src="<?php echo $info_content_face_image; ?>" alt="Channel letter face" class="option-info-img">
                                                         </div>
                                                     </div>
                                                 </span>
@@ -654,7 +655,7 @@ get_header();
                                                             <?php echo $info_content_trimcap_text; ?>
                                                         </p>
                                                         <div class="option-info-img-container">
-                                                            <img src="<?php echo $info_content_trimcap_image; ?>" alt="" class="option-info-img">
+                                                            <img src="<?php echo $info_content_trimcap_image; ?>" alt="Channel letter trimcap" class="option-info-img">
                                                         </div>
                                                     </div>
                                                 </span>
@@ -668,7 +669,7 @@ get_header();
                                                             <?php echo $info_content_return_text; ?>
                                                         </p>
                                                         <div class="option-info-img-container">
-                                                            <img src="<?php echo $info_content_return_image; ?>" alt="" class="option-info-img">
+                                                            <img src="<?php echo $info_content_return_image; ?>" alt="Channel letter return" class="option-info-img">
                                                         </div>
                                                     </div>
                                                 </span>
@@ -1074,21 +1075,21 @@ get_header();
                             <!-- description -->
                             <div class="tab-pane fade show active" id="desc" role="tabpanel" aria-labelledby="desc-tab">
 
-                                <?php echo get_post_meta(get_the_ID(), '_product_description', true); ?>
+                                <?php echo wholesale_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_description', true), $product_image_label); ?>
                             </div>
 
                             <!-- Components -->
                             <div class="tab-pane fade" id="component" role="tabpanel" aria-labelledby="component-tab">
-                                <?php echo get_post_meta(get_the_ID(), '_product_component', true); ?>
+                                <?php echo wholesale_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_component', true), $product_image_label . ' component'); ?>
                             </div>
                             <!-- Warrenty -->
                             <div class="tab-pane fade" id="warrenty" role="tabpanel" aria-labelledby="warrenty-tab">
-                                <?php echo get_post_meta(get_the_ID(), '_product_warrenty', true); ?>
+                                <?php echo wholesale_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_warrenty', true), $product_image_label . ' warranty'); ?>
 
                             </div>
                             <!-- FAQ -->
                             <div class="tab-pane fade" id="faq" role="tabpanel" aria-labelledby="faq-tab">
-                                <?php echo get_post_meta(get_the_ID(), '_product_faq', true); ?>
+                                <?php echo wholesale_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_faq', true), $product_image_label); ?>
 
                             </div>
                             <!-- Manual -->
@@ -1103,7 +1104,7 @@ get_header();
 
                     <?php
                     } else {
-                        echo get_the_content();
+                        echo wholesale_seo_fill_missing_alt(get_the_content(), $product_image_label);
                     }
 
                     ?>

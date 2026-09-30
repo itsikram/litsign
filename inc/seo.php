@@ -300,6 +300,8 @@ function wholesale_seo_migrations()
 	return array(
 		'2026-10-remove-spam-categories' => 'wholesale_seo_migrate_remove_spam_categories',
 		'2026-10-storefront-signs-page' => 'wholesale_seo_migrate_storefront_signs_page',
+		'2026-10-image-alt-text' => 'wholesale_seo_migrate_image_alt_text',
+		'2026-10-product-copy-titles' => 'wholesale_seo_migrate_product_copy_titles',
 	);
 }
 
@@ -363,4 +365,54 @@ function wholesale_seo_migrate_storefront_signs_page()
 	), true);
 
 	return !is_wp_error($page_id);
+}
+
+/**
+ * Fill empty alt text on media library images from the product each image
+ * belongs to. Existing alt text is never changed.
+ */
+function wholesale_seo_migrate_image_alt_text()
+{
+	$attachments = get_posts(array(
+		'post_type' => 'attachment',
+		'post_status' => 'inherit',
+		'post_mime_type' => 'image',
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	));
+
+	foreach ($attachments as $attachment_id) {
+		if ('' !== trim((string) get_post_meta($attachment_id, '_wp_attachment_image_alt', true))) {
+			continue;
+		}
+
+		$alt = wholesale_seo_attachment_alt($attachment_id);
+		if ('' !== $alt) {
+			update_post_meta($attachment_id, '_wp_attachment_image_alt', sanitize_text_field($alt));
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Two products were published with " Copy" left in their names from being
+ * duplicated. Only the displayed name changes; the URLs stay the same.
+ */
+function wholesale_seo_migrate_product_copy_titles()
+{
+	$titles = array(
+		'fabric-banner-9oz-wrinkle-free-copy' => 'Fabric Banner (9oz. Wrinkle Free)',
+		'sd-retractable-sd-retractable-insert-only' => 'SD Retractable',
+	);
+
+	foreach ($titles as $slug => $title) {
+		$product = get_page_by_path($slug, OBJECT, 'product');
+		if ($product && preg_match('/\sCopy$/', $product->post_title)) {
+			wp_update_post(array('ID' => $product->ID, 'post_title' => $title));
+		}
+	}
+
+	return true;
 }

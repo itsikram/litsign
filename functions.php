@@ -52,6 +52,7 @@ require_once(dirname(__FILE__) . '/inc/admin-orders.php');
 require_once(dirname(__FILE__) . '/inc/refunds.php');
 require_once(dirname(__FILE__) . '/inc/email-log.php');
 require_once(dirname(__FILE__) . '/inc/quote-emails.php');
+require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
 /**

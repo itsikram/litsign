@@ -54,6 +54,7 @@ require_once(dirname(__FILE__) . '/inc/email-log.php');
 require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
+require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
 /**
@@ -1006,21 +1007,29 @@ function wholesale_deferred_conversion_tracking()
 {
 	?>
 	<script>
-		window.addEventListener('load', function () {
-			var script = document.createElement('script');
-			script.async = true;
-			script.src = 'https://www.googletagmanager.com/gtag/js?id=AW-18454059893';
-			document.head.appendChild(script);
-			window.dataLayer = window.dataLayer || [];
-			window.gtag = window.gtag || function () {
-				window.dataLayer.push(arguments);
+		(function () {
+			var start = function () {
+				var script = document.createElement('script');
+				script.async = true;
+				script.src = 'https://www.googletagmanager.com/gtag/js?id=AW-18454059893';
+				document.head.appendChild(script);
+				window.dataLayer = window.dataLayer || [];
+				window.gtag = window.gtag || function () {
+					window.dataLayer.push(arguments);
+				};
+				window.gtag('js', new Date());
+				window.gtag('config', 'AW-18454059893');
+				window.gtag('config', 'AW-18454059893/OK42COLkgPocEPW2yt9E', {
+					'phone_conversion_number': '866-436-2101'
+				});
 			};
-			window.gtag('js', new Date());
-			window.gtag('config', 'AW-18454059893');
-			window.gtag('config', 'AW-18454059893/OK42COLkgPocEPW2yt9E', {
-				'phone_conversion_number': '866-436-2101'
-			});
-		});
+			<?php if (wholesale_ads_is_ad_landing()) : ?>
+			// Arrived from an ad: record the click right away, before the visitor moves on.
+			start();
+			<?php else : ?>
+			window.addEventListener('load', start);
+			<?php endif; ?>
+		})();
 	</script>
 	<?php
 }

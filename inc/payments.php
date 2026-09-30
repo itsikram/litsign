@@ -831,16 +831,31 @@ function wholesale_purchase_conversion()
 
 	$cost = wholesale_decode_order_meta_array(get_post_meta($order, 'product_cost', true));
 	$value = isset($cost['grand_total']) ? (float) $cost['grand_total'] : 0;
+	$transaction_id = (string) get_post_meta($order, 'order_id', true);
+	$user_data = wholesale_ads_order_user_data($order);
 	?>
 	<script>
 		window.addEventListener('load', function () {
 			window.dataLayer = window.dataLayer || [];
 			window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+			<?php if ($user_data) : ?>
+			// Enhanced conversions: the Google tag hashes this before sending it.
+			window.gtag('set', 'user_data', <?php echo wp_json_encode($user_data); ?>);
+			<?php endif; ?>
 			window.gtag('event', 'conversion', {
 				send_to: 'AW-18454059893/UkFKCJGGp_kcEPW2yt9E',
 				value: <?php echo wp_json_encode(round($value, 2)); ?>,
 				currency: 'USD',
-				transaction_id: <?php echo wp_json_encode((string) get_post_meta($order, 'order_id', true)); ?>
+				transaction_id: <?php echo wp_json_encode($transaction_id); ?>
+			});
+			// GA4 ecommerce purchase (Site Kit's Google tag picks this up).
+			window.gtag('event', 'purchase', {
+				transaction_id: <?php echo wp_json_encode($transaction_id); ?>,
+				value: <?php echo wp_json_encode(round($value, 2)); ?>,
+				tax: <?php echo wp_json_encode(round((float) ($cost['tax'] ?? 0), 2)); ?>,
+				shipping: <?php echo wp_json_encode(round((float) ($cost['shipping_cost'] ?? 0), 2)); ?>,
+				currency: 'USD',
+				items: <?php echo wp_json_encode(wholesale_ads_order_items($order)); ?>
 			});
 		});
 	</script>

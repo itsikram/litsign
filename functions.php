@@ -55,6 +55,7 @@ require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
+require_once(dirname(__FILE__) . '/inc/performance.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
 /**

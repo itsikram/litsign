@@ -275,6 +275,9 @@ function wholesale_payment_customer_text($post_id, $unpaid = 'To be arranged wit
     if ('refunded' === $status) {
         return 'Refunded';
     }
+    if ('partially_refunded' === $status) {
+        return 'Paid by card' . ($last4 ? ' ending ' . $last4 : '') . ' (partly refunded)';
+    }
     return $unpaid;
 }
 

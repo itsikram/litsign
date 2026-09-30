@@ -35,6 +35,40 @@ $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
 };
 
+$states = array(
+    'AL' => 'Alabama', 'AK' => 'Alaska', 'AZ' => 'Arizona', 'AR' => 'Arkansas', 'CA' => 'California', 'CO' => 'Colorado',
+    'CT' => 'Connecticut', 'DE' => 'Delaware', 'DC' => 'District of Columbia', 'FL' => 'Florida', 'GA' => 'Georgia',
+    'HI' => 'Hawaii', 'ID' => 'Idaho', 'IL' => 'Illinois', 'IN' => 'Indiana', 'IA' => 'Iowa', 'KS' => 'Kansas',
+    'KY' => 'Kentucky', 'LA' => 'Louisiana', 'ME' => 'Maine', 'MD' => 'Maryland', 'MA' => 'Massachusetts',
+    'MI' => 'Michigan', 'MN' => 'Minnesota', 'MS' => 'Mississippi', 'MO' => 'Missouri', 'MT' => 'Montana',
+    'NE' => 'Nebraska', 'NV' => 'Nevada', 'NH' => 'New Hampshire', 'NJ' => 'New Jersey', 'NM' => 'New Mexico',
+    'NY' => 'New York', 'NC' => 'North Carolina', 'ND' => 'North Dakota', 'OH' => 'Ohio', 'OK' => 'Oklahoma',
+    'OR' => 'Oregon', 'PA' => 'Pennsylvania', 'PR' => 'Puerto Rico', 'RI' => 'Rhode Island', 'SC' => 'South Carolina',
+    'SD' => 'South Dakota', 'TN' => 'Tennessee', 'TX' => 'Texas', 'UT' => 'Utah', 'VT' => 'Vermont', 'VA' => 'Virginia',
+    'WA' => 'Washington', 'WV' => 'West Virginia', 'WI' => 'Wisconsin', 'WY' => 'Wyoming',
+);
+
+// State dropdown; a saved value that isn't a US state or code is kept as its own option.
+$state_select = static function ($id, $name, $autocomplete, $value = '', $extra = '') use ($states) {
+    $value = trim((string) $value);
+    $code = isset($states[strtoupper($value)]) ? strtoupper($value) : (string) array_search(strtolower($value), array_map('strtolower', $states), true);
+    ?>
+    <select id="<?php echo esc_attr($id); ?>" name="<?php echo esc_attr($name); ?>" autocomplete="<?php echo esc_attr($autocomplete); ?>" <?php echo $extra; // Static attributes. ?>>
+        <option value="">Select</option>
+        <?php foreach ($states as $abbr => $label) : ?>
+            <option value="<?php echo esc_attr($abbr); ?>" <?php selected($code, $abbr); ?>><?php echo esc_html($label); ?></option>
+        <?php endforeach; ?>
+        <?php if ($value && !$code) : ?>
+            <option value="<?php echo esc_attr($value); ?>" selected><?php echo esc_html($value); ?></option>
+        <?php endif; ?>
+    </select>
+    <?php
+};
+
+$lock_icon = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>';
+$grand_total = $sub_total + $first_shipping + $tax;
+$item_count = count($cart->get_items());
+
 get_header();
 ?>
 
@@ -56,52 +90,75 @@ get_header();
             <?php wp_nonce_field('wholesale_place_order', 'wholesale_order_nonce'); ?>
 
             <div class="checkout-main">
-                <section class="checkout-card" aria-labelledby="checkout-contact">
-                    <h2 id="checkout-contact"><span class="checkout-step-number">1</span> Contact</h2>
+                <details class="checkout-mobile-summary">
+                    <summary>
+                        <span class="checkout-mobile-summary__label"><?php echo esc_html(sprintf(_n('%d item', '%d items', $item_count, 'litsign'), $item_count)); ?> &middot; <span data-show-label>Show summary</span></span>
+                        <strong data-grand-total><?php echo esc_html($money($grand_total)); ?></strong>
+                    </summary>
+                    <ul class="checkout-items">
+                        <?php foreach ($cart->get_items() as $item) : ?>
+                            <li>
+                                <span class="checkout-item-name">
+                                    <?php echo esc_html($item->product_title); ?>
+                                    <small>Qty <?php echo esc_html($item->product_quantity); ?></small>
+                                </span>
+                                <span class="checkout-item-price"><?php echo esc_html($money($item->product_subtotal)); ?></span>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <a href="<?php echo esc_url(home_url('/cart/')); ?>">Edit cart</a>
+                </details>
+
+                <section class="checkout-card" aria-labelledby="checkout-details">
+                    <div class="checkout-card-head">
+                        <h2 id="checkout-details"><span class="checkout-step-number">1</span> Your details</h2>
+                        <?php if (!is_user_logged_in()) : ?>
+                            <p class="checkout-signin">Have an account? <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(home_url('/checkout/')), home_url('/login/'))); ?>">Log in</a></p>
+                        <?php endif; ?>
+                    </div>
+
+                    <p class="checkout-remembered" data-remembered hidden>
+                        Welcome back! We filled in your details from last time.
+                        <button type="button" class="checkout-link" data-forget>Not you? Clear</button>
+                    </p>
+
                     <div class="checkout-grid">
-                        <p class="checkout-field checkout-field--full">
+                        <p class="checkout-field">
                             <label for="billingEmail">Email</label>
-                            <input type="email" id="billingEmail" name="billing_email" required autocomplete="email" value="<?php echo esc_attr($prefill['billing_email']); ?>">
-                            <small>We'll send your order confirmation here.</small>
+                            <input type="email" id="billingEmail" name="billing_email" required autocomplete="email" inputmode="email" spellcheck="false" autocapitalize="off" value="<?php echo esc_attr($prefill['billing_email']); ?>" aria-describedby="billingEmailHint">
+                            <small id="billingEmailHint">We'll send your order confirmation here.</small>
+                            <button type="button" class="checkout-suggest" data-email-suggest hidden></button>
                         </p>
                         <p class="checkout-field">
                             <label for="billingTel">Phone <span class="checkout-optional">(recommended)</span></label>
-                            <input type="tel" id="billingTel" name="billing_tel" autocomplete="tel" value="<?php echo esc_attr($prefill['billing_tel']); ?>">
+                            <input type="tel" id="billingTel" name="billing_tel" autocomplete="tel" inputmode="tel" value="<?php echo esc_attr($prefill['billing_tel']); ?>">
                         </p>
-                        <p class="checkout-field">
-                            <label for="billingCompany">Business name <span class="checkout-optional">(optional)</span></label>
-                            <input type="text" id="billingCompany" name="billing_company" autocomplete="organization">
-                        </p>
-                    </div>
-                    <?php if (!is_user_logged_in()) : ?>
-                        <p class="checkout-signin">Already have an account? <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(home_url('/checkout/')), home_url('/login/'))); ?>">Log in</a> for faster checkout.</p>
-                    <?php endif; ?>
-                </section>
-
-                <section class="checkout-card" aria-labelledby="checkout-billing">
-                    <h2 id="checkout-billing"><span class="checkout-step-number">2</span> Billing address</h2>
-                    <div class="checkout-grid">
-                        <p class="checkout-field">
+                        <p class="checkout-field checkout-field--half">
                             <label for="billingFirstName">First name</label>
                             <input type="text" id="billingFirstName" name="billing_fname" required autocomplete="given-name" value="<?php echo esc_attr($prefill['billing_fname']); ?>">
                         </p>
-                        <p class="checkout-field">
+                        <p class="checkout-field checkout-field--half">
                             <label for="billingLastName">Last name</label>
                             <input type="text" id="billingLastName" name="billing_lname" required autocomplete="family-name" value="<?php echo esc_attr($prefill['billing_lname']); ?>">
                         </p>
                         <p class="checkout-field checkout-field--full">
+                            <label for="billingCompany">Business name <span class="checkout-optional">(optional)</span></label>
+                            <input type="text" id="billingCompany" name="billing_company" autocomplete="organization">
+                        </p>
+                        <p class="checkout-field checkout-field--full">
                             <label for="billingAddress">Street address</label>
                             <input type="text" id="billingAddress" name="billing_address" value="<?php echo esc_attr($prefill['billing_address']); ?>" required autocomplete="address-line1">
-                            <input type="text" id="billingAddress2" name="billing_address_2" value="<?php echo esc_attr($prefill['billing_address_2']); ?>" autocomplete="address-line2" placeholder="Suite, unit, floor (optional)" aria-label="Address line 2">
+                            <button type="button" class="checkout-link" data-reveal="billingAddress2">+ Add apartment, suite or unit</button>
+                            <input type="text" id="billingAddress2" name="billing_address_2" value="<?php echo esc_attr($prefill['billing_address_2']); ?>" autocomplete="address-line2" placeholder="Apartment, suite, unit (optional)" aria-label="Apartment, suite or unit" hidden>
                         </p>
-                        <p class="checkout-field">
-                            <label for="billingCity">City</label>
-                            <input type="text" id="billingCity" name="billing_city" value="<?php echo esc_attr($prefill['billing_city']); ?>" required autocomplete="address-level2">
-                        </p>
-                        <div class="checkout-grid checkout-grid--pair">
+                        <div class="checkout-grid checkout-grid--address checkout-field--full">
+                            <p class="checkout-field checkout-field--city">
+                                <label for="billingCity">City</label>
+                                <input type="text" id="billingCity" name="billing_city" value="<?php echo esc_attr($prefill['billing_city']); ?>" required autocomplete="address-level2">
+                            </p>
                             <p class="checkout-field">
                                 <label for="billingState">State</label>
-                                <input type="text" id="billingState" name="billing_state" value="<?php echo esc_attr($prefill['billing_state']); ?>" required autocomplete="address-level1" maxlength="30">
+                                <?php $state_select('billingState', 'billing_state', 'address-level1', $prefill['billing_state'], 'required'); ?>
                             </p>
                             <p class="checkout-field">
                                 <label for="billingZip">ZIP code</label>
@@ -113,17 +170,17 @@ get_header();
 
                     <label class="checkout-check">
                         <input type="checkbox" name="same_shipping_address" id="sameShippingAddress" checked>
-                        Ship to this address
+                        Ship my sign to this address
                     </label>
 
                     <div class="checkout-shipping-address" id="shippingAddressFields" hidden>
                         <h3>Shipping address</h3>
                         <div class="checkout-grid">
-                            <p class="checkout-field">
+                            <p class="checkout-field checkout-field--half">
                                 <label for="shippingFirstName">First name</label>
                                 <input type="text" id="shippingFirstName" name="shipping_fname" autocomplete="shipping given-name" data-ship-required>
                             </p>
-                            <p class="checkout-field">
+                            <p class="checkout-field checkout-field--half">
                                 <label for="shippingLastName">Last name</label>
                                 <input type="text" id="shippingLastName" name="shipping_lname" autocomplete="shipping family-name" data-ship-required>
                             </p>
@@ -134,33 +191,39 @@ get_header();
                             <p class="checkout-field checkout-field--full">
                                 <label for="shippingAddress">Street address</label>
                                 <input type="text" id="shippingAddress" name="shipping_address" autocomplete="shipping address-line1" data-ship-required>
-                                <input type="text" id="shippingAddress2" name="shipping_address_2" autocomplete="shipping address-line2" placeholder="Suite, unit, floor (optional)" aria-label="Shipping address line 2">
+                                <button type="button" class="checkout-link" data-reveal="shippingAddress2">+ Add apartment, suite or unit</button>
+                                <input type="text" id="shippingAddress2" name="shipping_address_2" autocomplete="shipping address-line2" placeholder="Apartment, suite, unit (optional)" aria-label="Shipping apartment, suite or unit" hidden>
                             </p>
-                            <p class="checkout-field">
-                                <label for="shippingCity">City</label>
-                                <input type="text" id="shippingCity" name="shipping_city" autocomplete="shipping address-level2" data-ship-required>
-                            </p>
-                            <div class="checkout-grid checkout-grid--pair">
+                            <div class="checkout-grid checkout-grid--address checkout-field--full">
+                                <p class="checkout-field checkout-field--city">
+                                    <label for="shippingCity">City</label>
+                                    <input type="text" id="shippingCity" name="shipping_city" autocomplete="shipping address-level2" data-ship-required>
+                                </p>
                                 <p class="checkout-field">
                                     <label for="shippingState">State</label>
-                                    <input type="text" id="shippingState" name="shipping_state" autocomplete="shipping address-level1" maxlength="30" data-ship-required>
+                                    <?php $state_select('shippingState', 'shipping_state', 'shipping address-level1', '', 'data-ship-required'); ?>
                                 </p>
                                 <p class="checkout-field">
                                     <label for="shippingZip">ZIP code</label>
                                     <input type="text" id="shippingZip" name="shipping_zip" autocomplete="shipping postal-code" inputmode="numeric" maxlength="10" data-ship-required>
                                 </p>
                             </div>
-                            <p class="checkout-field">
+                            <p class="checkout-field checkout-field--full">
                                 <label for="shippingTel">Phone at delivery address <span class="checkout-optional">(optional)</span></label>
-                                <input type="tel" id="shippingTel" name="shipping_tel" autocomplete="shipping tel">
+                                <input type="tel" id="shippingTel" name="shipping_tel" autocomplete="shipping tel" inputmode="tel">
                             </p>
                             <input type="hidden" name="shipping_country" value="United States">
                         </div>
                     </div>
+
+                    <label class="checkout-check checkout-check--quiet">
+                        <input type="checkbox" id="rememberDetails" checked>
+                        Remember my details on this device for next time
+                    </label>
                 </section>
 
                 <section class="checkout-card" aria-labelledby="checkout-shipping">
-                    <h2 id="checkout-shipping"><span class="checkout-step-number">3</span> Shipping speed</h2>
+                    <h2 id="checkout-shipping"><span class="checkout-step-number">2</span> Shipping speed</h2>
                     <p class="checkout-muted">Every sign is made to order. Dates include production time.</p>
                     <div class="checkout-options" role="radiogroup" aria-labelledby="checkout-shipping">
                         <?php foreach ($shipping_options as $index => $amount) : ?>
@@ -168,7 +231,7 @@ get_header();
                                 <input type="radio" name="shipping_method" value="<?php echo esc_attr($amount); ?>" <?php checked(0, $index); ?> required data-shipping-amount="<?php echo esc_attr($amount); ?>">
                                 <span class="checkout-option-body">
                                     <strong><?php echo esc_html(wholesale_shipping_label($index)); ?></strong>
-                                    <small>Estimated to ship by <?php echo esc_html(wholesale_estimated_ship_date($cart, $index)); ?></small>
+                                    <small>Ships by <?php echo esc_html(wholesale_estimated_ship_date($cart, $index)); ?></small>
                                 </span>
                                 <span class="checkout-option-price"><?php echo esc_html($money($amount)); ?></span>
                             </label>
@@ -177,49 +240,36 @@ get_header();
                 </section>
 
                 <section class="checkout-card" aria-labelledby="checkout-payment">
-                    <h2 id="checkout-payment"><span class="checkout-step-number">4</span> Payment</h2>
+                    <div class="checkout-card-head">
+                        <h2 id="checkout-payment"><span class="checkout-step-number">3</span> Payment</h2>
+                        <?php if ($card_enabled) : ?>
+                            <p class="checkout-secure-tag"><?php echo $lock_icon; // Static SVG. ?> Secure &amp; encrypted</p>
+                        <?php endif; ?>
+                    </div>
+
                     <?php if ($direct_card) : ?>
-                        <div class="checkout-secure">
-                            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>
-                            <div>
-                                <strong>Pay by card</strong>
-                                <p>Your payment is processed securely by Elavon Converge over an encrypted connection. We never store your card number.</p>
-                                <p class="checkout-cards">Visa &middot; Mastercard &middot; American Express &middot; Discover</p>
-                            </div>
-                        </div>
                         <div class="checkout-grid checkout-card-fields">
                             <p class="checkout-field checkout-field--full">
                                 <label for="cardNumber">Card number</label>
-                                <input type="text" id="cardNumber" name="card_number" required inputmode="numeric" autocomplete="cc-number" pattern="[0-9 ]{12,23}" maxlength="23" placeholder="1234 5678 9012 3456">
+                                <span class="checkout-card-input">
+                                    <input type="text" id="cardNumber" name="card_number" required inputmode="numeric" autocomplete="cc-number" maxlength="23" placeholder="1234 1234 1234 1234" spellcheck="false">
+                                    <span class="checkout-card-brand" data-card-brand aria-live="polite"></span>
+                                </span>
                             </p>
-                            <div class="checkout-grid checkout-grid--pair">
-                                <p class="checkout-field">
-                                    <label for="expMonth">Expiry month</label>
-                                    <select id="expMonth" name="card_exp_month" required autocomplete="cc-exp-month">
-                                        <option value="">MM</option>
-                                        <?php for ($month = 1; $month <= 12; $month++) : ?>
-                                            <option value="<?php echo esc_attr(sprintf('%02d', $month)); ?>"><?php echo esc_html(sprintf('%02d', $month)); ?></option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </p>
-                                <p class="checkout-field">
-                                    <label for="expYear">Expiry year</label>
-                                    <select id="expYear" name="card_exp_year" required autocomplete="cc-exp-year">
-                                        <option value="">YYYY</option>
-                                        <?php for ($exp_year = (int) gmdate('Y'); $exp_year <= (int) gmdate('Y') + 12; $exp_year++) : ?>
-                                            <option value="<?php echo esc_attr(substr((string) $exp_year, -2)); ?>"><?php echo esc_html((string) $exp_year); ?></option>
-                                        <?php endfor; ?>
-                                    </select>
-                                </p>
-                            </div>
-                            <p class="checkout-field">
-                                <label for="cardCvv">Security code (CVV)</label>
-                                <input type="text" id="cardCvv" name="card_cvv" required inputmode="numeric" autocomplete="cc-csc" pattern="[0-9]{3,4}" maxlength="4" placeholder="123">
+                            <p class="checkout-field checkout-field--half">
+                                <label for="cardExp">Expiration date</label>
+                                <input type="text" id="cardExp" name="card_exp" required inputmode="numeric" autocomplete="cc-exp" maxlength="7" placeholder="MM / YY">
+                            </p>
+                            <p class="checkout-field checkout-field--half">
+                                <label for="cardCvv">Security code</label>
+                                <input type="text" id="cardCvv" name="card_cvv" required inputmode="numeric" autocomplete="cc-csc" maxlength="4" placeholder="CVV" aria-describedby="cardCvvHint">
+                                <small id="cardCvvHint">3 digits on the back (Amex: 4 on the front)</small>
                             </p>
                         </div>
+                        <p class="checkout-cards">We accept Visa, Mastercard, American Express and Discover. Processed by Elavon Converge; we never store your card number.</p>
                     <?php elseif ($card_enabled) : ?>
                         <div class="checkout-secure">
-                            <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>
+                            <?php echo $lock_icon; // Static SVG. ?>
                             <div>
                                 <strong>Pay securely by card</strong>
                                 <p>When you click <em>Pay</em>, a secure window from our card processor, Elavon Converge, opens for your card details. Your card number never passes through our website.</p>
@@ -235,10 +285,13 @@ get_header();
                         </div>
                     <?php endif; ?>
 
-                    <p class="checkout-field checkout-field--full">
-                        <label for="orderComment">Order notes <span class="checkout-optional">(optional)</span></label>
-                        <textarea name="comment" id="orderComment" rows="3" placeholder="Anything we should know about your sign, installation or delivery?"></textarea>
-                    </p>
+                    <details class="checkout-more">
+                        <summary>Add a note to your order <span class="checkout-optional">(optional)</span></summary>
+                        <p class="checkout-field">
+                            <label for="orderComment" class="screen-reader-text">Order notes</label>
+                            <textarea name="comment" id="orderComment" rows="3" placeholder="Anything we should know about your sign, installation or delivery?"></textarea>
+                        </p>
+                    </details>
 
                     <?php if (!is_user_logged_in()) : ?>
                         <label class="checkout-check">
@@ -247,8 +300,8 @@ get_header();
                         </label>
                         <p class="checkout-field" id="accountPasswordGroup" hidden>
                             <label for="accountPassword">Choose a password</label>
-                            <input type="password" name="account_password" id="accountPassword" minlength="8" autocomplete="new-password">
-                            <small>At least 8 characters.</small>
+                            <input type="password" name="account_password" id="accountPassword" minlength="8" autocomplete="new-password" aria-describedby="accountPasswordHint">
+                            <small id="accountPasswordHint">At least 8 characters.</small>
                         </p>
                     <?php endif; ?>
                 </section>
@@ -256,7 +309,10 @@ get_header();
 
             <aside class="checkout-summary" aria-labelledby="checkout-summary-title">
                 <div class="checkout-card checkout-summary-card">
-                    <h2 id="checkout-summary-title">Order summary</h2>
+                    <div class="checkout-card-head">
+                        <h2 id="checkout-summary-title">Order summary</h2>
+                        <a class="checkout-edit-cart" href="<?php echo esc_url(home_url('/cart/')); ?>">Edit cart</a>
+                    </div>
                     <ul class="checkout-items">
                         <?php foreach ($cart->get_items() as $item) : ?>
                             <li>
@@ -276,15 +332,15 @@ get_header();
                         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($sub_total)); ?></dd></div>
                         <div><dt>Shipping</dt><dd data-shipping-total><?php echo esc_html($money($first_shipping)); ?></dd></div>
                         <div><dt>Tax (<?php echo esc_html(rtrim(rtrim(number_format($tax_rate, 2), '0'), '.')); ?>%)</dt><dd><?php echo esc_html($money($tax)); ?></dd></div>
-                        <div class="checkout-grand"><dt>Total</dt><dd data-grand-total><?php echo esc_html($money($sub_total + $first_shipping + $tax)); ?></dd></div>
+                        <div class="checkout-grand"><dt>Total</dt><dd data-grand-total><?php echo esc_html($money($grand_total)); ?></dd></div>
                     </dl>
 
                     <p class="checkout-status" data-pay-status role="alert" hidden></p>
 
                     <button type="submit" class="checkout-pay" data-pay-button>
                         <?php if ($card_enabled) : ?>
-                            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>
-                            Pay <span data-grand-total><?php echo esc_html($money($sub_total + $first_shipping + $tax)); ?></span>
+                            <?php echo $lock_icon; // Static SVG. ?>
+                            Pay <span data-grand-total><?php echo esc_html($money($grand_total)); ?></span>
                         <?php else : ?>
                             Place order
                         <?php endif; ?>
@@ -301,56 +357,6 @@ get_header();
         </form>
     </div>
 </main>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var form = document.getElementById('checkoutForm');
-        if (!form) return;
-
-        var money = function (value) {
-            return '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        };
-
-        // Separate shipping address.
-        var same = document.getElementById('sameShippingAddress');
-        var shipFields = document.getElementById('shippingAddressFields');
-        var syncShipping = function () {
-            shipFields.hidden = same.checked;
-            shipFields.querySelectorAll('[data-ship-required]').forEach(function (input) {
-                input.required = !same.checked;
-            });
-        };
-        same.addEventListener('change', syncShipping);
-        syncShipping();
-
-        // Totals follow the chosen shipping speed.
-        var totals = form.querySelector('.checkout-totals');
-        var updateTotals = function () {
-            var chosen = form.querySelector('input[name="shipping_method"]:checked');
-            var shipping = chosen ? parseFloat(chosen.dataset.shippingAmount) : 0;
-            var grand = parseFloat(totals.dataset.subtotal) + shipping + parseFloat(totals.dataset.tax);
-            form.querySelector('[data-shipping-total]').textContent = money(shipping);
-            form.querySelectorAll('[data-grand-total]').forEach(function (el) { el.textContent = money(grand); });
-        };
-        form.querySelectorAll('input[name="shipping_method"]').forEach(function (radio) {
-            radio.addEventListener('change', updateTotals);
-        });
-
-        // Optional account.
-        var createAccount = document.getElementById('createAccount');
-        if (createAccount) {
-            var group = document.getElementById('accountPasswordGroup');
-            var password = document.getElementById('accountPassword');
-            createAccount.addEventListener('change', function () {
-                group.hidden = !createAccount.checked;
-                password.required = createAccount.checked;
-            });
-        }
-
-        // Browser validation messages for the no-JS-payment path.
-        form.noValidate = false;
-    });
-</script>
 
 <?php
 get_footer();

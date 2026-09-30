@@ -42,17 +42,22 @@ function wholesale_direct_card_from_request($post)
 		'month' => $digits('card_exp_month'),
 		'year' => $digits('card_exp_year'),
 	);
+	// Checkout sends one "MM / YY" field; the payment-ticket page sends month and year.
+	if ('' === $card['month'] && preg_match('/^(\d{1,2})\D*(\d{2}|\d{4})$/', trim((string) wp_unslash($post['card_exp'] ?? '')), $exp)) {
+		$card['month'] = sprintf('%02d', (int) $exp[1]);
+		$card['year'] = substr($exp[2], -2);
+	}
 	$exp_year = 2000 + (int) $card['year'];
 	$expired = $exp_year < (int) gmdate('Y') || ($exp_year === (int) gmdate('Y') && (int) $card['month'] < (int) gmdate('n'));
 
 	if (strlen($card['number']) < 12 || strlen($card['number']) > 19) {
-		return new WP_Error('card', 'Please check your card number.');
-	}
-	if (strlen($card['cvv']) < 3 || strlen($card['cvv']) > 4) {
-		return new WP_Error('card', 'Please check your card security code (CVV).');
+		return new WP_Error('card', 'Please check your card number.', array('field' => 'card_number'));
 	}
 	if (2 !== strlen($card['month']) || (int) $card['month'] < 1 || (int) $card['month'] > 12 || 2 !== strlen($card['year']) || $expired) {
-		return new WP_Error('card', 'Please check your card expiration date.');
+		return new WP_Error('card', 'Please check your card expiration date.', array('field' => 'card_exp'));
+	}
+	if (strlen($card['cvv']) < 3 || strlen($card['cvv']) > 4) {
+		return new WP_Error('card', 'Please check your card security code (CVV).', array('field' => 'card_cvv'));
 	}
 	return $card;
 }
@@ -205,9 +210,12 @@ function wholesale_converge_session_token($amount, $invoice, $billing)
 }
 
 /**
- * Looks a transaction up with Converge. Returns the transaction fields, or WP_Error.
+ * Server-to-server XML request to Converge (processxml.do).
+ *
+ * @return SimpleXMLElement|WP_Error  WP_Error code 'unreachable' means no answer came back,
+ *                                    so a money-moving request may or may not have run.
  */
-function wholesale_converge_query_transaction($txn_id)
+function wholesale_converge_xml_request($fields, $timeout = 30)
 {
 	$credentials = wholesale_converge_credentials();
 	if (!$credentials) {
@@ -215,18 +223,18 @@ function wholesale_converge_query_transaction($txn_id)
 	}
 
 	$xml = '<txn>';
-	foreach (array_merge($credentials, array('ssl_transaction_type' => 'txnquery', 'ssl_txn_id' => $txn_id)) as $key => $value) {
+	foreach (array_merge($credentials, $fields) as $key => $value) {
 		$xml .= '<' . $key . '>' . esc_html($value) . '</' . $key . '>';
 	}
 	$xml .= '</txn>';
 
 	$path = wholesale_setting_enabled('payment_test_mode') ? '/VirtualMerchantDemo/processxml.do' : '/VirtualMerchant/processxml.do';
 	$response = wp_remote_post(wholesale_converge_host() . $path, array(
-		'timeout' => 30,
+		'timeout' => $timeout,
 		'body' => array('xmldata' => $xml),
 	));
 	if (is_wp_error($response)) {
-		return $response;
+		return new WP_Error('unreachable', $response->get_error_message());
 	}
 
 	$previous = libxml_use_internal_errors(true);
@@ -238,14 +246,32 @@ function wholesale_converge_query_transaction($txn_id)
 	if (isset($doc->errorCode)) {
 		return new WP_Error('converge_error', trim((string) $doc->errorCode . ' ' . (string) $doc->errorMessage));
 	}
+	return $doc;
+}
+
+function wholesale_converge_xml_fields($txn)
+{
+	$fields = array();
+	foreach ($txn->children() as $child) {
+		$fields[$child->getName()] = trim((string) $child);
+	}
+	return $fields;
+}
+
+/**
+ * Looks a transaction up with Converge. Returns the transaction fields, or WP_Error.
+ */
+function wholesale_converge_query_transaction($txn_id)
+{
+	$doc = wholesale_converge_xml_request(array('ssl_transaction_type' => 'txnquery', 'ssl_txn_id' => $txn_id));
+	if (is_wp_error($doc)) {
+		return $doc;
+	}
 
 	// Responses are either <txnlist><txn>…</txn></txnlist> or a single <txn>.
 	$candidates = isset($doc->txn) ? $doc->txn : array($doc);
 	foreach ($candidates as $txn) {
-		$fields = array();
-		foreach ($txn->children() as $child) {
-			$fields[$child->getName()] = trim((string) $child);
-		}
+		$fields = wholesale_converge_xml_fields($txn);
 		if (isset($fields['ssl_txn_id']) && $fields['ssl_txn_id'] === $txn_id) {
 			return $fields;
 		}
@@ -312,11 +338,11 @@ function wholesale_checkout_build($post, $cart)
 	);
 	foreach (array('billing_fname' => 'first name', 'billing_lname' => 'last name', 'billing_address' => 'address', 'billing_city' => 'city', 'billing_state' => 'state', 'billing_zip' => 'ZIP code') as $key => $label) {
 		if ('' === $billing[$key]) {
-			return new WP_Error('billing', sprintf('Please enter your billing %s.', $label));
+			return new WP_Error('billing', sprintf('Please enter your billing %s.', $label), array('field' => $key));
 		}
 	}
 	if (!is_email($billing['billing_email'])) {
-		return new WP_Error('billing', 'Please enter a valid email address.');
+		return new WP_Error('billing', 'Please enter a valid email address.', array('field' => 'billing_email'));
 	}
 
 	if ('on' === $field('same_shipping_address')) {
@@ -328,7 +354,7 @@ function wholesale_checkout_build($post, $cart)
 		}
 		foreach (array('shipping_fname' => 'first name', 'shipping_lname' => 'last name', 'shipping_address' => 'address', 'shipping_city' => 'city', 'shipping_state' => 'state', 'shipping_zip' => 'ZIP code') as $key => $label) {
 			if ('' === $shipping[$key]) {
-				return new WP_Error('shipping', sprintf('Please enter the shipping %s.', $label));
+				return new WP_Error('shipping', sprintf('Please enter the shipping %s.', $label), array('field' => $key));
 			}
 		}
 	}
@@ -512,9 +538,14 @@ function wholesale_payment_store($ref, $data = null)
 	return $data;
 }
 
-function wholesale_payment_json_error($message, $status = 400)
+/**
+ * @param string $field Optional form field name the error belongs to, so the page can highlight it.
+ */
+function wholesale_payment_json_error($message, $status = 400, $field = '')
 {
-	wp_send_json(array('ok' => false, 'error' => $message), $status);
+	wp_send_json(array_filter(array('ok' => false, 'error' => $message, 'field' => $field), static function ($value) {
+		return '' !== $value;
+	}), $status);
 }
 
 /**
@@ -534,10 +565,11 @@ function wholesale_ajax_payment_start()
 		$cart = wholesale_get_cart();
 		$checkout = wholesale_checkout_build($_POST, $cart);
 		if (is_wp_error($checkout)) {
-			wholesale_payment_json_error($checkout->get_error_message());
+			$data = $checkout->get_error_data();
+			wholesale_payment_json_error($checkout->get_error_message(), 400, is_array($data) ? ($data['field'] ?? '') : '');
 		}
 		if ($account_error = wholesale_checkout_account_error($checkout, $password)) {
-			wholesale_payment_json_error($account_error);
+			wholesale_payment_json_error($account_error, 400, false !== stripos($account_error, 'password must') ? 'account_password' : 'billing_email');
 		}
 
 		if (wholesale_setting_enabled('payment_disabled')) {
@@ -607,7 +639,7 @@ function wholesale_direct_payment($kind, $payload, $amount, $billing, $ref, $pas
 {
 	$card = wholesale_direct_card_from_request($_POST);
 	if (is_wp_error($card)) {
-		wholesale_payment_json_error($card->get_error_message());
+		wholesale_payment_json_error($card->get_error_message(), 400, $card->get_error_data()['field'] ?? '');
 	}
 
 	// One charge at a time per visitor: a double click can never charge twice.

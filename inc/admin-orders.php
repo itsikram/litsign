@@ -20,6 +20,7 @@ function wholesale_payment_statuses()
 		'paid_offline' => array('Paid (offline)', 'success'),
 		'needs_review' => array('Verify payment', 'danger'),
 		'manual' => array('Collect payment', 'warn'),
+		'partially_refunded' => array('Partly refunded', 'warn'),
 		'refunded' => array('Refunded', 'muted'),
 	);
 }
@@ -274,6 +275,7 @@ function wholesale_render_fulfillment_box($post)
 		<?php elseif ('manual' === $payment_status) : ?>
 			<p class="wholesale-fulfillment-warning">No card payment was taken. Collect payment before production.</p>
 		<?php endif; ?>
+		<?php wholesale_render_refund_panel($post); ?>
 		<p class="wo-status__row">
 			<label for="wholesale_payment_status"><strong>Payment status</strong></label>
 			<select name="wholesale_payment_status" id="wholesale_payment_status">
@@ -316,6 +318,9 @@ function wholesale_render_activity_box($post)
 			'time' => (int) get_gmt_from_date($parts[0] . ' ' . $parts[1], 'U'),
 			'text' => 'Customer emailed: ' . $label($parts[2]),
 		);
+	}
+	foreach (wholesale_order_refund_log($post->ID) as $entry) {
+		$events[] = array('time' => (int) $entry['time'], 'text' => wholesale_refund_activity_text($entry));
 	}
 	usort($events, static function ($a, $b) {
 		return $b['time'] <=> $a['time'];
@@ -517,31 +522,44 @@ function wholesale_send_status_email($post_id, $status)
 	}
 
 	list($subject, $body) = $messages[$status];
-	$font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
 	$tracking_html = '';
 	if ('completed' === $status && $tracking) {
 		$tracking_html = '<p style="margin:16px 0 0;padding:14px 16px;background:#eef7fc;border-radius:8px;font-size:15px;color:#0d2e4d;"><strong>Tracking number:</strong> '
 			. ($tracking_url ? '<a href="' . esc_url($tracking_url) . '" style="color:#1287b5;">' . esc_html($tracking) . '</a>' : esc_html($tracking)) . '</p>';
 	}
 
+	$sent = wholesale_send_order_email($post_id, sprintf($subject, $number), '<p style="margin:0;">' . esc_html($body) . '</p>' . $tracking_html);
+	// A failed send is retried automatically from the email log (Emails menu).
+	add_post_meta($post_id, '_status_email_log', current_time('mysql') . ' ' . $status . ($sent ? '' : ' (send failed, will retry)'));
+}
+
+/**
+ * Sends the customer a branded email about their order. $body_html must already be escaped.
+ */
+function wholesale_send_order_email($post_id, $subject, $body_html)
+{
+	$billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+	$email = $billing['billing_email'] ?? '';
+	if (!is_email($email)) {
+		return false;
+	}
+
+	$font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
 	$html = '<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#f5f8fb;">'
 		. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px;"><tr><td align="center">'
 		. '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #e3e9ef;border-radius:12px;">'
 		. '<tr><td style="padding:24px 28px;border-bottom:4px solid #1fa8de;' . $font . 'font-size:20px;font-weight:700;color:#0d2e4d;">Storefront Sign Online</td></tr>'
 		. '<tr><td style="padding:28px;' . $font . 'color:#172027;font-size:15px;line-height:1.6;">'
 		. '<p style="margin:0 0 12px;">Hi' . (!empty($billing['billing_fname']) ? ' ' . esc_html($billing['billing_fname']) : '') . ',</p>'
-		. '<p style="margin:0;">' . esc_html($body) . '</p>'
-		. $tracking_html
-		. '<p style="margin:20px 0 0;"><a href="' . esc_url(get_permalink($post_id)) . '" style="display:inline-block;padding:12px 20px;background:#1fa8de;color:#fff;border-radius:6px;text-decoration:none;font-weight:700;">View order #' . esc_html($number) . '</a></p>'
+		. $body_html
+		. '<p style="margin:20px 0 0;"><a href="' . esc_url(get_permalink($post_id)) . '" style="display:inline-block;padding:12px 20px;background:#1fa8de;color:#fff;border-radius:6px;text-decoration:none;font-weight:700;">View order #' . esc_html(wholesale_order_number($post_id)) . '</a></p>'
 		. '<p style="margin:20px 0 0;color:#5b6b7b;font-size:14px;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST).</p>'
 		. '</td></tr></table></td></tr></table></body></html>';
 
-	$sent = wp_mail($email, sprintf($subject, $number), $html, array(
+	return wp_mail($email, $subject, $html, array(
 		'Content-Type: text/html; charset=UTF-8',
 		'Reply-To: Storefront Sign Online <TR@StorefrontSignOnline.com>',
 	));
-	// A failed send is retried automatically from the email log (Emails menu).
-	add_post_meta($post_id, '_status_email_log', current_time('mysql') . ' ' . $status . ($sent ? '' : ' (send failed, will retry)'));
 }
 
 // ------------------------------------------------------------------

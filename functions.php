@@ -1463,8 +1463,10 @@ function wholesale_render_sitemap()
 		'ignore_sticky_posts' => true,
 	));
 
+	$private_page_ids = wholesale_seo_noindex_page_ids();
+
 	foreach ($page_query->posts as $post) {
-		if ('page' === $post->post_type && in_array($post->post_name, $private_pages, true)) {
+		if ('page' === $post->post_type && (in_array($post->post_name, $private_pages, true) || in_array($post->ID, $private_page_ids, true))) {
 			continue;
 		}
 
@@ -1482,7 +1484,7 @@ function wholesale_render_sitemap()
 	if (!is_wp_error($terms)) {
 		foreach ($terms as $term) {
 			// The channel-letter route canonicalizes to the home page.
-			if ('channel-letters' === $term->slug) {
+			if (in_array($term->slug, wholesale_seo_sitemap_excluded_categories(), true)) {
 				continue;
 			}
 
@@ -1540,15 +1542,7 @@ function wholesale_sitemap_excluded_page_ids($args, $post_type)
 		return $args;
 	}
 
-	$private_pages = wholesale_seo_noindex_page_slugs();
-	$excluded_ids = array();
-
-	foreach ($private_pages as $slug) {
-		$page = get_page_by_path($slug);
-		if ($page) {
-			$excluded_ids[] = $page->ID;
-		}
-	}
+	$excluded_ids = wholesale_seo_noindex_page_ids();
 
 	if ($excluded_ids) {
 		$args['post__not_in'] = $excluded_ids;
@@ -2519,13 +2513,44 @@ function wholesale_seo_is_noindex()
 }
 
 /**
+ * IDs of pages that must stay out of search results and sitemaps: the pages in
+ * wholesale_seo_noindex_page_slugs() plus any page using an ads-only template.
+ *
+ * @return int[]
+ */
+function wholesale_seo_noindex_page_ids()
+{
+	$ids = array();
+
+	foreach (wholesale_seo_noindex_page_slugs() as $slug) {
+		$page = get_page_by_path($slug);
+		if ($page) {
+			$ids[] = (int) $page->ID;
+		}
+	}
+
+	$ads_pages = get_posts(array(
+		'post_type' => 'page',
+		'post_status' => 'any',
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'meta_key' => '_wp_page_template',
+		'meta_value' => 'page-channel-letters-ads.php',
+	));
+
+	return array_values(array_unique(array_merge($ids, array_map('intval', $ads_pages))));
+}
+
+/**
  * Pages that are private, transactional, internal, or placeholder content.
  *
  * @return array
  */
 function wholesale_seo_noindex_page_slugs()
 {
-	return array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'my-orders', 'my_orders', 'orders', 'track-order', 'sample-page', 'sample-page-2', 'b2-calculator');
+	// 'pay' only works with a payment link; 'landing-page' is an ads-only page; the
+	// last three are empty placeholders until they have real content.
+	return array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'pay', 'my-orders', 'my_orders', 'orders', 'track-order', 'sample-page', 'sample-page-2', 'b2-calculator', 'landing-page', 'brands', 'parts', 'equipment');
 }
 
 add_filter('document_title_parts', function ($parts) {

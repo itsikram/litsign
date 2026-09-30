@@ -52,6 +52,76 @@ function wholesale_removed_spam_status()
 add_action('template_redirect', 'wholesale_removed_spam_status', 2);
 
 /**
+ * Permanently redirect leftover placeholder pages to the page that replaces them.
+ *
+ * @return array Page slug => target URL.
+ */
+function wholesale_seo_page_redirects()
+{
+	return array(
+		'sample-page' => home_url('/'),
+		'sample-page-2' => home_url('/'),
+	);
+}
+
+function wholesale_seo_redirect_pages()
+{
+	if (!is_page()) {
+		return;
+	}
+
+	$slug = get_post_field('post_name', get_queried_object_id());
+	$redirects = wholesale_seo_page_redirects();
+
+	if ($slug && isset($redirects[$slug])) {
+		wp_safe_redirect($redirects[$slug], 301);
+		exit;
+	}
+}
+add_action('template_redirect', 'wholesale_seo_redirect_pages', 1);
+
+/**
+ * Product category links point at the clean /{category}/ routes the theme
+ * serves, instead of /category/{slug}/ URLs that only redirect there.
+ */
+function wholesale_seo_product_category_link($url, $term, $taxonomy)
+{
+	return 'product_category' === $taxonomy ? wholesale_category_url($term->slug) : $url;
+}
+add_filter('term_link', 'wholesale_seo_product_category_link', 10, 3);
+
+/**
+ * Categories whose route is canonicalized or redirected elsewhere stay out of
+ * the core sitemap.
+ */
+function wholesale_seo_sitemap_excluded_categories()
+{
+	return array('channel-letters');
+}
+
+function wholesale_seo_sitemap_taxonomy_args($args, $taxonomy)
+{
+	if ('product_category' !== $taxonomy) {
+		return $args;
+	}
+
+	$excluded = array();
+	foreach (wholesale_seo_sitemap_excluded_categories() as $slug) {
+		$term = get_term_by('slug', $slug, 'product_category');
+		if ($term && !is_wp_error($term)) {
+			$excluded[] = (int) $term->term_id;
+		}
+	}
+
+	if ($excluded) {
+		$args['exclude'] = array_merge(isset($args['exclude']) ? (array) $args['exclude'] : array(), $excluded);
+	}
+
+	return $args;
+}
+add_filter('wp_sitemaps_taxonomies_query_args', 'wholesale_seo_sitemap_taxonomy_args', 10, 2);
+
+/**
  * One-time database updates that travel with the theme. Each step runs once,
  * for an administrator, and is recorded so it never repeats.
  */

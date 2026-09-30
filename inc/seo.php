@@ -122,6 +122,92 @@ function wholesale_seo_sitemap_taxonomy_args($args, $taxonomy)
 add_filter('wp_sitemaps_taxonomies_query_args', 'wholesale_seo_sitemap_taxonomy_args', 10, 2);
 
 /**
+ * Menu links that point at the wrong or a retired URL, keyed by path.
+ *
+ * @return array Path without trailing slash => site path to use instead.
+ */
+function wholesale_seo_link_fixes()
+{
+	return array(
+		// The old slug now redirects to Tension Fabric, a different product.
+		'/product/fabric-banner-9oz-wrinkle-free' => '/product/fabric-banner-9oz-wrinkle-free-copy/',
+		// The channel letter route canonicalizes to the home page.
+		'/channel-letters' => '/',
+	);
+}
+
+/**
+ * Normalize an internal link to its final URL: absolute, on this site's base
+ * path, clean category routes, and a trailing slash, so a click never costs a
+ * redirect. External, anchor, tel:, mailto: and sms: links are returned as-is.
+ */
+function wholesale_seo_normalize_internal_url($url)
+{
+	$url = trim((string) $url);
+	if ('' === $url || '#' === $url[0] || preg_match('/^(?:tel|mailto|sms|javascript):/i', $url)) {
+		return $url;
+	}
+
+	$parts = wp_parse_url($url);
+	if (false === $parts) {
+		return $url;
+	}
+
+	$home = wp_parse_url(home_url('/'));
+	if (!empty($parts['host']) && strcasecmp($parts['host'], $home['host']) !== 0) {
+		return $url;
+	}
+
+	$path = isset($parts['path']) ? $parts['path'] : '/';
+	$home_path = isset($home['path']) ? rtrim($home['path'], '/') : '';
+	if ($home_path && 0 === strpos($path, $home_path . '/')) {
+		$path = substr($path, strlen($home_path));
+	}
+	$path = '/' . ltrim($path, '/');
+
+	if (!empty($parts['query'])) {
+		parse_str($parts['query'], $query);
+		if (!empty($query['category_slug']) && 1 === count($query) && '/' === $path) {
+			$term = get_term_by('slug', sanitize_title($query['category_slug']), 'product_category');
+			if ($term && !is_wp_error($term)) {
+				$path = '/' . $term->slug;
+				unset($parts['query']);
+			}
+		}
+	}
+
+	$fixes = wholesale_seo_link_fixes();
+	$key = untrailingslashit($path);
+	if (isset($fixes[$key])) {
+		$path = $fixes[$key];
+	} elseif (!pathinfo($path, PATHINFO_EXTENSION)) {
+		$path = trailingslashit($path);
+	}
+
+	$normalized = home_url($path);
+	if (!empty($parts['query'])) {
+		$normalized .= '?' . $parts['query'];
+	}
+	if (!empty($parts['fragment'])) {
+		$normalized .= '#' . $parts['fragment'];
+	}
+
+	return $normalized;
+}
+
+function wholesale_seo_normalize_menu_urls($items)
+{
+	foreach ($items as $item) {
+		if (!empty($item->url)) {
+			$item->url = wholesale_seo_normalize_internal_url($item->url);
+		}
+	}
+
+	return $items;
+}
+add_filter('wp_nav_menu_objects', 'wholesale_seo_normalize_menu_urls', 20);
+
+/**
  * One-time database updates that travel with the theme. Each step runs once,
  * for an administrator, and is recorded so it never repeats.
  */

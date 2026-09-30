@@ -299,7 +299,7 @@ $logo_id = get_theme_mod('custom_logo');
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/product/step-and-repeat-backdrop-graphic-frame" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/step-and-repeat-backdrop-graphic-frame/')); ?>" class="mm-link">
 													<span>
 														Step and Repeat Backdrop
 													</span>
@@ -361,47 +361,47 @@ $logo_id = get_theme_mod('custom_logo');
 												<h4 class="mm-heading">
 													Banners
 												</h4>
-												<a href="/product/13oz-vinyl-banner" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/13oz-vinyl-banner/')); ?>" class="mm-link">
 													<span>
 														13oz Vinyl Banner
 													</span>
 												</a>
-												<a href="/product/18oz-blockout-banner" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/18oz-blockout-banner/')); ?>" class="mm-link">
 													<span>
 														18oz Blockout Banner
 													</span>
 												</a>
-												<a href="/product/backlit-banner" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/backlit-banner/')); ?>" class="mm-link">
 													<span>
 														Backlit Banner
 													</span>
 												</a>
-												<a href="/product/mesh-banner/" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/mesh-banner/')); ?>" class="mm-link">
 													<span>
 														Mesh Banner
 													</span>
 												</a>
-												<a href="/product/indoor-banner-super-smooth" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/indoor-banner-super-smooth/')); ?>" class="mm-link">
 													<span>
 														Indoor Banner
 													</span>
 												</a>
-												<a href="/product/pole-banner-set/" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/pole-banner-set/')); ?>" class="mm-link">
 													<span>
 														Pole Banner
 													</span>
 												</a>
-												<a href="/product/fabric-banner-9oz-wrinkle-free" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/fabric-banner-9oz-wrinkle-free-copy/')); ?>" class="mm-link">
 													<span>
 														9oz Fabric Banner
 													</span>
 												</a>
-												<a href="/product/blockout-fabric-banner" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/blockout-fabric-banner/')); ?>" class="mm-link">
 													<span>
 														Blockout Fabric Banner
 													</span>
 												</a>
-												<a href="/product/tension-fabric" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/tension-fabric/')); ?>" class="mm-link">
 													<span>
 														Tension Fabric
 													</span>
@@ -437,37 +437,37 @@ $logo_id = get_theme_mod('custom_logo');
 													</span>
 													<i class="fa-solid fa-chevron-right"></i>
 												</a>
-												<a href="/product/dtf/" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/dtf/')); ?>" class="mm-link">
 													<span>
 														DTF
 													</span>
 												</a>
-												<a href="/product/backlit-film/" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/backlit-film/')); ?>" class="mm-link">
 													<span>
 														Backlit Film
 													</span>
 												</a>
-												<a href="/product/premium-window-cling/" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/premium-window-cling/')); ?>" class="mm-link">
 													<span>
 														Prem. Window Cling
 													</span>
 												</a>
-												<a href="/product/posters/" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/posters/')); ?>" class="mm-link">
 													<span>
 														Posters
 													</span>
 												</a>
-												<a href="/product/styrene/" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/styrene/')); ?>" class="mm-link">
 													<span>
 														Styrene
 													</span>
 												</a>
-												<a href="/product/popup/" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/popup/')); ?>" class="mm-link">
 													<span>
 														Popup
 													</span>
 												</a>
-												<a href="/product/canvas-roll/" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/canvas-roll/')); ?>" class="mm-link">
 													<span>
 														Canvas Roll
 													</span>

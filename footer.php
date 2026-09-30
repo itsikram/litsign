@@ -26,7 +26,7 @@
         <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bd-2.webp?ver=' . _S_VERSION); ?>" alt="" loading="lazy" decoding="async">
     </div>
     <div class="container my-3 text-center">
-        <a href="<?php echo home_url() . '/channel-letters'; ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
+        <a href="<?php echo esc_url(home_url('/')); ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
 
     </div>
 
@@ -243,7 +243,7 @@
                     <p class="cp-text text-center">
                         Copyright © <?php echo esc_html(wp_date('Y')); ?> Storefrontsignonline, Inc.
                         All Rights Reserved.
-                        <a href="<?php echo site_url(); ?>/terms-conditions/">Terms & Conditions</a>
+                        <a href="<?php echo esc_url(home_url('/terms-conditions/')); ?>">Terms & Conditions</a>
 
                     </p>
                 </div>

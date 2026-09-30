@@ -387,7 +387,7 @@ get_header();
 
                                                         <?php if (count($single_attr->options) !== 1) { ?>
 
-                                                            <div id="custom-select-<?php echo $attr_name; ?>" data-type="<?php echo $single_attr->type; ?>" class="custom-select-container <?php echo $single_attr->cssClass; ?>">
+                                                            <div id="custom-select-<?php echo $attr_name; ?>" data-type="<?php echo esc_attr(isset($single_attr->type) ? $single_attr->type : ''); ?>" class="custom-select-container <?php echo $single_attr->cssClass; ?>">
                                                                 <span class="color-sample"></span>
                                                                 <span class="custom-select-selected">
                                                                     Option two
@@ -451,7 +451,7 @@ get_header();
                                             <div class="row">
                                                 <div class="col">
                                                     <?php if (count($single_attr->options) !== 1) { ?>
-                                                        <select data-type="<?php echo $single_attr->type; ?>" name="<?php echo $attr_name; ?>" id="select-<?php echo $attr_name; ?>" data-cCost="0" class="form-select dynamic-select <?php echo $attr_name  != 'height' ? 'dynamic-price' : ''; ?> <?php echo $single_attr->cssClass; ?>">
+                                                        <select data-type="<?php echo esc_attr(isset($single_attr->type) ? $single_attr->type : ''); ?>" name="<?php echo $attr_name; ?>" id="select-<?php echo $attr_name; ?>" data-cCost="0" class="form-select dynamic-select <?php echo $attr_name  != 'height' ? 'dynamic-price' : ''; ?> <?php echo $single_attr->cssClass; ?>">
                                                             <?php foreach ($single_attr->options as $option) {
                                                                 foreach ($option as $name => $price) {
                                                             ?>
@@ -680,7 +680,7 @@ get_header();
 
                                                     <?php if (count($single_attr->options) !== 1) { ?>
 
-                                                        <div id="custom-select-<?php echo $attr_name; ?>" data-type="<?php echo $single_attr->type; ?>" class="custom-select-container <?php echo $single_attr->cssClass; ?>">
+                                                        <div id="custom-select-<?php echo $attr_name; ?>" data-type="<?php echo esc_attr(isset($single_attr->type) ? $single_attr->type : ''); ?>" class="custom-select-container <?php echo $single_attr->cssClass; ?>">
                                                             <span class="color-sample"></span>
                                                             <span class="custom-select-selected">
                                                                 Option two

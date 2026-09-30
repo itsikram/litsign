@@ -2070,6 +2070,9 @@ function litsign_scripts()
 	if (is_page_template('page-channel-letters-ads.php')) {
 		wp_enqueue_style('cl-ads', $theme_uri . '/css/cl-ads.css', array('litsign-style', 'custom-style'), $asset_version('/css/cl-ads.css'));
 	}
+	if (is_page(array('storefront-signs', 'about')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
+		wp_enqueue_style('wholesale-seo-pages', $theme_uri . '/css/seo-pages.css', array('custom-style'), $asset_version('/css/seo-pages.css'));
+	}
 	//wp_enqueue_style('zebra_dialog', get_template_directory_uri() . '/css/zebra_dialog.css', array(), _S_VERSION);
 
 	wp_style_add_data('litsign-style', 'rtl', 'replace');
@@ -2343,6 +2346,10 @@ function wholesale_seo_page_defaults()
 		'contact' => array(
 			'title' => __('Contact Us | Free Channel Letter & Sign Quote', 'litsign'),
 			'description' => __('Request a free quote for channel letters or storefront signs. Call 866-436-2101, text or email your logo. Mon-Fri 8am-5pm PST.', 'litsign'),
+		),
+		'storefront-signs' => array(
+			'title' => __('Storefront Signs | Custom Lit Business Signs, Priced Online', 'litsign'),
+			'description' => __('Custom storefront signs: LED channel letters, window graphics, A-frames, banners and flags. Compare types, sizes and prices, then order online.', 'litsign'),
 		),
 		'terms-conditions' => array(
 			'title' => __('Terms & Conditions | Store Front Sign Online', 'litsign'),
@@ -2844,6 +2851,11 @@ function wholesale_seo_head()
 	}
 
 	echo '<script type="application/ld+json">' . wp_json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
+
+	$faq = wholesale_seo_faq_schema();
+	if ($faq) {
+		echo '<script type="application/ld+json">' . wp_json_encode(array('@context' => 'https://schema.org') + $faq, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
+	}
 }
 add_action('wp_head', 'wholesale_seo_head', 1);
 

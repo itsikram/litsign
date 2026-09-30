@@ -96,8 +96,60 @@ add_filter('term_link', 'wholesale_seo_product_category_link', 10, 3);
  */
 function wholesale_seo_sitemap_excluded_categories()
 {
-	return array('channel-letters');
+	$excluded = array('channel-letters');
+
+	// /signs-letters/ redirects to the Storefront Signs guide once it is published.
+	if (wholesale_seo_storefront_signs_url()) {
+		$excluded[] = 'signs-letters';
+	}
+
+	return $excluded;
 }
+
+/**
+ * URL of the published Storefront Signs guide, or ''.
+ */
+function wholesale_seo_storefront_signs_url()
+{
+	static $url = null;
+
+	if (null === $url) {
+		$page = get_page_by_path('storefront-signs');
+		$url = $page && 'publish' === $page->post_status ? get_permalink($page) : '';
+	}
+
+	return $url;
+}
+
+/**
+ * /signs-letters/ listed the same seven channel letter products as the home
+ * page; send it to the Storefront Signs guide instead.
+ */
+function wholesale_seo_redirect_signs_letters()
+{
+	if ('signs-letters' === get_query_var('category_slug') && ($url = wholesale_seo_storefront_signs_url())) {
+		wp_safe_redirect($url, 301);
+		exit;
+	}
+}
+add_action('template_redirect', 'wholesale_seo_redirect_signs_letters', 1);
+
+/**
+ * Add the Storefront Signs guide to the main category menu.
+ */
+function wholesale_seo_storefront_signs_menu_item($items, $args)
+{
+	$url = wholesale_seo_storefront_signs_url();
+	if (!$url || empty($args->theme_location) || 'header-bottom-menu' !== $args->theme_location || false !== strpos($items, $url)) {
+		return $items;
+	}
+
+	$current = is_page('storefront-signs') ? ' current-menu-item' : '';
+	$link = '<li class="menu-item menu-item-storefront-signs' . $current . '"><a href="' . esc_url($url) . '"' . ($current ? ' aria-current="page"' : '') . '>Storefront Signs</a></li>';
+
+	return $link . $items;
+}
+add_filter('wp_nav_menu_items', 'wholesale_seo_storefront_signs_menu_item', 10, 2);
 
 function wholesale_seo_sitemap_taxonomy_args($args, $taxonomy)
 {
@@ -247,6 +299,7 @@ function wholesale_seo_migrations()
 {
 	return array(
 		'2026-10-remove-spam-categories' => 'wholesale_seo_migrate_remove_spam_categories',
+		'2026-10-storefront-signs-page' => 'wholesale_seo_migrate_storefront_signs_page',
 	);
 }
 
@@ -287,4 +340,27 @@ function wholesale_seo_migrate_remove_spam_categories()
 	}
 
 	return true;
+}
+
+/**
+ * Create the Storefront Signs guide page. Its content comes from
+ * page-storefront-signs.php, so the page itself stays empty.
+ */
+function wholesale_seo_migrate_storefront_signs_page()
+{
+	if (get_page_by_path('storefront-signs', OBJECT, 'page')) {
+		return true;
+	}
+
+	$page_id = wp_insert_post(array(
+		'post_type' => 'page',
+		'post_status' => 'publish',
+		'post_title' => 'Storefront Signs',
+		'post_name' => 'storefront-signs',
+		'post_content' => '',
+		'comment_status' => 'closed',
+		'ping_status' => 'closed',
+	), true);
+
+	return !is_wp_error($page_id);
 }

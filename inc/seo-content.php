@@ -334,3 +334,125 @@ function wholesale_seo_product_meta($product_id)
 		'description' => $description ? $prefix . $description : '',
 	);
 }
+
+/**
+ * A published product by slug, or null.
+ */
+function wholesale_seo_product($slug)
+{
+	$product = get_page_by_path($slug, OBJECT, 'product');
+
+	return $product && 'publish' === $product->post_status ? $product : null;
+}
+
+/**
+ * The "starting at" price text a product card shows (may contain <del>), or ''.
+ */
+function wholesale_seo_product_starting_text($slug)
+{
+	$product = wholesale_seo_product($slug);
+
+	return $product ? trim((string) get_post_meta($product->ID, '_starting_at_text', true)) : '';
+}
+
+/**
+ * Smallest and largest letter height offered for a channel letter style.
+ *
+ * @return int[] array(min, max) in inches, or an empty array.
+ */
+function wholesale_seo_letter_height_range($slug)
+{
+	$product = wholesale_seo_product($slug);
+	$attrs = $product ? json_decode((string) get_post_meta($product->ID, 'product_attr', true), true) : null;
+	$heights = array();
+
+	foreach (is_array($attrs) ? $attrs : array() as $attr) {
+		if ('height' !== ($attr['name'] ?? '') || empty($attr['options'])) {
+			continue;
+		}
+		foreach ($attr['options'] as $option) {
+			$label = is_array($option) ? (string) key($option) : '';
+			if (preg_match('/(\d+)/', $label, $match)) {
+				$heights[] = (int) $match[1];
+			}
+		}
+	}
+
+	return $heights ? array(min($heights), max($heights)) : array();
+}
+
+/**
+ * Register the FAQ a template shows, so the head can describe it in FAQPage
+ * structured data. Call before get_header(). Answers may contain links.
+ *
+ * @param array $items List of array('q' => question, 'a' => answer HTML).
+ */
+function wholesale_seo_set_page_faq($items)
+{
+	$GLOBALS['wholesale_page_faq'] = $items;
+}
+
+/**
+ * FAQPage entity for the FAQ registered on this request, or null.
+ */
+function wholesale_seo_faq_schema()
+{
+	$items = isset($GLOBALS['wholesale_page_faq']) ? (array) $GLOBALS['wholesale_page_faq'] : array();
+	if (!$items) {
+		return null;
+	}
+
+	$questions = array();
+	foreach ($items as $item) {
+		$questions[] = array(
+			'@type' => 'Question',
+			'name' => wp_strip_all_tags($item['q']),
+			'acceptedAnswer' => array(
+				'@type' => 'Answer',
+				'text' => trim(preg_replace('/\s+/', ' ', wp_strip_all_tags($item['a']))),
+			),
+		);
+	}
+
+	return array(
+		'@type' => 'FAQPage',
+		'@id' => trailingslashit(wholesale_seo_url()) . '#faq',
+		'mainEntity' => $questions,
+	);
+}
+
+/**
+ * Print the registered FAQ as the site's expandable question list.
+ */
+function wholesale_seo_render_faq($open_first = false)
+{
+	$items = isset($GLOBALS['wholesale_page_faq']) ? (array) $GLOBALS['wholesale_page_faq'] : array();
+
+	foreach ($items as $index => $item) {
+		printf(
+			'<details%s><summary>%s</summary><p>%s</p></details>',
+			$open_first && 0 === $index ? ' open' : '',
+			esc_html($item['q']),
+			wp_kses_post($item['a'])
+		);
+	}
+}
+
+/**
+ * Add the page FAQ to Rank Math's graph when Rank Math owns the head.
+ */
+function wholesale_seo_rank_math_faq($data)
+{
+	$faq = is_array($data) ? wholesale_seo_faq_schema() : null;
+	if ($faq) {
+		foreach ($data as $entity) {
+			if (is_array($entity) && in_array('FAQPage', (array) ($entity['@type'] ?? array()), true)) {
+				return $data;
+			}
+		}
+		$data['wholesale-faq'] = $faq;
+	}
+
+	return $data;
+}
+add_filter('rank_math/json_ld', 'wholesale_seo_rank_math_faq', 25);

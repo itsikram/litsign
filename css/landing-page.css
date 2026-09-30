@@ -562,7 +562,15 @@
       rgba(7, 16, 24, 0.18) 68%,
       rgba(7, 16, 24, 0.08) 100%
     ),
-    url("../img/landing-hero.png") center center / cover no-repeat;
+    url("../img/landing-hero-1440.webp") center center / cover no-repeat;
+}
+
+@media (max-width: 767px) {
+  .landing-page .landing-hero {
+    background:
+      linear-gradient(90deg, rgba(7, 16, 24, 0.94) 0%, rgba(7, 16, 24, 0.82) 34%, rgba(7, 16, 24, 0.18) 68%, rgba(7, 16, 24, 0.08) 100%),
+      url("../img/landing-hero-960.webp") center center / cover no-repeat;
+  }
 }
 
 .landing-page .landing-hero:after {

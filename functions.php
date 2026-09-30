@@ -2357,6 +2357,15 @@ function wholesale_seo_page_defaults()
 			'title' => __('Contact Us | Free Channel Letter & Sign Quote', 'litsign'),
 			'description' => __('Request a free quote for channel letters or storefront signs. Call 866-436-2101, text or email your logo. Mon-Fri 8am-5pm PST.', 'litsign'),
 		),
+		// Ads-only pages (noindexed): the title still shows in the browser tab.
+		'chennel-letter-ads' => array(
+			'title' => __('Custom LED Channel Letters | Free Quote & Online Prices', 'litsign'),
+			'description' => __('UL listed channel letter signs, made in the USA. Get a free quote from a sign specialist or price your sign online in minutes.', 'litsign'),
+		),
+		'landing-page' => array(
+			'title' => __('Custom Business Signs | Free Sign Quote', 'litsign'),
+			'description' => __('Custom channel letters, banners, window graphics and more for your business. Request a free sign quote today.', 'litsign'),
+		),
 		'storefront-signs' => array(
 			'title' => __('Storefront Signs | Custom Lit Business Signs, Priced Online', 'litsign'),
 			'description' => __('Custom storefront signs: LED channel letters, window graphics, A-frames, banners and flags. Compare types, sizes and prices, then order online.', 'litsign'),

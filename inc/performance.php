@@ -63,3 +63,19 @@ function wholesale_delay_tidio_widget()
 	}, 1000);
 }
 add_action('wp', 'wholesale_delay_tidio_widget');
+
+/**
+ * Let the browser fetch the /landing-page/ hero image while CSS is still
+ * loading; it is that page's largest paint.
+ */
+function wholesale_preload_landing_hero()
+{
+	if (!is_page_template('landing-page.php')) {
+		return;
+	}
+
+	$img = get_template_directory_uri() . '/img/';
+	printf('<link rel="preload" as="image" href="%s" type="image/webp" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($img . 'landing-hero-960.webp'));
+	printf('<link rel="preload" as="image" href="%s" type="image/webp" media="(min-width: 768px)" fetchpriority="high">' . "\n", esc_url($img . 'landing-hero-1440.webp'));
+}
+add_action('wp_head', 'wholesale_preload_landing_hero', 1);

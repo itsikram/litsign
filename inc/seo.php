@@ -302,6 +302,7 @@ function wholesale_seo_migrations()
 		'2026-10-storefront-signs-page' => 'wholesale_seo_migrate_storefront_signs_page',
 		'2026-10-image-alt-text' => 'wholesale_seo_migrate_image_alt_text',
 		'2026-10-product-copy-titles' => 'wholesale_seo_migrate_product_copy_titles',
+		'2026-10-policy-drafts' => 'wholesale_seo_migrate_policy_drafts',
 	);
 }
 
@@ -412,6 +413,39 @@ function wholesale_seo_migrate_product_copy_titles()
 		if ($product && preg_match('/\sCopy$/', $product->post_title)) {
 			wp_update_post(array('ID' => $product->ID, 'post_title' => $title));
 		}
+	}
+
+	return true;
+}
+
+/**
+ * Save draft Privacy Policy and Shipping & Returns text for the owner to
+ * review and publish. Never publishes anything, and only replaces the
+ * privacy page's content while it still holds WordPress's sample text.
+ */
+function wholesale_seo_migrate_policy_drafts()
+{
+	require_once get_template_directory() . '/inc/policy-drafts.php';
+
+	$privacy_id = (int) get_option('wp_page_for_privacy_policy');
+	$privacy = $privacy_id ? get_post($privacy_id) : null;
+	if ($privacy && 'publish' !== $privacy->post_status && false !== strpos($privacy->post_content, 'privacy-policy-tutorial')) {
+		wp_update_post(array(
+			'ID' => $privacy_id,
+			'post_content' => wholesale_policy_privacy_draft(),
+		));
+	}
+
+	if (!get_page_by_path('shipping-returns', OBJECT, 'page')) {
+		wp_insert_post(array(
+			'post_type' => 'page',
+			'post_status' => 'draft',
+			'post_title' => 'Shipping & Returns',
+			'post_name' => 'shipping-returns',
+			'post_content' => str_replace('href="/terms-conditions/"', 'href="' . esc_url(home_url('/terms-conditions/')) . '"', wholesale_policy_shipping_draft()),
+			'comment_status' => 'closed',
+			'ping_status' => 'closed',
+		));
 	}
 
 	return true;

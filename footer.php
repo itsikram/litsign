@@ -30,14 +30,20 @@
 
     </div>
 
-    <?php // home.php sets this so the channel letter landing page stays focused on channel letters. ?>
-    <?php if (empty($GLOBALS['wholesale_channel_letter_landing'])) : ?>
+    <?php
+    // The adhesive shipping note stays off channel letter pages: home.php sets the
+    // global for the channel letter landing page, and made-to-order letters ship later.
+    $is_channel_letter_page = !empty($GLOBALS['wholesale_channel_letter_landing'])
+        || is_page(array('channel-letter-builder', 'storefront-signs'))
+        || (is_singular('product') && has_term('channel-letters', 'product_category', get_queried_object_id()));
+    ?>
+    <?php if (!$is_channel_letter_page) : ?>
     <div class="container py-5">
         <div class="row">
             <div class="col">
-                <h2 class="text-center fs-3">
-                    Adhesive products Orders placed by 4pm PST will be shipped the next business day
-                </h2>
+                <p class="text-center fs-3 fw-bold mb-0">
+                    Adhesive products: orders placed by 4pm PST ship the next business day
+                </p>
                 <p class="text-center fs-5 mt-4">Same-day service is also available if ordered by 12pm PST</p>
             </div>
         </div>
@@ -240,11 +246,36 @@
         <div class="container">
             <div class="row">
                 <div class="col">
+                    <?php
+                    $footer_links = array(
+                        home_url('/') => 'Channel Letters',
+                        'storefront-signs' => 'Storefront Signs',
+                        'about' => 'About Us',
+                        'contact' => 'Contact',
+                        'shipping-returns' => 'Shipping & Returns',
+                        'terms-conditions' => 'Terms & Conditions',
+                    );
+                    ?>
+                    <nav class="footer-links text-center" aria-label="<?php esc_attr_e('Footer', 'litsign'); ?>">
+                        <?php foreach ($footer_links as $target => $label) : ?>
+                            <?php
+                            if (0 !== strpos($target, 'http')) {
+                                $footer_page = get_page_by_path($target);
+                                if (!$footer_page || 'publish' !== $footer_page->post_status) {
+                                    continue;
+                                }
+                                $target = get_permalink($footer_page);
+                            }
+                            ?>
+                            <a href="<?php echo esc_url($target); ?>"><?php echo esc_html($label); ?></a>
+                        <?php endforeach; ?>
+                        <?php if (get_privacy_policy_url()) : ?>
+                            <a href="<?php echo esc_url(get_privacy_policy_url()); ?>">Privacy Policy</a>
+                        <?php endif; ?>
+                    </nav>
                     <p class="cp-text text-center">
                         Copyright © <?php echo esc_html(wp_date('Y')); ?> Storefrontsignonline, Inc.
                         All Rights Reserved.
-                        <a href="<?php echo esc_url(home_url('/terms-conditions/')); ?>">Terms & Conditions</a>
-
                     </p>
                 </div>
             </div>

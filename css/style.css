@@ -1913,6 +1913,23 @@ a.link-primary:focus,
   color: #777;
   margin-bottom: 0;
 }
+.footer .footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+  margin-bottom: 14px;
+}
+.footer .footer-links a {
+  color: #c9d1d9;
+  font-size: 14px;
+  text-decoration: none;
+}
+.footer .footer-links a:hover,
+.footer .footer-links a:focus-visible {
+  color: #ffffff;
+  text-decoration: underline;
+}
 .footer .footer-info {
   background-color: #444444;
 }

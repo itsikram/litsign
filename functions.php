@@ -55,6 +55,7 @@ require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
+require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
@@ -960,6 +961,7 @@ function wholesale_contact_submission_details_meta_box($post)
 		'Logo' => '_contact_logo',
 		'Files' => '_contact_files',
 		'Ad source' => '_contact_source',
+		'Google Ads click ID' => '_contact_gclid',
 	);
 
 	echo '<table class="widefat striped"><tbody>';

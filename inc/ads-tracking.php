@@ -110,6 +110,7 @@ function wholesale_ads_attach_click_to_quote($post_id, $post, $update)
 	$click = wholesale_ads_click();
 	if ($click && !get_post_meta($post_id, '_contact_gclid', true)) {
 		update_post_meta($post_id, '_contact_gclid', $click['id']);
+		update_post_meta($post_id, '_contact_click_type', $click['type']);
 	}
 }
 add_action('save_post_contact_submission', 'wholesale_ads_attach_click_to_quote', 10, 3);

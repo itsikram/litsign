@@ -208,6 +208,38 @@ function wholesale_seo_normalize_menu_urls($items)
 add_filter('wp_nav_menu_objects', 'wholesale_seo_normalize_menu_urls', 20);
 
 /**
+ * Rewrite this site's http:// URLs to https:// in a page served over HTTPS.
+ *
+ * Product gallery meta and some stored content still hold http:// image URLs
+ * (the site address was http when they were saved), which browsers flag as
+ * mixed content. Setting both site addresses to https in Settings > General
+ * and running a search-replace fixes the data; this keeps pages clean either way.
+ */
+function wholesale_seo_force_https_urls($html)
+{
+	$host = wp_parse_url(home_url('/'), PHP_URL_HOST);
+	if (!$host) {
+		return $html;
+	}
+
+	return str_replace(
+		array('http://' . $host, 'http:\/\/' . $host, 'http://www.' . $host, 'http:\/\/www.' . $host),
+		array('https://' . $host, 'https:\/\/' . $host, 'https://www.' . $host, 'https:\/\/www.' . $host),
+		$html
+	);
+}
+
+function wholesale_seo_start_https_buffer()
+{
+	if (!is_ssl() || is_admin() || wp_doing_ajax() || is_feed()) {
+		return;
+	}
+
+	ob_start('wholesale_seo_force_https_urls');
+}
+add_action('template_redirect', 'wholesale_seo_start_https_buffer', 0);
+
+/**
  * One-time database updates that travel with the theme. Each step runs once,
  * for an administrator, and is recorded so it never repeats.
  */

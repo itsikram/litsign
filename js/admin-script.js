@@ -81,8 +81,8 @@
             $(e.currentTarget).siblings('.attr-title').val('')
         })
 
-        $('.removeAttr').click(e => {
-            let attrName = $(e.currentTarget).attr('data-opname');
+        // Delegated so attributes added on this page can be removed too.
+        $(document).on('click', '.removeAttr', e => {
             $(e.currentTarget).parent('.product-attr').remove();
             // $(e.currentTarget).parent('.product-attr').empty();
             // $(e.currentTarget).parent('.product-attr').removeAttr('class');
@@ -132,7 +132,7 @@
 
                     let optionName = $('.product-attr-container .attr-' + attrName + ' .row.opt-row:nth-child(' + (opNumer + 1) + ') input[name=attr-name]').val()
 
-                    optionName = optionName.replace('"', '”').trim();
+                    optionName = optionName.replace(/"/g, '”').trim();
                     //alert('.attr-'+attrName+' .row.opt-row:nth-child('+(opNumer+1)+') input[name=attr-name]');
                     let optionPrice = ($('.product-attr-container .attr-' + attrName + ' .row.opt-row:nth-child(' + (opNumer + 1) + ') input[name=attr-price]').val()).trim()
 
@@ -145,6 +145,19 @@
 
                     singAttr.options.push({ [optionName]: optionPrice.trim() });
 
+                }
+                // Options sharing the same bare price can't be told apart once ordered, so
+                // they carry their name too ("9.90/4” - Top Only"); the server does the same.
+                if (attrName !== 'height') {
+                    const counts = {};
+                    singAttr.options.forEach(option => {
+                        const value = Object.values(option)[0];
+                        counts[value] = (counts[value] || 0) + 1;
+                    });
+                    singAttr.options = singAttr.options.map(option => {
+                        const [label, value] = Object.entries(option)[0];
+                        return value !== '' && !isNaN(value) && counts[value] > 1 ? { [label]: value + '/' + label } : option;
+                    });
                 }
                 allAttrData.push(singAttr);
             }
@@ -187,10 +200,42 @@
             $(e.target).text('Saved')
         })
 
-        $('#publish').click(e => {
+        // Keep the hidden option fields (#productAttrJson, #productClJson) in step with what's on
+        // screen, so Update always saves the edits even without clicking "Save Options".
+        // Only a box that was edited is rebuilt, so untouched options are saved exactly as stored.
+        const edited = { attr: false, cl: false };
+        const syncOptionFields = () => {
+            if (edited.attr) $('.saveOptBtn').trigger('click');
+            if (edited.cl) $('.saveClBtn').trigger('click');
+        };
+        const markEdited = (target) => {
+            if ($(target).closest('.product-cl-container').length || $(target).is('#addClAttrBtn')) edited.cl = true;
+            else edited.attr = true;
+        };
+        let syncTimer = null;
+        $(document).on('input change', '.product-attr-container :input, .product-cl-container :input', e => {
+            markEdited(e.target);
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(syncOptionFields, 100);
+        });
+        $(document).on('click', '.addOptBtn, .removeAttr, #addAttrBtn, #addClAttrBtn', e => {
+            markEdited(e.currentTarget);
+            setTimeout(syncOptionFields, 0);
+        });
 
-            $('.saveOptBtn,.saveClBtn').trigger('click')
-        })
+        // Classic editor: the Update/Publish button (it always rebuilt both boxes).
+        $('#publish').click(() => $('.saveOptBtn,.saveClBtn').trigger('click'));
+
+        // Block editor: there is no #publish button. Its option boxes are posted after the
+        // post itself is saved, so refresh the fields as soon as a save starts.
+        if (window.wp && wp.data && wp.data.select('core/editor')) {
+            let wasSaving = false;
+            wp.data.subscribe(() => {
+                const saving = wp.data.select('core/editor').isSavingPost();
+                if (saving && !wasSaving) syncOptionFields();
+                wasSaving = saving;
+            });
+        }
 
 
     })

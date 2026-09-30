@@ -1222,6 +1222,7 @@ function wholesale_inline_small_styles($tag, $handle)
 	$files = array(
 		'litsign-style' => '/style.css',
 		'font-awesome' => '/css/icons.css',
+		'wholesale-header' => '/css/header.css',
 	);
 
 	if (is_admin() || is_rtl() || !isset($files[$handle])) {
@@ -2062,6 +2063,7 @@ function litsign_scripts()
 	wp_enqueue_style('font-awesome', $theme_uri . '/css/icons.css', array(), $asset_version('/css/icons.css'));
 	wp_enqueue_style('litsign-style', get_stylesheet_uri(), array(), $asset_version('/style.css'));
 	wp_enqueue_style('custom-style', $theme_uri . '/css/style.css', array(), $asset_version('/css/style.css'));
+	wp_enqueue_style('wholesale-header', $theme_uri . '/css/header.css', array('custom-style'), $asset_version('/css/header.css'));
 	if (is_page(array('cart', 'checkout', 'account', 'my-orders', 'track-order', 'login', 'signup')) || is_singular('order') || get_query_var('wholesale_thank_you')) {
 		wp_enqueue_style('wholesale-shop', $theme_uri . '/css/shop.css', array('custom-style'), $asset_version('/css/shop.css'));
 	}
@@ -3124,12 +3126,14 @@ function my_enqueue($hook)
 	wp_enqueue_style('bootsrap', get_template_directory_uri() . '/css/bootstrap.min.css', array(), _S_VERSION);
 	wp_enqueue_style('admin-style', get_template_directory_uri() . '/css/admin.css', array(), _S_VERSION);
 
+	// Versioned by file date so browsers pick up changes to the script.
+	$admin_script_version = (string) filemtime(get_template_directory() . '/js/admin-script.js');
 	if (in_array($hook, array('post.php', 'post-new.php'), true)) {
-		wp_enqueue_script('admin-script', get_template_directory_uri() . '/js/admin-script.js', array('jquery'), _S_VERSION, true);
+		wp_enqueue_script('admin-script', get_template_directory_uri() . '/js/admin-script.js', array('jquery'), $admin_script_version, true);
 	}
 
 	if ('edit.php' === $hook && isset($_GET['post_type']) && 'order' === sanitize_key(wp_unslash($_GET['post_type']))) {
-		wp_enqueue_script('admin-script', get_template_directory_uri() . '/js/admin-script.js', array('jquery'), _S_VERSION, true);
+		wp_enqueue_script('admin-script', get_template_directory_uri() . '/js/admin-script.js', array('jquery'), $admin_script_version, true);
 	}
 }
 
@@ -3887,6 +3891,30 @@ function start_session()
 	}
 }
 
+/**
+ * Number of lines in the visitor's cart, for the header badge. Kept in a readable cookie
+ * (not the HTML) because pages are served from the NitroPack cache.
+ */
+function wholesale_sync_cart_cookie()
+{
+	if (headers_sent()) {
+		return;
+	}
+	$items = isset($_SESSION['cart_items']) ? json_decode(str_replace('\\', '', (string) $_SESSION['cart_items'])) : array();
+	$count = is_array($items) ? count($items) : 0;
+	if ((string) $count === ($_COOKIE['sso_cart_count'] ?? '0')) {
+		return;
+	}
+	setcookie('sso_cart_count', (string) $count, array(
+		'expires' => $count ? time() + 30 * DAY_IN_SECONDS : time() - HOUR_IN_SECONDS,
+		'path' => COOKIEPATH ?: '/',
+		'secure' => is_ssl(),
+		'samesite' => 'Lax',
+	));
+	$_COOKIE['sso_cart_count'] = (string) $count;
+}
+add_action('init', 'wholesale_sync_cart_cookie', 2);
+
 // Load Quick Edit Data for Product Turnaround
 
 
@@ -3948,21 +3976,15 @@ function render_product_attr_meta_box($post)
 
 	<?php
 
-	$product_attr_array = json_decode($product_attr);
-
-	if ($product_attr == '[{') {
-		?>
-		<input type="hidden" name="product_attr" id="productAttrJson" value="[]">
-
-
-		<?php
-	} else {
-		?>
-		<input type="hidden" name="product_attr" id="productAttrJson" value='<?php echo $product_attr; ?>'>
-
-		<?php
-	}
+	$product_attr_array = json_decode((string) $product_attr);
+	// Stored options that can't be read (e.g. damaged by an earlier save) are left untouched:
+	// the field goes out empty and the save handler skips empty values.
+	$attr_unreadable = '' !== trim((string) $product_attr) && '[{' !== $product_attr && !is_array($product_attr_array);
 	?>
+	<input type="hidden" name="product_attr" id="productAttrJson" value="<?php echo esc_attr(is_array($product_attr_array) ? $product_attr : ''); ?>">
+	<?php if ($attr_unreadable) : ?>
+		<div class="notice notice-error inline"><p><strong>This product's options are damaged and can't be shown.</strong> The product page shows no option selectors until they are added again below and saved with <em>Save Options</em>, then <em>Update</em>.</p></div>
+	<?php endif; ?>
 
 
 
@@ -3975,26 +3997,24 @@ function render_product_attr_meta_box($post)
 
 				$allOptions = $product_attr_array[$i]->options;
 				?>
-				<div class="product-attr mt-2 attr-<?php echo $product_attr_array[$i]->name; ?>"
-					data-opname="<?php echo $product_attr_array[$i]->name; ?>">
+				<?php $attr_name = (string) $product_attr_array[$i]->name; ?>
+				<div class="product-attr mt-2 attr-<?php echo esc_attr($attr_name); ?>"
+					data-opname="<?php echo esc_attr($attr_name); ?>">
 					<div class="attr-name">
 						<div class="row">
 							<div class="col">
 								<label for="">Attribute Name</label>
 								<input type="text" name="attr-title" disabled=""
-									value="<?php echo $product_attr_array[$i]->name; ?>" placeholder="Display Option"
+									value="<?php echo esc_attr($attr_name); ?>" placeholder="Display Option"
 									class="form-control">
 							</div>
-							<div class="col"><label> Attribute Type </label><select type="text"
-									value="<?php echo $product_attr_array[$i]->type; ?>" name="attr-type" class="form-select">
-									<option value="normal"> Normal </option>
-									<option value="flat"> Flat </option>
-									<option value="percent"> Percent </option>
-									<option value="lft"> Linear Ft. </option>
-									<option value="sqft"> Squre Ft. </option>
+							<div class="col"><label> Attribute Type </label><select name="attr-type" class="form-select">
+									<?php foreach (array('normal' => 'Normal', 'flat' => 'Flat', 'percent' => 'Percent', 'lft' => 'Linear Ft.', 'sqft' => 'Squre Ft.') as $type_value => $type_label) : ?>
+										<option value="<?php echo esc_attr($type_value); ?>" <?php selected($product_attr_array[$i]->heading ?? 'normal', $type_value); ?>> <?php echo esc_html($type_label); ?> </option>
+									<?php endforeach; ?>
 								</select></div>
 							<div class="col"><label for="">Css Class</label> <input type="text" name="css-class"
-									value="<?php echo $product_attr_array[$i]->cssClass; ?>" class="form-control"></div>
+									value="<?php echo esc_attr($product_attr_array[$i]->cssClass ?? ''); ?>" class="form-control"></div>
 						</div>
 
 
@@ -4002,23 +4022,23 @@ function render_product_attr_meta_box($post)
 					</div>
 					<div class="attibute-options">
 						<?php
-						foreach ($allOptions as $option) {
+						foreach ((array) $allOptions as $option) {
 
 							foreach ($option as $name => $price) ?>
 							<div class="row opt-row">
 								<div class="col">
 									<div class="form-group">
 										<label for="" class="form-label">Variant Title</label>
-										<input type="text" value="<?php echo $name; ?>"
-											data-opname="<?php echo $product_attr_array[$i]->name ? trim($product_attr_array[$i]->name) : ''; ?>"
+										<input type="text" value="<?php echo esc_attr($name); ?>"
+											data-opname="<?php echo esc_attr(trim($attr_name)); ?>"
 											placeholder="Single Sided" name="attr-name" class="variable-title form-control">
 									</div>
 								</div>
 								<div class="col">
 									<div class="form-group">
 										<label class="form-label">Variant Price</label>
-										<input data-opname="<?php echo $product_attr_array[$i]->name; ?>" type="text" placeholder="10"
-											value="<?php echo $price ? trim($price) : 0; ?>" name="attr-price"
+										<input data-opname="<?php echo esc_attr($attr_name); ?>" type="text" placeholder="10"
+											value="<?php echo esc_attr($price ? trim($price) : 0); ?>" name="attr-price"
 											class="variable-price form-control">
 									</div>
 								</div>
@@ -4028,9 +4048,9 @@ function render_product_attr_meta_box($post)
 						; ?>
 					</div>
 					<a class="btn btn-primary button-large mt-2 addOptBtn"
-						data-opname="<?php echo $product_attr_array[$i]->name; ?>">Add Option</a>
+						data-opname="<?php echo esc_attr($attr_name); ?>">Add Option</a>
 					<a class="btn btn-danger button-large mt-2 removeAttr"
-						data-opname="<?php echo $product_attr_array[$i]->name; ?>">Remove Attribute</a>
+						data-opname="<?php echo esc_attr($attr_name); ?>">Remove Attribute</a>
 				</div>
 
 				<?php
@@ -4056,16 +4076,76 @@ function save_product_attr_meta($post_id)
 		return;
 	if (!current_user_can('edit_post', $post_id))
 		return;
-	if (isset($_POST['product_attr'])) {
-
-		if ($_POST['product_attr'] == '[{') {
-			return;
-		} else {
-			update_post_meta($post_id, 'product_attr', sanitize_text_field($_POST['product_attr']));
-		}
+	if (!isset($_POST['product_attr'])) {
+		return;
 	}
+
+	$raw = trim(wp_unslash((string) $_POST['product_attr']));
+	if ('' === $raw || '[{' === $raw) {
+		return;
+	}
+	// Never replace good options with data the product page can't read.
+	$attrs = json_decode($raw, true);
+	if (!is_array($attrs)) {
+		set_transient('wholesale_attr_save_error_' . get_current_user_id(), $post_id, 60);
+		return;
+	}
+	update_post_meta($post_id, 'product_attr', wp_slash(wp_json_encode(wholesale_normalize_product_attrs($attrs), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
 }
 add_action('save_post', 'save_product_attr_meta');
+
+/**
+ * Cleans product options before saving: [{name, heading, cssClass, options: [{label: value}]}].
+ *
+ * The product page submits the chosen option's value and the cart maps it back to its
+ * label, so two options with the same bare price (e.g. "9.90") would be indistinguishable.
+ * Those get their label appended ("9.90/4” - Top Only"), the format the price code already
+ * reads as +9.90. Height options are left alone: channel letter pricing parses them.
+ */
+function wholesale_normalize_product_attrs($attrs)
+{
+	$clean = array();
+	foreach ($attrs as $attr) {
+		if (!is_array($attr) || empty($attr['name'])) {
+			continue;
+		}
+		$name = sanitize_text_field((string) $attr['name']);
+		$options = array();
+		foreach (isset($attr['options']) && is_array($attr['options']) ? $attr['options'] : array() as $option) {
+			foreach (is_array($option) ? $option : array() as $label => $value) {
+				$label = sanitize_text_field(str_replace('"', '”', (string) $label));
+				if ('' !== $label) {
+					$options[] = array($label, sanitize_text_field((string) $value));
+				}
+			}
+		}
+
+		$counts = array_count_values(array_column($options, 1));
+		$list = array();
+		foreach ($options as list($label, $value)) {
+			if ('height' !== $name && is_numeric($value) && $counts[$value] > 1) {
+				$value .= '/' . $label;
+			}
+			$list[] = (object) array($label => $value);
+		}
+
+		$clean[] = array(
+			'name' => $name,
+			'heading' => sanitize_key($attr['heading'] ?? '') ?: 'normal',
+			'cssClass' => sanitize_text_field((string) ($attr['cssClass'] ?? '')),
+			'options' => $list,
+		);
+	}
+	return $clean;
+}
+
+add_action('admin_notices', function () {
+	$key = 'wholesale_attr_save_error_' . get_current_user_id();
+	if ($post_id = get_transient($key)) {
+		delete_transient($key);
+		echo '<div class="notice notice-error"><p>The product options for &ldquo;' . esc_html(get_the_title($post_id)) . '&rdquo; were not saved because they could not be read. The previous options were kept.</p></div>';
+	}
+});
 
 
 

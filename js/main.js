@@ -781,28 +781,75 @@
     updateStickyHeader();
     $(window).on("scroll", updateStickyHeader);
 
-    // handle mobile menu close button click
+    // Slide-in menu (tablet and phone). The open state lives on the header as
+    // .mobile-menu-open; header.css slides the panel in and dims the page.
+    const menuTrigger = $(".mobile-menu-trigger");
+    const isMobileMenuOpen = () => $(".main-header").hasClass("mobile-menu-open");
 
-    const closeMobileMenu = () => {
-      $(".mobile-menu-container").stop(true, true).slideUp();
-      $(".main-header").removeClass("mobile-menu-open");
+    const setMobileMenu = (open) => {
+      const wasOpen = isMobileMenuOpen();
+      $(".main-header").toggleClass("mobile-menu-open", open);
+      menuTrigger.attr("aria-expanded", String(open));
+      document.documentElement.classList.toggle("sh-lock", open);
+      if (open) {
+        closeMegaMenu();
+        // Focus moves after the slide starts so the panel doesn't jump.
+        setTimeout(() => $(".mobile-menu-close").trigger("focus"), 50);
+      } else if (wasOpen) {
+        menuTrigger.trigger("focus");
+      }
     };
+    const closeMobileMenu = () => setMobileMenu(false);
 
-    $(".mobile-menu-close, .mobile-menu-container .menu-item").click((e) => {
+    $(".mobile-menu-close, .mobile-menu-container .menu-item a, .mobile-menu-cta").click(() => {
       closeMobileMenu();
     });
 
-    // handel hamberger menu click
-
-    $(".mobile-menu-trigger").click((e) => {
+    menuTrigger.click((e) => {
       e.stopPropagation();
-      $(".mobile-menu-container").stop(true, true).slideDown("fast");
-      $(".main-header").addClass("mobile-menu-open");
+      setMobileMenu(!isMobileMenuOpen());
     });
 
+    // Clicking the dimmed page (the header's ::after overlay) closes the menu.
     $(".main-header").on("click", (e) => {
       if (e.target === e.currentTarget) closeMobileMenu();
     });
+
+    // Keep Tab inside the open menu.
+    $(".mobile-menu-container").on("keydown", (e) => {
+      if (e.key !== "Tab") return;
+      const focusable = $(e.currentTarget).find("a[href], button:not([disabled])").filter(":visible");
+      if (!focusable.length) return;
+      const first = focusable.get(0);
+      const last = focusable.get(focusable.length - 1);
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
+
+    // The slide-in menu doesn't exist on desktop widths.
+    const desktopQuery = window.matchMedia("(min-width: 1200px)");
+    const onDesktopChange = () => {
+      if (desktopQuery.matches && isMobileMenuOpen()) closeMobileMenu();
+    };
+    if (desktopQuery.addEventListener) desktopQuery.addEventListener("change", onDesktopChange);
+    else if (desktopQuery.addListener) desktopQuery.addListener(onDesktopChange);
+
+    // Cart badge. The count comes from a cookie the server keeps in sync, because
+    // cached pages can't include it.
+    const cartCount = (() => {
+      const match = document.cookie.match(/(?:^|;\s*)sso_cart_count=(\d+)/);
+      return match ? parseInt(match[1], 10) : 0;
+    })();
+    $("[data-cart-count]").each((i, el) => {
+      el.textContent = cartCount > 99 ? "99+" : String(cartCount);
+      el.hidden = cartCount < 1;
+    });
+    $("[data-cart-link]").attr("aria-label", cartCount > 0 ? `Cart, ${cartCount} ${cartCount === 1 ? "item" : "items"}` : "Cart");
 
     $('.category-filter-toggler').click(e => {
       const toggler = $(e.currentTarget);
@@ -861,6 +908,7 @@
     })
 
     $('#allProductsBtn').click( e => {
+      e.stopPropagation();
       const button = $(e.currentTarget);
       const menu = $('#megaMenu');
       const isOpen = menu.is(':visible');
@@ -870,6 +918,21 @@
       $('.main-header').toggleClass('mega-menu-open', !isOpen);
       if (!isOpen) sizeMegaMenu();
     })
+
+    // Close the product menu from outside clicks and Escape; Escape also closes the slide-in menu.
+    $(document).on('click', (e) => {
+      if ($('.main-header').hasClass('mega-menu-open') && !$(e.target).closest('#megaMenu, #allProductsBtn').length) {
+        closeMegaMenu();
+      }
+    });
+    $(document).on('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      if ($('.main-header').hasClass('mega-menu-open')) {
+        closeMegaMenu();
+        $('#allProductsBtn').trigger('focus');
+      }
+      if (isMobileMenuOpen()) closeMobileMenu();
+    });
 
     // Fit the menu into the space left below the sticky header so it scrolls on small screens.
     function sizeMegaMenu() {
@@ -888,11 +951,13 @@
       document.body.appendChild(feedbackModalEl);
     }
 
-    $('.mega-menu-backdrop').click(() => {
+    function closeMegaMenu() {
       $('#megaMenu').stop(true, true).hide();
       $('#allProductsBtn').attr('aria-expanded', 'false');
       $('.main-header').removeClass('mega-menu-open');
-    });
+    }
+
+    $('.mega-menu-backdrop').click(closeMegaMenu);
 
 
     //checkout page data 

@@ -6033,3 +6033,58 @@ a.review-author-name:hover {
     transition: none;
   }
 }
+
+/* ---------- Product size calculator (height / width in ft + in) ---------- */
+.product-details .product-attibute-box .dim-label {
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+.product-details .product-attibute-box .dim-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+/* Unit box and input form one control: same height, border and corners, no gap. */
+.product-details .product-attibute-box .dim-group {
+  flex-wrap: nowrap;
+}
+.product-details .product-attibute-box .dim-group .input-group-text {
+  justify-content: center;
+  min-width: 44px;
+  min-height: 42px;
+  margin: 0;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-right: 0;
+  border-radius: 8px 0 0 8px;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 14px;
+  font-weight: 600;
+}
+.product-details .product-attibute-box .dim-group .dim-input {
+  min-width: 0;
+  min-height: 42px;
+  margin: 0;
+  border-radius: 0 8px 8px 0 !important;
+  font-variant-numeric: tabular-nums;
+}
+.product-details .product-attibute-box .dim-group:focus-within .input-group-text {
+  border-color: #1fa8de;
+  color: #1287b5;
+}
+.product-details .product-attibute-box .total-size-sqft {
+  color: #334155;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 400px) {
+  .product-details .product-attibute-box .dim-fields {
+    gap: 8px;
+  }
+  .product-details .product-attibute-box .dim-group .input-group-text {
+    min-width: 36px;
+    padding: 0 8px;
+  }
+}

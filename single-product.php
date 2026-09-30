@@ -32,7 +32,10 @@ $product_group_array = json_decode($product_group_json, true);
 
 $product_has_group = $product_group_array[0]['slug'] == 'null' ? false : true;
 $product_attr_json = get_post_meta(get_the_ID(), 'product_attr', true);
-$product_attr_array = json_decode($product_attr_json);
+$product_attr_array = json_decode((string) $product_attr_json);
+if (!is_array($product_attr_array)) {
+    $product_attr_array = array(); // Unreadable options: show the page without selectors instead of erroring.
+}
 
 $product_trimcap_color = get_post_meta(get_the_ID(), '_trimcap_color', true);
 $is_same_return_color = get_post_meta(get_the_ID(), '_return_color', true);
@@ -565,76 +568,41 @@ get_header();
                         <?php if ($product_category_slug != 'channel-letters' && $is_hide_calculator != 'on') { ?>
                             <input type="hidden" name="price_per_sqft" value="<?php echo $price_per_sqft; ?>" id="pricePerSqft">
 
-                            <div class="row d-fex align-items-center dimenstion-calculator">
-                                <div class="col-3">
-                                    <label>Height</label>
-                                </div>
-                                <div class="col-9">
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <div class="input-group">
-                                                <div class="input-group-prepend">
-                                                    <div class="input-group-text">ft</div>
-                                                </div>
-                                                <input placeholder="Ft" value="<?php echo round(sqrt($product_min_sqft), 2); ?>" name="height-ft" min="<?php echo $product_min_height; ?>" max="<?php echo $product_max_height; ?>" step="0.1" type="number" id="input-height-ft" class="form-control text-right">
-
+                            <?php
+                            // Starting size: a square of the minimum area, shown as whole feet plus
+                            // inches (2 ft 2.6 in rather than 2.21 ft + 0 in). Same total as before.
+                            $start_side_in = round(sqrt((float) $product_min_sqft) * 12, 1);
+                            $start_ft = (int) floor($start_side_in / 12);
+                            $start_in = round($start_side_in - $start_ft * 12, 1);
+                            $dimensions = array(
+                                'height' => array('label' => 'Height', 'min' => $product_min_height, 'max' => $product_max_height),
+                                'width' => array('label' => 'Width', 'min' => $product_min_width, 'max' => $product_max_width),
+                            );
+                            foreach ($dimensions as $dim => $dim_info) : ?>
+                                <div class="row d-fex align-items-center mt-2 dimenstion-calculator dim-row">
+                                    <div class="col-md-3 col-4">
+                                        <span class="dim-label" id="dim-label-<?php echo esc_attr($dim); ?>"><?php echo esc_html($dim_info['label']); ?></span>
+                                    </div>
+                                    <div class="col-8 col-md-9">
+                                        <div class="dim-fields" role="group" aria-labelledby="dim-label-<?php echo esc_attr($dim); ?>">
+                                            <div class="input-group dim-group">
+                                                <span class="input-group-text" aria-hidden="true">ft</span>
+                                                <input type="number" inputmode="decimal" step="0.1" min="<?php echo esc_attr($dim_info['min'] ?: 0); ?>" max="<?php echo esc_attr($dim_info['max']); ?>" name="<?php echo esc_attr($dim); ?>-ft" id="input-<?php echo esc_attr($dim); ?>-ft" value="<?php echo esc_attr($start_ft); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in feet'); ?>">
                                             </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="input-group">
-                                                <div class="input-group-prepend">
-                                                    <div class="input-group-text">in</div>
-                                                </div>
-                                                <input type="number" step="0.1" name="height-in" value="0" max="12" placeholder="In" id="input-height-in" class="form-control text-right" />
-
+                                            <div class="input-group dim-group">
+                                                <span class="input-group-text" aria-hidden="true">in</span>
+                                                <input type="number" inputmode="decimal" step="0.1" min="0" max="12" name="<?php echo esc_attr($dim); ?>-in" id="input-<?php echo esc_attr($dim); ?>-in" value="<?php echo esc_attr($start_in); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in inches'); ?>">
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            <?php endforeach; ?>
 
+                            <div class="row mt-2 mb-3">
+                                <div class="col-8 col-md-9 offset-4 offset-md-3">
+                                    <span class="total-size-sqft" aria-live="polite"><?php echo esc_html($start_side_in); ?>" x <?php echo esc_html($start_side_in); ?>" = <?php echo esc_html($product_min_sqft); ?> ft<sup>2</sup></span>
                                 </div>
                             </div>
-
-                            <div class="row d-fex align-items-center dimenstion-calculator">
-                                <div class="col-3">
-                                    <label>Width</label>
-                                </div>
-                                <div class="col-9 mt-2">
-                                    <div class="row">
-                                        <div class="col-6">
-                                            <div class="input-group">
-                                                <div class="input-group-prepend">
-                                                    <div class="input-group-text">ft</div>
-                                                </div>
-                                                <input placeholder="Ft" step="0.1" min="<?php echo $product_min_width; ?>" value="<?php echo round(sqrt($product_min_sqft), 2); ?>" max="<?php echo $product_max_width; ?>" name="width-ft" type="number" id="input-width-ft" class="form-control text-right">
-
-
-                                            </div>
-                                        </div>
-                                        <div class="col-6">
-                                            <div class="input-group">
-                                                <div class="input-group-prepend">
-                                                    <div class="input-group-text">in</div>
-                                                </div>
-                                                <input type="number" step="0.1" max="12" value="0" name="width-in" placeholder="In" id="input-width-in" class="form-control text-right">
-
-
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <?php if ($product_category_slug != 'channel-letters') { ?>
-
-                                <div class="row mb-3">
-                                    <div class="col-3">
-
-                                    </div>
-                                    <div class="col-9">
-                                        <span class="total-size-sqft"><?php echo round(sqrt($product_min_sqft) * 12, 1); ?>" x <?php echo round(sqrt($product_min_sqft) * 12, 1); ?>" = <?php echo $product_min_sqft; ?> ft<sup>2</sup></span>
-
-                                    </div>
-                                </div>
-                            <?php }; ?>
 
 
 

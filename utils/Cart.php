@@ -481,7 +481,9 @@ class Cart
 
     public function empty() {
         $_SESSION['cart_items']  = json_encode(array());
-
+        if (function_exists('wholesale_sync_cart_cookie')) {
+            wholesale_sync_cart_cookie();
+        }
     }
 }
 

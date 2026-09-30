@@ -1,0 +1,629 @@
+/*
+ * Site header: logo, contact, account + cart, "All Products" mega menu and the slide-in
+ * menu. Loads after style.css and overrides its older header rules.
+ *
+ *   Desktop (1200px+): full header with contact details, account links and categories.
+ *   Tablet (768-1199px) and phone (<768px): logo + call, cart and menu buttons; the
+ *   categories, account and contact links move into the slide-in menu.
+ */
+
+.site-header {
+  --sh-brand: #1fa8de;
+  --sh-brand-dark: #1287b5;
+  --sh-ink: #172027;
+  --sh-muted: #5b6b7b;
+  --sh-line: #e3e9ef;
+  --sh-soft: #f3f8fb;
+  padding: 10px 0 0;
+}
+
+.site-header.is-scrolled {
+  padding-top: 6px;
+}
+
+/* ---------- Top row ---------- */
+.site-header .sh-top {
+  display: flex;
+  align-items: center;
+  gap: 16px 24px;
+  min-height: 56px;
+}
+
+.site-header .sh-logo {
+  flex: 0 1 340px;
+  min-width: 0;
+}
+
+.site-header .sh-logo a {
+  display: block;
+}
+
+.site-header .logo-container .header-logo {
+  display: block;
+  width: 100%;
+  max-width: 340px;
+  height: auto;
+  transition: max-width 180ms ease;
+}
+
+.site-header.is-scrolled .logo-container .header-logo {
+  max-width: 290px;
+}
+
+.site-header .sh-contact {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.site-header .sh-contact .header-menu-container .header-menu {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 20px;
+}
+
+.site-header .sh-contact .header-menu-container .header-menu .menu-item {
+  margin: 0 !important;
+}
+
+.site-header .sh-contact .header-menu-container .header-menu .menu-item a {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--sh-ink);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.site-header .sh-contact .header-menu-container .header-menu .menu-item a:hover,
+.site-header .sh-contact .header-menu-container .header-menu .menu-item a:focus-visible {
+  color: var(--sh-brand-dark);
+}
+
+/* Contact menu items carry Font Awesome phone/envelope tags, which the subset icon font lacks. */
+.site-header .fa-phone::before,
+.site-header .fa-envelope::before {
+  content: "";
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  background-color: var(--sh-brand);
+  vertical-align: -2px;
+  -webkit-mask: var(--sh-icon) center / contain no-repeat;
+  mask: var(--sh-icon) center / contain no-repeat;
+}
+
+.site-header .fa-phone {
+  --sh-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25c1.1.37 2.3.57 3.6.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z'/%3E%3C/svg%3E");
+}
+
+.site-header .fa-envelope {
+  --sh-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z'/%3E%3C/svg%3E");
+}
+
+.site-header .sh-hours {
+  margin: 0;
+  color: var(--sh-muted);
+  font-size: 12px;
+}
+
+.site-header .sh-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.site-header .sh-account {
+  display: flex;
+  gap: 4px;
+  margin: 0 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-header .sh-account a {
+  display: inline-block;
+  padding: 8px 10px;
+  border-radius: 8px;
+  color: var(--sh-muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.site-header .sh-account a:hover,
+.site-header .sh-account a:focus-visible {
+  background: var(--sh-soft);
+  color: var(--sh-brand-dark);
+}
+
+.site-header .sh-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--sh-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--sh-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+
+.site-header .sh-icon:hover,
+.site-header .sh-icon:focus-visible {
+  border-color: var(--sh-brand);
+  background: var(--sh-soft);
+  color: var(--sh-brand-dark);
+}
+
+.site-header .sh-icon:focus-visible,
+.site-header #allProductsBtn:focus-visible,
+.site-header .header-builder-cta:focus-visible {
+  outline: 2px solid var(--sh-brand);
+  outline-offset: 2px;
+}
+
+.site-header .sh-svg {
+  flex: none;
+}
+
+.site-header .sh-icon--call {
+  display: none;
+}
+
+.site-header .sh-cart-count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #e0312b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.site-header .sh-cart-count[hidden] {
+  display: none;
+}
+
+/* Hamburger (tablet and phone only). */
+.site-header .sh-menu-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  width: 44px;
+  padding: 0 11px;
+}
+
+.site-header .sh-menu-toggle span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+/* ---------- Bottom row: All Products, categories, builder ---------- */
+.site-header .header-bottom {
+  margin: 10px 0 0;
+  padding: 6px 0;
+  border-top: 1px solid var(--sh-line);
+}
+
+.site-header.is-scrolled .header-bottom {
+  margin-top: 6px;
+}
+
+.site-header .header-bottom-container {
+  gap: 4px 12px;
+}
+
+.site-header .header-bottom-container .megamenu-container #allProductsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  color: var(--sh-brand-dark);
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.site-header .sh-categories .header-menu-container .header-menu {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0 2px;
+}
+
+.site-header .sh-categories .header-menu-container .header-menu .menu-item {
+  margin: 0 !important;
+}
+
+.site-header .sh-categories .header-menu-container .header-menu .menu-item a {
+  display: inline-block;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: #4a5968;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.site-header .sh-categories .header-menu-container .header-menu .menu-item a:hover,
+.site-header .sh-categories .header-menu-container .header-menu .menu-item a:focus-visible,
+.site-header .sh-categories .header-menu-container .header-menu .current-menu-item a {
+  background: var(--sh-soft);
+  color: var(--sh-brand-dark);
+}
+
+.site-header .header-bottom-container .header-builder-menu {
+  margin: 0 0 0 4px;
+}
+
+.site-header .header-builder-menu .header-builder-cta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--sh-brand);
+  border-radius: 999px;
+  background: var(--sh-brand);
+  color: #fff !important;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.site-header .header-builder-menu .header-builder-cta:hover,
+.site-header .header-builder-menu .header-builder-cta:focus-visible {
+  border-color: var(--sh-brand-dark);
+  background: var(--sh-brand-dark);
+  color: #fff !important;
+}
+
+/* ---------- Slide-in menu ---------- */
+.site-header .mobile-menu-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  width: min(88vw, 380px);
+  height: 100vh;
+  height: 100dvh;
+  padding: 0 20px 24px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  box-shadow: -12px 0 32px rgba(15, 23, 42, 0.22);
+  visibility: hidden;
+  transform: translateX(100%);
+  transition: transform 220ms ease, visibility 0s linear 220ms;
+}
+
+.site-header.mobile-menu-open .mobile-menu-container {
+  visibility: visible;
+  transform: none;
+  transition: transform 220ms ease;
+}
+
+.site-header.mobile-menu-open::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 1150;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+html.sh-lock,
+html.sh-lock body {
+  overflow: hidden;
+}
+
+.site-header .mobile-menu-container .mobile-menu-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+  margin: 0 -20px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--sh-line);
+  background: #fff;
+}
+
+.site-header .mobile-menu-container .mobile-menu-title {
+  color: var(--sh-ink);
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.site-header .mobile-menu-container .mobile-menu-close {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.site-header .mobile-menu-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 18px 0 4px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--sh-brand);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.site-header .mobile-menu-cta:hover,
+.site-header .mobile-menu-cta:focus-visible {
+  background: var(--sh-brand-dark);
+  color: #fff;
+}
+
+.site-header .mobile-menu-label {
+  margin: 20px 0 4px;
+  color: var(--sh-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.site-header .mobile-menu-container .header-menu {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.site-header .mobile-menu-container .header-menu .menu-item {
+  display: block;
+  margin: 0 !important;
+}
+
+.site-header .mobile-menu-container .header-menu .menu-item a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 2px;
+  border-bottom: 1px solid #eef2f7;
+  color: var(--sh-ink) !important;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.site-header .mobile-menu-container .header-menu .menu-item a:hover,
+.site-header .mobile-menu-container .header-menu .menu-item a:focus-visible {
+  color: var(--sh-brand-dark) !important;
+}
+
+.site-header .mobile-menu-container .sh-cart-count {
+  position: static;
+  border: 0;
+}
+
+.site-header .mobile-menu-contact .header-menu .menu-item a {
+  font-size: 15px;
+}
+
+.site-header .mobile-menu-contact .sh-hours {
+  margin-top: 8px;
+}
+
+/* ---------- Tablet and phone ---------- */
+@media (max-width: 1199.98px) {
+  /* A blurred background would make the fixed slide-in menu size itself to the header. */
+  .site-header.is-scrolled {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: #fff;
+  }
+
+  .site-header .sh-contact,
+  .site-header .sh-account,
+  .site-header .sh-categories {
+    display: none;
+  }
+
+  .site-header .sh-icon--call,
+  .site-header .sh-menu-toggle {
+    display: inline-flex;
+  }
+
+  .site-header .sh-logo {
+    flex-basis: 300px;
+  }
+
+  .site-header .header-bottom-container {
+    justify-content: space-between !important;
+  }
+
+  .site-header .header-bottom-container .megamenu-container {
+    position: static;
+  }
+
+  .site-header .header-bottom-container .megamenu-container #megaMenu {
+    top: 100%;
+    width: min(760px, calc(100vw - 24px));
+  }
+
+  .site-header.mega-menu-open .mega-menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(15, 23, 42, 0.38);
+  }
+
+  .site-header .header-bottom-container .megamenu-container #megaMenu {
+    z-index: 1201;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  /* Tablets show the phone number beside its icon; the cart is icon-only. */
+  .site-header .sh-icon--cart .sh-icon__text {
+    display: none;
+  }
+}
+
+/* ---------- Phone ---------- */
+@media (max-width: 767.98px) {
+  .site-header {
+    padding-top: 8px;
+  }
+
+  .site-header > .container {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .site-header .sh-top {
+    gap: 8px;
+    min-height: 48px;
+  }
+
+  .site-header .sh-logo {
+    flex: 1 1 auto;
+  }
+
+  .site-header .logo-container .header-logo,
+  .site-header.is-scrolled .logo-container .header-logo {
+    max-width: 210px;
+  }
+
+  .site-header .sh-actions {
+    gap: 6px;
+  }
+
+  .site-header .sh-icon {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    padding: 0;
+  }
+
+  .site-header .sh-icon__text {
+    display: none;
+  }
+
+  .site-header .sh-menu-toggle {
+    padding: 0 11px;
+  }
+
+  .site-header .header-bottom {
+    margin-top: 8px;
+    padding: 6px 0;
+  }
+
+  .site-header.is-scrolled .header-bottom {
+    margin-top: 6px;
+  }
+
+  .site-header .header-bottom-container {
+    gap: 8px;
+  }
+
+  .site-header .header-bottom-container .megamenu-container #allProductsBtn {
+    min-height: 40px;
+    padding: 8px 10px;
+    font-size: 15px;
+  }
+
+  .site-header .header-builder-menu .header-builder-cta {
+    min-height: 38px;
+    padding: 7px 14px;
+    font-size: 13px;
+  }
+
+  /* Mega menu opens as a full-width sheet under the header. */
+  .site-header .header-bottom-container .megamenu-container #megaMenu {
+    left: 50%;
+    width: 100vw;
+    border-radius: 0 0 14px 14px;
+    transform: translateX(-50%);
+  }
+
+  .site-header .header-bottom-container .megamenu-container #megaMenu > .container {
+    max-width: none;
+    padding: 12px 14px 18px !important;
+  }
+
+  .site-header .header-bottom-container .megamenu-container #megaMenu .row {
+    margin: 0;
+  }
+
+  .site-header .header-bottom-container .megamenu-container #megaMenu .col-md-4 {
+    padding: 8px 4px;
+  }
+
+  .site-header .header-bottom-container .megamenu-container #megaMenu .col-md-4 + .col-md-4 {
+    border-left: 0;
+  }
+
+  .site-header .header-bottom-container .megamenu-container #megaMenu .mm-link {
+    min-height: 44px;
+  }
+
+  .site-header .header-bottom-container .megamenu-container #megaMenu .mega-menu-builder-cta {
+    justify-content: center;
+    width: 100%;
+  }
+}
+
+@media (max-width: 359.98px) {
+  .site-header .logo-container .header-logo,
+  .site-header.is-scrolled .logo-container .header-logo {
+    max-width: 160px;
+  }
+
+  .site-header .header-builder-menu .header-builder-cta {
+    padding: 7px 10px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header .mobile-menu-container,
+  .site-header.mobile-menu-open .mobile-menu-container,
+  .site-header .logo-container .header-logo {
+    transition: none;
+  }
+}

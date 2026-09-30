@@ -150,126 +150,124 @@ $logo_id = get_theme_mod('custom_logo');
 		<a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e('Skip to content', 'litsign'); ?></a>
 
 
-		<header class="main-header">
+		<?php
+		// Account links differ for signed-in customers. The cart count badge is filled in by
+		// JavaScript from the sso_cart_count cookie, because pages are served from cache.
+		$account_links = is_user_logged_in()
+			? array(home_url('/my-orders/') => 'My Orders', home_url('/account/') => 'My Account')
+			: array(home_url('/login/') => 'Log in', home_url('/signup/') => 'Register');
+		$phone_display = '866-436-2101';
+		$phone_href = 'tel:+18664362101';
+		// Inline icons: the theme's icon font is a small subset without these glyphs.
+		$icon = static function ($name) {
+			$paths = array(
+				'phone' => '<path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25c1.1.37 2.3.57 3.6.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/>',
+				'cart' => '<path fill="currentColor" d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM1 2v2h2l3.6 7.6-1.35 2.4A2 2 0 0 0 7 17h12v-2H7.4a.25.25 0 0 1-.22-.37l.9-1.63h7.45a2 2 0 0 0 1.75-1.03l3.58-6.5A1 1 0 0 0 20 4H5.2l-.94-2H1zm16 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>',
+				'grid' => '<path fill="currentColor" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>',
+				'arrow' => '<path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/>',
+			);
+			return '<svg class="sh-svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
+		};
+		?>
+		<header class="main-header site-header">
 			<div class="container">
-				<div class="row d-flex align-items-center justify-content-center">
-					<div class="col-md-3 col-10">
-						<div class="logo-container">
-							<a href="<?php echo home_url() . '/'; ?>">
-								<?php
-								if ($logo_id) {
-									echo wp_get_attachment_image($logo_id, 'full', false, array(
-										'alt' => get_bloginfo('name'),
-										'class' => 'header-logo',
-										'loading' => 'eager',
-										'decoding' => 'async',
-										'fetchpriority' => 'auto',
-										'sizes' => '(max-width: 767px) 300px, 500px',
-									));
-								} else {
-									echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async">';
-								}
-								?>
-							</a>
-						</div>
+				<div class="sh-top">
+					<div class="logo-container sh-logo">
+						<a href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr(get_bloginfo('name') . ' home'); ?>">
+							<?php
+							if ($logo_id) {
+								echo wp_get_attachment_image($logo_id, 'full', false, array(
+									'alt' => get_bloginfo('name'),
+									'class' => 'header-logo',
+									'loading' => 'eager',
+									'decoding' => 'async',
+									'fetchpriority' => 'high',
+									'sizes' => '(max-width: 767px) 240px, 400px',
+								));
+							} else {
+								echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async">';
+							}
+							?>
+						</a>
 					</div>
-					<div class="col-md-6 col-2">
 
-						<nav aria-label="<?php esc_attr_e('Primary navigation', 'litsign'); ?>">
+					<nav class="sh-contact" aria-label="<?php esc_attr_e('Contact', 'litsign'); ?>">
 						<?php
 						wp_nav_menu(array(
 							'theme_location' => 'header-menu',
-							'container_class' => 'header-menu-container hide-on-mobile',
-							'menu_class' => 'header-menu text-center'
+							'container_class' => 'header-menu-container',
+							'menu_class' => 'header-menu',
 						));
 						?>
-						</nav>
-						<div class="mobile-menu-container hide-on-desktop">
-							<div class="mobile-menu-header">
-								<span class="mobile-menu-title">Menu</span>
-								<button type="button" class="mobile-menu-close" aria-label="<?php esc_attr_e('Close menu', 'litsign'); ?>">
-									&times;
-								</button>
-							</div>
-							<div class="account-menu mobile-account-menu">
-								<ul class="header-menu">
-									<?php if (!is_user_logged_in()) { ?>
-										<li class="menu-item"><a href="<?php echo esc_url(home_url('/login/')); ?>">Login</a></li>
-										<li class="menu-item"><a href="<?php echo esc_url(home_url('/signup/')); ?>">Register</a></li>
-									<?php } else { ?>
-										<li class="menu-item"><a href="<?php echo esc_url(home_url('/account/')); ?>">My Account</a></li>
-										<li class="menu-item"><a href="<?php echo esc_url(home_url('/my-orders/')); ?>">My Orders</a></li>
-									<?php } ?>
-									<li class="menu-item"><a href="<?php echo esc_url(home_url('/cart/')); ?>">Cart</a></li>
-									<li class="menu-item"><a href="<?php echo esc_url(home_url('/checkout/')); ?>">Checkout</a></li>
-								</ul>
-							</div>
-							<nav aria-label="<?php esc_attr_e('Mobile navigation', 'litsign'); ?>">
-							<?php
-							wp_nav_menu(array(
-								'theme_location' => 'header-menu',
-								'menu_class' => 'header-menu text-center'
-							));
-							?>
-							<?php wp_nav_menu(array(
-								'theme_location' => 'header-bottom-menu',
-								//'container_class' => 'header-menu-container',
-								'menu_class' => 'header-menu text-center'
-							));
-							?>
-							</nav>
-						</div>
-						<div class="div-hamberger-container">
-							<button type="button" class="mobile-menu-trigger" aria-label="<?php esc_attr_e('Open menu', 'litsign'); ?>">
-								<span></span>
-								<span></span>
-								<span></span>
-							</button>
-						</div>
+						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PST</p>
+					</nav>
+
+					<div class="sh-actions">
+						<ul class="sh-account">
+							<?php foreach ($account_links as $url => $label) : ?>
+								<li><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($label); ?></a></li>
+							<?php endforeach; ?>
+						</ul>
+						<a class="sh-icon sh-icon--call" href="<?php echo esc_attr($phone_href); ?>" aria-label="<?php echo esc_attr('Call us at ' . $phone_display); ?>">
+							<?php echo $icon('phone'); // Static SVG. ?>
+							<span class="sh-icon__text"><?php echo esc_html($phone_display); ?></span>
+						</a>
+						<a class="sh-icon sh-icon--cart" href="<?php echo esc_url(home_url('/cart/')); ?>" data-cart-link aria-label="<?php esc_attr_e('Cart', 'litsign'); ?>">
+							<?php echo $icon('cart'); // Static SVG. ?>
+							<span class="sh-icon__text">Cart</span>
+							<span class="sh-cart-count" data-cart-count hidden></span>
+						</a>
+						<button type="button" class="mobile-menu-trigger sh-icon sh-menu-toggle" aria-label="<?php esc_attr_e('Open menu', 'litsign'); ?>" aria-expanded="false" aria-controls="siteMobileMenu">
+							<span></span>
+							<span></span>
+							<span></span>
+						</button>
 					</div>
-					<div class="col-md-3 hide-on-mobile">
-
-						<?php if (!is_user_logged_in()) { ?>
-
-							<!-- <form class="header-account-form" method="POST" action="/login">
-								<div class="row align-items-center d-flex">
-
-									<div class="col-md-12 mb-sm-1 col-sm-12 text-center">
-										<button type="submit" class="btn btn-primary account-action-button p-0">login</button>
-										<a href="<?php echo site_url() . '/signup'; ?>" class="btn btn-danger account-action-button p-0">Register</a>
-									</div>
-
-								</div>
-							</form> -->
-							<div class="account-menu header-menu-container">
-								<ul class="header-menu text-end">
-
-									<li class="menu-item"><a href="<?php echo home_url() . '/cart'; ?>">Cart</a></li>
-									<li class="menu-item"><a href="<?php echo home_url() . '/checkout'; ?>">Checkout</a></li>
-																		<li class="menu-item"><a href="<?php echo esc_url(home_url('/login/')); ?>">Login</a></li>
-									<li class="menu-item"><a href="<?php echo esc_url(home_url('/signup/')); ?>">Register</a></li>
-								</ul>
-							</div>
-						<?php } else {
-						?>
-							<div class="account-menu header-menu-container">
-								<ul class="header-menu text-end">
-									<li class="menu-item"><a href="<?php echo home_url() . '/cart'; ?>">Cart</a></li>
-									<li class="menu-item"><a href="<?php echo site_url() . '/my-orders'; ?>">My Orders</a></li>
-									<li class="menu-item"><a href="<?php echo site_url() . '/account'; ?>">My Account</a></li>
-								</ul>
-							</div>
-
-						<?php
-						} ?>
-					</div>
-
-
 				</div>
+
+				<div class="mobile-menu-container" id="siteMobileMenu" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e('Menu', 'litsign'); ?>">
+					<div class="mobile-menu-header">
+						<span class="mobile-menu-title">Menu</span>
+						<button type="button" class="mobile-menu-close" aria-label="<?php esc_attr_e('Close menu', 'litsign'); ?>">&times;</button>
+					</div>
+					<a class="mobile-menu-cta" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">
+						Design your sign online <?php echo $icon('arrow'); // Static SVG. ?>
+					</a>
+					<nav aria-label="<?php esc_attr_e('Mobile navigation', 'litsign'); ?>">
+						<p class="mobile-menu-label">Shop</p>
+						<?php
+						wp_nav_menu(array(
+							'theme_location' => 'header-bottom-menu',
+							'container' => false,
+							'menu_class' => 'header-menu',
+						));
+						?>
+						<p class="mobile-menu-label">Your account</p>
+						<ul class="header-menu mobile-account-menu">
+							<?php foreach ($account_links as $url => $label) : ?>
+								<li class="menu-item"><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($label); ?></a></li>
+							<?php endforeach; ?>
+							<li class="menu-item"><a href="<?php echo esc_url(home_url('/cart/')); ?>">Cart <span class="sh-cart-count" data-cart-count hidden></span></a></li>
+							<li class="menu-item"><a href="<?php echo esc_url(home_url('/checkout/')); ?>">Checkout</a></li>
+						</ul>
+					</nav>
+					<div class="mobile-menu-contact">
+						<p class="mobile-menu-label">Talk to a sign specialist</p>
+						<?php
+						wp_nav_menu(array(
+							'theme_location' => 'header-menu',
+							'container' => false,
+							'menu_class' => 'header-menu',
+						));
+						?>
+						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PST</p>
+					</div>
+				</div>
+
 				<div class="row header-bottom">
 					<div class="col d-flex justify-content-center align-items-center header-bottom-container">
 						<div class="megamenu-container">
-							<button id="allProductsBtn" aria-expanded="false" aria-controls="megaMenu">All Products <i class="fa-solid fa-chevron-down"> </i></button>
+							<button type="button" id="allProductsBtn" aria-expanded="false" aria-controls="megaMenu"><?php echo $icon('grid'); // Static SVG. ?> All Products <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
 							<div id="megaMenu" class="mega-menu">
 								<div class="container p-3">
 									<div class="row">
@@ -487,11 +485,13 @@ $logo_id = get_theme_mod('custom_logo');
 							</div>
 							<div class="mega-menu-backdrop" aria-hidden="true"></div>
 						</div>
-						<?php wp_nav_menu(array(
-							'theme_location' => 'header-bottom-menu',
-							'container_class' => 'header-menu-container hide-on-mobile',
-							'menu_class' => 'header-menu text-center'
-						)); 					?>
+						<nav class="sh-categories" aria-label="<?php esc_attr_e('Product categories', 'litsign'); ?>">
+							<?php wp_nav_menu(array(
+								'theme_location' => 'header-bottom-menu',
+								'container_class' => 'header-menu-container',
+								'menu_class' => 'header-menu',
+							)); ?>
+						</nav>
 						<div class="header-builder-menu">
 							<a class="header-builder-cta" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
 						</div>

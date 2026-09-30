@@ -406,10 +406,10 @@ function wholesale_seo_faq_schema()
 	foreach ($items as $item) {
 		$questions[] = array(
 			'@type' => 'Question',
-			'name' => wp_strip_all_tags($item['q']),
+			'name' => html_entity_decode(wp_strip_all_tags($item['q']), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
 			'acceptedAnswer' => array(
 				'@type' => 'Answer',
-				'text' => trim(preg_replace('/\s+/', ' ', wp_strip_all_tags($item['a']))),
+				'text' => trim(preg_replace('/\s+/', ' ', html_entity_decode(wp_strip_all_tags($item['a']), ENT_QUOTES | ENT_HTML5, 'UTF-8'))),
 			),
 		);
 	}

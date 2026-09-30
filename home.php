@@ -170,6 +170,65 @@ function get_nested_terms($taxonomy = 'product_category', $args = array())
 
 $all_categories = get_nested_terms('product_category');
 
+$cl_heights = wholesale_seo_letter_height_range('standard-channel-letter-front-lit');
+$cl_min_height = $cl_heights ? $cl_heights[0] : 8;
+$cl_max_height = $cl_heights ? $cl_heights[1] : 0;
+$storefront_signs_url = function_exists('wholesale_seo_storefront_signs_url') ? wholesale_seo_storefront_signs_url() : '';
+
+if ($is_channel_letters) {
+    // Shown in the FAQ section below and described as FAQPage structured data in the head.
+    wholesale_seo_set_page_faq(array(
+        array(
+            'q' => 'Which channel letter style is right for my storefront?',
+            'a' => 'Front-lit letters give bold, direct illumination. Back-lit and halo-lit letters glow onto the wall behind them for a softer, upscale look. Front-and-back lit letters combine both. Not sure? Call us at <a href="tel:+18664362101">866-436-2101</a> and we&rsquo;ll help you choose.',
+        ),
+        array(
+            'q' => 'How much do channel letters cost?',
+            'a' => 'Channel letters are priced by letter height, so each style lists a starting price per inch. Open a style, enter your wording, letter height and colors, and you&rsquo;ll see your full price before checkout. For large or unusual projects, <a href="' . esc_url($contact_url) . '">request a free quote</a>.',
+        ),
+        array(
+            'q' => 'What are channel letters made of?',
+            'a' => 'Standard channel letters have .040 aluminum returns (the sides of each letter), a colored acrylic face held by a trimcap, and LED modules with a power supply inside. Halo lit letters use welded stainless steel faces and returns so the light shines out of the back.',
+        ),
+        array(
+            'q' => 'What is the difference between halo lit and reverse lit channel letters?',
+            'a' => 'Both glow onto the wall behind the letters. Halo lit letters have a hidden back with welded stainless steel faces and returns. Reverse lit letters have an exposed acrylic back that the light shines through. Standard back lit letters give a similar glow with acrylic faces and trimcaps.',
+        ),
+        array(
+            'q' => 'What are trimless channel letters?',
+            'a' => 'Trimless letters have no plastic trimcap around the acrylic face. Choose an inset face with a metal border, or a borderless exposed face for the sleekest look. Both use welded stainless steel returns.',
+        ),
+        array(
+            'q' => 'Should I mount my letters on a raceway or directly on the wall?',
+            'a' => 'A raceway is a metal box that holds the wiring and mounts the letters as one unit, so fewer holes go into your building. You can add a raceway to front lit, back lit and dual lit letters, or add one in the <a href="' . esc_url($builder_url) . '">online sign builder</a>. Letters without a raceway mount directly to the wall using the included installation pattern.',
+        ),
+        array(
+            'q' => 'What letter heights can I order?',
+            'a' => sprintf('Letter heights start at %d inches%s. The largest size depends on the style; choose a height on any product page to see what&rsquo;s available.', $cl_min_height, $cl_max_height ? sprintf(' and go up to %d inches for front lit letters', $cl_max_height) : ''),
+        ),
+        array(
+            'q' => 'How tall should my channel letters be?',
+            'a' => 'A common sign industry rule of thumb is about 1 inch of letter height for every 10 feet of viewing distance, so letters seen from 120 feet away work best at about 12 inches or taller. Also check the space on your fascia and any size limits in your lease or local sign code.',
+        ),
+        array(
+            'q' => 'What materials and warranty do I get?',
+            'a' => 'Outdoor channel letter signs are UL listed with sign section labels. Listed LED modules, power supplies and qualifying letters carry a five-year warranty.',
+        ),
+        array(
+            'q' => 'How long will it take to get my sign?',
+            'a' => 'Every sign is made to order. Your estimated ship date is shown at checkout, and after manufacturing you can choose standard (3&ndash;6 business days), 3-day, 2-day or overnight shipping.',
+        ),
+        array(
+            'q' => 'Is my sign ready to install when it arrives?',
+            'a' => 'Yes. Every sign is tested before shipment and includes a wiring diagram and an installation pattern for your installer.',
+        ),
+        array(
+            'q' => 'Can I pick up my order?',
+            'a' => 'Pickup isn&rsquo;t available &mdash; every order ships directly to you.',
+        ),
+    ));
+}
+
 get_header();
 
 
@@ -655,6 +714,30 @@ get_header();
     </section>
     <?php endif; ?>
 
+    <section class="sf-section cl-guide" aria-labelledby="cl-guide-title">
+        <div class="container sf-prose">
+            <p class="cl-kicker">Channel letter guide</p>
+            <h2 id="cl-guide-title" class="cl-section-title">What Are Channel Letters?</h2>
+            <p>Channel letters are individually built, three-dimensional letters used as exterior business signs. Each letter is a shallow metal &ldquo;channel&rdquo; with LED lighting inside, which is why they are the most common lit sign on retail stores, restaurants, salons and offices. They read clearly by day and glow at night, and every letter is cut to your wording, font and colors.<?php if ($storefront_signs_url) : ?> Comparing sign types for your business? See our <a href="<?php echo esc_url($storefront_signs_url); ?>">storefront signs guide</a>.<?php endif; ?></p>
+
+            <h3>How channel letters are built</h3>
+            <ul class="sf-facts">
+                <li><strong>Returns</strong>The sides of each letter give it depth: .040 aluminum on standard letters, welded stainless steel on halo, reverse lit, trimless and borderless styles.</li>
+                <li><strong>Faces</strong>Colored acrylic that the light shines through, or a solid metal face on halo lit letters so the light glows out of the back.</li>
+                <li><strong>Trimcap &amp; LEDs</strong>A trimcap holds the face on standard letters (trimless styles skip it). LED modules and a power supply light each letter.</li>
+            </ul>
+
+            <h3>Choosing your letter height</h3>
+            <p>Start with how far away your customers are. A common sign industry rule of thumb is about 1 inch of letter height for every 10 feet of viewing distance, so letters seen from 120 feet away work best at about 12 inches or taller. Our letters start at <?php echo esc_html($cl_min_height); ?> inches<?php if ($cl_max_height) : ?> and go up to <?php echo esc_html($cl_max_height); ?> inches for front lit letters<?php endif; ?>. Measure the space on your fascia, and check any sign criteria in your lease before you choose.</p>
+
+            <h3>Mounting and installation</h3>
+            <p>Letters mount directly to the wall or on a raceway, a metal box that holds the wiring and mounts the sign as one unit so fewer holes go into your building. Every sign is tested before it ships and arrives with an installation pattern and a wiring diagram for your installer. In most areas the electrical connection must be made by a licensed electrician or sign contractor.</p>
+
+            <h3>How channel letter pricing works</h3>
+            <p>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, and you see it before checkout. The table above shows where each style starts; <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+        </div>
+    </section>
+
     <section class="cl-steps" aria-labelledby="cl-steps-title">
         <div class="container">
             <p class="cl-kicker">Simple ordering</p>
@@ -725,46 +808,7 @@ get_header();
             <p class="cl-kicker">Before you order</p>
             <h2 id="cl-faq-title" class="cl-section-title">Frequently Asked Questions</h2>
             <div class="cl-faq-list">
-                <details>
-                    <summary>Which channel letter style is right for my storefront?</summary>
-                    <p>Front-lit letters give bold, direct illumination. Back-lit and halo-lit letters glow onto the wall behind them for a softer, upscale look. Front-and-back lit letters combine both. Not sure? Call us at <a href="tel:+18664362101">866-436-2101</a> and we&rsquo;ll help you choose.</p>
-                </details>
-                <details>
-                    <summary>How much do channel letters cost?</summary>
-                    <p>Channel letters are priced by letter height, so each style lists a starting price per inch. Open a style, enter your wording, letter height and colors, and you&rsquo;ll see your full price before checkout. For large or unusual projects, <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
-                </details>
-                <details>
-                    <summary>What is the difference between halo lit and reverse lit channel letters?</summary>
-                    <p>Both glow onto the wall behind the letters. Halo lit letters have a hidden back with welded stainless steel faces and returns. Reverse lit letters have an exposed acrylic back that the light shines through. Standard back lit letters give a similar glow with acrylic faces and trimcaps.</p>
-                </details>
-                <details>
-                    <summary>What are trimless channel letters?</summary>
-                    <p>Trimless letters have no plastic trimcap around the acrylic face. Choose an inset face with a metal border, or a borderless exposed face for the sleekest look. Both use welded stainless steel returns.</p>
-                </details>
-                <details>
-                    <summary>Should I mount my letters on a raceway or directly on the wall?</summary>
-                    <p>A raceway is a metal box that holds the wiring and mounts the letters as one unit, so fewer holes go into your building. You can add a raceway to front lit, back lit and dual lit letters, or add one in the <a href="<?php echo esc_url($builder_url); ?>">online sign builder</a>. Letters without a raceway mount directly to the wall using the included installation pattern.</p>
-                </details>
-                <details>
-                    <summary>What letter heights can I order?</summary>
-                    <p>Letter heights start at 8 inches. The largest size depends on the style; choose a height on any product page to see what&rsquo;s available.</p>
-                </details>
-                <details>
-                    <summary>What materials and warranty do I get?</summary>
-                    <p>Outdoor channel letter signs are UL listed with sign section labels. Listed LED modules, power supplies and qualifying letters carry a five-year warranty.</p>
-                </details>
-                <details>
-                    <summary>How long will it take to get my sign?</summary>
-                    <p>Every sign is made to order. Your estimated ship date is shown at checkout, and after manufacturing you can choose standard (3&ndash;6 business days), 3-day, 2-day or overnight shipping.</p>
-                </details>
-                <details>
-                    <summary>Is my sign ready to install when it arrives?</summary>
-                    <p>Yes. Every sign is tested before shipment and includes a wiring diagram and an installation pattern for your installer.</p>
-                </details>
-                <details>
-                    <summary>Can I pick up my order?</summary>
-                    <p>Pickup isn&rsquo;t available &mdash; every order ships directly to you.</p>
-                </details>
+                <?php wholesale_seo_render_faq(); ?>
             </div>
         </div>
     </section>

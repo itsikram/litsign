@@ -2741,38 +2741,48 @@ function wholesale_seo_head()
 		echo '<meta name="twitter:image" content="' . esc_url($image) . '">' . "\n";
 	}
 
-	$graph = array(
-		'@context' => 'https://schema.org',
-		'@type' => is_singular('product') ? 'Product' : (is_page_template('home.php') ? 'CollectionPage' : 'WebPage'),
+	$site_id = trailingslashit(home_url('/')) . '#website';
+	$organization_id = trailingslashit(home_url('/')) . '#organization';
+	$page_id = trailingslashit($url) . '#webpage';
+	$is_collection = is_page_template('home.php') || get_query_var('category_slug');
+
+	if (is_singular('product')) {
+		$page_type = 'ItemPage';
+	} elseif ($is_collection) {
+		$page_type = 'CollectionPage';
+	} elseif (is_page('about')) {
+		$page_type = 'AboutPage';
+	} elseif (is_page('contact')) {
+		$page_type = 'ContactPage';
+	} else {
+		$page_type = 'WebPage';
+	}
+
+	$page = array(
+		'@type' => $page_type,
+		'@id' => $page_id,
 		'name' => $title,
 		'url' => $url,
 		'description' => $description,
-		'publisher' => array(
-			'@type' => 'Organization',
-			'name' => 'Lit Sign Manufacturing LLC',
-			'alternateName' => 'Store Front Sign Online',
-			'url' => home_url('/'),
-			'telephone' => '+1-866-436-2101',
-			'address' => array(
-				'@type' => 'PostalAddress',
-				'streetAddress' => '707 S. Grady Way Suite 600',
-				'addressLocality' => 'Renton',
-				'addressRegion' => 'WA',
-				'postalCode' => '98057',
-				'addressCountry' => 'US',
-			),
-		),
+		'isPartOf' => array('@id' => $site_id),
+		'publisher' => array('@id' => $organization_id),
+		'inLanguage' => get_bloginfo('language'),
+	);
+	$entities = array();
+
+	// Home > [category >] current page, matching the visible breadcrumbs.
+	$breadcrumb_items = array(
+		array('@type' => 'ListItem', 'position' => 1, 'name' => __('Home', 'litsign'), 'item' => home_url('/')),
 	);
 
 	if (is_singular('product')) {
 		$product_id = get_queried_object_id();
-		$product_name = get_the_title($product_id);
-		$graph = array_merge($graph, wholesale_product_schema($product_id, $url, $image));
-		$terms = get_the_terms($product_id, 'product_category');
+		$product = wholesale_product_schema($product_id, $url, $image);
+		$product['offers']['seller'] = array('@id' => $organization_id);
+		$page['mainEntity'] = array('@id' => $product['@id']);
+		$entities[] = $product;
 
-		$breadcrumb_items = array(
-			array('@type' => 'ListItem', 'position' => 1, 'name' => __('Home', 'litsign'), 'item' => home_url('/')),
-		);
+		$terms = get_the_terms($product_id, 'product_category');
 		if ($terms && !is_wp_error($terms)) {
 			$breadcrumb_items[] = array(
 				'@type' => 'ListItem',
@@ -2784,14 +2794,10 @@ function wholesale_seo_head()
 		$breadcrumb_items[] = array(
 			'@type' => 'ListItem',
 			'position' => count($breadcrumb_items) + 1,
-			'name' => $product_name,
+			'name' => wp_strip_all_tags(get_the_title($product_id)),
 			'item' => $url,
 		);
-		$graph['breadcrumb'] = array(
-			'@type' => 'BreadcrumbList',
-			'itemListElement' => $breadcrumb_items,
-		);
-	} elseif (is_page_template('home.php') || get_query_var('category_slug')) {
+	} elseif ($is_collection) {
 		$term_slug = get_query_var('category_slug');
 		$term_slug = $term_slug ? sanitize_title($term_slug) : (isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : 'channel-letters');
 		$query = new WP_Query(array(
@@ -2823,32 +2829,41 @@ function wholesale_seo_head()
 				'name' => get_the_title($product_id),
 			);
 		}
-		$graph['mainEntity'] = array(
+		$page['mainEntity'] = array(
 			'@type' => 'ItemList',
 			'numberOfItems' => count($items),
 			'itemListElement' => $items,
 		);
-	}
 
-	if (is_singular() && !is_singular('product')) {
-		$graph['breadcrumb'] = array(
-			'@type' => 'BreadcrumbList',
-			'itemListElement' => array(
-				array(
-					'@type' => 'ListItem',
-					'position' => 1,
-					'name' => __('Home', 'litsign'),
-					'item' => home_url('/'),
-				),
-				array(
-					'@type' => 'ListItem',
-					'position' => 2,
-					'name' => wp_strip_all_tags(get_the_title()),
-					'item' => $url,
-				),
-			),
+		$term = get_query_var('category_slug') ? get_term_by('slug', $term_slug, 'product_category') : false;
+		if ($term && !is_wp_error($term)) {
+			$breadcrumb_items[] = array(
+				'@type' => 'ListItem',
+				'position' => 2,
+				'name' => $term->name,
+				'item' => $url,
+			);
+		}
+	} elseif (is_singular()) {
+		$breadcrumb_items[] = array(
+			'@type' => 'ListItem',
+			'position' => 2,
+			'name' => wp_strip_all_tags(get_the_title()),
+			'item' => $url,
 		);
 	}
+
+	if (count($breadcrumb_items) > 1) {
+		$page['breadcrumb'] = array(
+			'@type' => 'BreadcrumbList',
+			'itemListElement' => $breadcrumb_items,
+		);
+	}
+
+	$graph = array(
+		'@context' => 'https://schema.org',
+		'@graph' => array_merge(array($page), $entities),
+	);
 
 	echo '<script type="application/ld+json">' . wp_json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
 
@@ -3045,7 +3060,6 @@ function wholesale_organization_schema()
 		'alternateName' => 'Store Front Sign Online',
 		'url' => home_url('/'),
 		'logo' => get_theme_mod('custom_logo') ? wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full') : '',
-		'foundingDate' => '1998',
 		'founder' => array(
 			'@type' => 'Person',
 			'name' => 'Tri Nguyen',
@@ -3061,6 +3075,7 @@ function wholesale_organization_schema()
 		'parentOrganization' => array('@id' => $organization_id),
 		'telephone' => '+1-866-436-2101',
 		'email' => 'TR@StorefrontSignOnline.com',
+		'image' => $organization['logo'],
 		'address' => array(
 			'@type' => 'PostalAddress',
 			'streetAddress' => '707 S. Grady Way Suite 600',
@@ -3069,7 +3084,17 @@ function wholesale_organization_schema()
 			'postalCode' => '98057',
 			'addressCountry' => 'US',
 		),
+		// Customer service hours shown in the header and footer (Pacific time).
+		'openingHoursSpecification' => array(
+			array(
+				'@type' => 'OpeningHoursSpecification',
+				'dayOfWeek' => array('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'),
+				'opens' => '08:00',
+				'closes' => '17:00',
+			),
+		),
 	);
+	$local_business = array_filter($local_business);
 
 	echo '<script type="application/ld+json">' . wp_json_encode(array(
 		'@context' => 'https://schema.org',

@@ -221,7 +221,7 @@ get_header();
                     </p>
                 <?php else : ?>
                     <p class="home-hero-eyebrow">Premium quality signs &amp; letters</p>
-                    <h2 id="home-hero-title" class="home-hero-title">Make Your Brand <br class="home-hero-mobile-break"><span> Stand Out</span></h2>
+                    <p id="home-hero-title" class="home-hero-title">Make Your Brand <br class="home-hero-mobile-break"><span> Stand Out</span></p>
                 <p class="home-hero-lead">Custom LED channel letters, storefront signs, acrylic signs and more.<br class="home-hero-desktop-break"> Built for businesses that want to be seen.</p>
                 <div class="home-hero-actions">
                     <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>
@@ -281,7 +281,7 @@ get_header();
     <div class="home-video-modal-backdrop" data-video-modal-close></div>
     <div class="home-video-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="homeVideoModalTitle">
         <div class="home-video-modal-header">
-            <h2 id="homeVideoModalTitle">Storefront Sign Online</h2>
+            <p id="homeVideoModalTitle" class="h5 mb-0">Storefront Sign Online</p>
             <button type="button" class="home-video-modal-close" data-video-modal-close aria-label="Close video">
                 <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
@@ -337,9 +337,18 @@ get_header();
 <?php else : ?>
 <div class="container">
     <header class="shop-header">
-        <?php $shop_heading_tag = $is_channel_letters ? 'h2' : 'h1'; ?>
-        <<?php echo $shop_heading_tag; ?> class="shop-header-title text-center fs-2"><?php echo esc_html($is_channel_letters ? __('Shop Channel Letter Sign Styles', 'litsign') : ($current_term ? $current_term->name : __('Custom Signs', 'litsign'))); ?></<?php echo $shop_heading_tag; ?>>
-        <p class="text-center fs-5 mb-0"><?php echo esc_html($is_channel_letters ? __('Create a stronger storefront presence with custom LED channel letters made for retail businesses.', 'litsign') : ($current_term ? $current_term->description : __('Shop custom signage designed and built for your business.', 'litsign'))); ?></p>
+        <?php
+        $shop_heading_tag = $is_channel_letters ? 'h2' : 'h1';
+        $category_seo = $current_term ? wholesale_seo_category_meta() : array();
+        $category_seo = $current_term && isset($category_seo[$current_term->slug]) ? $category_seo[$current_term->slug] : array();
+        $shop_heading = $current_term ? (!empty($category_seo['h1']) ? $category_seo['h1'] : $current_term->name) : __('Custom Signs', 'litsign');
+        ?>
+        <<?php echo $shop_heading_tag; ?> class="shop-header-title text-center fs-2"><?php echo esc_html($is_channel_letters ? __('Shop Channel Letter Sign Styles', 'litsign') : $shop_heading); ?></<?php echo $shop_heading_tag; ?>>
+        <?php if (!$is_channel_letters && !empty($category_seo['intro'])) : ?>
+            <p class="shop-header-intro text-center mb-0"><?php echo wp_kses_post($category_seo['intro']); ?></p>
+        <?php else : ?>
+            <p class="text-center fs-5 mb-0"><?php echo esc_html($is_channel_letters ? __('Create a stronger storefront presence with custom LED channel letters made for retail businesses.', 'litsign') : ($current_term ? $current_term->description : __('Shop custom signage designed and built for your business.', 'litsign'))); ?></p>
+        <?php endif; ?>
         <?php if ($is_channel_letters) : ?>
             <p class="text-center mt-3"><a class="btn btn-primary" href="<?php echo esc_url($contact_url); ?>">Request a Channel Letter Sign Quote</a></p>
         <?php endif; ?>

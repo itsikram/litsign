@@ -53,6 +53,7 @@ require_once(dirname(__FILE__) . '/inc/refunds.php');
 require_once(dirname(__FILE__) . '/inc/email-log.php');
 require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
+require_once(dirname(__FILE__) . '/inc/seo-content.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
 /**
@@ -1466,7 +1467,8 @@ function wholesale_render_sitemap()
 	$private_page_ids = wholesale_seo_noindex_page_ids();
 
 	foreach ($page_query->posts as $post) {
-		if ('page' === $post->post_type && (in_array($post->post_name, $private_pages, true) || in_array($post->ID, $private_page_ids, true))) {
+		if (('page' === $post->post_type && (in_array($post->post_name, $private_pages, true) || in_array($post->ID, $private_page_ids, true)))
+			|| ('product' === $post->post_type && in_array($post->ID, wholesale_seo_duplicate_product_ids(), true))) {
 			continue;
 		}
 
@@ -2335,12 +2337,16 @@ function wholesale_seo_page_defaults()
 {
 	return array(
 		'about' => array(
-			'title' => __('About Lit Sign Manufacturing | Custom Sign Manufacturer', 'litsign'),
-			'description' => __('Learn about Lit Sign Manufacturing, founded in 1998 by Tri Nguyen and serving retail storefronts from Renton, WA.', 'litsign'),
+			'title' => __('About Us | Store Front Sign Online, Renton, WA', 'litsign'),
+			'description' => __('Store Front Sign Online makes custom channel letters, storefront signs and large format prints, ordered online and shipped to your business.', 'litsign'),
 		),
 		'contact' => array(
-			'title' => __('Contact Lit Sign Manufacturing | Request a Sign Quote', 'litsign'),
-			'description' => __('Contact Lit Sign Manufacturing in Renton, WA about custom storefront signs, installation, and your next sign project.', 'litsign'),
+			'title' => __('Contact Us | Free Channel Letter & Sign Quote', 'litsign'),
+			'description' => __('Request a free quote for channel letters or storefront signs. Call 866-436-2101, text or email your logo. Mon-Fri 8am-5pm PST.', 'litsign'),
+		),
+		'terms-conditions' => array(
+			'title' => __('Terms & Conditions | Store Front Sign Online', 'litsign'),
+			'description' => __('Ordering, artwork approval, cancellation, returns, reprints and shipping terms for custom signs and prints from Store Front Sign Online.', 'litsign'),
 		),
 		'brands' => array(
 			'title' => __('Sign Brands and Products | Lit Sign Manufacturing', 'litsign'),
@@ -2378,7 +2384,7 @@ function wholesale_seo_channel_letter_products()
 	return array(
 		'standard-channel-letter-front-lit' => array(
 			'title' => __('Front Lit Channel Letters | Custom LED Face Lit Signs', 'litsign'),
-			'description' => __('Custom front lit channel letters (face lit) with acrylic faces, trimcaps, and .040 aluminum returns. UL listed, made in USA. Design and price your LED sign online.', 'litsign'),
+			'description' => __('Front lit (face lit) channel letters with acrylic faces, trimcaps and .040 aluminum returns. UL listed, made in USA. Design and price your sign online.', 'litsign'),
 			'heading' => __('Front Lit Channel Letters', 'litsign'),
 			'intro' => __('Front lit channel letters, also called face lit letters, shine LED light through a colored acrylic face so your business name reads bright and clear day and night. Each letter is built with an acrylic face, trimcap, and .040 aluminum returns.', 'litsign'),
 		),
@@ -2390,13 +2396,13 @@ function wholesale_seo_channel_letter_products()
 		),
 		'standard-channel-letter-front-back-lit' => array(
 			'title' => __('Front & Back Lit Channel Letters | Dual Lit LED Signs', 'litsign'),
-			'description' => __('Dual lit channel letters that light up through the face and onto the wall behind. Acrylic faces, trimcaps, .040 aluminum returns. Made in USA. Design your sign online.', 'litsign'),
+			'description' => __('Dual lit channel letters light through the face and onto the wall behind. Acrylic faces, trimcaps, .040 aluminum returns. Made in USA. Price it online.', 'litsign'),
 			'heading' => __('Front and Back Lit Channel Letters', 'litsign'),
 			'intro' => __('Front and back lit channel letters, also called dual lit letters, shine through the acrylic face and onto the wall behind, combining a bright face with a halo glow. Each letter has an acrylic face, trimcap, and .040 aluminum returns.', 'litsign'),
 		),
 		'hidden-back-halo-lit' => array(
-			'title' => __('Halo Lit Channel Letters | Custom Halo Lit Signs', 'litsign'),
-			'description' => __('Custom halo lit channel letters with welded stainless steel faces and returns that glow onto the wall behind for an upscale look. Made in USA. Design your sign online.', 'litsign'),
+			'title' => __('Halo Lit Channel Letters | Stainless Steel Halo Signs', 'litsign'),
+			'description' => __('Halo lit channel letters with welded stainless steel faces and returns that glow onto the wall behind for an upscale look. Made in USA. Price yours online.', 'litsign'),
 			'heading' => __('Halo Lit Channel Letters', 'litsign'),
 			'intro' => __('Halo lit channel letters have solid stainless steel faces, so the LED light shines out the back and draws a glowing halo on the wall around each letter. Faces and returns are welded stainless steel, sanded, and painted.', 'litsign'),
 		),
@@ -2407,13 +2413,13 @@ function wholesale_seo_channel_letter_products()
 			'intro' => __('Reverse lit channel letters glow from behind through an exposed acrylic back, casting a halo of light onto the wall. Faces and returns are welded stainless steel, sanded, and painted in multiple colors.', 'litsign'),
 		),
 		'exposed-acrylic-face-lit-borderless-no-trimcap' => array(
-			'title' => __('Borderless Channel Letters | Trimless Face Lit Signs', 'litsign'),
-			'description' => __('Borderless channel letters with an exposed acrylic face and no trimcap for a sleek, trimless face lit look. Welded stainless steel returns in multiple colors. Made in USA.', 'litsign'),
+			'title' => __('Borderless Channel Letters | Exposed Face Lit Letters', 'litsign'),
+			'description' => __('Borderless channel letters with an exposed acrylic face and no trimcap or border for a sleek face lit look. Welded stainless steel returns. Made in USA.', 'litsign'),
 			'heading' => __('Borderless Channel Letters', 'litsign'),
 			'intro' => __('Borderless channel letters have an exposed acrylic face with no trimcap and no border, giving a sleek, trimless face lit look. Returns are welded stainless steel, sanded, and painted in multiple colors.', 'litsign'),
 		),
 		'inset-acrylic-face-lit-with-border-no-trimcap' => array(
-			'title' => __('Trimless Channel Letters with Border | Face Lit Letters', 'litsign'),
+			'title' => __('Trimless Channel Letters | Face Lit Letters with Border', 'litsign'),
 			'description' => __('Trimless channel letters with an inset acrylic face and a metal border instead of a trimcap. Face lit, on welded stainless steel returns. Made in USA.', 'litsign'),
 			'heading' => __('Trimless Channel Letters with Border', 'litsign'),
 			'intro' => __('Trimless channel letters with an inset acrylic face sit inside a clean metal border instead of a plastic trimcap. They are face lit and built on welded stainless steel returns, sanded and painted.', 'litsign'),
@@ -2443,18 +2449,21 @@ function wholesale_seo_keyword_meta()
 {
 	if (wholesale_is_channel_letters_page()) {
 		return array(
-			'title' => __('Custom Channel Letter Signs | LED Storefront Signs Online', 'litsign'),
-			'description' => __('Buy custom LED channel letters online: front lit, back lit, halo lit, reverse lit, and trimless letters. See your price per inch, UL listed, made in USA.', 'litsign'),
+			'title' => __('Channel Letters | Custom LED Signs, See Your Price Online', 'litsign'),
+			'description' => __('Custom LED channel letters built to order: front lit, back lit, halo lit, reverse lit and trimless. See your price per inch online. UL listed, made in USA.', 'litsign'),
 		);
 	}
 
 	if (is_singular('product')) {
-		return wholesale_seo_channel_letter_product(get_queried_object_id());
+		$product_id = get_queried_object_id();
+		$channel_letter = wholesale_seo_channel_letter_product($product_id);
+
+		return $channel_letter ? $channel_letter : wholesale_seo_product_meta($product_id);
 	}
 
 	if (is_page('channel-letter-builder')) {
 		return array(
-			'title' => __('Channel Letter Sign Builder | Design Custom Channel Letters Online', 'litsign'),
+			'title' => __('Channel Letter Builder | Design & Price Your Sign Online', 'litsign'),
 			'description' => __('Design custom channel letters online. Choose your letter style, lighting, colors, and size, then preview and price your storefront sign before you order.', 'litsign'),
 		);
 	}
@@ -2466,6 +2475,14 @@ function wholesale_seo_keyword_meta()
 			return array(
 				'title' => __('Storefront Signs & Channel Letters | Store Front Sign Online', 'litsign'),
 				'description' => __('Shop custom storefront signs and LED channel letters for retail businesses. Compare lit letter styles and build your sign online.', 'litsign'),
+			);
+		}
+
+		$category_meta = $term && !is_wp_error($term) ? wholesale_seo_category_meta() : array();
+		if (isset($category_meta[$term->slug])) {
+			return array(
+				'title' => $category_meta[$term->slug]['title'],
+				'description' => $category_meta[$term->slug]['description'],
 			);
 		}
 	}
@@ -2493,6 +2510,10 @@ function wholesale_seo_url()
 		$shop_url = $shop_url ? $shop_url : home_url('/');
 
 		return $term_slug ? wholesale_category_url($term_slug) : $shop_url;
+	}
+
+	if (is_singular('product') && ($original = wholesale_seo_product_duplicate_of(get_queried_object_id()))) {
+		return get_permalink($original);
 	}
 
 	return is_singular() ? get_permalink() : home_url(add_query_arg(array(), $GLOBALS['wp']->request));
@@ -2873,7 +2894,8 @@ add_filter('rank_math/frontend/description', 'wholesale_rank_math_channel_letter
 
 function wholesale_rank_math_canonical($canonical)
 {
-	if (wholesale_is_channel_letters_page() || get_query_var('category_slug')) {
+	if (wholesale_is_channel_letters_page() || get_query_var('category_slug')
+		|| (is_singular('product') && wholesale_seo_product_duplicate_of(get_queried_object_id()))) {
 		return wholesale_seo_url();
 	}
 

@@ -1038,6 +1038,8 @@ get_header();
             </div>
         </div>
 
+        <?php wholesale_seo_render_channel_letter_guide(get_the_ID()); ?>
+
         <!-- product description -->
         <div class="row mt-4 overflow-hidden">
             <div class="col">

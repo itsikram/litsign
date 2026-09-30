@@ -456,3 +456,111 @@ function wholesale_seo_rank_math_faq($data)
 	return $data;
 }
 add_filter('rank_math/json_ld', 'wholesale_seo_rank_math_faq', 25);
+
+/**
+ * Style guide copy for each channel letter product page. Keys are product
+ * slugs; facts match the product construction described elsewhere on the site.
+ *
+ * @return array
+ */
+function wholesale_seo_channel_letter_guides()
+{
+	return array(
+		'standard-channel-letter-front-lit' => array(
+			'look' => 'Front lit letters are lit from inside and shine through a colored acrylic face, so the whole face of each letter glows. It is the brightest, most readable style at night and the classic look for storefront signs.',
+			'build' => array('Colored acrylic face held by a trimcap', '.040 aluminum returns', 'LED modules and a power supply inside each letter', 'Optional raceway for mounting and wiring'),
+			'best_for' => 'Retail stores, restaurants, convenience stores and any business that needs to be read from the road or across a parking lot after dark.',
+		),
+		'standard-channel-letter-back-lit' => array(
+			'look' => 'Back lit letters send light onto the wall behind them, surrounding each letter with a soft glow while the letter itself reads as a solid shape. The effect is calmer than a fully lit face.',
+			'build' => array('Acrylic face held by a trimcap', '.040 aluminum returns', 'LED lighting aimed at the wall behind the letter', 'Optional raceway for mounting and wiring'),
+			'best_for' => 'Cafes, restaurants and offices that want a lit sign with a softer, more atmospheric look.',
+		),
+		'standard-channel-letter-front-back-lit' => array(
+			'look' => 'Front and back lit letters, also called dual lit, glow through the face and onto the wall behind at the same time. You get the readability of a front lit sign with a halo around every letter.',
+			'build' => array('Acrylic face held by a trimcap', '.040 aluminum returns', 'LED lighting for both the face and the wall behind', 'Optional raceway for mounting and wiring'),
+			'best_for' => 'Businesses that want maximum presence after dark, such as restaurants, entertainment venues and shops on busy streets.',
+		),
+		'hidden-back-halo-lit' => array(
+			'look' => 'Halo lit letters have solid metal faces, so the letter stays dark and the light shines out of the back to draw a glowing outline on the wall. By day they look like painted metal dimensional letters.',
+			'build' => array('Welded stainless steel faces and returns', 'Sanded and painted in your color', 'LED lighting that shines out the back of each letter'),
+			'best_for' => 'Salons, boutiques, clinics, law and professional offices, and brands that want an upscale, understated sign.',
+		),
+		'halo-reverse-acrylic-lit-channel-letters' => array(
+			'look' => 'Reverse lit letters glow from behind through an exposed acrylic back, casting a halo of light onto the wall around a painted metal face.',
+			'build' => array('Welded stainless steel faces and returns', 'Exposed acrylic back that the light shines through', 'Sanded and painted in multiple colors'),
+			'best_for' => 'Modern storefronts and offices that want a halo effect with a clean metal face.',
+		),
+		'inset-acrylic-face-lit-with-border-no-trimcap' => array(
+			'look' => 'Trimless letters with a border are face lit like a standard letter, but the acrylic face sits inside a thin metal border instead of a plastic trimcap, for a crisp edge up close.',
+			'build' => array('Inset acrylic face with a metal border, no trimcap', 'Welded stainless steel returns, sanded and painted', 'LED lighting behind the face'),
+			'best_for' => 'Brands that want a bright face lit sign with a more refined, modern edge.',
+		),
+		'exposed-acrylic-face-lit-borderless-no-trimcap' => array(
+			'look' => 'Borderless letters have an exposed acrylic face with no trimcap and no border, so only the lit face shows. It is the sleekest face lit style.',
+			'build' => array('Exposed acrylic face, no trimcap or border', 'Welded stainless steel returns, sanded and painted', 'LED lighting behind the face'),
+			'best_for' => 'Contemporary brands, tech and design businesses, and any storefront where a minimal look matters.',
+		),
+	);
+}
+
+/**
+ * Print the style guide section on a channel letter product page.
+ */
+function wholesale_seo_render_channel_letter_guide($product_id)
+{
+	$slug = (string) get_post_field('post_name', $product_id);
+	$guides = wholesale_seo_channel_letter_guides();
+	$seo = wholesale_seo_channel_letter_product($product_id);
+	if (!isset($guides[$slug]) || empty($seo['heading'])) {
+		return;
+	}
+
+	$guide = $guides[$slug];
+	$heading = $seo['heading'];
+	$heights = wholesale_seo_letter_height_range($slug);
+	$storefront_url = function_exists('wholesale_seo_storefront_signs_url') ? wholesale_seo_storefront_signs_url() : '';
+	?>
+	<section class="cl-style-guide" aria-labelledby="cl-style-guide-title">
+		<h2 id="cl-style-guide-title"><?php echo esc_html(sprintf('%s: Style Guide', $heading)); ?></h2>
+		<p><?php echo esc_html($guide['look']); ?></p>
+
+		<h3>How they&rsquo;re built</h3>
+		<ul>
+			<?php foreach ($guide['build'] as $item) : ?>
+				<li><?php echo esc_html($item); ?></li>
+			<?php endforeach; ?>
+		</ul>
+
+		<h3>Best for</h3>
+		<p><?php echo esc_html($guide['best_for']); ?></p>
+
+		<h3>Sizes and ordering</h3>
+		<p>
+			<?php if ($heights) : ?>
+				<?php echo esc_html(sprintf('Available with letters from %d to %d inches tall.', $heights[0], $heights[1])); ?>
+			<?php endif; ?>
+			Price is per letter by height: choose your height, enter your wording and colors above, and your total updates before you add it to the cart. Every sign is tested before it ships, with an installation pattern and wiring diagram for your installer.
+		</p>
+
+		<h3>Compare other channel letter styles</h3>
+		<ul>
+			<?php foreach (wholesale_seo_channel_letter_products() as $other_slug => $other) : ?>
+				<?php
+				if ($other_slug === $slug) {
+					continue;
+				}
+				$other_product = wholesale_seo_product($other_slug);
+				if (!$other_product) {
+					continue;
+				}
+				?>
+				<li><a href="<?php echo esc_url(get_permalink($other_product)); ?>"><?php echo esc_html($other['heading']); ?></a></li>
+			<?php endforeach; ?>
+		</ul>
+		<p>
+			See all styles side by side on the <a href="<?php echo esc_url(home_url('/#cl-compare-title')); ?>">channel letters page</a><?php if ($storefront_url) : ?>, or compare every sign type in our <a href="<?php echo esc_url($storefront_url); ?>">storefront signs guide</a><?php endif; ?>.
+		</p>
+	</section>
+	<?php
+}

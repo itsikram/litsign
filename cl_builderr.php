@@ -171,7 +171,7 @@ get_header();
                             <span class="info-btn" role="button" tabindex="0" aria-label="What is the face?">i</span>
                             <div class="info-btn-content">
                                 <small class="text-muted">The face is the colored acrylic front of each letter that lights up.</small>
-                                <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/face-info.png'); ?>" alt="">
+                                <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/face-info.png'); ?>" alt="Channel letter face options">
                             </div>
                         </span>
                     </div>
@@ -192,7 +192,7 @@ get_header();
                                 <small class="text-muted">
                                     The return is the metal side wall of each channel letter.
                                 </small>
-                                <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/return-info.png'); ?>" alt="">
+                                <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/return-info.png'); ?>" alt="Channel letter return options">
                             </div>
                         </span>
                     </div>
@@ -213,7 +213,7 @@ get_header();
                                 <small class="text-muted">
                                     Trimcap is a plastic molding that surrounds the acrylic channel letter face.
                                 </small>
-                                <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/trimcap-info.png'); ?>" alt="">
+                                <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/trimcap-info.png'); ?>" alt="Channel letter trimcap options">
 
                             </div>
                         </span>
@@ -343,7 +343,7 @@ get_header();
                                             <small class="text-muted">
                                                 Fang Hua HMA-60NU-RX 12V / 5A 60W, Class 2, constant voltage and current, IP67, 5-year warranty. Non-brand transformer boxes, for dry locations only. $90 each.
                                             </small>
-                                            <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/standard-ps-info.png'); ?>" alt="">
+                                            <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/standard-ps-info.png'); ?>" alt="Standard power supply for channel letters">
                                         </div>
                                     </div>
                                 </li>

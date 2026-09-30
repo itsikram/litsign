@@ -639,3 +639,17 @@ function wholesale_seo_attachment_alt($attachment_id)
 
 	return $readable;
 }
+
+/**
+ * Pages print their title as the H1, so an H1 typed into the page content
+ * (the Terms page has one) becomes a second H1. Demote those to H2.
+ */
+function wholesale_seo_demote_content_h1($content)
+{
+	if (!is_page() || false === stripos($content, '<h1')) {
+		return $content;
+	}
+
+	return preg_replace(array('/<h1(\s|>)/i', '/<\/h1>/i'), array('<h2$1', '</h2>'), $content);
+}
+add_filter('the_content', 'wholesale_seo_demote_content_h1', 20);

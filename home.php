@@ -738,6 +738,56 @@ get_header();
         </div>
     </section>
 
+    <?php
+    // More product lines for storefronts: product slug (image and starting price), link, name, summary.
+    $more_products = array(
+        array('adhesive-window-perf', wholesale_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted film and clings for your storefront glass.'),
+        array('deluxe-signicade-graphic-frame', wholesale_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street.'),
+        array('13oz-vinyl-banner', wholesale_category_url('banners'), 'Banners', 'Vinyl, mesh and fabric banners for grand openings, sales and events.'),
+        array('feather-angled-flag-pole', wholesale_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that catch drivers&rsquo; attention from the road.'),
+        array('aluminum-sign', wholesale_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours and parking.'),
+        array('standard-retractable-insert-stand', wholesale_category_url('banner-stands'), 'Banner Stands', 'Retractable and X-stands for lobbies, trade shows and in-store promotions.'),
+        array('straight-tension-fabric-displays-graphic-frame', wholesale_category_url('trade-show-products'), 'Trade Show Displays', 'Tension fabric and pop up backwalls for your booth.'),
+        array('event-tent-full-canopy-graphic-frame', wholesale_category_url('custom-event-tents'), 'Event Tents', 'Printed 10x10 canopy tents with walls and flags for outdoor events.'),
+    );
+    ?>
+    <section class="sf-section" aria-labelledby="home-more-title">
+        <div class="container">
+            <p class="cl-kicker">More for your storefront</p>
+            <h2 id="home-more-title" class="cl-section-title">Window Graphics, Banners, Flags &amp; Displays</h2>
+            <p class="cl-section-lead">Pair your channel letters with signs at eye level. Every product shows its price online.<?php if ($storefront_signs_url) : ?> Compare them all in our <a href="<?php echo esc_url($storefront_signs_url); ?>">storefront signs guide</a>.<?php endif; ?></p>
+            <div class="sf-type-grid">
+                <?php foreach ($more_products as $item) : ?>
+                    <?php
+                    $item_product = wholesale_seo_product($item[0]);
+                    $item_price = wholesale_seo_product_starting_text($item[0]);
+                    ?>
+                    <article class="sf-type-card">
+                        <a class="sf-type-image" href="<?php echo esc_url($item[1]); ?>" tabindex="-1" aria-hidden="true">
+                            <?php
+                            if ($item_product && has_post_thumbnail($item_product)) {
+                                echo get_the_post_thumbnail($item_product, 'medium_large', array(
+                                    'loading' => 'lazy',
+                                    'decoding' => 'async',
+                                    'alt' => wp_strip_all_tags($item[2]),
+                                    'sizes' => '(max-width: 575px) 100vw, (max-width: 991px) 50vw, 25vw',
+                                ));
+                            }
+                            ?>
+                        </a>
+                        <div class="sf-type-body">
+                            <h3><a href="<?php echo esc_url($item[1]); ?>"><?php echo esc_html($item[2]); ?></a></h3>
+                            <p><?php echo wp_kses_post($item[3]); ?></p>
+                            <?php if ($item_price) : ?>
+                                <p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($item_price); ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </section>
+
     <section class="cl-steps" aria-labelledby="cl-steps-title">
         <div class="container">
             <p class="cl-kicker">Simple ordering</p>

@@ -2654,6 +2654,71 @@ add_filter('document_title_parts', function ($parts) {
 });
 
 /**
+ * Return the store's schema.org return policy. Orders are made to order and
+ * approved orders are not refundable; defect claims are handled separately.
+ *
+ * @return array
+ */
+function wholesale_merchant_return_policy()
+{
+	$policy = array(
+		'@type' => 'MerchantReturnPolicy',
+		'applicableCountry' => 'US',
+		'returnPolicyCategory' => 'https://schema.org/MerchantReturnNotPermitted',
+	);
+	$page = get_page_by_path('shipping-returns');
+
+	if (!$page || 'publish' !== $page->post_status) {
+		$page = get_page_by_path('terms-conditions');
+	}
+
+	if ($page && 'publish' === $page->post_status) {
+		$policy['merchantReturnLink'] = get_permalink($page);
+	}
+
+	return $policy;
+}
+
+/**
+ * Add the return policy to each Offer in a Product entity without replacing
+ * policy data supplied by an SEO plugin.
+ *
+ * @param array $product Product schema entity.
+ * @return array
+ */
+function wholesale_add_return_policy_to_product($product)
+{
+	if (empty($product['offers']) || !is_array($product['offers'])) {
+		return $product;
+	}
+
+	$policy = wholesale_merchant_return_policy();
+	$offers = &$product['offers'];
+	$offer_types = isset($offers['@type']) ? (array) $offers['@type'] : array();
+
+	if (array_intersect(array('Offer', 'AggregateOffer'), $offer_types)) {
+		if (!isset($offers['hasMerchantReturnPolicy'])) {
+			$offers['hasMerchantReturnPolicy'] = $policy;
+		}
+		return $product;
+	}
+
+	foreach ($offers as &$offer) {
+		if (!is_array($offer)) {
+			continue;
+		}
+
+		$offer_types = isset($offer['@type']) ? (array) $offer['@type'] : array();
+		if (array_intersect(array('Offer', 'AggregateOffer'), $offer_types) && !isset($offer['hasMerchantReturnPolicy'])) {
+			$offer['hasMerchantReturnPolicy'] = $policy;
+		}
+	}
+	unset($offer);
+
+	return $product;
+}
+
+/**
  * Build the schema.org Product entity for a product page.
  *
  * @return array
@@ -2684,6 +2749,7 @@ function wholesale_product_schema($product_id, $url, $image = '')
 		'priceCurrency' => 'USD',
 		'availability' => 'https://schema.org/InStock',
 		'url' => $url,
+		'hasMerchantReturnPolicy' => wholesale_merchant_return_policy(),
 	);
 	$price = floatval(get_post_meta($product_id, '_min_sqft', true)) * floatval(get_post_meta($product_id, '_price_per_sqft', true));
 
@@ -2996,7 +3062,7 @@ function wholesale_rank_math_json_ld($data, $jsonld)
 	$has_local_business = false;
 	$has_product = false;
 
-	foreach ($data as $entity) {
+	foreach ($data as $key => $entity) {
 		if (!is_array($entity)) {
 			continue;
 		}
@@ -3005,6 +3071,10 @@ function wholesale_rank_math_json_ld($data, $jsonld)
 		$has_organization = $has_organization || in_array('Organization', $types, true);
 		$has_local_business = $has_local_business || in_array('LocalBusiness', $types, true);
 		$has_product = $has_product || in_array('Product', $types, true);
+
+		if (in_array('Product', $types, true)) {
+			$data[$key] = wholesale_add_return_policy_to_product($entity);
+		}
 	}
 
 	if (is_singular('product') && !$has_product) {

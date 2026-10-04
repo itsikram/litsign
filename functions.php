@@ -2093,7 +2093,6 @@ function litsign_scripts()
 	wp_style_add_data('litsign-style', 'rtl', 'replace');
 
 	wp_enqueue_script('bootsrap', $theme_uri . '/js/bootstrap.min.js', array('jquery'), $asset_version('/js/bootstrap.min.js'), true);
-	//wp_enqueue_script('stripe', 'https://js.stripe.com/v3/', array(), _S_VERSION, false);
 	wp_enqueue_script('custom-script', $theme_uri . '/js/main.js', array('jquery'), $asset_version('/js/main.js'), true);
 	wp_localize_script('custom-script', 'wholesaleShop', array('ajaxUrl' => admin_url('admin-ajax.php')));
 

@@ -303,6 +303,7 @@ function wholesale_seo_migrations()
 		'2026-10-image-alt-text' => 'wholesale_seo_migrate_image_alt_text',
 		'2026-10-product-copy-titles' => 'wholesale_seo_migrate_product_copy_titles',
 		'2026-10-policy-drafts' => 'wholesale_seo_migrate_policy_drafts',
+		'2026-10-remove-supplier-references' => 'wholesale_seo_migrate_remove_supplier_references',
 	);
 }
 

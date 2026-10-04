@@ -24,7 +24,7 @@ get_header();
 			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">About us</p>
 			<h1 id="about-title" class="sf-hero-title"><?php echo esc_html(sprintf('About %s', $business)); ?></h1>
-			<p class="sf-hero-lead"><?php echo esc_html($business); ?> is an online sign company in Renton, Washington. We make custom LED channel letters and storefront signs, plus banners, flags, trade show displays, adhesive vinyl and other large format prints, and ship them directly to businesses across the United States.</p>
+			<p class="sf-hero-lead"><?php echo esc_html($business); ?> is an online sign company in Renton, Washington, operated by Storefront Sign Online LLC, which has also done business as Lit Sign Manufacturing since 2002. We make custom LED channel letters and storefront signs, plus banners, flags, trade show displays, adhesive vinyl and other large format prints, and ship them directly to businesses across the United States.</p>
 			<div class="sf-hero-actions">
 				<a class="cl-button" href="<?php echo esc_url(home_url('/')); ?>">Shop Channel Letters <?php echo wholesale_home_icon('arrow'); ?></a>
 				<a class="sf-button-outline" href="<?php echo esc_url($contact_url); ?>">Contact Us</a>

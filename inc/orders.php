@@ -236,7 +236,7 @@ function wholesale_customer_order_email_html($post_id)
         . '<p style="margin:20px 0 0;"><a href="' . esc_url(wholesale_track_order_url($post_id)) . '" style="display:inline-block;padding:12px 22px;background:#1fa8de;border-radius:8px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Track your order</a></p>'
         . '<p style="margin:24px 0 0;font-size:14px;color:#5b6b7b;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or reply to this email with your order number.</p>'
         . '</td></tr>'
-        . '<tr><td style="padding:18px 28px;border-top:1px solid #e3e9ef;' . $font . 'font-size:12px;color:#8a97a5;">Storefront Sign Online &middot; 707 S. Grady Way, Suite 600, Renton, WA 98057</td></tr>'
+        . '<tr><td style="padding:18px 28px;border-top:1px solid #e3e9ef;' . $font . 'font-size:12px;color:#8a97a5;">Storefront Sign Online &middot; 2601 NE 12th St, Renton, WA 98056</td></tr>'
         . '</table></td></tr></table></body></html>';
 }
 

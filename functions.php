@@ -56,6 +56,7 @@ require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
 require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
+require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
@@ -339,7 +340,7 @@ function wholesale_setting_defaults()
 		'ticket_business_name' => 'Lit Sign Manufacturing',
 		'ticket_business_phone' => '866-436-2101',
 		'ticket_business_email' => 'TR@StorefrontSignOnline.com',
-		'ticket_business_address' => '707 S. Grady Way Suite 600, Renton, WA 98057',
+		'ticket_business_address' => '2601 NE 12th St, Renton, WA 98056',
 		'ticket_email_subject' => 'Payment request {number} from {business}: {amount}',
 		'ticket_auto_send' => 1,
 		'quote_autoreply' => 1,
@@ -2073,6 +2074,7 @@ function litsign_scripts()
 	wp_enqueue_style('litsign-style', get_stylesheet_uri(), array(), $asset_version('/style.css'));
 	wp_enqueue_style('custom-style', $theme_uri . '/css/style.css', array(), $asset_version('/css/style.css'));
 	wp_enqueue_style('wholesale-header', $theme_uri . '/css/header.css', array('custom-style'), $asset_version('/css/header.css'));
+	wp_enqueue_style('wholesale-footer', $theme_uri . '/css/footer.css', array('custom-style'), $asset_version('/css/footer.css'));
 	if (is_page(array('cart', 'checkout', 'account', 'my-orders', 'track-order', 'login', 'signup')) || is_singular('order') || get_query_var('wholesale_thank_you')) {
 		wp_enqueue_style('wholesale-shop', $theme_uri . '/css/shop.css', array('custom-style'), $asset_version('/css/shop.css'));
 	}
@@ -3087,14 +3089,14 @@ function wholesale_rank_math_json_ld($data, $jsonld)
 	$organization = array(
 		'@type' => 'Organization',
 		'@id' => $organization_id,
-		'name' => 'Lit Sign Manufacturing LLC',
+		'name' => 'Storefront Sign Online LLC',
 		'url' => home_url('/'),
 		'telephone' => '+1-866-436-2101',
 	);
 	$local_business = array(
 		'@type' => 'LocalBusiness',
 		'@id' => trailingslashit(home_url('/')) . '#localbusiness',
-		'name' => 'Lit Sign Manufacturing LLC',
+		'name' => 'Storefront Sign Online LLC',
 		'url' => home_url('/'),
 		'parentOrganization' => array('@id' => $organization_id),
 		'telephone' => '+1-866-436-2101',
@@ -3147,8 +3149,10 @@ function wholesale_organization_schema()
 	$organization = array(
 		'@type' => 'Organization',
 		'@id' => $organization_id,
-		'name' => 'Lit Sign Manufacturing LLC',
-		'alternateName' => 'Store Front Sign Online',
+		'name' => 'Storefront Sign Online LLC',
+		// Doing business as Lit Sign Manufacturing since 2002.
+		'alternateName' => array('Store Front Sign Online', 'Lit Sign Manufacturing'),
+		'foundingDate' => '2002',
 		'url' => home_url('/'),
 		'logo' => get_theme_mod('custom_logo') ? wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full') : '',
 		'founder' => array(
@@ -3161,7 +3165,7 @@ function wholesale_organization_schema()
 	$local_business = array(
 		'@type' => 'LocalBusiness',
 		'@id' => $local_business_id,
-		'name' => 'Lit Sign Manufacturing LLC',
+		'name' => 'Storefront Sign Online LLC',
 		'url' => home_url('/'),
 		'parentOrganization' => array('@id' => $organization_id),
 		'telephone' => '+1-866-436-2101',

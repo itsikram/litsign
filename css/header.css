@@ -18,7 +18,7 @@
 }
 
 .site-header.is-scrolled {
-  padding-top: 6px;
+  padding: 6px 0 0;
 }
 
 /* ---------- Top row ---------- */
@@ -228,7 +228,7 @@
 /* ---------- Bottom row: All Products, categories, builder ---------- */
 .site-header .header-bottom {
   margin: 10px 0 0;
-  padding: 6px 0;
+  padding: 10px 0;
   border-top: 1px solid var(--sh-line);
 }
 
@@ -551,7 +551,7 @@ html.sh-lock body {
 
   .site-header .header-bottom {
     margin-top: 8px;
-    padding: 6px 0;
+    padding: 8px 0;
   }
 
   .site-header.is-scrolled .header-bottom {

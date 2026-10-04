@@ -531,7 +531,7 @@ if (!function_exists('wholesale_cla_icon')) {
 				<?php endif; ?>
 			</nav>
 		</div>
-		<p class="cla-copy">&copy; <?php echo esc_html(wp_date('Y')); ?> Storefrontsignonline, Inc. All rights reserved.</p>
+		<p class="cla-copy">&copy; <?php echo esc_html(wp_date('Y')); ?> Storefront Sign Online LLC All rights reserved.</p>
 	</footer>
 
 	<nav class="cla-mobile-bar" aria-label="Quick actions">

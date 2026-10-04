@@ -450,13 +450,6 @@ html.sh-lock body {
 
 /* ---------- Tablet and phone ---------- */
 @media (max-width: 1199.98px) {
-  /* A blurred background would make the fixed slide-in menu size itself to the header. */
-  .site-header.is-scrolled {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    background: #fff;
-  }
-
   .site-header .sh-contact,
   .site-header .sh-account,
   .site-header .sh-categories {

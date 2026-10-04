@@ -16,6 +16,13 @@
   --thank-you-muted: #52616f;
 }
 
+html,
+body {
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  max-width: 100vw;
+}
+
 .thank-you-page {
   padding: 72px 0 104px;
   background:
@@ -857,10 +864,8 @@ a.link-primary:focus,
 }
 .main-header.is-scrolled {
   padding: 6px 0;
-  background-color: rgba(255, 255, 255, 0.96);
+  background-color: #fff;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
 }
 .main-header.is-scrolled .header-bottom {
   margin-top: 6px;

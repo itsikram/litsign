@@ -48,6 +48,7 @@ require_once(dirname(__FILE__) . '/inc/reviews.php');
 require_once(dirname(__FILE__) . '/inc/review-manager.php');
 require_once(dirname(__FILE__) . '/inc/pricing.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');
+require_once(dirname(__FILE__) . '/inc/mini-cart.php');
 require_once(dirname(__FILE__) . '/inc/admin-orders.php');
 require_once(dirname(__FILE__) . '/inc/refunds.php');
 require_once(dirname(__FILE__) . '/inc/email-log.php');
@@ -2787,6 +2788,54 @@ function wholesale_product_schema($product_id, $url, $image = '')
 	}
 
 	$product['offers'] = $offer;
+
+	// Gallery photos after the featured image, so Google can pick the best one.
+	$gallery = get_post_meta($product_id, '_product_gallery', true);
+	foreach (is_array($gallery) ? array_slice(array_values($gallery), 0, 9) : array() as $gallery_url) {
+		if (is_string($gallery_url) && $gallery_url && !in_array($gallery_url, $product['image'], true)) {
+			$product['image'][] = $gallery_url;
+		}
+	}
+
+	// Ratings only when the page shows the reviews they come from (approved,
+	// never samples), as Google requires for review markup.
+	$stats = function_exists('wholesale_product_review_stats') ? wholesale_product_review_stats($product_id) : array();
+	if (!empty($stats['published']) && wholesale_setting_enabled('show_product_reviews')) {
+		$product['aggregateRating'] = array(
+			'@type' => 'AggregateRating',
+			'ratingValue' => number_format((float) $stats['average'], 1, '.', ''),
+			'reviewCount' => (int) $stats['published'],
+			'bestRating' => '5',
+			'worstRating' => '1',
+		);
+
+		$reviews = get_posts(array(
+			'post_type' => 'review_submission',
+			'post_status' => 'publish',
+			'posts_per_page' => 6,
+			'meta_key' => '_review_product_id',
+			'meta_value' => absint($product_id),
+			'orderby' => 'date',
+			'order' => 'DESC',
+		));
+		foreach ($reviews as $review) {
+			if (wholesale_review_is_sample($review->ID)) {
+				continue;
+			}
+			$review_name = trim((string) get_post_meta($review->ID, '_review_name', true));
+			$product['review'][] = array(
+				'@type' => 'Review',
+				'reviewRating' => array(
+					'@type' => 'Rating',
+					'ratingValue' => (string) min(5, max(1, absint(get_post_meta($review->ID, '_review_rating', true)))),
+					'bestRating' => '5',
+				),
+				'author' => array('@type' => 'Person', 'name' => $review_name ? $review_name : __('Verified customer', 'litsign')),
+				'datePublished' => get_the_date('Y-m-d', $review),
+				'reviewBody' => wp_strip_all_tags($review->post_content),
+			);
+		}
+	}
 
 	return $product;
 }

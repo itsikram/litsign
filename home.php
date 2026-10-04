@@ -227,6 +227,9 @@ if ($is_channel_letters) {
             'a' => 'Pickup isn&rsquo;t available &mdash; every order ships directly to you.',
         ),
     ));
+} elseif ($current_term) {
+    // Buyer questions shown under the products and described as FAQPage data in the head.
+    wholesale_seo_set_page_faq(wholesale_seo_category_faq($current_term->slug));
 }
 
 get_header();
@@ -654,6 +657,18 @@ get_header();
         </div>
     </div>
 </div>
+
+<?php if (!$is_channel_letters && !empty($GLOBALS['wholesale_page_faq'])) : ?>
+    <section class="cl-faq" aria-labelledby="category-faq-title">
+        <div class="container">
+            <p class="cl-kicker">Before you order</p>
+            <h2 id="category-faq-title" class="cl-section-title"><?php echo esc_html(sprintf(__('%s: Questions & Answers', 'litsign'), $shop_heading)); ?></h2>
+            <div class="cl-faq-list">
+                <?php wholesale_seo_render_faq(); ?>
+            </div>
+        </div>
+    </section>
+<?php endif; ?>
 
 <?php if ($is_channel_letters) : ?>
     <?php

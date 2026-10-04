@@ -72,6 +72,9 @@ class Cart
 
     private function redirect_with_error($product_id, $message)
     {
+        if (wp_doing_ajax()) {
+            wp_send_json_error(array('message' => $message));
+        }
         $url = $product_id ? get_permalink($product_id) : home_url('/');
         wp_safe_redirect(add_query_arg(array('type' => 'danger', 'message' => rawurlencode($message)), $url));
         exit;
@@ -430,6 +433,10 @@ class Cart
         $cart_items = $this->get_items();
         array_push($cart_items, json_decode($cart_items_json));
         $_SESSION['cart_items'] = json_encode($cart_items);
+        if (wp_doing_ajax()) {
+            // The header cart drawer (inc/mini-cart.php) sends its own response.
+            return;
+        }
         wp_safe_redirect(get_permalink());
         exit;
     }

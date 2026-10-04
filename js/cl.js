@@ -3229,7 +3229,7 @@ window.addEventListener("load", function (e) {
     });
     textNode.on("dragend", persistText);
 
-    textNode.on("click", (e) => {
+    textNode.on("click tap", (e) => {
       selectedNode = textNode;
       selectedNodeType = textNode.getClassName();
       textInput.value = textNode.text();
@@ -3687,7 +3687,7 @@ window.addEventListener("load", function (e) {
       layer.batchDraw();
     });
 
-    shape.on("click", (e) => {
+    shape.on("click tap", (e) => {
       selectedNode = shape;
       updatePreview(previewnType, shape);
       updateLeftsideBar();
@@ -4006,7 +4006,7 @@ window.addEventListener("load", function (e) {
       persistRaceway();
     });
 
-    raceway.on("click", (e) => {
+    raceway.on("click tap", (e) => {
       selectedNode = raceway;
       updatePreview("raceway", raceway);
       updateNodeDimensionInputs(raceway, "raceway");
@@ -4459,7 +4459,7 @@ window.addEventListener("load", function (e) {
 
     cloneNode.on("transformend", persistCloneTransform);
 
-    cloneNode.on("click", (e) => {
+    cloneNode.on("click tap", (e) => {
       selectedNode = cloneNode;
       updateFocusedTransformer(cloneNode);
       updateNodeDimensionInputs(cloneNode);

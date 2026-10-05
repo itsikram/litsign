@@ -1,0 +1,6178 @@
+const { createStore, combineReducers } = window.Redux;
+let detailTableBody = document.getElementById("detailTableBody");
+// start constant
+const container = document.getElementById("container");
+const previewContainer = document.getElementById("previewContainer");
+const textInput = document.getElementById("textInput");
+const fontSelect = document.getElementById("fontSelect");
+const faceColorPicker = document.getElementById("faceColorPicker");
+const trimCapColorPicker = document.getElementById("trimcapColorPicker");
+const trimcapSizeInput = document.getElementById("trimcapSizeInput");
+
+const returnColorPicker = document.getElementById("returnColorPicker");
+const returnSizeInput = document.getElementById("returnSizeInput");
+const sizeHeightInput = document.getElementById("sizeHeightInput");
+const sizeWidthInput = document.getElementById("sizeWidthInput");
+const cornerRadiusInput = document.getElementById("cornerRadius");
+const fontFamilyLoader = document.getElementById("fontFamilyLoader");
+const addTextBtn = document.getElementById("addTextBtn");
+const duplicateBtn = document.getElementById("duplicateBtn");
+const saveBtn = document.getElementById("saveBtn");
+const elementIndexContainer = document.querySelector(".element-index");
+const elementDimenstionContainer = document.querySelector(
+  ".element-dimenstion",
+);
+const standarPsCost = parseFloat(
+  document.getElementById("standarPsCost").value,
+);
+const backLitCost = parseFloat(document.getElementById("backLitCost").value);
+const eightFtcableCost = parseFloat(
+  document.getElementById("eightFtcableCost").value,
+);
+const hasTrimcap = document.getElementById("hasTrimcap").value;
+const hasReturn = document.getElementById("hasReturn").value;
+const hasFace = document.getElementById("hasFace").value;
+let hasDualColor = false;
+let dualColorBg = null;
+
+const productPermalink = document.getElementById("productPermalink").value;
+
+const undoBtn = document.getElementById("undoBtn");
+const redoBtn = document.getElementById("redoBtn");
+const deleteBtn = document.getElementById("deleteBtn");
+const clearBuilderBtn = document.getElementById("clearBuilderBtn");
+const addRacewayButton = document.getElementById("addRacewayButton");
+let sliderCloseButton = document.getElementById("sliderCloseBtn");
+const infoButtons = document.querySelectorAll(".info-btn");
+let shapeButtons = document.querySelectorAll(
+  ".shape-dropdown .shapes-container .shape",
+);
+let bottomBarListItems = document.querySelectorAll(".bottombar-list-item");
+let sidebarListItems = document.querySelectorAll(
+  ".slider-choose-item-container.slider-choose-item-container",
+);
+let productClData = JSON.parse(document.getElementById("productClData").value);
+let editDesignDataInput = document.getElementById("editDesignData").value;
+var isEditDesign = true;
+let editDesignData =
+  editDesignDataInput.length > 1
+    ? JSON.parse(editDesignDataInput)
+    : (isEditDesign = false);
+let editDesignElements = editDesignData.elements || [];
+let editDesignExtras = editDesignData.extras || [];
+let isLitOption = detailTableBody.dataset.haslitoption == "0" ? false : true;
+
+let siteUrl = null;
+if (document.location.origin == "http://localhost") {
+  siteUrl = document.location.origin + "/storefrontsignonline.com";
+} else {
+  siteUrl = document.location.origin;
+}
+
+let fontData = [
+  {
+    heading: "Fonts",
+    cost: 0,
+    id: "font",
+    options: [
+      {
+        Arial: "Arial",
+      },
+      {
+        "Arial Black": "arial-black",
+      },
+      {
+        "Gotham Medium": "gotham-medium",
+      },
+      {
+        Halvetica: "helvetica",
+      },
+      {
+        "Helvetica Condensed Bold": "helvetica-condensed-bold",
+      },
+      {
+        "Helvetica Rounded Bold": "helvetica-rounded-bold",
+      },
+    ],
+  },
+];
+
+let defaultColorDataInput = document.getElementById("defaultColorData").value;
+let defaultColorData = {};
+
+const dpi = 10; // Assuming 96 DPI for inch to pixel conversion
+const ppi = 10;
+const triangleReduction = 1.15; // 1.32;
+const maxRacewayHeightInches = 8;
+
+const normalizeCost = (value, fallback = 0) => {
+  const numericValue = Number(value);
+  if (Number.isFinite(numericValue)) {
+    return numericValue;
+  }
+  return fallback;
+};
+
+const clampRacewayHeight = (node) => {
+  if (!node || !node.getAttr("textIndex")) return;
+  const scaleY = node.scaleY() || 1;
+  const maxHeight = maxRacewayHeightInches * dpi;
+  if (node.height() * scaleY > maxHeight) {
+    node.height(maxHeight / scaleY);
+  }
+};
+
+let colorCost = 0;
+
+let currentElementIndex = 1;
+
+let widhtDisplay = null;
+let heightDisplay = null;
+
+var heightArrows = null;
+var widthArrows = null;
+
+//initial input values
+var fontSize = 10 * dpi;
+var fontFamily = "Arial";
+var trimCapColor = "gray";
+var trimCapColorTitle = null;
+var faceColor = null;
+var faceColorTitle = null;
+var returnColor = "#000000";
+var returnColorTitle = null;
+var returnSize = 3;
+var returnSizeTitle = 5;
+var trimCapSize = 2;
+var trimCapSizeTitle = null;
+var isReturnColorSame = false;
+var maxWidth = 360;
+var maxHeight = 360;
+var minWidth = 80;
+var minHeight = 80;
+
+let contentWidth = 0;
+let contentHeight = 0;
+
+// var changeEvent = new CustomEvent("change",{
+//     bubbles: true
+// })
+
+let selectedNode = null;
+let selectedNodeType = null;
+
+let canvasWidth = container.clientWidth;
+let canvasHeight = container.clientHeight;
+
+let previewCanvasWidth = previewContainer.clientWidth;
+let previewCanvasHeight = previewContainer.clientHeight;
+
+let nodeLists = [];
+let previewNodeLists = [];
+let currentPreviewNode = null;
+
+function updateSaveButtonState() {
+  const hasElements = nodeLists.length > 0;
+  saveBtn.disabled = !hasElements;
+  saveBtn.setAttribute("aria-disabled", String(!hasElements));
+}
+
+updateSaveButtonState();
+
+const undoStack = [];
+const redoStack = [];
+let historyRestoring = false;
+let lastHistorySignature = null;
+
+// end constant
+
+// start utils
+
+
+async function waitForWindowLoad() {
+  await new Promise((resolve) => {
+    window.addEventListener("load", resolve);
+  });
+
+  console.log("Window fully loaded, including all resources");
+}
+
+// Call the function
+waitForWindowLoad();
+
+let getDataById = (ids, productClDataJson) => {
+  let productClDataList = [];
+
+  ids.forEach((id) => {
+    for (let i = 0; i < productClDataJson.length; i++) {
+      if (productClDataJson[i].id == id) {
+        productClDataList.push(productClDataJson[i]);
+      }
+    }
+  });
+
+  return productClDataList;
+};
+
+let activeFontTitle = Object.keys(fontData[0].options[0])[0];
+let activeFontCode = fontData[0].options[0][activeFontTitle];
+
+// set default face Color
+let faceColorData = getDataById(["color-ac"], productClData)
+  ? getDataById(["color-ac"], productClData)[0].options[0]
+  : undefined;
+let activeFaceTitle = Object.keys(faceColorData)[0];
+let activeFaceCode = faceColorData[Object.keys(faceColorData)[0]];
+faceColor = activeFaceCode;
+defaultColorData.face = `${activeFaceTitle}/${activeFaceCode}`;
+
+// set default return Color
+let returnColorData = getDataById(["return-color"], productClData)[0]
+  .options[0];
+let firstReturnColorValue =
+  returnColorData[Object.keys(returnColorData)[0]].split(".");
+
+let activeReturnColorTitle = Object.keys(returnColorData)[0];
+let activeReturnColorCode = returnColorData[Object.keys(returnColorData)[0]];
+returnColor = activeReturnColorCode;
+
+defaultColorData.return = `${activeReturnColorTitle}/${activeReturnColorCode}`;
+
+if (firstReturnColorValue[0] == "same") {
+  let returnSameAs = firstReturnColorValue[1];
+  if (returnSameAs == "face") {
+    activeReturnColorTitle = Object.keys(faceColorData)[0];
+    activeReturnColorCode = returnColorData[Object.keys(returnColorData)[0]];
+    returnColor = activeFaceCode;
+    isReturnColorSame = true;
+  }
+}
+
+// set default trimcap Color
+
+let trimcapColorData =
+  hasTrimcap == "on"
+    ? getDataById(["trimcap-color"], productClData)[0].options[0]
+    : null;
+let activeTrimcapColorTitle =
+  hasTrimcap == "on" ? Object.keys(trimcapColorData)[0] : null;
+let activeTrimcapColorCode =
+  hasTrimcap == "on"
+    ? trimcapColorData[Object.keys(trimcapColorData)[0]]
+    : null;
+if (hasTrimcap == "on") {
+  trimCapColor = activeTrimcapColorCode;
+  defaultColorData.trimcap = `${activeTrimcapColorTitle}/${activeTrimcapColorCode}`;
+} else {
+  trimCapColor =
+    defaultColorData.trimcap = `${activeTrimcapColorTitle}/${activeTrimcapColorCode}`;
+}
+
+// set default return Color
+let returnSizeData = getDataById(["return-size"], productClData)[0].options[0];
+let activeReturnSizeTitle = Object.keys(returnSizeData)[0];
+let activeReturnSizeCode = parseInt(
+  returnSizeData[Object.keys(returnSizeData)[0]].split("-")[0],
+);
+returnSize = activeReturnColorCode;
+
+// set default return Color
+let trimcapSizeData =
+  hasTrimcap == "on"
+    ? getDataById(["trimcap-size"], productClData)[0].options[0]
+    : null;
+let activeTrimcapSizeTitle =
+  hasTrimcap == "on" ? Object.keys(trimcapSizeData)[0] : null;
+let activeTrimcapSizeCode =
+  hasTrimcap == "on"
+    ? parseInt(trimcapSizeData[Object.keys(trimcapSizeData)[0]])
+    : null;
+trimCapSize = activeTrimcapColorCode;
+
+if (defaultColorDataInput) {
+  try {
+    let defaultColorJson = JSON.parse(defaultColorDataInput);
+    defaultColorData = defaultColorJson;
+
+    if (defaultColorJson.face) {
+      activeFaceTitle = defaultColorData.face.split("/")[0];
+      activeFaceCode = defaultColorData.face.split("/")[1];
+      faceColor = defaultColorData.face.split("/")[1];
+    }
+    if (defaultColorJson.trimcap) {
+      activeTrimcapColorTitle = defaultColorData.trimcap.split("/")[0];
+      activeTrimcapColorCode = defaultColorData.trimcap.split("/")[1];
+      trimCapColor = defaultColorData.trimcap.split("/")[1];
+    }
+    if (defaultColorJson.return) {
+      if (defaultColorJson.return.split(".")[0] != "same") {
+        activeReturnColorTitle = defaultColorData.return.split("/")[0];
+        activeReturnColorCode = defaultColorData.return.split("/")[1];
+        returnColor = defaultColorData.return.split("/")[1];
+      } else {
+        defaultColorData.return = `${activeFaceTitle}/${activeFaceCode}`;
+        activeReturnColorTitle = activeFaceTitle;
+        activeReturnColorCode = activeFaceCode;
+        returnColor = activeFaceTitle;
+      }
+    }
+    if (defaultColorJson.color_cost) {
+      colorCost = parseFloat(defaultColorJson.color_cost || 0);
+    }
+  } catch (error) {
+    console.log("please setup default colors from dashboard");
+    console.log(error);
+  }
+}
+
+fontData.forEach((fontContainer) => {
+  let fontOptions = fontContainer.options;
+  let loaderChilds = "";
+  fontOptions.forEach((option) => {
+    let fontName = Object.keys(option)[0];
+    let fontValue = option[fontName];
+
+    let loadFontItem = document.createElement("span");
+    loadFontItem.innerText = fontName;
+    loadFontItem.style.fontFamily = fontValue;
+
+    loaderChilds += `<span style="font-family: ${fontValue}">${fontName}</span>`;
+  });
+  fontFamilyLoader.innerHTML = loaderChilds;
+  setTimeout(() => {
+    fontFamilyLoader.remove();
+  }, 2000);
+});
+
+var textFSI = [];
+
+// active font
+// let activeFontData = document.querySelector('.select-font').dataset.active
+// let activeFontTitle = activeFontData.split('/')[0]
+// let activeFontCode = activeFontData.split('/')[1]
+
+// // active face
+// let activeFaceData = document.querySelector('.select-face').dataset.active
+// let activeFaceTitle = activeFaceData.split('/')[0]
+// let activeFaceCode = activeFaceData.split('/')[1]
+
+// // active face
+// let activeReturnColorData = document.querySelector('.select-return').dataset.active
+// let activeReturnColorTitle = activeReturnColorData.split('/')[0]
+// let activeReturnColorCode = activeReturnColorData.split('/')[1]
+
+// // active return size
+// let activeReturnSizeData = document.querySelector('.select-return').dataset.activeSecond ? document.querySelector('.select-return').dataset.activeSecond : false;
+// let activeReturnSizeTitle = activeReturnSizeData ? activeReturnSizeData.split('/')[0] : returnSizeTitle;
+// let activeReturnSizeCode = activeReturnSizeData ? activeReturnSizeData.split('/')[1] : returnSize
+
+// // active trimcap
+// let activeTrimcapColorData = document.querySelector('.select-trimcap').dataset.active
+// let activeTrimcapColorTitle = activeTrimcapColorData.split('/')[0]
+// let activeTrimcapColorCode = activeTrimcapColorData.split('/')[1]
+
+// // active face
+// let activeTrimcapSizeData = document.querySelector('.select-trimcap').dataset.activeSecond || false;
+// let activeTrimcapSizeTitle = activeTrimcapSizeData ? activeTrimcapSizeData.split('/')[0] : '1 Inch';
+// let activeTrimcapSizeCode = activeTrimcapSizeData ? activeTrimcapSizeData.split('/')[1] : 3
+
+// Define an initial state
+let initialExtras = {
+  powerSupply: {
+    value: "Standard",
+    cost: parseFloat(standarPsCost),
+    qty: 1,
+  },
+
+  cable: {
+    value: "3ft Cable",
+    cost: 0,
+    qty: 1,
+  },
+};
+
+if (isLitOption) {
+  initialExtras.lit = {
+    value: "Front Lit",
+    cost: 0,
+    qty: 1,
+  };
+}
+const initialElement = [];
+
+// Define a reducer function
+const extrasReducer = (state = initialExtras, action) => {
+  switch (action.type) {
+    case "UPDATE":
+      let payload = action.payload;
+      return { ...state, ...payload };
+    case "RESTORE_EXTRAS":
+      return (state = action.payload);
+      break;
+    default:
+      return state;
+  }
+};
+const elementsReducer = (state = initialElement, action) => {
+  // activeFontData = document.querySelector('.select-font').dataset.active
+  // activeFontTitle = activeFontData.split('/')[0]
+  // activeFontCode = activeFontData.split('/')[1]
+
+  // // active face
+  // activeFaceData = document.querySelector('.select-face').dataset.active
+  // activeFaceTitle = activeFaceData.split('/')[0]
+  // activeFaceCode = activeFaceData.split('/')[1]
+
+  // // active face
+  // activeReturnColorData = document.querySelector('.select-return').dataset.active
+  // activeReturnColorTitle = activeReturnColorData.split('/')[0]
+  // activeReturnColorCode = activeReturnColorData.split('/')[1]
+
+  // // active return size
+  // activeReturnSizeData = document.querySelector('.select-return').dataset.activeSecond ? document.querySelector('.select-return').dataset.activeSecond : false;
+  // activeReturnSizeTitle = activeReturnSizeData ? activeReturnSizeData.split('/')[0] : returnSizeTitle;
+  // activeReturnSizeCode = activeReturnSizeData ? activeReturnSizeData.split('/')[1] : returnSize
+
+  // // active trimcap
+  // activeTrimcapColorData = document.querySelector('.select-trimcap').dataset.active
+  // activeTrimcapColorTitle = activeTrimcapColorData.split('/')[0]
+  // activeTrimcapColorCode = activeTrimcapColorData.split('/')[1]
+
+  // // active face
+  // activeTrimcapSizeData = document.querySelector('.select-trimcap').dataset.activeSecond || false;
+  // activeTrimcapSizeTitle = activeTrimcapSizeData ? activeTrimcapSizeData.split('/')[0] : '1 Inch';
+  // activeTrimcapSizeCode = activeTrimcapSizeData ? activeTrimcapSizeData.split('/')[1] : 3
+
+  let nodeType = selectedNode ? selectedNode.getClassName() : null;
+  switch (nodeType && selectedNode.getClassName()) {
+    case "Rect":
+      nodeType = "Rectangle";
+
+      if (selectedNode.getAttr("textIndex")) {
+        nodeType = "Raceway";
+      }
+      break;
+
+    case "Line":
+      nodeType = "Arrow";
+      break;
+
+    case "Star":
+      nodeType = "Starburst";
+
+      break;
+
+    case "RegularPolygon":
+      nodeType = "Triangle";
+
+      break;
+  }
+
+  let x = selectedNode ? selectedNode.x().toFixed(2) : null;
+  let y = selectedNode ? selectedNode.y().toFixed(2) : null;
+
+  let oldState = state;
+
+  switch (action.type) {
+    case "ADD_ELEMENT":
+      let font =
+        selectedNode.getClassName() == "Text"
+          ? { title: activeFontTitle, code: activeFontCode }
+          : undefined;
+      let fontSize =
+        selectedNode.getClassName() == "Text"
+          ? selectedNode.fontSize()
+          : undefined;
+      let radius = action.payload.radius / dpi || undefined;
+      console.log("payload radius", action.payload.radius);
+      let newElement = {
+        ...action.payload,
+        cost: normalizeCost(action.payload.cost),
+        colorCost: normalizeCost(action.payload.colorCost),
+        fontSize,
+        font,
+        type: action.payload.type || nodeType,
+        // faceColor: {
+        //     title: activeFaceTitle,
+        //     code: activeFaceCode
+        // },
+        // returnColor: {
+        //     title: returnColorTitle,
+        //     code: returnColorCode
+
+        // },
+        // trimcapColor: {
+        //     title: trimCapColorTitle,
+        //     code: trimcapColorCode
+
+        // },
+        // trimcapSize: {
+        //     title: trimCapSizeTitle,
+        //     code: trimcapSizeCode
+        // },
+        // returnSize: {
+        //     title: returnSizeTitle,
+        //     code: returnSizeCode
+
+        // },
+        // returnColor: {
+        //     title: returnColorTitle,
+        //     code: returnColorCode
+        // },
+        radius,
+        x,
+        y,
+      };
+      // let textLenght = newElement.length;
+      // let elementCost = (costPerInch * newElement.height) * textLenght;
+      // newElement.cost = elementCost;
+      return [...state, newElement];
+      break;
+
+    case "REMOVE_ELEMENT":
+      let newState = state.filter((el) => el.id != action.payload.id);
+      return newState;
+
+      break;
+
+    case "UPDATE_ELEMENT":
+      let elementId = action.payload.id;
+      let oldState = state;
+
+      for (let i = 0; i < state.length; i++) {
+        if (state[i].id == elementId) {
+          let element = state[i];
+          let height =
+            action.payload.height === undefined
+              ? element.height
+              : action.payload.height;
+          let width =
+            action.payload.width === undefined
+              ? element.width
+              : action.payload.width;
+          let text =
+            action.payload.text === undefined
+              ? element.text
+              : action.payload.text;
+          let cost =
+            action.payload.cost === undefined
+              ? element.cost
+              : normalizeCost(action.payload.cost);
+          let radius =
+            action.payload.radius === undefined
+              ? element.radius
+              : action.payload.radius / dpi;
+          let colorCost =
+            action.payload.colorCost == undefined
+              ? element.colorCost
+              : action.payload.colorCost;
+          let fontSize =
+            selectedNode.getClassName() == "Text"
+              ? selectedNode.fontSize()
+              : undefined;
+
+          var updatedElement = {
+            ...element,
+            ...action.payload,
+            fontSize,
+            // Keep the element's own type: the selected node can be a different element
+            // (e.g. a raceway persisting while a letter is selected).
+            type: action.payload.type || element.type || nodeType,
+            x,
+            y,
+            radius,
+            height,
+            width,
+            text,
+            cost,
+            colorCost: normalizeCost(colorCost),
+          };
+
+          state[i] = updatedElement;
+        }
+      }
+
+      return state;
+
+      break;
+    case "UPDATE_ID":
+      let oldElementId = action.payload.id;
+      let newId = action.payload.newId;
+      for (let i = 0; i < state.length; i++) {
+        if (state[i].id == oldElementId) {
+          let element = state[i];
+          state[i] = { ...state[i], id: newId };
+        }
+      }
+
+      return state;
+
+      break;
+    case "RESTORE_ELEMENT":
+      state = action.payload;
+      return state;
+      break;
+    default:
+      return state;
+  }
+};
+
+let getTextFSI = (id) => {
+  for (let i = 0; i < textFSI.length; i++) {
+    if (id == textFSI[i].id) {
+      return textFSI[i].value;
+    }
+  }
+};
+
+let setTextFSI = (id, value) => {
+  let idExists = false;
+  for (let i = 0; i < textFSI.length; i++) {
+    if (id == textFSI[i].id) {
+      idExists = true;
+      textFSI[i].value = value;
+    }
+  }
+
+  if (!idExists) {
+    textFSI.push({ id: id, value: value });
+  }
+};
+
+let rootReducers = combineReducers({
+  extras: extrasReducer,
+  elements: elementsReducer,
+});
+// Create a store with the reducer
+const store = createStore(rootReducers);
+
+let getNodeIndex = (node) => {
+  let nodeId = 0;
+
+  if (Number.isInteger(node)) {
+    nodeId = node;
+  } else {
+    nodeId = node.id;
+  }
+
+  for (let i = 0; i < nodeLists.length; i++) {
+    let listId = nodeLists[i].node._id;
+
+    if (nodeId == listId) {
+      return nodeLists[i].id;
+    }
+  }
+};
+
+let getNodeById = (nodeId) => {
+  if (nodeId) {
+    for (var i = 0; i < nodeLists.length; i++) {
+      if (nodeLists[i].node._id == nodeId) {
+        return nodeLists[i].node;
+      }
+    }
+  }
+};
+
+let minimumSize = parseInt(
+  Object.keys(getDataById(["cost-per-inch"], productClData)[0].options[0])[0],
+);
+let maximumSize =
+  getDataById(["cost-per-inch"], productClData)[0].options.length +
+  minimumSize -
+  1;
+
+minHeight = minWidth = minimumSize;
+maxHeight = maxWidth = maximumSize;
+
+const costPerInch = (
+  size,
+  costPerSize = getDataById(["cost-per-inch"], productClData)[0].options,
+) => {
+  const numericSize = Number(size);
+  if (!Number.isFinite(numericSize) || numericSize < 8 || numericSize > 45) {
+    return 0;
+  }
+
+  const sizeInch = parseInt(numericSize, 10);
+
+  const foundItem = costPerSize.find(
+    (item) => item[`${sizeInch} Inch`] !== undefined,
+  );
+
+  if (foundItem) {
+    const cost = parseFloat(foundItem[`${sizeInch} Inch`]);
+    return normalizeCost(cost);
+  } else {
+    return 0;
+  }
+};
+let updateArrowLine = (height, width, item) => {
+  if (selectedNode.getClassName() !== "Line") return;
+  let points = selectedNode.points();
+  let pointA = [points[0], points[1]];
+  let pointB = [points[2], points[3]];
+  let pointC = [points[4], points[5]];
+  let pointD = [points[6], points[7]];
+  let pointE = [points[8], points[9]];
+  let pointF = [points[10], points[11]];
+  let pointG = [points[12], points[13]];
+  let posX = points[0];
+  let posY = points[1];
+
+  if (height == null) {
+    height = selectedNode.height() * selectedNode.scaleY();
+  }
+
+  if (width == null) {
+    width = selectedNode.width() * selectedNode.scaleX();
+  }
+
+  if (item == "width") {
+    if (width !== null) {
+      pointB = [posX + width / 2, posY];
+      pointC = [posX + width / 2, posY - height / 3];
+      pointD = [pointB[0] + width / 2, pointC[1] + height / 2];
+      pointE = [pointB[0], pointC[1] + height];
+      pointF = [pointE[0], pointE[1] - height / 3];
+      pointG = [pointA[0], pointF[1]];
+    }
+  }
+
+  if (item == "height") {
+    if (width !== null) {
+      pointB = [posX + width / 2, posY];
+      pointC = [posX + width / 2, posY - height / 3];
+      pointD = [pointB[0] + width / 2, pointC[1] + height / 2];
+      pointE = [pointB[0], pointC[1] + height];
+      pointF = [pointE[0], pointE[1] - height / 3];
+      pointG = [pointA[0], pointF[1]];
+    }
+  }
+
+  let updatedPoints = [
+    ...pointA,
+    ...pointB,
+    ...pointC,
+    ...pointD,
+    ...pointE,
+    ...pointF,
+    ...pointG,
+  ];
+
+  return updatedPoints;
+};
+
+let getElementById = (node) => {
+  let nodeId = 0;
+
+  if (Number.isInteger(node)) {
+    nodeId = node;
+  } else {
+    nodeId = node.id;
+  }
+  let currentStage = store.getState();
+  elementsNodes = currentStage.elements || 0;
+  if (elementsNodes.length < 1) return;
+  for (let i = 0; i < elementsNodes.length; i++) {
+    let listId = elementsNodes[i].id;
+
+    if (nodeId == listId) {
+      return elementsNodes[i];
+    }
+  }
+};
+
+function isValidLink(str) {
+  const pattern = new RegExp(
+    "^(https?:\\/\\/)?" + // protocol
+      "((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.?)+[a-z]{2,}|" + // domain name
+      "((\\d{1,3}\\.){3}\\d{1,3}))" + // OR ip (v4) address
+      "(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*" + // port and path
+      "(\\?[;&a-z\\d%_.~+=-]*)?" + // query string
+      "(\\#[-a-z\\d_]*)?$",
+    "i",
+  ); // fragment locator
+  return !!pattern.test(str);
+}
+
+function pxToIn(px) {
+  let inch = px / ppi;
+  return inch.toFixed(1);
+}
+
+function getNodeDesignBounds(node) {
+  const bounds = node.getClientRect({
+    skipTransform: false,
+    skipStroke: true,
+    skipShadow: true,
+  });
+  const scaleX = stage.scaleX() || 1;
+  const scaleY = stage.scaleY() || 1;
+  return {
+    x: (bounds.x - stage.x()) / scaleX,
+    y: (bounds.y - stage.y()) / scaleY,
+    width: bounds.width / scaleX,
+    height: bounds.height / scaleY,
+  };
+}
+
+function getTextDimensions(node) {
+  const bounds = getNodeDesignBounds(node);
+  return `H:${pxToIn(bounds.height)} x W:${pxToIn(bounds.width)}`;
+}
+
+function maintainAspectRatio(newWidth = null, newHeight = null) {
+  let defaultHeight = selectedNode.height() * selectedNode.scaleY();
+  let defaultWidth = selectedNode.width() * selectedNode.scaleX();
+  // Calculate the aspect ratio
+  const aspectRatio = defaultWidth / defaultHeight;
+
+  // If a new width is provided, calculate the new height
+  if (newWidth !== null) {
+    return {
+      width: newWidth,
+      height: newWidth / aspectRatio,
+    };
+  }
+
+  // If a new height is provided, calculate the new width
+  if (newHeight !== null) {
+    return {
+      width: newHeight * aspectRatio,
+      height: newHeight,
+    };
+  }
+
+  // If neither new width nor height is provided, return the default dimensions
+  return {
+    width: defaultWidth,
+    height: defaultHeight,
+  };
+}
+
+function getHistorySignature() {
+  return JSON.stringify({
+    elements: store.getState().elements,
+    extras: store.getState().extras,
+    nodes: nodeLists.map((item) => {
+      const attrs = { ...item.node.getAttrs() };
+      delete attrs.textIndex;
+      delete attrs.transformer;
+      return {
+        id: item.node._id,
+        type: item.type,
+        attrs,
+        text:
+          item.type === "raceway" && item.node.getAttr("textIndex")
+            ? item.node.getAttr("textIndex").getAttrs()
+            : null,
+      };
+    }),
+  });
+}
+
+function updateHistoryButtons() {
+  if (undoBtn) undoBtn.disabled = undoStack.length === 0;
+  if (redoBtn) redoBtn.disabled = redoStack.length === 0;
+}
+
+function createHistorySnapshot() {
+  return {
+    elements: JSON.parse(JSON.stringify(store.getState().elements)),
+    extras: JSON.parse(JSON.stringify(store.getState().extras)),
+    nodes: nodeLists.map((item) => {
+      const attrs = { ...item.node.getAttrs() };
+      delete attrs.textIndex;
+      delete attrs.transformer;
+      return {
+        id: item.id,
+        type: item.type,
+        attrs,
+        points: item.node.points ? item.node.points() : null,
+        text:
+          item.type === "raceway" && item.node.getAttr("textIndex")
+            ? item.node.getAttr("textIndex").getAttrs()
+            : null,
+      };
+    }),
+  };
+}
+
+function saveState() {
+  if (historyRestoring) return;
+  const signature = getHistorySignature();
+  if (signature === lastHistorySignature) return;
+  undoStack.push(createHistorySnapshot());
+  lastHistorySignature = signature;
+  redoStack.length = 0; // clear redo stack
+  updateHistoryButtons();
+}
+
+// addText / addShape / addRaceway are defined inside the window "load" handler;
+// it registers them here so undo/redo (loadState) can rebuild elements.
+const clBuilderActions = {};
+
+function loadState(snapshot) {
+  historyRestoring = true;
+  try {
+    restoreSnapshot(snapshot);
+  } finally {
+    // Never leave history switched off if a restore fails part-way.
+    historyRestoring = false;
+  }
+}
+
+function restoreSnapshot(snapshot) {
+  nodeLists.forEach((item) => {
+    const text = item.node.getAttr("textIndex");
+    item.node.destroy();
+    if (text && text.destroy) text.destroy();
+  });
+  stage.find("Transformer").forEach((transformer) => transformer.destroy());
+
+  nodeLists = [];
+  selectedNode = null;
+  // Start from an empty store so re-adding elements never looks up destroyed nodes.
+  store.dispatch({ type: "RESTORE_ELEMENT", payload: [] });
+  const restoredElements = [];
+  snapshot.elements.forEach((element) => {
+    const nodeSnapshot = snapshot.nodes.find(
+      (item) => item.id === element.id,
+    );
+    const type = element.type || (nodeSnapshot ? nodeSnapshot.type : null);
+
+    if (type === "Text") {
+      clBuilderActions.addText(element.text || "", element.x, element.y, true);
+    } else if (type === "Raceway") {
+      clBuilderActions.addRaceway();
+    } else {
+      const shapeType = {
+        Rectangle: "rectangle",
+        Circle: "circle",
+        Triangle: "triangle",
+        Starburst: "star",
+        Arrow: "arrow",
+      }[type];
+      if (shapeType) clBuilderActions.addShape(shapeType);
+    }
+
+    const node = selectedNode;
+    if (!node) return;
+    if (nodeSnapshot) {
+      const attrs = { ...nodeSnapshot.attrs };
+      delete attrs._id;
+      delete attrs.textIndex;
+      delete attrs.transformer;
+      node.setAttrs(attrs);
+      if (node.points && nodeSnapshot.points) node.points(nodeSnapshot.points);
+      if (type === "Raceway" && nodeSnapshot.text) {
+        const racewayText = node.getAttr("textIndex");
+        if (racewayText) racewayText.setAttrs(nodeSnapshot.text);
+      }
+    }
+    restoredElements.push({ ...element, id: node._id });
+    node.fire("click", { cancelBubble: true });
+  });
+
+  store.dispatch({ type: "RESTORE_ELEMENT", payload: restoredElements });
+  store.dispatch({ type: "RESTORE_EXTRAS", payload: snapshot.extras });
+  selectedNode = null;
+  selectedNodeType = null;
+  updateSaveButtonState();
+  updateBottombarOverlay();
+  updateHeightWidthDisplay();
+  layer.draw();
+  updateHistoryButtons();
+  lastHistorySignature = getHistorySignature();
+}
+
+function clearSavedBuilderDesign() {
+  const savedDesignKeys = [];
+
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (key && /design|builder/i.test(key)) {
+      savedDesignKeys.push(key);
+    }
+  }
+
+  savedDesignKeys.forEach((key) => localStorage.removeItem(key));
+}
+
+function updateBottombarOverlay() {
+  let overlayContainer = document.querySelector(
+    ".editor-bottombar .bottom-left .bottombar-overlay",
+  );
+  if (nodeLists.length > 0) {
+    overlayContainer.style.display = "none";
+  } else {
+    overlayContainer.style.display = "block";
+  }
+}
+
+function drawWidthArrows(startY, textValue) {
+  let middleX = stage.width() / 2;
+  let arrowWidth = stage.width() / 3;
+
+  let widthArrow = new Konva.Group({
+    draggable: false,
+  });
+
+  const leftArrow = new Konva.Arrow({
+    points: [middleX - 40, startY, middleX - arrowWidth, startY],
+    pointerLength: 10,
+    pointerWidth: 10,
+    fill: "black",
+    stroke: "black",
+    strokeWidth: 2,
+  });
+
+  widthArrow.add(leftArrow);
+
+  // Points for right arrow
+  const rightArrow = new Konva.Arrow({
+    points: [middleX + 40, startY, middleX + arrowWidth, startY],
+    pointerLength: 10,
+    pointerWidth: 10,
+    fill: "black",
+    stroke: "black",
+    strokeWidth: 2,
+  });
+
+  const widthInInch = new Konva.Text({
+    x: middleX - 20,
+    y: startY - 10,
+    text: textValue,
+    fontSize: 20,
+    fontFamily: "Arial",
+    fill: "black",
+  });
+
+  widthArrow.add(rightArrow);
+  widthArrow.add(widthInInch);
+  layer.add(widthArrow);
+  widhtDisplay = widthInInch;
+
+  widthArrows = widthArrow;
+
+  layer.batchDraw();
+}
+
+function drawHeightArrows(startX, textValue = 0) {
+  let middleY = stage.height() / 2;
+  let arrowHeight = stage.height() / 3;
+
+  let heightArrow = new Konva.Group({
+    draggable: false,
+  });
+
+  const topArrow = new Konva.Arrow({
+    points: [startX, middleY - 20, startX, middleY - arrowHeight],
+    pointerLength: 10,
+    pointerWidth: 10,
+    fill: "black",
+    stroke: "black",
+    strokeWidth: 2,
+  });
+
+  heightArrow.add(topArrow);
+
+  // Points for right arrow
+  const bottomArrow = new Konva.Arrow({
+    points: [startX, middleY + 20, startX, middleY + arrowHeight],
+    pointerLength: 10,
+    pointerWidth: 10,
+    fill: "black",
+    stroke: "black",
+    strokeWidth: 2,
+  });
+
+  heightArrow.add(bottomArrow);
+
+  const heightInInch = new Konva.Text({
+    x: startX - 20,
+    y: middleY - 10,
+    text: textValue,
+    fontSize: 20,
+    fontFamily: "Arial",
+    fill: "black",
+  });
+
+  heightArrow.add(heightInInch);
+
+  heightDisplay = heightInInch;
+  heightArrows = heightArrow;
+
+  layer.add(heightArrow);
+  layer.batchDraw();
+}
+
+let updatePreview = (type = null, node = null) => {
+  if (selectedNode == null) {
+    elementDimenstionContainer.parentElement.style.setProperty(
+      "display",
+      "none",
+      "important",
+    );
+  } else {
+    elementDimenstionContainer.parentElement.style.setProperty(
+      "display",
+      "flex",
+      "important",
+    );
+  }
+  for (let i = 0; i < previewNodeLists.length; i++) {
+    previewNodeLists[i].destroy();
+  }
+  previewNodeLists.length = 0;
+  previewLayer.batchDraw();
+
+  if (!type && !node) {
+    previewNoItemText();
+    return;
+  }
+
+  let strokeWidth = activeTrimcapSizeCode / 1.5;
+  let previewNode = null;
+  let previewNodeWidth = 150;
+  let previewNodeHeight = previewNodeWidth * (node.height() / node.width());
+  const shapeConfig = {
+    draggable: false,
+    fill: activeFaceCode,
+    stroke: activeTrimcapColorCode,
+    strokeWidth: strokeWidth,
+    shadowColor: activeReturnColorCode,
+    shadowOffsetX: activeReturnSizeCode / 1.5,
+    shadowOffsetY: activeReturnSizeCode / 1.5,
+    shadowBlur: activeReturnSizeCode / 1.5,
+    cornerRadius: selectedNode ? selectedNode.attrs.cornerRadius / 2 : 0,
+  };
+
+  const previewNodeBounds = (previewTarget) =>
+    previewTarget.getClientRect({
+      skipTransform: false,
+      skipStroke: false,
+      skipShadow: false,
+    });
+  const fitPreviewNode = (previewTarget) => {
+    const padding = 10;
+    const availableWidth = Math.max(1, previewStage.width() - padding * 2);
+    const availableHeight = Math.max(1, previewStage.height() - padding * 2);
+    const bounds = previewNodeBounds(previewTarget);
+    const fitScale = Math.min(
+      availableWidth / Math.max(1, bounds.width),
+      availableHeight / Math.max(1, bounds.height),
+    );
+
+    previewTarget.scale({
+      x: previewTarget.scaleX() * fitScale,
+      y: previewTarget.scaleY() * fitScale,
+    });
+
+    const fittedBounds = previewNodeBounds(previewTarget);
+    previewTarget.position({
+      x:
+        previewTarget.x() +
+        previewStage.width() / 2 -
+        (fittedBounds.x + fittedBounds.width / 2),
+      y:
+        previewTarget.y() +
+        previewStage.height() / 2 -
+        (fittedBounds.y + fittedBounds.height / 2),
+    });
+  };
+
+  if (node) {
+    if (type === "raceway" && node.getAttr("textIndex")) {
+      previewNode = new Konva.Group({ draggable: false });
+      const previewRaceway = node.clone({ draggable: false });
+      previewRaceway.x(0);
+      previewRaceway.y(0);
+      previewRaceway.setAttr("textIndex", undefined);
+      previewNode.add(previewRaceway);
+
+      const previewRacewayText = node.getAttr("textIndex").clone({
+        draggable: false,
+      });
+      previewRacewayText.x(
+        (node.width() * node.scaleX() - previewRacewayText.width()) / 2,
+      );
+      previewRacewayText.y(
+        (node.height() * node.scaleY() - previewRacewayText.height()) / 2,
+      );
+      previewNode.add(previewRacewayText);
+    } else {
+      previewNode = node.clone({ draggable: false });
+      previewNode.position({ x: 0, y: 0 });
+    }
+
+    fitPreviewNode(previewNode);
+    currentPreviewNode = previewNode;
+    previewLayer.add(previewNode);
+    previewNodeLists.push(previewNode);
+    previewLayer.batchDraw();
+    return;
+  }
+
+  switch (type) {
+    case "text":
+      previewNode = node.clone({ draggable: false });
+      previewNode.position({ x: 0, y: 0 });
+      const textBounds = previewNode.getClientRect({ skipTransform: true });
+      const availableWidth = Math.max(1, previewStage.width() - 20);
+      const availableHeight = Math.max(1, previewStage.height() - 20);
+      const previewScale = Math.min(
+        availableWidth / textBounds.width,
+        availableHeight / textBounds.height,
+      );
+      previewNode.scale({
+        x: previewNode.scaleX() * previewScale,
+        y: previewNode.scaleY() * previewScale,
+      });
+      const scaledBounds = previewNode.getClientRect({ skipTransform: false });
+      previewNode.position({
+        x: (previewStage.width() - scaledBounds.width) / 2 - scaledBounds.x,
+        y: (previewStage.height() - scaledBounds.height) / 2 - scaledBounds.y,
+      });
+      break;
+
+    case "rect":
+      previewNode = new Konva.Rect({
+        ...shapeConfig,
+      });
+      previewNode.setAttrs({
+        height: previewNodeHeight,
+        width: previewNodeWidth,
+      });
+
+      previewNode.x(previewStage.width() / 2 - previewNode.width() / 2);
+      previewNode.y(previewStage.height() / 2 - previewNode.height() / 2);
+      previewLayer.batchDraw();
+
+      break;
+
+    case "circle":
+      previewNode = new Konva.Circle({
+        ...shapeConfig,
+        radius: 75,
+        x: 100,
+        y: 100,
+      });
+
+      previewLayer.batchDraw();
+
+      // previewNode.x((previewStage.width() / 2) - (previewNode.width() / 2));
+      // previewNode.y(((previewStage.height() / 2) - (previewNode.height() / 2)));
+
+      break;
+
+    case "arrow":
+      var points = [
+        37.5,
+        67, // Point A
+        112.5,
+        67, // Point B
+        112.5,
+        33.5, // Point C
+        187.5,
+        83.75, // Point D (tip of the arrow)
+        112.5,
+        134, // Point E
+        112.5,
+        100.5, // Point F
+        37.5,
+        100.5, // Point G
+      ];
+
+      // Find the bounding box of the points
+      var minX = Math.min(...points.filter((_, i) => i % 2 === 0));
+      var maxX = Math.max(...points.filter((_, i) => i % 2 === 0));
+      var minY = Math.min(...points.filter((_, i) => i % 2 === 1));
+      var maxY = Math.max(...points.filter((_, i) => i % 2 === 1));
+
+      // Calculate the center of the arrow
+      var arrowCenterX = (minX + maxX) / 2;
+      var arrowCenterY = (minY + maxY) / 2;
+
+      // Calculate the center of the stage
+      var stageCenterX = previewStage.width() / 3;
+      var stageCenterY = previewStage.height() / 4;
+
+      // Calculate the offset to move the arrow to the center of the stage
+      var offsetX = stageCenterX - arrowCenterX;
+      var offsetY = stageCenterY - arrowCenterY;
+
+      // Apply the offset to all points
+      var centeredPoints = points.map((value, index) => {
+        if (index % 2 === 0) {
+          return value + offsetX; // Adjust x-coordinates
+        } else {
+          return value + offsetY; // Adjust y-coordinates
+        }
+      });
+
+      previewNode = new Konva.Line({
+        points: centeredPoints,
+        fill: shapeConfig.fill,
+        stroke: shapeConfig.stroke,
+        strokeWidth: strokeWidth,
+        closed: true,
+        shadowColor: shapeConfig.shadowColor,
+        shadowBlur: shapeConfig.shadowBlur,
+        shadowOffset: {
+          x: shapeConfig.shadowOffsetX,
+          y: shapeConfig.shadowOffsetY,
+        },
+        draggable: false,
+      });
+
+      previewNode.x(previewStage.width() / 2 - previewNode.width() / 2);
+      previewNode.y(previewStage.height() / 2 - previewNode.height() / 2);
+      previewLayer.batchDraw();
+
+      break;
+
+    case "triangle":
+      previewNode = new Konva.RegularPolygon({
+        ...shapeConfig,
+        sides: 3,
+        radius: 66,
+        x: 100,
+        y: 100,
+      });
+      previewnType = "triangle";
+
+      previewLayer.batchDraw();
+
+      break;
+    case "star":
+      previewNode = new Konva.Star({
+        ...shapeConfig,
+        numPoints: 5,
+        innerRadius: 30,
+        outerRadius: 50,
+        x: 100,
+        y: 100,
+      });
+
+      previewLayer.batchDraw();
+
+      break;
+    case "raceway":
+      previewNode = new Konva.Rect({
+        ...shapeConfig,
+        fill: "gray",
+        height: 80,
+        width: previewCanvasWidth - 20,
+        opacity: 0.2,
+        stroke: "gray",
+        shadowColor: "gray",
+      });
+
+      let racewayText = new Konva.Text({
+        x: previewNode.width / 2,
+        y: previewNode.height / 2,
+        text: "Raceway",
+        fill: "gray",
+        fontSize: 25,
+      });
+
+      previewLayer.add(racewayText);
+
+      previewNodeLists.push(racewayText);
+
+      previewNode.x(previewStage.width() / 2 - previewNode.width() / 2);
+      previewNode.y(previewStage.height() / 2 - previewNode.height() / 2);
+      layer.draw();
+      racewayText.x(previewNode.width() / 2 - racewayText.width() / 2 + 10);
+      racewayText.y(
+        previewNode.y() + previewNode.height() / 2 - racewayText.height() / 2,
+      );
+
+      previewLayer.batchDraw();
+      break;
+
+    default:
+      previewNode = node.clone({
+        ...shapeConfig,
+      });
+
+      previewNode.setAttrs({
+        height: previewNodeHeight,
+        width: previewNodeWidth,
+        radius: 50,
+      });
+      previewNode.x(previewStage.width() / 2 - previewNode.width() / 2);
+      previewNode.y(previewStage.height() / 2 - previewNode.height() / 2);
+      break;
+  }
+
+  currentPreviewNode = previewNode;
+
+  previewLayer.add(previewNode);
+  previewNodeLists.push(previewNode);
+  previewLayer.batchDraw();
+};
+
+// update text node
+
+function updateNode(sNode, meta = null) {
+  if (sNode == null) return;
+  switch (selectedNodeType) {
+    case "Text":
+      // Update text content
+      if (sNode.value !== undefined && meta == "text") {
+        sNode.text(textInput.value);
+      }
+
+      if (fontFamily !== undefined && meta == "font-family") {
+        sNode.fontFamily(fontFamily);
+        sNode.getLayer().batchDraw();
+        triggerTransformEvent();
+
+        sNode.fontSize(selectedNode.fontSize() + 0.1);
+        sNode.fontSize(selectedNode.fontSize() - 0.1);
+
+        triggerTransformEvent();
+        sNode.width(undefined);
+        layer.draw();
+      }
+
+      // Update font size
+      if (fontSize !== undefined && meta == "font-size") {
+        sNode.fontSize(fontSize);
+      }
+
+      // Update fill color (face color)
+      if (faceColor !== undefined && meta == "face-color") {
+        sNode.fill(faceColor);
+      }
+
+      // Update stroke color
+      if (trimCapColor !== undefined && meta == "trimcap-color") {
+        sNode.stroke(trimCapColor);
+      }
+
+      // Update shadow color
+      if (returnColor !== undefined && meta == "return-color") {
+        sNode.shadowColor(returnColor);
+      }
+
+      // Update shadow size
+      if (returnSize !== undefined && meta == "return-size") {
+        sNode.shadowOffsetX(returnSize);
+        sNode.shadowOffsetY(returnSize);
+        sNode.shadowBlur(returnSize);
+      }
+      updatePreview("text", sNode);
+
+      // Redraw layer to apply changes
+      sNode.getLayer().batchDraw();
+      break;
+    case "Rect":
+      // Update fill color (face color)
+      if (faceColor !== undefined && meta == "face-color") {
+        sNode.fill(faceColor);
+      }
+
+      if (trimCapColor !== undefined && meta == "trimcap-color") {
+        sNode.stroke(trimCapColor);
+      }
+
+      if (returnColor !== undefined && meta == "return-color") {
+        sNode.shadowColor(returnColor);
+      }
+      if (returnSize !== undefined && meta == "return-size") {
+        sNode.shadowOffsetX(returnSize);
+        sNode.shadowOffsetY(returnSize);
+        sNode.shadowBlur(returnSize);
+      }
+      break;
+    case "Circle":
+      if (faceColor !== undefined && meta == "face-color") {
+        sNode.fill(faceColor);
+      }
+
+      if (trimCapColor !== undefined && meta == "trimcap-color") {
+        sNode.stroke(trimCapColor);
+      }
+
+      if (returnColor !== undefined && meta == "return-color") {
+        sNode.shadowColor(returnColor);
+      }
+      if (returnSize !== undefined && meta == "return-size") {
+        sNode.shadowOffsetX(returnSize);
+        sNode.shadowOffsetY(returnSize);
+        sNode.shadowBlur(returnSize);
+      }
+      break;
+    case "RegularPolygon":
+      if (faceColor !== undefined && meta == "face-color") {
+        sNode.fill(faceColor);
+      }
+
+      if (trimCapColor !== undefined && meta == "trimcap-color") {
+        sNode.stroke(trimCapColor);
+      }
+
+      if (returnColor !== undefined && meta == "return-color") {
+        sNode.shadowColor(returnColor);
+      }
+      if (returnSize !== undefined && meta == "return-size") {
+        sNode.shadowOffsetX(returnSize);
+        sNode.shadowOffsetY(returnSize);
+        sNode.shadowBlur(returnSize);
+      }
+      break;
+    case "Star":
+      if (faceColor !== undefined && meta == "face-color") {
+        sNode.fill(faceColor);
+      }
+
+      if (trimCapColor !== undefined && meta == "trimcap-color") {
+        sNode.stroke(trimCapColor);
+      }
+
+      if (returnColor !== undefined && meta == "return-color") {
+        sNode.shadowColor(returnColor);
+      }
+      if (returnSize !== undefined && meta == "return-size") {
+        sNode.shadowOffsetX(returnSize);
+        sNode.shadowOffsetY(returnSize);
+        sNode.shadowBlur(returnSize);
+      }
+      break;
+    case "Line":
+      // Update fill color (face color)
+      if (faceColor !== undefined && meta == "face-color") {
+        sNode.fill(faceColor);
+      }
+
+      if (trimCapColor !== undefined && meta == "trimcap-color") {
+        sNode.stroke(trimCapColor);
+      }
+
+      if (returnColor !== undefined && meta == "return-color") {
+        sNode.shadowColor(returnColor);
+      }
+      if (returnSize !== undefined && meta == "return-size") {
+        sNode.shadowOffsetX(returnSize);
+        sNode.shadowOffsetY(returnSize);
+        sNode.shadowBlur(returnSize);
+      }
+      break;
+  }
+
+  let tr = sNode.getAttr("transformer");
+  tr.update();
+
+  layer.batchDraw();
+}
+
+// The white design area lives inside the zoomed/shifted stage; place it so it
+// always covers exactly the visible canvas, whatever the zoom level.
+function syncCanvasBackground() {
+  const scale = stage.scaleX();
+  background.position({
+    x: -stage.x() / scale,
+    y: -stage.y() / scale,
+  });
+  background.size({ width: stage.width(), height: stage.height() });
+  background.scale({ x: 1 / scale, y: 1 / scale });
+}
+
+// Function to zoom the stage with center focus
+function zoomStage(scaleFactor) {
+  const oldScale = stage.scaleX();
+  const newScale = Math.min(3, Math.max(0.5, oldScale * scaleFactor));
+  const scaleRatio = newScale / oldScale;
+  const oldPos = stage.position();
+  const center = {
+    x: stage.width() / 2,
+    y: stage.height() / 2,
+  };
+  const newPos = {
+    x: center.x - (center.x - oldPos.x) * scaleRatio,
+    y: center.y - (center.y - oldPos.y) * scaleRatio,
+  };
+
+  stage.scale({ x: newScale, y: newScale });
+  stage.position(newPos);
+
+  syncCanvasBackground();
+  stage.batchDraw();
+
+  nodeLists.forEach(function (nodeObject, key) {
+    let node = nodeObject.node;
+    let transformer = node.getAttr("transformer");
+
+    if (transformer) {
+      transformer.update();
+    }
+  });
+
+  updateHeightWidthDisplay();
+}
+
+function triggerTransformEvent() {
+  if (selectedNode == null) {
+    return;
+  }
+  // Update the rectangle's scale (just for demonstration)
+  selectedNode.scaleX(1);
+  selectedNode.scaleY(1);
+
+  let transformer = selectedNode.getAttr("transformer");
+
+  layer.add(transformer);
+  transformer.nodes([selectedNode]);
+  selectedNode.fire("transform", { type: "transform" });
+  transformer.update();
+  layer.batchDraw();
+
+  if (selectedNode.getClassName() == "Text") {
+  }
+}
+
+function updateHeightWidthInput(height, width, type) {
+  let nodeHeight = height ? parseFloat(height) : false;
+  let nodeWidth = width ? parseFloat(width) : false;
+  switch (type) {
+    case "text":
+      if (nodeHeight) {
+        sizeHeightInput.value = parseFloat(pxToIn(nodeHeight)).toFixed(1);
+        sizeHeightInput.removeAttribute("readonly");
+      }
+      if (nodeWidth) {
+        if (typeof nodeWidth == "number") {
+          sizeWidthInput.value = parseFloat(pxToIn(nodeWidth)).toFixed(1);
+        }
+      }
+
+      break;
+    case "raceway":
+      if (nodeWidth) {
+        sizeWidthInput.value = nodeWidth;
+        sizeHeightInput.setAttribute("readonly", "true");
+        if (typeof width == "number") {
+          sizeWidthInput.value = parseFloat(pxToIn(nodeWidth)).toFixed(1);
+        }
+
+        if (!height) {
+          sizeHeightInput.value = maxRacewayHeightInches.toFixed(1);
+        } else {
+          sizeHeightInput.value = Math.min(
+            maxRacewayHeightInches,
+            parseFloat(pxToIn(nodeHeight)),
+          ).toFixed(1);
+        }
+      }
+
+      break;
+
+    case "arrow":
+      //sizeWidthInput.setAttribute('readonly', 'true');
+      //sizeHeightInput.setAttribute('readonly', 'true');
+
+      //sizeHeightInput.setAttribute('readonly', 'true');
+      if (typeof width == "number") {
+        if (nodeWidth) {
+          sizeWidthInput.value = parseFloat(pxToIn(nodeWidth)).toFixed(1);
+        }
+
+        if (nodeWidth) {
+          sizeHeightInput.value = parseFloat(pxToIn(nodeHeight)).toFixed(1);
+        }
+        //sizeWidthInput.value = parseFloat(pxToIn(nodeWidth)).toFixed(1);
+      }
+
+      break;
+    default:
+      //sizeHeightInput.value = nodeHeight * dpi;
+      sizeHeightInput.removeAttribute("readonly");
+      sizeWidthInput.removeAttribute("readonly");
+
+      if (typeof width == "number") {
+        sizeWidthInput.value = parseFloat(pxToIn(nodeWidth)).toFixed(1);
+      }
+      if (typeof nodeHeight == "number") {
+        sizeHeightInput.value = parseFloat(pxToIn(nodeHeight)).toFixed(1);
+      }
+
+      break;
+  }
+}
+
+function updateNodeDimensionInputs(node, type = null) {
+  if (!node) {
+    return;
+  }
+
+  const bounds = getNodeDesignBounds(node);
+  const inputType =
+    type ||
+    (node.getClassName() === "Text"
+      ? "text"
+      : node.getClassName() === "Line"
+        ? "arrow"
+        : node.getAttr("textIndex")
+          ? "raceway"
+          : null);
+  updateHeightWidthInput(bounds.height, bounds.width, inputType);
+}
+
+let heightWidthDisplayFrame = null;
+function scheduleHeightWidthDisplayUpdate() {
+  if (heightWidthDisplayFrame !== null) {
+    return;
+  }
+
+  heightWidthDisplayFrame = requestAnimationFrame(() => {
+    heightWidthDisplayFrame = null;
+    updateHeightWidthDisplay(true);
+  });
+}
+
+function updateHeightWidthDisplay(skipDraw = false) {
+  const isMobileEditor = window.matchMedia("(max-width: 767.98px)").matches;
+  const viewportInsetX = isMobileEditor ? 15 : 30;
+  const viewportInsetY = isMobileEditor ? 15 : 20;
+  const verticalArrowX = (viewportInsetX - stage.x()) / stage.scaleX();
+  const horizontalArrowY = (viewportInsetY - stage.y()) / stage.scaleY();
+
+  if (nodeLists.length < 1) {
+    const middleX = stage.width() / 2;
+    const middleY = stage.height() / 2;
+    const arrowWidth = stage.width() / 3;
+    const arrowHeight = stage.height() / 3;
+
+    heightArrows.children[0].points([
+      verticalArrowX,
+      middleY - 15,
+      verticalArrowX,
+      middleY - arrowHeight,
+    ]);
+    heightArrows.children[1].points([
+      verticalArrowX,
+      middleY + 15,
+      verticalArrowX,
+      middleY + arrowHeight,
+    ]);
+    heightDisplay.x(verticalArrowX - 20);
+    heightDisplay.y(middleY - 10);
+    widthArrows.children[0].points([
+      middleX - 35,
+      horizontalArrowY,
+      middleX - arrowWidth,
+      horizontalArrowY,
+    ]);
+    widthArrows.children[1].points([
+      middleX + 35,
+      horizontalArrowY,
+      middleX + arrowWidth,
+      horizontalArrowY,
+    ]);
+    widhtDisplay.x(middleX - 25);
+    widhtDisplay.y(horizontalArrowY - 10);
+    widhtDisplay.text(`0"`);
+    heightDisplay.text(`0"`);
+    if (!skipDraw) {
+      layer.batchDraw();
+    }
+    return;
+  }
+
+  const getStageBounds = (node) => {
+    const bounds = getNodeDesignBounds(node);
+    return {
+      left: bounds.x,
+      top: bounds.y,
+      right: bounds.x + bounds.width,
+      bottom: bounds.y + bounds.height,
+    };
+  };
+
+  const firstBounds = getStageBounds(nodeLists[0].node);
+  let minLeft = firstBounds.left;
+  let minTop = firstBounds.top;
+  let minRight = firstBounds.right;
+  let minBottom = firstBounds.bottom;
+
+  nodeLists.forEach((singleNode) => {
+    const bounds = getStageBounds(singleNode.node);
+    minLeft = Math.min(minLeft, bounds.left);
+    minTop = Math.min(minTop, bounds.top);
+    minRight = Math.max(minRight, bounds.right);
+    minBottom = Math.max(minBottom, bounds.bottom);
+  });
+
+  contentHeight = (minBottom - minTop) / dpi || 0;
+  contentWidth = (minRight - minLeft) / dpi || 0;
+
+  let topArrow = heightArrows.children[0];
+  let bottomArrow = heightArrows.children[1];
+  let leftArrow = widthArrows.children[0];
+  let rightArrow = widthArrows.children[1];
+  let xArrowHeight = (contentHeight * dpi) / 2;
+  let xArrowWidth = (contentWidth * dpi) / 2;
+  let middleY = minTop + xArrowHeight;
+  let middleX = minLeft + xArrowWidth;
+  topArrow.points([
+    verticalArrowX,
+    middleY - 15,
+    verticalArrowX,
+    middleY - xArrowHeight,
+  ]);
+  bottomArrow.points([
+    verticalArrowX,
+    middleY + 15,
+    verticalArrowX,
+    middleY + xArrowHeight,
+  ]);
+  heightDisplay.x(verticalArrowX - 20);
+  heightDisplay.y(middleY - 10);
+  leftArrow.points([
+    middleX - 35,
+    horizontalArrowY,
+    middleX - xArrowWidth,
+    horizontalArrowY,
+  ]);
+  rightArrow.points([
+    middleX + 35,
+    horizontalArrowY,
+    middleX + xArrowWidth,
+    horizontalArrowY,
+  ]);
+  widhtDisplay.x(middleX - 25);
+  widhtDisplay.y(horizontalArrowY - 10);
+  widhtDisplay.text(`${contentWidth.toFixed(1)}"`);
+  heightDisplay.text(`${contentHeight.toFixed(1)}"`);
+  if (!skipDraw) {
+    layer.batchDraw();
+  }
+}
+
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function removeClassFromSiblings(element, className) {
+  let sliderChooseItemContainers = document.querySelectorAll(
+    ".slider-choose-item-container.have-background-color",
+  );
+
+  if (sliderChooseItemContainers.length > 0) {
+    sliderChooseItemContainers.forEach((container) => {
+      [...container.children].forEach((e) => {
+        e.classList.remove(className);
+      });
+    });
+  } else {
+    const siblings = Array.from(element.parentNode.children);
+
+    siblings.forEach((sibling) => {
+      if (sibling !== element) {
+        sibling.classList.remove(className);
+      }
+    });
+  }
+}
+
+let handleChooseItemClick = (
+  slideChooseItem,
+  slideChooseContainer,
+  actionId,
+) => {
+  removeClassFromSiblings(slideChooseContainer, "active");
+  slideChooseItem.classList.add("active");
+
+  let itemType = slideChooseItem.dataset.type;
+  let itemValue = slideChooseItem.dataset.value;
+  let itemName = slideChooseItem.dataset.name;
+  let itemCost = slideChooseItem.dataset.cost;
+  if (selectedNode == null) {
+    return;
+  }
+
+  let changeEvent = new CustomEvent("change", {
+    bubbles: true,
+    cancelable: true,
+  });
+
+  let itemSelector = document.querySelector(".select-" + itemType);
+  itemSelector.dataset.active = itemName + "/" + itemValue;
+
+  switch (actionId) {
+    case "font":
+      fontFamily = itemValue;
+      activeFontCode = itemValue;
+      activeFontTitle = itemName;
+      activeFontTitle;
+      updateNode(selectedNode, "font-family");
+      triggerTransformEvent();
+
+      setTimeout(() => {
+        updateNode(selectedNode, "font-family");
+        selectedNode.scaleX(selectedNode.scaleX());
+        triggerTransformEvent();
+      }, 1000);
+
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: selectedNode._id,
+          font: {
+            title: itemName,
+            code: itemValue,
+          },
+        },
+      });
+
+      triggerTransformEvent();
+      setTextFSI(selectedNode._id, "yes");
+      document.querySelector(".select-" + itemType + " .name").innerHTML =
+        itemName;
+      break;
+
+    case "face-color":
+      document.querySelector(".select-" + itemType + " .name").innerHTML =
+        itemName;
+      faceColorPicker.value = itemValue;
+      faceColorPicker.dispatchEvent(changeEvent);
+      colorCost = itemCost;
+      faceColor = itemValue;
+      activeFaceTitle = itemName;
+      activeFaceCode = itemValue;
+
+      let sameReturnColorData = null;
+
+      if (isReturnColorSame) {
+        activeReturnColorCode = itemValue;
+        activeReturnColorTitle = itemName;
+        sameReturnColorData = {
+          code: itemValue,
+          title: itemName,
+        };
+      }
+
+      if (itemCost) {
+        switch (selectedNode.getClassName()) {
+          case "Text":
+            let totalLength = selectedNode.text().replace(/\s/g, "").length;
+            let singleHeightInch =
+              (selectedNode.height() * selectedNode.scaleY()) / dpi;
+            let totalTextHeightInch = singleHeightInch * totalLength;
+            totalColorCost = totalTextHeightInch * itemCost;
+            store.dispatch({
+              type: "UPDATE_ELEMENT",
+              payload: {
+                id: selectedNode._id,
+                width: pxToIn(selectedNode.width() * selectedNode.scaleX()),
+                height: singleHeightInch,
+                cost: costPerInch(singleHeightInch) * totalLength,
+                text: selectedNode.text(),
+                colorCost: totalColorCost,
+                faceColor: {
+                  title: itemName,
+                  code: itemValue,
+                },
+                returnColor: sameReturnColorData,
+                faceCostPerInch: itemCost,
+              },
+            });
+            break;
+          case "RegularPolygon":
+            let totalTriWidthInch =
+              (selectedNode.width() * selectedNode.scaleX()) /
+              dpi /
+              triangleReduction;
+            let totalTriHeightInch =
+              (selectedNode.height() * selectedNode.scaleY()) /
+              dpi /
+              triangleReduction;
+            let totalTriCost = costPerInch(totalTriWidthInch);
+            totalColorCost = totalTriWidthInch * itemCost;
+
+            if (totalTriWidthInch < totalTriHeightInch) {
+              totalTriCost = costPerInch(totalTriHeightInch);
+              totalColorCost = totalTriHeightInch * itemCost;
+            }
+            store.dispatch({
+              type: "UPDATE_ELEMENT",
+              payload: {
+                id: selectedNode._id,
+                width: totalTriWidthInch,
+                height: totalTriHeightInch,
+                cost: totalTriCost,
+                colorCost: totalColorCost,
+                faceColor: {
+                  title: itemName,
+                  code: itemValue,
+                },
+                returnColor: sameReturnColorData,
+                faceCostPerInch: itemCost,
+              },
+            });
+            break;
+
+          default:
+            let totalWidthInch =
+              (selectedNode.width() * selectedNode.scaleX()) / dpi;
+            let totalHeightInch =
+              (selectedNode.height() * selectedNode.scaleY()) / dpi;
+            let totalCost = costPerInch(totalWidthInch);
+            totalColorCost = totalWidthInch * itemCost;
+            if (totalHeightInch > totalWidthInch) {
+              totalCost = costPerInch(totalHeightInch);
+              totalColorCost = totalHeightInch * itemCost;
+            }
+
+            store.dispatch({
+              type: "UPDATE_ELEMENT",
+              payload: {
+                id: selectedNode._id,
+                width: totalWidthInch,
+                height: totalHeightInch,
+                cost: totalCost,
+                colorCost: totalColorCost,
+                faceColor: {
+                  title: itemName,
+                  code: itemValue,
+                },
+                returnColor: sameReturnColorData,
+
+                faceCostPerInch: itemCost,
+              },
+            });
+            break;
+        }
+      }
+
+      if (isReturnColorSame) {
+        if (itemValue != "same.face") {
+          returnColorPicker.value = itemValue;
+          returnColorPicker.dispatchEvent(changeEvent);
+
+          activeReturnColorTitle = itemName;
+          activeReturnColorCode = itemValue;
+          returnColor = itemValue;
+          updateActiveItem("return", `${itemName}/${itemValue}`);
+        }
+      }
+
+      break;
+    case "return-color":
+      if (isReturnColorSame) return;
+      document.querySelector(".select-" + itemType + " .name").innerHTML =
+        itemName;
+      returnColorPicker.value = itemValue;
+      returnColorPicker.dispatchEvent(changeEvent);
+      itemSelector.dataset.active = itemName + "/" + itemValue;
+
+      activeReturnColorTitle = itemName;
+      activeReturnColorCode = itemValue;
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: selectedNode._id,
+          returnColor: {
+            title: itemName,
+            code: itemValue,
+          },
+        },
+      });
+
+      break;
+    case "return-size":
+      //document.querySelector('.select-' + itemType + ' .name').innerHTML = itemName;
+      returnSizeInput.value = itemValue;
+      returnSizeInput.dispatchEvent(changeEvent);
+      itemSelector.dataset.activeSecond = itemName + "/" + itemValue;
+      activeReturnSizeCode = itemValue;
+      activeReturnSizeTitle = itemName;
+      updatePreview("text", selectedNode);
+
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: selectedNode._id,
+          returnSize: {
+            title: itemName,
+            code: itemValue,
+          },
+        },
+      });
+      break;
+    case "trimcap-color":
+      document.querySelector(".select-" + itemType + " .name").innerHTML =
+        itemName;
+      trimcapColorPicker.value = itemValue;
+      trimcapColorPicker.dispatchEvent(changeEvent);
+
+      activeTrimcapColorTitle = itemName;
+      activeTrimcapColorCode = itemValue;
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: selectedNode._id,
+          trimcapColor: {
+            title: itemName,
+            code: itemValue,
+          },
+        },
+      });
+      break;
+
+    case "trimcap-size":
+      //document.querySelector('.select-' + itemType + ' .name').innerHTML = itemName;
+      trimcapSizeInput.value = itemValue;
+      trimcapSizeInput.dispatchEvent(changeEvent);
+      itemSelector.dataset.activeSecond = itemName + "/" + itemValue;
+      activeTrimcapSizeCode = itemValue;
+      activeReturnSizeTitle = itemName;
+      updatePreview("text", selectedNode);
+
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: selectedNode._id,
+          trimcapSize: {
+            title: itemName,
+            code: itemValue,
+          },
+        },
+      });
+
+      break;
+  }
+
+  hideLeftSlider();
+};
+
+let showLeftSlider = (data, type, column) => {
+  if (selectedNode == null) {
+    return;
+  }
+  hideLeftSlider();
+
+  let matchActiveItem = (item) => {
+    let itemSelector = document.querySelector(".select-" + type);
+    let activeItem = itemSelector.dataset.active;
+    let activeItemSecond = itemSelector.dataset.activeSecond;
+
+    for (const itemKey in item) {
+      let name = itemKey;
+      let value = item[itemKey];
+
+      if (name + "/" + value == activeItem) {
+        return true;
+      } else if (activeItemSecond) {
+        if (
+          name.replace(/\s+/g, "") + "/" + value.replace(/\s+/g, "") ==
+          activeItemSecond.replace(/\s+/g, "")
+        ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    }
+  };
+
+  let leftSliderContainer = document.querySelector(".left-slider-container");
+  if (column == 4) {
+    leftSliderContainer.classList.add("direction-right");
+  }
+
+  leftSliderContainer.replaceChildren();
+  let addHeading = (heading, cost) => {
+    let headingContainer = document.createElement("div");
+    let headingText = document.createElement("h3");
+
+    headingText.classList.add("slider-heading");
+    headingContainer.classList.add("heading-container");
+    headingText.innerText = heading;
+    headingContainer.appendChild(headingText);
+
+    if (cost != "0") {
+      let costText = document.createElement("span");
+      costText.innerText = cost;
+      headingContainer.appendChild(costText);
+    }
+
+    leftSliderContainer.appendChild(headingContainer);
+  };
+
+  let addChooseItems = (id, items, cost) => {
+    let slideChooseContainer = document.createElement("div");
+    slideChooseContainer.classList.add("slider-choose-container");
+
+    let slideChooseItemContainerOne = document.createElement("ul");
+    slideChooseItemContainerOne.classList.add("slider-choose-item-container");
+
+    let slideChooseItemContainerTwo = document.createElement("ul");
+    slideChooseItemContainerTwo.classList.add("slider-choose-item-container");
+
+    let slideChooseItemContainerThree = document.createElement("ul");
+    slideChooseItemContainerThree.classList.add("slider-choose-item-container");
+
+    let slideChooseItemContainerFour = document.createElement("ul");
+    slideChooseItemContainerFour.classList.add("slider-choose-item-container");
+
+    switch (id) {
+      case "face-color":
+        slideChooseItemContainerOne.classList.add("have-background-color");
+        slideChooseItemContainerTwo.classList.add("have-background-color");
+        slideChooseItemContainerThree.classList.add("have-background-color");
+        slideChooseItemContainerFour.classList.add("have-background-color");
+
+        break;
+      case "trimcap-color":
+        slideChooseItemContainerOne.classList.add("have-background-color");
+        slideChooseItemContainerTwo.classList.add("have-background-color");
+        slideChooseItemContainerThree.classList.add("have-background-color");
+        slideChooseItemContainerFour.classList.add("have-background-color");
+
+        break;
+      case "return-color":
+        if (!isReturnColorSame) {
+          slideChooseItemContainerOne.classList.add("have-background-color");
+        }
+
+        slideChooseItemContainerTwo.classList.add("have-background-color");
+        slideChooseItemContainerThree.classList.add("have-background-color");
+        slideChooseItemContainerFour.classList.add("have-background-color");
+
+        break;
+      default:
+        slideChooseItemContainerOne.classList.remove("have-background-color");
+        slideChooseItemContainerTwo.classList.remove("have-background-color");
+        slideChooseItemContainerThree.classList.remove("have-background-color");
+        slideChooseItemContainerFour.classList.remove("have-background-color");
+
+        break;
+    }
+
+    let itemLength = items.length;
+    let itemIndex = 0;
+    let currentColumn = 1;
+    let currentColumnLength = 0;
+    let itemPerColumn = itemLength > 4 ? Math.round(itemLength / 4) : 1;
+    if (itemPerColumn) {
+      items.forEach((item) => {
+        for (const itemKey in item) {
+          let name = itemKey;
+          let value = item[itemKey];
+
+          let slideChooseItem = document.createElement("li");
+          slideChooseItem.classList.add("slider-choose-item");
+          if (matchActiveItem(item)) {
+            slideChooseItem.classList.add("active");
+          }
+
+          slideChooseItem.dataset.cost = cost;
+          slideChooseItem.dataset.type = type;
+          slideChooseItem.dataset.name = name;
+          slideChooseItem.dataset.value = value;
+
+          if (
+            slideChooseItemContainerOne.classList.contains(
+              "have-background-color",
+            )
+          ) {
+            let chooseColorPrevew = document.createElement("span");
+            let chooseColorName = document.createElement("span");
+            chooseColorPrevew.classList.add("choose-color-preview");
+            if (isValidLink(value)) {
+              chooseColorPrevew.style.backgroundImage = `url('${value}')`;
+            } else {
+              chooseColorPrevew.style.backgroundColor = value;
+            }
+            chooseColorName.innerText = name;
+            slideChooseItem.appendChild(chooseColorPrevew);
+            slideChooseItem.appendChild(chooseColorName);
+          } else {
+            slideChooseItem.innerHTML = name;
+          }
+
+          slideChooseItem.addEventListener("click", function (e) {
+            handleChooseItemClick(
+              slideChooseItem,
+              slideChooseItemContainerOne,
+              id,
+            );
+            handleChooseItemClick(
+              slideChooseItem,
+              slideChooseItemContainerTwo,
+              id,
+            );
+            handleChooseItemClick(
+              slideChooseItem,
+              slideChooseItemContainerThree,
+              id,
+            );
+            handleChooseItemClick(
+              slideChooseItem,
+              slideChooseItemContainerFour,
+              id,
+            );
+          });
+
+          switch (currentColumn) {
+            case 1:
+              slideChooseItemContainerOne.appendChild(slideChooseItem);
+
+              break;
+
+            case 2:
+              slideChooseItemContainerTwo.appendChild(slideChooseItem);
+
+              break;
+
+            case 3:
+              slideChooseItemContainerThree.appendChild(slideChooseItem);
+
+              break;
+
+            case 4:
+              slideChooseItemContainerFour.appendChild(slideChooseItem);
+
+              break;
+          }
+        }
+        slideChooseContainer.appendChild(slideChooseItemContainerOne);
+        slideChooseContainer.appendChild(slideChooseItemContainerTwo);
+        slideChooseContainer.appendChild(slideChooseItemContainerThree);
+        slideChooseContainer.appendChild(slideChooseItemContainerFour);
+
+        itemIndex++;
+
+        if (currentColumnLength == itemPerColumn) {
+          currentColumn = currentColumn + 1;
+          currentColumnLength = 0;
+        }
+        currentColumnLength++;
+      });
+
+      return slideChooseContainer;
+    } else {
+      items.forEach((item) => {
+        for (const itemKey in item) {
+          let name = itemKey;
+          let value = item[itemKey];
+
+          let slideChooseItem = document.createElement("li");
+          slideChooseItem.classList.add("slider-choose-item");
+          if (matchActiveItem(item)) {
+            slideChooseItem.classList.add("active");
+          }
+
+          slideChooseItem.dataset.cost = cost;
+          slideChooseItem.dataset.type = type;
+          slideChooseItem.dataset.name = name;
+          slideChooseItem.dataset.value = value;
+
+          if (
+            slideChooseItemContainerOne.classList.contains(
+              "have-background-color",
+            )
+          ) {
+            let chooseColorPrevew = document.createElement("span");
+            let chooseColorName = document.createElement("span");
+            chooseColorPrevew.classList.add("choose-color-preview");
+            if (isValidLink(value)) {
+              chooseColorPrevew.style.backgroundImage = `url('${value}')`;
+            } else {
+              chooseColorPrevew.style.backgroundColor = value;
+            }
+            chooseColorName.innerText = name;
+            slideChooseItem.appendChild(chooseColorPrevew);
+            slideChooseItem.appendChild(chooseColorName);
+          } else {
+            slideChooseItem.innerHTML = name;
+          }
+
+          slideChooseItemContainerOne.appendChild(slideChooseItem);
+
+          slideChooseContainer.appendChild(slideChooseItemContainerOne);
+
+          if (!isReturnColorSame) {
+            slideChooseItem.addEventListener("click", function (e) {
+              handleChooseItemClick(
+                slideChooseItem,
+                slideChooseItemContainerOne,
+                id,
+              );
+            });
+          }
+        }
+      });
+
+      return slideChooseContainer;
+    }
+  };
+
+  data.forEach((container) => {
+    let heading = container.heading;
+    let cost = container.cost;
+    let items = container.options;
+    let id = null;
+
+    switch (container.id) {
+      case "color-ac":
+        id = "face-color";
+        break;
+
+      case "color-3mt":
+        id = "face-color";
+        break;
+
+      case "color-3mb":
+        id = "face-color";
+
+        break;
+      case "color-3md":
+        id = "face-color";
+
+        break;
+      case "color-3mm":
+        id = "face-color";
+
+        break;
+
+      default:
+        id = container.id;
+        break;
+    }
+
+    if (heading) {
+      addHeading(heading, cost);
+    }
+
+    if (items) {
+      leftSliderContainer.appendChild(addChooseItems(id, items, cost));
+    }
+  });
+  document.getElementById("leftSidebarSlider").style.left = "100%";
+  document.getElementById("leftSidebarSlider").style.opacity = "1";
+  document.getElementById("leftSidebarSlider").style.width =
+    220 * column + "px";
+  document.getElementById("leftSidebarSlider").classList.add("is-open");
+};
+let hideLeftSlider = () => {
+  let sliderWidth = parseInt(
+    document.getElementById("leftSidebarSlider").style.width.replace("px", ""),
+  );
+  let column = sliderWidth / 220;
+  document.getElementById("leftSidebarSlider").style.left =
+    column * -220 + "px";
+  document.getElementById("leftSidebarSlider").style.opacity = "0";
+  document.getElementById("leftSidebarSlider").classList.remove("is-open");
+  document
+    .querySelector(".left-slider-container")
+    .classList.remove("direction-right");
+};
+
+let updateActiveItem = (type, value) => {
+  let isReturnSize = false;
+  let isTrimcapSize = false;
+
+  switch (type) {
+    case "return-size":
+      let itemSelectorrs = document.querySelector(".select-return");
+      return (itemSelectorrs.dataset.activeSecond = value);
+      break;
+    case "trimcap-size":
+      let itemSelectorts = document.querySelector(".select-trimcap");
+      return (itemSelectorts.dataset.activeSecond = value);
+      break;
+    default:
+      let itemSelector = document.querySelector(".select-" + type);
+      itemSelector.dataset.active = value;
+      return (itemSelector.querySelector(".name").innerText =
+        value.split("/")[0]);
+      break;
+  }
+};
+
+let updateDimenstionDisplay = () => {
+  let elementIndexNumber = "#" + getNodeIndex(selectedNode._id);
+  let elementDimenstionText = getTextDimensions(selectedNode);
+
+  elementIndexContainer.innerHTML = elementIndexNumber;
+  elementDimenstionContainer.innerHTML = elementDimenstionText;
+};
+
+const focusedTransformColor = "#2563eb";
+const unfocusedTransformColor = "#808080";
+
+let updateFocusedTransformer = (node) => {
+  stage.find("Transformer").forEach((transformer) => {
+    const isFocused = node && transformer === node.getAttr("transformer");
+    transformer.borderStroke(
+      isFocused ? focusedTransformColor : unfocusedTransformColor,
+    );
+    transformer.anchorStroke(
+      isFocused ? focusedTransformColor : unfocusedTransformColor,
+    );
+    transformer.anchorFill(isFocused ? "#ffffff" : "#f0f0f0");
+
+    if (isFocused) {
+      transformer.show();
+    } else {
+      transformer.hide();
+    }
+  });
+
+  layer.batchDraw();
+};
+
+let updateLeftsideBar = () => {
+  updateFocusedTransformer(selectedNode);
+  document
+    .getElementById("cornerRadiusContainer")
+    .style.setProperty("display", "none", "important");
+
+  if (selectedNode == null) {
+    updatePreview();
+
+    document
+      .querySelector("#leftSidebar .item-font")
+      .style.setProperty("display", "none", "important");
+    document
+      .querySelector("#leftSidebar .item-face")
+      .style.setProperty("display", "none", "important");
+    document
+      .querySelector("#leftSidebar .item-return")
+      .style.setProperty("display", "none", "important");
+    document
+      .querySelector("#leftSidebar .item-trimcap")
+      .style.setProperty("display", "none", "important");
+    document
+      .querySelector("#leftSidebar .item-textInput")
+      .style.setProperty("display", "none", "important");
+    document.querySelector("#sizeWidthInput").setAttribute("readonly", "true");
+    document.querySelector("#sizeHeightInput").setAttribute("readonly", "true");
+
+    return;
+  }
+
+  document
+    .querySelector("#leftSidebar .item-textInput")
+    .style.setProperty("display", "block", "important");
+  document
+    .querySelector("#leftSidebar .item-font")
+    .style.setProperty("display", "flex", "important");
+  document
+    .querySelector("#leftSidebar .item-face")
+    .style.setProperty("display", "flex", "important");
+  document
+    .querySelector("#leftSidebar .item-return")
+    .style.setProperty("display", "flex", "important");
+  hasTrimcap == "on"
+    ? document
+        .querySelector("#leftSidebar .item-trimcap")
+        .style.setProperty("display", "flex", "important")
+    : document
+        .querySelector("#leftSidebar .item-trimcap")
+        .style.setProperty("display", "none", "important");
+  document.querySelector("#sizeWidthInput").removeAttribute("readonly");
+  document.querySelector("#sizeHeightInput").removeAttribute("readonly");
+
+  let currentElement = getElementById(selectedNode._id);
+  if (!currentElement) {
+    return;
+  }
+  switch (selectedNode.getClassName()) {
+    case "RegularPolygon":
+      document
+        .querySelector("#leftSidebar .item-textInput")
+        .style.setProperty("display", "none", "important");
+      document
+        .querySelector("#leftSidebar .item-font")
+        .style.setProperty("display", "none", "important");
+      // document.getElementById('cornerRadiusContainer').style.setProperty('display', 'block', 'important');
+
+      break;
+    case "Line":
+      document
+        .querySelector("#leftSidebar .item-textInput")
+        .style.setProperty("display", "none", "important");
+      document
+        .querySelector("#leftSidebar .item-font")
+        .style.setProperty("display", "none", "important");
+      document
+        .getElementById("cornerRadiusContainer")
+        .style.setProperty("display", "none", "important");
+
+      break;
+    case "Circle":
+      document
+        .querySelector("#leftSidebar .item-textInput")
+        .style.setProperty("display", "none", "important");
+      document
+        .querySelector("#leftSidebar .item-font")
+        .style.setProperty("display", "none", "important");
+      document
+        .querySelector("#leftSidebar .item-radius")
+        .style.setProperty("display", "none", "important");
+      document
+        .getElementById("cornerRadiusContainer")
+        .style.setProperty("display", "none", "important");
+
+      break;
+    case "Rect":
+      if (selectedNode.getAttr("textIndex")) {
+        document
+          .querySelector("#leftSidebar .item-textInput")
+          .style.setProperty("display", "none", "important");
+        document
+          .querySelector("#leftSidebar .item-font")
+          .style.setProperty("display", "none", "important");
+        document
+          .querySelector("#leftSidebar .item-face")
+          .style.setProperty("display", "none", "important");
+        document
+          .querySelector("#leftSidebar .item-return")
+          .style.setProperty("display", "none", "important");
+        document
+          .querySelector("#leftSidebar .item-trimcap")
+          .style.setProperty("display", "none", "important");
+        document
+          .getElementById("cornerRadiusContainer")
+          .style.setProperty("display", "none", "important");
+
+        document
+          .querySelector("#sizeHeightInput")
+          .setAttribute("readonly", true);
+        document.querySelector("#sizeHeightInput").value = 8;
+      } else {
+        document
+          .querySelector("#leftSidebar .item-textInput")
+          .style.setProperty("display", "none", "important");
+        document
+          .querySelector("#leftSidebar .item-font")
+          .style.setProperty("display", "none", "important");
+        document
+          .getElementById("cornerRadiusContainer")
+          .style.setProperty("display", "block", "important");
+      }
+      break;
+    case "Star":
+      document
+        .querySelector("#leftSidebar .item-textInput")
+        .style.setProperty("display", "none", "important");
+      document
+        .querySelector("#leftSidebar .item-font")
+        .style.setProperty("display", "none", "important");
+      //document.getElementById('ornerRadiusContainer').style.setProperty('display', 'block', 'important');
+
+      break;
+    case "Text":
+      document
+        .querySelector("#leftSidebar .item-textInput")
+        .style.setProperty("display", "block", "important");
+      document
+        .querySelector("#leftSidebar .item-font")
+        .style.setProperty("display", "flex", "important");
+      updateActiveItem(
+        "font",
+        currentElement.font.title + "/" + currentElement.font.code,
+      );
+      document
+        .getElementById("cornerRadiusContainer")
+        .style.setProperty("display", "none", "important");
+
+      break;
+    default:
+      document
+        .querySelector("#leftSidebar .item-textInput")
+        .style.setProperty("display", "none", "important");
+      document
+        .querySelector("#leftSidebar .item-font")
+        .style.setProperty("display", "none", "important");
+      document
+        .querySelector("#leftSidebar .item-face")
+        .style.setProperty("display", "none", "important");
+      document
+        .querySelector("#leftSidebar .item-return")
+        .style.setProperty("display", "none", "important");
+      document
+        .querySelector("#leftSidebar .item-trimcap")
+        .style.setProperty("display", "none", "important");
+      document
+        .getElementById("cornerRadiusContainer")
+        .style.setProperty("display", "none", "important");
+      break;
+  }
+
+  if (!selectedNode.getAttr("textIndex")) {
+    if (currentElement.faceColor) {
+      updateActiveItem(
+        "face",
+        currentElement.faceColor.title + "/" + currentElement.faceColor.code,
+      );
+    }
+    if (currentElement.returnColor) {
+      updateActiveItem(
+        "return",
+        currentElement.returnColor.title +
+          "/" +
+          currentElement.returnColor.code,
+      );
+    }
+    if (currentElement.returnSize) {
+      updateActiveItem(
+        "return-size",
+        currentElement.returnSize.title + "/" + currentElement.returnSize.code,
+      );
+    }
+
+    if (currentElement.trimcapColor) {
+      updateActiveItem(
+        "trimcap",
+        currentElement.trimcapColor.title +
+          "/" +
+          currentElement.trimcapColor.code,
+      );
+    }
+    if (currentElement.trimcapSize) {
+      updateActiveItem(
+        "trimcap-size",
+        currentElement.trimcapSize.title +
+          "/" +
+          currentElement.trimcapSize.code,
+      );
+    }
+  }
+
+  updateDimenstionDisplay();
+};
+
+let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
+  detailTableBody.innerHTML = "";
+  for (let i = 0; i < elements.length; i++) {
+    let detailTableTR = document.createElement("tr");
+    let detailTableId = document.createElement("td");
+    detailTableId.innerText = getNodeIndex(elements[i].id);
+    detailTableTR.appendChild(detailTableId);
+
+    let detailTableType = document.createElement("td");
+    let isChannelLetter =
+      elements[i].text != undefined && elements[i].text.length > 0
+        ? "Channel Letter"
+        : "Raceway";
+    const elementNode = getNodeById(elements[i].id);
+    if (!elementNode) {
+      continue;
+    }
+    if (elements[i].text == undefined) {
+      let currentNodeType = elementNode.getClassName();
+      if (currentNodeType == "Rect") {
+        currentNodeType = "Rectangle";
+      }
+      if (currentNodeType == "RegularPolygon") {
+        currentNodeType = "Triangle";
+      }
+      if (currentNodeType == "Line") {
+        currentNodeType = "Arrow";
+      }
+      if (currentNodeType == "Star") {
+        currentNodeType = "Starburst";
+      }
+      detailTableType.innerText = currentNodeType;
+      detailTableTR.appendChild(detailTableType);
+    } else {
+      detailTableType.innerText = isChannelLetter;
+      detailTableTR.appendChild(detailTableType);
+    }
+
+    let detailTableDimenstion = document.createElement("td");
+    const elementHeight = normalizeCost(elements[i].height);
+    const elementWidth = normalizeCost(elements[i].width);
+    const elementCost = normalizeCost(elements[i].cost);
+    const elementColorCost = normalizeCost(elements[i].colorCost);
+    detailTableDimenstion.innerText = `${elementHeight.toFixed(1)} x ${elementWidth.toFixed(1)}`;
+    detailTableTR.appendChild(detailTableDimenstion);
+
+    let detailTableCost = document.createElement("td");
+    detailTableCost.innerText = "$" + elementCost.toFixed(1);
+
+    detailTableTR.appendChild(detailTableCost);
+    let detailTableColorCost = document.createElement("td");
+    detailTableColorCost.innerText = "$" + elementColorCost.toFixed(1);
+    detailTableTR.appendChild(detailTableColorCost);
+
+    let detailTableTotalCost = document.createElement("td");
+    detailTableTotalCost.innerText =
+      `$${(elementCost + elementColorCost).toFixed(2)}`;
+    detailTableTR.appendChild(detailTableTotalCost);
+
+    detailTableBody.appendChild(detailTableTR);
+  }
+  if (extras.powerSupply.qty > 0) {
+    let detailTableTR = document.createElement("tr");
+
+    let detailTablePsTitle = document.createElement("td");
+    //detailTablePsTitle.classList.add('fw-bold')
+    detailTablePsTitle.innerHTML =
+      'Power Supply: <span class="fw-bold" >' +
+      extras.powerSupply.value +
+      "</span>";
+    let detailTablePsCost = document.createElement("td");
+    detailTablePsTitle.setAttribute("colspan", 5);
+
+    detailTablePsCost.innerText =
+      `$${normalizeCost(extras.powerSupply.cost).toFixed(2)}`;
+    detailTableTR.appendChild(detailTablePsTitle);
+    detailTableTR.appendChild(detailTablePsCost);
+    detailTableBody.appendChild(detailTableTR);
+  }
+  if (extras.lit && extras.lit.qty > 0) {
+    if (isLitOption) {
+      let detailTableTR = document.createElement("tr");
+      let totalElementCost = normalizeCost(
+        detailTableBody.dataset.totalElementCost,
+      );
+      let litCostPercent = normalizeCost(extras.lit.cost);
+      let litCost = (totalElementCost * litCostPercent) / 100;
+      let detailTableLitTitle = document.createElement("td");
+      detailTableLitTitle.innerHTML =
+        'Lit: <span class="fw-bold" >' + extras.lit.value + "</span>";
+      let detailTableLitCost = document.createElement("td");
+      detailTableLitTitle.setAttribute("colspan", 5);
+
+      let litCostText =
+        litCost != 0 ? `$${litCost.toFixed(2)} (${litCostPercent}%)` : `$0.00`;
+
+      detailTableLitCost.innerText = litCostText;
+      detailTableTR.appendChild(detailTableLitTitle);
+      detailTableTR.appendChild(detailTableLitCost);
+      detailTableBody.appendChild(detailTableTR);
+    }
+  }
+  if (extras.cable.qty > 0) {
+    let detailTableTR = document.createElement("tr");
+
+    let detailTableCableTitle = document.createElement("td");
+    //detailTableCableTitle.classList.add('fw-bold')
+    detailTableCableTitle.innerHTML =
+      'Cable: <span class="fw-bold" >' + extras.cable.value + "</span>";
+    let detailTableCableCost = document.createElement("td");
+    detailTableCableTitle.setAttribute("colspan", 5);
+
+    detailTableCableCost.innerText =
+      `$${normalizeCost(extras.cable.cost).toFixed(2)}`;
+    detailTableTR.appendChild(detailTableCableTitle);
+    detailTableTR.appendChild(detailTableCableCost);
+    detailTableBody.appendChild(detailTableTR);
+  }
+
+  let detailTableTR = document.createElement("tr");
+
+  let detailTablePriceTitle = document.createElement("td");
+  detailTablePriceTitle.classList.add("fw-bold");
+  detailTablePriceTitle.innerHTML =
+    'Total : <span class="text-primary"> ' + 0 + " </span> Objects";
+
+  let detailTableTotalPrice = document.createElement("td");
+  detailTablePriceTitle.setAttribute("colspan", 3);
+  detailTablePriceTitle.id = "dtTotalObjDisplay";
+  detailTableTotalPrice.setAttribute("colspan", 3);
+  detailTableTotalPrice.id = "dtTotalPriceDisplay";
+  detailTableTotalPrice.innerHTML =
+    'Total Price: <span class="text-success fw-bold">$' + 0 + "</span>";
+  detailTableTR.appendChild(detailTablePriceTitle);
+  detailTableTR.appendChild(detailTableTotalPrice);
+  detailTableBody.appendChild(detailTableTR);
+};
+
+function dataURLtoBlob(dataurl) {
+  var arr = dataurl.split(","),
+    mime = arr[0].match(/:(.*?);/)[1],
+    bstr = atob(arr[1]),
+    n = bstr.length,
+    u8arr = new Uint8Array(n);
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n);
+  }
+  return new Blob([u8arr], { type: mime });
+}
+
+// end utils
+
+// start main
+
+const stage = new Konva.Stage({
+  container: "container",
+  width: canvasWidth,
+  height: canvasHeight,
+  fill: "#F5F5F5",
+});
+
+if (stage.height() > canvasHeight) {
+  stage.height(canvasHeight);
+  stage.draw();
+}
+
+const previewStage = new Konva.Stage({
+  container: previewContainer,
+  width: previewCanvasWidth,
+  height: previewCanvasWidth,
+  background: "#F5F5F5",
+});
+
+var previewBackground = new Konva.Rect({
+  x: 0,
+  y: 0,
+  width: previewStage.width(),
+  height: previewStage.height(),
+  fill: "#F0F0F0", // background color
+});
+
+const previewLayer = new Konva.Layer();
+previewStage.add(previewLayer);
+previewLayer.add(previewBackground);
+
+function resizePreviewStage() {
+  const width = previewContainer.clientWidth;
+  const height = previewContainer.clientHeight;
+  if (!width || !height) {
+    return;
+  }
+
+  previewCanvasWidth = width;
+  previewCanvasHeight = height;
+  previewStage.width(width);
+  previewStage.height(height);
+  previewBackground.width(width);
+  previewBackground.height(height);
+  const emptyStateText = previewStage.findOne(".preview-empty-state");
+  if (emptyStateText) {
+    emptyStateText.position({
+      x: (width - emptyStateText.width()) / 2,
+      y: (height - emptyStateText.height()) / 2,
+    });
+  }
+  if (selectedNode) {
+    const previewType = selectedNode.getAttr("textIndex")
+      ? "raceway"
+      : selectedNode.getClassName() === "Text"
+        ? "text"
+        : selectedNode.getClassName() === "Rect"
+          ? "rect"
+          : selectedNode.getClassName() === "Circle"
+            ? "circle"
+            : selectedNode.getClassName() === "RegularPolygon"
+              ? "triangle"
+              : selectedNode.getClassName() === "Star"
+                ? "star"
+                : selectedNode.getClassName() === "Line"
+                  ? "arrow"
+                  : null;
+    if (previewType) {
+      updatePreview(previewType, selectedNode);
+    }
+  }
+  previewLayer.batchDraw();
+}
+
+let previewNoItemText = () => {
+  let noItemText = new Konva.Text({
+    name: "preview-empty-state",
+    text: "No item selected",
+    fontSize: 22,
+    fill: "gray",
+  });
+
+  noItemText.x((previewStage.width() - noItemText.width()) / 2);
+  noItemText.y((previewStage.height() - noItemText.height()) / 2);
+
+  previewLayer.add(noItemText);
+  previewNodeLists.push(noItemText);
+  previewLayer.batchDraw();
+};
+
+var background = new Konva.Rect({
+  x: 0,
+  y: 0,
+  width: stage.width(),
+  height: stage.height(),
+  fill: "#fff", // background color
+});
+
+const layer = new Konva.Layer();
+stage.add(layer);
+
+layer.add(background);
+
+const mobileDefaultZoom = 0.8;
+if (window.matchMedia("(max-width: 767.98px)").matches) {
+  stage.scale({ x: mobileDefaultZoom, y: mobileDefaultZoom });
+  stage.position({
+    x: (stage.width() * (1 - mobileDefaultZoom)) / 2,
+    y: (stage.height() * (1 - mobileDefaultZoom)) / 2,
+  });
+  syncCanvasBackground();
+  stage.batchDraw();
+}
+
+window.addEventListener("load", function (e) {
+  // document.getElementById('addPatternButton').addEventListener('click', function () {
+  //     // Load the image
+  //     var imageObj = new Image();
+  //     imageObj.onload = function () {
+  //       // Apply the fillPatternImage to the text
+  //       selectedNode.fillPatternImage(imageObj);
+  //       selectedNode.fillPatternRepeat('repeat'); // Optional: Repeat pattern inside the text
+  //       selectedNode.fillPatternScale({ x: 0.2, y: 0.2 }); // Optional: Scale down the pattern
+  //       selectedNode.fillPatternOffset({ x: 0, y: 0 }); // Optional: Offset the pattern inside the text
+  //       selectedNode.fillPatternRotation(0); // Optional: Rotate the pattern inside the text
+
+  //       console.log(selectedNode)
+  //       // Redraw the layer to reflect changes
+  //       layer.batchDraw();
+  //     };
+
+  //     // Set the source of the image
+  //     imageObj.src = 'http://localhost/wholesale/wp-content/themes/wholesale/img/dual-color-black.jpeg'; // Replace with your image URL
+  //   });
+  function addText(
+    text,
+    x = stage.width() / 2,
+    y = stage.height() / 2,
+    isUpdateId = false,
+  ) {
+    dualColorBg =
+      "http://localhost/wholesale/wp-content/themes/wholesale/img/dual-color-black.jpeg"; //
+    var imageObj = new Image();
+    imageObj.src = dualColorBg;
+    //Replace with your image URL
+    imageObj;
+
+    let textConfig = {
+      x: x,
+      y: y,
+      text: text,
+      fontSize: fontSize,
+      fontFamily: activeFontCode,
+      fill: activeFaceCode,
+      stroke: activeTrimcapColorCode,
+      strokeWidth: activeTrimcapSizeCode,
+      shadowColor: activeReturnColorCode,
+      shadowOffsetX: activeReturnSizeCode,
+      shadowOffsetY: activeReturnSizeCode,
+      shadowBlur: activeReturnSizeCode,
+      draggable: true,
+      rotateLineVisible: false,
+    };
+    if (hasDualColor) {
+      textConfig = {
+        x: x,
+        y: y,
+        text: text,
+        fontSize: fontSize,
+        fontFamily: fontFamily,
+        stroke: trimCapColor,
+        strokeWidth: trimCapSize,
+        shadowColor: returnColor,
+        shadowOffsetX: returnSize,
+        shadowOffsetY: returnSize,
+        fillPatternImage: imageObj, // Set the pattern image
+        fillPatternRepeat: "repeat", // Repeat the pattern inside the text
+        fillPatternOffset: { x: 0, y: 0 }, // Offset the pattern (optional)
+        fillPatternScale: { x: 0.2, y: 0.2 }, // Scale the pattern (optional)
+        fillPatternRotation: 0, // Rotate the pattern (optional)
+        shadowBlur: returnSize,
+        draggable: true,
+        rotateLineVisible: false,
+      };
+    }
+
+    const textNode = new Konva.Text(textConfig);
+
+    let changeEvent = new CustomEvent("change", { bubbles: true });
+    textNode.x(x - (textNode.width() * textNode.scaleX()) / 2);
+    textNode.y(y - (textNode.height() * textNode.scaleY()) / 2);
+
+    layer.add(textNode);
+
+    const tr = new Konva.Transformer({
+      nodes: [textNode],
+      keepRatio: true,
+      boundBoxFunc: function (oldBoundBox, newBoundBox) {
+        let stageScaleX = stage.scaleX();
+        let stageScaleY = stage.scaleY();
+        // Constrain height
+        if (pxToIn(newBoundBox.height / stageScaleY) > maxHeight) {
+          oldBoundBox.height = maxHeight * dpi;
+          sizeHeightInput.value = maxHeight;
+          sizeHeightInput.dispatchEvent(changeEvent);
+          return oldBoundBox;
+        }
+        if (pxToIn(newBoundBox.height / stageScaleY) < minHeight) {
+          oldBoundBox.height = minHeight * dpi;
+          sizeHeightInput.value = minHeight;
+          sizeHeightInput.dispatchEvent(changeEvent);
+          return oldBoundBox;
+        }
+
+        return newBoundBox;
+      },
+      rotateEnabled: false,
+      rotateLineVisible: false,
+      borderStroke: "gray", // Set border color to gray
+      borderDash: [4, 4], // Set dashed border (4 pixels dash, 4 pixels gap)
+      borderStrokeWidth: 2, // Set border width
+      anchorStroke: "gray",
+      //enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+    });
+
+    tr.nodes([textNode]);
+
+    layer.add(tr);
+
+    textNode.setAttr("transformer", tr);
+
+    let textTransformFrame = null;
+    let scheduleTextTransformUpdate = () => {
+      if (textTransformFrame !== null) {
+        return;
+      }
+      textTransformFrame = requestAnimationFrame(() => {
+        textTransformFrame = null;
+        selectedNode = textNode;
+        selectedNodeType = textNode.getClassName();
+        textInput.value = textNode.text();
+        updatePreview("text", textNode);
+        updateNodeDimensionInputs(textNode, "text");
+        isTextTransform = true;
+        fontSize = textNode.fontSize() * textNode.scaleX();
+        persistTextTransform();
+        layer.batchDraw();
+      });
+    };
+
+    let persistTextTransform = () => {
+      let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
+      let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
+      let textLength = textNode.text().replace(/\s/g, "").length;
+
+      let totalLength = textNode.text().replace(/\s/g, "").length;
+      let singleHeightInch = (textNode.height() * textNode.scaleY()) / dpi;
+      let totalHeightInch = singleHeightInch * totalLength;
+      totalColorCost = parseFloat(totalHeightInch * parseFloat(colorCost));
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: textNode._id,
+          width: widthInInch,
+          height: heightInInch,
+          text: textNode.text(),
+          cost: costPerInch(heightInInch) * textLength,
+          fontSize: textNode.fontSize() * textNode.scaleX(),
+          colorCost: totalColorCost,
+          x: textNode.x(),
+          y: textNode.y(),
+          scale: {
+            x: textNode.scaleX(),
+            y: textNode.scaleY(),
+          },
+        },
+      });
+      updateHeightWidthDisplay();
+    };
+
+    textNode.on("transformstart", saveState);
+    textNode.on("transform", function () {
+      updateNodeDimensionInputs(textNode, "text");
+      scheduleTextTransformUpdate();
+      scheduleHeightWidthDisplayUpdate();
+    });
+
+    textNode.on("transformend", persistTextTransform);
+
+    let persistText = () => {
+      let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
+      let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
+      let textLength = textNode.text().replace(/\s/g, "").length;
+      totalColorCost = heightInInch * textLength * parseFloat(colorCost);
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: textNode._id,
+          width: widthInInch,
+          height: heightInInch,
+          text: textNode.text(),
+          cost: costPerInch(heightInInch) * textLength,
+          colorCost: totalColorCost,
+          x: textNode.x(),
+          y: textNode.y(),
+        },
+      });
+      updateHeightWidthDisplay();
+    };
+
+    textNode.on("dragmove", () => {
+      updateNodeDimensionInputs(textNode, "text");
+      scheduleHeightWidthDisplayUpdate();
+    });
+    textNode.on("dragstart", () => {
+      saveState();
+      selectedNode = textNode;
+      selectedNodeType = textNode.getClassName();
+      updateNodeDimensionInputs(textNode, "text");
+      updatePreview("text", textNode);
+      updateLeftsideBar();
+      updateFocusedTransformer(textNode);
+    });
+    textNode.on("dragend", persistText);
+
+    textNode.on("click tap", (e) => {
+      selectedNode = textNode;
+      selectedNodeType = textNode.getClassName();
+      textInput.value = textNode.text();
+      updatePreview("text", textNode);
+      updateLeftsideBar();
+      updateNodeDimensionInputs(textNode, "text");
+    });
+
+    nodeLists.push({ type: "text", node: textNode, id: currentElementIndex });
+    updateSaveButtonState();
+
+    selectedNode = textNode;
+    selectedNodeType = textNode.getClassName();
+
+    layer.batchDraw();
+    updateHeightWidthDisplay();
+    updatePreview("text", textNode);
+    updateLeftsideBar();
+
+    let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
+    let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
+    let textLength = textNode.text().replace(/\s/g, "").length;
+
+    let totalLength = textNode.text().replace(/\s/g, "").length;
+    let singleHeightInch =
+      parseFloat(textNode.height() * textNode.scaleY()) / dpi;
+    let totalHeightInch = singleHeightInch * totalLength;
+    totalColorCost = totalHeightInch * parseFloat(colorCost);
+
+    store.dispatch({
+      type: "ADD_ELEMENT",
+      payload: {
+        id: textNode._id,
+        width: widthInInch,
+        height: heightInInch,
+        text: textNode.text(),
+        cost: costPerInch(heightInInch) * textLength,
+        colorCost: totalColorCost,
+        faceColor: {
+          title: activeFaceTitle,
+          code: activeFaceCode,
+        },
+        returnColor: {
+          title: activeReturnColorTitle,
+          code: activeReturnColorCode,
+        },
+        trimcapColor: {
+          title: activeTrimcapColorTitle,
+          code: activeTrimcapColorCode,
+        },
+        returnSize: {
+          title: activeReturnSizeTitle,
+          code: activeReturnSizeCode,
+        },
+        trimcapSize: {
+          title: activeTrimcapSizeTitle,
+          code: activeTrimcapSizeCode,
+        },
+        faceCostPerInch: parseFloat(colorCost),
+        colorCost: totalColorCost,
+        scale: {
+          x: textNode.scaleX(),
+          y: textNode.scaleY(),
+        },
+        x: textNode.x(),
+        y: textNode.y(),
+      },
+    });
+
+    currentElementIndex = currentElementIndex + 1;
+    updateBottombarOverlay();
+    updateLeftsideBar();
+    setTextFSI(textNode._id, "yes");
+
+    return textNode._id;
+  }
+
+  function addShape(shapeType) {
+    let shape;
+    let previewnType = null;
+    let isKeepRatio = true;
+    let changeEvent = new CustomEvent("change", { bubbles: true });
+    const shapeConfig = {
+      x: 150,
+      y: 150,
+      draggable: true,
+      fill: activeFaceCode,
+      stroke: activeTrimcapColorCode,
+      strokeWidth: activeTrimcapSizeCode,
+      shadowColor: activeReturnColorCode,
+      shadowOffsetX: activeReturnSizeCode,
+      shadowOffsetY: activeReturnSizeCode,
+      shadowBlur: activeReturnSizeCode,
+    };
+
+    switch (shapeType) {
+      case "rectangle":
+        shape = new Konva.Rect({
+          ...shapeConfig,
+          width: 200,
+          height: 100,
+          cornerRadius: 8,
+        });
+        previewnType = "rect";
+        break;
+
+      case "arrow":
+        var points = [
+          37.5,
+          67, // Point A
+          112.5,
+          67, // Point B
+          112.5,
+          33.5, // Point C
+          187.5,
+          83.75, // Point D (tip of the arrow)
+          112.5,
+          134, // Point E
+          112.5,
+          100.5, // Point F
+          37.5,
+          100.5, // Point G
+        ];
+
+        // Find the bounding box of the points
+        var minX = Math.min(...points.filter((_, i) => i % 2 === 0));
+        var maxX = Math.max(...points.filter((_, i) => i % 2 === 0));
+        var minY = Math.min(...points.filter((_, i) => i % 2 === 1));
+        var maxY = Math.max(...points.filter((_, i) => i % 2 === 1));
+
+        // Calculate the center of the arrow
+        var arrowCenterX = (minX + maxX) / 2;
+        var arrowCenterY = (minY + maxY) / 2;
+
+        // Calculate the center of the stage
+        var stageCenterX = 150;
+        var stageCenterY = 150;
+
+        // Calculate the offset to move the arrow to the center of the stage
+        var offsetX = stageCenterX - arrowCenterX;
+        var offsetY = stageCenterY - arrowCenterY;
+
+        // Apply the offset to all points
+        var centeredPoints = points.map((value, index) => {
+          if (index % 2 === 0) {
+            return value + offsetX; // Adjust x-coordinates
+          } else {
+            return value + offsetY; // Adjust y-coordinates
+          }
+        });
+
+        // Create the arrow shape using Konva.Line
+        shape = new Konva.Line({
+          points: centeredPoints,
+          fill: shapeConfig.fill,
+          stroke: shapeConfig.stroke,
+          strokeWidth: 2,
+          closed: true,
+          shadowColor: shapeConfig.shadowColor,
+          shadowBlur: shapeConfig.shadowBlur,
+          shadowOffset: {
+            x: shapeConfig.shadowOffsetX,
+            y: shapeConfig.shadowOffsetY,
+          },
+          draggable: true,
+        });
+
+        updateHeightWidthInput(101, 150);
+        previewnType = "arrow";
+
+        break;
+      case "circle":
+        shape = new Konva.Circle({
+          ...shapeConfig,
+          radius: 50,
+        });
+
+        previewnType = "circle";
+
+        break;
+      case "triangle":
+        shape = new Konva.RegularPolygon({
+          ...shapeConfig,
+          sides: 3,
+          radius: 50 * triangleReduction,
+        });
+        previewnType = "triangle";
+        isKeepRatio = false;
+        break;
+      case "star":
+        shape = new Konva.Star({
+          ...shapeConfig,
+          numPoints: 5,
+          innerRadius: 30,
+          outerRadius: 50,
+        });
+        updatePreview("star", shape);
+        previewnType = "star";
+
+        break;
+    }
+
+    // Center each new shape using the current stage size, including on mobile.
+    const shapeBounds = shape.getClientRect({ skipTransform: true });
+    shape.x(
+      shape.x() + stage.width() / 2 - (shapeBounds.x + shapeBounds.width / 2),
+    );
+    shape.y(
+      shape.y() + stage.height() / 2 - (shapeBounds.y + shapeBounds.height / 2),
+    );
+
+    selectedNodeType = shape.getClassName();
+
+    updatePreview(previewnType, shape);
+
+    layer.add(shape);
+
+    if (shape.getClassName() == "Rect") {
+      isKeepRatio = false;
+    }
+
+    const tr = new Konva.Transformer({
+      nodes: [shape],
+      keepRatio: isKeepRatio,
+      boundBoxFunc: function (oldBoundBox, newBoundBox) {
+        // Set minimum and maximum size constraints
+
+        let stageScaleX = stage.scaleX();
+        let stageScaleY = stage.scaleY();
+        let reduction =
+          shape.getClassName() == "RegularPolygon" ? triangleReduction : 1;
+        // Constrain height
+
+        if (pxToIn(newBoundBox.height / stageScaleY) * reduction > maxHeight) {
+          oldBoundBox.height = maxHeight * dpi;
+          sizeHeightInput.value = maxHeight;
+          sizeHeightInput.dispatchEvent(changeEvent);
+          return oldBoundBox;
+        }
+        if (pxToIn(newBoundBox.height / stageScaleY) * reduction < minHeight) {
+          oldBoundBox.height = minHeight * dpi;
+          sizeHeightInput.value = minHeight;
+          sizeHeightInput.dispatchEvent(changeEvent);
+          return oldBoundBox;
+        }
+
+        if (pxToIn(newBoundBox.width / stageScaleX) * reduction > maxWidth) {
+          oldBoundBox.width = maxWidth * dpi;
+          sizeWidthInput.value = maxWidth;
+          sizeWidthInput.dispatchEvent(changeEvent);
+          return oldBoundBox;
+        }
+        if (pxToIn(newBoundBox.width / stageScaleX) * reduction < minWidth) {
+          oldBoundBox.width = minWidth * dpi;
+          sizeWidthInput.value = minWidth;
+          sizeWidthInput.dispatchEvent(changeEvent);
+          return oldBoundBox;
+        }
+        return newBoundBox;
+      },
+      rotateEnabled: true,
+      borderStroke: "gray", // Set border color to gray
+      borderDash: [4, 4], // Set dashed border (4 pixels dash, 4 pixels gap)
+      borderStrokeWidth: 2, // Set border width
+      anchorStroke: "gray",
+      //enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+    });
+    layer.add(tr);
+    shape.setAttr("transformer", tr);
+    selectedNode = shape;
+
+    let persistShape = () => {
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: shape._id,
+          x: shape.x(),
+          y: shape.y(),
+          rotation: shape.rotation(),
+        },
+      });
+      updateHeightWidthDisplay();
+    };
+
+    shape.on("dragmove", () => {
+      updateNodeDimensionInputs(shape);
+      scheduleHeightWidthDisplayUpdate();
+    });
+    shape.on("dragstart", () => {
+      saveState();
+      selectedNode = shape;
+      selectedNodeType = shape.getClassName();
+      updateNodeDimensionInputs(shape);
+      updatePreview(previewnType, shape);
+      updateLeftsideBar();
+      updateFocusedTransformer(shape);
+    });
+    shape.on("dragend", persistShape);
+
+    let shapeTransformFrame = null;
+    let scheduleShapeTransformUpdate = () => {
+      if (shapeTransformFrame !== null) {
+        return;
+      }
+      shapeTransformFrame = requestAnimationFrame(() => {
+        shapeTransformFrame = null;
+        selectedNode = shape;
+        selectedNodeType = shape.getClassName();
+        updatePreview(previewnType, shape);
+        const shapeBounds = getNodeDesignBounds(shape);
+        updateHeightWidthInput(
+          shapeBounds.height,
+          shapeBounds.width,
+          previewnType,
+        );
+        let transformer = shape.getAttr("transformer");
+        if (transformer) {
+          transformer.update();
+        }
+        layer.draw();
+        persistShapeTransform();
+      });
+    };
+
+    let persistShapeTransform = () => {
+      let currentElementColorCost = getElementById(shape._id)
+        ? getElementById(shape._id).faceCostPerInch
+        : 0;
+      switch (shape.getClassName()) {
+        case "RegularPolygon":
+          let triHeightInch = pxToIn(
+            (shape.height() * shape.scaleY()) / triangleReduction,
+          );
+          let triWidthInch = pxToIn(
+            (shape.width() * shape.scaleX()) / triangleReduction,
+          );
+          let totalTriColorCost =
+            parseFloat(currentElementColorCost) * triWidthInch;
+
+          let totalTriCost = costPerInch(triWidthInch);
+          if (triHeightInch > triWidthInch) {
+            totalTriCost = costPerInch(triHeightInch);
+            totalTriColorCost =
+              parseFloat(currentElementColorCost) * triHeightInch;
+          }
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: shape._id,
+              cost: totalTriCost,
+              width: triWidthInch,
+              height: triHeightInch,
+              colorCost: totalTriColorCost,
+              faceCostPerInch: colorCost,
+              x: shape.x(),
+              y: shape.y(),
+              rotation: shape.rotation(),
+              scale: {
+                x: shape.scaleX(),
+                y: shape.scaleY(),
+              },
+            },
+          });
+          break;
+        case "Line":
+          let points = shape.points() || [];
+          let arrowHeightInch = pxToIn(shape.height() * shape.scaleY());
+          let arrowWidthInch = pxToIn(shape.width() * shape.scaleX());
+
+          let totalArrowCost = costPerInch(arrowWidthInch);
+          let totalArrowColorCost =
+            parseFloat(currentElementColorCost) * arrowWidthInch;
+          if (arrowHeightInch > arrowWidthInch) {
+            totalArrowCost = costPerInch(arrowHeightInch);
+            totalArrowColorCost =
+              parseFloat(currentElementColorCost) * arrowHeightInch;
+          }
+
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: shape._id,
+              cost: totalArrowCost,
+              width: arrowWidthInch,
+              height: arrowHeightInch,
+              colorCost: totalArrowColorCost,
+              faceCostPerInch: colorCost,
+              x: shape.x(),
+              y: shape.y(),
+              rotation: shape.rotation(),
+              scale: {
+                x: shape.scaleX(),
+                y: shape.scaleY(),
+              },
+            },
+          });
+          break;
+
+        default:
+          let shapeHeightInch = pxToIn(shape.height() * shape.scaleY());
+          let shapeWidthInch = pxToIn(shape.width() * shape.scaleX());
+          let totalShapeCost = costPerInch(shapeWidthInch);
+          let totalShapeColorCost =
+            parseFloat(currentElementColorCost) * shapeWidthInch;
+          if (shapeWidthInch < shapeHeightInch) {
+            totalShapeCost = costPerInch(shapeHeightInch);
+            totalShapeColorCost =
+              parseFloat(currentElementColorCost) * shapeHeightInch;
+          }
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: shape._id,
+              cost: totalShapeCost,
+              width: shapeWidthInch,
+              height: shapeHeightInch,
+              colorCost: totalShapeColorCost,
+              faceCostPerInch: colorCost,
+              x: shape.x(),
+              y: shape.y(),
+              rotation: shape.rotation(),
+              scale: {
+                x: shape.scaleX(),
+                y: shape.scaleY(),
+              },
+            },
+          });
+          break;
+      }
+    };
+
+    shape.on("transformstart", saveState);
+    shape.on("transform", (e) => {
+      updateNodeDimensionInputs(shape);
+      scheduleShapeTransformUpdate();
+      scheduleHeightWidthDisplayUpdate();
+    });
+
+    shape.on("transformend", (e) => {
+      if (shape.getClassName() === "Rect") {
+        shape.width(shape.width() * shape.scaleX());
+        shape.height(shape.height() * shape.scaleY());
+        shape.scaleX(1);
+        shape.scaleY(1);
+      }
+
+      persistShapeTransform();
+      let transformer = shape.getAttr("transformer");
+      if (transformer) {
+        transformer.nodes([shape]);
+        transformer.update();
+      }
+      updatePreview(previewnType, shape);
+      updateHeightWidthDisplay();
+      layer.batchDraw();
+    });
+
+    shape.on("click tap", (e) => {
+      selectedNode = shape;
+      updatePreview(previewnType, shape);
+      updateLeftsideBar();
+
+      updateNodeDimensionInputs(shape);
+      selectedNodeType = shape.getClassName();
+      faceColor = shape.attrs.fill;
+      returnColor = shape.attrs.shadowColor;
+      trimcap = shape.attrs.stroke;
+    });
+
+    nodeLists.push({ type: "shape", node: shape, id: currentElementIndex });
+    updateSaveButtonState();
+
+    layer.batchDraw();
+    updateHeightWidthDisplay();
+
+    switch (shape.getClassName()) {
+      case "RegularPolygon":
+        let triHeightInch = pxToIn(
+          (shape.height() * shape.scaleY()) / triangleReduction,
+        );
+        let triWidthInch = pxToIn(
+          (shape.width() * shape.scaleX()) / triangleReduction,
+        );
+        let totalTriCost = costPerInch(triWidthInch);
+
+        let totalColorCost = triWidthInch * parseFloat(colorCost);
+
+        if (triWidthInch < triHeightInch) {
+          totalTriCost = costPerInch(triHeightInch);
+          totalColorCost = triHeightInch * parseFloat(colorCost);
+        }
+        shape.scaleX(2.8);
+
+        updateHeightWidthInput(triWidthInch * dpi, triWidthInch * dpi);
+
+        store.dispatch({
+          type: "ADD_ELEMENT",
+          payload: {
+            id: shape._id,
+            type: shape.getClassName(),
+            cost: parseFloat(totalTriCost),
+            width: triWidthInch,
+            height: triHeightInch,
+            faceColor: {
+              title: activeFaceTitle,
+              code: activeFaceCode,
+            },
+            returnColor: {
+              title: activeReturnColorTitle,
+              code: activeReturnColorCode,
+            },
+            trimcapColor: {
+              title: activeTrimcapColorTitle,
+              code: activeTrimcapColorCode,
+            },
+            returnSize: {
+              title: activeReturnSizeTitle,
+              code: activeReturnSizeCode,
+            },
+            trimcapSize: {
+              title: activeTrimcapSizeTitle,
+              code: activeTrimcapSizeCode,
+            },
+            faceCostPerInch: parseFloat(colorCost),
+            colorCost: totalColorCost,
+            rotation: shape.rotation(),
+          },
+        });
+
+        break;
+
+      case "Line":
+        let points = shape.points() || [];
+
+        let arrowHeightInch = (shape.points()[9] - shape.points()[5]) / dpi;
+        let arrowWidthInch = (shape.points()[6] - shape.points()[0]) / dpi;
+        let totalArrowCost = costPerInch(arrowWidthInch);
+        let totalArrowColorCost = arrowWidthInch * parseFloat(colorCost);
+
+        if (arrowWidthInch < arrowHeightInch) {
+          totalArrowCost = costPerInch(arrowHeightInch);
+          totalArrowColorCost = arrowHeightInch * parseFloat(colorCost);
+        }
+        store.dispatch({
+          type: "ADD_ELEMENT",
+          payload: {
+            id: shape._id,
+            cost: totalArrowCost,
+            width: arrowWidthInch,
+            height: arrowHeightInch,
+            colorCost: totalArrowColorCost,
+            faceCostPerInch: colorCost,
+            x: shape.x(),
+            y: shape.y(),
+            faceColor: {
+              title: activeFaceTitle,
+              code: activeFaceCode,
+            },
+            returnColor: {
+              title: activeReturnColorTitle,
+              code: activeReturnColorCode,
+            },
+            trimcapColor: {
+              title: activeTrimcapColorTitle,
+              code: activeTrimcapColorCode,
+            },
+            returnSize: {
+              title: activeReturnSizeTitle,
+              code: activeReturnSizeCode,
+            },
+            trimcapSize: {
+              title: activeTrimcapSizeTitle,
+              code: activeTrimcapSizeCode,
+            },
+            scale: {
+              x: shape.scaleX(),
+              y: shape.scaleY(),
+            },
+            rotation: shape.rotation(),
+            points: points,
+          },
+        });
+
+        break;
+
+      default:
+        updateHeightWidthInput(
+          shape.height() * shape.scaleY(),
+          shape.width() * shape.scaleX(),
+          previewnType,
+        );
+        let shapeHeightInch = pxToIn(shape.height() * shape.scaleY());
+        let shapeWidthInch = pxToIn(shape.width() * shape.scaleX());
+
+        let radius = shape.getClassName() == "Rect" ? 8 : undefined;
+
+        let totalShapeCost = costPerInch(shapeWidthInch);
+        let totalShapeColorCost = shapeWidthInch * parseFloat(colorCost);
+
+        if (shapeHeightInch > shapeWidthInch) {
+          totalShapeCost = costPerInch(shapeHeightInch);
+          totalShapeColorCost = shapeHeightInch * parseFloat(colorCost);
+        }
+
+        store.dispatch({
+          type: "ADD_ELEMENT",
+          payload: {
+            id: shape._id,
+            type: shape.getClassName(),
+            cost: totalShapeCost,
+            width: shapeWidthInch,
+            height: shapeHeightInch,
+            faceCostPerInch: colorCost,
+            faceColor: {
+              title: activeFaceTitle,
+              code: activeFaceCode,
+            },
+            returnColor: {
+              title: activeReturnColorTitle,
+              code: activeReturnColorCode,
+            },
+            trimcapColor: {
+              title: activeTrimcapColorTitle,
+              code: activeTrimcapColorCode,
+            },
+            returnSize: {
+              title: activeReturnSizeTitle,
+              code: activeReturnSizeCode,
+            },
+            trimcapSize: {
+              title: activeTrimcapSizeTitle,
+              code: activeTrimcapSizeCode,
+            },
+            faceCostPerInch: parseFloat(colorCost),
+            colorCost: totalShapeColorCost,
+            rotation: shape.rotation(),
+            radius,
+          },
+        });
+        break;
+    }
+    layer.batchDraw();
+
+    updateLeftsideBar();
+    currentElementIndex = currentElementIndex + 1;
+    updateBottombarOverlay();
+  }
+
+  let addRaceway = (e) => {
+    // Create the rectangle
+    var rectWidth = Math.min(600, Math.max(80, stage.width() - 24));
+    var rectHeight = 80;
+    var raceway = new Konva.Rect({
+      x: (stage.width() - rectWidth) / 2,
+      y: (stage.height() - rectHeight) / 2,
+      width: rectWidth,
+      height: rectHeight,
+      fill: "#D3D3D3",
+      stroke: "transparent",
+      strokeWidth: 2,
+      shadowColor: "#7f7b7b",
+      shadowOffsetX: 5,
+      shadowOffsetY: 5,
+      shadowBlur: 5,
+      id: "raceway-rect",
+      draggable: true,
+      opacity: 0.5,
+      rotateLineVisible: false,
+    });
+
+    updatePreview("raceway", raceway);
+
+    const tr = new Konva.Transformer({
+      nodes: [raceway],
+      rotateEnabled: false,
+      rotateLineVisible: false,
+      borderStroke: "gray", // Set border color to gray
+      borderDash: [4, 4], // Set dashed border (4 pixels dash, 4 pixels gap)
+      borderStrokeWidth: 2, // Set border width
+      anchorStroke: "gray",
+      enabledAnchors: ["middle-right", "middle-left"],
+    });
+
+    raceway.setAttr("transformer", tr);
+
+    layer.add(tr);
+    layer.add(raceway);
+
+    // Create the text
+    var racewayText = new Konva.Text({
+      text: "Raceway",
+      fontSize: 24,
+      fontFamily: "Arial",
+      fill: "gray",
+      listening: false,
+    });
+
+    raceway.setAttr("textIndex", racewayText);
+
+    layer.add(racewayText);
+
+    let racewayUpdateFrame = null;
+    let racewayCostUpdatePending = false;
+    let updateRacewayTextPosition = () => {
+      racewayText.x(
+        raceway.x() +
+          (raceway.width() * raceway.scaleX() - racewayText.width()) / 2,
+      );
+      racewayText.y(
+        raceway.y() +
+          (raceway.height() * raceway.scaleY()) / 2 -
+          racewayText.height() / 2,
+      );
+    };
+    let scheduleRacewayUpdate = (updateCost = false) => {
+      racewayCostUpdatePending = racewayCostUpdatePending || updateCost;
+      if (racewayUpdateFrame !== null) {
+        return;
+      }
+
+      racewayUpdateFrame = requestAnimationFrame(() => {
+        racewayUpdateFrame = null;
+        updateRacewayTextPosition();
+        if (racewayCostUpdatePending) {
+          racewayCostUpdatePending = false;
+          persistRaceway();
+        }
+        layer.batchDraw();
+      });
+    };
+
+    let persistRaceway = () => {
+      clampRacewayHeight(raceway);
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: raceway._id,
+          type: "Raceway",
+          cost: (
+            (pxToIn(raceway.width() * raceway.scaleX()) / 12) *
+            50
+          ).toFixed(2),
+          width: pxToIn(raceway.width() * raceway.scaleX()),
+          height: pxToIn(raceway.height() * raceway.scaleY()),
+          x: raceway.x(),
+          y: raceway.y(),
+          scale: {
+            x: raceway.scaleX(),
+            y: raceway.scaleY(),
+          },
+        },
+      });
+      updateHeightWidthDisplay();
+    };
+
+    raceway.on("dragstart", () => {
+      saveState();
+      selectedNode = raceway;
+      selectedNodeType = raceway.getClassName();
+      updateNodeDimensionInputs(raceway, "raceway");
+      updatePreview("raceway", raceway);
+      updateLeftsideBar();
+      updateFocusedTransformer(raceway);
+    });
+    raceway.on("dragmove", (e) => {
+      updateRacewayTextPosition();
+      updateNodeDimensionInputs(raceway, "raceway");
+      scheduleHeightWidthDisplayUpdate();
+    });
+    raceway.on("dragmove", updateRacewayTextPosition);
+
+    raceway.on("dragend", () => {
+      updateRacewayTextPosition();
+      persistRaceway();
+    });
+
+    raceway.on("click tap", (e) => {
+      selectedNode = raceway;
+      updatePreview("raceway", raceway);
+      updateNodeDimensionInputs(raceway, "raceway");
+      updateLeftsideBar();
+    });
+
+    raceway.on("transformstart", saveState);
+    raceway.on("transform", (e) => {
+      clampRacewayHeight(raceway);
+      updateNodeDimensionInputs(raceway, "raceway");
+      scheduleRacewayUpdate(true);
+      scheduleHeightWidthDisplayUpdate();
+    });
+    raceway.on("transformend", persistRaceway);
+    // Center the text within the rectangle
+    racewayText.x(raceway.x() + (raceway.width() - racewayText.width()) / 2);
+    racewayText.y(raceway.y() + (raceway.height() - racewayText.height()) / 2);
+
+    nodeLists.push({ type: "raceway", node: raceway, id: currentElementIndex });
+    updateSaveButtonState();
+
+    selectedNode = raceway;
+    updatePreview("raceway", raceway);
+
+    let textIndex = selectedNode.getAttr("textIndex");
+    racewayText.moveToBottom();
+    raceway.moveToBottom();
+    tr.moveToBottom();
+    background.moveToBottom();
+    layer.draw();
+    updateHeightWidthDisplay();
+
+    let text = "";
+
+    selectedNode = raceway;
+
+    updateNodeDimensionInputs(raceway, "raceway");
+    store.dispatch({
+      type: "ADD_ELEMENT",
+      payload: {
+        id: raceway._id,
+        text,
+        type: "Raceway",
+        cost: ((pxToIn(raceway.width() * raceway.scaleX()) / 12) * 50).toFixed(
+          2,
+        ),
+        width: pxToIn(raceway.width() * raceway.scaleX()),
+        height: pxToIn(raceway.height() * raceway.scaleY()),
+        colorCost: 0,
+        scale: {
+          x: raceway.scaleX(),
+          y: raceway.scaleY(),
+        },
+      },
+    });
+    updateLeftsideBar();
+  };
+
+  let updateEditor = () => {
+    if (selectedNode == null) {
+      for (let i = 0; i < nodeLists.length; i++) {
+        let nodeContainer = nodeLists[i].node;
+        let transformer = nodeContainer.getAttr("transformer");
+
+        if (nodeContainer._id != selectedNodeId) {
+          if (transformer) {
+            transformer.hide();
+          }
+        }
+      }
+    }
+    let selectedNodeId = selectedNode._id;
+    for (let i = 0; i < nodeLists.length; i++) {
+      let nodeContainer = nodeLists[i].node;
+      let transformer = nodeContainer.getAttr("transformer");
+      if (nodeContainer._id != selectedNodeId) {
+        if (transformer) {
+          transformer.hide();
+        }
+      } else {
+        if (transformer) {
+          transformer.show();
+        }
+      }
+    }
+    triggerTransformEvent();
+  };
+
+  drawHeightArrows(20, `0"`);
+  drawWidthArrows(20, `0"`);
+  updateHeightWidthDisplay();
+  previewNoItemText();
+  updateLeftsideBar();
+  updateBottombarOverlay();
+
+  // end main
+
+  // start script
+
+  let resizeFrame = null;
+  window.addEventListener("resize", function () {
+    if (resizeFrame !== null) {
+      return;
+    }
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = null;
+      resizeEditor();
+    });
+  });
+  if (typeof ResizeObserver !== "undefined") {
+    const editorResizeObserver = new ResizeObserver(() => {
+      if (resizeFrame !== null) {
+        return;
+      }
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = null;
+        resizeEditor();
+      });
+    });
+    editorResizeObserver.observe(container);
+  }
+
+  function resizeEditor() {
+    var width = container.clientWidth;
+    var height = container.clientHeight;
+    if (!width || !height) {
+      return;
+    }
+
+    const previousWidth = stage.width();
+    const previousHeight = stage.height();
+    const currentScale = stage.scaleX();
+    const currentPosition = stage.position();
+
+    canvasWidth = width;
+    canvasHeight = height;
+    stage.width(width);
+    stage.height(height);
+    stage.position({
+      x: currentPosition.x + ((previousWidth - width) / 2) * currentScale,
+      y: currentPosition.y + ((previousHeight - height) / 2) * currentScale,
+    });
+    syncCanvasBackground();
+    layer.batchDraw();
+    scheduleHeightWidthDisplayUpdate();
+    resizePreviewStage();
+  }
+
+  resizePreviewStage();
+
+  infoButtons.forEach((button) => {
+    button.addEventListener("click", function () {
+      // Access the .info-btn-content within the same container
+      const infoContent = this.parentElement.querySelector(".info-btn-content");
+
+      if (infoContent) {
+        const isOpen = getComputedStyle(infoContent).display !== "none";
+        document.querySelectorAll(".info-btn-content").forEach((info) => {
+          info.style.display = "none";
+        });
+        infoContent.style.display = isOpen ? "none" : "block";
+      }
+
+      // Do something with the .info-btn-content (e.g., toggle visibility)
+    });
+  });
+
+  addTextBtn.addEventListener("click", function () {
+    const text = textInput.value || "Channel";
+    fontSize = parseFloat(sizeHeightInput.value) * dpi || 10 * dpi;
+    saveState();
+    addText(text);
+    textInput.value = text;
+    triggerTransformEvent();
+  });
+
+  addRacewayButton.addEventListener("click", function () {
+    saveState();
+    addRaceway();
+  });
+
+  shapeButtons.forEach((el) => {
+    el.addEventListener("click", (e) => {
+      let shapeType = e.currentTarget.dataset.shape;
+      saveState();
+      addShape(shapeType);
+      const mouseoutEvent = new MouseEvent("mouseleave", {
+        bubbles: true, // Allows the event to bubble up through the DOM
+        cancelable: true, // Allows the event to be canceled
+      });
+      document.querySelector(".shape-dropdown").dispatchEvent(mouseoutEvent);
+      setShapeMenuOpen(false);
+      triggerTransformEvent();
+    });
+  });
+
+  // Shape menu: opens on hover for mouse users and on click/tap for everyone.
+  const shapeDropdown = document.querySelector(".shape-dropdown");
+  const canHover = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  function setShapeMenuOpen(open) {
+    shapeDropdown.classList.toggle("is-open", open);
+    shapeDropdown.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  if (canHover) {
+    shapeDropdown.addEventListener("mouseenter", () => setShapeMenuOpen(true));
+    shapeDropdown.addEventListener("mouseleave", () => setShapeMenuOpen(false));
+  }
+  shapeDropdown.addEventListener("click", (e) => {
+    if (e.target.closest(".shape")) {
+      return;
+    }
+    setShapeMenuOpen(!shapeDropdown.classList.contains("is-open"));
+  });
+  shapeDropdown.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === " ") && e.target === shapeDropdown) {
+      e.preventDefault();
+      setShapeMenuOpen(!shapeDropdown.classList.contains("is-open"));
+      const first = shapeDropdown.querySelector(".shape");
+      if (shapeDropdown.classList.contains("is-open") && first) {
+        first.focus();
+      }
+    } else if ((e.key === "Enter" || e.key === " ") && e.target.closest(".shape")) {
+      e.preventDefault();
+      e.target.closest(".shape").click();
+      shapeDropdown.focus();
+    }
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".shape-dropdown")) {
+      setShapeMenuOpen(false);
+    }
+  });
+  duplicateBtn.addEventListener("click", function (e) {
+    if (selectedNode == null) return;
+    saveState();
+
+    let selectedNodeId = selectedNode._id;
+    let selectedElement = getElementById(selectedNodeId);
+    if (!selectedElement) return;
+
+    let cloneNode = selectedNode.clone({
+      x: selectedNode.x() + 100, // Adjust position of the cloned arrow
+      y: selectedNode.y() + 100, // Adjust position of the cloned arrow
+    });
+
+    let enabledAnchors = undefined;
+
+    let text = cloneNode.getClassName() == "Text" ? cloneNode.text() : " ";
+    let textLength = text.replace(/\s/g, "").length || 1;
+
+    if (cloneNode.getAttr("textIndex")) {
+      let selectedRacewayText = cloneNode.getAttr("textIndex");
+      var clonedRacewayText = selectedRacewayText.clone({
+        x: selectedRacewayText.x() + 100,
+        y: selectedRacewayText.y() + 100,
+      });
+
+      layer.add(clonedRacewayText);
+      cloneNode.setAttr("textIndex", clonedRacewayText);
+    }
+
+    if (cloneNode.getClassName() == "Rect") {
+      if (cloneNode.getAttr("textIndex")) {
+        enabledAnchors = ["middle-right", "middle-left"];
+      }
+    }
+
+    const tr = new Konva.Transformer({
+      nodes: [cloneNode],
+      keepRatio: true,
+      rotationSnaps: false,
+      boundBoxFunc: function (oldBoundBox, newBoundBox) {
+        // Set minimum and maximum size constraints
+        var minWidth = 82;
+        var minHeight = 82;
+        var maxWidth = 455;
+        var maxHeight = 455;
+
+        if (cloneNode.getClassName() == "Text") {
+          // Constrain height
+          if (newBoundBox.height < minHeight) {
+            oldBoundBox.height = minHeight;
+
+            return oldBoundBox;
+          } else if (newBoundBox.height > maxHeight) {
+            oldBoundBox.height = maxHeight;
+
+            return oldBoundBox;
+          }
+        } else {
+          // Constrain width
+          if (newBoundBox.width < minWidth) {
+            oldBoundBox.width = minWidth;
+            return oldBoundBox;
+          } else if (newBoundBox.width > maxWidth) {
+            oldBoundBox.width = maxWidth;
+            return oldBoundBox;
+          }
+        }
+        return newBoundBox;
+      },
+      rotateEnabled:
+        cloneNode.getClassName() !== "Text" && !cloneNode.getAttr("textIndex"),
+      rotateLineVisible: false,
+      borderStroke: "gray", // Set border color to gray
+      borderDash: [4, 4], // Set dashed border (4 pixels dash, 4 pixels gap)
+      borderStrokeWidth: 2, // Set border width
+      anchorStroke: "gray",
+      enabledAnchors,
+    });
+
+    cloneNode.setAttr("transformer", tr);
+
+    layer.add(cloneNode);
+
+    layer.add(tr);
+
+    selectedNode = cloneNode;
+
+    layer.draw();
+
+    let cloneDragFrame = null;
+    let scheduleCloneUpdate = () => {
+      if (cloneDragFrame !== null) {
+        return;
+      }
+      cloneDragFrame = requestAnimationFrame(() => {
+        cloneDragFrame = null;
+        if (clonedRacewayText) {
+          clonedRacewayText.x(
+            cloneNode.x() +
+              (cloneNode.width() * cloneNode.scaleX() -
+                clonedRacewayText.width()) /
+                2,
+          );
+          clonedRacewayText.y(
+            cloneNode.y() +
+              (cloneNode.height() * cloneNode.scaleY()) / 2 -
+              clonedRacewayText.height() / 2,
+          );
+        }
+        selectedNode = cloneNode;
+        layer.batchDraw();
+      });
+    };
+
+    cloneNode.on("dragstart", () => {
+      saveState();
+      selectedNode = cloneNode;
+      selectedNodeType = cloneNode.getClassName();
+      updateNodeDimensionInputs(cloneNode);
+      updatePreview(
+        cloneNode.getAttr("textIndex")
+          ? "raceway"
+          : cloneNode.getClassName() === "Text"
+            ? "text"
+            : "shape",
+        cloneNode,
+      );
+      updateLeftsideBar();
+      updateFocusedTransformer(cloneNode);
+    });
+    cloneNode.on("dragmove", () => {
+      updateNodeDimensionInputs(cloneNode);
+      scheduleHeightWidthDisplayUpdate();
+    });
+
+    cloneNode.on("dragend", () => {
+      scheduleCloneUpdate();
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: cloneNode._id,
+          x: cloneNode.x(),
+          y: cloneNode.y(),
+        },
+      });
+      updateHeightWidthDisplay();
+    });
+
+    let cloneTransformFrame = null;
+    let scheduleCloneTransformUpdate = () => {
+      if (cloneTransformFrame !== null) {
+        return;
+      }
+      cloneTransformFrame = requestAnimationFrame(() => {
+        cloneTransformFrame = null;
+        selectedNode = cloneNode;
+        if (cloneNode._id == selectedNodeId) {
+          cloneDimenstionText.text(getTextDimensions(cloneNode));
+        }
+
+        if (clonedRacewayText) {
+          clonedRacewayText.x(
+            cloneNode.x() +
+              (cloneNode.width() * cloneNode.scaleX() -
+                clonedRacewayText.width()) /
+                2,
+          );
+          clonedRacewayText.y(
+            cloneNode.y() +
+              (cloneNode.height() * cloneNode.scaleY()) / 2 -
+              clonedRacewayText.height() / 2,
+          );
+        }
+        layer.batchDraw();
+      });
+    };
+
+    let persistCloneTransform = () => {
+      let currentElementColorCost = getElementById(
+        cloneNode._id,
+      ).faceCostPerInch;
+      let clonedNodeHeight = pxToIn(cloneNode.height() * cloneNode.scaleY());
+      let clonedNodeWidth = pxToIn(cloneNode.width() * cloneNode.scaleX());
+      let clonedNodeTotalCost = costPerInch(clonedNodeWidth);
+      let cloneNodeTotalColorCost =
+        parseFloat(currentElementColorCost) * clonedNodeWidth;
+      let cloneNodePoints = [];
+
+      if (contentHeight > clonedNodeWidth) {
+        clonedNodeTotalCost = costPerInch(clonedNodeHeight);
+        cloneNodeTotalColorCost =
+          parseFloat(currentElementColorCost) * clonedNodeHeight;
+      }
+
+      store.dispatch({
+        type: "UPDATE_ELEMENT",
+        payload: {
+          id: cloneNode._id,
+          width: pxToIn(cloneNode.width() * cloneNode.scaleX()),
+          height: pxToIn(cloneNode.height() * cloneNode.scaleY()),
+          text: text,
+          cost: clonedNodeTotalCost,
+          colorCost: cloneNodeTotalColorCost,
+          x: cloneNode.x(),
+          y: cloneNode.y(),
+          rotation: cloneNode.rotation(),
+          points: cloneNodePoints,
+        },
+      });
+    };
+
+    cloneNode.on("transformstart", saveState);
+    cloneNode.on("transform", () => {
+      updateNodeDimensionInputs(cloneNode);
+      scheduleCloneTransformUpdate();
+      scheduleHeightWidthDisplayUpdate();
+    });
+
+    cloneNode.on("transformend", persistCloneTransform);
+
+    cloneNode.on("click tap", (e) => {
+      selectedNode = cloneNode;
+      updateFocusedTransformer(cloneNode);
+      updateNodeDimensionInputs(cloneNode);
+    });
+
+    layer.batchDraw();
+
+    nodeLists.push({ type: "text", node: cloneNode, id: currentElementIndex });
+    updateSaveButtonState();
+    updateHeightWidthDisplay();
+
+    store.dispatch({
+      type: "ADD_ELEMENT",
+      payload: {
+        ...selectedElement,
+        id: cloneNode._id,
+        x: cloneNode.x(),
+        y: cloneNode.y(),
+        rotation: cloneNode.rotation(),
+      },
+    });
+
+    if (selectedNode.getClassName() != "Text") {
+      currentElementIndex = currentElementIndex + 1;
+    }
+    selectedNode = cloneNode;
+    updateFocusedTransformer(cloneNode);
+  });
+  function undo() {
+    if (undoStack.length === 0) return;
+    const currentState = createHistorySnapshot();
+    const previousState = undoStack.pop();
+    redoStack.push(currentState);
+    loadState(previousState);
+  }
+
+  function redo() {
+    if (redoStack.length === 0) return;
+    const currentState = createHistorySnapshot();
+    const nextState = redoStack.pop();
+    undoStack.push(currentState);
+    loadState(nextState);
+  }
+
+  if (undoBtn) undoBtn.addEventListener("click", undo);
+  if (redoBtn) redoBtn.addEventListener("click", redo);
+
+  document.addEventListener("keydown", function (event) {
+    if (!(event.ctrlKey || event.metaKey)) return;
+    if (event.key.toLowerCase() === "z") {
+      event.preventDefault();
+      event.shiftKey ? redo() : undo();
+    } else if (event.key.toLowerCase() === "y") {
+      event.preventDefault();
+      redo();
+    }
+  });
+
+  document.getElementById("zoomInBtn").addEventListener("click", function () {
+    zoomStage(1.2);
+  });
+
+  document.getElementById("zoomOutBtn").addEventListener("click", function () {
+    zoomStage(0.8);
+  });
+
+  deleteBtn.addEventListener("click", function () {
+    if (selectedNode) {
+      saveState();
+
+      let lnIndex = null;
+      let indexOfRItem = null;
+
+      const index = nodeLists.findIndex(
+        (item) => item.node._id === selectedNode._id,
+      );
+      store.dispatch({
+        type: "REMOVE_ELEMENT",
+        payload: { id: selectedNode._id },
+      });
+      nodeLists.splice(index, 1);
+      updateSaveButtonState();
+
+      let transformer = selectedNode.getAttr("transformer");
+      if (transformer) {
+        transformer.hide();
+        transformer.destroy();
+      }
+
+      if (selectedNode.getAttr("textIndex")) {
+        selectedNode.getAttr("textIndex").hide();
+        selectedNode.getAttr("textIndex").destroy();
+      }
+      selectedNode.hide();
+      selectedNode.destroy();
+
+      selectedNode = null;
+      layer.draw();
+      updatePreview(null, null);
+      updateHeightWidthDisplay();
+    }
+    updateHeightWidthInput(100, 100);
+    updateHeightWidthDisplay();
+    updateLeftsideBar();
+    updateBottombarOverlay();
+  });
+
+  clearBuilderBtn.addEventListener("click", function () {
+    if (nodeLists.length > 0 || store.getState().elements.length > 0) {
+      saveState();
+    }
+
+    loadState({
+      elements: [],
+      extras: initialExtras,
+      nodes: [],
+    });
+    clearSavedBuilderDesign();
+    updatePreview(null, null);
+    updateLeftsideBar();
+    updateBottombarOverlay();
+  });
+
+  textInput.addEventListener("input", function () {
+    let text = textInput.value;
+    if (selectedNode && selectedNodeType === "Text") {
+      selectedNode.text(text);
+      updatePreview("text", selectedNode);
+
+      if (text.length > 0) {
+        let heightInInch =
+          (selectedNode.height() * selectedNode.scaleY()) / dpi;
+        let widhtInInch = (selectedNode.width() * selectedNode.scaleX()) / dpi;
+
+        let currentElement = getElementById(selectedNode._id);
+        let totalLength = selectedNode.text().replace(/\s/g, "").length;
+        let singleHeightInch =
+          (selectedNode.height() * selectedNode.scaleY()) / dpi;
+        let totalHeightInch = singleHeightInch * totalLength;
+        let totalColorCost =
+          totalHeightInch * parseFloat(currentElement.faceCostPerInch);
+        let dimenstionCost = (
+          costPerInch(singleHeightInch) * totalLength
+        ).toFixed(1);
+        store.dispatch({
+          type: "UPDATE_ELEMENT",
+          payload: {
+            id: selectedNode._id,
+            height: heightInInch,
+            width: widhtInInch,
+            cost: dimenstionCost,
+            text,
+            colorCost: totalColorCost,
+          },
+        });
+      } else {
+        // deleteBtn.dispatchEvent(clickEvent)
+      }
+
+      updateDimenstionDisplay();
+    }
+    fontSize = parseFloat(sizeHeightInput.value) * dpi || 20;
+    activeFontCode = document
+      .querySelector(".select-font")
+      .dataset.active.split("/")[1];
+    activeFaceCode = document
+      .querySelector(".select-face")
+      .dataset.active.split("/")[1];
+    activeTrimcapColorCode = document
+      .querySelector(".select-trimcap")
+      .dataset.active.split("/")[1];
+    activeReturnColorCode = document
+      .querySelector(".select-return")
+      .dataset.active.split("/")[1];
+    activeReturnSizeCode = parseFloat(
+      document
+        .querySelector(".select-return")
+        .dataset.activeSecond.split("/")[1],
+    );
+    activeTrimcapSizeCode = parseFloat(
+      document
+        .querySelector(".select-trimcap")
+        .dataset.activeSecond.split("/")[1],
+    );
+
+    updateDimenstionDisplay();
+    updateHeightWidthDisplay();
+    selectedNode.width(undefined);
+  });
+
+  faceColorPicker.addEventListener("change", function () {
+    faceColor = faceColorPicker.value;
+    currentPreviewNode.setAttrs({
+      fill: faceColor,
+    });
+    updateNode(selectedNode, "face-color");
+  });
+
+  trimCapColorPicker.addEventListener("change", function () {
+    trimCapColor = trimCapColorPicker.value;
+
+    currentPreviewNode.setAttrs({
+      stroke: trimCapColor,
+    });
+    updateNode(selectedNode, "trimcap-color");
+  });
+
+  returnColorPicker.addEventListener("change", function () {
+    returnColor = returnColorPicker.value;
+    currentPreviewNode.setAttrs({
+      shadowColor: returnColor,
+    });
+    updateNode(selectedNode, "return-color");
+  });
+
+  trimcapSizeInput.addEventListener("change", function () {
+    let trimcapSize = parseFloat(trimcapSizeInput.value) || 3;
+    currentPreviewNode.setAttrs({
+      strokeWidth: trimcapSize,
+    });
+    selectedNode.setAttrs({
+      strokeWidth: trimcapSize,
+    });
+  });
+  returnSizeInput.addEventListener("change", function () {
+    returnSize = parseFloat(returnSizeInput.value) || 5;
+    currentPreviewNode.setAttrs({
+      shadowOffsetX: returnSize,
+      shadowOffsetY: returnSize,
+    });
+    updateNode(selectedNode, "return-size");
+  });
+
+  sizeHeightInput.addEventListener("change", function () {
+    if (selectedNode == null) {
+      return;
+    }
+
+    let changeEvent = new CustomEvent("change", {
+      bubbles: true,
+      cancelable: true,
+    });
+
+    const sizeInInches = parseFloat(sizeHeightInput.value);
+    if (!isNaN(sizeInInches) && sizeInInches > 0) {
+      let heightInInch = parseFloat(sizeHeightInput.value);
+      let heightInPx = heightInInch * dpi;
+      let widhtInPx = selectedNode.width() * selectedNode.scaleX();
+      let widthInInch = widhtInPx / dpi;
+      let oldHeightInPx = selectedNode.height() * selectedNode.scaleY();
+
+      switch (selectedNode.getClassName()) {
+        case "Text":
+          if (heightInInch > maxHeight) {
+            sizeHeightInput.value = maxHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+          if (heightInInch < minHeight) {
+            sizeHeightInput.value = minHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+
+          selectedNode.setAttrs({
+            fontSize: heightInPx,
+          });
+
+          let text = selectedNode.text();
+
+          selectedNode.scaleX(1);
+          selectedNode.scaleY(1);
+          let scaleFactor = heightInPx / oldHeightInPx;
+          selectedNode.width(undefined);
+          fontSize = selectedNode.fontSize() * selectedNode.scaleX();
+          heightInInch = pxToIn(selectedNode.height() * selectedNode.scaleY());
+          widthInInch = pxToIn(selectedNode.width() * selectedNode.scaleX());
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: selectedNode._id,
+              width: widthInInch,
+              height: heightInInch,
+              cost:
+                costPerInch(heightInInch) *
+                (text.replace(" ", "") ? text.replace(/\s/g, "").length : 1),
+              text,
+              colorCost:
+                heightInInch *
+                text.replace(/\s/g, "").length *
+                parseFloat(colorCost),
+              faceCostPerInch: parseFloat(colorCost),
+            },
+          });
+          setTextFSI(selectedNode._id, "yes");
+
+          updateHeightWidthInput(null, widhtInPx, "text");
+          triggerTransformEvent();
+
+          break;
+
+        case "Rect":
+          if (selectedNode.getAttr("textIndex")) {
+            heightInInch = Math.min(heightInInch, maxRacewayHeightInches);
+            heightInPx = heightInInch * dpi;
+            sizeHeightInput.value = heightInInch;
+            selectedNode.scaleY(1);
+            selectedNode.height(heightInPx);
+            updateHeightWidthInput(null, widhtInPx, "raceway");
+            triggerTransformEvent();
+            break;
+          }
+
+          if (heightInInch < minHeight) {
+            sizeHeightInput.value = minHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+          if (heightInInch > maxHeight) {
+            sizeHeightInput.value = maxHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+
+          selectedNode.scaleX(1);
+          selectedNode.scaleY(1);
+          selectedNode.height(heightInPx);
+          updateHeightWidthInput(null, widhtInPx, "text");
+
+          layer.draw();
+
+          let rectHeightInInch = pxToIn(
+            selectedNode.height() * selectedNode.scaleY(),
+          );
+          let rectWidthInInch = pxToIn(
+            selectedNode.width() * selectedNode.scaleX(),
+          );
+
+          let totalRectCost = costPerInch(rectHeightInInch);
+          let totalRectColorCost = rectWidthInInch * parseFloat(colorCost);
+          if (rectHeightInInch > rectWidthInInch) {
+            totalRectCost = costPerInch(rectHeightInInch);
+            totalRectColorCost = rectHeightInInch * parseFloat(colorCost);
+          }
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: selectedNode._id,
+              width: rectWidthInInch,
+              height: rectHeightInInch,
+              cost: totalRectCost,
+              colorCost: totalRectColorCost,
+              faceCostPerInch: parseFloat(colorCost),
+            },
+          });
+          break;
+        case "Line":
+          if (heightInInch < minHeight) {
+            sizeHeightInput.value = minHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+          if (heightInInch > maxHeight) {
+            sizeHeightInput.value = maxHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+
+          let updatedPoints = updateArrowLine(heightInPx, null, "height");
+          selectedNode.points(updatedPoints);
+
+          updateHeightWidthInput(null, widhtInPx, "text");
+          triggerTransformEvent();
+          break;
+        case "RegularPolygon":
+          if (heightInInch < minHeight) {
+            sizeHeightInput.value = minHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+          if (heightInInch > maxHeight) {
+            sizeHeightInput.value = maxHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+
+          let oldHeight = (selectedNode.radius() * 2) / triangleReduction;
+
+          selectedNode.scaleY(heightInPx / oldHeight);
+          updateHeightWidthInput(null, widhtInPx / triangleReduction, "text");
+
+          layer.draw();
+
+          let triHeightInInch =
+            pxToIn(selectedNode.height() * selectedNode.scaleY()) /
+            triangleReduction;
+          let triWidthInInch =
+            pxToIn(selectedNode.width() * selectedNode.scaleX()) /
+            triangleReduction;
+          let totalTriCost = costPerInch(triWidthInInch);
+          let totalTriColorCost = triWidthInInch * parseFloat(colorCost);
+          if (triHeightInInch > triWidthInInch) {
+            totalTriCost = costPerInch(triHeightInInch);
+            totalTriColorCost = triHeightInInch * parseFloat(colorCost);
+          }
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: selectedNode._id,
+              width: triWidthInInch,
+              height: triHeightInInch,
+              cost: totalTriCost,
+              colorCost: totalTriColorCost,
+              faceCostPerInch: parseFloat(colorCost),
+            },
+          });
+          break;
+        case "Star":
+          if (heightInInch < minHeight) {
+            sizeHeightInput.value = minHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+
+          if (heightInInch > maxHeight) {
+            sizeHeightInput.value = maxHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+
+          let oldStarHeight = selectedNode.attrs.outerRadius * 2;
+          selectedNode.scaleY(heightInPx / oldStarHeight);
+
+          updateHeightWidthInput(null, widhtInPx, "text");
+          layer.draw();
+
+          let starHeightInInch = pxToIn(
+            selectedNode.height() * selectedNode.scaleY(),
+          );
+          let starWidthInInch = pxToIn(
+            selectedNode.width() * selectedNode.scaleX(),
+          );
+          let totalStarCost = costPerInch(starWidthInInch);
+          let totalStarColorCost = starWidthInInch * parseFloat(colorCost);
+          if (starHeightInInch > starWidthInInch) {
+            totalStarCost = costPerInch(starHeightInInch);
+            totalStarColorCost = starHeightInInch * parseFloat(colorCost);
+          }
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: selectedNode._id,
+              width: starWidthInInch,
+              height: starHeightInInch,
+              cost: totalStarCost,
+              colorCost: totalStarColorCost,
+              faceCostPerInch: parseFloat(colorCost),
+            },
+          });
+
+          break;
+        case "Circle":
+          if (heightInInch < minHeight) {
+            sizeHeightInput.value = minHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+          if (heightInInch > maxHeight) {
+            sizeHeightInput.value = maxHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+
+          let oldCircleHeight = selectedNode.radius() * 2; // * selectedNode.scaleY()
+          //selectedNode.scaleY(1)
+          selectedNode.scaleY(heightInPx / oldCircleHeight);
+
+          updateHeightWidthInput(null, widhtInPx, "text");
+          layer.draw();
+
+          let circleHeightInInch = pxToIn(
+            selectedNode.height() * selectedNode.scaleY(),
+          );
+          let circleWidthInInch = pxToIn(
+            selectedNode.width() * selectedNode.scaleX(),
+          );
+          let totalCircleCost = costPerInch(circleWidthInInch);
+          let totalCircleColorCost = circleWidthInInch * parseFloat(colorCost);
+          if (circleHeightInInch > circleWidthInInch) {
+            totalCircleCost = costPerInch(circleHeightInInch);
+            totalCircleColorCost = circleHeightInInch * parseFloat(colorCost);
+          }
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: selectedNode._id,
+              width: circleWidthInInch,
+              height: circleHeightInInch,
+              cost: totalCircleCost,
+              colorCost: totalCircleColorCost,
+              faceCostPerInch: parseFloat(colorCost),
+            },
+          });
+
+          break;
+
+        default:
+          if (heightInInch < minHeight) {
+            sizeHeightInput.value = minHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+          if (heightInInch > maxHeight) {
+            sizeHeightInput.value = maxHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+          selectedNode.width(heightInPx);
+          selectedNode.height(heightInPx);
+
+          let shapeHeightInInch = pxToIn(
+            selectedNode.height() * selectedNode.scaleY(),
+          );
+          let shapeWidthInInch = pxToIn(
+            selectedNode.width() * selectedNode.scaleX(),
+          );
+          let totalShapeCost = costPerInch(shapeWidthInInch);
+          let totalShapeColorCost = shapeWidthInInch * parseFloat(colorCost);
+          if (shapeHeightInInch > shapeWidthInInch) {
+            totalShapeCost = costPerInch(shapeHeightInInch);
+            totalShapeColorCost = shapeHeightInInch * parseFloat(colorCost);
+          }
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: selectedNode._id,
+              width: shapeWidthInInch,
+              height: shapeHeightInInch,
+              cost: totalShapeCost,
+              colorCost: totalShapeColorCost,
+              faceCostPerInch: parseFloat(colorCost),
+            },
+          });
+          updateHeightWidthInput(null, widhtInPx);
+
+          break;
+      }
+
+      if (selectedNode.getAttr("textIndex")) {
+        let racewayText = selectedNode.getAttr("textIndex");
+
+        racewayText.x(
+          selectedNode.x() +
+            (selectedNode.width() * selectedNode.scaleX()) / 2 -
+            racewayText.width() / 2,
+        );
+        racewayText.y(
+          selectedNode.y() +
+            ((selectedNode.height() * selectedNode.scaleY()) / 2 -
+              racewayText.height() / 2),
+        );
+      }
+    }
+
+    updateLeftsideBar();
+    updateHeightWidthDisplay();
+  });
+
+  sizeWidthInput.addEventListener("change", function (e) {
+    if (selectedNode == null) {
+      return;
+    }
+    let changeEvent = new CustomEvent("change", {
+      bubbles: true,
+      cancelable: true,
+    });
+    let heightInInch = parseFloat(sizeHeightInput.value) || 1;
+    let heightInPx = heightInInch * dpi;
+
+    let widthInInch = parseFloat(sizeWidthInput.value) || 1;
+    let widthInPx = widthInInch * dpi;
+
+    let transformer = selectedNode.getAttr("transformer");
+
+    let text = "";
+    switch (selectedNode.getClassName()) {
+      case "Text":
+        let currentWidth = selectedNode.width() * selectedNode.scaleX();
+        let currentHeight = selectedNode.height() * selectedNode.scaleY();
+        let currentFontSize = selectedNode.fontSize();
+
+        if (pxToIn(currentHeight) > maxHeight) {
+          sizeHeightInput.value = maxHeight;
+          return sizeHeightInput.dispatchEvent(changeEvent);
+        }
+
+        selectedNode.width(widthInPx);
+        layer.batchDraw();
+
+        let updatedHeight = selectedNode.height() * selectedNode.scaleY();
+        let updatedWidth = selectedNode.width() * selectedNode.scaleX();
+
+        let scaleFactor = widthInPx / currentWidth;
+        let newFontSize =
+          getTextFSI(selectedNode._id) == "yes"
+            ? currentFontSize * scaleFactor - 1.3
+            : currentFontSize * scaleFactor;
+
+        selectedNode.fontSize(newFontSize);
+        fontSize = newFontSize;
+
+        let tr = selectedNode.getAttr("transformer");
+        tr.update();
+
+        triggerTransformEvent();
+        selectedNode.scaleX(1);
+        selectedNode.scaleY(1);
+        layer.batchDraw();
+
+        break;
+
+      case "Line":
+        if (widthInInch < minWidth) {
+          sizeWidthInput.value = minWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        if (widthInInch > maxWidth) {
+          sizeWidthInput.value = maxWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        // Update the Konva line with the new points
+        selectedNode.points(updateArrowLine(null, widthInPx, "width"));
+
+        layer.draw();
+        triggerTransformEvent();
+
+        let arrowWidth =
+          (selectedNode.points()[6] - selectedNode.points()[0]) / dpi;
+        let arrowHeight =
+          (selectedNode.points()[9] - selectedNode.points()[5]) / dpi;
+        let totalArrowCost = costPerInch(arrowWidth);
+        let totalArrowColorCost = arrowWidth * parseFloat(colorCost);
+
+        if (arrowHeight > arrowWidth) {
+          totalArrowCost = costPerInch(arrowHeight);
+          totalArrowColorCost = arrowHeight * parseFloat(colorCost);
+        }
+
+        store.dispatch({
+          type: "UPDATE_ELEMENT",
+          payload: {
+            id: selectedNode._id,
+            text,
+            type: selectedNode.getClassName(),
+            cost: totalArrowCost,
+            width: pxToIn(selectedNode.width() * selectedNode.scaleX()),
+            height: pxToIn(selectedNode.height() * selectedNode.scaleY()),
+            colorCost: totalArrowColorCost,
+            faceCostPerInch: parseFloat(colorCost),
+          },
+        });
+
+        break;
+
+      case "Rect":
+        if (selectedNode.getAttr("textIndex")) {
+          clampRacewayHeight(selectedNode);
+          selectedNode.width(widthInPx * selectedNode.scaleX());
+          selectedNode.scaleX(1);
+          transformer.update();
+          sizeHeightInput.value = maxRacewayHeightInches;
+
+          triggerTransformEvent();
+        } else {
+          if (widthInInch < minWidth) {
+            sizeWidthInput.value = minWidth;
+            return sizeWidthInput.dispatchEvent(changeEvent);
+          }
+
+          if (widthInInch > maxWidth) {
+            sizeWidthInput.value = maxWidth;
+            return sizeWidthInput.dispatchEvent(changeEvent);
+          }
+
+          let totalRectCost = costPerInch(widthInInch);
+          let totalRectColorCost = widthInInch * parseFloat(colorCost);
+          if (widthInInch < heightInInch) {
+            totalRectCost = costPerInch(heightInInch);
+            totalRectColorCost = heightInInch * parseFloat(colorCost);
+          }
+
+          selectedNode.width(widthInPx * selectedNode.scaleX());
+          selectedNode.height(
+            sizeHeightInput.value * dpi * selectedNode.scaleY(),
+          );
+          selectedNode.scaleX(1);
+          //selectedNode.height(newSizeByHeight.height);
+          updateHeightWidthInput(selectedNode.height(), selectedNode.width());
+          selectedNode.scaleY(1);
+          transformer.update();
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: selectedNode._id,
+              text,
+              type: selectedNode.getClassName(),
+              cost: totalRectCost,
+              width: widthInInch,
+              height: pxToIn(selectedNode.height()),
+              colorCost: totalRectColorCost,
+              faceCostPerInch: parseFloat(colorCost),
+            },
+          });
+          triggerTransformEvent();
+        }
+        break;
+      case "Circle":
+        if (widthInInch < minWidth) {
+          sizeWidthInput.value = minWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        if (widthInInch > maxWidth) {
+          sizeWidthInput.value = maxWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        let currentCircleWidth = selectedNode.radius() * 2;
+        let newCircleWidth = widthInPx;
+        selectedNode.scaleX(widthInPx / currentCircleWidth);
+        layer.draw();
+
+        let circleUpdatedHeight = selectedNode.height() * selectedNode.scaleY();
+        let circleUpdatedWidth = selectedNode.width() * selectedNode.scaleX();
+
+        let totalOvalCost = costPerInch(widthInInch);
+        let totalOvalColorCost = widthInInch * parseFloat(colorCost);
+        if (widthInInch < heightInInch) {
+          totalOvalCost = costPerInch(heightInInch);
+          totalOvalColorCost = heightInInch * parseFloat(colorCost);
+        }
+        store.dispatch({
+          type: "UPDATE_ELEMENT",
+          payload: {
+            id: selectedNode._id,
+            text,
+            type: selectedNode.getClassName(),
+            cost: totalOvalCost,
+            width: widthInInch,
+            height: heightInInch,
+            colorCost: totalOvalColorCost,
+            faceCostPerInch: parseFloat(colorCost),
+          },
+        });
+        break;
+
+      case "RegularPolygon":
+        if (widthInInch < minWidth) {
+          sizeWidthInput.value = minWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        if (widthInInch > maxWidth) {
+          sizeWidthInput.value = maxWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        var originalWidth = selectedNode.radius() * 2;
+
+        var scaleX = widthInPx / (originalWidth / triangleReduction);
+        selectedNode.scaleX(scaleX);
+        layer.draw();
+
+        let totalTriCost = costPerInch(widthInInch);
+        let totalTriColorCost = widthInInch * parseFloat(colorCost);
+
+        if (widthInInch < heightInInch) {
+          totalTriCost = costPerInch(heightInInch);
+          totalTriColorCost = heightInInch * parseFloat(colorCost);
+        }
+
+        store.dispatch({
+          type: "UPDATE_ELEMENT",
+          payload: {
+            id: selectedNode._id,
+            text,
+            type: selectedNode.getClassName(),
+            cost: totalTriCost,
+            width: widthInInch,
+            height: heightInInch,
+            colorCost: totalTriColorCost,
+            faceCostPerInch: parseFloat(colorCost),
+          },
+        });
+        break;
+      case "Star":
+        if (widthInInch < minWidth) {
+          sizeWidthInput.value = minWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        if (widthInInch > maxWidth) {
+          sizeWidthInput.value = maxWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        let currentStarWidth = selectedNode.attrs.outerRadius * 2;
+
+        selectedNode.scaleX(widthInPx / currentStarWidth);
+        layer.draw();
+
+        let starHeightInch = pxToIn(
+          selectedNode.height() * selectedNode.scaleY(),
+        );
+        let starWidthInch = pxToIn(
+          selectedNode.width() * selectedNode.scaleX(),
+        );
+
+        let totalStarCost = costPerInch(starWidthInch);
+        let totalStarColorCost = widthInInch * parseFloat(colorCost);
+        if (starWidthInch < starHeightInch) {
+          totalStarCost = costPerInch(starHeightInch);
+          totalStarColorCost = starHeightInch * parseFloat(colorCost);
+        }
+        store.dispatch({
+          type: "UPDATE_ELEMENT",
+          payload: {
+            id: selectedNode._id,
+            text,
+            type: selectedNode.getClassName(),
+            cost: totalStarCost,
+            width: widthInInch,
+            height: heightInInch,
+            colorCost: totalStarColorCost,
+            faceCostPerInch: parseFloat(colorCost),
+          },
+        });
+
+        break;
+
+      default:
+        if (widthInInch < minWidth) {
+          sizeWidthInput.value = minWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        if (widthInInch > maxWidth) {
+          sizeWidthInput.value = maxWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        let newSizeByHeight = maintainAspectRatio(widthInPx, null);
+        selectedNode.width(newSizeByHeight.width);
+        selectedNode.scaleX(1);
+        selectedNode.height(newSizeByHeight.height);
+        sizeHeightInput.value = pxToIn(newSizeByHeight.height.toFixed(1));
+        updateHeightWidthInput(newSizeByHeight.height, newSizeByHeight.width);
+
+        selectedNode.scaleY(1);
+        transformer.update();
+
+        let totalCost = costPerInch(widthInInch);
+        let totalColorCost = widthInInch * parseFloat(colorCost);
+        if (widthInInch < heightInInch) {
+          totalCost = costPerInch(heightInInch);
+          totalColorCost = heightInInch * parseFloat(colorCost);
+        }
+
+        store.dispatch({
+          type: "UPDATE_ELEMENT",
+          payload: {
+            id: selectedNode._id,
+            text,
+            type: selectedNode.getClassName(),
+            cost: totalCost,
+            width: pxToIn(selectedNode.width() * selectedNode.scaleX()),
+            height: pxToIn(selectedNode.height() * selectedNode.scaleY()),
+            colorCost: totalColorCost,
+            faceCostPerInch: parseFloat(colorCost),
+          },
+        });
+        break;
+    }
+
+    if (selectedNode.getAttr("textIndex")) {
+      let racewayText = selectedNode.getAttr("textIndex");
+
+      racewayText.x(
+        selectedNode.x() +
+          (selectedNode.width() * selectedNode.scaleX()) / 2 -
+          racewayText.width() / 2,
+      );
+      racewayText.y(
+        selectedNode.y() +
+          ((selectedNode.height() * selectedNode.scaleY()) / 2 -
+            racewayText.height() / 2),
+      );
+    }
+
+    // if (selectedNode.getClassName() != 'RegularPolygon' && selectedNode.getClassName() != 'Circle' && selectedNode.getClassName() != 'Star') {
+    //     triggerTransformEvent()
+    // } else {
+    //     store.dispatch({
+    //         type: 'UPDATE_ELEMENT',
+    //         payload: {
+    //             id: selectedNode._id,
+    //             height: pxToIn((selectedNode.height() * selectedNode.scaleY()) / triangleReduction),
+    //             width: pxToIn((selectedNode.width() * selectedNode.scaleX()) / triangleReduction),
+    //             cost: (costPerInch(pxToIn((selectedNode.width() * selectedNode.scaleX()) / triangleReduction))),
+    //             colorCost: colorCost * costPerInch(pxToIn((selectedNode.width() * selectedNode.scaleX()) / triangleReduction))
+    //         }
+    //     })
+    // }
+
+    if (selectedNode.getClassName() == "Text") {
+      setTextFSI(selectedNode._id, "no");
+    }
+    layer.batchDraw();
+    updateLeftsideBar();
+    updateHeightWidthDisplay();
+  });
+
+  cornerRadius.addEventListener("change", function (e) {
+    if (selectedNode == null) return;
+    let radius = parseFloat(e.target.value) * dpi;
+    switch (selectedNode.getClassName()) {
+      case "RegularPolygon":
+        selectedNode.setAttrs({
+          innerRadius: radius,
+          outerRadius: radius,
+        });
+        layer.draw();
+
+        break;
+
+      case "Star":
+        break;
+
+      case "Rect":
+        selectedNode.setAttrs({
+          cornerRadius: radius,
+        });
+
+        store.dispatch({
+          type: "UPDATE_ELEMENT",
+          payload: {
+            id: selectedNode._id,
+            radius: radius,
+          },
+        });
+
+        break;
+    }
+    layer.batchDraw();
+  });
+
+  bottomBarListItems.forEach((element) => {
+    const bottomBarItem = element.closest(".bottombar-left-item");
+    if (bottomBarItem && !bottomBarItem.dataset.mobileToggleBound) {
+      bottomBarItem.dataset.mobileToggleBound = "true";
+      bottomBarItem.addEventListener("click", function (event) {
+        if (event.target.closest(".bottombar-list-item")) {
+          return;
+        }
+
+        document
+          .querySelectorAll(".bottombar-left-item.is-open")
+          .forEach((item) => {
+            if (item !== this) {
+              item.classList.remove("is-open");
+            }
+          });
+        this.classList.toggle("is-open");
+      });
+      bottomBarItem.addEventListener(
+        "touchend",
+        function (event) {
+          if (event.target.closest(".bottombar-list-item")) {
+            return;
+          }
+
+          event.preventDefault();
+          this.click();
+        },
+        { passive: false },
+      );
+    }
+
+    element.addEventListener("click", function (e) {
+      let type = element.dataset.type;
+      let value = element.dataset.value;
+
+      element.parentElement
+        .querySelectorAll(".bottombar-list-item")
+        .forEach((element) => {
+          element.classList.remove("active");
+        });
+
+      this.classList.add("active");
+
+      switch (type) {
+        case "ps":
+          document.querySelector(
+            "#powerSupply .current-item .value",
+          ).innerHTML = "<b>" + capitalizeFirstLetter(value) + "</b>";
+
+          if (value == "standard") {
+            store.dispatch({
+              type: "UPDATE",
+              payload: {
+                powerSupply: {
+                  value: "Standard",
+                  cost: parseFloat(standarPsCost),
+                  qty: 1,
+                },
+              },
+            });
+          } else if (value == "none") {
+            store.dispatch({
+              type: "UPDATE",
+              payload: {
+                powerSupply: {
+                  value: "None",
+                  cost: parseFloat(0),
+                  qty: 0,
+                },
+              },
+            });
+          }
+
+          break;
+
+        case "lit":
+          document.querySelector("#ledLit .current-item .value").innerHTML =
+            "<b>" + capitalizeFirstLetter(value) + "</b>";
+
+          if (value == "front") {
+            document.querySelector("#ledLit .current-item .value").innerHTML =
+              "<b>Front Lit</b>";
+            store.dispatch({
+              type: "UPDATE",
+              payload: {
+                lit: {
+                  value: "Front Lit",
+                  cost: parseFloat(0),
+                  qty: 1,
+                },
+              },
+            });
+          } else if (value == "both") {
+            document.querySelector("#ledLit .current-item .value").innerHTML =
+              "<b>Front and Back Lit</b>";
+
+            store.dispatch({
+              type: "UPDATE",
+              payload: {
+                lit: {
+                  value: "Back Lit",
+                  cost: parseFloat(backLitCost),
+                  qty: 1,
+                },
+              },
+            });
+          }
+          break;
+
+        case "cable":
+          if (value == "3") {
+            document.querySelector("#ledCable .current-item .value").innerHTML =
+              "<b>3ft Cable</b>";
+            store.dispatch({
+              type: "UPDATE",
+              payload: {
+                cable: {
+                  value: "3ft Cable",
+                  cost: parseFloat(0),
+                  qty: 1,
+                },
+              },
+            });
+          } else if (value == "8") {
+            document.querySelector("#ledCable .current-item .value").innerHTML =
+              "<b>8ft Cable</b>";
+
+            store.dispatch({
+              type: "UPDATE",
+              payload: {
+                cable: {
+                  value: "8ft Cable",
+                  cost: parseFloat(eightFtcableCost),
+                  qty: 1,
+                },
+              },
+            });
+          } else if (value == "0") {
+            document.querySelector("#ledCable .current-item .value").innerHTML =
+              "<b>No Cable</b>";
+            store.dispatch({
+              type: "UPDATE",
+              payload: {
+                cable: {
+                  value: "No Cable",
+                  cost: parseFloat(0),
+                  qty: 0,
+                },
+              },
+            });
+          }
+
+          ledCable;
+          break;
+      }
+
+      element.closest(".bottombar-left-item").classList.remove("is-open");
+    });
+  });
+
+  document.querySelector(".select-font").addEventListener("click", (e) => {
+    showLeftSlider(fontData, "font", 1);
+  });
+
+  document.querySelector(".select-trimcap").addEventListener("click", (e) => {
+    showLeftSlider(
+      getDataById(["trimcap-color", "trimcap-size"], productClData),
+      "trimcap",
+      1,
+    );
+  });
+
+  document.querySelector(".select-return").addEventListener("click", (e) => {
+    let returnColorLength = getDataById(["return-color"], productClData)[0]
+      .options.length;
+    if (returnColorLength > 20) {
+      return showLeftSlider(
+        getDataById(["return-color", "return-size"], productClData),
+        "return",
+        4,
+      );
+    }
+    showLeftSlider(
+      getDataById(["return-color", "return-size"], productClData),
+      "return",
+      1,
+    );
+  });
+  document.querySelector(".select-face").addEventListener("click", (e) => {
+    let faceColors = getDataById(
+      ["color-ac", "color-3mt", "color-3mb", "color-3md", "color-3mm"],
+      productClData,
+    );
+
+    let faceColorContainerLength = getDataById(
+      ["color-ac", "color-3mt", "color-3mb", "color-3md", "color-3mm"],
+      productClData,
+    ).length;
+    let faceColorItemLength = getDataById(
+      ["color-ac", "color-3mt", "color-3mb", "color-3md", "color-3mm"],
+      productClData,
+    )[0].options.length;
+    if (faceColorContainerLength > 0 && faceColorItemLength > 5) {
+      return showLeftSlider(faceColors, "face", 4);
+    }
+    showLeftSlider(faceColors, "face", 1);
+  });
+
+  sliderCloseButton.addEventListener("click", (e) => {
+    hideLeftSlider();
+  });
+
+  sidebarListItems.forEach((element) => {
+    let sliderItems = this.querySelectorAll(".slider-choose-item");
+
+    sliderItems.forEach((sliderItem) => {});
+  });
+
+
+  window.addEventListener("keydown", function (e) {
+    if (e.key === "Delete") {
+      let clickEvent = new CustomEvent("click", {
+        bubbles: true,
+        cancelable: true,
+      });
+
+      deleteBtn.dispatchEvent(clickEvent);
+    }
+  });
+
+  window.addEventListener("keydown", function (event) {
+    if (selectedNode == null) return;
+    if (
+      document.activeElement == sizeWidthInput ||
+      document.activeElement == sizeHeightInput ||
+      document.activeElement == cornerRadiusInput
+    ) {
+      return;
+    }
+
+    switch (event.key) {
+      case "ArrowUp":
+        event.preventDefault();
+        selectedNode.y(selectedNode.y() - 5);
+        break;
+      case "ArrowDown":
+        event.preventDefault();
+        selectedNode.y(selectedNode.y() + 5);
+        // Add your logic for "down" arrow key action
+        break;
+      case "ArrowLeft":
+        event.preventDefault();
+
+        selectedNode.x(selectedNode.x() - 5);
+        // Add your logic for "left" arrow key action
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+
+        selectedNode.x(selectedNode.x() + 5);
+        // Add your logic for "right" arrow key action
+        break;
+    }
+    updateHeightWidthDisplay();
+    layer.draw();
+  });
+
+  saveBtn.addEventListener("click", async function (e) {
+    if (saveBtn.disabled) {
+      return;
+    }
+
+    const originalButtonText = saveBtn.textContent.trim();
+    const loadingImage = document.createElement("img");
+    loadingImage.height = 20;
+    loadingImage.style.marginLeft = "5px";
+    loadingImage.src =
+      siteUrl + "/wp-content/themes/wholesale/img/ajax_loader.gif";
+
+    saveBtn.disabled = true;
+    saveBtn.setAttribute("aria-busy", "true");
+    saveBtn.setAttribute("data-original-label", originalButtonText);
+    saveBtn.innerHTML = "<span>Saving Design...</span>";
+    saveBtn.appendChild(loadingImage);
+
+    nodeLists.forEach((nodeContainer) => {
+      let node = nodeContainer.node;
+      let transformer = node.getAttr("transformer");
+
+      if (transformer) {
+        transformer.destroy();
+      }
+
+      layer.draw();
+    });
+
+    stage.height(container.clientHeight);
+
+    var dataURL = stage.toDataURL({ mimeType: "image/png" });
+    let imageBlob = dataURLtoBlob(dataURL);
+
+    // Prepare the form data
+    var formData = new FormData();
+    formData.append("file", imageBlob, "clDesign-" + Math.random() + ".png");
+    formData.append("action", "wholesale_upload_design");
+    formData.append("nonce", window.mediaUploadData.upload_nonce);
+
+    try {
+      const mediaEndpoint = window.mediaUploadData.upload_url;
+      const freshResponse = await fetch(mediaEndpoint, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!freshResponse.ok) {
+        const errorDetails = await freshResponse.text();
+        throw new Error(
+          `Media upload failed (${freshResponse.status}): ${errorDetails || freshResponse.statusText}`,
+        );
+      }
+
+      const uploadResponse = await freshResponse.json();
+      if (
+        !uploadResponse.success ||
+        !uploadResponse.data ||
+        !uploadResponse.data.id
+      ) {
+        const uploadMessage =
+          uploadResponse.data && uploadResponse.data.message
+            ? uploadResponse.data.message
+            : "The design image could not be uploaded.";
+        throw new Error(uploadMessage);
+      }
+      const freshMediaData = uploadResponse.data;
+
+      loadingImage.remove();
+      saveBtn.disabled = false;
+      saveBtn.removeAttribute("aria-busy");
+      const contentDimenstion = {
+        height: contentHeight,
+        width: contentWidth,
+      };
+      const elements = store.getState()["elements"];
+      const extras = store.getState()["extras"];
+      const updatedState = { elements, extras, contentDimenstion };
+      const designData = JSON.stringify(updatedState);
+      const redirectUrl = `${productPermalink}?save_design=true&design_data=${encodeURIComponent(designData)}&design_id=${freshMediaData.id}`;
+      window.location.href = redirectUrl;
+      return;
+
+      /*
+            // Legacy JWT upload path retained below for reference.
+            const jwtToken = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL3N0b3JlZnJvbnRzaWdub25saW5lLmNvbSIsImlhdCI6MTczNDgxNTYyOSwibmJmIjoxNzM0ODE1NjI5LCJleHAiOjE3MzU0MjA0MjksImRhdGEiOnsidXNlciI6eyJpZCI6IjkifX19.swVU-Zp-lbpsLpXOLT97y9h4V5psnZrSyA5-gzWeVNw';
+            const response = await fetch(siteUrl + '/wp-json/wp/v2/media', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${jwtToken}`,
+                },
+                body: formData,  // This contains the image data you're uploading
+            })
+
+            if (!response.ok) {
+                console.error('Media upload failed:', response.statusText);
+                return;
+            }
+
+            const mediaData = await response.json();
+            const mediaId = mediaData.id; // Get the uploaded media ID
+
+            console.log('Image uploaded successfully:', mediaData);
+            this.querySelector('img').remove();
+            let contentDimenstion = {
+                height: contentHeight,
+                width: contentWidth
+            }
+            let elements = store.getState()['elements']
+            let extras = store.getState()['extras']
+            let updatedState = { elements, extras, contentDimenstion }
+
+            let designData = JSON.stringify(updatedState);
+            let attachmentId = mediaData.id;
+            let redirectUrl = `${productPermalink}?save_design=true&design_data=${designData}&design_id=${attachmentId}`;
+            window.location.href = redirectUrl
+
+            */
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      loadingImage.remove();
+      saveBtn.disabled = false;
+      saveBtn.removeAttribute("aria-busy");
+      const previousLabel = saveBtn.getAttribute("data-original-label");
+      saveBtn.textContent = previousLabel || "Save Design";
+    }
+  });
+
+  container.addEventListener("click", function (e) {
+    hideLeftSlider();
+    const infoContents = document.querySelectorAll(".info-btn-content");
+    infoContents.forEach((info) => {
+      info.style.display = "none";
+    });
+  });
+
+  store.subscribe(() => {
+    let totalCost = 0;
+    let totalColorCost = 0;
+
+    let elements = store.getState()["elements"];
+    let extras = store.getState()["extras"];
+    updateDetailTable(elements, extras);
+    elements.forEach((element) => {
+      totalCost += normalizeCost(element.cost);
+      totalColorCost += normalizeCost(element.colorCost);
+    });
+
+    let psCost =
+      extras.powerSupply.qty > 0
+        ? normalizeCost(extras.powerSupply.cost)
+        : 0;
+    let litCostPecent =
+      extras.lit && extras.lit.qty > 0
+        ? normalizeCost(extras.lit.cost)
+        : 0;
+    let litCost = ((totalCost + totalColorCost) * litCostPecent) / 100;
+    let cableCost =
+      extras.cable.qty > 0 ? normalizeCost(extras.cable.cost) : 0;
+
+    detailTableBody.dataset.totalElementCost = parseFloat(
+      totalCost + totalColorCost,
+    );
+    // Power supply, lighting and cable are only charged once there is something to power.
+    totalCost = elements.length ? totalCost + psCost + litCost + cableCost : 0;
+
+    document.getElementById("displayCost").innerText =
+      "$" + (totalCost + totalColorCost).toFixed(2);
+    document.getElementById("dtTotalPriceDisplay").innerHTML =
+      'Price: <span class="text-success fw-bold">$' +
+      (totalCost + totalColorCost).toFixed(2) +
+      "</span>";
+
+    let totalObjects = store.getState()["elements"].length;
+
+    document.getElementById("dtTotalObjDisplay").innerHTML =
+      'Total : <span class="text-primary"> ' +
+      totalObjects +
+      " </span> Objects";
+
+    document.getElementById("dtTotalPriceDisplay").innerHTML =
+      'Total Price: <span class="text-success fw-bold">$' +
+      (totalCost + totalColorCost).toFixed(2) +
+      "</span>";
+
+    document.querySelector("#totalObject .value").innerText = totalObjects;
+    console.log(store.getState());
+  });
+  console.log(editDesignElements);
+
+  if (isEditDesign) {
+    let clickEvent = new CustomEvent("click", { bubbles: true });
+    editDesignElements.forEach((element) => {
+      let text = element.text || "";
+
+      if (element.faceColor && element.faceColor.code) {
+        faceColor = element.faceColor.code;
+        activeFaceCode = element.faceColor.code;
+        activeFaceTitle = element.faceColor.title;
+      }
+      if (element.returnColor && element.returnColor.code) {
+        returnColor = element.returnColor.code;
+        activeReturnColorCode = element.returnColor.code;
+        activeReturnColorTitle = element.returnColor.title;
+        updateActiveItem(
+          "return",
+          activeReturnColorTitle + "/" + activeReturnColorCode,
+        );
+      }
+
+      if (element.trimcapColor && element.trimcapColor.code) {
+        trimCapColor = element.trimcapColor.code;
+        activeTrimcapColorCode = element.trimcapColor.code;
+        activeTrimcapColorTitle = element.trimcapColor.title;
+        updateActiveItem(
+          "trimcap",
+          activeTrimcapColorTitle + "/" + activeTrimcapColorCode,
+        );
+      }
+
+      if (element.trimcapSize && element.trimcapSize.code) {
+        trimCapSize = parseFloat(element.trimcapSize.code);
+        activeTrimcapSizeCode = parseFloat(element.trimcapSize.code);
+        activeTrimcapSizeTitle = element.trimcapSize.title;
+        updateActiveItem(
+          "trimcap-size",
+          activeTrimcapSizeTitle + "/" + activeTrimcapSizeCode,
+        );
+      }
+
+      if (element.returnSize && element.returnSize.code) {
+        returnSize = parseFloat(element.returnSize.code);
+        activeReturnSizeCode = parseFloat(element.returnSize.code);
+        activeReturnSizeTitle = element.returnSize.title;
+        updateActiveItem(
+          "return-size",
+          activeReturnSizeTitle + "/" + activeReturnSizeCode,
+        );
+      }
+
+      if (element.font && element.font.code) {
+        fontFamily = element.font.code;
+        activeFontCode = element.font.code;
+        activeFontTitle = element.font.title;
+        updateActiveItem("font", activeFontTitle + "/" + activeFontCode);
+      }
+
+      if (element.fontSize) {
+        fontSize = element.fontSize;
+      }
+
+      if (element.faceCostPerInch) {
+        colorCost = parseFloat(element.faceCostPerInch);
+      }
+
+      let height = parseFloat(element.height) * dpi || false;
+      let width = parseFloat(element.width) * dpi || false;
+      let scaleX = element.scale.x || 1;
+      let scaleY = element.scale.y || 1;
+      let radius = element.radius || false;
+      let points = element.points || false;
+
+      switch (element.type) {
+        case "Text":
+          let textNodeId = addText(text, element.x, element.y, true);
+
+          store.dispatch({
+            type: "UPDATE_ELEMENT",
+            payload: {
+              id: textNodeId,
+              ...element,
+              //colorCost : element.colorCost
+            },
+          });
+          setTextFSI(textNodeId, "yes");
+          const clickEvent = new Event("click", {
+            bubbles: true,
+            cancelable: true,
+          });
+
+          if (width) {
+            if (selectedNode != null) {
+              selectedNode.width(undefined);
+            }
+          }
+
+          //document.querySelector('.select-font .slider-choose-item.active').dispatchEvent(clickEvent)
+          break;
+
+        case "Raceway":
+          addRaceway();
+          selectedNode.width(parseFloat(element.width) * dpi);
+          triggerTransformEvent();
+          if (height) {
+            selectedNode.height(
+              Math.min(height, maxRacewayHeightInches * dpi),
+            );
+            clampRacewayHeight(selectedNode);
+          }
+          if (width) {
+            selectedNode.width(width);
+          }
+          triggerTransformEvent();
+          break;
+
+        case "Rectangle":
+          addShape("rectangle");
+
+          if (height) {
+            selectedNode.height(height);
+          }
+
+          if (width) {
+            selectedNode.width(width);
+          }
+
+          break;
+
+        case "Circle":
+          addShape("circle");
+          if (height) {
+            selectedNode.height(height);
+          }
+
+          if (width) {
+            selectedNode.width(width);
+          }
+          //selectedNode.x(element.x)
+          //selectedNode.y(element.y)
+          break;
+        case "Triangle":
+          addShape("triangle");
+          if (height) {
+            selectedNode.height(height);
+          }
+
+          if (width) {
+            selectedNode.width(width);
+          }
+          break;
+        case "Starburst":
+          addShape("star");
+          if (height) {
+            selectedNode.height(height);
+          }
+
+          if (width) {
+            selectedNode.width(width);
+          }
+          break;
+        case "Arrow":
+          addShape("arrow");
+
+          if (height) {
+            selectedNode.height(height);
+          }
+
+          if (width) {
+            selectedNode.width(width);
+          }
+
+          if (points) {
+            selectedNode.points(points);
+          }
+
+          if (scaleX) {
+            selectedNode.scaleX(scaleX);
+          }
+
+          if (scaleY) {
+            selectedNode.scaleY(scaleY);
+          }
+
+          selectedNode.x(canvasWidth / 2);
+          selectedNode.y(canvasHeight / 2);
+          break;
+        default:
+          break;
+      }
+
+      if (selectedNode) {
+        selectedNode.x(parseFloat(element.x));
+        selectedNode.y(parseFloat(element.y));
+        if (element.rotation !== undefined) {
+          selectedNode.rotation(parseFloat(element.rotation));
+        }
+
+        if (selectedNode.getClassName() == "Rect") {
+          if (radius) {
+            cornerRadius.value = radius;
+            let changeEvent = new CustomEvent("change", {
+              bubbles: true,
+              cancelable: true,
+            });
+            cornerRadius.dispatchEvent(changeEvent);
+            layer.batchDraw();
+          }
+        }
+      }
+
+      triggerTransformEvent();
+      layer.draw();
+    });
+
+    if (editDesignExtras) {
+      let psValue = editDesignExtras.powerSupply.value.toLowerCase();
+      let powerSupplySelector = document.querySelector(
+        '[data-type="ps"][data-value="' + psValue + '"]',
+      );
+      powerSupplySelector && powerSupplySelector.dispatchEvent(clickEvent);
+
+      let litValue = editDesignExtras.lit.value.toLowerCase();
+      if (litValue == "back lit") litValue = "both";
+      if (litValue == "front lit") litValue = "front";
+      let litSelector = document.querySelector(
+        '[data-type="lit"][data-value="' + litValue + '"]',
+      );
+      litSelector && litSelector.dispatchEvent(clickEvent);
+
+      let cableValue =
+        parseInt(editDesignExtras.cable.value.toLowerCase()) || 0;
+      let cableSelector = document.querySelector(
+        '[data-type="cable"][data-value="' + cableValue + '"]',
+      );
+      cableSelector && cableSelector.dispatchEvent(clickEvent);
+    }
+  }
+
+  clBuilderActions.addText = addText;
+  clBuilderActions.addShape = addShape;
+  clBuilderActions.addRaceway = addRaceway;
+
+  // end script
+});
+
+// Touch and keyboard support for the builder's panels and menus.
+(function () {
+  const slider = document.getElementById("leftSidebarSlider");
+  const backdrop = document.getElementById("clSheetBackdrop");
+
+  function closeBottomMenus(except) {
+    document.querySelectorAll(".bottombar-left-item.is-open").forEach((item) => {
+      if (item !== except) {
+        item.classList.remove("is-open");
+      }
+    });
+  }
+
+  function closeInfoPopovers() {
+    document.querySelectorAll(".info-btn-content").forEach((info) => {
+      info.style.display = "none";
+    });
+  }
+
+  // Power supply / lighting / cable menus close when tapping anywhere else.
+  document.addEventListener("click", (event) => {
+    closeBottomMenus(event.target.closest(".bottombar-left-item"));
+    if (!event.target.closest(".info-btn-container")) {
+      closeInfoPopovers();
+    }
+  });
+
+  // The phone bottom sheet closes from its backdrop.
+  if (backdrop && slider) {
+    backdrop.addEventListener("click", () => hideLeftSlider());
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      if (slider && slider.classList.contains("is-open")) {
+        hideLeftSlider();
+      }
+      closeBottomMenus(null);
+      closeInfoPopovers();
+      const shapeMenu = document.querySelector(".shape-dropdown.is-open");
+      if (shapeMenu) {
+        shapeMenu.classList.remove("is-open");
+        shapeMenu.setAttribute("aria-expanded", "false");
+      }
+      return;
+    }
+
+    // Enter / Space activate the builder's clickable rows and chips.
+    const target = event.target;
+    if (
+      (event.key === "Enter" || event.key === " ") &&
+      target.matches(".cl-option-value, .bottombar-left-item, .info-btn, .slider-choose-item, .bottombar-list-item")
+    ) {
+      event.preventDefault();
+      target.click();
+    }
+  });
+
+  // Options inside the picker are reachable by keyboard.
+  if (slider && typeof MutationObserver !== "undefined") {
+    new MutationObserver(() => {
+      slider.querySelectorAll(".slider-choose-item:not([tabindex])").forEach((item) => {
+        item.setAttribute("tabindex", "0");
+        item.setAttribute("role", "button");
+      });
+      document.body.classList.toggle("cl-sheet-open", slider.classList.contains("is-open"));
+    }).observe(slider, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
+  }
+})();

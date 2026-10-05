@@ -1,0 +1,213 @@
+/* Customer payment page (/pay/). Scoped to .wpt-pay. */
+
+.wpt-pay {
+    --pay-ink: #14202c;
+    --pay-muted: #5b6573;
+    --pay-line: #e2e7ed;
+    --pay-soft: #f5f7fa;
+    --pay-accent: #1fa8de;
+    --pay-accent-ink: #0c7fae;
+    --pay-good: #1a7a47;
+    --pay-good-soft: #e3f4ea;
+    --pay-warn: #946000;
+    --pay-warn-soft: #fcf1d9;
+    --pay-bad: #b32d2e;
+    --pay-bad-soft: #fbe9e9;
+    background: var(--pay-soft);
+    color: var(--pay-ink);
+    padding: 32px 16px 64px;
+}
+.wpt-pay *,
+.wpt-pay *::before,
+.wpt-pay *::after { box-sizing: border-box; }
+
+.wpt-pay__wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 24px; }
+
+.wpt-pay__preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    align-items: center;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: var(--pay-warn-soft);
+    color: var(--pay-warn);
+    font-size: 14px;
+}
+.wpt-pay__preview a { margin-left: auto; color: inherit; font-weight: 600; }
+
+.wpt-pay__top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px 24px; }
+.wpt-pay__eyebrow { margin: 0 0 6px; color: var(--pay-muted); font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.wpt-pay__eyebrow span { margin-left: 6px; color: var(--pay-ink); font-family: Menlo, Consolas, monospace; letter-spacing: 0; }
+.wpt-pay__heading h1 { margin: 0; font-size: clamp(1.6rem, 3.4vw, 2.2rem); line-height: 1.2; font-weight: 700; text-wrap: balance; }
+.wpt-pay__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: #e6f5fc;
+    color: var(--pay-accent-ink);
+    font-size: 14px;
+    font-weight: 600;
+}
+.wpt-pay__badge::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.wpt-pay__badge--paid { background: var(--pay-good-soft); color: var(--pay-good); }
+.wpt-pay__badge--expired { background: var(--pay-bad-soft); color: var(--pay-bad); }
+
+.wpt-pay__grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 24px; align-items: start; }
+
+/* Invoice */
+.wpt-invoice {
+    container: invoice / inline-size;
+    display: grid;
+    gap: 24px;
+    padding: 28px;
+    background: #fff;
+    border: 1px solid var(--pay-line);
+    border-top: 4px solid var(--pay-accent);
+    border-radius: 10px;
+}
+.wpt-invoice h2 { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--pay-muted); }
+.wpt-invoice p { margin: 0; }
+
+.wpt-invoice__parties { display: grid; grid-template-columns: 1fr 1fr auto; gap: 20px 28px; font-size: 14px; line-height: 1.6; }
+.wpt-invoice__parties p { overflow-wrap: anywhere; }
+.wpt-invoice__dates { display: grid; gap: 6px; margin: 0; align-content: start; }
+.wpt-invoice__dates div { display: flex; justify-content: space-between; gap: 16px; }
+.wpt-invoice__dates dt { color: var(--pay-muted); }
+.wpt-invoice__dates dd { margin: 0; font-weight: 600; white-space: nowrap; }
+
+.wpt-invoice__message { padding: 14px 16px; border-radius: 8px; background: var(--pay-soft); line-height: 1.6; }
+
+.wpt-invoice__items { display: grid; }
+.wpt-invoice__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 60px 110px 120px;
+    gap: 12px;
+    align-items: start;
+    padding: 16px 0;
+    border-top: 1px solid var(--pay-line);
+    font-variant-numeric: tabular-nums;
+}
+.wpt-invoice__row--head { padding: 0 0 10px; border-top: 0; border-bottom: 2px solid var(--pay-ink); font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--pay-muted); }
+.wpt-invoice__row--head + .wpt-invoice__row { border-top: 0; }
+.wpt-c { text-align: center; }
+.wpt-r { text-align: right; }
+.wpt-invoice__amount { font-weight: 700; }
+
+.wpt-invoice__item { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 14px; }
+.wpt-invoice__thumb { width: 64px; height: 64px; border-radius: 6px; background: var(--pay-soft); border: 1px solid var(--pay-line); overflow: hidden; }
+.wpt-invoice__thumb { display: grid; place-items: center; color: #9aa6b4; }
+.wpt-invoice__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.wpt-invoice__item strong { display: block; font-size: 15px; line-height: 1.4; }
+.wpt-invoice__specs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; padding: 0; list-style: none; }
+.wpt-invoice__specs li { margin: 0; padding: 2px 8px; border-radius: 4px; background: var(--pay-soft); border: 1px solid var(--pay-line); color: var(--pay-muted); font-size: 12px; line-height: 1.6; }
+.wpt-invoice__notes { margin-top: 8px !important; color: var(--pay-muted); font-size: 13px; line-height: 1.5; }
+
+.wpt-invoice__totals { display: grid; gap: 8px; width: 100%; max-width: 340px; margin: -8px 0 0 auto; font-variant-numeric: tabular-nums; }
+.wpt-invoice__totals div { display: flex; justify-content: space-between; gap: 16px; color: var(--pay-muted); }
+.wpt-invoice__totals dd { margin: 0; color: var(--pay-ink); }
+.wpt-invoice__discount dd { color: var(--pay-good); }
+.wpt-invoice__grand { margin-top: 6px; padding-top: 12px; border-top: 2px solid var(--pay-ink); color: var(--pay-ink) !important; font-weight: 700; font-size: 18px; }
+
+.wpt-invoice__proof { display: grid; gap: 10px; padding-top: 20px; border-top: 1px solid var(--pay-line); }
+.wpt-invoice__proof img { display: block; max-width: 100%; max-height: 420px; border-radius: 8px; border: 1px solid var(--pay-line); }
+.wpt-invoice__proof-link { color: var(--pay-accent-ink); font-weight: 600; font-size: 14px; }
+
+/* Pay box */
+.wpt-paybox {
+    display: grid;
+    gap: 18px;
+    padding: 24px;
+    background: #fff;
+    border: 1px solid var(--pay-line);
+    border-radius: 10px;
+    box-shadow: 0 18px 40px -28px rgba(20, 32, 44, .45);
+}
+.wpt-paybox__amount { display: grid; gap: 2px; padding-bottom: 16px; border-bottom: 1px solid var(--pay-line); }
+.wpt-paybox__amount span { color: var(--pay-muted); font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.wpt-paybox__amount strong { font-size: 34px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.wpt-paybox__state { display: grid; gap: 6px; padding: 16px; border-radius: 8px; background: var(--pay-soft); }
+.wpt-paybox__state h2 { margin: 0; font-size: 18px; }
+.wpt-paybox__state p { margin: 0; line-height: 1.6; color: var(--pay-muted); }
+.wpt-paybox__state--done { background: var(--pay-good-soft); }
+.wpt-paybox__state--done h2 { color: var(--pay-good); }
+.wpt-paybox__error { padding: 12px 14px; border-radius: 8px; background: var(--pay-bad-soft); color: var(--pay-bad); font-weight: 600; font-size: 14px; }
+.wpt-paybox__help { margin: 0; color: var(--pay-muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+
+.wpt-payform { display: grid; gap: 18px; }
+.wpt-payform fieldset { display: grid; gap: 12px; margin: 0; padding: 0; border: 0; min-width: 0; }
+.wpt-payform legend { float: none; width: auto; margin: 0 0 4px; padding: 0; font-size: 15px; font-weight: 700; }
+.wpt-payform p { display: grid; gap: 6px; margin: 0; min-width: 0; }
+.wpt-payform label { margin: 0; font-size: 13px; font-weight: 600; color: var(--pay-ink); }
+.wpt-payform label span { color: var(--pay-muted); font-weight: 400; }
+.wpt-payform input,
+.wpt-payform select {
+    width: 100%;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid #c9d1da;
+    border-radius: 6px;
+    background: #fff;
+    color: var(--pay-ink);
+    font-size: 15px;
+}
+.wpt-payform input:focus,
+.wpt-payform select:focus { outline: none; border-color: var(--pay-accent); box-shadow: 0 0 0 3px rgba(31, 168, 222, .2); }
+.wpt-payform__row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.wpt-payform__row--3 { grid-template-columns: 1.3fr 1fr 1fr; }
+.wpt-payform__info { padding: 12px 14px; border-radius: 8px; background: #e6f5fc; color: var(--pay-accent-ink); font-size: 14px; line-height: 1.5; }
+.wpt-payform__status { margin: 0 0 12px; padding: 12px 14px; border-radius: 8px; background: #fdecec; color: #9b1c1c; font-size: 14px; line-height: 1.5; }
+.wpt-payform__status[data-type="info"] { background: #e6f5fc; color: var(--pay-accent-ink); }
+.wpt-payform__submit {
+    min-height: 52px;
+    border: 0;
+    border-radius: 8px;
+    background: var(--pay-accent);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+}
+.wpt-payform__submit:hover { background: var(--pay-accent-ink); }
+.wpt-payform__submit:focus-visible { outline: 3px solid rgba(31, 168, 222, .45); outline-offset: 2px; }
+.wpt-payform__submit:disabled { background: #9fb3c2; cursor: not-allowed; }
+.wpt-payform__secure { display: flex !important; grid-template-columns: none; align-items: flex-start; gap: 8px !important; color: var(--pay-muted); font-size: 12px; line-height: 1.5; }
+.wpt-payform__secure svg { flex: none; margin-top: 2px; color: var(--pay-good); }
+
+@media (max-width: 1100px) {
+    .wpt-pay__grid { grid-template-columns: 1fr; }
+    .wpt-paybox { max-width: 640px; }
+}
+
+@media (max-width: 600px) {
+    .wpt-pay { padding-top: 20px; }
+    .wpt-invoice,
+    .wpt-paybox { padding: 18px; }
+    .wpt-payform__row,
+    .wpt-payform__row--3 { grid-template-columns: 1fr 1fr; }
+    .wpt-payform__row--3 > p:first-child { grid-column: 1 / -1; }
+}
+
+/* The invoice adapts to its own width, not the window's. */
+@container invoice (max-width: 720px) {
+    .wpt-invoice__parties { grid-template-columns: 1fr 1fr; }
+    .wpt-invoice__dates { grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px 24px; }
+}
+
+@container invoice (max-width: 520px) {
+    .wpt-invoice__parties { grid-template-columns: 1fr; }
+    .wpt-invoice__row--head { display: none; }
+    .wpt-invoice__row { grid-template-columns: 1fr; gap: 6px; }
+    .wpt-invoice__row--head + .wpt-invoice__row { border-top: 1px solid var(--pay-line); }
+    .wpt-invoice__item { grid-template-columns: 52px minmax(0, 1fr); margin-bottom: 6px; }
+    .wpt-invoice__thumb { width: 52px; height: 52px; }
+    .wpt-invoice__row > [data-label] { display: flex; justify-content: space-between; font-size: 14px; }
+    .wpt-invoice__row > [data-label]::before { content: attr(data-label); color: var(--pay-muted); font-weight: 400; }
+    .wpt-invoice__totals { max-width: none; margin-top: 0; }
+}
+
+.wpt-invoice__design { display: inline-block; margin-top: 8px; color: var(--pay-accent-ink); font-size: 13px; font-weight: 600; }
+.wpt-invoice__thumb img[src*="clDesign"] { object-fit: contain; background: #fff; }

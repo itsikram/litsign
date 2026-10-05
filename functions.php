@@ -46,6 +46,7 @@ if (file_exists(dirname(__FILE__) . '/template/display_admin_orders.php')) {
 require_once(dirname(__FILE__) . '/inc/orders.php');
 require_once(dirname(__FILE__) . '/inc/reviews.php');
 require_once(dirname(__FILE__) . '/inc/review-manager.php');
+require_once(dirname(__FILE__) . '/inc/order-reviews.php');
 require_once(dirname(__FILE__) . '/inc/pricing.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');
 require_once(dirname(__FILE__) . '/inc/mini-cart.php');
@@ -56,10 +57,12 @@ require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
 require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
+require_once(dirname(__FILE__) . '/inc/product-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
 require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
 require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
 require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
+require_once(dirname(__FILE__) . '/inc/storefront-media.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
@@ -740,10 +743,17 @@ function wholesale_handle_review_submission()
 			wp_safe_redirect(add_query_arg('review_status', 'disabled', $redirect_url) . $review_anchor);
 			exit;
 		}
-		if (!is_user_logged_in() || !wholesale_user_can_review_product(get_current_user_id(), $product_id)) {
-			wp_safe_redirect(add_query_arg('review_status', 'not_eligible', $redirect_url) . $review_anchor);
+		// Signed-in customers, or anyone holding the review link for a completed order.
+		$eligibility = wholesale_review_eligibility(
+			$product_id,
+			isset($_POST['review_order']) ? absint($_POST['review_order']) : 0,
+			isset($_POST['review_token']) ? sanitize_text_field(wp_unslash($_POST['review_token'])) : ''
+		);
+		if (!$eligibility['order']) {
+			wp_safe_redirect(add_query_arg('review_status', 'reviewed' === $eligibility['reason'] ? 'already_reviewed' : 'not_eligible', $redirect_url) . $review_anchor);
 			exit;
 		}
+		$review_order_id = $eligibility['order'];
 	}
 
 	$submission_id = wp_insert_post(array(
@@ -756,6 +766,7 @@ function wholesale_handle_review_submission()
 			'_review_email' => $email,
 			'_review_rating' => $rating,
 			'_review_product_id' => $product_id,
+			'_review_order_id' => isset($review_order_id) ? $review_order_id : 0,
 		),
 	), true);
 
@@ -765,7 +776,17 @@ function wholesale_handle_review_submission()
 	}
 
 	$subject = sprintf('New %d-star customer review from %s', $rating, $name);
-	$body = "Name: {$name}\nEmail: {$email}\nRating: {$rating}/5\n\nReview:\n{$review}\n";
+	$body = "Name: {$name}\nEmail: {$email}\nRating: {$rating}/5\n";
+	if ($product_id) {
+		$body .= 'Product: ' . html_entity_decode(get_the_title($product_id), ENT_QUOTES) . "\n";
+	}
+	if (!empty($review_order_id)) {
+		$body .= 'Order: #' . wholesale_order_number($review_order_id) . "\n";
+	}
+	$body .= "\nReview:\n{$review}\n\n";
+	$body .= wholesale_setting_enabled('auto_publish_reviews')
+		? "This review was published automatically.\n"
+		: 'Approve or edit it here: ' . admin_url('edit.php?post_status=pending&post_type=review_submission') . "\n";
 	$headers = array(
 		'Content-Type: text/plain; charset=UTF-8',
 		'Reply-To: ' . $name . ' <' . $email . '>',
@@ -780,21 +801,9 @@ add_action('admin_post_submit_review', 'wholesale_handle_review_submission');
 
 function wholesale_user_can_review_product($user_id, $product_id)
 {
-	$orders = get_posts(array(
-		'post_type' => 'order',
-		'post_status' => 'completed',
-		'posts_per_page' => -1,
-		'meta_key' => 'user_id',
-		'meta_value' => absint($user_id),
-	));
-
-	foreach ($orders as $order) {
-		$items = wholesale_decode_order_meta_array(get_post_meta($order->ID, 'product_json', true));
-		foreach ($items as $item) {
-			$details = isset($item['product_details']) && is_array($item['product_details']) ? $item['product_details'] : array();
-			if (isset($details['Product Id']) && absint($details['Product Id']) === absint($product_id)) {
-				return true;
-			}
+	foreach (wholesale_user_completed_order_ids($user_id) as $order_id) {
+		if (wholesale_order_can_be_reviewed($order_id, $product_id)) {
+			return true;
 		}
 	}
 
@@ -2142,7 +2151,7 @@ function litsign_scripts()
 	if (is_page_template('page-channel-letters.php')) {
 		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
 	}
-	if (is_page(array('storefront-signs', 'about', 'banners-displays', 'channel-letter-cost')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
+	if (is_page(array('storefront-signs', 'about', 'banners-displays', 'channel-letter-cost', 'design-templates')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
 		wp_enqueue_style('wholesale-seo-pages', $theme_uri . '/css/seo-pages.css', array('custom-style'), $asset_version('/css/seo-pages.css'));
 	}
 	if (is_page('banners-displays')) {
@@ -2561,6 +2570,10 @@ function wholesale_seo_page_defaults()
 		'banners-displays' => array(
 			'title' => __('Custom Banners & Display Stands | Printed Banners, Flags & Booths', 'litsign'),
 			'description' => __('Custom vinyl and fabric banners, retractable banner stands, feather flags and trade show displays. See your price online.', 'litsign'),
+		),
+		'design-templates' => array(
+			'title' => __('Free Sign Design Templates (PDF, PSD, CDR) & Artwork Guide', 'litsign'),
+			'description' => __('Download free print-ready templates for feather flags, banner stands, tents, table covers and SEG displays, plus how to set up your artwork file.', 'litsign'),
 		),
 		'terms-conditions' => array(
 			'title' => __('Terms & Conditions | Store Front Sign Online', 'litsign'),

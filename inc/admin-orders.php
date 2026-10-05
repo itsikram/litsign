@@ -528,7 +528,10 @@ function wholesale_send_status_email($post_id, $status)
 			. ($tracking_url ? '<a href="' . esc_url($tracking_url) . '" style="color:#1287b5;">' . esc_html($tracking) . '</a>' : esc_html($tracking)) . '</p>';
 	}
 
-	$sent = wholesale_send_order_email($post_id, sprintf($subject, $number), '<p style="margin:0;">' . esc_html($body) . '</p>' . $tracking_html);
+	// Shipped email: invite a review of each item (signed links, so guests can review too).
+	$review_html = 'completed' === $status && function_exists('wholesale_order_review_email_html') ? wholesale_order_review_email_html($post_id) : '';
+
+	$sent = wholesale_send_order_email($post_id, sprintf($subject, $number), '<p style="margin:0;">' . esc_html($body) . '</p>' . $tracking_html . $review_html);
 	// A failed send is retried automatically from the email log (Emails menu).
 	add_post_meta($post_id, '_status_email_log', current_time('mysql') . ' ' . $status . ($sent ? '' : ' (send failed, will retry)'));
 }

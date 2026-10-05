@@ -359,6 +359,9 @@ function wholesale_seo_migrations()
 		'2026-10-banners-displays-page' => 'wholesale_seo_migrate_banners_displays_page',
 		'2026-10-coroplast-description' => 'wholesale_seo_migrate_coroplast_description',
 		'2026-10-channel-letter-cost-page' => 'wholesale_seo_migrate_channel_letter_cost_page',
+		'2026-10-design-templates-page' => 'wholesale_seo_migrate_design_templates_page',
+		'2026-10-storefront-media' => 'wholesale_seo_migrate_storefront_media',
+		'2026-10-supplier-text' => 'wholesale_seo_migrate_supplier_text',
 	);
 }
 
@@ -642,6 +645,30 @@ function wholesale_seo_migrate_channel_letter_cost_page()
 		'post_status' => 'publish',
 		'post_title' => 'Channel Letter Cost',
 		'post_name' => 'channel-letter-cost',
+		'post_content' => '',
+		'comment_status' => 'closed',
+		'ping_status' => 'closed',
+	), true);
+
+	return !is_wp_error($page_id);
+}
+
+/**
+ * Create the Design Templates page (artwork guide and every template
+ * download). Its content comes from page-design-templates.php, so the page
+ * itself stays empty.
+ */
+function wholesale_seo_migrate_design_templates_page()
+{
+	if (get_page_by_path('design-templates', OBJECT, 'page')) {
+		return true;
+	}
+
+	$page_id = wp_insert_post(array(
+		'post_type' => 'page',
+		'post_status' => 'publish',
+		'post_title' => 'Design Templates',
+		'post_name' => 'design-templates',
 		'post_content' => '',
 		'comment_status' => 'closed',
 		'ping_status' => 'closed',

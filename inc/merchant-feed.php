@@ -112,7 +112,8 @@ function wholesale_render_merchant_feed()
 
 	foreach ($products as $product) {
 		$price = wholesale_seo_product_lowest_price($product->ID);
-		$image = get_the_post_thumbnail_url($product, 'full');
+		$images = wholesale_product_sitemap_images($product->ID);
+		$image = $images ? $images[0] : '';
 		$description = wholesale_merchant_description($product->ID);
 		if ($price <= 0 || !$image || '' === $description) {
 			continue; // Merchant Center rejects items without a price, image or description.
@@ -146,11 +147,8 @@ function wholesale_render_merchant_feed()
 		echo '<g:description>' . $x($description) . "</g:description>\n";
 		echo '<g:link>' . esc_url(get_permalink($product)) . "</g:link>\n";
 		echo '<g:image_link>' . esc_url($image) . "</g:image_link>\n";
-		$gallery = get_post_meta($product->ID, '_product_gallery', true);
-		foreach (is_array($gallery) ? array_slice(array_values(array_filter($gallery, 'is_string')), 0, 10) : array() as $gallery_url) {
-			if ($gallery_url !== $image) {
-				echo '<g:additional_image_link>' . esc_url($gallery_url) . "</g:additional_image_link>\n";
-			}
+		foreach (array_slice($images, 1) as $gallery_url) {
+			echo '<g:additional_image_link>' . esc_url($gallery_url) . "</g:additional_image_link>\n";
 		}
 		echo "<g:availability>in_stock</g:availability>\n";
 		echo '<g:price>' . number_format($price, 2, '.', '') . " USD</g:price>\n";

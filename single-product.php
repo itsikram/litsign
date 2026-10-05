@@ -1093,15 +1093,32 @@ get_header();
     $product_review_data = wholesale_product_review_data($product_id);
     $show_product_reviews = wholesale_setting_enabled('show_product_reviews');
     $product_reviews = wholesale_product_reviews($product_id, 6);
-    $can_review_product = is_user_logged_in() && wholesale_user_can_review_product(get_current_user_id(), $product_id);
+    $review_eligibility = wholesale_setting_enabled('allow_verified_reviews') ? wholesale_review_eligibility_from_request($product_id) : array('order' => 0, 'reason' => 'none');
+    $can_review_product = $review_eligibility['order'] > 0;
     $review_status = isset($_GET['review_status']) ? sanitize_key(wp_unslash($_GET['review_status'])) : '';
+    // Guests arriving from a review link get the name and email from their order.
+    $review_defaults = array('name' => '', 'email' => '');
+    if ($can_review_product) {
+        $review_billing = wholesale_decode_order_meta_array(get_post_meta($review_eligibility['order'], 'billing_address', true));
+        $review_user = wp_get_current_user();
+        $review_defaults = array(
+            'name' => $review_user->exists() ? $review_user->display_name : trim(($review_billing['billing_fname'] ?? '') . ' ' . ($review_billing['billing_lname'] ?? '')),
+            'email' => $review_user->exists() ? $review_user->user_email : ($review_billing['billing_email'] ?? ''),
+        );
+    }
     ?>
     <?php if ($show_product_reviews) : ?>
     <section class="product-reviews" id="product-reviews" aria-labelledby="product-reviews-title">
         <?php if ('sent' === $review_status) : ?>
-            <div class="product-review-alert" role="status">Thank you. Your review has been submitted for approval.</div>
+            <div class="product-review-alert" role="status">Thank you! Your review has been submitted and will appear here once our team approves it.</div>
+        <?php elseif ('already_reviewed' === $review_status) : ?>
+            <div class="product-review-alert" role="status">You have already reviewed this product for this order. Thank you!</div>
         <?php elseif ('not_eligible' === $review_status) : ?>
-            <div class="product-review-alert product-review-alert-error" role="alert">Reviews are available after this product has been delivered.</div>
+            <div class="product-review-alert product-review-alert-error" role="alert">Reviews are available once your order for this product is complete.</div>
+        <?php elseif ('disabled' === $review_status) : ?>
+            <div class="product-review-alert product-review-alert-error" role="alert">Product reviews are currently turned off.</div>
+        <?php elseif ('error' === $review_status) : ?>
+            <div class="product-review-alert product-review-alert-error" role="alert">Please fill in every field and choose a star rating, then try again.</div>
         <?php endif; ?>
         <div class="product-reviews-heading">
             <div>
@@ -1150,26 +1167,43 @@ get_header();
                     </article>
                 <?php endforeach; ?>
             </div>
+            <?php if ($product_review_data['count'] > count($product_reviews)) : ?>
+                <p class="product-review-more"><a href="<?php echo esc_url(wholesale_reviews_page_url(array('product' => $product_id))); ?>">See all <?php echo esc_html(number_format_i18n($product_review_data['count'])); ?> reviews for this product &rarr;</a></p>
+            <?php endif; ?>
+        <?php else : ?>
+            <p class="product-review-note">No reviews for this product yet.</p>
         <?php endif; ?>
         <?php if ($can_review_product) : ?>
-            <div class="product-review-form-card">
+            <div class="product-review-form-card" id="write-review">
                 <h3>Share your experience</h3>
-                <p>Your completed order makes you eligible to review this product.</p>
+                <p>Thanks for your order #<?php echo esc_html(wholesale_order_number($review_eligibility['order'])); ?>. Tell other customers how your sign turned out. Reviews appear after a quick check by our team.</p>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="submit_review">
                     <input type="hidden" name="review_product_id" value="<?php echo esc_attr($product_id); ?>">
+                    <input type="hidden" name="review_order" value="<?php echo esc_attr($review_eligibility['order']); ?>">
+                    <input type="hidden" name="review_token" value="<?php echo esc_attr(wholesale_order_review_token($review_eligibility['order'], $product_id)); ?>">
                     <?php wp_nonce_field('submit_review', 'review_nonce'); ?>
+                    <fieldset class="review-star-input">
+                        <legend>Your rating</legend>
+                        <span class="review-star-row">
+                        <?php foreach (array(5 => 'Excellent', 4 => 'Very good', 3 => 'Good', 2 => 'Fair', 1 => 'Needs improvement') as $stars => $star_label) : ?>
+                            <input type="radio" id="review-star-<?php echo esc_attr($stars); ?>" name="review_rating" value="<?php echo esc_attr($stars); ?>" required>
+                            <label for="review-star-<?php echo esc_attr($stars); ?>" title="<?php echo esc_attr($star_label); ?>"><span class="review-sr"><?php echo esc_html($stars . ' stars, ' . $star_label); ?></span>&#9733;</label>
+                        <?php endforeach; ?>
+                        </span>
+                    </fieldset>
                     <div class="product-review-form-grid">
-                        <label>Name<input type="text" name="review_name" required value="<?php echo esc_attr(wp_get_current_user()->display_name); ?>"></label>
-                        <label>Email<input type="email" name="review_email" required value="<?php echo esc_attr(wp_get_current_user()->user_email); ?>"></label>
+                        <label>Name<input type="text" name="review_name" required autocomplete="name" value="<?php echo esc_attr($review_defaults['name']); ?>"></label>
+                        <label><span>Email <small>(not published)</small></span><input type="email" name="review_email" required autocomplete="email" value="<?php echo esc_attr($review_defaults['email']); ?>"></label>
                     </div>
-                    <label>Rating<select name="review_rating" required><option value="">Select a rating</option><option value="5">5 - Excellent</option><option value="4">4 - Very good</option><option value="3">3 - Good</option><option value="2">2 - Fair</option><option value="1">1 - Needs improvement</option></select></label>
-                    <label>Your review<textarea name="review_message" rows="4" required></textarea></label>
+                    <label>Your review<textarea name="review_message" rows="4" required placeholder="How did the sign look once it was installed? How was the ordering process?"></textarea></label>
                     <button type="submit" class="btn btn-primary">Submit review</button>
                 </form>
             </div>
+        <?php elseif ('reviewed' === $review_eligibility['reason'] && 'sent' !== $review_status && 'already_reviewed' !== $review_status) : ?>
+            <p class="product-review-note">Thanks, you have already reviewed this product. It appears here once approved.</p>
         <?php elseif (!is_user_logged_in()) : ?>
-            <p class="product-review-note">Sign in with the account used for your order to leave a review after delivery.</p>
+            <p class="product-review-note">Bought this sign? Use the review link in your shipping email, or <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink() . '#product-reviews'), home_url('/login/'))); ?>">sign in</a> with the account used for your order.</p>
         <?php endif; ?>
     </section>
     <?php endif; ?>

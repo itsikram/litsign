@@ -1,0 +1,3913 @@
+{
+	"files": [
+		{
+			"file": "10ft-20ft-seg-fabric-display-installation-guide.pdf",
+			"title": "10ft 20ft SEG Fabric Display Installation Guide (PDF)",
+			"alt": "",
+			"parent": "10ft-seg-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/c7312edceea2d84050649d08aec8bef3a96815c5"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-curved-tension-fabric-display-template.pdf",
+			"title": "10ft Curved Tension Fabric Display PDF Template",
+			"alt": "",
+			"parent": "curved-tension-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/efcf2d88b5b2672b4d4802079475c08f3b9d3e49"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-curved-velcro-fabric-pop-up-display-template.pdf",
+			"title": "10ft Curved Velcro Fabric Pop Up Display PDF Template",
+			"alt": "",
+			"parent": "curved-velcro-fabric-pop-up-display-graphic-frame",
+			"sources": [
+				"/downloadable/877640ade9c0932f3e582047d9d91ca2c07c732b"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-seg-backlit-display-installation-guide.pdf",
+			"title": "10ft SEG Backlit Display Installation Guide (PDF)",
+			"alt": "",
+			"parent": "10ft-seg-backlit-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/1d9724a05d2e46fda65d380bfa98198e9a5810dc"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-seg-backlit-fabric-display-double-sided-template.pdf",
+			"title": "10ft SEG Backlit Fabric Display Double-Sided PDF Template",
+			"alt": "",
+			"parent": "10ft-seg-backlit-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/b36716dd2a4d2fe99a35c1d84629bc9186cfe211"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-seg-backlit-fabric-display-single-sided-template.pdf",
+			"title": "10ft SEG Backlit Fabric Display Single-Sided PDF Template",
+			"alt": "",
+			"parent": "10ft-seg-backlit-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/9481335360602d5a3061fa8004338a6156f5fc5e"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-seg-backlit-popup-display-double-sided-template.pdf",
+			"title": "10ft SEG Backlit Popup Display Double-Sided PDF Template",
+			"alt": "",
+			"parent": "10ft-seg-backlit-popup-display-graphic-frame",
+			"sources": [
+				"/downloadable/43f949ac8fcf92e7f6b764573d547f35cbce7c27"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-seg-backlit-popup-display-single-sided-template.pdf",
+			"title": "10ft SEG Backlit Popup Display Single-Sided PDF Template",
+			"alt": "",
+			"parent": "10ft-seg-backlit-popup-display-graphic-frame",
+			"sources": [
+				"/downloadable/c774e3d734b8e03d23fbc2659607db1ead43e279"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-seg-fabric-display-double-sided-template.pdf",
+			"title": "10ft SEG Fabric Display Double-Sided PDF Template",
+			"alt": "",
+			"parent": "10ft-seg-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/431e80288c5d8ba19a3c090f2ee3c7cf68fe21df"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-seg-fabric-display-single-sided-template.pdf",
+			"title": "10ft SEG Fabric Display Single-Sided PDF Template",
+			"alt": "",
+			"parent": "10ft-seg-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/471560a7935286459012dc5e3cc0c00e4b209cc6"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-straight-tension-fabric-display-template.pdf",
+			"title": "10ft Straight Tension Fabric Display PDF Template",
+			"alt": "",
+			"parent": "straight-tension-fabric-displays-graphic-frame",
+			"sources": [
+				"/downloadable/739c95c2957e3668127a904ad64cd428d7895fe7"
+			],
+			"old": []
+		},
+		{
+			"file": "10ft-straight-velcro-fabric-pop-up-display-template.pdf",
+			"title": "10ft Straight Velcro Fabric Pop Up Display PDF Template",
+			"alt": "",
+			"parent": "straight-velcro-fabric-pop-up-display-graphic-frame",
+			"sources": [
+				"/downloadable/b3ae37a3c557f24062fc78b8cff3470c87443b44"
+			],
+			"old": []
+		},
+		{
+			"file": "20ft-seg-fabric-display-double-sided-template.pdf",
+			"title": "20ft SEG Fabric Display Double-Sided PDF Template",
+			"alt": "",
+			"parent": "20ft-seg-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/3fc68fcfd2adcd0b2274212f41653446f27fc4b8"
+			],
+			"old": []
+		},
+		{
+			"file": "20ft-seg-fabric-display-single-sided-template.pdf",
+			"title": "20ft SEG Fabric Display Single-Sided PDF Template",
+			"alt": "",
+			"parent": "20ft-seg-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/bfa47378eeed895c04f5518af9acced2fb4c4699"
+			],
+			"old": []
+		},
+		{
+			"file": "20ft-straight-tension-fabric-display-template.pdf",
+			"title": "20ft Straight Tension Fabric Display PDF Template",
+			"alt": "",
+			"parent": "straight-tension-fabric-displays-graphic-frame",
+			"sources": [
+				"/downloadable/6acbf3afe394e38f531946775f6aeccc54627b07"
+			],
+			"old": []
+		},
+		{
+			"file": "3ft-seg-display-installation-guide.pdf",
+			"title": "3ft SEG Display Installation Guide (PDF)",
+			"alt": "",
+			"parent": "3ft-seg-fabric-stand-graphic-frame",
+			"sources": [
+				"/downloadable/793c48d12ad58df51bf8f739eadb7ba86ed3019e"
+			],
+			"old": []
+		},
+		{
+			"file": "3ft-seg-fabric-stand-double-sided-template.pdf",
+			"title": "3ft SEG Fabric Stand Double-Sided PDF Template",
+			"alt": "",
+			"parent": "3ft-seg-fabric-stand-graphic-frame",
+			"sources": [
+				"/downloadable/12af32302d1a222f1ca371d3d18e0d34872f7808"
+			],
+			"old": []
+		},
+		{
+			"file": "3ft-seg-fabric-stand-single-sided-template.pdf",
+			"title": "3ft SEG Fabric Stand Single-Sided PDF Template",
+			"alt": "",
+			"parent": "3ft-seg-fabric-stand-graphic-frame",
+			"sources": [
+				"/downloadable/374f753c1f925e1b238782f4c10cb3530084a994"
+			],
+			"old": []
+		},
+		{
+			"file": "3ft-tension-fabric-stand-template.pdf",
+			"title": "3ft Tension Fabric Stand PDF Template",
+			"alt": "",
+			"parent": "tension-fabric-stand-graphic-frame",
+			"sources": [
+				"/downloadable/6720630bf5ec6747ab64875fb14be89dad3d21dc"
+			],
+			"old": [
+				"ac6b3b76-Tension_Fabric_Stand_3ft_Straight.pdf"
+			]
+		},
+		{
+			"file": "4ft-table-cover-3-sided-open-back-template.pdf",
+			"title": "4ft Table Cover 3-Sided Open-Back PDF Template",
+			"alt": "",
+			"parent": "4ft-table-cover",
+			"sources": [
+				"/downloadable/598c5997967510e60f1682b24c459b42949ce8e0"
+			],
+			"old": []
+		},
+		{
+			"file": "4ft-table-cover-4-sided-closed-back-template.pdf",
+			"title": "4ft Table Cover 4-Sided Closed-Back PDF Template",
+			"alt": "",
+			"parent": "4ft-table-cover",
+			"sources": [
+				"/downloadable/b40453e1bf8ef3c802df23eacf7fda7cd9380b6e"
+			],
+			"old": []
+		},
+		{
+			"file": "4ft-tension-fabric-stand-template.pdf",
+			"title": "4ft Tension Fabric Stand PDF Template",
+			"alt": "",
+			"parent": "tension-fabric-stand-graphic-frame",
+			"sources": [
+				"/downloadable/dc721f79eab1114de3fc349efa8eafe2f5268f11"
+			],
+			"old": [
+				"39e394be-Tension_Fabric_Stand_4ft_Straight.pdf"
+			]
+		},
+		{
+			"file": "6ft-curved-tension-fabric-display-template.pdf",
+			"title": "6ft Curved Tension Fabric Display PDF Template",
+			"alt": "",
+			"parent": "curved-tension-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/15f4e9b54871811ab2d48dd62479e3831f56b3b6"
+			],
+			"old": []
+		},
+		{
+			"file": "6ft-stretch-table-cover-template.pdf",
+			"title": "6ft Stretch Table Cover PDF Template",
+			"alt": "",
+			"parent": "stretch-table-cover",
+			"sources": [
+				"/downloadable/e71203ac4a0f96a4679c373d9f60cec85fa26a86"
+			],
+			"old": []
+		},
+		{
+			"file": "6ft-table-cover-3-sided-open-back-template.pdf",
+			"title": "6ft Table Cover 3-Sided Open-Back PDF Template",
+			"alt": "",
+			"parent": "6ft-table-cover",
+			"sources": [
+				"/downloadable/954e80cb93b34652e42e006254fc5cbe57151b35"
+			],
+			"old": []
+		},
+		{
+			"file": "6ft-table-cover-3-sided-open-back-template.psd",
+			"title": "6ft Table Cover 3-Sided Open-Back Photoshop PSD Template",
+			"alt": "",
+			"parent": "6ft-table-cover",
+			"sources": [
+				"/downloadable/40b334c6c770acb93f4297772c77cc304c869755"
+			],
+			"old": []
+		},
+		{
+			"file": "6ft-table-cover-4-sided-closed-back-template.pdf",
+			"title": "6ft Table Cover 4-Sided Closed-Back PDF Template",
+			"alt": "",
+			"parent": "6ft-table-cover",
+			"sources": [
+				"/downloadable/ca2cfa04ffbe4e54f6ac2159922acc02ea584e9b"
+			],
+			"old": []
+		},
+		{
+			"file": "6ft-table-cover-4-sided-closed-back-template.psd",
+			"title": "6ft Table Cover 4-Sided Closed-Back Photoshop PSD Template",
+			"alt": "",
+			"parent": "6ft-table-cover",
+			"sources": [
+				"/downloadable/145e68848f7c81e256beb32bf1147e7035f6b747"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-curved-tension-fabric-display-template.pdf",
+			"title": "8ft Curved Tension Fabric Display PDF Template",
+			"alt": "",
+			"parent": "curved-tension-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/631007f1af490033ae8b34c11798f043e97d2bbe"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-curved-velcro-fabric-pop-up-display-template.pdf",
+			"title": "8ft Curved Velcro Fabric Pop Up Display PDF Template",
+			"alt": "",
+			"parent": "curved-velcro-fabric-pop-up-display-graphic-frame",
+			"sources": [
+				"/downloadable/1cbb7a2b89749da220e73d46aef19b9786ee6451"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-seg-backlit-popup-display-double-sided-template.pdf",
+			"title": "8ft SEG Backlit Popup Display Double-Sided PDF Template",
+			"alt": "",
+			"parent": "8ft-seg-backlit-popup-display-graphic-frame",
+			"sources": [
+				"/downloadable/0040afc3cbe46e5b7250d3de40a8d4e127fac354"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-seg-backlit-popup-display-single-sided-template.pdf",
+			"title": "8ft SEG Backlit Popup Display Single-Sided PDF Template",
+			"alt": "",
+			"parent": "8ft-seg-backlit-popup-display-graphic-frame",
+			"sources": [
+				"/downloadable/bd969f9173267b696c09fd4a2b8e55d55e478216"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-straight-tension-fabric-display-template.pdf",
+			"title": "8ft Straight Tension Fabric Display PDF Template",
+			"alt": "",
+			"parent": "straight-tension-fabric-displays-graphic-frame",
+			"sources": [
+				"/downloadable/fdae4b6cd0069dd272ccb6c442eac27dedac2738"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-straight-velcro-fabric-pop-up-display-template.pdf",
+			"title": "8ft Straight Velcro Fabric Pop Up Display PDF Template",
+			"alt": "",
+			"parent": "straight-velcro-fabric-pop-up-display-graphic-frame",
+			"sources": [
+				"/downloadable/f6ec3c2cbd0aa13c608518260a9f0b5af7918f04"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-stretch-table-cover-template.pdf",
+			"title": "8ft Stretch Table Cover PDF Template",
+			"alt": "",
+			"parent": "stretch-table-cover",
+			"sources": [
+				"/downloadable/5bac04c7fa34637bdbcd07ebb96f69d6fc5c0d7c"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-table-cover-3-sided-open-back-template.pdf",
+			"title": "8ft Table Cover 3-Sided Open-Back PDF Template",
+			"alt": "",
+			"parent": "8ft-table-cover",
+			"sources": [
+				"/downloadable/8460ad78f38ed8fb31d9baaa4248df22bf718824"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-table-cover-3-sided-open-back-template.psd",
+			"title": "8ft Table Cover 3-Sided Open-Back Photoshop PSD Template",
+			"alt": "",
+			"parent": "8ft-table-cover",
+			"sources": [
+				"/downloadable/99144061e4bcf506330d7f6d4390b8dbacf14f26"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-table-cover-4-sided-closed-back-template.pdf",
+			"title": "8ft Table Cover 4-Sided Closed-Back PDF Template",
+			"alt": "",
+			"parent": "8ft-table-cover",
+			"sources": [
+				"/downloadable/95da508590afce460e03a8c0c120b02d2e3f4370"
+			],
+			"old": []
+		},
+		{
+			"file": "8ft-table-cover-4-sided-closed-back-template.psd",
+			"title": "8ft Table Cover 4-Sided Closed-Back Photoshop PSD Template",
+			"alt": "",
+			"parent": "8ft-table-cover",
+			"sources": [
+				"/downloadable/f6c3feb6949144385b160920e7ac60c48d14e7e1"
+			],
+			"old": []
+		},
+		{
+			"file": "adobe-illustrator-file-icon.jpg",
+			"title": "Adobe Illustrator (AI) file icon",
+			"alt": "Adobe Illustrator (AI) file icon",
+			"parent": "4ft-table-cover",
+			"sources": [
+				"/image/item/230726/wfzJgAwF.jpg"
+			],
+			"old": [
+				"8d6c9a72-wfzJgAwF.jpg"
+			]
+		},
+		{
+			"file": "available-check-icon.png",
+			"title": "Available",
+			"alt": "Available",
+			"parent": "real-estate-post-sign",
+			"sources": [
+				"/image/item/240404/jGw3GXyw.png"
+			],
+			"old": [
+				"e59b991b-jGw3GXyw.png"
+			]
+		},
+		{
+			"file": "back-lit-halo-channel-letter-on-brick-wall.png",
+			"title": "Back lit channel letter with a halo glow on a brick wall",
+			"alt": "Back lit channel letter with a halo glow on a brick wall",
+			"parent": "standard-channel-letter-back-lit",
+			"sources": [
+				"/image/item/230726/tKqLBSnh.png"
+			],
+			"old": [
+				"d308ab6d-tKqLBSnh.png"
+			]
+		},
+		{
+			"file": "backlit-popup-display-frame-installation-guide.pdf",
+			"title": "Backlit Popup Display Frame Installation Guide (PDF)",
+			"alt": "",
+			"parent": "8ft-seg-backlit-popup-display-graphic-frame",
+			"sources": [
+				"/downloadable/734263e191de6a0dbb499ccedbbe2bba37c239c3"
+			],
+			"old": []
+		},
+		{
+			"file": "backlit-popup-display-led-lights-installation-guide.pdf",
+			"title": "Backlit Popup Display LED Lights Installation Guide (PDF)",
+			"alt": "",
+			"parent": "8ft-seg-backlit-popup-display-graphic-frame",
+			"sources": [
+				"/downloadable/3b6b4501ae029016b927716194823507d4101c94"
+			],
+			"old": []
+		},
+		{
+			"file": "borderless-channel-letter-acrylic-face-diagram.png",
+			"title": "Diagram of the white acrylic face on a borderless channel letter",
+			"alt": "Diagram of the white acrylic face on a borderless channel letter",
+			"parent": "exposed-acrylic-face-lit-borderless-no-trimcap",
+			"sources": [
+				"/image/item/230818/EXlbd9aD.png"
+			],
+			"old": [
+				"5e730a05-EXlbd9aD.png"
+			]
+		},
+		{
+			"file": "borderless-channel-letter-stainless-steel-back-diagram.png",
+			"title": "Diagram of the stainless steel back on a borderless channel letter",
+			"alt": "Diagram of the stainless steel back on a borderless channel letter",
+			"parent": "exposed-acrylic-face-lit-borderless-no-trimcap",
+			"sources": [
+				"/image/item/230818/51Tcn8LT.png"
+			],
+			"old": [
+				"a52724a4-51Tcn8LT.png"
+			]
+		},
+		{
+			"file": "borderless-channel-letter-stainless-steel-return-diagram.png",
+			"title": "Diagram of the stainless steel return on a borderless channel letter",
+			"alt": "Diagram of the stainless steel return on a borderless channel letter",
+			"parent": "exposed-acrylic-face-lit-borderless-no-trimcap",
+			"sources": [
+				"/image/item/230818/aWIxCA12.png"
+			],
+			"old": [
+				"764fa2bc-aWIxCA12.png"
+			]
+		},
+		{
+			"file": "borderless-face-lit-channel-letter-back-view.jpg",
+			"title": "Back view of a borderless face lit stainless steel channel letter",
+			"alt": "Back view of a borderless face lit stainless steel channel letter",
+			"parent": "exposed-acrylic-face-lit-borderless-no-trimcap",
+			"sources": [
+				"/image/item/230818/ok50PgNf.jpg"
+			],
+			"old": [
+				"011e217a-ok50PgNf.jpg"
+			]
+		},
+		{
+			"file": "borderless-face-lit-channel-letter-front-view.jpg",
+			"title": "Front view of a borderless face lit channel letter with a white acrylic face",
+			"alt": "Front view of a borderless face lit channel letter with a white acrylic face",
+			"parent": "exposed-acrylic-face-lit-borderless-no-trimcap",
+			"sources": [
+				"/image/item/230818/YJyloUGc.jpg"
+			],
+			"old": [
+				"e726d2a5-YJyloUGc.jpg"
+			]
+		},
+		{
+			"file": "california-prop-65-warning-icon.png",
+			"title": "California Proposition 65 warning symbol",
+			"alt": "California Proposition 65 warning symbol",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/230725/Kz3iANVm.png"
+			],
+			"old": [
+				"1a21e6a8-Kz3iANVm.png"
+			]
+		},
+		{
+			"file": "canvas-wrap-edge-options.jpg",
+			"title": "Canvas wrap edge options: black, white, folded and mirrored edges",
+			"alt": "Canvas wrap edge options: black, white, folded and mirrored edges",
+			"parent": "canvas-wrap",
+			"sources": [
+				"/image/item/230725/L7G4NMRF.jpg"
+			],
+			"old": [
+				"9eab8be4-L7G4NMRF.jpg"
+			]
+		},
+		{
+			"file": "channel-letter-acrylic-face-diagram.png",
+			"title": "Diagram showing the acrylic face of a channel letter",
+			"alt": "Diagram showing the acrylic face of a channel letter",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/230817/QCPhLBdY.png"
+			],
+			"old": [
+				"909438b7-QCPhLBdY.png"
+			]
+		},
+		{
+			"file": "channel-letter-aluminum-return-diagram.png",
+			"title": "Diagram showing the aluminum return on the side of a channel letter",
+			"alt": "Diagram showing the aluminum return on the side of a channel letter",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/230817/SA7wkGre.png"
+			],
+			"old": [
+				"ce42031d-SA7wkGre.png"
+			]
+		},
+		{
+			"file": "channel-letter-installation-manual.pdf",
+			"title": "Channel Letter Installation Manual (PDF)",
+			"alt": "",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/item/download/lG1ary2h"
+			],
+			"old": []
+		},
+		{
+			"file": "channel-letter-raceway-assembly.jpg",
+			"title": "Channel letter raceway assembly with end caps",
+			"alt": "Channel letter raceway assembly with end caps",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/240620/2xljQILp.jpg"
+			],
+			"old": [
+				"3b988d6e-2xljQILp.jpg"
+			]
+		},
+		{
+			"file": "channel-letter-raceway-hanger-installation.jpg",
+			"title": "Mounting hangers installed on a channel letter raceway",
+			"alt": "Mounting hangers installed on a channel letter raceway",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/240620/N5m75sGP.jpg"
+			],
+			"old": [
+				"15b5ef6e-N5m75sGP.jpg"
+			]
+		},
+		{
+			"file": "channel-letter-raceway-installation-parts.jpg",
+			"title": "Channel letter raceway installation parts laid out",
+			"alt": "Channel letter raceway installation parts laid out",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/240620/Oi7FPphd.jpg"
+			],
+			"old": [
+				"bd57f997-Oi7FPphd.jpg"
+			]
+		},
+		{
+			"file": "channel-letter-return-color-chart.png",
+			"title": "Channel letter aluminum return color chart",
+			"alt": "Channel letter aluminum return color chart",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/230817/QLvjyTDS.png"
+			],
+			"old": [
+				"94e9a312-QLvjyTDS.png"
+			]
+		},
+		{
+			"file": "channel-letter-trimcap-color-chart.png",
+			"title": "Channel letter trimcap color chart",
+			"alt": "Channel letter trimcap color chart",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/230817/0MauwHBy.png"
+			],
+			"old": [
+				"29e02e39-0MauwHBy.png"
+			]
+		},
+		{
+			"file": "channel-letter-trimcap-diagram.png",
+			"title": "Diagram showing the trimcap around the face of a channel letter",
+			"alt": "Diagram showing the trimcap around the face of a channel letter",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/230817/aWhVq9pB.png"
+			],
+			"old": [
+				"28346b7e-aWhVq9pB.png"
+			]
+		},
+		{
+			"file": "channel-letter-vinyl-face-color-chart.png",
+			"title": "Channel letter translucent vinyl face color chart",
+			"alt": "Channel letter translucent vinyl face color chart",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/230817/bvTujeVe.png"
+			],
+			"old": [
+				"c2e20443-bvTujeVe.png"
+			]
+		},
+		{
+			"file": "coreldraw-cdr-template-file-icon.png",
+			"title": "CorelDRAW (CDR) template file icon",
+			"alt": "CorelDRAW (CDR) template file icon",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/image/item/230814/VxXcPPFK.png"
+			],
+			"old": [
+				"6943abd3-VxXcPPFK.png"
+			]
+		},
+		{
+			"file": "curved-tension-fabric-display-installation-guide.pdf",
+			"title": "Curved Tension Fabric Display Installation Guide (PDF)",
+			"alt": "",
+			"parent": "curved-tension-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/f767f69c55fde801cf55f1e8b97d4d664c1f4c93"
+			],
+			"old": []
+		},
+		{
+			"file": "curved-tension-fabric-display-installation-step-1-connect-frame.jpg",
+			"title": "Curved tension fabric display installation step 1: connect the numbered frame tubes",
+			"alt": "Curved tension fabric display installation step 1: connect the numbered frame tubes",
+			"parent": "curved-tension-fabric-display-graphic-frame",
+			"sources": [
+				"/image/item/240408/TQvE3WnQ.jpg"
+			],
+			"old": [
+				"f3a0c295-TQvE3WnQ.jpg"
+			]
+		},
+		{
+			"file": "curved-tension-fabric-display-installation-step-2-zip-on-graphic.jpg",
+			"title": "Curved tension fabric display installation step 2: wrap the graphic over the frame and zip it up",
+			"alt": "Curved tension fabric display installation step 2: wrap the graphic over the frame and zip it up",
+			"parent": "curved-tension-fabric-display-graphic-frame",
+			"sources": [
+				"/image/item/240408/G3Jw6DZI.jpg"
+			],
+			"old": [
+				"69542ee3-G3Jw6DZI.jpg"
+			]
+		},
+		{
+			"file": "curved-tension-fabric-display-installation-step-3-light-clips.jpg",
+			"title": "Curved tension fabric display installation step 3: attach the light clips to the top of the display",
+			"alt": "Curved tension fabric display installation step 3: attach the light clips to the top of the display",
+			"parent": "curved-tension-fabric-display-graphic-frame",
+			"sources": [
+				"/image/item/240408/NCSeaNvD.jpg"
+			],
+			"old": [
+				"12384dc3-NCSeaNvD.jpg"
+			]
+		},
+		{
+			"file": "custom-printed-event-tent-canopy.jpg",
+			"title": "Custom printed 10x10 event tent canopy",
+			"alt": "Custom printed 10x10 event tent canopy",
+			"parent": "event-tent-full-canopy-graphic-frame",
+			"sources": [
+				"/image/item/230714/Ls46nibr.jpg"
+			],
+			"old": [
+				"87365e36-Ls46nibr.jpg"
+			]
+		},
+		{
+			"file": "deluxe-retractable-banner-artwork-size-diagram.jpg",
+			"title": "Deluxe retractable banner artwork size diagram, 33 x 81 inches with safety margins",
+			"alt": "Deluxe retractable banner artwork size diagram, 33 x 81 inches with safety margins",
+			"parent": "deluxe-retractable-insert-stand",
+			"sources": [
+				"/image/item/240328/vgP3CqV7.jpg"
+			],
+			"old": [
+				"466f09a0-vgP3CqV7.jpg"
+			]
+		},
+		{
+			"file": "econo-feather-flag-installation-step-1-position-pole-set.jpg",
+			"title": "Econo feather flag installation step 1: position the pole set",
+			"alt": "Econo feather flag installation step 1: position the pole set",
+			"parent": "econo-feather-flag-pole",
+			"sources": [
+				"/image/item/240408/wGJgb4wx.jpg"
+			],
+			"old": [
+				"f5cb4516-wGJgb4wx.jpg"
+			]
+		},
+		{
+			"file": "econo-feather-flag-installation-step-2-connect-poles.jpg",
+			"title": "Econo feather flag installation step 2: connect the poles",
+			"alt": "Econo feather flag installation step 2: connect the poles",
+			"parent": "econo-feather-flag-pole",
+			"sources": [
+				"/image/item/240408/7z4JhDJr.jpg"
+			],
+			"old": [
+				"8282b072-7z4JhDJr.jpg"
+			]
+		},
+		{
+			"file": "econo-feather-flag-installation-step-3-slide-flag-onto-pole.jpg",
+			"title": "Econo feather flag installation step 3: slide the flag onto the pole",
+			"alt": "Econo feather flag installation step 3: slide the flag onto the pole",
+			"parent": "econo-feather-flag-pole",
+			"sources": [
+				"/image/item/240408/jgZJ7pZ3.jpg"
+			],
+			"old": [
+				"d42794a5-jgZJ7pZ3.jpg"
+			]
+		},
+		{
+			"file": "econo-feather-flag-installation-step-4-secure-flag.jpg",
+			"title": "Econo feather flag installation step 4: secure the flag down the pole",
+			"alt": "Econo feather flag installation step 4: secure the flag down the pole",
+			"parent": "econo-feather-flag-pole",
+			"sources": [
+				"/image/item/240408/397ppWtU.jpg"
+			],
+			"old": [
+				"0c02019f-397ppWtU.jpg"
+			]
+		},
+		{
+			"file": "econo-feather-flag-single-sided-print-through-template.cdr",
+			"title": "Econo Feather Flag Single Sided Print-Through CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "econo-feather-flag-pole",
+			"sources": [
+				"/downloadable/487d92074c658f247856f9059ea59a69c61410db"
+			],
+			"old": []
+		},
+		{
+			"file": "econo-feather-flag-single-sided-print-through-template.pdf",
+			"title": "Econo Feather Flag Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "econo-feather-flag-pole",
+			"sources": [
+				"/downloadable/3f96de608d6183d6b0ad534450cf70eff9c147e4"
+			],
+			"old": []
+		},
+		{
+			"file": "econo-feather-flag-single-sided-print-through-template.psd",
+			"title": "Econo Feather Flag Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "econo-feather-flag-pole",
+			"sources": [
+				"/downloadable/02023d9b5191dd948a42e82b4e735a013058168a"
+			],
+			"old": []
+		},
+		{
+			"file": "econo-flag-ground-stake.jpg",
+			"title": "Ground stake for econo feather and stock flags",
+			"alt": "Ground stake for econo feather and stock flags",
+			"parent": "econo-feather-flag-pole",
+			"sources": [
+				"/image/page/240312/TIKttFZw.jpg"
+			],
+			"old": [
+				"8dcc4e6c-TIKttFZw.jpg"
+			]
+		},
+		{
+			"file": "event-tent-canopy-sides-a-b-c-d-diagram.png",
+			"title": "Top-down diagram of event tent canopy sides A, B, C and D for artwork",
+			"alt": "Top-down diagram of event tent canopy sides A, B, C and D for artwork",
+			"parent": "event-tent-full-canopy-graphic-frame",
+			"sources": [
+				"/image/item/230727/jh1kXHtr.png"
+			],
+			"old": [
+				"6f0a5877-jh1kXHtr.png"
+			]
+		},
+		{
+			"file": "event-tent-canopy-template.pdf",
+			"title": "Event Tent Canopy PDF Template",
+			"alt": "",
+			"parent": "event-tent-full-canopy-graphic-frame",
+			"sources": [
+				"/downloadable/678c62a2ccbc02e32a592e0057b0840e876884da"
+			],
+			"old": []
+		},
+		{
+			"file": "event-tent-canopy-template.psd",
+			"title": "Event Tent Canopy Photoshop PSD Template",
+			"alt": "",
+			"parent": "event-tent-full-canopy-graphic-frame",
+			"sources": [
+				"/downloadable/e57236a09106419ddcd86aea890f6fbea87c1e94"
+			],
+			"old": []
+		},
+		{
+			"file": "event-tent-full-wall-template.pdf",
+			"title": "Event Tent Full Wall PDF Template",
+			"alt": "",
+			"parent": "event-tent-full-canopy-graphic-frame",
+			"sources": [
+				"/downloadable/a848616120e0e0e9840a56f1c933845ceafa84f4"
+			],
+			"old": []
+		},
+		{
+			"file": "event-tent-full-wall-template.psd",
+			"title": "Event Tent Full Wall Photoshop PSD Template",
+			"alt": "",
+			"parent": "event-tent-full-canopy-graphic-frame",
+			"sources": [
+				"/downloadable/6235ae9b0107e6c22a73709f8c07e08e469280ee"
+			],
+			"old": []
+		},
+		{
+			"file": "event-tent-half-wall-template.pdf",
+			"title": "Event Tent Half Wall PDF Template",
+			"alt": "",
+			"parent": "event-tent-full-canopy-graphic-frame",
+			"sources": [
+				"/downloadable/3728b9387600be6e0da4bacb905dc518099df010"
+			],
+			"old": []
+		},
+		{
+			"file": "event-tent-half-wall-template.psd",
+			"title": "Event Tent Half Wall Photoshop PSD Template",
+			"alt": "",
+			"parent": "event-tent-full-canopy-graphic-frame",
+			"sources": [
+				"/downloadable/4732d872ec33a9c2525d083926f60274d9c61eb4"
+			],
+			"old": []
+		},
+		{
+			"file": "event-tent-installation-guide.pdf",
+			"title": "Event Tent Installation Guide (PDF)",
+			"alt": "",
+			"parent": "event-tent-full-canopy-graphic-frame",
+			"sources": [
+				"/downloadable/6dc92a4a1e2a7f655005a1e629849ff2e76aecc4"
+			],
+			"old": []
+		},
+		{
+			"file": "event-tent-with-full-printed-back-wall.jpg",
+			"title": "Event tent with a full color printed full back wall",
+			"alt": "Event tent with a full color printed full back wall",
+			"parent": "tent-walls-full-color-full-wall",
+			"sources": [
+				"/image/item/230730/qxJsc6R4.jpg"
+			],
+			"old": [
+				"4a5d5690-qxJsc6R4.jpg"
+			]
+		},
+		{
+			"file": "event-tent-with-printed-half-walls.jpg",
+			"title": "Event tent with full color printed half walls",
+			"alt": "Event tent with full color printed half walls",
+			"parent": "tent-walls-full-color-half-wall",
+			"sources": [
+				"/image/item/230802/1zfIvXLP.jpg"
+			],
+			"old": [
+				"95c35cfd-1zfIvXLP.jpg"
+			]
+		},
+		{
+			"file": "feather-angled-flag-extra-large-double-sided-template.cdr",
+			"title": "Feather Angled Flag Extra Large Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/04101feb0b39422395cce122ae96d610cafb613b"
+			],
+			"old": [
+				"3ffc904f-angled-xlarge-double.cdr"
+			]
+		},
+		{
+			"file": "feather-angled-flag-extra-large-double-sided-template.pdf",
+			"title": "Feather Angled Flag Extra Large Double Sided PDF Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/10fe5352391918e4e5e18905a68e98d4321a8f32"
+			],
+			"old": [
+				"0c4fd18f-FeatherAngled_XL_DoubleSided.pdf"
+			]
+		},
+		{
+			"file": "feather-angled-flag-extra-large-double-sided-template.psd",
+			"title": "Feather Angled Flag Extra Large Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/d1d99a25894d52ee0448065cb3a0fa33f652aa0a"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-angled-flag-extra-large-single-sided-print-through-template.pdf",
+			"title": "Feather Angled Flag Extra Large Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/05d61c344c0791c66f81e1b743cc47f6ac449095"
+			],
+			"old": [
+				"c8d7e568-FeatherAngled_XL_SingleSided_PrintThru.pdf"
+			]
+		},
+		{
+			"file": "feather-angled-flag-extra-large-single-sided-print-through-template.psd",
+			"title": "Feather Angled Flag Extra Large Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/f5a59631fd343bb14d4a8bed8beba2138c690523"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-angled-flag-extra-large-single-sided-template.cdr",
+			"title": "Feather Angled Flag Extra Large Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/4360fff17000f9eefbf2211486aa4bd341f7540d"
+			],
+			"old": [
+				"0c6b7761-angled-xlarge-single.cdr"
+			]
+		},
+		{
+			"file": "feather-angled-flag-large-double-sided-template.cdr",
+			"title": "Feather Angled Flag Large Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/05315aeae1a5620382b7f9fe0326eab2ec0c0877"
+			],
+			"old": [
+				"f1ab6ba5-angled-large-double.cdr"
+			]
+		},
+		{
+			"file": "feather-angled-flag-large-double-sided-template.pdf",
+			"title": "Feather Angled Flag Large Double Sided PDF Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/83064dff6e0ce3f09d89c1641cb8400cb45b5cb1"
+			],
+			"old": [
+				"ec525f9d-FeatherAngled_L_DoubleSided.pdf"
+			]
+		},
+		{
+			"file": "feather-angled-flag-large-double-sided-template.psd",
+			"title": "Feather Angled Flag Large Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/1fb50d237885fff51aa0257d407a83e745c95e60"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-angled-flag-large-single-sided-print-through-template.pdf",
+			"title": "Feather Angled Flag Large Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/0895772a89dad1c9c0c5a194d797edb447f86907"
+			],
+			"old": [
+				"20b5930c-FeatherAngled_L_SingleSided_PrintThru.pdf"
+			]
+		},
+		{
+			"file": "feather-angled-flag-large-single-sided-print-through-template.psd",
+			"title": "Feather Angled Flag Large Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/172ff826e80482383f35cbae71b3bd2120512dff"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-angled-flag-large-single-sided-template.cdr",
+			"title": "Feather Angled Flag Large Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/22462ec3f8663796a8d5f543e8109ed4bc4727e3"
+			],
+			"old": [
+				"729fe010-angled-large-single.cdr"
+			]
+		},
+		{
+			"file": "feather-angled-flag-medium-double-sided-template.cdr",
+			"title": "Feather Angled Flag Medium Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/f81121721654aa0fc91ec28ad8973edab7f680b0"
+			],
+			"old": [
+				"32f94858-angled-medium-double.cdr"
+			]
+		},
+		{
+			"file": "feather-angled-flag-medium-double-sided-template.pdf",
+			"title": "Feather Angled Flag Medium Double Sided PDF Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/3646e7132420d0f6146936e0159955d584476e05"
+			],
+			"old": [
+				"450b4d01-FeatherAngled_M_DoubleSided.pdf"
+			]
+		},
+		{
+			"file": "feather-angled-flag-medium-double-sided-template.psd",
+			"title": "Feather Angled Flag Medium Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/d08e0060b84162bdf809c07c29532234b78f5f5f"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-angled-flag-medium-single-sided-print-through-template.pdf",
+			"title": "Feather Angled Flag Medium Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/2ce3c8dbd2d62796db863de839e3a8178fc15f48"
+			],
+			"old": [
+				"c3a06763-FeatherAngled_M_SingleSided_PrintThru.pdf"
+			]
+		},
+		{
+			"file": "feather-angled-flag-medium-single-sided-print-through-template.psd",
+			"title": "Feather Angled Flag Medium Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/dca02818958679b99e9cfb650a8ba8014642e9e2"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-angled-flag-medium-single-sided-template.cdr",
+			"title": "Feather Angled Flag Medium Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/c835b9a11c91e103c62006fca5a53dd50cd7fa4e"
+			],
+			"old": [
+				"19d5c582-angled-medium-single.cdr"
+			]
+		},
+		{
+			"file": "feather-angled-flag-size-chart.jpg",
+			"title": "Feather angled flag size chart: small, medium, large and extra large heights from 6 to 18 feet",
+			"alt": "Feather angled flag size chart: small, medium, large and extra large heights from 6 to 18 feet",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/image/item/240308/vU8HVKND.jpg"
+			],
+			"old": [
+				"3eb80da0-vU8HVKND.jpg"
+			]
+		},
+		{
+			"file": "feather-angled-flag-small-double-sided-template.cdr",
+			"title": "Feather Angled Flag Small Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/60a6c6c678dd7b5c66926fcae8c507991263e1b2"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-angled-flag-small-double-sided-template.pdf",
+			"title": "Feather Angled Flag Small Double Sided PDF Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/8fb3636d3c59c7d6f4379917f07ac6a6086edb6f"
+			],
+			"old": [
+				"e8981fc7-FeatherAngled_S_DoubleSided.pdf"
+			]
+		},
+		{
+			"file": "feather-angled-flag-small-double-sided-template.psd",
+			"title": "Feather Angled Flag Small Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/a4a39c8fa16bb6589237b64726f7ac87a738390f"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-angled-flag-small-single-sided-print-through-template.pdf",
+			"title": "Feather Angled Flag Small Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/b05721223e326aa074d7d922c42616644e9990cf"
+			],
+			"old": [
+				"23d057e8-FeatherAngled_S_SingleSided_PrintThru.pdf"
+			]
+		},
+		{
+			"file": "feather-angled-flag-small-single-sided-print-through-template.psd",
+			"title": "Feather Angled Flag Small Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/5375f758b968969064d52696f6d9d436c4526926"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-angled-flag-small-single-sided-template.cdr",
+			"title": "Feather Angled Flag Small Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/downloadable/c2a07c7116e62edc5c80268ec501dfb6f54cda1a"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-convex-flag-extra-large-double-sided-template.pdf",
+			"title": "Feather Convex Flag Extra Large Double Sided PDF Template",
+			"alt": "",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/downloadable/6db11c22a91637c05dec4e557807dd2ea11131f0"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-convex-flag-extra-large-single-sided-print-through-template.pdf",
+			"title": "Feather Convex Flag Extra Large Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/downloadable/537bfff142807bb959265089fb0362b04da3f49d"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-convex-flag-installation-step-1-position-pole-set.jpg",
+			"title": "Feather convex flag installation step 1: position the pole set",
+			"alt": "Feather convex flag installation step 1: position the pole set",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/image/item/240404/NueqXgkw.jpg"
+			],
+			"old": [
+				"11417442-NueqXgkw.jpg"
+			]
+		},
+		{
+			"file": "feather-convex-flag-installation-step-2-connect-poles.jpg",
+			"title": "Feather convex flag installation step 2: connect the poles",
+			"alt": "Feather convex flag installation step 2: connect the poles",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/image/item/240404/8pOY2huA.jpg"
+			],
+			"old": [
+				"f5ccf121-8pOY2huA.jpg"
+			]
+		},
+		{
+			"file": "feather-convex-flag-installation-step-3-slide-flag-onto-pole.jpg",
+			"title": "Feather convex flag installation step 3: slide the flag onto the pole",
+			"alt": "Feather convex flag installation step 3: slide the flag onto the pole",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/image/item/240404/aujkqPzf.jpg"
+			],
+			"old": [
+				"e8735ec1-aujkqPzf.jpg"
+			]
+		},
+		{
+			"file": "feather-convex-flag-installation-step-4-secure-flag.jpg",
+			"title": "Feather convex flag installation step 4: secure the flag down the pole",
+			"alt": "Feather convex flag installation step 4: secure the flag down the pole",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/image/item/240404/TSCP1exH.jpg"
+			],
+			"old": [
+				"83debd0c-TSCP1exH.jpg"
+			]
+		},
+		{
+			"file": "feather-convex-flag-large-double-sided-template.pdf",
+			"title": "Feather Convex Flag Large Double Sided PDF Template",
+			"alt": "",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/downloadable/c728a8a593e5c8850adff05cdb80d80a85320e28"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-convex-flag-large-single-sided-print-through-template.pdf",
+			"title": "Feather Convex Flag Large Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/downloadable/525e9fb1f98ae62fa6661f8f4e0087c1c94c492a"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-convex-flag-medium-double-sided-template.pdf",
+			"title": "Feather Convex Flag Medium Double Sided PDF Template",
+			"alt": "",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/downloadable/9d51b68ab9a87f3e8a9026a684a7507f361408b1"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-convex-flag-medium-single-sided-print-through-template.pdf",
+			"title": "Feather Convex Flag Medium Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/downloadable/6ea5cee610f23bc85aa3637fbd579742dc02303c"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-convex-flag-size-chart.jpg",
+			"title": "Feather convex flag size chart: small, medium, large and extra large heights from 6 to 18 feet",
+			"alt": "Feather convex flag size chart: small, medium, large and extra large heights from 6 to 18 feet",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/image/item/240311/QIZAw7ro.jpg"
+			],
+			"old": [
+				"0b4a7b4f-QIZAw7ro.jpg"
+			]
+		},
+		{
+			"file": "feather-convex-flag-small-double-sided-template.pdf",
+			"title": "Feather Convex Flag Small Double Sided PDF Template",
+			"alt": "",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/downloadable/d150604a07423fb592406e3fa7817094e888e8d7"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-convex-flag-small-single-sided-print-through-template.pdf",
+			"title": "Feather Convex Flag Small Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "feather-convex-flag-pole",
+			"sources": [
+				"/downloadable/cf6c0df3aaee29f3e3215d8e153f81f69127e593"
+			],
+			"old": []
+		},
+		{
+			"file": "feather-flag-installation-step-1-position-pole-set.jpg",
+			"title": "Feather flag installation step 1: position the pole set",
+			"alt": "Feather flag installation step 1: position the pole set",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/image/item/240404/XUw1cXK1.jpg"
+			],
+			"old": [
+				"5745a694-XUw1cXK1.jpg"
+			]
+		},
+		{
+			"file": "feather-flag-installation-step-2-connect-poles.jpg",
+			"title": "Feather flag installation step 2: connect the poles",
+			"alt": "Feather flag installation step 2: connect the poles",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/image/item/240404/yNfNTdaR.jpg"
+			],
+			"old": [
+				"09562be4-yNfNTdaR.jpg"
+			]
+		},
+		{
+			"file": "feather-flag-installation-step-3-slide-flag-onto-pole.jpg",
+			"title": "Feather flag installation step 3: slide the flag onto the pole",
+			"alt": "Feather flag installation step 3: slide the flag onto the pole",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/image/item/240404/oCFjOfyI.jpg"
+			],
+			"old": [
+				"4ecf1573-oCFjOfyI.jpg"
+			]
+		},
+		{
+			"file": "feather-flag-installation-step-4-secure-flag.jpg",
+			"title": "Feather flag installation step 4: secure the flag down the pole",
+			"alt": "Feather flag installation step 4: secure the flag down the pole",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/image/item/240404/VzVnbNoG.jpg"
+			],
+			"old": [
+				"4380aab0-VzVnbNoG.jpg"
+			]
+		},
+		{
+			"file": "feather-tent-flag-on-event-tent.jpg",
+			"title": "Feather tent flag attached to the leg of a pop-up event tent",
+			"alt": "Feather tent flag attached to the leg of a pop-up event tent",
+			"parent": "tent-flag",
+			"sources": [
+				"/image/item/230730/bbZwFIp6.jpg"
+			],
+			"old": [
+				"5596955c-bbZwFIp6.jpg"
+			]
+		},
+		{
+			"file": "flag-cross-base.jpg",
+			"title": "Aluminum cross base for flags on hard surfaces",
+			"alt": "Aluminum cross base for flags on hard surfaces",
+			"parent": "cross-base",
+			"sources": [
+				"/image/page/240315/Fcg3wWR2.jpg"
+			],
+			"old": [
+				"5fc6d7fb-Fcg3wWR2.jpg"
+			]
+		},
+		{
+			"file": "flag-ground-stake-base.jpg",
+			"title": "Aluminum ground stake flag base for soft ground",
+			"alt": "Aluminum ground stake flag base for soft ground",
+			"parent": "ground-stake",
+			"sources": [
+				"/image/page/240312/Ce1ddZkY.jpg"
+			],
+			"old": [
+				"91af4952-Ce1ddZkY.jpg"
+			]
+		},
+		{
+			"file": "flag-square-steel-base.jpg",
+			"title": "Square steel flag base for indoor and outdoor hard surfaces",
+			"alt": "Square steel flag base for indoor and outdoor hard surfaces",
+			"parent": "square-base",
+			"sources": [
+				"/image/page/240315/QGBiEh4m.jpg"
+			],
+			"old": [
+				"e81b00e4-QGBiEh4m.jpg"
+			]
+		},
+		{
+			"file": "flag-water-bag-weight.jpg",
+			"title": "Water bag weight placed over a flag cross base",
+			"alt": "Water bag weight placed over a flag cross base",
+			"parent": "water-bag",
+			"sources": [
+				"/image/page/240315/YyTOFUzG.jpg"
+			],
+			"old": [
+				"64675c25-YyTOFUzG.jpg"
+			]
+		},
+		{
+			"file": "front-lit-led-channel-letter-on-brick-wall.png",
+			"title": "Front lit LED channel letter glowing on a brick wall",
+			"alt": "Front lit LED channel letter glowing on a brick wall",
+			"parent": "standard-channel-letter-front-lit",
+			"sources": [
+				"/image/item/230726/rw6efOzY.png"
+			],
+			"old": [
+				"73dc8dce-rw6efOzY.png"
+			]
+		},
+		{
+			"file": "halo-lit-channel-letter-back-view.png",
+			"title": "Back view of a halo lit channel letter showing the LED modules",
+			"alt": "Back view of a halo lit channel letter showing the LED modules",
+			"parent": "hidden-back-halo-lit",
+			"sources": [
+				"/image/item/230817/6LrlHqEb.png"
+			],
+			"old": [
+				"83b7729f-6LrlHqEb.png"
+			]
+		},
+		{
+			"file": "halo-lit-channel-letter-clear-lexan-back-diagram.png",
+			"title": "Diagram of the clear Lexan back on a halo lit channel letter",
+			"alt": "Diagram of the clear Lexan back on a halo lit channel letter",
+			"parent": "hidden-back-halo-lit",
+			"sources": [
+				"/image/item/230817/3QYSyhl8.png"
+			],
+			"old": [
+				"20304794-3QYSyhl8.png"
+			]
+		},
+		{
+			"file": "halo-lit-channel-letter-front-view.png",
+			"title": "Front view of a halo lit channel letter with a solid stainless steel face",
+			"alt": "Front view of a halo lit channel letter with a solid stainless steel face",
+			"parent": "hidden-back-halo-lit",
+			"sources": [
+				"/image/item/230817/DoAcdo0N.png"
+			],
+			"old": [
+				"7006824c-DoAcdo0N.png"
+			]
+		},
+		{
+			"file": "halo-lit-channel-letter-stainless-steel-face-diagram.png",
+			"title": "Diagram of the stainless steel face on a halo lit channel letter",
+			"alt": "Diagram of the stainless steel face on a halo lit channel letter",
+			"parent": "hidden-back-halo-lit",
+			"sources": [
+				"/image/item/230817/Wyxn53DX.png"
+			],
+			"old": [
+				"d9eeb23e-Wyxn53DX.png"
+			]
+		},
+		{
+			"file": "halo-lit-channel-letter-stainless-steel-return-diagram.png",
+			"title": "Diagram of the stainless steel return on a halo lit channel letter",
+			"alt": "Diagram of the stainless steel return on a halo lit channel letter",
+			"parent": "hidden-back-halo-lit",
+			"sources": [
+				"/image/item/230817/RijfnE6r.png"
+			],
+			"old": [
+				"b0022d22-RijfnE6r.png"
+			]
+		},
+		{
+			"file": "inset-acrylic-channel-letter-face-diagram.png",
+			"title": "Diagram of the acrylic face with stainless steel border on an inset face lit channel letter",
+			"alt": "Diagram of the acrylic face with stainless steel border on an inset face lit channel letter",
+			"parent": "inset-acrylic-face-lit-with-border-no-trimcap",
+			"sources": [
+				"/image/item/230818/1v3Bnw3J.png"
+			],
+			"old": [
+				"0544b08c-1v3Bnw3J.png"
+			]
+		},
+		{
+			"file": "inset-acrylic-channel-letter-stainless-steel-back-diagram.png",
+			"title": "Diagram of the stainless steel back on an inset face lit channel letter",
+			"alt": "Diagram of the stainless steel back on an inset face lit channel letter",
+			"parent": "inset-acrylic-face-lit-with-border-no-trimcap",
+			"sources": [
+				"/image/item/230818/Hz43Fdo7.png"
+			],
+			"old": [
+				"8e67427f-Hz43Fdo7.png"
+			]
+		},
+		{
+			"file": "inset-acrylic-channel-letter-stainless-steel-return-diagram.png",
+			"title": "Diagram of the stainless steel return on an inset face lit channel letter",
+			"alt": "Diagram of the stainless steel return on an inset face lit channel letter",
+			"parent": "inset-acrylic-face-lit-with-border-no-trimcap",
+			"sources": [
+				"/image/item/230818/psimipjh.png"
+			],
+			"old": [
+				"7a9e4778-psimipjh.png"
+			]
+		},
+		{
+			"file": "inset-acrylic-face-lit-channel-letter-back-view.jpg",
+			"title": "Back view of an inset acrylic face lit channel letter showing the LED modules",
+			"alt": "Back view of an inset acrylic face lit channel letter showing the LED modules",
+			"parent": "inset-acrylic-face-lit-with-border-no-trimcap",
+			"sources": [
+				"/image/item/230818/h9vd0Lhg.jpg"
+			],
+			"old": [
+				"5cb1465a-h9vd0Lhg.jpg"
+			]
+		},
+		{
+			"file": "inset-acrylic-face-lit-channel-letter-front-view.jpg",
+			"title": "Front view of an inset acrylic face lit channel letter with stainless steel border",
+			"alt": "Front view of an inset acrylic face lit channel letter with stainless steel border",
+			"parent": "inset-acrylic-face-lit-with-border-no-trimcap",
+			"sources": [
+				"/image/item/230818/8XAY8DhO.jpg"
+			],
+			"old": [
+				"b6536cf0-8XAY8DhO.jpg"
+			]
+		},
+		{
+			"file": "not-available-icon.png",
+			"title": "Not available",
+			"alt": "Not available",
+			"parent": "real-estate-post-sign",
+			"sources": [
+				"/image/item/240404/yH94dTds.png"
+			],
+			"old": [
+				"e87a4d10-yH94dTds.png"
+			]
+		},
+		{
+			"file": "pdf-template-file-icon.png",
+			"title": "PDF template file icon",
+			"alt": "PDF template file icon",
+			"parent": "tension-fabric-stand-graphic-frame",
+			"sources": [
+				"/image/item/230814/yVkrUaTh.png"
+			],
+			"old": [
+				"b55093ff-yVkrUaTh.png"
+			]
+		},
+		{
+			"file": "photoshop-psd-template-file-icon.png",
+			"title": "Photoshop (PSD) template file icon",
+			"alt": "Photoshop (PSD) template file icon",
+			"parent": "feather-angled-flag-pole",
+			"sources": [
+				"/image/item/230814/hQWbl81V.png"
+			],
+			"old": [
+				"92b29c22-hQWbl81V.png"
+			]
+		},
+		{
+			"file": "rectangle-flag-installation-step-1-position-pole-set.jpg",
+			"title": "Rectangle flag installation step 1: position the pole set",
+			"alt": "Rectangle flag installation step 1: position the pole set",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/image/item/240411/uHXrKPNR.jpg"
+			],
+			"old": [
+				"dd5c670c-uHXrKPNR.jpg"
+			]
+		},
+		{
+			"file": "rectangle-flag-installation-step-2-connect-poles.jpg",
+			"title": "Rectangle flag installation step 2: connect the poles",
+			"alt": "Rectangle flag installation step 2: connect the poles",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/image/item/240411/DF9Wa4EW.jpg"
+			],
+			"old": [
+				"6dc003cc-DF9Wa4EW.jpg"
+			]
+		},
+		{
+			"file": "rectangle-flag-installation-step-3-slide-flag-onto-pole.jpg",
+			"title": "Rectangle flag installation step 3: slide the flag onto the pole",
+			"alt": "Rectangle flag installation step 3: slide the flag onto the pole",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/image/item/240411/ec6ulyRn.jpg"
+			],
+			"old": [
+				"5c2e3ba4-ec6ulyRn.jpg"
+			]
+		},
+		{
+			"file": "rectangle-flag-installation-step-4-secure-flag.jpg",
+			"title": "Rectangle flag installation step 4: secure the flag down the pole",
+			"alt": "Rectangle flag installation step 4: secure the flag down the pole",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/image/item/240411/OSHDWfQg.jpg"
+			],
+			"old": [
+				"e9df1c58-OSHDWfQg.jpg"
+			]
+		},
+		{
+			"file": "rectangle-flag-large-double-sided-template.cdr",
+			"title": "Rectangle Flag Large Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/5de2a0bec859f0678cc0b18cb1f9e72ec489934b"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-large-double-sided-template.pdf",
+			"title": "Rectangle Flag Large Double Sided PDF Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/7d460d73a76c2a976696b86eb9698e7cf7807103"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-large-double-sided-template.psd",
+			"title": "Rectangle Flag Large Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/e1413fb43e2b9d2977b78f37a10ed2d0686554d7"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-large-single-sided-print-through-template.pdf",
+			"title": "Rectangle Flag Large Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/be6ef15449ff57628f697e32e62b209dd3388be1"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-large-single-sided-print-through-template.psd",
+			"title": "Rectangle Flag Large Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/dd97eb8754b7e23d56fa4c4b871910349edd7d91"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-large-single-sided-template.cdr",
+			"title": "Rectangle Flag Large Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/6157703068ea3281ccc8222d7b32dde22306723b"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-medium-double-sided-template.cdr",
+			"title": "Rectangle Flag Medium Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/3799716326a877f129f7adf77aa4a46afcd7fe25"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-medium-double-sided-template.pdf",
+			"title": "Rectangle Flag Medium Double Sided PDF Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/591e538becce3d6c3070abe1e32afcc9c71871c5"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-medium-double-sided-template.psd",
+			"title": "Rectangle Flag Medium Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/73aec8f09685b0b020bbcbfafd080f16f2659dc4"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-medium-single-sided-print-through-template.pdf",
+			"title": "Rectangle Flag Medium Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/05f05889cd6521a629a1f3fd142420fb128461d6"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-medium-single-sided-print-through-template.psd",
+			"title": "Rectangle Flag Medium Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/61cbd526770b3af036ce7040ea96ed6056939ff0"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-medium-single-sided-template.cdr",
+			"title": "Rectangle Flag Medium Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/13652efb2dc5d5cab9ae4b79a764cf2e32dbf95c"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-size-chart.jpg",
+			"title": "Rectangle flag size chart: small, medium and large heights",
+			"alt": "Rectangle flag size chart: small, medium and large heights",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/image/item/240312/2h9WEHE3.jpg"
+			],
+			"old": [
+				"d9210e05-2h9WEHE3.jpg"
+			]
+		},
+		{
+			"file": "rectangle-flag-small-double-sided-template.cdr",
+			"title": "Rectangle Flag Small Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/5e8284bbfb6341399167f098ec361cbc8300fe04"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-small-double-sided-template.pdf",
+			"title": "Rectangle Flag Small Double Sided PDF Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/1d0bde4ae285f1ec0bd293a92184bf5823e8c4cb"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-small-double-sided-template.psd",
+			"title": "Rectangle Flag Small Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/2cca5ff9d62af07c43f36f8b276f7457c498b5c1"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-small-single-sided-print-through-template.pdf",
+			"title": "Rectangle Flag Small Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/fdf01b15dcabb8936062d0f2d10f778538a803ed"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-small-single-sided-print-through-template.psd",
+			"title": "Rectangle Flag Small Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/e2ab02e8f2caf6aabb771dea5be5a7d295c90352"
+			],
+			"old": []
+		},
+		{
+			"file": "rectangle-flag-small-single-sided-template.cdr",
+			"title": "Rectangle Flag Small Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "rectangle-flag-pole",
+			"sources": [
+				"/downloadable/e6fc4a3ccfb49c7b3aa3fc9d527ab65e747a16de"
+			],
+			"old": []
+		},
+		{
+			"file": "reverse-lit-channel-letter-acrylic-back-diagram.png",
+			"title": "Diagram of the translucent polycarbonate back on a reverse halo lit channel letter",
+			"alt": "Diagram of the translucent polycarbonate back on a reverse halo lit channel letter",
+			"parent": "halo-reverse-acrylic-lit-channel-letters",
+			"sources": [
+				"/image/item/230818/Xvz1CGjH.png"
+			],
+			"old": [
+				"517b5d3a-Xvz1CGjH.png"
+			]
+		},
+		{
+			"file": "reverse-lit-channel-letter-stainless-steel-face-diagram.png",
+			"title": "Diagram of the stainless steel face on a reverse halo lit channel letter",
+			"alt": "Diagram of the stainless steel face on a reverse halo lit channel letter",
+			"parent": "halo-reverse-acrylic-lit-channel-letters",
+			"sources": [
+				"/image/item/230818/Tsgght8i.png"
+			],
+			"old": [
+				"ca369b86-Tsgght8i.png"
+			]
+		},
+		{
+			"file": "round-table-cover-31-inch-bar-height-template.pdf",
+			"title": "Round Table Cover 31\" Bar Height PDF Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/4de83f6c3164aa5af6e1fec333e4c1131181f03c"
+			],
+			"old": []
+		},
+		{
+			"file": "round-table-cover-31-inch-bar-height-template.psd",
+			"title": "Round Table Cover 31\" Bar Height Photoshop PSD Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/b73035b0bb3c5e6ed8ada9d70337d8dae0dffcc2"
+			],
+			"old": []
+		},
+		{
+			"file": "round-table-cover-31-inch-standard-height-template.pdf",
+			"title": "Round Table Cover 31\" Standard Height PDF Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/7dc8461659aa8cb13cd5fc12084cff8dfa52a02b"
+			],
+			"old": []
+		},
+		{
+			"file": "round-table-cover-31-inch-standard-height-template.psd",
+			"title": "Round Table Cover 31\" Standard Height Photoshop PSD Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/550b2b5212bbfbae76bba0e224cb52cc8ea96bfa"
+			],
+			"old": []
+		},
+		{
+			"file": "round-table-cover-36-inch-standard-height-template.pdf",
+			"title": "Round Table Cover 36\" Standard Height PDF Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/3f0e84f62366be21616c1a39ba3e31983a4d84af"
+			],
+			"old": []
+		},
+		{
+			"file": "round-table-cover-36-inch-standard-height-template.psd",
+			"title": "Round Table Cover 36\" Standard Height Photoshop PSD Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/bd78fafc0930698da325c3cefd7e5e023f1f3bc6"
+			],
+			"old": []
+		},
+		{
+			"file": "round-table-cover-48-inch-standard-height-template.pdf",
+			"title": "Round Table Cover 48\" Standard Height PDF Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/1c0fd1e0da9e8afcf2d85543906c06d3736be2e1"
+			],
+			"old": []
+		},
+		{
+			"file": "round-table-cover-48-inch-standard-height-template.psd",
+			"title": "Round Table Cover 48\" Standard Height Photoshop PSD Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/4406af63d4c574d9aa7b90d50f61395cd069fe89"
+			],
+			"old": []
+		},
+		{
+			"file": "round-table-cover-60-inch-standard-height-template.pdf",
+			"title": "Round Table Cover 60\" Standard Height PDF Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/958220157aa8cd288d835aa7a20244ec3368e6e2"
+			],
+			"old": []
+		},
+		{
+			"file": "round-table-cover-60-inch-standard-height-template.psd",
+			"title": "Round Table Cover 60\" Standard Height Photoshop PSD Template",
+			"alt": "",
+			"parent": "round-table-cover",
+			"sources": [
+				"/downloadable/31b6914488fd58ee40ca6f29260910aa08192b2c"
+			],
+			"old": []
+		},
+		{
+			"file": "stainless-steel-channel-letter-color-chart.pdf",
+			"title": "Stainless Steel Channel Letter Color Chart (PDF)",
+			"alt": "",
+			"parent": "hidden-back-halo-lit",
+			"sources": [
+				"/item/download/L2UjHbpx"
+			],
+			"old": []
+		},
+		{
+			"file": "stainless-steel-channel-letter-color-chart.png",
+			"title": "Stainless steel channel letter face and return color chart",
+			"alt": "Stainless steel channel letter face and return color chart",
+			"parent": "hidden-back-halo-lit",
+			"sources": [
+				"/image/item/230817/HkmdZB4d.png"
+			],
+			"old": [
+				"770d9b53-HkmdZB4d.png"
+			]
+		},
+		{
+			"file": "step-and-repeat-backdrop-installation-step-1-connect-poles.jpg",
+			"title": "Step and repeat backdrop installation step 1: join the horizontal poles",
+			"alt": "Step and repeat backdrop installation step 1: join the horizontal poles",
+			"parent": "step-and-repeat-backdrop-graphic-frame",
+			"sources": [
+				"/image/item/240405/AEbSTKtV.jpg"
+			],
+			"old": [
+				"2e712ea6-AEbSTKtV.jpg"
+			]
+		},
+		{
+			"file": "step-and-repeat-backdrop-installation-step-2-insert-vertical-pole.jpg",
+			"title": "Step and repeat backdrop installation step 2: insert the vertical pole into the base",
+			"alt": "Step and repeat backdrop installation step 2: insert the vertical pole into the base",
+			"parent": "step-and-repeat-backdrop-graphic-frame",
+			"sources": [
+				"/image/item/240405/gTSjOKg6.jpg"
+			],
+			"old": [
+				"2ed0e745-gTSjOKg6.jpg"
+			]
+		},
+		{
+			"file": "step-and-repeat-backdrop-installation-step-3-pole-pockets.jpg",
+			"title": "Step and repeat backdrop installation step 3: run the poles through the graphic pole pockets",
+			"alt": "Step and repeat backdrop installation step 3: run the poles through the graphic pole pockets",
+			"parent": "step-and-repeat-backdrop-graphic-frame",
+			"sources": [
+				"/image/item/240405/jKCE28dO.jpg"
+			],
+			"old": [
+				"a0307917-jKCE28dO.jpg"
+			]
+		},
+		{
+			"file": "step-and-repeat-backdrop-installation-step-4-secure-poles.jpg",
+			"title": "Step and repeat backdrop installation step 4: secure the horizontal poles with thumb screws",
+			"alt": "Step and repeat backdrop installation step 4: secure the horizontal poles with thumb screws",
+			"parent": "step-and-repeat-backdrop-graphic-frame",
+			"sources": [
+				"/image/item/240405/z8amPsyq.jpg"
+			],
+			"old": [
+				"3e6c1620-z8amPsyq.jpg"
+			]
+		},
+		{
+			"file": "straight-tension-fabric-display-installation-guide.pdf",
+			"title": "Straight Tension Fabric Display Installation Guide (PDF)",
+			"alt": "",
+			"parent": "straight-tension-fabric-displays-graphic-frame",
+			"sources": [
+				"/downloadable/bd969a86b9b7afd699999afc1e4fd7d609983e73"
+			],
+			"old": []
+		},
+		{
+			"file": "straight-tension-fabric-display-installation-step-1-connect-frame.jpg",
+			"title": "Straight tension fabric display installation step 1: connect the numbered frame tubes",
+			"alt": "Straight tension fabric display installation step 1: connect the numbered frame tubes",
+			"parent": "straight-tension-fabric-displays-graphic-frame",
+			"sources": [
+				"/image/item/240408/BGeTZGvx.jpg"
+			],
+			"old": [
+				"04ad20e0-BGeTZGvx.jpg"
+			]
+		},
+		{
+			"file": "straight-tension-fabric-display-installation-step-2-zip-on-graphic.jpg",
+			"title": "Straight tension fabric display installation step 2: wrap the graphic over the frame and zip it up",
+			"alt": "Straight tension fabric display installation step 2: wrap the graphic over the frame and zip it up",
+			"parent": "straight-tension-fabric-displays-graphic-frame",
+			"sources": [
+				"/image/item/240408/Sj9UfcXk.jpg"
+			],
+			"old": [
+				"bf86423c-Sj9UfcXk.jpg"
+			]
+		},
+		{
+			"file": "straight-tension-fabric-display-installation-step-3-light-clips.jpg",
+			"title": "Straight tension fabric display installation step 3: attach the light clips to the top of the display",
+			"alt": "Straight tension fabric display installation step 3: attach the light clips to the top of the display",
+			"parent": "straight-tension-fabric-displays-graphic-frame",
+			"sources": [
+				"/image/item/240408/ORCvY2K7.jpg"
+			],
+			"old": [
+				"05a7e585-ORCvY2K7.jpg"
+			]
+		},
+		{
+			"file": "teardrop-flag-extra-large-double-sided-template.cdr",
+			"title": "Teardrop Flag Extra Large Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/9f84873cc4c0178d73db61fcacd6446c6c9dd1c4"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-extra-large-double-sided-template.pdf",
+			"title": "Teardrop Flag Extra Large Double Sided PDF Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/3e9af9819dc56dbc5685e7bef44010179ff85ef8"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-extra-large-double-sided-template.psd",
+			"title": "Teardrop Flag Extra Large Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/3b9122c78b48e30f8664ac93ee684e9c16d0525e"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-extra-large-single-sided-print-through-template.pdf",
+			"title": "Teardrop Flag Extra Large Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/10d30487ca63ad3758f3c406c47d8f428a4f4781"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-extra-large-single-sided-print-through-template.psd",
+			"title": "Teardrop Flag Extra Large Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/fadb34b64129ffebc5093c2efd0481782d093de2"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-extra-large-single-sided-template.cdr",
+			"title": "Teardrop Flag Extra Large Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/fdbf8fe6ce8e897831cd0f7be7ee2d568968369e"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-installation-step-1-position-pole-set.jpg",
+			"title": "Teardrop flag installation step 1: position the pole set",
+			"alt": "Teardrop flag installation step 1: position the pole set",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/image/item/240405/4x6RA6ue.jpg"
+			],
+			"old": [
+				"74551182-4x6RA6ue.jpg"
+			]
+		},
+		{
+			"file": "teardrop-flag-installation-step-2-connect-poles.jpg",
+			"title": "Teardrop flag installation step 2: connect the poles",
+			"alt": "Teardrop flag installation step 2: connect the poles",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/image/item/240405/e0QHN70O.jpg"
+			],
+			"old": [
+				"065834b7-e0QHN70O.jpg"
+			]
+		},
+		{
+			"file": "teardrop-flag-installation-step-3-slide-flag-onto-pole.jpg",
+			"title": "Teardrop flag installation step 3: slide the flag onto the pole",
+			"alt": "Teardrop flag installation step 3: slide the flag onto the pole",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/image/item/240405/5KLHVY1E.jpg"
+			],
+			"old": [
+				"fa4e3689-5KLHVY1E.jpg"
+			]
+		},
+		{
+			"file": "teardrop-flag-installation-step-4-secure-flag.jpg",
+			"title": "Teardrop flag installation step 4: secure the flag down the pole",
+			"alt": "Teardrop flag installation step 4: secure the flag down the pole",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/image/item/240405/umiSAwWT.jpg"
+			],
+			"old": [
+				"79a417a6-umiSAwWT.jpg"
+			]
+		},
+		{
+			"file": "teardrop-flag-large-double-sided-template.cdr",
+			"title": "Teardrop Flag Large Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/07fdc289051fa121f8cf5893a0cb50f5eaab5ae3"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-large-double-sided-template.pdf",
+			"title": "Teardrop Flag Large Double Sided PDF Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/84fbc4d022a848234c8a5136ff8b46d664135a24",
+				"/downloadable/9d5985a9564bdc794eba015f40f7b2a83abfe56e"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-large-double-sided-template.psd",
+			"title": "Teardrop Flag Large Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/e4d4d90ec1a792735dbae8ed5d9ef13a4d6c9bb6"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-large-single-sided-print-through-template.pdf",
+			"title": "Teardrop Flag Large Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/cdcae6006b1c40f41a83690854a73cf0bbb24cba"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-large-single-sided-print-through-template.psd",
+			"title": "Teardrop Flag Large Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/f03fc157806b4185ffa959f48134f2512eb2ac7c"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-medium-double-sided-template.cdr",
+			"title": "Teardrop Flag Medium Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/260552e2f61cc05e7851c213013893568e081133"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-medium-double-sided-template.pdf",
+			"title": "Teardrop Flag Medium Double Sided PDF Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/1b8b0bb71ea4e60a2f07872def1405e77a8d444c"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-medium-double-sided-template.psd",
+			"title": "Teardrop Flag Medium Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/3ae0c016251ce2c0af8b89732cd6d40ebf5daa55"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-medium-single-sided-print-through-template.pdf",
+			"title": "Teardrop Flag Medium Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/56db908cb128160ad3f37a6bc9241495e9ea2375"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-medium-single-sided-print-through-template.psd",
+			"title": "Teardrop Flag Medium Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/f9f1515d9ec154cc0c44a316f4a1009511245aea"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-medium-single-sided-template.cdr",
+			"title": "Teardrop Flag Medium Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/c2c9cb7b2c1e0b7ab217319e570b15680c2c4702"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-size-chart.jpg",
+			"title": "Teardrop flag size chart: small, medium, large and extra large heights",
+			"alt": "Teardrop flag size chart: small, medium, large and extra large heights",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/image/item/240312/xpqG4krw.jpg"
+			],
+			"old": [
+				"34c746ea-xpqG4krw.jpg"
+			]
+		},
+		{
+			"file": "teardrop-flag-small-double-sided-template.cdr",
+			"title": "Teardrop Flag Small Double Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/0ad8e2a215a7c823f53b370c25d49a7d7fcf313c"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-small-double-sided-template.pdf",
+			"title": "Teardrop Flag Small Double Sided PDF Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/5fffd6aa6030929df5fb912009415acfc470c8d8"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-small-double-sided-template.psd",
+			"title": "Teardrop Flag Small Double Sided Photoshop PSD Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/97da385e2e85a8ed781cfecf64f5c009dd2c8741"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-small-single-sided-print-through-template.pdf",
+			"title": "Teardrop Flag Small Single Sided Print-Through PDF Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/5ebfd4884e1719c1e666040b8ca515ffdb35142b"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-small-single-sided-print-through-template.psd",
+			"title": "Teardrop Flag Small Single Sided Print-Through Photoshop PSD Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/d19c80e22721fae5c4ab0c5b1f3460fedd7c9347"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-flag-small-single-sided-template.cdr",
+			"title": "Teardrop Flag Small Single Sided CorelDRAW CDR Template",
+			"alt": "",
+			"parent": "teardrop-flag-pole",
+			"sources": [
+				"/downloadable/466a7126200137407950fe9d59dc7d03ab68be9f"
+			],
+			"old": []
+		},
+		{
+			"file": "teardrop-tent-flag-on-event-tent.jpg",
+			"title": "Teardrop tent flag attached to the leg of a pop-up event tent",
+			"alt": "Teardrop tent flag attached to the leg of a pop-up event tent",
+			"parent": "tent-flag",
+			"sources": [
+				"/image/item/230730/QIR5qiUB.jpg"
+			],
+			"old": [
+				"53087389-QIR5qiUB.jpg"
+			]
+		},
+		{
+			"file": "tension-fabric-stand-installation-guide.jpg",
+			"title": "Straight tension fabric banner stand installation guide, steps 1 to 4",
+			"alt": "Straight tension fabric banner stand installation guide, steps 1 to 4",
+			"parent": "tension-fabric-stand-graphic-frame",
+			"sources": [
+				"/downloadable/e9f98f75c273471ab2c0b105283aae83bf21ca42"
+			],
+			"old": [
+				"3968ec57-Installation_Guide_Tension_Fabric_Stand_3ft_Straight.jpg"
+			]
+		},
+		{
+			"file": "tension-fabric-stand-installation-step-1-connect-tubes.jpg",
+			"title": "Tension fabric stand installation step 1: connect the numbered aluminum tubes",
+			"alt": "Tension fabric stand installation step 1: connect the numbered aluminum tubes",
+			"parent": "tension-fabric-stand-graphic-frame",
+			"sources": [
+				"/image/item/240405/Em0KUHv9.jpg"
+			],
+			"old": [
+				"a8a23283-Em0KUHv9.jpg"
+			]
+		},
+		{
+			"file": "tension-fabric-stand-installation-step-2-fasten-cross-bar.jpg",
+			"title": "Tension fabric stand installation step 2: fasten the bottom cross bar",
+			"alt": "Tension fabric stand installation step 2: fasten the bottom cross bar",
+			"parent": "tension-fabric-stand-graphic-frame",
+			"sources": [
+				"/image/item/240405/2NBmy7X3.jpg"
+			],
+			"old": [
+				"67f02dd5-2NBmy7X3.jpg"
+			]
+		},
+		{
+			"file": "tension-fabric-stand-installation-step-3-zip-on-graphic.jpg",
+			"title": "Tension fabric stand installation step 3: zip the fabric graphic over the frame and attach the base",
+			"alt": "Tension fabric stand installation step 3: zip the fabric graphic over the frame and attach the base",
+			"parent": "tension-fabric-stand-graphic-frame",
+			"sources": [
+				"/image/item/240405/6kMjm0et.jpg"
+			],
+			"old": [
+				"060d5ac1-6kMjm0et.jpg"
+			]
+		},
+		{
+			"file": "tension-fabric-stand-installation-step-4-light-clips.jpg",
+			"title": "Tension fabric stand installation step 4: fasten the light clips to the top of the stand",
+			"alt": "Tension fabric stand installation step 4: fasten the light clips to the top of the stand",
+			"parent": "tension-fabric-stand-graphic-frame",
+			"sources": [
+				"/image/item/240405/stIz52EJ.jpg"
+			],
+			"old": [
+				"2028ebcf-stIz52EJ.jpg"
+			]
+		},
+		{
+			"file": "trade-show-podium-template.pdf",
+			"title": "Trade Show Podium PDF Template",
+			"alt": "",
+			"parent": "curved-tension-fabric-display-graphic-frame",
+			"sources": [
+				"/downloadable/f9125bb661e054c350104ac7f3118578799e6ae7"
+			],
+			"old": []
+		},
+		{
+			"file": "velcro-fabric-pop-up-display-installation-guide.pdf",
+			"title": "Velcro Fabric Pop Up Display Installation Guide (PDF)",
+			"alt": "",
+			"parent": "curved-velcro-fabric-pop-up-display-graphic-frame",
+			"sources": [
+				"/downloadable/60334c3513f1f7905b26fef3abb13965d627e6dc"
+			],
+			"old": []
+		}
+	],
+	"template_links": {
+		"feather-angled-flag-pole": [
+			[
+				"1 side",
+				"feather-angled-flag-extra-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-extra-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"feather-angled-flag-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"feather-angled-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-medium-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"feather-angled-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-small-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"feather-angled-flag-small-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-small-double-sided-template.cdr"
+			]
+		],
+		"feather-angled-flag-only": [
+			[
+				"1 side",
+				"feather-angled-flag-extra-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-extra-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"feather-angled-flag-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"feather-angled-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-medium-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"feather-angled-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-small-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"feather-angled-flag-small-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"feather-angled-flag-small-double-sided-template.cdr"
+			]
+		],
+		"econo-feather-flag-pole": [
+			[
+				"1 side",
+				"econo-feather-flag-single-sided-print-through-template.pdf"
+			],
+			[
+				"1 side",
+				"econo-feather-flag-single-sided-print-through-template.psd"
+			],
+			[
+				"1 side",
+				"econo-feather-flag-single-sided-print-through-template.cdr"
+			]
+		],
+		"econo-feather-flag-only": [
+			[
+				"1 side",
+				"econo-feather-flag-single-sided-print-through-template.pdf"
+			],
+			[
+				"1 side",
+				"econo-feather-flag-single-sided-print-through-template.psd"
+			],
+			[
+				"1 side",
+				"econo-feather-flag-single-sided-print-through-template.cdr"
+			]
+		],
+		"feather-convex-flag-pole": [
+			[
+				"1 side",
+				"feather-convex-flag-extra-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"feather-convex-flag-extra-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"feather-convex-flag-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"feather-convex-flag-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"feather-convex-flag-medium-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"feather-convex-flag-medium-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"feather-convex-flag-small-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"feather-convex-flag-small-double-sided-template.pdf"
+			]
+		],
+		"feather-convex-flag-only": [
+			[
+				"1 side",
+				"feather-convex-flag-extra-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"feather-convex-flag-extra-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"feather-convex-flag-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"feather-convex-flag-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"feather-convex-flag-medium-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"feather-convex-flag-medium-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"feather-convex-flag-small-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"feather-convex-flag-small-double-sided-template.pdf"
+			]
+		],
+		"teardrop-flag-pole": [
+			[
+				"1 side",
+				"teardrop-flag-extra-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-extra-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"teardrop-flag-extra-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-extra-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"teardrop-flag-extra-large-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-extra-large-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"teardrop-flag-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"teardrop-flag-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"teardrop-flag-large-double-sided-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-large-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"teardrop-flag-medium-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-medium-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"teardrop-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-medium-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"teardrop-flag-medium-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-medium-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"teardrop-flag-small-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-small-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"teardrop-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-small-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"teardrop-flag-small-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-small-double-sided-template.cdr"
+			]
+		],
+		"teardrop-flag-only": [
+			[
+				"1 side",
+				"teardrop-flag-extra-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-extra-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"teardrop-flag-extra-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-extra-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"teardrop-flag-extra-large-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-extra-large-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"teardrop-flag-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"teardrop-flag-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"teardrop-flag-large-double-sided-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-large-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"teardrop-flag-medium-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-medium-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"teardrop-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-medium-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"teardrop-flag-medium-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-medium-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"teardrop-flag-small-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-small-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"teardrop-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-small-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"teardrop-flag-small-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"teardrop-flag-small-double-sided-template.cdr"
+			]
+		],
+		"rectangle-flag-pole": [
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.cdr"
+			]
+		],
+		"rectangle-flag-only": [
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.cdr"
+			]
+		],
+		"custom-pole-flag-pole": [
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.cdr"
+			]
+		],
+		"custom-pole-flag-only": [
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-large-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-large-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-medium-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-medium-double-sided-template.cdr"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-print-through-template.pdf"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.pdf"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.psd"
+			],
+			[
+				"1 side",
+				"rectangle-flag-small-single-sided-template.cdr"
+			],
+			[
+				"2 sides",
+				"rectangle-flag-small-double-sided-template.cdr"
+			]
+		],
+		"4ft-table-cover": [
+			[
+				"3 sided (Open-Back)",
+				"4ft-table-cover-3-sided-open-back-template.pdf"
+			],
+			[
+				"4 sided (Close-Back)",
+				"4ft-table-cover-4-sided-closed-back-template.pdf"
+			]
+		],
+		"round-table-cover": [
+			[
+				"Download",
+				"round-table-cover-31-inch-standard-height-template.pdf"
+			],
+			[
+				"Download",
+				"round-table-cover-31-inch-standard-height-template.psd"
+			],
+			[
+				"Download",
+				"round-table-cover-36-inch-standard-height-template.pdf"
+			],
+			[
+				"Download",
+				"round-table-cover-36-inch-standard-height-template.psd"
+			],
+			[
+				"Download",
+				"round-table-cover-48-inch-standard-height-template.pdf"
+			],
+			[
+				"Download",
+				"round-table-cover-48-inch-standard-height-template.psd"
+			],
+			[
+				"Download",
+				"round-table-cover-60-inch-standard-height-template.pdf"
+			],
+			[
+				"Download",
+				"round-table-cover-60-inch-standard-height-template.psd"
+			],
+			[
+				"Download",
+				"round-table-cover-31-inch-bar-height-template.pdf"
+			],
+			[
+				"Download",
+				"round-table-cover-31-inch-bar-height-template.psd"
+			]
+		],
+		"stretch-table-cover": [
+			[
+				"Stretch Table Cover 6ft",
+				"6ft-stretch-table-cover-template.pdf"
+			],
+			[
+				"Stretch Table Cover 8ft",
+				"8ft-stretch-table-cover-template.pdf"
+			]
+		],
+		"tent-flag": [
+			[
+				"Medium 1 side",
+				"feather-angled-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"Medium 2 sides",
+				"feather-angled-flag-medium-double-sided-template.psd"
+			],
+			[
+				"Small 1 side",
+				"feather-angled-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"Small 2 sides",
+				"feather-angled-flag-small-double-sided-template.psd"
+			],
+			[
+				"Medium 1 side",
+				"teardrop-flag-medium-single-sided-print-through-template.pdf"
+			],
+			[
+				"Medium 2 sides",
+				"teardrop-flag-medium-double-sided-template.pdf"
+			],
+			[
+				"Small 1 side",
+				"teardrop-flag-small-single-sided-print-through-template.pdf"
+			],
+			[
+				"Small 2 sides",
+				"teardrop-flag-small-double-sided-template.pdf"
+			],
+			[
+				"Medium 1 side",
+				"teardrop-flag-medium-single-sided-print-through-template.psd"
+			],
+			[
+				"Medium 2 sides",
+				"teardrop-flag-medium-double-sided-template.psd"
+			],
+			[
+				"Small 1 side",
+				"teardrop-flag-small-single-sided-print-through-template.psd"
+			],
+			[
+				"Small 2 sides",
+				"teardrop-flag-small-double-sided-template.psd"
+			]
+		],
+		"10ft-seg-fabric-display-graphic-frame": [
+			[
+				"Single Sided Template",
+				"10ft-seg-fabric-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"10ft-seg-fabric-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"10ft-20ft-seg-fabric-display-installation-guide.pdf"
+			]
+		],
+		"10ft-seg-fabric-display-graphic-only": [
+			[
+				"Single Sided Template",
+				"10ft-seg-fabric-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"10ft-seg-fabric-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"10ft-20ft-seg-fabric-display-installation-guide.pdf"
+			]
+		],
+		"20ft-seg-fabric-display-graphic-frame": [
+			[
+				"Single Sided Template",
+				"20ft-seg-fabric-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"20ft-seg-fabric-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"10ft-20ft-seg-fabric-display-installation-guide.pdf"
+			]
+		],
+		"20ft-seg-fabric-display-graphic-only": [
+			[
+				"Single Sided Template",
+				"20ft-seg-fabric-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"20ft-seg-fabric-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"10ft-20ft-seg-fabric-display-installation-guide.pdf"
+			]
+		],
+		"8ft-seg-backlit-popup-display-graphic-frame": [
+			[
+				"Single Sided Template",
+				"8ft-seg-backlit-popup-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"8ft-seg-backlit-popup-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide - Frame",
+				"backlit-popup-display-frame-installation-guide.pdf"
+			],
+			[
+				"Download Installation Guide - LEDs",
+				"backlit-popup-display-led-lights-installation-guide.pdf"
+			]
+		],
+		"8ft-seg-backlit-popup-display-graphic-only": [
+			[
+				"Single Sided Template",
+				"8ft-seg-backlit-popup-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"8ft-seg-backlit-popup-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide - Frame",
+				"backlit-popup-display-frame-installation-guide.pdf"
+			],
+			[
+				"Download Installation Guide - LEDs",
+				"backlit-popup-display-led-lights-installation-guide.pdf"
+			]
+		],
+		"10ft-seg-backlit-popup-display-graphic-frame": [
+			[
+				"Single Sided Template",
+				"10ft-seg-backlit-popup-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"10ft-seg-backlit-popup-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide - Frame",
+				"backlit-popup-display-frame-installation-guide.pdf"
+			],
+			[
+				"Download Installation Guide - LEDs",
+				"backlit-popup-display-led-lights-installation-guide.pdf"
+			]
+		],
+		"10ft-seg-backlit-popup-display-graphic-only": [
+			[
+				"Single Sided Template",
+				"10ft-seg-backlit-popup-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"10ft-seg-backlit-popup-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide - Frame",
+				"backlit-popup-display-frame-installation-guide.pdf"
+			],
+			[
+				"Download Installation Guide - LEDs",
+				"backlit-popup-display-led-lights-installation-guide.pdf"
+			]
+		],
+		"curved-tension-fabric-display-graphic-frame": [
+			[
+				"Download",
+				"6ft-curved-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"8ft-curved-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"10ft-curved-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"trade-show-podium-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"curved-tension-fabric-display-installation-guide.pdf"
+			]
+		],
+		"curved-tension-fabric-display-graphic-only": [
+			[
+				"Download",
+				"6ft-curved-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"8ft-curved-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"10ft-curved-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"trade-show-podium-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"curved-tension-fabric-display-installation-guide.pdf"
+			]
+		],
+		"event-tent-full-canopy-graphic-frame": [
+			[
+				"Canopy",
+				"event-tent-canopy-template.pdf"
+			],
+			[
+				"Canopy",
+				"event-tent-canopy-template.psd"
+			],
+			[
+				"Full Wall",
+				"event-tent-full-wall-template.pdf"
+			],
+			[
+				"Full Wall",
+				"event-tent-full-wall-template.psd"
+			],
+			[
+				"Half Wall",
+				"event-tent-half-wall-template.pdf"
+			],
+			[
+				"Half Wall",
+				"event-tent-half-wall-template.psd"
+			],
+			[
+				"Event Tent Installation Guide",
+				"event-tent-installation-guide.pdf"
+			]
+		],
+		"event-tent-full-canopy-graphic-only": [
+			[
+				"Canopy",
+				"event-tent-canopy-template.pdf"
+			],
+			[
+				"Canopy",
+				"event-tent-canopy-template.psd"
+			],
+			[
+				"Full Wall",
+				"event-tent-full-wall-template.pdf"
+			],
+			[
+				"Full Wall",
+				"event-tent-full-wall-template.psd"
+			],
+			[
+				"Half Wall",
+				"event-tent-half-wall-template.pdf"
+			],
+			[
+				"Half Wall",
+				"event-tent-half-wall-template.psd"
+			],
+			[
+				"Event Tent Installation Guide",
+				"event-tent-installation-guide.pdf"
+			]
+		],
+		"tent-walls-full-color-full-wall": [
+			[
+				"Full Wall",
+				"event-tent-full-wall-template.pdf"
+			],
+			[
+				"Full Wall",
+				"event-tent-full-wall-template.psd"
+			],
+			[
+				"Half Wall",
+				"event-tent-half-wall-template.pdf"
+			],
+			[
+				"Half Wall",
+				"event-tent-half-wall-template.psd"
+			]
+		],
+		"tent-walls-full-color-half-wall": [
+			[
+				"Full Wall",
+				"event-tent-full-wall-template.pdf"
+			],
+			[
+				"Full Wall",
+				"event-tent-full-wall-template.psd"
+			],
+			[
+				"Half Wall",
+				"event-tent-half-wall-template.pdf"
+			],
+			[
+				"Half Wall",
+				"event-tent-half-wall-template.psd"
+			]
+		],
+		"straight-tension-fabric-displays-graphic-frame": [
+			[
+				"Download",
+				"8ft-straight-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"10ft-straight-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"20ft-straight-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"trade-show-podium-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"straight-tension-fabric-display-installation-guide.pdf"
+			]
+		],
+		"straight-tension-fabric-displays-graphic-only": [
+			[
+				"Download",
+				"8ft-straight-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"10ft-straight-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"20ft-straight-tension-fabric-display-template.pdf"
+			],
+			[
+				"Download",
+				"trade-show-podium-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"straight-tension-fabric-display-installation-guide.pdf"
+			]
+		],
+		"curved-velcro-fabric-pop-up-display-graphic-frame": [
+			[
+				"Download",
+				"8ft-curved-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"10ft-curved-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"trade-show-podium-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"velcro-fabric-pop-up-display-installation-guide.pdf"
+			]
+		],
+		"curved-velcro-fabric-pop-up-display-graphic-only": [
+			[
+				"Download",
+				"8ft-curved-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"10ft-curved-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"trade-show-podium-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"velcro-fabric-pop-up-display-installation-guide.pdf"
+			]
+		],
+		"straight-velcro-fabric-pop-up-display-graphic-frame": [
+			[
+				"Download",
+				"8ft-straight-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"10ft-straight-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"trade-show-podium-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"velcro-fabric-pop-up-display-installation-guide.pdf"
+			]
+		],
+		"straight-velcro-fabric-pop-up-display-graphic-only": [
+			[
+				"Download",
+				"8ft-straight-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"10ft-straight-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"trade-show-podium-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"velcro-fabric-pop-up-display-installation-guide.pdf"
+			]
+		],
+		"straight-velcro-fabric-pop-up-display-graphic-frame-only": [
+			[
+				"Download",
+				"8ft-straight-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"10ft-straight-velcro-fabric-pop-up-display-template.pdf"
+			],
+			[
+				"Download",
+				"trade-show-podium-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"velcro-fabric-pop-up-display-installation-guide.pdf"
+			]
+		],
+		"3ft-seg-fabric-stand-graphic-frame": [
+			[
+				"Single Sided Template",
+				"3ft-seg-fabric-stand-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"3ft-seg-fabric-stand-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"3ft-seg-display-installation-guide.pdf"
+			]
+		],
+		"3ft-seg-fabric-stand-graphic-only": [
+			[
+				"Single Sided Template",
+				"3ft-seg-fabric-stand-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"3ft-seg-fabric-stand-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"3ft-seg-display-installation-guide.pdf"
+			]
+		],
+		"10ft-seg-backlit-fabric-display-graphic-frame": [
+			[
+				"Single Sided Template",
+				"10ft-seg-backlit-fabric-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"10ft-seg-backlit-fabric-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"10ft-seg-backlit-display-installation-guide.pdf"
+			]
+		],
+		"10ft-seg-backlit-fabric-display-graphic-only": [
+			[
+				"Single Sided Template",
+				"10ft-seg-backlit-fabric-display-single-sided-template.pdf"
+			],
+			[
+				"Double Sided Template",
+				"10ft-seg-backlit-fabric-display-double-sided-template.pdf"
+			],
+			[
+				"Download Installation Guide",
+				"10ft-seg-backlit-display-installation-guide.pdf"
+			]
+		],
+		"6ft-table-cover": [
+			[
+				"Download",
+				"6ft-table-cover-3-sided-open-back-template.pdf"
+			],
+			[
+				"Download",
+				"6ft-table-cover-3-sided-open-back-template.psd"
+			],
+			[
+				"Download",
+				null
+			],
+			[
+				"Download",
+				"6ft-table-cover-4-sided-closed-back-template.pdf"
+			],
+			[
+				"Download",
+				"6ft-table-cover-4-sided-closed-back-template.psd"
+			],
+			[
+				"Download",
+				null
+			]
+		],
+		"8ft-table-cover": [
+			[
+				"Download",
+				"8ft-table-cover-3-sided-open-back-template.pdf"
+			],
+			[
+				"Download",
+				"8ft-table-cover-3-sided-open-back-template.psd"
+			],
+			[
+				"Download",
+				null
+			],
+			[
+				"Download",
+				"8ft-table-cover-4-sided-closed-back-template.pdf"
+			],
+			[
+				"Download",
+				"8ft-table-cover-4-sided-closed-back-template.psd"
+			],
+			[
+				"Download",
+				null
+			]
+		]
+	},
+	"text_links": {
+		"Yard Sign and H-Stake": [
+			[
+				"Coroplast",
+				"coroplast"
+			]
+		],
+		"Coroplast": [
+			[
+				"3M decals",
+				"3m-ij-180cv3-controltac-vehicle-wrap"
+			],
+			[
+				"Reflective Car Magnets",
+				"reflective-car-magnet"
+			],
+			[
+				"Dry Erase Car Magnets",
+				"dry-erase-magnet"
+			]
+		],
+		"Dry Erase Adhesive Vinyl": [
+			[
+				"Regular Adhesive Vinyl",
+				"adhesive-products"
+			],
+			[
+				"Reflective Adhesive Vinyl",
+				"reflective-adhesive-vinyl"
+			]
+		],
+		"Pole Banner Set": [
+			[
+				"18 oz banner product",
+				"18oz-blockout-banner"
+			]
+		],
+		"PVC Board": [
+			[
+				"Reflective PVC Board",
+				"reflective-pvc-board"
+			],
+			[
+				"Dry Erase PVC Board",
+				"dry-erase-pvc-board"
+			]
+		],
+		"LED Light for Banner Stand": [
+			[
+				"Deluxe Retractable",
+				"deluxe-retractable-insert-stand"
+			],
+			[
+				"Standard Retractable",
+				"standard-retractable-insert-stand"
+			],
+			[
+				"SD Retractable",
+				"sd-retractable-sd-retractable-insert-stand"
+			]
+		],
+		"Tension Fabric Stand (Hardware Only)": [
+			[
+				"Fabric Stand 36\"x90\" Insert",
+				"tension-fabric-stand-graphic-only"
+			],
+			[
+				"Fabric Stand 48\"x90\" Insert",
+				"tension-fabric-stand-graphic-only"
+			]
+		],
+		"Aluminum Sandwich Board": [
+			[
+				"Reflective Aluminum Sandwich Board",
+				"reflective-aluminum-sandwich-board"
+			],
+			[
+				"Dry Erase Aluminum Sandwich Board",
+				"dry-erase-aluminum-sandwich-board"
+			]
+		],
+		"Dry Erase Signicade A-Frame": [
+			[
+				"Regular Signicade A-Frame",
+				"standard-signicade-white-frame-graphic"
+			],
+			[
+				"Reflective Signicade A-Frame",
+				"reflective-signicade-a-frame"
+			]
+		],
+		"Dry Erase Magnet": [
+			[
+				"Regular Magnets",
+				"magnets"
+			],
+			[
+				"Reflective Magnets",
+				"reflective-car-magnet"
+			]
+		],
+		"Dry Erase Aluminum Sandwich Board": [
+			[
+				"Regular Aluminum Sandwich Board",
+				"aluminum-sandwich-board"
+			],
+			[
+				"Reflective Aluminum Sandwich Board",
+				"reflective-aluminum-sandwich-board"
+			]
+		],
+		"Dry Erase Foamcore": [
+			[
+				"Regular Foamcore",
+				"foam-board"
+			]
+		]
+	},
+	"component_links": {
+		"hidden-back-halo-lit": "stainless-steel-channel-letter-color-chart.pdf",
+		"halo-reverse-acrylic-lit-channel-letters": "stainless-steel-channel-letter-color-chart.pdf",
+		"inset-acrylic-face-lit-with-border-no-trimcap": "stainless-steel-channel-letter-color-chart.pdf",
+		"exposed-acrylic-face-lit-borderless-no-trimcap": "stainless-steel-channel-letter-color-chart.pdf"
+	}
+}

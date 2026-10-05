@@ -281,6 +281,9 @@ function wholesale_render_review_slider()
 			<div class="review-dots" data-review-dots aria-hidden="true"></div>
 
 			<div class="review-actions">
+				<?php if (function_exists('wholesale_reviews_page_url')) : ?>
+					<a class="review-action" href="<?php echo esc_url(wholesale_reviews_page_url()); ?>">See all customer reviews</a>
+				<?php endif; ?>
 				<?php if ($data['google_url']) : ?>
 					<a class="review-action" href="<?php echo esc_url($data['google_url']); ?>" target="_blank" rel="noopener">See all reviews on Google</a>
 				<?php endif; ?>

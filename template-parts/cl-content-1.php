@@ -32,11 +32,11 @@
                     <li><strong>LED illuminated</strong></li>
                 </ul>
                 <p style="padding-left: 40px;"><strong>Buying Options</strong></p>
-                <p style="padding-left: 40px;"><img src="https://www.b2sign.com/image/item/230726/rw6efOzY.png" alt="Front-lit channel letter buying options" width="450" loading="lazy" decoding="async" /></p>
+                <p style="padding-left: 40px;"><img src="<?php echo esc_url(wholesale_storefront_media_url('front-lit-led-channel-letter-on-brick-wall.png')); ?>" alt="Front-lit channel letter buying options" width="450" loading="lazy" decoding="async" /></p>
                 <p style="padding-left: 40px;">Front Lit</p>
                 <p style="padding-left: 40px;"><strong>Material Options</strong></p>
                 <p style="padding-left: 40px;"><img class="alignnone wp-image-245 " src="https://mystorefrontsigns.com/wp-content/uploads/2024/06/SIGN-spec-detail-2-1.png" alt="Channel letter sign material options" width="450" height="267" loading="lazy" decoding="async" /></p>
-                <p style="padding-left: 40px;"><img class="" src="https://www.b2sign.com/image/item/230725/Kz3iANVm.png" alt="California Proposition 65 warning" width="27" height="25" loading="lazy" decoding="async" /><strong>WARNING:</strong> This product can expose you to chemicals including Diisononyl phthalate (DINP), which is known to the State of California to cause cancer. For more information go to  <a href="https://www.P65Warnings.ca.gov" target="_blank" rel="noopener">www.P65Warnings.ca.gov </a>.</p>
+                <p style="padding-left: 40px;"><img class="" src="<?php echo esc_url(wholesale_storefront_media_url('california-prop-65-warning-icon.png')); ?>" alt="California Proposition 65 warning" width="27" height="25" loading="lazy" decoding="async" /><strong>WARNING:</strong> This product can expose you to chemicals including Diisononyl phthalate (DINP), which is known to the State of California to cause cancer. For more information go to  <a href="https://www.P65Warnings.ca.gov" target="_blank" rel="noopener">www.P65Warnings.ca.gov </a>.</p>
 
             </div>
         </div>
@@ -63,7 +63,7 @@
                                 </div>
                                 <div>1/8” Clear Lexan</div>
                             </div>
-                            <div><img src="https://www.b2sign.com/image/item/230817/3QYSyhl8.png" alt="Clear Lexan channel letter back" loading="lazy" decoding="async" /></div>
+                            <div><img src="<?php echo esc_url(wholesale_storefront_media_url('halo-lit-channel-letter-clear-lexan-back-diagram.png')); ?>" alt="Clear Lexan channel letter back" loading="lazy" decoding="async" /></div>
                         </div>
                     </div>
                 </div>
@@ -85,10 +85,10 @@
                                 </div>
                                 <div>0.8mm/1mm stainless steel</div>
                             </div>
-                            <div><img src="https://www.b2sign.com/image/item/230817/Wyxn53DX.png" alt="Stainless steel channel letter face" loading="lazy" decoding="async" /></div>
-                            <div><a href="https://www.b2sign.com/item/download/L2UjHbpx"> Download Face Color Chart </a></div>
+                            <div><img src="<?php echo esc_url(wholesale_storefront_media_url('halo-lit-channel-letter-stainless-steel-face-diagram.png')); ?>" alt="Stainless steel channel letter face" loading="lazy" decoding="async" /></div>
+                            <div><a href="<?php echo esc_url(wholesale_storefront_media_url('stainless-steel-channel-letter-color-chart.pdf')); ?>"> Download Face Color Chart </a></div>
                         </div>
-                        <div><img src="https://www.b2sign.com/image/item/230817/HkmdZB4d.png" alt="Channel letter face color chart" loading="lazy" decoding="async" /></div>
+                        <div><img src="<?php echo esc_url(wholesale_storefront_media_url('stainless-steel-channel-letter-color-chart.png')); ?>" alt="Channel letter face color chart" loading="lazy" decoding="async" /></div>
                     </div>
                 </div>
             </div>
@@ -109,10 +109,10 @@
                                 </div>
                                 <div>2" or 3" 0.8mm/1mm stainless steel Returns</div>
                             </div>
-                            <div><img src="https://www.b2sign.com/image/item/230817/RijfnE6r.png" alt="Stainless steel channel letter returns" loading="lazy" decoding="async" /></div>
-                            <div><a href="https://www.b2sign.com/item/download/L2UjHbpx"> Download Return Color Chart </a></div>
+                            <div><img src="<?php echo esc_url(wholesale_storefront_media_url('halo-lit-channel-letter-stainless-steel-return-diagram.png')); ?>" alt="Stainless steel channel letter returns" loading="lazy" decoding="async" /></div>
+                            <div><a href="<?php echo esc_url(wholesale_storefront_media_url('stainless-steel-channel-letter-color-chart.pdf')); ?>"> Download Return Color Chart </a></div>
                         </div>
-                        <div><img src="https://www.b2sign.com/image/item/230817/HkmdZB4d.png" alt="Channel letter return color chart" loading="lazy" decoding="async" /></div>
+                        <div><img src="<?php echo esc_url(wholesale_storefront_media_url('stainless-steel-channel-letter-color-chart.png')); ?>" alt="Channel letter return color chart" loading="lazy" decoding="async" /></div>
                     </div>
                 </div>
             </div>
@@ -183,17 +183,17 @@
                                             <li>Self-tapping screws x20 (each segment)</li>
                                         </ul>
                                         <strong>Installation Guide:</strong>
-                                        <div><img class="" src="https://www.b2sign.com/image/item/240620/Oi7FPphd.jpg" alt="Channel letter raceway installation parts" width="557" height="418" loading="lazy" decoding="async" />
+                                        <div><img class="" src="<?php echo esc_url(wholesale_storefront_media_url('channel-letter-raceway-installation-parts.jpg')); ?>" alt="Channel letter raceway installation parts" width="557" height="418" loading="lazy" decoding="async" />
                                             <div>
                                                 <div>List out parts</div>
                                             </div>
                                         </div>
-                                        <div><img class="" src="https://www.b2sign.com/image/item/240620/2xljQILp.jpg" alt="Channel letter raceway assembly" width="552" height="414" loading="lazy" decoding="async" />
+                                        <div><img class="" src="<?php echo esc_url(wholesale_storefront_media_url('channel-letter-raceway-assembly.jpg')); ?>" alt="Channel letter raceway assembly" width="552" height="414" loading="lazy" decoding="async" />
                                             <div>
                                                 <div>Assemble Raceway</div>
                                             </div>
                                         </div>
-                                        <div><img class="" src="https://www.b2sign.com/image/item/240620/N5m75sGP.jpg" alt="Channel letter raceway hanger installation" width="532" height="399" loading="lazy" decoding="async" />
+                                        <div><img class="" src="<?php echo esc_url(wholesale_storefront_media_url('channel-letter-raceway-hanger-installation.jpg')); ?>" alt="Channel letter raceway hanger installation" width="532" height="399" loading="lazy" decoding="async" />
                                             <div>
                                                 <div>Put Hanger on</div>
                                             </div>
@@ -212,15 +212,15 @@
 </div>
 <!-- Warrenty -->
 <div class="tab-pane fade" id="warrenty" role="tabpanel" aria-labelledby="warrenty-tab">
-    My Store Front Sign warrants that Front Lit Letters, Front & Back Lit Letters, Front Lit Logo Shapes Sign, and Front & Back Lit Logo Shapes Sign will be free from defects in materials and workmanship for a period of five (5) years from the date of shipment. Should there be a malfunction covered under this warranty, the buyer must notify B2 Sign prior to taking any action. To proceed with any work or repairs on signs under warranty without notifying B2 Sign automatically voids any warranty.
+    Storefront Sign Online LLC warrants that Front Lit Letters, Front & Back Lit Letters, Front Lit Logo Shapes Sign, and Front & Back Lit Logo Shapes Sign will be free from defects in materials and workmanship for a period of five (5) years from the date of shipment. Should there be a malfunction covered under this warranty, the buyer must notify Storefront Sign Online LLC prior to taking any action. To proceed with any work or repairs on signs under warranty without notifying Storefront Sign Online LLC automatically voids any warranty.
 
-    If the product proves defective during the warranty period, B2 Sign, at its option, will: (1) Repair the product, at no charge for parts or telephone/email support (2) Replace the product with an equivalent product which may be new or refurbished
+    If the product proves defective during the warranty period, Storefront Sign Online LLC, at its option, will: (1) Repair the product, at no charge for parts or telephone/email support (2) Replace the product with an equivalent product which may be new or refurbished
 
-    B2 Sign tests and inspects all signs for proper operation prior to shipment. In addition, all signs are shipped in packaging that meets or exceeds industry standards for common carrier shipment. Therefore, it is the responsibility of the party receiving the shipment to inspect the packaging for any damage prior to accepting shipment. If packaging is damaged – inspect all contents for damages before signing. In the event that shipping damage is determined, it is the responsibility of the customer receiving the shipment to file a claim with the carrier and notify by email ChannelLetters@b2sign.com or call 1 (888) 739-8501 Any damages incurred between shipment from our plant and final destination will not be the responsibility of B2 Sign, but will fall on the carrier.
+    Storefront Sign Online LLC tests and inspects all signs for proper operation prior to shipment. In addition, all signs are shipped in packaging that meets or exceeds industry standards for common carrier shipment. Therefore, it is the responsibility of the party receiving the shipment to inspect the packaging for any damage prior to accepting shipment. If packaging is damaged – inspect all contents for damages before signing. In the event that shipping damage is determined, it is the responsibility of the customer receiving the shipment to file a claim with the carrier and notify by email TR@StorefrontSignOnline.com or call 866-436-2101 Any damages incurred between shipment from our plant and final destination will not be the responsibility of Storefront Sign Online LLC, but will fall on the carrier.
 
-    This warranty does not apply to damages resulting from acts of God, accidental negligence, vandalism or misuse. These warranties shall not apply to any defect, failure or damage caused by improper use, installation or care. B2 Sign shall not be obligated under this warranty.
+    This warranty does not apply to damages resulting from acts of God, accidental negligence, vandalism or misuse. These warranties shall not apply to any defect, failure or damage caused by improper use, installation or care. Storefront Sign Online LLC shall not be obligated under this warranty.
 
-    The above warranties are given by B2 Sign with respect to this product and its related items in lieu of any other warranties, express or implied. It is the responsibility of B2 Sign to repair defective products and related items as the sole remedy provided to the customer for honor of this warranty.
+    The above warranties are given by Storefront Sign Online LLC with respect to this product and its related items in lieu of any other warranties, express or implied. It is the responsibility of Storefront Sign Online LLC to repair defective products and related items as the sole remedy provided to the customer for honor of this warranty.
 </div>
 <!-- FAQ -->
 <div class="tab-pane fade" id="faq" role="tabpanel" aria-labelledby="faq-tab">
@@ -307,7 +307,7 @@
             <div id=":re:" class="MuiTabPanel-root MuiTabPanel-sizeMd MuiTabPanel-horizontal MuiTabPanel-variantPlain MuiTabPanel-colorNeutral MuiTabPanel-sizeMd css-1qoucup" role="tabpanel" aria-labelledby=":r9:">
                 <div class="_rich-text_1by3u_30">
                     <div>
-                        <div><img class="" src="https://www.b2sign.com/image/item/230814/yVkrUaTh.png" alt="Channel letter user manual PDF" width="83" height="83" loading="lazy" decoding="async" /><a href="https://www.b2sign.com/item/download/lG1ary2h" target="_blank" rel="noopener">Channel Letter User Manual </a></div>
+                        <div><img class="" src="<?php echo esc_url(wholesale_storefront_media_url('pdf-template-file-icon.png')); ?>" alt="Channel letter user manual PDF" width="83" height="83" loading="lazy" decoding="async" /><a href="<?php echo esc_url(wholesale_storefront_media_url('channel-letter-installation-manual.pdf')); ?>" target="_blank" rel="noopener">Channel Letter User Manual </a></div>
                     </div>
                 </div>
             </div>

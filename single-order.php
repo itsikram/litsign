@@ -18,6 +18,8 @@ $tracking = get_post_meta($post_id, '_tracking_number', true);
 $carrier = get_post_meta($post_id, '_tracking_carrier', true);
 $tracking_url = $tracking ? wholesale_tracking_url($carrier, $tracking) : '';
 $is_staff = current_user_can('edit_post', $post_id);
+$review_links = wholesale_order_unreviewed_products($post_id);
+$can_collect_reviews = 'completed' === $status && wholesale_setting_enabled('allow_verified_reviews');
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
 };
@@ -145,6 +147,11 @@ get_header();
                             <?php if ($product_url) : ?>
                                 <div class="cart-line-actions">
                                     <a class="order-view-product" href="<?php echo esc_url($product_url); ?>">View product</a>
+                                    <?php if (isset($review_links[$product_id])) : ?>
+                                        <a class="order-write-review" href="<?php echo esc_url($review_links[$product_id]); ?>">&#9733; Write a review</a>
+                                    <?php elseif ($can_collect_reviews && wholesale_order_review_id($post_id, $product_id)) : ?>
+                                        <span class="order-reviewed"><?php echo 'publish' === get_post_status(wholesale_order_review_id($post_id, $product_id)) ? 'Reviewed &middot; thank you!' : 'Review submitted &middot; awaiting approval'; ?></span>
+                                    <?php endif; ?>
                                 </div>
                             <?php endif; ?>
                         </div>

@@ -626,6 +626,71 @@ add_action('pre_get_posts', function ($query) {
 	}
 });
 
+// ------------------------------------------------------------------
+// Rating in Quick Edit on the "Review Submissions" list screen
+// ------------------------------------------------------------------
+
+// Hidden value the Quick Edit script reads to preselect the current rating.
+add_action('manage_review_submission_posts_custom_column', function ($column, $post_id) {
+	if ('review_rating' === $column) {
+		printf('<span class="hidden wholesale-qe-rating">%d</span>', absint(get_post_meta($post_id, '_review_rating', true)));
+	}
+}, 20, 2);
+
+add_action('quick_edit_custom_box', function ($column_name, $post_type) {
+	if ('review_submission' !== $post_type || 'review_rating' !== $column_name) {
+		return;
+	}
+	?>
+	<fieldset class="inline-edit-col-right">
+		<div class="inline-edit-col">
+			<label>
+				<span class="title">Rating</span>
+				<?php echo wholesale_review_manager_rating_select('_review_rating', 5); // Escaped in the helper. ?>
+			</label>
+		</div>
+	</fieldset>
+	<?php
+}, 10, 2);
+
+add_action('admin_footer-edit.php', function () {
+	if ('review_submission' !== get_current_screen()->post_type) {
+		return;
+	}
+	?>
+	<script>
+	jQuery(function ($) {
+		if (typeof inlineEditPost === 'undefined') {
+			return;
+		}
+		var edit = inlineEditPost.edit;
+		inlineEditPost.edit = function (id) {
+			edit.apply(this, arguments);
+			var postId = typeof id === 'object' ? this.getId(id) : id;
+			var rating = parseInt($('#post-' + postId + ' .wholesale-qe-rating').text(), 10);
+			if (rating >= 1 && rating <= 5) {
+				$('#edit-' + postId + ' select[name="_review_rating"]').val(String(rating));
+			}
+		};
+	});
+	</script>
+	<?php
+});
+
+add_action('save_post_review_submission', function ($post_id) {
+	if (!wp_doing_ajax() || 'inline-save' !== ($_POST['action'] ?? '') || !isset($_POST['_review_rating'])) {
+		return;
+	}
+	check_ajax_referer('inlineeditnonce', '_inline_edit');
+	if (!current_user_can('edit_post', $post_id)) {
+		return;
+	}
+	$rating = absint($_POST['_review_rating']);
+	if ($rating >= 1 && $rating <= 5) {
+		update_post_meta($post_id, '_review_rating', $rating);
+	}
+});
+
 function wholesale_review_manager_rating_select($name, $selected, $required = true)
 {
 	$html = '<select name="' . esc_attr($name) . '"' . ($required ? ' required' : '') . '>';

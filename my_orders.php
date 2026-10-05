@@ -72,6 +72,10 @@ get_header();
                         <div class="order-row-side">
                             <strong><?php echo esc_html('$' . number_format((float) ($cost['grand_total'] ?? 0), 2)); ?></strong>
                             <a href="<?php echo esc_url(get_permalink($order)); ?>">View details</a>
+                            <?php $review_links = wholesale_order_unreviewed_products($order->ID); ?>
+                            <?php if ($review_links) : ?>
+                                <a class="order-write-review" href="<?php echo esc_url(1 === count($review_links) ? reset($review_links) : get_permalink($order)); ?>">&#9733; Write a review</a>
+                            <?php endif; ?>
                         </div>
                     </li>
                 <?php endforeach; ?>

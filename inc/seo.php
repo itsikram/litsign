@@ -357,6 +357,8 @@ function wholesale_seo_migrations()
 		'2026-10-policy-drafts' => 'wholesale_seo_migrate_policy_drafts',
 		'2026-10-remove-supplier-references' => 'wholesale_seo_migrate_remove_supplier_references',
 		'2026-10-banners-displays-page' => 'wholesale_seo_migrate_banners_displays_page',
+		'2026-10-coroplast-description' => 'wholesale_seo_migrate_coroplast_description',
+		'2026-10-channel-letter-cost-page' => 'wholesale_seo_migrate_channel_letter_cost_page',
 	);
 }
 
@@ -526,4 +528,124 @@ function wholesale_seo_migrate_policy_drafts()
 	}
 
 	return true;
+}
+
+/**
+ * The Coroplast product was saved with the Magnets product's copy (description,
+ * specs, FAQ, bullets and card text all describe a 30 mil magnet). Replace it
+ * with copy built from the product's own options: 4mm white Coroplast, UV
+ * printed matte, one or two sides, free grommets, optional H-stake. Only runs
+ * while the magnet text is still there, so owner edits are never overwritten.
+ */
+function wholesale_seo_migrate_coroplast_description()
+{
+	$product = get_page_by_path('coroplast', OBJECT, 'product');
+	if (!$product || false === strpos($product->post_content, 'Our magnet sheet')) {
+		return true;
+	}
+
+	$intro = strstr($product->post_content, '<h4 id="description">', true);
+	$body = '<h4 id="description">Description</h4>
+Custom Coroplast signs are printed on 4mm white corrugated plastic: lightweight, waterproof and rigid enough to stand up outdoors. They are the go-to material for yard signs, real estate and open house signs, political and event signs, construction site and directional signs, and temporary storefront promotions. Graphics are UV printed for a long lasting matte finish.
+
+Choose a standard size or enter your own, print one or both sides, and add an H-stake to put your sign straight into the ground.
+
+<hr />
+
+<h4 id="spec">Spec</h4>
+<strong>Material:</strong>
+<ul>
+ 	<li>4mm White Coroplast (corrugated plastic)</li>
+</ul>
+<strong>Print</strong>
+<ul>
+ 	<li>UV Ink - Matte Finish</li>
+ 	<li>1 side or 2 sides</li>
+</ul>
+<strong>Product Attributes:</strong>
+<ul>
+ 	<li>Standard sizes from 18" x 12" to 24" x 36", or custom sizes up to 4 ft x 8 ft</li>
+ 	<li>Grommets in all four corners or the top two corners, free of charge</li>
+ 	<li>Optional H-stake for yard and lawn installs</li>
+ 	<li>Indoor or outdoor; waterproof</li>
+</ul>
+<strong>See Also:</strong>
+<ul>
+ 	<li><a href="/product/reflective-coroplast-sign-hstake/">Reflective Coroplast</a></li>
+ 	<li><a href="/product/dry-erase-coroplast-sign-hstake/">Dry Erase Coroplast</a></li>
+ 	<li><a href="/product/yard-sign-and-h-stake/">Yard Sign and H-Stake</a></li>
+</ul>
+
+<hr />
+
+<h4 id="file-setup">File Setup</h4>
+<ul>
+ 	<li>Accepted File Formats: JPEG or PDF (single page only)</li>
+ 	<li>Color Space: CMYK</li>
+ 	<li>Resolution: 150dpi for raster images (More than enough for large format)</li>
+ 	<li>Max File Upload Size: 300MB</li>
+ 	<li>Submit artwork built to ordered size - Scaled artwork is automatically detected and fit to order</li>
+ 	<li>Do not include crop marks or bleeds</li>
+</ul>
+<strong>Additional Tips</strong>
+<ul>
+ 	<li>Do not submit with Pantones/Spot Colors - Convert to CMYK</li>
+ 	<li>Convert live fonts to outlines</li>
+ 	<li>Use provided design templates when available</li>
+</ul>
+
+<hr />
+
+<h4 id="frequently-asked-questions">Frequently asked questions</h4>
+<ul>
+ 	<li>Q: Can I print both sides of my Coroplast sign?</li>
+ 	<li>A: Yes. Choose 2 Sides when you order and both faces are printed.</li>
+ 	<li>Q: Do Coroplast signs come with stakes?</li>
+ 	<li>A: H-stakes are an optional add-on. Choose Yes for H-Stake when you order.</li>
+ 	<li>Q: Is there a charge for grommets?</li>
+ 	<li>A: No. Grommets in all four corners or the top two corners are free.</li>
+</ul>';
+
+	$body = str_replace('href="/product/', 'href="' . esc_url(home_url('/product/')), $body);
+
+	wp_update_post(array(
+		'ID' => $product->ID,
+		'post_content' => (false !== $intro ? $intro : '') . $body,
+	));
+
+	update_post_meta($product->ID, '_product_short_desc', '<ul>
+ 	<li>4mm white Coroplast (corrugated plastic)</li>
+ 	<li>UV printed matte finish - indoor and outdoor ready</li>
+ 	<li>Print 1 or 2 sides, free grommets</li>
+ 	<li>Optional H-stake for yard signs</li>
+</ul>');
+	update_post_meta($product->ID, '_product_list_desc', '<ul>
+ 	<li>4mm corrugated plastic yard signs</li>
+ 	<li>Waterproof, optional H-stake</li>
+</ul>');
+
+	return true;
+}
+
+/**
+ * Create the Channel Letter Cost guide page. Its content comes from
+ * page-channel-letter-cost.php, so the page itself stays empty.
+ */
+function wholesale_seo_migrate_channel_letter_cost_page()
+{
+	if (get_page_by_path('channel-letter-cost', OBJECT, 'page')) {
+		return true;
+	}
+
+	$page_id = wp_insert_post(array(
+		'post_type' => 'page',
+		'post_status' => 'publish',
+		'post_title' => 'Channel Letter Cost',
+		'post_name' => 'channel-letter-cost',
+		'post_content' => '',
+		'comment_status' => 'closed',
+		'ping_status' => 'closed',
+	), true);
+
+	return !is_wp_error($page_id);
 }

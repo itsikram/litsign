@@ -55,6 +55,7 @@ require_once(dirname(__FILE__) . '/inc/email-log.php');
 require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
+require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
 require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
 require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
@@ -2141,7 +2142,7 @@ function litsign_scripts()
 	if (is_page_template('page-channel-letters.php')) {
 		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
 	}
-	if (is_page(array('storefront-signs', 'about', 'banners-displays')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
+	if (is_page(array('storefront-signs', 'about', 'banners-displays', 'channel-letter-cost')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
 		wp_enqueue_style('wholesale-seo-pages', $theme_uri . '/css/seo-pages.css', array('custom-style'), $asset_version('/css/seo-pages.css'));
 	}
 	if (is_page('banners-displays')) {
@@ -2547,6 +2548,11 @@ function wholesale_seo_page_defaults()
 		'landing-page' => array(
 			'title' => __('Custom Business Signs | Free Sign Quote', 'litsign'),
 			'description' => __('Custom channel letters, banners, window graphics and more for your business. Request a free sign quote today.', 'litsign'),
+		),
+		'channel-letter-cost' => array(
+			// The prices are live, so the year stays current.
+			'title' => sprintf(__('Channel Letter Cost: Real Prices per Letter & Height (%s)', 'litsign'), wp_date('Y')),
+			'description' => __('How much do channel letters cost? See real per-letter prices for 7 lit styles from 8" to 36", example sign totals, and what adds to the price.', 'litsign'),
 		),
 		'storefront-signs' => array(
 			'title' => __('Storefront Signs | Custom Lit Business Signs, Priced Online', 'litsign'),
@@ -3291,6 +3297,18 @@ function wholesale_seo_head()
 	}
 }
 add_action('wp_head', 'wholesale_seo_head', 1);
+
+/**
+ * The Ultimate Social Media Icons plugin prints its own Open Graph and Twitter
+ * tags (bare product name as the title, the whole description as the summary),
+ * which duplicate the theme's and win on Facebook and LinkedIn because they
+ * come first. Keep the plugin's icons, drop its tags.
+ */
+add_action('wp', function () {
+	if (!wholesale_has_seo_plugin()) {
+		remove_action('wp_head', 'ultimatefbmetatags');
+	}
+});
 
 /**
  * Identify the public channel-letter category route.

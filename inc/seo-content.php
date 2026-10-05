@@ -1058,6 +1058,10 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 				echo '<strong>' . esc_html(sprintf('Prices start at $%s for one %d inch letter', number_format($from_price, 2), $heights[0])) . '</strong>'
 					. esc_html($discount > 0 ? sprintf(', including the %s%% online discount,', rtrim(rtrim(number_format($discount, 2), '0'), '.')) : '')
 					. ' before options such as a power supply or raceway.';
+				$cost_page = get_page_by_path('channel-letter-cost');
+				if ($cost_page && 'publish' === $cost_page->post_status) {
+					echo ' Compare every style and height in our <a href="' . esc_url(get_permalink($cost_page)) . '">channel letter cost guide</a>.';
+				}
 				?>
 			<?php endif; ?>
 			Price is per letter by height: choose your height, enter your wording and colors above, and your total updates before you add it to the cart. Every sign is tested before it ships, with an installation pattern and wiring diagram for your installer.
@@ -1173,3 +1177,83 @@ function wholesale_seo_demote_content_h1($content)
 	return preg_replace(array('/<h1(\s|>)/i', '/<\/h1>/i'), array('<h2$1', '</h2>'), $content);
 }
 add_filter('the_content', 'wholesale_seo_demote_content_h1', 20);
+
+/**
+ * "More {category}" links under a product: up to eight other listed products
+ * from the product's most specific category, so shoppers and search engines
+ * can move between related products (Coroplast to aluminum and PVC signs,
+ * Graphic Only to Graphic & Frame). Channel letters have their own style list.
+ */
+function wholesale_seo_render_related_products($product_id)
+{
+	if (wholesale_seo_channel_letter_product($product_id)) {
+		return;
+	}
+
+	$terms = get_the_terms($product_id, 'product_category');
+	if (!$terms || is_wp_error($terms)) {
+		return;
+	}
+
+	// A child category is more specific than its parent.
+	$term = $terms[0];
+	foreach ($terms as $candidate) {
+		if ($candidate->parent) {
+			$term = $candidate;
+		}
+	}
+
+	$related = get_posts(array(
+		'post_type' => 'product',
+		'post_status' => 'publish',
+		'posts_per_page' => 8,
+		'post__not_in' => array_merge(array((int) $product_id), wholesale_seo_duplicate_product_ids()),
+		'no_found_rows' => true,
+		'orderby' => array('menu_order' => 'ASC', 'title' => 'ASC'),
+		'tax_query' => array(
+			array('taxonomy' => 'product_category', 'field' => 'term_id', 'terms' => (int) $term->term_id),
+		),
+		'meta_query' => array(
+			array('key' => '_show_in_list', 'value' => 'on'),
+		),
+	));
+	if (!$related) {
+		return;
+	}
+	?>
+	<section class="related-products" aria-labelledby="related-products-title">
+		<div class="related-products-head">
+			<h2 id="related-products-title"><?php echo esc_html(sprintf('More %s', $term->name)); ?></h2>
+			<a href="<?php echo esc_url(wholesale_category_url($term->slug)); ?>"><?php echo esc_html(sprintf('See all %s', $term->name)); ?> &rarr;</a>
+		</div>
+		<ul class="related-products-grid">
+			<?php foreach ($related as $item) : ?>
+				<?php
+				$name = wholesale_seo_product_name($item->ID);
+				$price = wholesale_seo_product_lowest_price($item->ID);
+				?>
+				<li class="related-product">
+					<a href="<?php echo esc_url(get_permalink($item)); ?>">
+						<span class="related-product-image">
+							<?php
+							if (has_post_thumbnail($item)) {
+								echo get_the_post_thumbnail($item, 'medium', array(
+									'loading' => 'lazy',
+									'decoding' => 'async',
+									'alt' => $name,
+									'sizes' => '(max-width: 575px) 50vw, 200px',
+								));
+							}
+							?>
+						</span>
+						<span class="related-product-name"><?php echo esc_html($name); ?></span>
+						<?php if ($price > 0) : ?>
+							<span class="related-product-price"><?php echo esc_html(sprintf('From $%s', number_format($price, 2))); ?></span>
+						<?php endif; ?>
+					</a>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+	</section>
+	<?php
+}

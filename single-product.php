@@ -1088,6 +1088,7 @@ get_header();
             </div>
         </div>
     </form>
+    <?php wholesale_seo_render_related_products($product_id); ?>
     <?php
     $product_review_data = wholesale_product_review_data($product_id);
     $show_product_reviews = wholesale_setting_enabled('show_product_reviews');

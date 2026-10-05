@@ -2964,7 +2964,7 @@ function wholesale_product_schema($product_id, $url, $image = '')
 	$product = array(
 		'@type' => 'Product',
 		'@id' => trailingslashit($url) . '#product',
-		'name' => wp_strip_all_tags(get_the_title($product_id)),
+		'name' => wholesale_schema_text(get_the_title($product_id)),
 		'url' => $url,
 		'description' => wholesale_seo_description(),
 		'image' => $image ? array($image) : array(),
@@ -3049,6 +3049,15 @@ function wholesale_product_schema($product_id, $url, $image = '')
 	}
 
 	return $product;
+}
+
+/**
+ * Plain text for JSON-LD: get_the_title() returns HTML-escaped text
+ * ("Terms &amp; Conditions"), which Google reads literally.
+ */
+function wholesale_schema_text($text)
+{
+	return trim(html_entity_decode(wp_strip_all_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 }
 
 /**
@@ -3180,7 +3189,7 @@ function wholesale_seo_head()
 		$breadcrumb_items[] = array(
 			'@type' => 'ListItem',
 			'position' => count($breadcrumb_items) + 1,
-			'name' => wp_strip_all_tags(get_the_title($product_id)),
+			'name' => wholesale_schema_text(get_the_title($product_id)),
 			'item' => $url,
 		);
 	} elseif ($is_collection) {
@@ -3212,7 +3221,7 @@ function wholesale_seo_head()
 				'@type' => 'ListItem',
 				'position' => $position + 1,
 				'url' => get_permalink($product_id),
-				'name' => get_the_title($product_id),
+				'name' => wholesale_schema_text(get_the_title($product_id)),
 			);
 		}
 		$page['mainEntity'] = array(
@@ -3233,7 +3242,7 @@ function wholesale_seo_head()
 			$breadcrumb_items[] = array(
 				'@type' => 'ListItem',
 				'position' => 2,
-				'name' => wp_strip_all_tags(get_the_title()),
+				'name' => wholesale_schema_text(get_the_title()),
 				'item' => $url,
 			);
 			$entities[] = array(
@@ -3257,7 +3266,7 @@ function wholesale_seo_head()
 					'@type' => 'ListItem',
 					'position' => $position + 1,
 					'url' => get_permalink($item),
-					'name' => wp_strip_all_tags(get_the_title($item)),
+					'name' => wholesale_schema_text(get_the_title($item)),
 				);
 			}
 			$page['mainEntity'] = array(
@@ -3272,10 +3281,19 @@ function wholesale_seo_head()
 		$breadcrumb_items[] = array(
 			'@type' => 'ListItem',
 			'position' => 2,
-			'name' => wp_strip_all_tags(get_the_title()),
+			'name' => wholesale_schema_text(get_the_title()),
 			'item' => $url,
 		);
 	}
+
+	// Google rejects the whole BreadcrumbList if any crumb lacks a name.
+	$breadcrumb_items = array_values(array_filter($breadcrumb_items, function ($crumb) {
+		return isset($crumb['name']) && '' !== $crumb['name'];
+	}));
+	foreach ($breadcrumb_items as $index => &$crumb) {
+		$crumb['position'] = $index + 1;
+	}
+	unset($crumb);
 
 	if (count($breadcrumb_items) > 1) {
 		$page['breadcrumb'] = array(
@@ -3589,7 +3607,7 @@ function wholesale_breadcrumbs()
 	}
 
 	$items[] = array(
-		'name' => wp_strip_all_tags(get_the_title()),
+		'name' => wholesale_schema_text(get_the_title()),
 		'url' => get_permalink(),
 	);
 

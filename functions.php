@@ -1359,6 +1359,9 @@ function wholesale_category_template($template)
 	$term_slug = get_query_var('category_slug');
 
 	if ($term_slug && get_term_by('slug', $term_slug, 'product_category')) {
+		if ('channel-letters' === sanitize_title($term_slug)) {
+			return locate_template('page-channel-letters.php');
+		}
 		return locate_template('home.php');
 	}
 
@@ -3119,11 +3122,11 @@ function wholesale_is_channel_letters_page()
 {
 	$term_slug = get_query_var('category_slug');
 
-	if (!$term_slug && is_page_template('home.php')) {
+	if (!$term_slug && (is_page_template('home.php') || is_page_template('page-channel-letters.php') || is_page('channel-letters'))) {
 		$term_slug = 'channel-letters';
 	}
 
-	return 'channel-letters' === sanitize_title($term_slug);
+	return 'channel-letters' === sanitize_title((string) $term_slug);
 }
 
 /**

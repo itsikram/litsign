@@ -427,6 +427,8 @@
     render(json.data);
     open({ skipRefresh: true });
     const added = json.data.added;
+    // inc/ads-tracking.php sends the add_to_cart conversion from this.
+    if (added) document.dispatchEvent(new CustomEvent("wholesale:cart-added", { detail: added }));
     if (json.data.notice) showAlert("warning", json.data.notice);
     else showAlert("success", added ? `${added.title} was added to your cart.` : "Added to your cart.");
     announce(json.data.notice || (added ? `${added.title} added to your cart.` : "Added to your cart."));

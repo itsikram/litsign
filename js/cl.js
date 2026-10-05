@@ -46,6 +46,254 @@ const clearBuilderBtn = document.getElementById("clearBuilderBtn");
 const addRacewayButton = document.getElementById("addRacewayButton");
 let sliderCloseButton = document.getElementById("sliderCloseBtn");
 const infoButtons = document.querySelectorAll(".info-btn");
+
+// Path-based shapes. Each one is drawn by a Konva.Shape (className "Shape") whose
+// path data is stretched to the node's width/height, so they size, price and save
+// like the built-in shapes. Paths use absolute M/L/C/Z commands.
+const shapeLibrary = {
+  pentagon: { label: "Pentagon", path: "M50 0 L100 36.3 L80.9 95.1 L19.1 95.1 L0 36.3 Z" },
+  hexagon: { label: "Hexagon", path: "M25 0 L75 0 L100 43.3 L75 86.6 L25 86.6 L0 43.3 Z" },
+  octagon: { label: "Octagon", path: "M29.3 0 L70.7 0 L100 29.3 L100 70.7 L70.7 100 L29.3 100 L0 70.7 L0 29.3 Z" },
+  diamond: { label: "Diamond", path: "M50 0 L100 50 L50 100 L0 50 Z" },
+  parallelogram: { label: "Parallelogram", path: "M25 0 L100 0 L75 60 L0 60 Z" },
+  trapezoid: { label: "Trapezoid", path: "M20 0 L80 0 L100 60 L0 60 Z" },
+  pill: { label: "Pill", path: "M20 0 L80 0 C91 0 100 9 100 20 C100 31 91 40 80 40 L20 40 C9 40 0 31 0 20 C0 9 9 0 20 0 Z" },
+  heart: { label: "Heart", path: "M50 92 C20 70 0 52 0 30 C0 13 13 0 29 0 C39 0 46 6 50 14 C54 6 61 0 71 0 C87 0 100 13 100 30 C100 52 80 70 50 92 Z" },
+  shield: { label: "Shield", path: "M50 0 L100 14 L100 45 C100 74 78 92 50 100 C22 92 0 74 0 45 L0 14 Z" },
+  speech: { label: "Speech bubble", path: "M10 0 L90 0 C96 0 100 4 100 10 L100 60 C100 66 96 70 90 70 L45 70 L22 92 L26 70 L10 70 C4 70 0 66 0 60 L0 10 C0 4 4 0 10 0 Z" },
+  banner: { label: "Ribbon banner", path: "M0 0 L100 0 L88 20 L100 40 L0 40 L12 20 Z" },
+  chevron: { label: "Chevron", path: "M0 0 L70 0 L100 30 L70 60 L0 60 L30 30 Z" },
+  cross: { label: "Plus / cross", path: "M35 0 L65 0 L65 35 L100 35 L100 65 L65 65 L65 100 L35 100 L35 65 L0 65 L0 35 L35 35 Z" },
+  house: { label: "House", path: "M50 0 L100 45 L88 45 L88 100 L12 100 L12 45 L0 45 Z" },
+  bolt: { label: "Lightning bolt", path: "M38 0 L0 56 L26 56 L16 100 L60 38 L33 38 L45 0 Z" },
+  seal: { label: "Seal badge", path: null, build: () => starPath(16, 0.84) },
+};
+
+function roundPathNumber(value) {
+  return Math.round(value * 100) / 100;
+}
+
+// Regular polygon with `sides` corners, point up, in a 100 x 100 box.
+function polygonPath(sides) {
+  let path = "";
+  for (let i = 0; i < sides; i++) {
+    const angle = -Math.PI / 2 + (i * 2 * Math.PI) / sides;
+    path += `${i ? " L" : "M"}${roundPathNumber(50 + 50 * Math.cos(angle))} ${roundPathNumber(50 + 50 * Math.sin(angle))}`;
+  }
+  return path + " Z";
+}
+
+// Star / burst with `points` tips; innerRatio is the valley radius as a share of the tip radius.
+function starPath(points, innerRatio) {
+  let path = "";
+  for (let i = 0; i < points * 2; i++) {
+    const radius = i % 2 ? 50 * innerRatio : 50;
+    const angle = -Math.PI / 2 + (i * Math.PI) / points;
+    path += `${i ? " L" : "M"}${roundPathNumber(50 + radius * Math.cos(angle))} ${roundPathNumber(50 + radius * Math.sin(angle))}`;
+  }
+  return path + " Z";
+}
+
+function getShapeDefinition(kind, options = {}) {
+  if (options.path) {
+    return { label: options.label || "Custom shape", path: options.path };
+  }
+  const shapeDef = shapeLibrary[kind];
+  if (!shapeDef) return null;
+  return { label: shapeDef.label, path: shapeDef.path || shapeDef.build() };
+}
+
+// Prices a path shape by its largest side, like the other shapes.
+function persistPathShapeSize(node) {
+  const element = getElementById(node._id);
+  const faceCostPerInch = parseFloat(element ? element.faceCostPerInch : colorCost) || 0;
+  const widthInch = pxToIn(node.width() * node.scaleX());
+  const heightInch = pxToIn(node.height() * node.scaleY());
+  const largestSide = Math.max(parseFloat(widthInch), parseFloat(heightInch));
+  store.dispatch({
+    type: "UPDATE_ELEMENT",
+    payload: {
+      id: node._id,
+      width: widthInch,
+      height: heightInch,
+      cost: costPerInch(largestSide),
+      colorCost: largestSide * faceCostPerInch,
+      faceCostPerInch,
+    },
+  });
+}
+
+const pathGeometryCache = {};
+function getPathGeometry(pathData) {
+  if (!pathGeometryCache[pathData]) {
+    const probe = new Konva.Path({ data: pathData });
+    pathGeometryCache[pathData] = {
+      commands: probe.dataArray,
+      bounds: probe.getSelfRect(),
+    };
+    probe.destroy();
+  }
+  return pathGeometryCache[pathData];
+}
+
+// sceneFunc for path shapes: the path is built in a scaled space, then filled and
+// stroked in the node's own space so the trimcap stroke keeps an even width.
+function drawPathShape(context, shape) {
+  const { commands, bounds } = getPathGeometry(shape.getAttr("shapeData"));
+  context.beginPath();
+  context.save();
+  context.scale(
+    shape.width() / Math.max(1, bounds.width),
+    shape.height() / Math.max(1, bounds.height),
+  );
+  context.translate(-bounds.x, -bounds.y);
+  commands.forEach(({ command, points: p }) => {
+    switch (command) {
+      case "M":
+        context.moveTo(p[0], p[1]);
+        break;
+      case "L":
+        context.lineTo(p[0], p[1]);
+        break;
+      case "C":
+        context.bezierCurveTo(p[0], p[1], p[2], p[3], p[4], p[5]);
+        break;
+      case "Q":
+        context.quadraticCurveTo(p[0], p[1], p[2], p[3]);
+        break;
+      case "z":
+        context.closePath();
+        break;
+    }
+  });
+  context.restore();
+  context.fillStrokeShape(shape);
+}
+
+// Turns an uploaded/pasted SVG into one absolute M/L/C/Q/Z path. Element transforms
+// are applied and arcs are flattened to lines, so drawPathShape can stretch it freely.
+function svgToShapePath(svgText) {
+  const trimmed = (svgText || "").trim();
+  if (!trimmed) return "";
+  const markup = trimmed.startsWith("<")
+    ? trimmed
+    : `<svg xmlns="http://www.w3.org/2000/svg"><path d="${trimmed.replace(/"/g, "")}"/></svg>`;
+  const parsed = new DOMParser().parseFromString(markup, "image/svg+xml");
+  const parsedRoot = parsed.documentElement;
+  if (!parsedRoot || parsedRoot.nodeName.toLowerCase() !== "svg") return "";
+
+  // Only geometry is copied into the live (hidden) SVG; scripts and styles never are.
+  const svgNS = "http://www.w3.org/2000/svg";
+  const host = document.createElementNS(svgNS, "svg");
+  host.setAttribute("width", "0");
+  host.setAttribute("height", "0");
+  host.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;visibility:hidden";
+  const geometryTags = ["path", "polygon", "polyline", "rect", "circle", "ellipse"];
+  const geometryAttrs = ["d", "points", "x", "y", "width", "height", "rx", "ry", "cx", "cy", "r", "transform"];
+  const copyNode = (source, target) => {
+    Array.from(source.children).forEach((child) => {
+      const tag = child.nodeName.toLowerCase();
+      if (tag !== "g" && !geometryTags.includes(tag)) return;
+      const clone = document.createElementNS(svgNS, tag);
+      geometryAttrs.forEach((attr) => {
+        if (child.hasAttribute(attr)) clone.setAttribute(attr, child.getAttribute(attr));
+      });
+      target.appendChild(clone);
+      if (tag === "g") copyNode(child, clone);
+    });
+  };
+  copyNode(parsedRoot, host);
+  document.body.appendChild(host);
+
+  let output = "";
+  try {
+    host.querySelectorAll(geometryTags.join(",")).forEach((el) => {
+      const tag = el.nodeName.toLowerCase();
+      const num = (attr) => parseFloat(el.getAttribute(attr)) || 0;
+      let d = "";
+      if (tag === "path") {
+        d = el.getAttribute("d") || "";
+      } else if (tag === "polygon" || tag === "polyline") {
+        const values = (el.getAttribute("points") || "").trim().split(/[\s,]+/).map(parseFloat);
+        for (let i = 0; i + 1 < values.length; i += 2) {
+          d += `${i ? " L" : "M"}${values[i]} ${values[i + 1]}`;
+        }
+        if (d) d += " Z";
+      } else if (tag === "rect") {
+        const x = num("x"), y = num("y"), w = num("width"), h = num("height");
+        if (w > 0 && h > 0) d = `M${x} ${y} L${x + w} ${y} L${x + w} ${y + h} L${x} ${y + h} Z`;
+      } else {
+        const cx = num("cx"), cy = num("cy");
+        const rx = tag === "circle" ? num("r") : num("rx");
+        const ry = tag === "circle" ? num("r") : num("ry");
+        if (rx > 0 && ry > 0) {
+          const kx = rx * 0.5523, ky = ry * 0.5523;
+          d = `M${cx + rx} ${cy} C${cx + rx} ${cy + ky} ${cx + kx} ${cy + ry} ${cx} ${cy + ry}` +
+            ` C${cx - kx} ${cy + ry} ${cx - rx} ${cy + ky} ${cx - rx} ${cy}` +
+            ` C${cx - rx} ${cy - ky} ${cx - kx} ${cy - ry} ${cx} ${cy - ry}` +
+            ` C${cx + kx} ${cy - ry} ${cx + rx} ${cy - ky} ${cx + rx} ${cy} Z`;
+        }
+      }
+      if (!d) return;
+
+      const matrix = el.getCTM ? el.getCTM() : null;
+      const map = (x, y) => {
+        if (!matrix) return `${roundPathNumber(x)} ${roundPathNumber(y)}`;
+        return `${roundPathNumber(matrix.a * x + matrix.c * y + matrix.e)} ${roundPathNumber(matrix.b * x + matrix.d * y + matrix.f)}`;
+      };
+      Konva.Path.parsePathData(d).forEach(({ command, points: p }) => {
+        switch (command) {
+          case "M":
+          case "L":
+            output += ` ${command}${map(p[0], p[1])}`;
+            break;
+          case "C":
+            output += ` C${map(p[0], p[1])} ${map(p[2], p[3])} ${map(p[4], p[5])}`;
+            break;
+          case "Q":
+            output += ` Q${map(p[0], p[1])} ${map(p[2], p[3])}`;
+            break;
+          case "A": {
+            const steps = Math.max(4, Math.ceil(Math.abs(p[5]) / (Math.PI / 18)));
+            for (let i = 1; i <= steps; i++) {
+              const point = Konva.Path.getPointOnEllipticalArc(
+                p[0], p[1], p[2], p[3], p[4] + (p[5] * i) / steps, p[6],
+              );
+              output += ` L${map(point.x, point.y)}`;
+            }
+            break;
+          }
+          case "z":
+            output += " Z";
+            break;
+        }
+      });
+    });
+  } finally {
+    host.remove();
+  }
+  return output.trim();
+}
+
+// Library shapes are listed before the "Custom shape" item in the Shape menu.
+(function renderShapeMenu() {
+  const menu = document.querySelector(".shape-dropdown .shapes-container");
+  if (!menu) return;
+  const customItem = menu.querySelector('[data-shape="custom"]');
+  Object.keys(shapeLibrary).forEach((kind) => {
+    const shapeDef = getShapeDefinition(kind);
+    const item = document.createElement("li");
+    item.className = "shape";
+    item.dataset.shape = kind;
+    item.setAttribute("role", "menuitem");
+    item.setAttribute("tabindex", "-1");
+    item.innerHTML =
+      `<svg class="shape-icon" viewBox="-6 -6 112 112" aria-hidden="true" preserveAspectRatio="xMidYMid meet"><path d="${shapeDef.path}"/></svg>` +
+      `<span>${shapeDef.label}</span>`;
+    menu.insertBefore(item, customItem);
+  });
+})();
+
 let shapeButtons = document.querySelectorAll(
   ".shape-dropdown .shapes-container .shape",
 );
@@ -71,33 +319,99 @@ if (document.location.origin == "http://localhost") {
   siteUrl = document.location.origin;
 }
 
+// Option values are CSS font-family names. Theme fonts are declared in header.php;
+// the Google families are loaded on the builder page by litsign_scripts().
+// The first option of the first group is the default font for new letters.
 let fontData = [
   {
-    heading: "Fonts",
+    heading: "Sans serif",
     cost: 0,
     id: "font",
     options: [
-      {
-        Arial: "Arial",
-      },
-      {
-        "Arial Black": "arial-black",
-      },
-      {
-        "Gotham Medium": "gotham-medium",
-      },
-      {
-        Halvetica: "helvetica",
-      },
-      {
-        "Helvetica Condensed Bold": "helvetica-condensed-bold",
-      },
-      {
-        "Helvetica Rounded Bold": "helvetica-rounded-bold",
-      },
+      { Arial: "Arial" },
+      { "Arial Black": "arial-black" },
+      { "Gotham Medium": "gotham-medium" },
+      { Halvetica: "helvetica" },
+      { "Helvetica Condensed Bold": "helvetica-condensed-bold" },
+      { "Helvetica Rounded Bold": "helvetica-rounded-bold" },
+      { "Nimbus Sans Bold": "nimbus-sans" },
+      { "Montserrat Extra Bold": "Montserrat" },
+      { "Poppins Bold": "Poppins" },
+      { "Raleway Extra Bold": "Raleway" },
+      { "Archivo Black": "Archivo Black" },
+      { "Russo One": "Russo One" },
+    ],
+  },
+  {
+    heading: "Condensed",
+    cost: 0,
+    id: "font",
+    options: [
+      { Anton: "anton" },
+      { "Bebas Neue": "Bebas Neue" },
+      { "Oswald Semi Bold": "Oswald" },
+      { "Roboto Condensed Bold": "Roboto Condensed" },
+      { "Fjalla One": "Fjalla One" },
+      { "Teko Semi Bold": "Teko" },
+    ],
+  },
+  {
+    heading: "Serif & slab",
+    cost: 0,
+    id: "font",
+    options: [
+      { "Playfair Display Bold": "Playfair Display" },
+      { "Cinzel Bold": "Cinzel" },
+      { "Abril Fatface": "Abril Fatface" },
+      { "Roboto Slab Bold": "Roboto Slab" },
+      { "Alfa Slab One": "Alfa Slab One" },
+      { Alegreya: "alegreya" },
+      { Typewriter: "type-writer" },
+    ],
+  },
+  {
+    heading: "Display",
+    cost: 0,
+    id: "font",
+    options: [
+      { Righteous: "Righteous" },
+      { Bungee: "Bungee" },
+      { "Titan One": "Titan One" },
+      { "Passion One": "Passion One" },
+      { "Black Ops One": "Black Ops One" },
+      { "Orbitron Bold": "Orbitron" },
+      { Bangers: "Bangers" },
+    ],
+  },
+  {
+    heading: "Script",
+    cost: 0,
+    id: "font",
+    options: [
+      { Lobster: "Lobster" },
+      { Pacifico: "Pacifico" },
+      { "Kaushan Script": "Kaushan Script" },
+      { "Dancing Script Bold": "Dancing Script" },
+      { Satisfy: "Satisfy" },
     ],
   },
 ];
+
+// Canvas text only uses a web font once the browser has downloaded it, so wait
+// for it before measuring. Resolves (never rejects) after at most 4 seconds.
+const fontLoadPromises = {};
+function ensureFontLoaded(fontCode) {
+  if (!fontCode || !document.fonts || !document.fonts.load) {
+    return Promise.resolve();
+  }
+  if (!fontLoadPromises[fontCode]) {
+    fontLoadPromises[fontCode] = Promise.race([
+      document.fonts.load(`40px "${fontCode}"`).catch(() => {}),
+      new Promise((resolve) => setTimeout(resolve, 4000)),
+    ]);
+  }
+  return fontLoadPromises[fontCode];
+}
 
 let defaultColorDataInput = document.getElementById("defaultColorData").value;
 let defaultColorData = {};
@@ -331,24 +645,19 @@ if (defaultColorDataInput) {
   }
 }
 
+let loaderChilds = "";
 fontData.forEach((fontContainer) => {
-  let fontOptions = fontContainer.options;
-  let loaderChilds = "";
-  fontOptions.forEach((option) => {
+  fontContainer.options.forEach((option) => {
     let fontName = Object.keys(option)[0];
     let fontValue = option[fontName];
 
-    let loadFontItem = document.createElement("span");
-    loadFontItem.innerText = fontName;
-    loadFontItem.style.fontFamily = fontValue;
-
-    loaderChilds += `<span style="font-family: ${fontValue}">${fontName}</span>`;
+    loaderChilds += `<span style="font-family: '${fontValue}'">${fontName}</span>`;
   });
-  fontFamilyLoader.innerHTML = loaderChilds;
-  setTimeout(() => {
-    fontFamilyLoader.remove();
-  }, 2000);
 });
+fontFamilyLoader.innerHTML = loaderChilds;
+setTimeout(() => {
+  fontFamilyLoader.remove();
+}, 2000);
 
 var textFSI = [];
 
@@ -470,6 +779,11 @@ const elementsReducer = (state = initialElement, action) => {
 
     case "RegularPolygon":
       nodeType = "Triangle";
+
+      break;
+
+    case "Shape":
+      nodeType = selectedNode.getAttr("shapeLabel") || "Custom shape";
 
       break;
   }
@@ -953,14 +1267,23 @@ function restoreSnapshot(snapshot) {
     } else if (type === "Raceway") {
       clBuilderActions.addRaceway();
     } else {
-      const shapeType = {
+      const shapeType = element.shapeKind || {
         Rectangle: "rectangle",
+        Rect: "rectangle",
         Circle: "circle",
         Triangle: "triangle",
+        RegularPolygon: "triangle",
         Starburst: "star",
+        Star: "star",
         Arrow: "arrow",
+        Line: "arrow",
       }[type];
-      if (shapeType) clBuilderActions.addShape(shapeType);
+      if (shapeType) {
+        clBuilderActions.addShape(shapeType, {
+          path: element.shapeData,
+          label: element.type,
+        });
+      }
     }
 
     const node = selectedNode;
@@ -1549,6 +1872,7 @@ function updateNode(sNode, meta = null) {
         sNode.shadowBlur(returnSize);
       }
       break;
+    case "Shape":
     case "Line":
       // Update fill color (face color)
       if (faceColor !== undefined && meta == "face-color") {
@@ -1923,6 +2247,16 @@ let handleChooseItemClick = (
         selectedNode.scaleX(selectedNode.scaleX());
         triggerTransformEvent();
       }, 1000);
+
+      // Re-measure once the web font has arrived; the first pass may have used a fallback.
+      let fontNode = selectedNode;
+      ensureFontLoaded(itemValue).then(() => {
+        if (selectedNode !== fontNode || fontNode.fontFamily() !== itemValue) {
+          return;
+        }
+        updateNode(fontNode, "font-family");
+        triggerTransformEvent();
+      });
 
       store.dispatch({
         type: "UPDATE_ELEMENT",
@@ -2300,6 +2634,10 @@ let showLeftSlider = (data, type, column) => {
             slideChooseItem.appendChild(chooseColorName);
           } else {
             slideChooseItem.innerHTML = name;
+            if (id == "font") {
+              slideChooseItem.style.fontFamily = `'${value}', Arial, sans-serif`;
+              slideChooseItem.classList.add("font-choose-item");
+            }
           }
 
           slideChooseItem.addEventListener("click", function (e) {
@@ -2601,6 +2939,7 @@ let updateLeftsideBar = () => {
       // document.getElementById('cornerRadiusContainer').style.setProperty('display', 'block', 'important');
 
       break;
+    case "Shape":
     case "Line":
       document
         .querySelector("#leftSidebar .item-textInput")
@@ -2786,6 +3125,9 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
       }
       if (currentNodeType == "Star") {
         currentNodeType = "Starburst";
+      }
+      if (currentNodeType == "Shape") {
+        currentNodeType = elementNode.getAttr("shapeLabel") || "Custom shape";
       }
       detailTableType.innerText = currentNodeType;
       detailTableTR.appendChild(detailTableType);
@@ -2976,7 +3318,9 @@ function resizePreviewStage() {
                 ? "star"
                 : selectedNode.getClassName() === "Line"
                   ? "arrow"
-                  : null;
+                  : selectedNode.getClassName() === "Shape"
+                    ? "custom"
+                    : null;
     if (previewType) {
       updatePreview(previewType, selectedNode);
     }
@@ -3313,7 +3657,7 @@ window.addEventListener("load", function (e) {
     return textNode._id;
   }
 
-  function addShape(shapeType) {
+  function addShape(shapeType, shapeOptions = {}) {
     let shape;
     let previewnType = null;
     let isKeepRatio = true;
@@ -3436,6 +3780,25 @@ window.addEventListener("load", function (e) {
         previewnType = "star";
 
         break;
+      default: {
+        // Library and custom path shapes (see shapeLibrary).
+        const shapeDef = getShapeDefinition(shapeType, shapeOptions);
+        if (!shapeDef) return;
+        const { bounds } = getPathGeometry(shapeDef.path);
+        const ratio = Math.max(0.05, bounds.width / Math.max(1, bounds.height));
+        const longSide = 120;
+        shape = new Konva.Shape({
+          ...shapeConfig,
+          width: ratio >= 1 ? longSide : longSide * ratio,
+          height: ratio >= 1 ? longSide / ratio : longSide,
+          shapeKind: shapeType,
+          shapeLabel: shapeDef.label,
+          shapeData: shapeDef.path,
+          sceneFunc: drawPathShape,
+        });
+        previewnType = "custom";
+        break;
+      }
     }
 
     // Center each new shape using the current stage size, including on mobile.
@@ -3675,7 +4038,7 @@ window.addEventListener("load", function (e) {
     });
 
     shape.on("transformend", (e) => {
-      if (shape.getClassName() === "Rect") {
+      if (shape.getClassName() === "Rect" || shape.getClassName() === "Shape") {
         shape.width(shape.width() * shape.scaleX());
         shape.height(shape.height() * shape.scaleY());
         shape.scaleX(1);
@@ -3844,7 +4207,15 @@ window.addEventListener("load", function (e) {
           type: "ADD_ELEMENT",
           payload: {
             id: shape._id,
-            type: shape.getClassName(),
+            type: shape.getAttr("shapeLabel") || shape.getClassName(),
+            ...(shape.getAttr("shapeKind")
+              ? {
+                  shapeKind: shape.getAttr("shapeKind"),
+                  shapeData: shapeLibrary[shape.getAttr("shapeKind")]
+                    ? undefined
+                    : shape.getAttr("shapeData"),
+                }
+              : {}),
             cost: totalShapeCost,
             width: shapeWidthInch,
             height: shapeHeightInch,
@@ -4197,6 +4568,11 @@ window.addEventListener("load", function (e) {
   shapeButtons.forEach((el) => {
     el.addEventListener("click", (e) => {
       let shapeType = e.currentTarget.dataset.shape;
+      if (shapeType == "custom") {
+        setShapeMenuOpen(false);
+        openCustomShapeModal();
+        return;
+      }
       saveState();
       addShape(shapeType);
       const mouseoutEvent = new MouseEvent("mouseleave", {
@@ -4245,6 +4621,120 @@ window.addEventListener("load", function (e) {
       setShapeMenuOpen(false);
     }
   });
+
+  // Custom shape dialog: regular polygon, star / burst, or an uploaded SVG outline.
+  const customShapeModalEl = document.getElementById("customShapeModal");
+  let customShapeModal = null;
+  let customSvgPath = "";
+  function getCustomShapeDraft() {
+    const mode = customShapeModalEl.querySelector(
+      'input[name="customShapeMode"]:checked',
+    ).value;
+    if (mode == "polygon") {
+      const sides = Math.min(
+        20,
+        Math.max(3, parseInt(document.getElementById("customShapeSides").value, 10) || 6),
+      );
+      return { path: polygonPath(sides), label: `Polygon (${sides} sides)` };
+    }
+    if (mode == "star") {
+      const points = Math.min(
+        40,
+        Math.max(3, parseInt(document.getElementById("customShapePoints").value, 10) || 8),
+      );
+      const depth = Math.min(
+        90,
+        Math.max(10, parseInt(document.getElementById("customShapeDepth").value, 10) || 50),
+      );
+      return {
+        path: starPath(points, 1 - depth / 100),
+        label: `Starburst (${points} points)`,
+      };
+    }
+    return customSvgPath
+      ? { path: customSvgPath, label: "Custom shape" }
+      : null;
+  }
+  function refreshCustomShapeDialog() {
+    const mode = customShapeModalEl.querySelector(
+      'input[name="customShapeMode"]:checked',
+    ).value;
+    customShapeModalEl.querySelectorAll("[data-shape-mode]").forEach((panel) => {
+      panel.hidden = panel.dataset.shapeMode !== mode;
+    });
+    document.getElementById("customShapeDepthValue").textContent =
+      document.getElementById("customShapeDepth").value + "%";
+
+    const draft = getCustomShapeDraft();
+    const previewPath = document.getElementById("customShapePreviewPath");
+    const previewSvg = document.getElementById("customShapePreview");
+    const addButton = document.getElementById("customShapeAddBtn");
+    addButton.disabled = !draft;
+    if (!draft) {
+      previewPath.setAttribute("d", "");
+      return;
+    }
+    previewPath.setAttribute("d", draft.path);
+    const { bounds } = getPathGeometry(draft.path);
+    const pad = Math.max(bounds.width, bounds.height) * 0.06;
+    previewSvg.setAttribute(
+      "viewBox",
+      `${bounds.x - pad} ${bounds.y - pad} ${bounds.width + pad * 2} ${bounds.height + pad * 2}`,
+    );
+  }
+  function setCustomSvgPath(svgText) {
+    const status = document.getElementById("customShapeSvgStatus");
+    try {
+      customSvgPath = svgToShapePath(svgText);
+    } catch (error) {
+      customSvgPath = "";
+    }
+    if (customSvgPath.length > 60000) {
+      customSvgPath = "";
+      status.textContent = "That outline is too detailed. Try a simpler SVG.";
+    } else {
+      status.textContent = customSvgPath
+        ? "Outline loaded."
+        : "No filled shapes found in that SVG.";
+    }
+    refreshCustomShapeDialog();
+  }
+  function openCustomShapeModal() {
+    if (!customShapeModalEl || typeof bootstrap === "undefined") return;
+    customShapeModal =
+      customShapeModal || bootstrap.Modal.getOrCreateInstance(customShapeModalEl);
+    refreshCustomShapeDialog();
+    customShapeModal.show();
+  }
+  if (customShapeModalEl) {
+    customShapeModalEl.addEventListener("input", (e) => {
+      if (e.target.id == "customShapeSvgText") {
+        setCustomSvgPath(e.target.value);
+      } else {
+        refreshCustomShapeDialog();
+      }
+    });
+    customShapeModalEl.addEventListener("change", refreshCustomShapeDialog);
+    document.getElementById("customShapeSvgFile").addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        document.getElementById("customShapeSvgStatus").textContent =
+          "Please choose an SVG under 2 MB.";
+        return;
+      }
+      file.text().then(setCustomSvgPath);
+    });
+    document.getElementById("customShapeAddBtn").addEventListener("click", () => {
+      const draft = getCustomShapeDraft();
+      if (!draft) return;
+      saveState();
+      addShape("custom", draft);
+      triggerTransformEvent();
+      customShapeModal.hide();
+    });
+  }
+
   duplicateBtn.addEventListener("click", function (e) {
     if (selectedNode == null) return;
     saveState();
@@ -4834,6 +5324,21 @@ window.addEventListener("load", function (e) {
           updateHeightWidthInput(null, widhtInPx, "text");
           triggerTransformEvent();
           break;
+        case "Shape":
+          if (heightInInch < minHeight) {
+            sizeHeightInput.value = minHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+          if (heightInInch > maxHeight) {
+            sizeHeightInput.value = maxHeight;
+            return sizeHeightInput.dispatchEvent(changeEvent);
+          }
+          // Path shapes stretch freely.
+          selectedNode.width(widhtInPx);
+          selectedNode.height(heightInPx);
+          triggerTransformEvent();
+          persistPathShapeSize(selectedNode);
+          break;
         case "RegularPolygon":
           if (heightInInch < minHeight) {
             sizeHeightInput.value = minHeight;
@@ -5071,6 +5576,25 @@ window.addEventListener("load", function (e) {
         selectedNode.scaleY(1);
         layer.batchDraw();
 
+        break;
+
+      case "Shape":
+        if (widthInInch < minWidth) {
+          sizeWidthInput.value = minWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        if (widthInInch > maxWidth) {
+          sizeWidthInput.value = maxWidth;
+          return sizeWidthInput.dispatchEvent(changeEvent);
+        }
+
+        selectedNode.width(widthInPx);
+        selectedNode.height(
+          selectedNode.height() * selectedNode.scaleY(),
+        );
+        triggerTransformEvent();
+        persistPathShapeSize(selectedNode);
         break;
 
       case "Line":
@@ -5979,7 +6503,7 @@ window.addEventListener("load", function (e) {
   });
   console.log(editDesignElements);
 
-  if (isEditDesign) {
+  let restoreEditDesign = () => {
     let clickEvent = new CustomEvent("click", { bubbles: true });
     editDesignElements.forEach((element) => {
       let text = element.text || "";
@@ -6094,6 +6618,7 @@ window.addEventListener("load", function (e) {
           triggerTransformEvent();
           break;
 
+        case "Rect":
         case "Rectangle":
           addShape("rectangle");
 
@@ -6119,6 +6644,7 @@ window.addEventListener("load", function (e) {
           //selectedNode.x(element.x)
           //selectedNode.y(element.y)
           break;
+        case "RegularPolygon":
         case "Triangle":
           addShape("triangle");
           if (height) {
@@ -6129,6 +6655,7 @@ window.addEventListener("load", function (e) {
             selectedNode.width(width);
           }
           break;
+        case "Star":
         case "Starburst":
           addShape("star");
           if (height) {
@@ -6139,6 +6666,7 @@ window.addEventListener("load", function (e) {
             selectedNode.width(width);
           }
           break;
+        case "Line":
         case "Arrow":
           addShape("arrow");
 
@@ -6166,6 +6694,18 @@ window.addEventListener("load", function (e) {
           selectedNode.y(canvasHeight / 2);
           break;
         default:
+          if (element.shapeKind) {
+            addShape(element.shapeKind, {
+              path: element.shapeData,
+              label: element.type,
+            });
+            if (height) {
+              selectedNode.height(height);
+            }
+            if (width) {
+              selectedNode.width(width);
+            }
+          }
           break;
       }
 
@@ -6215,6 +6755,14 @@ window.addEventListener("load", function (e) {
       );
       cableSelector && cableSelector.dispatchEvent(clickEvent);
     }
+  };
+
+  if (isEditDesign) {
+    // Letters are measured (and priced) from the rendered font, so load the design's fonts first.
+    const designFonts = editDesignElements
+      .map((element) => element.font && element.font.code)
+      .filter(Boolean);
+    Promise.all(designFonts.map(ensureFontLoaded)).then(restoreEditDesign);
   }
 
   clBuilderActions.addText = addText;

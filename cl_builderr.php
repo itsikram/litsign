@@ -300,6 +300,11 @@ get_header();
                                 <img width="20" height="20" src="<?php echo esc_url(get_template_directory_uri() . '/img/star-icon.png'); ?>" alt="">
                                 <span>Starburst</span>
                             </li>
+                            <?php // js/cl.js inserts the rest of the shape library here. ?>
+                            <li class="shape shape-custom" data-shape="custom" role="menuitem" tabindex="-1">
+                                <i class="fa-solid fa-pen-ruler" aria-hidden="true"></i>
+                                <span>Custom shape&hellip;</span>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -492,6 +497,53 @@ get_header();
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade custom-shape-modal" id="customShapeModal" tabindex="-1" aria-labelledby="customShapeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="customShapeModalLabel">Custom shape</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="custom-shape-modes" role="radiogroup" aria-label="Shape type">
+                    <label><input type="radio" name="customShapeMode" value="polygon" checked> <span>Polygon</span></label>
+                    <label><input type="radio" name="customShapeMode" value="star"> <span>Star / burst</span></label>
+                    <label><input type="radio" name="customShapeMode" value="svg"> <span>Upload SVG</span></label>
+                </div>
+                <div class="custom-shape-layout">
+                    <div class="custom-shape-fields">
+                        <div data-shape-mode="polygon">
+                            <label for="customShapeSides" class="cl-field-label">Number of sides</label>
+                            <input type="number" id="customShapeSides" class="form-control" min="3" max="20" step="1" value="6" inputmode="numeric">
+                        </div>
+                        <div data-shape-mode="star" hidden>
+                            <label for="customShapePoints" class="cl-field-label">Number of points</label>
+                            <input type="number" id="customShapePoints" class="form-control" min="3" max="40" step="1" value="8" inputmode="numeric">
+                            <label for="customShapeDepth" class="cl-field-label mt-3">Point depth <span id="customShapeDepthValue">50%</span></label>
+                            <input type="range" id="customShapeDepth" class="form-range" min="10" max="90" step="1" value="50">
+                        </div>
+                        <div data-shape-mode="svg" hidden>
+                            <label for="customShapeSvgFile" class="cl-field-label">SVG file</label>
+                            <input type="file" id="customShapeSvgFile" class="form-control" accept=".svg,image/svg+xml">
+                            <label for="customShapeSvgText" class="cl-field-label mt-3">Or paste SVG code / path data</label>
+                            <textarea id="customShapeSvgText" class="form-control" rows="3" placeholder="M10 10 L90 10 L50 90 Z" spellcheck="false"></textarea>
+                            <p class="custom-shape-hint" id="customShapeSvgStatus" role="status">Use a single-color logo or outline made of filled shapes.</p>
+                        </div>
+                    </div>
+                    <div class="custom-shape-preview-box">
+                        <svg id="customShapePreview" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" aria-hidden="true"><path id="customShapePreviewPath" d=""></path></svg>
+                    </div>
+                </div>
+                <p class="custom-shape-hint mb-0">Custom shapes are priced by their largest dimension, like the other shapes. You can resize and color it after adding.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn cl-btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="customShapeAddBtn">Add shape</button>
             </div>
         </div>
     </div>

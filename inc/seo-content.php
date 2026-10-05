@@ -779,9 +779,39 @@ function wholesale_seo_product_meta($product_id)
  */
 function wholesale_seo_product($slug)
 {
+	$primed = $GLOBALS['wholesale_seo_primed_products'] ?? array();
+	if (isset($primed[$slug])) {
+		return $primed[$slug];
+	}
+
 	$product = get_page_by_path($slug, OBJECT, 'product');
 
 	return $product && 'publish' === $product->post_status ? $product : null;
+}
+
+/**
+ * Load the published products a page shows in one query (posts, meta and featured
+ * images), so wholesale_seo_product() and get_post_meta() don't query per slug.
+ * Slugs that aren't published fall back to wholesale_seo_product()'s own lookup.
+ */
+function wholesale_seo_prime_products(array $slugs)
+{
+	$slugs = array_values(array_unique(array_filter(array_map('sanitize_title', $slugs))));
+	if (!$slugs) {
+		return;
+	}
+	$query = new WP_Query(array(
+		'post_type' => 'product',
+		'post_status' => 'publish',
+		'post_name__in' => $slugs,
+		'posts_per_page' => count($slugs),
+		'no_found_rows' => true,
+		'ignore_sticky_posts' => true,
+	));
+	update_post_thumbnail_cache($query);
+	foreach ($query->posts as $post) {
+		$GLOBALS['wholesale_seo_primed_products'][$post->post_name] = $post;
+	}
 }
 
 /**

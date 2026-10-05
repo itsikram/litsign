@@ -10,9 +10,20 @@
  * @package litsign
  */
 
-$contact_page = get_page_by_path('contact');
-$contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $banners_url = wholesale_category_url('banners');
+
+// Google Ads landing page: an on-page quote form (#quote) that saves the ad
+// click and fires the lead conversion (inc/quote-form.php).
+$quote_form = array(
+	'prefix' => 'bdq',
+	'page_url' => get_permalink(),
+	'project_label' => 'Banners & displays',
+	'interests' => array('Vinyl banners', 'Mesh banners', 'Pole banners', 'Banner stands', 'Feather/teardrop flags', 'Trade show display', 'Event tent', 'Table covers'),
+);
+wholesale_quote_form_handle($quote_form);
+wholesale_track_quote_lead('banners_displays_page');
+// Quote links on this page jump to the form instead of leaving for /contact/.
+$contact_url = '#quote';
 
 $product_url = static function ($slug, $fallback = '') {
 	$product = wholesale_seo_product($slug);
@@ -35,16 +46,17 @@ $product_image = static function ($slug, $alt, $sizes, $eager = false) {
 	));
 };
 
-// Product lines: category slug, product whose photo and price represent it, name, summary.
+// Product lines: category slug, product whose photo and price represent it, name, summary,
+// stable anchor id (for ads and sitelinks, e.g. /banners-displays/#flags).
 $lines = array(
-	array('banners', '13oz-vinyl-banner', 'Vinyl &amp; Fabric Banners', '13oz and 18oz vinyl, mesh, backlit and wrinkle-free fabric banners, hemmed and finished the way you hang them.'),
-	array('banner-stands', 'standard-retractable-insert-stand', 'Retractable Banner Stands', 'Roll-up, X-stand, tension fabric and table top stands that set up in minutes and travel in a bag.'),
-	array('advertising-flags', 'feather-angled-flag-pole', 'Feather &amp; Teardrop Flags', 'Flags from 9 to 18 feet tall that move in the wind and catch drivers&rsquo; eyes from the road.'),
-	array('trade-show-products', 'straight-tension-fabric-displays-graphic-frame', 'Trade Show Displays', 'Straight and curved tension fabric walls and pop up displays for a booth that looks finished.'),
-	array('seg-products', '10ft-seg-fabric-display-graphic-frame', 'SEG &amp; Backlit Displays', 'Silicone edge fabric graphics in aluminum frames, with backlit options that glow on a busy show floor.'),
-	array('table-throws', '6ft-table-cover', 'Table Covers &amp; Throws', 'Printed 4, 6 and 8 ft covers, stretch covers and runners that turn any table into branded space.'),
-	array('custom-event-tents', 'event-tent-full-canopy-graphic-frame', 'Custom Event Tents', 'Full color canopy tents, walls and tent flags for festivals, markets and outdoor events.'),
-	array('a-frame-and-sign-holders', 'banner-a-banner-frame', 'A-Frames &amp; Sign Holders', 'Banner A-frames, poster stands and snap hangers that put your message on the sidewalk.'),
+	array('banners', '13oz-vinyl-banner', 'Vinyl &amp; Fabric Banners', '13oz and 18oz vinyl, mesh, backlit and wrinkle-free fabric banners, hemmed and finished the way you hang them.', 'banners'),
+	array('banner-stands', 'standard-retractable-insert-stand', 'Retractable Banner Stands', 'Roll-up, X-stand, tension fabric and table top stands that set up in minutes and travel in a bag.', 'stands'),
+	array('advertising-flags', 'feather-angled-flag-pole', 'Feather &amp; Teardrop Flags', 'Flags from 9 to 18 feet tall that move in the wind and catch drivers&rsquo; eyes from the road.', 'flags'),
+	array('trade-show-products', 'straight-tension-fabric-displays-graphic-frame', 'Trade Show Displays', 'Straight and curved tension fabric walls and pop up displays for a booth that looks finished.', 'trade-show'),
+	array('seg-products', '10ft-seg-fabric-display-graphic-frame', 'SEG &amp; Backlit Displays', 'Silicone edge fabric graphics in aluminum frames, with backlit options that glow on a busy show floor.', 'seg'),
+	array('table-throws', '6ft-table-cover', 'Table Covers &amp; Throws', 'Printed 4, 6 and 8 ft covers, stretch covers and runners that turn any table into branded space.', 'table-covers'),
+	array('custom-event-tents', 'event-tent-full-canopy-graphic-frame', 'Custom Event Tents', 'Full color canopy tents, walls and tent flags for festivals, markets and outdoor events.', 'tents'),
+	array('a-frame-and-sign-holders', 'banner-a-banner-frame', 'A-Frames &amp; Sign Holders', 'Banner A-frames, poster stands and snap hangers that put your message on the sidewalk.', 'a-frames'),
 );
 
 // Best sellers: product slug, short label.
@@ -61,22 +73,22 @@ $best_sellers = array(
 
 // Picks by occasion: id, heading, intro, array(product slug => label).
 $occasions = array(
-	array('grand-opening', 'Grand Openings &amp; Sales', 'Make sure the whole street knows you&rsquo;re open, then keep the promotion in front of customers at the door.', array(
+	array('occasion-grand-opening', 'Grand Openings &amp; Sales', 'Make sure the whole street knows you&rsquo;re open, then keep the promotion in front of customers at the door.', array(
 		'13oz-vinyl-banner' => 'Storefront banner',
 		'feather-angled-flag-pole' => 'Feather flag',
 		'banner-a-banner-frame' => 'Banner A-frame',
 	)),
-	array('trade-show', 'Trade Shows &amp; Expos', 'Build a booth that draws people in from the aisle and packs into the trunk afterwards.', array(
+	array('occasion-trade-show', 'Trade Shows &amp; Expos', 'Build a booth that draws people in from the aisle and packs into the trunk afterwards.', array(
 		'10ft-seg-fabric-display-graphic-frame' => '10ft back wall',
 		'deluxe-retractable-insert-stand' => 'Retractable stand',
 		'6ft-table-cover' => 'Printed table cover',
 	)),
-	array('events', 'Events &amp; Festivals', 'Shade, shelter and branding for markets, races, fairs and outdoor activations.', array(
+	array('occasion-events', 'Events &amp; Festivals', 'Shade, shelter and branding for markets, races, fairs and outdoor activations.', array(
 		'event-tent-full-canopy-graphic-frame' => 'Canopy tent',
 		'teardrop-flag-pole' => 'Teardrop flag',
 		'mesh-banner' => 'Mesh fence banner',
 	)),
-	array('in-store', 'In-Store &amp; Lobby', 'Point customers to new products, offers and check-in from the moment they walk in.', array(
+	array('occasion-in-store', 'In-Store &amp; Lobby', 'Point customers to new products, offers and check-in from the moment they walk in.', array(
 		'standard-retractable-insert-stand' => 'Retractable stand',
 		'x-stand-graphic-stand' => 'X-stand',
 		'table-top-banner-stand' => 'Table top stand',
@@ -102,6 +114,18 @@ $stands = array(
 	array('tension-fabric-stand-graphic-frame', 'Tension Fabric Stand', 'A few minutes', 'Wrinkle-free, premium look'),
 	array('step-and-repeat-backdrop-graphic-frame', 'Step &amp; Repeat Backdrop', 'A few minutes', 'Red carpets and photo walls'),
 );
+
+// One query for every product this page shows (instead of one lookup per slug).
+wholesale_seo_prime_products(array_merge(
+	array_column($lines, 1),
+	array_keys($best_sellers),
+	array_merge(...array_map(static function ($occasion) {
+		return array_keys($occasion[3]);
+	}, $occasions)),
+	array_column($materials, 0),
+	array_column($stands, 0),
+	array('banner-a-banner-frame', 'deluxe-retractable-insert-stand', 'teardrop-flag-pole', 'table-top-banner-stand')
+));
 
 $vinyl_price = wholesale_seo_product_starting_text('13oz-vinyl-banner');
 
@@ -208,7 +232,7 @@ get_header();
 		</div>
 	</div>
 
-	<section class="sf-section" aria-labelledby="bd-lines-title">
+	<section class="sf-section" id="products" aria-labelledby="bd-lines-title">
 		<div class="container">
 			<p class="cl-kicker">Shop by product</p>
 			<h2 id="bd-lines-title" class="cl-section-title">Banners, Stands, Flags &amp; Trade Show Displays</h2>
@@ -220,7 +244,7 @@ get_header();
 					$line_price = wholesale_seo_product_starting_text($line[1]);
 					$line_name = wp_strip_all_tags(html_entity_decode($line[2], ENT_QUOTES, 'UTF-8'));
 					?>
-					<article class="sf-type-card bd-card">
+					<article class="sf-type-card bd-card" id="<?php echo esc_attr($line[4]); ?>">
 						<a class="sf-type-image" href="<?php echo esc_url($line_url); ?>" tabindex="-1" aria-hidden="true">
 							<?php echo $product_image($line[1], $line_name, '(max-width: 575px) 100vw, (max-width: 991px) 50vw, 25vw'); ?>
 						</a>
@@ -434,24 +458,31 @@ get_header();
 		</div>
 	</section>
 
-	<section class="cl-help" aria-labelledby="bd-help-title">
+	<section class="cl-help cl-help--quote" id="quote" aria-labelledby="bd-help-title">
 		<div class="container cl-help-inner">
 			<div class="cl-help-copy">
-				<h2 id="bd-help-title">Talk to a Real Sign Specialist</h2>
-				<p>Not sure which size, material or stand fits your space? Send us a photo and your artwork and we&rsquo;ll recommend the right setup.</p>
+				<p class="cl-kicker">Free quote &middot; No obligation</p>
+				<h2 id="bd-help-title">Get a Free Banner &amp; Display Quote</h2>
+				<p>Tell us what you need, the sizes and how many, and attach your artwork or logo if you have it. A sign specialist will price your order and help you choose the right material or stand.</p>
 				<ul class="cl-help-details">
 					<li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
 					<li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
 				</ul>
+				<div class="clq-contact">
+					<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+					<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+					<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+				</div>
 			</div>
-			<div class="cl-help-actions">
-				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-				<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
-				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
-			</div>
+			<?php wholesale_quote_form_render($quote_form); ?>
 		</div>
 	</section>
+
+	<nav class="cl-mobile-bar" aria-label="Quick actions">
+		<a class="cl-mobile-bar-call" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> Call</a>
+		<a class="cl-mobile-bar-quote" href="#quote">Free Quote</a>
+		<a class="cl-mobile-bar-shop" href="#products">See Prices</a>
+	</nav>
 </main>
 
 <?php

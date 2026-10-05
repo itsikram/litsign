@@ -396,6 +396,18 @@
 .dt-container .shapes-container li:hover,
 .dt-container .shapes-container li:focus { background: var(--cl-accent-soft); outline: none; }
 .dt-container .shapes-container img { width: 20px; height: 20px; object-fit: contain; }
+.dt-container .shapes-container .shape-icon { flex: none; width: 20px; height: 20px; fill: #fff; stroke: var(--cl-ink); stroke-width: 7; stroke-linejoin: round; }
+.dt-container .shapes-container .shape-custom { color: var(--cl-accent-ink); font-weight: 600; }
+.dt-container .shapes-container .shape-custom i { width: 20px; text-align: center; }
+@media (min-width: 768px) {
+  /* The library is long enough to need two columns on desktop. */
+  .dt-container .shapes-container { min-width: 380px; max-height: min(70vh, 520px); overflow-y: auto; }
+  .dt-container .shape-dropdown.is-open .shapes-container { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+  .dt-container .shapes-container .shape-custom { grid-column: 1 / -1; border-top: 1px solid var(--cl-line); border-radius: 0 0 6px 6px; }
+}
+
+/* Font picker: each option is shown in its own typeface. */
+.dt-container .slider-choose-item.font-choose-item { font-size: 17px; line-height: 1.25; }
 
 .dt-container .editor-topbar .button-group button {
   display: grid;
@@ -541,6 +553,50 @@
 .dt-container #clAddToCartBtn:disabled { background: #e9a0a7; border-color: #e9a0a7; opacity: 1; cursor: not-allowed; }
 .dt-container #clAddToCartBtn img { height: 18px; }
 .dt-container .cl-cart-status { flex-basis: 100%; margin: 0; color: #b02a37; font-size: 13px; text-align: right; }
+
+/* ------------------------------------------------------------------ */
+/* Custom shape modal                                                  */
+/* ------------------------------------------------------------------ */
+
+.custom-shape-modal {
+  --cl-ink: #14202c;
+  --cl-muted: #5b6573;
+  --cl-line: #e1e6ec;
+  --cl-accent: #1fa8de;
+  --cl-accent-ink: #0c7fae;
+  --cl-accent-soft: #e6f5fc;
+}
+.custom-shape-modal .modal-content { border: 0; border-radius: 16px; box-shadow: 0 18px 55px rgba(14, 53, 74, 0.2); }
+.custom-shape-modal .modal-title { margin: 0; font-size: 20px; font-weight: 700; color: var(--cl-ink); }
+.custom-shape-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 16px; }
+.custom-shape-modes label { margin: 0; cursor: pointer; }
+.custom-shape-modes input { position: absolute; opacity: 0; pointer-events: none; }
+.custom-shape-modes span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 6px 8px;
+  border: 1px solid var(--cl-line);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--cl-ink);
+}
+.custom-shape-modes input:checked + span { border-color: var(--cl-accent); background: var(--cl-accent-soft); color: var(--cl-accent-ink); }
+.custom-shape-modes input:focus-visible + span { outline: 2px solid var(--cl-accent); outline-offset: 2px; }
+.custom-shape-layout { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; align-items: start; }
+.custom-shape-preview-box { display: flex; align-items: center; justify-content: center; aspect-ratio: 1; padding: 10px; border: 1px solid var(--cl-line); border-radius: 12px; background: #f4f7fa; }
+.custom-shape-preview-box svg { width: 100%; height: 100%; }
+.custom-shape-preview-box path { fill: #fff; stroke: var(--cl-ink); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.custom-shape-modal textarea { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; }
+.custom-shape-hint { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--cl-muted); }
+.custom-shape-modal .cl-btn-secondary { border: 1px solid #cdd5de; background: #fff; color: var(--cl-ink); }
+@media (max-width: 575.98px) {
+  .custom-shape-layout { grid-template-columns: minmax(0, 1fr); }
+  .custom-shape-preview-box { width: 140px; justify-self: center; grid-row: 1; }
+}
 
 /* ------------------------------------------------------------------ */
 /* Change product modal                                                */
@@ -907,6 +963,8 @@
   }
   .dt-container .shape-dropdown.is-open .shapes-container { display: grid; }
   .dt-container .shapes-container li { min-height: 48px; }
+  .dt-container .shapes-container { max-height: 70vh; overflow-y: auto; }
+  .dt-container .shapes-container .shape-custom { grid-column: 1 / -1; }
 
   .dt-container .editor-bottombar { gap: 10px; margin: 0 -10px; padding-left: 10px; padding-right: 10px; }
   .dt-container .bottom-left { width: 100%; flex-wrap: nowrap; }
@@ -947,6 +1005,8 @@
 
 @media (max-width: 380px) {
   .dt-container .topbar-left-button img { display: none; }
+  /* ...but keep the icons inside the shape menu, which has room for them. */
+  .dt-container .shapes-container img { display: block; }
   .dt-container .editor-topbar .button-group button { width: 38px; }
   .cl-divider { display: none; }
   .dt-container #detailBtn { padding: 8px 10px; font-size: 13px; }

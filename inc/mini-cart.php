@@ -280,6 +280,10 @@ function wholesale_ajax_mini_cart_add()
 			'cart_id' => (string) $added->cart_id,
 			// get_the_title() is HTML-encoded; the script shows this as plain text.
 			'title' => html_entity_decode((string) $added->product_title, ENT_QUOTES, 'UTF-8'),
+			// For the add_to_cart tracking event (inc/ads-tracking.php).
+			'product_id' => (string) ($added->product_id ?? ''),
+			'quantity' => max(1, (int) ($added->product_quantity ?? 1)),
+			'value' => round((float) ($added->product_subtotal ?? 0), 2),
 		) : null,
 	));
 }

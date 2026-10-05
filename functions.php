@@ -59,6 +59,7 @@ require_once(dirname(__FILE__) . '/inc/seo-content.php');
 require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
 require_once(dirname(__FILE__) . '/inc/product-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
+require_once(dirname(__FILE__) . '/inc/quote-form.php');
 require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
 require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
 require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
@@ -341,6 +342,12 @@ function wholesale_setting_defaults()
 		'google_places_api_key' => defined('WHOLESALE_GOOGLE_PLACES_API_KEY') ? WHOLESALE_GOOGLE_PLACES_API_KEY : '',
 		'google_place_id' => '',
 		'google_ads_lead_label' => '-4S9CMyui4EdEPW2yt9E',
+		'google_ads_phone_tap_label' => '',
+		'google_ads_sms_tap_label' => '',
+		'google_ads_email_tap_label' => '',
+		'google_ads_builder_start_label' => '',
+		'google_ads_add_to_cart_label' => '',
+		'ga4_measurement_id' => '',
 		'email_status_updates' => 1,
 		'payment_method' => 'lightbox',
 		'ticket_business_name' => 'Lit Sign Manufacturing',
@@ -481,6 +488,10 @@ function wholesale_settings_page()
 			<h2 class="title" id="google-ads">Google Ads</h2>
 			<table class="form-table" role="presentation">
 				<tr><th><label for="wholesale_google_ads_lead_label">Quote request conversion label</label></th><td><input class="regular-text" id="wholesale_google_ads_lead_label" name="wholesale_google_ads_lead_label" value="<?php echo esc_attr(wholesale_get_setting('google_ads_lead_label')); ?>" placeholder="AbC-D_efG-h12_34-567"><p class="description">Sent when someone submits a quote form: the contact page, the sign landing page and the <strong>Channel Letters</strong> page (/custom-channel-letters/). In Google Ads, create a "Submit lead form" conversion action and paste the part after <code>AW-18454059893/</code> from its event snippet.</p></td></tr>
+				<?php foreach (wholesale_ads_click_conversions() as $key => $conversion) : ?>
+					<tr><th><label for="wholesale_<?php echo esc_attr($key); ?>"><?php echo esc_html($conversion['label']); ?></label></th><td><input class="regular-text" id="wholesale_<?php echo esc_attr($key); ?>" name="wholesale_<?php echo esc_attr($key); ?>" value="<?php echo esc_attr(wholesale_get_setting($key)); ?>" placeholder="Leave empty to turn off"><p class="description"><?php echo esc_html($conversion['help']); ?> Create it in Google Ads as a <strong>Secondary</strong> conversion action and paste the part after <code>AW-18454059893/</code>.</p></td></tr>
+				<?php endforeach; ?>
+				<tr><th><label for="wholesale_ga4_measurement_id">Google Analytics 4 measurement ID</label></th><td><input class="regular-text" id="wholesale_ga4_measurement_id" name="wholesale_ga4_measurement_id" value="<?php echo esc_attr(wholesale_get_setting('ga4_measurement_id')); ?>" placeholder="G-XXXXXXXXXX"><p class="description">From Google Analytics: Admin &gt; Data streams &gt; your web stream. Purchases, checkouts and quote requests are then also sent to Analytics. Leave empty to turn off.</p></td></tr>
 			</table>
 			<h2 class="title" id="google-reviews">Google reviews</h2>
 			<p>Shows your Google Business rating and latest reviews in the site-wide review slider, next to reviews you approve under <a href="<?php echo esc_url(admin_url('edit.php?post_type=review_submission')); ?>">Customer Reviews</a>.</p>
@@ -557,6 +568,11 @@ function wholesale_newsletter_create_table()
 {
 	global $wpdb;
 
+	// Create the table once instead of loading upgrade.php and running dbDelta on every request.
+	if ('1' === get_option('wholesale_newsletter_table_version')) {
+		return;
+	}
+
 	$table_name = wholesale_newsletter_table_name();
 	$charset_collate = $wpdb->get_charset_collate();
 
@@ -570,6 +586,9 @@ function wholesale_newsletter_create_table()
 
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	dbDelta($sql);
+	if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table_name)) === $table_name) {
+		update_option('wholesale_newsletter_table_version', '1');
+	}
 }
 add_action('init', 'wholesale_newsletter_create_table');
 register_activation_hook(__FILE__, 'wholesale_newsletter_create_table');
@@ -1035,6 +1054,9 @@ function wholesale_deferred_conversion_tracking()
 				};
 				window.gtag('js', new Date());
 				window.gtag('config', 'AW-18454059893');
+				<?php if (wholesale_ga4_measurement_id()) : ?>
+				window.gtag('config', <?php echo wp_json_encode(wholesale_ga4_measurement_id()); ?>);
+				<?php endif; ?>
 				window.gtag('config', 'AW-18454059893/OK42COLkgPocEPW2yt9E', {
 					'phone_conversion_number': '866-436-2101'
 				});
@@ -2148,7 +2170,8 @@ function litsign_scripts()
 	if (is_page_template('landing-page.php')) {
 		wp_enqueue_style('landing-page', $theme_uri . '/css/landing-page.css', array('litsign-style', 'custom-style'), $asset_version('/css/landing-page.css'));
 	}
-	if (is_page_template('page-channel-letters.php')) {
+	// The quote form styles are shared by both Google Ads landing pages.
+	if (is_page_template('page-channel-letters.php') || is_page('banners-displays')) {
 		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
 	}
 	if (is_page(array('storefront-signs', 'about', 'banners-displays', 'channel-letter-cost', 'design-templates')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
@@ -2175,6 +2198,8 @@ function litsign_scripts()
 		wp_enqueue_script('konva', 'https://cdn.jsdelivr.net/npm/konva@8.3.5/konva.min.js', array(), _S_VERSION, true);
 		wp_enqueue_script('redux', $theme_uri . '/js/redux.min.js', array(), $asset_version('/js/redux.min.js'), true);
 		wp_enqueue_style('cl', $theme_uri . '/css/cl.css', array(), $asset_version('/css/cl.css'));
+		// Letter fonts offered in the builder's font picker (fontData in js/cl.js); one weight per family.
+		wp_enqueue_style('cl-fonts', 'https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Alfa+Slab+One&family=Archivo+Black&family=Bangers&family=Bebas+Neue&family=Black+Ops+One&family=Bungee&family=Cinzel:wght@700&family=Dancing+Script:wght@700&family=Fjalla+One&family=Kaushan+Script&family=Lobster&family=Montserrat:wght@800&family=Orbitron:wght@700&family=Oswald:wght@600&family=Pacifico&family=Passion+One&family=Playfair+Display:wght@700&family=Poppins:wght@700&family=Raleway:wght@800&family=Righteous&family=Roboto+Condensed:wght@700&family=Roboto+Slab:wght@700&family=Russo+One&family=Satisfy&family=Teko:wght@600&family=Titan+One&display=swap', array(), null);
 		wp_localize_script('cl', 'wpApiSettings', array(
 			'nonce' => wp_create_nonce('wp_rest'),
 		));
@@ -4449,11 +4474,43 @@ function wholesale_send_html_mail($to, $subject, $html, $headers = array(), $fro
 }
 
 
+/**
+ * The cart lives in the PHP session. A visitor without a session cookie has nothing in
+ * it, so only start one when the request can put something there: session_start() sets
+ * a PHPSESSID cookie and "Cache-Control: no-store", which keeps pages out of any page
+ * cache (and live chat / price AJAX on every page would otherwise give every visitor one).
+ * Once a visitor has the cookie, every request starts the session as before.
+ */
 function start_session()
 {
-	if (!session_id()) {
-		session_start();
+	if (session_id()) {
+		return;
 	}
+	if (empty($_COOKIE[session_name()]) && !wholesale_request_needs_new_session()) {
+		$_SESSION = array();
+		return;
+	}
+	session_start();
+}
+
+/**
+ * Whether a visitor without a session cookie needs one for this request: wp-admin screens,
+ * front-end form posts (add to cart, checkout), anything carrying a product to add, and the
+ * AJAX calls that store a cart item, builder design or payment. Page views, REST calls and
+ * read-only AJAX (price quotes, mini cart refresh) don't.
+ */
+function wholesale_request_needs_new_session()
+{
+	if (wp_doing_ajax()) {
+		$writes = array('wholesale_mini_cart_add', 'wholesale_cl_builder_add', 'wholesale_upload_design', 'wholesale_payment_start', 'wholesale_payment_complete');
+		return in_array($_REQUEST['action'] ?? '', $writes, true);
+	}
+	if (is_admin() || isset($_REQUEST['product_id'])) {
+		return true;
+	}
+	$is_rest = false !== strpos((string) ($_SERVER['REQUEST_URI'] ?? ''), '/' . rest_get_url_prefix() . '/') || isset($_GET['rest_route']);
+
+	return !$is_rest && !in_array(strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET'), array('GET', 'HEAD'), true);
 }
 
 /**

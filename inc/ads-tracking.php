@@ -220,3 +220,99 @@ function wholesale_ads_begin_checkout_event()
 	<?php
 }
 add_action('wp_footer', 'wholesale_ads_begin_checkout_event', 21);
+
+/**
+ * Secondary Google Ads conversions sent from the browser, keyed by their theme
+ * setting (Settings > Storefront Sign > Google Ads). An empty label turns one off.
+ *
+ * @return array setting key => array('event' => script key, 'label' => admin label, 'help' => admin help)
+ */
+function wholesale_ads_click_conversions()
+{
+	return array(
+		'google_ads_phone_tap_label' => array('event' => 'phone_tap', 'label' => 'Phone tap conversion label', 'help' => 'Sent when someone taps or clicks a phone number link.'),
+		'google_ads_sms_tap_label' => array('event' => 'sms_tap', 'label' => 'Text tap conversion label', 'help' => 'Sent when someone taps a "text us" link.'),
+		'google_ads_email_tap_label' => array('event' => 'email_tap', 'label' => 'Email tap conversion label', 'help' => 'Sent when someone clicks an email address link.'),
+		'google_ads_builder_start_label' => array('event' => 'builder_start', 'label' => 'Builder start conversion label', 'help' => 'Sent once per page view, the first time someone types sign text in the channel letter builder or a product price calculator.'),
+		'google_ads_add_to_cart_label' => array('event' => 'add_to_cart', 'label' => 'Add to cart conversion label', 'help' => 'Sent with the item value when a product or builder design is added to the cart.'),
+	);
+}
+
+/**
+ * The GA4 measurement ID from the theme settings, or '' when unset or malformed.
+ */
+function wholesale_ga4_measurement_id()
+{
+	$id = strtoupper(trim((string) wholesale_get_setting('ga4_measurement_id')));
+
+	return preg_match('/^G-[A-Z0-9]{4,20}$/', $id) ? $id : '';
+}
+
+/**
+ * Phone, text and email taps, builder starts and cart adds. Events queue in
+ * dataLayer, so ones that happen before the deferred Google tag loads
+ * (wholesale_deferred_conversion_tracking) are sent once it does.
+ */
+function wholesale_ads_click_tracking_script()
+{
+	$labels = array();
+	foreach (wholesale_ads_click_conversions() as $key => $conversion) {
+		$label = trim((string) wholesale_get_setting($key));
+		if ('' !== $label) {
+			$labels[$conversion['event']] = $label;
+		}
+	}
+	$ga4 = '' !== wholesale_ga4_measurement_id();
+	if (!$labels && !$ga4) {
+		return;
+	}
+	?>
+	<script>
+		(function () {
+			var labels = <?php echo wp_json_encode((object) $labels); ?>;
+			var ga4 = <?php echo $ga4 ? 'true' : 'false'; ?>;
+			window.dataLayer = window.dataLayer || [];
+			function gtag() { window.dataLayer.push(arguments); }
+			function convert(key, params) {
+				if (!labels[key]) return;
+				params = params || {};
+				params.send_to = 'AW-18454059893/' + labels[key];
+				gtag('event', 'conversion', params);
+			}
+
+			document.addEventListener('click', function (e) {
+				var link = e.target.closest ? e.target.closest('a[href]') : null;
+				if (!link) return;
+				var href = link.getAttribute('href').trim().toLowerCase();
+				if (0 === href.indexOf('tel:')) convert('phone_tap');
+				else if (0 === href.indexOf('sms:')) convert('sms_tap');
+				else if (0 === href.indexOf('mailto:')) convert('email_tap');
+			}, true);
+
+			var started = false;
+			document.addEventListener('input', function (e) {
+				var field = e.target;
+				if (started || !field.matches || !field.matches('#textInput, input[name="letters"]') || !field.value) return;
+				started = true;
+				convert('builder_start');
+			}, true);
+
+			// js/mini-cart.js dispatches this after the cart confirms the add.
+			document.addEventListener('wholesale:cart-added', function (e) {
+				var item = e.detail || {};
+				var value = Number(item.value) || 0;
+				var quantity = Number(item.quantity) || 1;
+				convert('add_to_cart', { value: value, currency: 'USD' });
+				if (ga4) {
+					gtag('event', 'add_to_cart', {
+						currency: 'USD',
+						value: value,
+						items: [{ item_id: String(item.product_id || ''), item_name: item.title || '', quantity: quantity, price: Math.round(value / quantity * 100) / 100 }]
+					});
+				}
+			});
+		})();
+	</script>
+	<?php
+}
+add_action('wp_footer', 'wholesale_ads_click_tracking_script', 21);

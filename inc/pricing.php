@@ -457,3 +457,42 @@ function wholesale_ajax_price_quote()
 }
 add_action('wp_ajax_wholesale_price_quote', 'wholesale_ajax_price_quote');
 add_action('wp_ajax_nopriv_wholesale_price_quote', 'wholesale_ajax_price_quote');
+
+/**
+ * Example total for a channel letter product, from wholesale_price_quote(): the product
+ * page's default selections (first face color, no raceway, and the standard power supply
+ * the calculator adds once text is entered), for $letters letters at $inches tall.
+ *
+ * @return array|null array('total' => float, 'discount' => float) or null when it can't be priced.
+ */
+function wholesale_cl_example_price($slug, $letters, $inches)
+{
+	$product = get_page_by_path($slug, OBJECT, 'product');
+	if (!$product) {
+		return null;
+	}
+	$request = array('letters' => str_repeat('A', max(1, (int) $letters)), 'product_quantity' => 1);
+	foreach (wholesale_product_price_attrs($product->ID) as $attr) {
+		$options = wholesale_attr_options($attr);
+		$name = (string) ($attr['name'] ?? '');
+		if (!$options || '' === $name) {
+			continue;
+		}
+		$value = $options[0]['value'];
+		if ('height' === $name) {
+			$value = null;
+			foreach ($options as $option) {
+				$value = (int) $option['label'] === (int) $inches ? $option['value'] : $value;
+			}
+		} elseif ('power-supply' === $name && isset($options[1])) {
+			$value = $options[1]['value'];
+		}
+		if (null === $value) {
+			return null;
+		}
+		$request[$name] = $value;
+	}
+	$quote = wholesale_price_quote($product->ID, $request);
+
+	return $quote['ok'] ? array('total' => $quote['total'], 'discount' => $quote['discount']) : null;
+}

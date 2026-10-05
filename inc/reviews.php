@@ -131,6 +131,7 @@ function wholesale_site_reviews($limit = 12)
 			// completed order. Reviews an admin added or imported have a _review_source.
 			'verified' => $product_id > 0 && '' === get_post_meta($post->ID, '_review_source', true),
 			'product' => $product_id ? get_the_title($product_id) : '',
+			'product_id' => $product_id,
 		);
 	}
 
@@ -161,6 +162,12 @@ function wholesale_review_slider_data()
 	$google = wholesale_google_reviews();
 	$google_reviews = $google ? $google['reviews'] : array();
 	$site_reviews = wholesale_site_reviews();
+	// The banners & displays ads landing page shows only reviews of those products, not channel letters.
+	if (is_page('banners-displays')) {
+		$site_reviews = array_values(array_filter($site_reviews, static function ($review) {
+			return $review['product_id'] && !wholesale_product_is_channel_letter($review['product_id']);
+		}));
+	}
 
 	$reviews = array();
 	$max = max(count($google_reviews), count($site_reviews));

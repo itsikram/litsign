@@ -105,7 +105,7 @@ get_header();
 			<div class="landing-hero-copy">
 				<p class="landing-eyebrow">Professional signage. Delivered nationwide.</p>
 				<h1>Custom signs<br>built for your <span>business success</span></h1>
-				<p class="landing-lead">High quality custom signs, fast turnaround, nationwide shipping and professional installation.</p>
+				<p class="landing-lead">High quality custom signs, fast turnaround and nationwide shipping.</p>
 				<div class="landing-actions">
 					<a class="landing-button" href="#quote">Get a free quote <span aria-hidden="true">&rarr;</span></a>
 					<a class="landing-button landing-button-outline" href="#solutions">View our work</a>
@@ -113,7 +113,7 @@ get_header();
 				<div class="landing-benefits">
 					<span><b>+</b> Premium quality materials</span>
 					<span><b>+</b> Fast production &amp; delivery</span>
-					<span><b>+</b> Professional installation</span>
+					<span><b>+</b> Wiring diagram &amp; install pattern included</span>
 				</div>
 			</div>
 		</div>
@@ -170,13 +170,13 @@ get_header();
 
 	<section class="landing-dark-section">
 		<div class="landing-shell container landing-stats-layout">
-			<div><p class="landing-eyebrow">Why choose StorefrontSignOnline?</p><h2>Signs that work as hard as you do.</h2><p>We are a full-service sign company committed to providing high-quality signage solutions with exceptional customer service.</p><ul><li>Over 15 years of industry experience</li><li>Advanced technology &amp; premium materials</li><li>Fast turnaround &amp; on-time delivery</li><li>Nationwide shipping &amp; installation</li><li>Unlimited design support</li></ul><a class="landing-button" href="<?php echo esc_url($contact_url); ?>">About our company <span aria-hidden="true">&rarr;</span></a></div>
+			<div><p class="landing-eyebrow">Why choose StorefrontSignOnline?</p><h2>Signs that work as hard as you do.</h2><p>We are a sign company committed to providing high-quality signage solutions with exceptional customer service.</p><ul><li>Over 15 years of industry experience</li><li>Advanced technology &amp; premium materials</li><li>Fast turnaround &amp; on-time delivery</li><li>Nationwide shipping</li><li>Unlimited design support</li></ul><a class="landing-button" href="<?php echo esc_url($contact_url); ?>">About our company <span aria-hidden="true">&rarr;</span></a></div>
 			<div class="landing-stat-grid"><strong>15+<small>Years experience</small></strong><strong>10,000+<small>Signs completed</small></strong><strong>50<small>States served</small></strong><strong>100%<small>Satisfaction</small></strong></div>
 		</div>
 	</section>
 
 	<section class="landing-section landing-process">
-		<div class="landing-shell container"><header class="landing-section-heading"><p class="landing-eyebrow">Simple from start to finish</p><h2>Our <span>simple</span> process</h2><p>From concept to installation, we make the process easy.</p></header><div class="landing-process-grid"><div><b>01</b><h3>Consultation</h3><p>Tell us about your project and requirements.</p></div><div><b>02</b><h3>Design &amp; approval</h3><p>We create the design and get your approval.</p></div><div><b>03</b><h3>Production</h3><p>We build your sign with quality materials.</p></div><div><b>04</b><h3>Delivery &amp; install</h3><p>We deliver and install your sign professionally.</p></div></div></div>
+		<div class="landing-shell container"><header class="landing-section-heading"><p class="landing-eyebrow">Simple from start to finish</p><h2>Our <span>simple</span> process</h2><p>From concept to delivery, we make the process easy.</p></header><div class="landing-process-grid"><div><b>01</b><h3>Consultation</h3><p>Tell us about your project and requirements.</p></div><div><b>02</b><h3>Design &amp; approval</h3><p>We create the design and get your approval.</p></div><div><b>03</b><h3>Production</h3><p>We build your sign with quality materials.</p></div><div><b>04</b><h3>Testing &amp; delivery</h3><p>We test your sign and ship it with a wiring diagram and install pattern for your licensed installer.</p></div></div></div>
 	</section>
 
 	<section class="landing-cta"><div class="landing-shell container"><div><p class="landing-eyebrow">Ready to grow your business?</p><h2>Let your sign do the talking.</h2><p>Let's create a sign that gets you noticed and brings more customers to your business.</p></div><a class="landing-button" href="#quote">Get a free quote now <span aria-hidden="true">&rarr;</span></a></div></section>

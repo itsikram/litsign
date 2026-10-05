@@ -286,3 +286,73 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Hero: who installs it, and the logo quote link */
+.home-hero-install {
+  max-width: 560px;
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.home-hero-logo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 16px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.95rem;
+}
+
+.home-hero-logo a {
+  color: #fff;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cl-shop-header-logo {
+  margin-top: 4px;
+}
+
+/* Real example prices, under the hero */
+.cl-examples {
+  padding: 40px 0 8px;
+  text-align: center;
+}
+
+.cl-examples-title {
+  margin: 0 0 8px;
+  color: #172027;
+  font-size: clamp(1.4rem, 2.2vw, 1.75rem);
+  font-weight: 800;
+}
+
+.cl-examples-lead,
+.cl-examples-note {
+  max-width: 640px;
+  margin: 0 auto;
+  color: #526171;
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.cl-examples-table-wrap {
+  max-width: 520px;
+  margin: 20px auto 14px;
+}
+
+.cl-examples-table {
+  min-width: 0;
+}
+
+.cl-examples-table td.cl-compare-price {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.cl-examples-note a {
+  color: #0c7fae;
+  font-weight: 700;
+}

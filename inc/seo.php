@@ -81,6 +81,24 @@ function wholesale_seo_redirect_pages()
 add_action('template_redirect', 'wholesale_seo_redirect_pages', 1);
 
 /**
+ * The site has no blog authors: /author/{name}/ pages are thin duplicates
+ * that also reveal admin user names. Send them home and keep them out of
+ * the sitemap.
+ */
+function wholesale_seo_redirect_author_archives()
+{
+	if (is_author()) {
+		wp_safe_redirect(home_url('/'), 301);
+		exit;
+	}
+}
+add_action('template_redirect', 'wholesale_seo_redirect_author_archives', 1);
+
+add_filter('wp_sitemaps_add_provider', function ($provider, $name) {
+	return 'users' === $name ? false : $provider;
+}, 10, 2);
+
+/**
  * Product category links point at the clean /{category}/ routes the theme
  * serves, instead of /category/{slug}/ URLs that only redirect there.
  */
@@ -135,6 +153,38 @@ function wholesale_seo_redirect_signs_letters()
 add_action('template_redirect', 'wholesale_seo_redirect_signs_letters', 1);
 
 /**
+ * /channel-letters/ rendered the same letters as the channel letters landing
+ * page; send it (and its link equity) to /custom-channel-letters/.
+ */
+function wholesale_seo_redirect_channel_letters()
+{
+	if ('channel-letters' === get_query_var('category_slug') && wholesale_channel_letters_landing_id()) {
+		$url = get_permalink(wholesale_channel_letters_landing_id());
+		if (!empty($_SERVER['QUERY_STRING'])) {
+			$url .= '?' . wp_unslash($_SERVER['QUERY_STRING']);
+		}
+		wp_safe_redirect($url, 301);
+		exit;
+	}
+}
+add_action('template_redirect', 'wholesale_seo_redirect_channel_letters', 1);
+
+/**
+ * The site has no blog, so RSS feeds (/feed/, /comments/feed/, ...) are empty
+ * pages Google keeps crawling; send them to the home page.
+ */
+function wholesale_seo_redirect_feeds()
+{
+	if (is_feed()) {
+		wp_safe_redirect(home_url('/'), 301);
+		exit;
+	}
+}
+add_action('template_redirect', 'wholesale_seo_redirect_feeds', 1);
+remove_action('wp_head', 'feed_links', 2);
+remove_action('wp_head', 'feed_links_extra', 3);
+
+/**
  * Add the Storefront Signs guide to the main category menu.
  */
 function wholesale_seo_storefront_signs_menu_item($items, $args)
@@ -183,8 +233,10 @@ function wholesale_seo_link_fixes()
 	return array(
 		// The old slug now redirects to Tension Fabric, a different product.
 		'/product/fabric-banner-9oz-wrinkle-free' => '/product/fabric-banner-9oz-wrinkle-free-copy/',
-		// The channel letter route canonicalizes to the home page.
-		'/channel-letters' => '/',
+		// The channel letter route redirects to the channel letters landing page.
+		'/channel-letters' => wholesale_channel_letters_landing_id()
+			? '/' . get_page_uri(wholesale_channel_letters_landing_id()) . '/'
+			: '/',
 	);
 }
 
@@ -304,6 +356,7 @@ function wholesale_seo_migrations()
 		'2026-10-product-copy-titles' => 'wholesale_seo_migrate_product_copy_titles',
 		'2026-10-policy-drafts' => 'wholesale_seo_migrate_policy_drafts',
 		'2026-10-remove-supplier-references' => 'wholesale_seo_migrate_remove_supplier_references',
+		'2026-10-banners-displays-page' => 'wholesale_seo_migrate_banners_displays_page',
 	);
 }
 
@@ -361,6 +414,29 @@ function wholesale_seo_migrate_storefront_signs_page()
 		'post_status' => 'publish',
 		'post_title' => 'Storefront Signs',
 		'post_name' => 'storefront-signs',
+		'post_content' => '',
+		'comment_status' => 'closed',
+		'ping_status' => 'closed',
+	), true);
+
+	return !is_wp_error($page_id);
+}
+
+/**
+ * Create the Banners & Displays landing page. Its content comes from
+ * page-banners-displays.php, so the page itself stays empty.
+ */
+function wholesale_seo_migrate_banners_displays_page()
+{
+	if (get_page_by_path('banners-displays', OBJECT, 'page')) {
+		return true;
+	}
+
+	$page_id = wp_insert_post(array(
+		'post_type' => 'page',
+		'post_status' => 'publish',
+		'post_title' => 'Banners & Displays',
+		'post_name' => 'banners-displays',
 		'post_content' => '',
 		'comment_status' => 'closed',
 		'ping_status' => 'closed',

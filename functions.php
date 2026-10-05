@@ -476,7 +476,7 @@ function wholesale_settings_page()
 			</table>
 			<h2 class="title" id="google-ads">Google Ads</h2>
 			<table class="form-table" role="presentation">
-				<tr><th><label for="wholesale_google_ads_lead_label">Quote request conversion label</label></th><td><input class="regular-text" id="wholesale_google_ads_lead_label" name="wholesale_google_ads_lead_label" value="<?php echo esc_attr(wholesale_get_setting('google_ads_lead_label')); ?>" placeholder="AbC-D_efG-h12_34-567"><p class="description">Sent when someone submits the quote form on a page using the <strong>Channel Letters Ads Landing</strong> template. In Google Ads, create a "Submit lead form" conversion action and paste the part after <code>AW-18454059893/</code> from its event snippet.</p></td></tr>
+				<tr><th><label for="wholesale_google_ads_lead_label">Quote request conversion label</label></th><td><input class="regular-text" id="wholesale_google_ads_lead_label" name="wholesale_google_ads_lead_label" value="<?php echo esc_attr(wholesale_get_setting('google_ads_lead_label')); ?>" placeholder="AbC-D_efG-h12_34-567"><p class="description">Sent when someone submits a quote form: the contact page, the sign landing page and the <strong>Channel Letters</strong> page (/custom-channel-letters/). In Google Ads, create a "Submit lead form" conversion action and paste the part after <code>AW-18454059893/</code> from its event snippet.</p></td></tr>
 			</table>
 			<h2 class="title" id="google-reviews">Google reviews</h2>
 			<p>Shows your Google Business rating and latest reviews in the site-wide review slider, next to reviews you approve under <a href="<?php echo esc_url(admin_url('edit.php?post_type=review_submission')); ?>">Customer Reviews</a>.</p>
@@ -1371,7 +1371,50 @@ add_filter('template_include', 'wholesale_category_template');
 
 function wholesale_category_url($term_slug)
 {
-	return trailingslashit(home_url(sanitize_title($term_slug)));
+	$term_slug = sanitize_title($term_slug);
+
+	// The channel letters landing page owns the channel letter keywords, so
+	// every channel letter category link points at it.
+	if ('channel-letters' === $term_slug && wholesale_channel_letters_landing_id()) {
+		return get_permalink(wholesale_channel_letters_landing_id());
+	}
+
+	return trailingslashit(home_url($term_slug));
+}
+
+/**
+ * ID of the published page using the Channel Letters template
+ * (/custom-channel-letters/), or 0. It is the organic and Google Ads landing
+ * page for channel letters; /channel-letters/ redirects to it.
+ */
+function wholesale_channel_letters_landing_id()
+{
+	static $id = null;
+
+	if (null === $id) {
+		$pages = get_posts(array(
+			'post_type' => 'page',
+			'post_status' => 'publish',
+			'posts_per_page' => 1,
+			'fields' => 'ids',
+			'orderby' => 'ID',
+			'order' => 'ASC',
+			'meta_key' => '_wp_page_template',
+			'meta_value' => 'page-channel-letters.php',
+			'no_found_rows' => true,
+		));
+		$id = $pages ? (int) $pages[0] : 0;
+	}
+
+	return $id;
+}
+
+/**
+ * Whether this request is the channel letters landing page itself.
+ */
+function wholesale_is_channel_letters_landing()
+{
+	return is_page() && is_page_template('page-channel-letters.php');
 }
 
 function wholesale_normalize_category_menu_urls($items, $args)
@@ -1401,6 +1444,15 @@ add_filter('wp_nav_menu_objects', 'wholesale_normalize_category_menu_urls', 10, 
 function wholesale_category_redirect()
 {
 	if (!empty($_GET['category_slug'])) {
+		// On any page but the shop root the parameter is a stray filter
+		// (e.g. /product/x/?category_slug=y); drop it and keep the page.
+		$request_path = trim((string) wp_parse_url(wp_unslash($_SERVER['REQUEST_URI']), PHP_URL_PATH), '/');
+		$home_path = trim((string) wp_parse_url(home_url('/'), PHP_URL_PATH), '/');
+		if ($request_path !== $home_path) {
+			wp_safe_redirect(remove_query_arg('category_slug'), 301);
+			exit;
+		}
+
 		$term_slug = sanitize_title(wp_unslash($_GET['category_slug']));
 		$term = get_term_by('slug', $term_slug, 'product_category');
 
@@ -2086,11 +2138,14 @@ function litsign_scripts()
 	if (is_page_template('landing-page.php')) {
 		wp_enqueue_style('landing-page', $theme_uri . '/css/landing-page.css', array('litsign-style', 'custom-style'), $asset_version('/css/landing-page.css'));
 	}
-	if (is_page_template('page-channel-letters-ads.php')) {
-		wp_enqueue_style('cl-ads', $theme_uri . '/css/cl-ads.css', array('litsign-style', 'custom-style'), $asset_version('/css/cl-ads.css'));
+	if (is_page_template('page-channel-letters.php')) {
+		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
 	}
-	if (is_page(array('storefront-signs', 'about')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
+	if (is_page(array('storefront-signs', 'about', 'banners-displays')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
 		wp_enqueue_style('wholesale-seo-pages', $theme_uri . '/css/seo-pages.css', array('custom-style'), $asset_version('/css/seo-pages.css'));
+	}
+	if (is_page('banners-displays')) {
+		wp_enqueue_style('wholesale-banners-displays', $theme_uri . '/css/banners-displays.css', array('wholesale-seo-pages'), $asset_version('/css/banners-displays.css'));
 	}
 	//wp_enqueue_style('zebra_dialog', get_template_directory_uri() . '/css/zebra_dialog.css', array(), _S_VERSION);
 
@@ -2345,6 +2400,11 @@ function wholesale_seo_description()
 
 	$description = trim(preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $description)));
 
+	// Excerpts of long page content would be cut off mid-sentence in results.
+	if (mb_strlen($description) > 160 && !wholesale_seo_is_sales_page()) {
+		$description = wholesale_seo_trim_description($description, 158);
+	}
+
 	return wholesale_seo_localize_description($description ?: get_bloginfo('name'));
 }
 
@@ -2369,11 +2429,11 @@ function wholesale_seo_area_served_schema()
 
 /**
  * Pages that sell something: the home page, channel letters, product and
- * category pages, and the storefront signs guide.
+ * category pages, the storefront signs guide and the banners & displays page.
  */
 function wholesale_seo_is_sales_page()
 {
-	return is_front_page() || wholesale_is_channel_letters_page() || is_singular('product') || (bool) get_query_var('category_slug') || is_page('storefront-signs');
+	return is_front_page() || wholesale_is_channel_letters_page() || is_singular('product') || (bool) get_query_var('category_slug') || is_page(array('storefront-signs', 'banners-displays'));
 }
 
 /**
@@ -2392,6 +2452,12 @@ function wholesale_seo_localize_title($title)
 	$parts = explode(' | ', $title, 2);
 	$main = $parts[0] . ' ' . sprintf(__('in %s', 'litsign'), wholesale_seo_service_area());
 	$rest = isset($parts[1]) ? trim($parts[1]) : '';
+
+	// Long product names ("Standard Retractable Banner Stand (Graphic & Stand)")
+	// keep their own title: with the area added, Google would cut them off.
+	if (mb_strlen($main) > 65) {
+		return mb_strlen($title) <= 65 ? $title : $parts[0];
+	}
 
 	// The text before the first comma only when it can stand alone
 	// ("Custom LED Signs", not "13oz").
@@ -2458,8 +2524,16 @@ function wholesale_seo_page_defaults()
 {
 	return array(
 		'about' => array(
-			'title' => __('About Us | Store Front Sign Online, Washington & USA', 'litsign'),
-			'description' => __('Store Front Sign Online makes custom channel letters, storefront signs and large format prints, ordered online and shipped to your business.', 'litsign'),
+			'title' => __('About Us | Custom Sign Company in Renton, WA Since 2002', 'litsign'),
+			'description' => __('Store Front Sign Online (Lit Sign Manufacturing since 2002) makes custom LED channel letters, storefront signs and large format prints, shipped USA-wide.', 'litsign'),
+		),
+		'privacy-policy' => array(
+			'title' => __('Privacy Policy | Store Front Sign Online', 'litsign'),
+			'description' => __('How Store Front Sign Online collects, uses and protects your information when you order signs, request a quote or contact us.', 'litsign'),
+		),
+		'shipping-returns' => array(
+			'title' => __('Shipping & Returns | Store Front Sign Online', 'litsign'),
+			'description' => __('Shipping options, delivery times and the return and reprint policy for custom made-to-order signs and prints from Store Front Sign Online.', 'litsign'),
 		),
 		'contact' => array(
 			'title' => __('Contact Us | Free Channel Letter & Sign Quote', 'litsign'),
@@ -2477,6 +2551,10 @@ function wholesale_seo_page_defaults()
 		'storefront-signs' => array(
 			'title' => __('Storefront Signs | Custom Lit Business Signs, Priced Online', 'litsign'),
 			'description' => __('Custom storefront signs: LED channel letters, window graphics, A-frames, banners and flags. Compare types, sizes and prices, then order online.', 'litsign'),
+		),
+		'banners-displays' => array(
+			'title' => __('Custom Banners & Display Stands | Printed Banners, Flags & Booths', 'litsign'),
+			'description' => __('Custom vinyl and fabric banners, retractable banner stands, feather flags and trade show displays. See your price online.', 'litsign'),
 		),
 		'terms-conditions' => array(
 			'title' => __('Terms & Conditions | Store Front Sign Online', 'litsign'),
@@ -2581,6 +2659,15 @@ function wholesale_seo_channel_letter_product($product_id)
  */
 function wholesale_seo_keyword_meta()
 {
+	// The landing page targets "custom channel letters" and "channel letter
+	// signs"; the home page keeps the broader "channel letters" title below.
+	if (wholesale_is_channel_letters_landing()) {
+		return array(
+			'title' => __('Custom Channel Letter Signs | UL Listed LED, Made in USA', 'litsign'),
+			'description' => __('Custom LED channel letter signs, built to order and UL listed. See your price per inch online or get a free quote.', 'litsign'),
+		);
+	}
+
 	if (wholesale_is_channel_letters_page()) {
 		return array(
 			'title' => __('Channel Letters | Custom LED Signs, See Your Price Online', 'litsign'),
@@ -2629,8 +2716,13 @@ function wholesale_seo_keyword_meta()
  */
 function wholesale_seo_url()
 {
-	// The home page and /channel-letters/ render the same listing, so both
-	// consolidate ranking signals on the home page.
+	// The channel letters landing page ranks on its own; ad URLs with ?gclid,
+	// ?style and UTM tags canonicalize to the clean URL.
+	if (wholesale_is_channel_letters_landing()) {
+		return get_permalink();
+	}
+
+	// The home page shares the channel letter listing and canonicalizes to itself.
 	if (wholesale_is_channel_letters_page()) {
 		return home_url('/');
 	}
@@ -2661,7 +2753,6 @@ function wholesale_seo_is_noindex()
 	return is_404()
 		|| is_search()
 		|| is_page(wholesale_seo_noindex_page_slugs())
-		|| is_page_template('page-channel-letters-ads.php')
 		|| is_singular(array('order', 'cnn'))
 		|| is_post_type_archive('order')
 		|| get_query_var('wholesale_thank_you');
@@ -2825,6 +2916,39 @@ function wholesale_add_return_policy_to_product($product)
 }
 
 /**
+ * Standard shipping for a product as schema.org OfferShippingDetails: the
+ * flat Standard rate charged at checkout (channel letters have their own),
+ * production time as handling time, and the 3-6 business day transit the
+ * checkout quotes for Standard shipping.
+ *
+ * @return array
+ */
+function wholesale_seo_offer_shipping_details($product_id)
+{
+	$setting = has_term('channel-letters', 'product_category', $product_id) ? 'channel_shipping_options' : 'standard_shipping_options';
+	$rates = array_values(array_filter(explode(',', (string) wholesale_get_setting($setting)), 'is_numeric'));
+	$turnaround = max(1, (int) get_post_meta($product_id, '_product_turnaround', true));
+
+	return array(
+		'@type' => 'OfferShippingDetails',
+		'shippingRate' => array(
+			'@type' => 'MonetaryAmount',
+			'value' => number_format($rates ? (float) $rates[0] : 0, 2, '.', ''),
+			'currency' => 'USD',
+		),
+		'shippingDestination' => array(
+			'@type' => 'DefinedRegion',
+			'addressCountry' => 'US',
+		),
+		'deliveryTime' => array(
+			'@type' => 'ShippingDeliveryTime',
+			'handlingTime' => array('@type' => 'QuantitativeValue', 'minValue' => 1, 'maxValue' => $turnaround, 'unitCode' => 'DAY'),
+			'transitTime' => array('@type' => 'QuantitativeValue', 'minValue' => 3, 'maxValue' => 6, 'unitCode' => 'DAY'),
+		),
+	);
+}
+
+/**
  * Build the schema.org Product entity for a product page.
  *
  * @return array
@@ -2843,6 +2967,9 @@ function wholesale_product_schema($product_id, $url, $image = '')
 			'name' => get_bloginfo('name'),
 		),
 		'sku' => (string) get_post_field('post_name', $product_id),
+		// Made-to-order products have no GTIN; the store's own part number
+		// identifies them (Merchant Center: identifier_exists = no).
+		'mpn' => (string) get_post_field('post_name', $product_id),
 	);
 
 	$terms = get_the_terms($product_id, 'product_category');
@@ -2850,47 +2977,22 @@ function wholesale_product_schema($product_id, $url, $image = '')
 		$product['category'] = implode(', ', wp_list_pluck($terms, 'name'));
 	}
 
-	$offer = array(
-		'@type' => 'Offer',
-		'priceCurrency' => 'USD',
-		'availability' => 'https://schema.org/InStock',
-		'url' => $url,
-		'hasMerchantReturnPolicy' => wholesale_merchant_return_policy(),
-	);
-	$price = floatval(get_post_meta($product_id, '_min_sqft', true)) * floatval(get_post_meta($product_id, '_price_per_sqft', true));
-
+	// The same price the page and cart charge for the smallest configuration.
+	// Products without an online price get no Offer, since Google rejects an
+	// Offer without a price.
+	$price = wholesale_seo_product_lowest_price($product_id);
 	if ($price > 0) {
-		$offer['price'] = number_format($price, 2, '.', '');
-	} else {
-		// Channel letters are priced per inch, e.g. "<del>$13</del> $11.70 Per Inch".
-		$starting_at = wp_strip_all_tags(preg_replace('#<del>.*?</del>#is', '', (string) get_post_meta($product_id, '_starting_at_text', true)));
-
-		if (preg_match('/\$\s*([0-9]+(?:\.[0-9]+)?)/', $starting_at, $match)) {
-			$offer['price'] = number_format((float) $match[1], 2, '.', '');
-
-			if (false !== stripos($starting_at, 'per inch')) {
-				$offer['priceSpecification'] = array(
-					'@type' => 'UnitPriceSpecification',
-					'price' => $offer['price'],
-					'priceCurrency' => 'USD',
-					'referenceQuantity' => array(
-						'@type' => 'QuantitativeValue',
-						'value' => 1,
-						'unitCode' => 'INH',
-						'unitText' => 'inch',
-					),
-				);
-			}
-		} else {
-			$offer['priceSpecification'] = array(
-				'@type' => 'PriceSpecification',
-				'priceCurrency' => 'USD',
-				'description' => __('Pricing varies by size and configuration.', 'litsign'),
-			);
-		}
+		$product['offers'] = array(
+			'@type' => 'Offer',
+			'price' => number_format($price, 2, '.', ''),
+			'priceCurrency' => 'USD',
+			'availability' => 'https://schema.org/InStock',
+			'itemCondition' => 'https://schema.org/NewCondition',
+			'url' => $url,
+			'shippingDetails' => wholesale_seo_offer_shipping_details($product_id),
+			'hasMerchantReturnPolicy' => wholesale_merchant_return_policy(),
+		);
 	}
-
-	$product['offers'] = $offer;
 
 	// Gallery photos after the featured image, so Google can pick the best one.
 	$gallery = get_post_meta($product_id, '_product_gallery', true);
@@ -2959,6 +3061,36 @@ function wholesale_seo_head()
 	$description = wholesale_seo_description();
 	$image = is_singular() ? get_the_post_thumbnail_url(get_queried_object_id(), 'large') : '';
 
+	// Share previews for the channel letters landing page show a lit letter, not the logo.
+	if (!$image && wholesale_is_channel_letters_landing()) {
+		$front_lit = wholesale_seo_product('standard-channel-letter-front-lit');
+		$image = $front_lit ? get_the_post_thumbnail_url($front_lit, 'large') : '';
+	}
+
+	// Pages with a hand-picked share image (set by the template before get_header()).
+	if (!$image && !empty($GLOBALS['wholesale_page_image'])) {
+		$image = $GLOBALS['wholesale_page_image'];
+	}
+
+	// Category pages share their first product's photo instead of the logo.
+	if (!$image && get_query_var('category_slug')) {
+		$first_product = get_posts(array(
+			'post_type' => 'product',
+			'post_status' => 'publish',
+			'posts_per_page' => 1,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+			'tax_query' => array(
+				array('taxonomy' => 'product_category', 'field' => 'slug', 'terms' => sanitize_title(get_query_var('category_slug'))),
+			),
+			'meta_query' => array(
+				array('key' => '_thumbnail_id', 'compare' => 'EXISTS'),
+				array('key' => '_show_in_list', 'value' => 'on'),
+			),
+		));
+		$image = $first_product ? get_the_post_thumbnail_url($first_product[0], 'large') : '';
+	}
+
 	if (!$image) {
 		$image = get_theme_mod('custom_logo') ? wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full') : '';
 	}
@@ -2985,11 +3117,12 @@ function wholesale_seo_head()
 	$site_id = trailingslashit(home_url('/')) . '#website';
 	$organization_id = trailingslashit(home_url('/')) . '#organization';
 	$page_id = trailingslashit($url) . '#webpage';
-	$is_collection = is_page_template('home.php') || get_query_var('category_slug');
+	$is_collection = is_page_template('home.php') || wholesale_is_channel_letters_landing() || get_query_var('category_slug');
+	$page_items = !empty($GLOBALS['wholesale_page_items']) ? (array) $GLOBALS['wholesale_page_items'] : array();
 
 	if (is_singular('product')) {
 		$page_type = 'ItemPage';
-	} elseif ($is_collection) {
+	} elseif ($is_collection || $page_items) {
 		$page_type = 'CollectionPage';
 	} elseif (is_page('about')) {
 		$page_type = 'AboutPage';
@@ -3019,9 +3152,15 @@ function wholesale_seo_head()
 	if (is_singular('product')) {
 		$product_id = get_queried_object_id();
 		$product = wholesale_product_schema($product_id, $url, $image);
-		$product['offers']['seller'] = array('@id' => $organization_id);
-		$page['mainEntity'] = array('@id' => $product['@id']);
-		$entities[] = $product;
+		// Google needs an offer or a rating on a Product; a product with
+		// neither (no online price yet) is left as a plain item page.
+		if (!empty($product['offers']) || !empty($product['aggregateRating'])) {
+			if (!empty($product['offers'])) {
+				$product['offers']['seller'] = array('@id' => $organization_id);
+			}
+			$page['mainEntity'] = array('@id' => $product['@id']);
+			$entities[] = $product;
+		}
 
 		$terms = get_the_terms($product_id, 'product_category');
 		if ($terms && !is_wp_error($terms)) {
@@ -3084,8 +3223,46 @@ function wholesale_seo_head()
 				'name' => $term->name,
 				'item' => $url,
 			);
+		} elseif (wholesale_is_channel_letters_landing()) {
+			$breadcrumb_items[] = array(
+				'@type' => 'ListItem',
+				'position' => 2,
+				'name' => wp_strip_all_tags(get_the_title()),
+				'item' => $url,
+			);
+			$entities[] = array(
+				'@type' => 'Service',
+				'@id' => trailingslashit($url) . '#service',
+				'name' => 'Custom Channel Letter Signs',
+				'serviceType' => 'Channel letter signs',
+				'description' => 'Custom LED channel letter signs for storefronts: front lit, back lit, front and back lit, halo lit, reverse lit and trimless letters, made in the USA and UL listed.',
+				'url' => $url,
+				'image' => $image,
+				'provider' => array('@id' => $organization_id),
+				'areaServed' => wholesale_seo_area_served_schema(),
+			);
 		}
 	} elseif (is_singular()) {
+		// Landing pages that feature products (set by the template before get_header()).
+		if ($page_items) {
+			$items = array();
+			foreach (array_values($page_items) as $position => $item) {
+				$items[] = array(
+					'@type' => 'ListItem',
+					'position' => $position + 1,
+					'url' => get_permalink($item),
+					'name' => wp_strip_all_tags(get_the_title($item)),
+				);
+			}
+			$page['mainEntity'] = array(
+				'@type' => 'ItemList',
+				'numberOfItems' => count($items),
+				'itemListElement' => $items,
+			);
+		}
+		if (is_page('about')) {
+			$page['mainEntity'] = array('@id' => $organization_id);
+		}
 		$breadcrumb_items[] = array(
 			'@type' => 'ListItem',
 			'position' => 2,
@@ -3316,6 +3493,8 @@ function wholesale_organization_schema()
 		),
 		'telephone' => '+1-866-436-2101',
 		'email' => 'TR@StorefrontSignOnline.com',
+		// Store-wide return policy, so Google can show it for every product.
+		'hasMerchantReturnPolicy' => wholesale_merchant_return_policy(),
 	);
 	$local_business = array(
 		'@type' => 'LocalBusiness',

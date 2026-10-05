@@ -185,6 +185,17 @@ function wholesale_home_from_price($slug)
     return '$' . end($prices[1]);
 }
 
+// The unit a "starting at" price is quoted in, so "$1.98" reads as "$1.98/sq ft".
+function wholesale_home_price_unit($slug)
+{
+    $text = strtolower(wp_strip_all_tags(wholesale_seo_product_starting_text($slug)));
+    if (false !== strpos($text, 'inch')) {
+        return '/inch';
+    }
+
+    return false !== strpos($text, 'ft') ? '/sq ft' : '';
+}
+
 // Hero proof points: the lowest channel letter price and the Google rating.
 $cl_from_price = wholesale_home_from_price('standard-channel-letter-front-lit');
 $google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
@@ -404,14 +415,13 @@ get_header();
         <ul class="home-types-list">
             <?php
             $type_links = array_merge(
-                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/inch')),
-                array_map(static function ($item) {
-                    return array($item[0], $item[1], $item[2], '', '');
-                }, $more_products)
+                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters')),
+                $more_products
             );
             foreach ($type_links as $type_link) :
                 $type_product = wholesale_seo_product($type_link[0]);
                 $type_price = wholesale_home_from_price($type_link[0]);
+                $type_price .= $type_price ? wholesale_home_price_unit($type_link[0]) : '';
                 ?>
                 <li>
                     <a class="home-types-item" href="<?php echo esc_url($type_link[1]); ?>">
@@ -424,7 +434,7 @@ get_header();
                         </span>
                         <span class="home-types-text">
                             <strong><?php echo esc_html($type_link[2]); ?></strong>
-                            <?php if ($type_price) : ?><small>From <?php echo esc_html($type_price . $type_link[4]); ?></small><?php endif; ?>
+                            <?php if ($type_price) : ?><small>From <?php echo esc_html($type_price); ?></small><?php endif; ?>
                         </span>
                     </a>
                 </li>

@@ -188,7 +188,7 @@ get_header();
                         <?php if ($can_view_full) : ?>
                             <a class="cart-secondary track-full-link" href="<?php echo esc_url(get_permalink($order_post_id)); ?>">View full order details</a>
                         <?php elseif ($owner) : ?>
-                            <p class="account-help"><a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink($order_post_id)), home_url('/login/'))); ?>">Sign in</a> to see prices, payment and full addresses.</p>
+                            <p class="account-help"><a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink($order_post_id)), home_url('/login/'))); ?>" rel="nofollow">Sign in</a> to see prices, payment and full addresses.</p>
                         <?php endif; ?>
                     </section>
 

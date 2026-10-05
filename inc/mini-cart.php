@@ -278,12 +278,38 @@ function wholesale_ajax_mini_cart_add()
 	wholesale_mini_cart_send(array(
 		'added' => $added ? array(
 			'cart_id' => (string) $added->cart_id,
-			'title' => (string) $added->product_title,
+			// get_the_title() is HTML-encoded; the script shows this as plain text.
+			'title' => html_entity_decode((string) $added->product_title, ENT_QUOTES, 'UTF-8'),
 		) : null,
 	));
 }
 add_action('wp_ajax_wholesale_mini_cart_add', 'wholesale_ajax_mini_cart_add');
 add_action('wp_ajax_nopriv_wholesale_mini_cart_add', 'wholesale_ajax_mini_cart_add');
+
+/**
+ * Add To Cart from the channel letter builder: saves the design (uploaded first through
+ * wholesale_upload_design) as the product's session design, then adds it like the
+ * product page does. The design image is the nonce-protected, session-owned part.
+ */
+function wholesale_ajax_cl_builder_add()
+{
+	$product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
+	if (!$product_id || !wholesale_product_is_channel_letter($product_id) || 'publish' !== get_post_status($product_id)) {
+		wp_send_json_error(array('message' => 'This product is no longer available.'));
+	}
+	$design = wholesale_store_session_cl_design(
+		$product_id,
+		isset($_POST['design_id']) ? $_POST['design_id'] : 0,
+		isset($_POST['design_data']) ? $_POST['design_data'] : '' // The helper strips WordPress's slashes.
+	);
+	if (is_wp_error($design)) {
+		wp_send_json_error(array('message' => $design->get_error_message()));
+	}
+	$_REQUEST['design_id'] = $design['design_id'];
+	wholesale_ajax_mini_cart_add();
+}
+add_action('wp_ajax_wholesale_cl_builder_add', 'wholesale_ajax_cl_builder_add');
+add_action('wp_ajax_nopriv_wholesale_cl_builder_add', 'wholesale_ajax_cl_builder_add');
 
 /**
  * The cart and checkout pages show the cart themselves, so the header icon stays a link there.

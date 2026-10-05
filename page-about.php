@@ -69,6 +69,22 @@ get_header();
 		</div>
 	</section>
 
+	<section class="sf-section<?php echo $story ? ' sf-section--tint' : ''; ?>" aria-labelledby="about-facts-title">
+		<div class="container sf-prose">
+			<p class="cl-kicker">Company facts</p>
+			<h2 id="about-facts-title" class="cl-section-title">Store Front Sign Online at a Glance</h2>
+			<?php // Matches the Organization and LocalBusiness structured data in the page head. ?>
+			<ul class="sf-facts">
+				<li><strong>Company</strong>Storefront Sign Online LLC, doing business as Store Front Sign Online and Lit Sign Manufacturing</li>
+				<li><strong>In business since</strong>2002, founded by Tri Nguyen</li>
+				<li><strong>Location</strong>707 S. Grady Way, Suite 600, Renton, WA 98057</li>
+				<li><strong>Service area</strong>Washington State and businesses across the United States, shipped directly to you</li>
+				<li><strong>Products</strong>LED channel letters, storefront signs, banners, flags, banner stands, trade show displays and large format prints</li>
+				<li><strong>Policies</strong><a href="<?php echo esc_url(home_url('/terms-conditions/')); ?>">Terms &amp; Conditions</a><?php if (get_privacy_policy_url()) : ?> and <a href="<?php echo esc_url(get_privacy_policy_url()); ?>">Privacy Policy</a><?php endif; ?></li>
+			</ul>
+		</div>
+	</section>
+
 	<section class="cl-help" aria-labelledby="about-help-title">
 		<div class="container cl-help-inner">
 			<div class="cl-help-copy">

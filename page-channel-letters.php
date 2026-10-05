@@ -2,9 +2,12 @@
 /**
  * Template Name: Channel Letters
  *
- * This route is intentionally separate from the front-page home template so the
- * /channel-letters/ landing remains independent while reusing the same channel
- * letters layout and product logic from the central home template.
+ * The channel letters landing page (/custom-channel-letters/): it ranks on its
+ * own (self canonical; /channel-letters/ redirects here) and is the Google Ads
+ * final URL. It reuses the home template's layout and product logic, and adds
+ * a quote form (#quote) that saves the ad click and fires the lead conversion.
+ * Add ?style=front-lit, back-lit, halo, dual, reverse-lit or trimless to an
+ * ad's final URL so the headline and product list match the ad group.
  */
 
 function get_product_attribute_data($id, $attr)
@@ -115,6 +118,154 @@ $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $builder_url = home_url('/channel-letter-builder/');
 $GLOBALS['wholesale_channel_letter_landing'] = $is_channel_letters;
+
+// Google Ads landing: the quote form below, the ad group headline and the lead conversion.
+$is_cl_landing = $is_channel_letters && wholesale_is_channel_letters_landing();
+$page_url = $is_cl_landing ? get_permalink() : '';
+$logo_max_mb = 10;
+$quote_styles = array('Front lit', 'Back lit', 'Front & back lit (dual lit)', 'Halo lit', 'Reverse lit', 'Trimless with border', 'Borderless');
+
+// Add ?style=front-lit, back-lit, halo, dual, reverse-lit or trimless to an ad's
+// final URL so the headline, the product list and the quote form match the ad
+// group. Search engines see the default page (the canonical drops ?style).
+// Style => headline, accent, label for the filter note, product slugs shown,
+// letter style preselected in the quote form.
+$hero_variants = array(
+    'front-lit' => array('Front Lit Channel Letters', 'Built to Get Noticed', 'front lit', array('standard-channel-letter-front-lit', 'inset-acrylic-face-lit-with-border-no-trimcap', 'exposed-acrylic-face-lit-borderless-no-trimcap'), 'Front lit'),
+    'back-lit' => array('Back Lit Channel Letters', 'with a Glowing Halo', 'back lit', array('standard-channel-letter-back-lit', 'hidden-back-halo-lit', 'halo-reverse-acrylic-lit-channel-letters'), 'Back lit'),
+    'halo' => array('Halo Lit Channel Letters', 'for a Premium Storefront', 'halo lit', array('hidden-back-halo-lit', 'halo-reverse-acrylic-lit-channel-letters'), 'Halo lit'),
+    'dual' => array('Front &amp; Back Lit Channel Letters', 'Twice the Glow', 'front &amp; back lit', array('standard-channel-letter-front-back-lit'), 'Front & back lit (dual lit)'),
+    'reverse-lit' => array('Reverse Lit Channel Letters', 'with a Soft Halo Glow', 'reverse lit', array('halo-reverse-acrylic-lit-channel-letters'), 'Reverse lit'),
+    'trimless' => array('Trimless Channel Letters', 'for a Clean, Modern Look', 'trimless', array('inset-acrylic-face-lit-with-border-no-trimcap', 'exposed-acrylic-face-lit-borderless-no-trimcap'), ''),
+);
+$hero_style = isset($_GET['style']) ? sanitize_key(wp_unslash($_GET['style'])) : '';
+$hero_style = isset($hero_variants[$hero_style]) ? $hero_style : '';
+
+if ($is_cl_landing && 'POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['clq_submit'])) {
+    $field = static function ($key) {
+        return isset($_POST[$key]) ? sanitize_text_field(wp_unslash($_POST[$key])) : '';
+    };
+
+    // Keep the ad group headline and click ID when the page reloads after submit.
+    $form_style = sanitize_key($field('clq_variant'));
+    $gclid = preg_replace('/[^A-Za-z0-9_-]/', '', $field('clq_gclid'));
+    $return_url = add_query_arg(array_filter(array(
+        'style' => isset($hero_variants[$form_style]) ? $form_style : '',
+        'gclid' => $gclid,
+    )), $page_url);
+    $fail = static function ($status = 'error') use ($return_url) {
+        wp_safe_redirect(add_query_arg('quote_status', $status, $return_url) . '#quote');
+        exit;
+    };
+
+    if (!wp_verify_nonce($field('clq_nonce'), 'clq_quote')) {
+        $fail();
+    }
+
+    $name = $field('clq_name');
+    $email = isset($_POST['clq_email']) ? sanitize_email(wp_unslash($_POST['clq_email'])) : '';
+    $phone = $field('clq_phone');
+    $business = $field('clq_business');
+    $style = in_array($field('clq_style'), $quote_styles, true) ? $field('clq_style') : '';
+    $zip = $field('clq_zip');
+    $details = isset($_POST['clq_details']) ? sanitize_textarea_field(wp_unslash($_POST['clq_details'])) : '';
+
+    // Bots fill the hidden website field; people never see it.
+    if ($field('clq_website') || !$name || !$phone || !is_email($email)) {
+        $fail();
+    }
+
+    $logo_path = '';
+    $logo_url = '';
+    if (!empty($_FILES['clq_logo']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['clq_logo']['error']) {
+        if (UPLOAD_ERR_OK !== (int) $_FILES['clq_logo']['error'] || (int) $_FILES['clq_logo']['size'] > $logo_max_mb * MB_IN_BYTES) {
+            $fail('file_error');
+        }
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        $upload = wp_handle_upload($_FILES['clq_logo'], array(
+            'test_form' => false,
+            'mimes' => array(
+                'jpg|jpeg|jpe' => 'image/jpeg',
+                'png' => 'image/png',
+                'pdf' => 'application/pdf',
+            ),
+        ));
+
+        if (!empty($upload['error'])) {
+            $fail('file_error');
+        }
+
+        $logo_path = $upload['file'];
+        $logo_url = $upload['url'];
+    }
+
+    $project_type = 'Channel letters' . ($style ? ': ' . $style : '');
+    $source = implode(', ', array_filter(array(
+        $field('clq_utm_campaign') ? 'Campaign: ' . $field('clq_utm_campaign') : '',
+        $field('clq_utm_term') ? 'Keyword: ' . $field('clq_utm_term') : '',
+        $gclid ? 'GCLID: ' . $gclid : '',
+    )));
+
+    $submission_id = wp_insert_post(array(
+        'post_type' => 'contact_submission',
+        'post_status' => 'publish',
+        'post_title' => sprintf('%s - %s', $name, current_time('Y-m-d H:i')),
+        'post_content' => $details,
+        'meta_input' => array(
+            '_contact_name' => $name,
+            '_contact_business' => $business,
+            '_contact_phone' => $phone,
+            '_contact_email' => $email,
+            '_contact_project_type' => $project_type,
+            '_contact_message' => $details,
+            '_contact_zip' => $zip,
+            '_contact_logo' => $logo_url,
+            '_contact_gclid' => $gclid,
+            '_contact_source' => $source,
+        ),
+    ), true);
+
+    if (is_wp_error($submission_id)) {
+        $fail();
+    }
+
+    $subject = sprintf('New channel letter quote request from %s', $name);
+    $body = "Name: {$name}\n"
+        . "Business: {$business}\n"
+        . "Phone: {$phone}\n"
+        . "Email: {$email}\n"
+        . 'Letter style: ' . ($style ? $style : 'Not sure yet') . "\n"
+        . "ZIP code: {$zip}\n"
+        . 'Logo: ' . ($logo_url ? $logo_url : 'Not uploaded') . "\n"
+        . ($source ? "Ad source: {$source}\n" : '')
+        . "\nProject details:\n{$details}\n";
+    $headers = array(
+        'Content-Type: text/plain; charset=UTF-8',
+        'Reply-To: ' . $name . ' <' . $email . '>',
+    );
+
+    wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers, $logo_path ? array($logo_path) : array());
+    wholesale_send_quote_confirmation($submission_id);
+
+    // The quote is saved even when mail fails, so the visitor still sees success.
+    wp_safe_redirect(add_query_arg(wholesale_quote_lead_args($submission_id), $return_url) . '#quote');
+    exit;
+}
+
+$quote_status = isset($_GET['quote_status']) ? sanitize_key(wp_unslash($_GET['quote_status'])) : '';
+$quote_lead_id = isset($_GET['lead']) ? absint($_GET['lead']) : 0;
+$quote_lead_key = isset($_GET['lk']) ? sanitize_text_field(wp_unslash($_GET['lk'])) : '';
+$quote_sent = 'sent' === $quote_status && $quote_lead_id
+    && hash_equals(wp_hash('cla_lead_' . $quote_lead_id), $quote_lead_key)
+    && 'contact_submission' === get_post_type($quote_lead_id);
+
+if ($is_cl_landing) {
+    // Fire the Google Ads lead conversion once, only for the visitor who just sent the quote.
+    wholesale_track_quote_lead('channel_letters_page');
+    // Quote links on this page jump to the form below instead of leaving for /contact/.
+    $contact_url = '#quote';
+}
 
 $current_term_id = $current_term ?  $current_term->term_id : 0;
 $current_term_ref = get_term_meta($current_term_id, 'taxonomy-ref', true);
@@ -278,7 +429,11 @@ get_header();
             <div class="home-hero-copy">
                 <?php if ($is_channel_letters) : ?>
                     <p class="home-hero-eyebrow">Made in USA &middot; UL listed &middot; 5-year LED warranty</p>
-                    <h1 id="home-hero-title" class="home-hero-title">Custom LED Channel Letter Signs <span>for Your Storefront</span></h1>
+                    <?php if ($hero_style) : ?>
+                        <h1 id="home-hero-title" class="home-hero-title"><?php echo wp_kses_post($hero_variants[$hero_style][0]); ?> <span><?php echo esc_html($hero_variants[$hero_style][1]); ?></span></h1>
+                    <?php else : ?>
+                        <h1 id="home-hero-title" class="home-hero-title">Custom LED Channel Letter Signs <span>for Your Storefront</span></h1>
+                    <?php endif; ?>
                     <p class="home-hero-proof">
                         <?php if ($google_rating) : ?>
                             <a class="home-hero-rating" href="#customer-reviews"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
@@ -402,47 +557,15 @@ get_header();
 </script>
 
 <?php if ($is_channel_letters) : ?>
-<nav class="home-types" aria-label="Shop by sign type">
-    <div class="container">
-        <p class="home-types-title">Shop by sign type</p>
-        <ul class="home-types-list">
-            <?php
-            $type_links = array_merge(
-                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/inch')),
-                array_map(static function ($item) {
-                    return array($item[0], $item[1], $item[2], '', '');
-                }, $more_products)
-            );
-            foreach ($type_links as $type_link) :
-                $type_product = wholesale_seo_product($type_link[0]);
-                $type_price = wholesale_home_from_price($type_link[0]);
-                ?>
-                <li>
-                    <a class="home-types-item" href="<?php echo esc_url($type_link[1]); ?>">
-                        <span class="home-types-image">
-                            <?php
-                            if ($type_product && has_post_thumbnail($type_product)) {
-                                echo get_the_post_thumbnail($type_product, 'thumbnail', array('loading' => 'lazy', 'decoding' => 'async', 'alt' => ''));
-                            }
-                            ?>
-                        </span>
-                        <span class="home-types-text">
-                            <strong><?php echo esc_html($type_link[2]); ?></strong>
-                            <?php if ($type_price) : ?><small>From <?php echo esc_html($type_price . $type_link[4]); ?></small><?php endif; ?>
-                        </span>
-                    </a>
-                </li>
-            <?php endforeach; ?>
-        </ul>
-    </div>
-</nav>
-
 <div class="container">
     <header class="cl-shop-header">
         <p class="cl-kicker">Step 1 &middot; Choose your style</p>
         <h2 class="cl-section-title">Channel Letter Styles &amp; Starting Prices</h2>
         <p class="cl-section-lead">Every custom storefront sign is built to order. Open a style to pick your letter height, colors and wording and see your exact price before checkout.</p>
         <p class="cl-shop-header-help">Not sure which style fits your storefront? <a href="tel:+18664362101">Call 866-436-2101</a> or <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
+        <?php if ($hero_style) : ?>
+            <p class="cl-style-filter">Showing <strong><?php echo wp_kses_post($hero_variants[$hero_style][2]); ?></strong> channel letter styles &middot; <a href="<?php echo esc_url(remove_query_arg(array('style', 'quote_status', 'lead', 'lk'))); ?>#product-box-container">Show all styles</a></p>
+        <?php endif; ?>
     </header>
 </div>
 <?php else : ?>
@@ -578,6 +701,8 @@ get_header();
                             'compare' => '=', // Comparison operator (default is '=')
                         ),
                     ),
+                    // ?style= narrows the list to that ad group's letter styles.
+                    'post_name__in' => $hero_style ? $hero_variants[$hero_style][3] : array(),
                 ));
                 if ($product_query->have_posts()) {
                     $is_first_product = true;
@@ -873,24 +998,173 @@ get_header();
         </div>
     </section>
 
-    <section class="cl-help" aria-labelledby="cl-help-title">
+    <section class="cl-help<?php echo $is_cl_landing ? ' cl-help--quote' : ''; ?>" id="quote" aria-labelledby="cl-help-title">
         <div class="container cl-help-inner">
             <div class="cl-help-copy">
-                <h2 id="cl-help-title">Talk to a Real Sign Specialist</h2>
-                <p>Have a logo, a storefront photo or a question about sizing? We&rsquo;ll help you pick the right sign before you order.</p>
+                <?php if ($is_cl_landing) : ?>
+                    <p class="cl-kicker">Free quote &middot; No obligation</p>
+                    <h2 id="cl-help-title">Get Your Channel Letter Sign Quote</h2>
+                    <p>Tell us what your sign should say and send your logo or a storefront photo. A sign specialist will price the exact letters you need and help you choose the right size and style.</p>
+                    <ul class="clq-promise">
+                        <li><?php echo wholesale_home_icon('check'); ?> Free design help from a real person</li>
+                        <li><?php echo wholesale_home_icon('check'); ?> No hidden charges, no obligation</li>
+                        <li><?php echo wholesale_home_icon('check'); ?> Made in USA, UL listed, ready to install</li>
+                    </ul>
+                <?php else : ?>
+                    <h2 id="cl-help-title">Talk to a Real Sign Specialist</h2>
+                    <p>Have a logo, a storefront photo or a question about sizing? We&rsquo;ll help you pick the right sign before you order.</p>
+                <?php endif; ?>
                 <ul class="cl-help-details">
                     <li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
                     <li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
                 </ul>
+                <?php if ($is_cl_landing) : ?>
+                    <div class="clq-contact">
+                        <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+                        <a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+                        <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+                    </div>
+                <?php endif; ?>
             </div>
-            <div class="cl-help-actions">
-                <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-                <a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-                <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
-                <a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
-            </div>
+            <?php if ($is_cl_landing) : ?>
+                <div class="clq-card">
+                    <?php if ($quote_sent) : ?>
+                        <div class="clq-success" role="status">
+                            <span class="clq-success-icon"><?php echo wholesale_home_icon('check'); ?></span>
+                            <h3>Thanks! Your quote request is in.</h3>
+                            <p>A sign specialist will review your project and reach out with pricing and design options. Need it sooner? Call us during business hours.</p>
+                            <a class="clq-submit" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> Call 866-436-2101</a>
+                            <a class="clq-alt" href="<?php echo esc_url($builder_url); ?>">Or design your sign online <?php echo wholesale_home_icon('arrow'); ?></a>
+                        </div>
+                    <?php else : ?>
+                        <form class="clq-form" action="<?php echo esc_url($page_url); ?>#quote" method="post" enctype="multipart/form-data" data-clq-form>
+                            <?php if ('error' === $quote_status) : ?>
+                                <p class="clq-alert" role="alert">We couldn&rsquo;t send your request. Please check your name, email and phone, then try again.</p>
+                            <?php elseif ('file_error' === $quote_status) : ?>
+                                <p class="clq-alert" role="alert">Your logo couldn&rsquo;t be uploaded. Please use a JPG, PNG or PDF under <?php echo esc_html($logo_max_mb); ?>&nbsp;MB, or send the form without it.</p>
+                            <?php endif; ?>
+
+                            <input type="hidden" name="clq_submit" value="1">
+                            <input type="hidden" name="clq_nonce" value="<?php echo esc_attr(wp_create_nonce('clq_quote')); ?>">
+                            <input type="hidden" name="clq_variant" value="<?php echo esc_attr($hero_style); ?>">
+                            <input type="hidden" name="clq_gclid" value="<?php echo esc_attr(isset($_GET['gclid']) ? preg_replace('/[^A-Za-z0-9_-]/', '', wp_unslash($_GET['gclid'])) : ''); ?>">
+                            <input type="hidden" name="clq_utm_campaign" value="<?php echo esc_attr(isset($_GET['utm_campaign']) ? sanitize_text_field(wp_unslash($_GET['utm_campaign'])) : ''); ?>">
+                            <input type="hidden" name="clq_utm_term" value="<?php echo esc_attr(isset($_GET['utm_term']) ? sanitize_text_field(wp_unslash($_GET['utm_term'])) : ''); ?>">
+                            <div class="clq-hp" aria-hidden="true"><label>Website <input type="text" name="clq_website" tabindex="-1" autocomplete="off"></label></div>
+
+                            <div class="clq-grid">
+                                <label class="clq-field">
+                                    <span>Your name <b aria-hidden="true">*</b></span>
+                                    <input type="text" name="clq_name" autocomplete="name" required>
+                                </label>
+                                <label class="clq-field">
+                                    <span>Business name</span>
+                                    <input type="text" name="clq_business" autocomplete="organization">
+                                </label>
+                                <label class="clq-field">
+                                    <span>Phone <b aria-hidden="true">*</b></span>
+                                    <input type="tel" name="clq_phone" autocomplete="tel" inputmode="tel" required>
+                                </label>
+                                <label class="clq-field">
+                                    <span>Email <b aria-hidden="true">*</b></span>
+                                    <input type="email" name="clq_email" autocomplete="email" required>
+                                </label>
+                                <label class="clq-field">
+                                    <span>Letter style</span>
+                                    <select name="clq_style">
+                                        <option value="">Not sure &ndash; help me choose</option>
+                                        <?php foreach ($quote_styles as $quote_style) : ?>
+                                            <option value="<?php echo esc_attr($quote_style); ?>"<?php selected($hero_style ? $hero_variants[$hero_style][4] : '', $quote_style); ?>><?php echo esc_html($quote_style); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </label>
+                                <label class="clq-field">
+                                    <span>Install ZIP code</span>
+                                    <input type="text" name="clq_zip" autocomplete="postal-code" inputmode="numeric" maxlength="10">
+                                </label>
+                                <label class="clq-field clq-field--wide">
+                                    <span>What should your sign say? Size, colors, anything else</span>
+                                    <textarea name="clq_details" rows="3" placeholder="e.g. &ldquo;BELLA NAILS&rdquo;, about 12 ft wide, red letters, mounted on a raceway"></textarea>
+                                </label>
+                                <label class="clq-upload clq-field--wide">
+                                    <input type="file" name="clq_logo" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-clq-file>
+                                    <span class="clq-upload-icon"><?php echo wholesale_home_icon('upload'); ?></span>
+                                    <span class="clq-upload-text"><strong data-clq-file-name>Upload your logo (optional)</strong><small>JPG, PNG or PDF up to <?php echo esc_html($logo_max_mb); ?>&nbsp;MB</small></span>
+                                </label>
+                            </div>
+
+                            <button class="clq-submit" type="submit">Get My Free Quote <?php echo wholesale_home_icon('arrow'); ?></button>
+                            <p class="clq-note">Your details stay private. Prefer to talk? Call <a href="tel:+18664362101">866-436-2101</a>.</p>
+                        </form>
+                        <script>
+                            (function () {
+                                var form = document.querySelector('[data-clq-form]');
+                                if (!form) {
+                                    return;
+                                }
+                                var file = form.querySelector('[data-clq-file]');
+                                var fileName = form.querySelector('[data-clq-file-name]');
+                                if (file && fileName) {
+                                    file.addEventListener('change', function () {
+                                        fileName.textContent = file.files.length ? file.files[0].name : 'Upload your logo (optional)';
+                                    });
+                                }
+                                form.addEventListener('submit', function () {
+                                    var button = form.querySelector('.clq-submit');
+                                    if (button) {
+                                        button.disabled = true;
+                                        button.textContent = 'Sending...';
+                                    }
+                                });
+                            })();
+                        </script>
+                    <?php endif; ?>
+                </div>
+            <?php else : ?>
+                <div class="cl-help-actions">
+                    <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+                    <a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+                    <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+                    <a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
+                </div>
+            <?php endif; ?>
         </div>
     </section>
+
+    <nav class="home-types" aria-label="Shop by sign type">
+        <div class="container">
+            <p class="home-types-title">Shop by sign type</p>
+            <ul class="home-types-list">
+                <?php
+                $type_links = array_merge(
+                    array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/inch')),
+                    array_map(static function ($item) {
+                        return array($item[0], $item[1], $item[2], '', '');
+                    }, $more_products)
+                );
+                foreach ($type_links as $type_link) :
+                    $type_product = wholesale_seo_product($type_link[0]);
+                    $type_price = wholesale_home_from_price($type_link[0]);
+                ?>
+                    <li>
+                        <a class="home-types-item" href="<?php echo esc_url($type_link[1]); ?>">
+                            <span class="home-types-image">
+                                <?php
+                                if ($type_product && has_post_thumbnail($type_product)) {
+                                    echo get_the_post_thumbnail($type_product, 'thumbnail', array('loading' => 'lazy', 'decoding' => 'async', 'alt' => ''));
+                                }
+                                ?>
+                            </span>
+                            <span class="home-types-text">
+                                <strong><?php echo esc_html($type_link[2]); ?></strong>
+                                <?php if ($type_price) : ?><small>From <?php echo esc_html($type_price . $type_link[4]); ?></small><?php endif; ?>
+                            </span>
+                        </a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    </nav>
 
     <section class="cl-faq" aria-labelledby="cl-faq-title">
         <div class="container">

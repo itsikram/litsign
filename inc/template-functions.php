@@ -53,6 +53,8 @@ function wholesale_home_icon($name)
 		'clock' => '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
 		'pin' => '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
 		'arrow' => '<path d="M5 12h14M13 6l6 6-6 6"/>',
+		'check' => '<path d="M20 6L9 17l-5-5"/>',
+		'upload' => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>',
 	);
 
 	if (!isset($paths[$name])) {

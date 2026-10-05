@@ -18,6 +18,8 @@ const fontFamilyLoader = document.getElementById("fontFamilyLoader");
 const addTextBtn = document.getElementById("addTextBtn");
 const duplicateBtn = document.getElementById("duplicateBtn");
 const saveBtn = document.getElementById("saveBtn");
+const addToCartBtn = document.getElementById("clAddToCartBtn");
+const cartStatus = document.getElementById("clCartStatus");
 const elementIndexContainer = document.querySelector(".element-index");
 const elementDimenstionContainer = document.querySelector(
   ".element-dimenstion",
@@ -175,6 +177,10 @@ function updateSaveButtonState() {
   const hasElements = nodeLists.length > 0;
   saveBtn.disabled = !hasElements;
   saveBtn.setAttribute("aria-disabled", String(!hasElements));
+  if (addToCartBtn && !addToCartBtn.hasAttribute("aria-busy")) {
+    addToCartBtn.disabled = !hasElements;
+    addToCartBtn.setAttribute("aria-disabled", String(!hasElements));
+  }
 }
 
 updateSaveButtonState();
@@ -5671,6 +5677,117 @@ window.addEventListener("load", function (e) {
     updateHeightWidthDisplay();
     layer.draw();
   });
+
+  // Uploads a PNG of the canvas (selection handles hidden) through wholesale_upload_design
+  // and returns the attachment id with the design JSON the product page and cart expect.
+  async function uploadDesignSnapshot() {
+    const transformers = [];
+    nodeLists.forEach((nodeContainer) => {
+      const transformer = nodeContainer.node.getAttr("transformer");
+      if (transformer && transformer.visible()) {
+        transformer.visible(false);
+        transformers.push(transformer);
+      }
+    });
+    stage.height(container.clientHeight);
+    layer.draw();
+    const dataURL = stage.toDataURL({ mimeType: "image/png" });
+    transformers.forEach((transformer) => transformer.visible(true));
+    layer.draw();
+
+    const formData = new FormData();
+    formData.append("file", dataURLtoBlob(dataURL), "clDesign-" + Math.random() + ".png");
+    formData.append("action", "wholesale_upload_design");
+    formData.append("nonce", window.mediaUploadData.upload_nonce);
+
+    const response = await fetch(window.mediaUploadData.upload_url, {
+      method: "POST",
+      body: formData,
+      credentials: "same-origin",
+    });
+    let uploadResponse = null;
+    try {
+      uploadResponse = await response.json();
+    } catch (err) {
+      uploadResponse = null;
+    }
+    if (!response.ok || !uploadResponse || !uploadResponse.success || !uploadResponse.data || !uploadResponse.data.id) {
+      throw new Error(
+        uploadResponse && uploadResponse.data && uploadResponse.data.message
+          ? uploadResponse.data.message
+          : "The design image could not be uploaded.",
+      );
+    }
+
+    const designData = JSON.stringify({
+      elements: store.getState()["elements"],
+      extras: store.getState()["extras"],
+      contentDimenstion: { height: contentHeight, width: contentWidth },
+    });
+    return { id: uploadResponse.data.id, designData };
+  }
+
+  if (addToCartBtn) {
+    const addToCartLabel = addToCartBtn.innerHTML;
+    const setCartStatus = (message) => {
+      cartStatus.textContent = message || "";
+      cartStatus.hidden = !message;
+    };
+
+    addToCartBtn.addEventListener("click", async function () {
+      if (addToCartBtn.disabled || !nodeLists.length) {
+        return;
+      }
+      setCartStatus("");
+      addToCartBtn.disabled = true;
+      addToCartBtn.setAttribute("aria-busy", "true");
+      addToCartBtn.innerHTML =
+        '<span>Adding to cart...</span><img alt="" src="' +
+        siteUrl +
+        '/wp-content/themes/wholesale/img/ajax_loader.gif">';
+
+      try {
+        const snapshot = await uploadDesignSnapshot();
+        const body = new FormData();
+        body.append("action", "wholesale_cl_builder_add");
+        body.append("product_id", addToCartBtn.getAttribute("data-product-id"));
+        body.append("design_id", snapshot.id);
+        body.append("design_data", snapshot.designData);
+
+        const response = await fetch(window.mediaUploadData.upload_url, {
+          method: "POST",
+          body,
+          credentials: "same-origin",
+        });
+        const json = await response.json();
+
+        if (!json.success) {
+          throw new Error(
+            json.data && json.data.message
+              ? json.data.message
+              : "Your design could not be added to the cart.",
+          );
+        }
+        if (document.getElementById("miniCart")) {
+          // js/mini-cart.js renders the drawer and opens it.
+          document.dispatchEvent(new CustomEvent("wholesale:minicart-added", { detail: json }));
+        } else {
+          window.location.href = addToCartBtn.getAttribute("data-cart-url");
+          return;
+        }
+      } catch (error) {
+        console.error("Error adding design to cart:", error);
+        setCartStatus(
+          (error && error.message) ||
+            "Your design could not be added to the cart. Please try again, or call 866-436-2101.",
+        );
+      }
+
+      addToCartBtn.removeAttribute("aria-busy");
+      addToCartBtn.innerHTML = addToCartLabel;
+      updateSaveButtonState();
+    });
+  }
 
   saveBtn.addEventListener("click", async function (e) {
     if (saveBtn.disabled) {

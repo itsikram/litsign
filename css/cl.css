@@ -535,6 +535,12 @@
 .dt-container #saveBtn:hover { background: var(--cl-accent-ink); border-color: var(--cl-accent-ink); }
 .dt-container #saveBtn:disabled { background: #9fc9dc; border-color: #9fc9dc; opacity: 1; cursor: not-allowed; }
 .dt-container #saveBtn img { vertical-align: middle; }
+.dt-container #clAddToCartBtn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #dc3545; border: 1px solid #dc3545; color: #fff; padding-left: 22px; padding-right: 22px; }
+.dt-container #clAddToCartBtn:hover,
+.dt-container #clAddToCartBtn:focus-visible { background: #b02a37; border-color: #b02a37; color: #fff; }
+.dt-container #clAddToCartBtn:disabled { background: #e9a0a7; border-color: #e9a0a7; opacity: 1; cursor: not-allowed; }
+.dt-container #clAddToCartBtn img { height: 18px; }
+.dt-container .cl-cart-status { flex-basis: 100%; margin: 0; color: #b02a37; font-size: 13px; text-align: right; }
 
 /* ------------------------------------------------------------------ */
 /* Change product modal                                                */
@@ -926,6 +932,9 @@
   .cl-stat--price .value { font-size: 20px; }
   .dt-container #detailBtn { padding: 8px 12px; }
   .dt-container #saveBtn { grid-column: auto; }
+  .dt-container #clAddToCartBtn,
+  .dt-container .cl-cart-status { grid-column: 1 / -1; }
+  .dt-container .cl-cart-status { text-align: left; }
 
   .dt-container .info-btn-content { position: fixed; top: auto; bottom: 16px; left: 12px; right: 12px; width: auto; z-index: 1080; }
 

@@ -2628,7 +2628,7 @@ function wholesale_vi_page_type_files()
 {
 	$map = array(
 		'home' => array('home.php', 'header.php', 'footer.php', 'css/style.scss'),
-		'landing' => array('landing-page.php', 'page-channel-letters-ads.php', 'css/landing-page.css', 'css/cl-ads.css'),
+		'landing' => array('landing-page.php', 'page-channel-letters.php', 'css/landing-page.css', 'css/cl-quote.css'),
 		'product' => array('single-product.php', 'js/main.js', 'inc/pricing.php', 'css/shop.css'),
 		'builder' => array('cl_builderr.php', 'b2calc.php', 'js/cl.js', 'css/cl.css'),
 		'category' => array('home.php'),

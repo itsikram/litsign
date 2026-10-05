@@ -26,7 +26,7 @@
         <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bd-2.webp?ver=' . _S_VERSION); ?>" alt="Samples of storefront signs and channel letters" loading="lazy" decoding="async">
     </div>
     <div class="container my-3 text-center">
-        <a href="<?php echo esc_url(home_url('/')); ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
+        <a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
 
     </div>
 

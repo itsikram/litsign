@@ -403,6 +403,49 @@ function wholesale_session_cl_design($product_id)
 }
 
 /**
+ * Stores a builder design (its JSON plus the preview image this visitor uploaded) as the
+ * product's session design, priced on the server. Used by "Save design" on the product
+ * page and by the builder's own Add To Cart.
+ *
+ * @return array|WP_Error The stored design.
+ */
+function wholesale_store_session_cl_design($product_id, $design_id, $design_json)
+{
+	$product_id = absint($product_id);
+	$design_id = absint($design_id);
+	wholesale_get_cart(); // Loads the Cart class, which AJAX requests don't include.
+	if (!Cart::is_session_design($design_id)) {
+		return new WP_Error('invalid_design', 'Your design image could not be found. Please try again.');
+	}
+	$design = json_decode(stripslashes((string) $design_json), true);
+	if (!is_array($design) || empty($design['elements'])) {
+		return new WP_Error('invalid_design', 'Add letters or a shape to your design first.');
+	}
+
+	$old_design = wholesale_session_cl_design($product_id);
+	$old_design_id = $old_design && isset($old_design['design_id']) ? absint($old_design['design_id']) : 0;
+	if ($old_design_id && $old_design_id !== $design_id && Cart::is_session_design($old_design_id)) {
+		// Never delete an image a cart line still shows.
+		$in_cart = false;
+		foreach (wholesale_get_cart()->get_items() as $item) {
+			$in_cart = $in_cart || absint($item->design_id ?? 0) === $old_design_id;
+		}
+		if (!$in_cart) {
+			wp_delete_attachment($old_design_id, true);
+		}
+	}
+
+	update_post_meta($design_id, '_cl_data', stripslashes((string) $design_json));
+	$design['design_url'] = wp_get_attachment_url($design_id);
+	$design['design_id'] = $design_id;
+	$design['total_cost'] = wholesale_cl_design_total($design, $product_id);
+	$design['product_id'] = $product_id;
+	$_SESSION['design_data_' . $product_id] = stripslashes(wp_json_encode($design));
+
+	return $design;
+}
+
+/**
  * AJAX: live price for the product page, so the price shown is exactly what the cart charges.
  */
 function wholesale_ajax_price_quote()

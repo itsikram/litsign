@@ -402,32 +402,41 @@
         return;
       }
       done();
-
-      if (!json.success) {
-        const message = (json.data && json.data.message) || "This item could not be added. Please check your options and try again.";
-        open({ skipRefresh: loaded });
-        showAlert("danger", message);
-        announce(message);
-        return;
-      }
-
-      render(json.data);
-      open({ skipRefresh: true });
-      const added = json.data.added;
-      if (json.data.notice) showAlert("warning", json.data.notice);
-      else showAlert("success", added ? `${added.title} was added to your cart.` : "Added to your cart.");
-      announce(json.data.notice || (added ? `${added.title} added to your cart.` : "Added to your cart."));
-
-      if (added) {
-        const line = body.querySelector(`[data-mc-line="${CSS.escape(added.cart_id)}"]`);
-        if (line) {
-          line.classList.add("is-new");
-          line.scrollIntoView({ block: "nearest", behavior: reduceMotion.matches ? "auto" : "smooth" });
-        }
-      }
+      showAddResult(json);
 
       const fileInput = form.querySelector('input[type="file"][name="custom-artwork"]');
-      if (fileInput) fileInput.value = "";
+      if (fileInput && json.success) fileInput.value = "";
     });
   });
+
+  // The channel letter builder posts its own add (wholesale_cl_builder_add) and hands the
+  // response here: document.dispatchEvent(new CustomEvent("wholesale:minicart-added", { detail: json })).
+  document.addEventListener("wholesale:minicart-added", (e) => {
+    if (e.detail) showAddResult(e.detail);
+  });
+
+  function showAddResult(json) {
+    if (!json.success) {
+      const message = (json.data && json.data.message) || "This item could not be added. Please check your options and try again.";
+      open({ skipRefresh: loaded });
+      showAlert("danger", message);
+      announce(message);
+      return;
+    }
+
+    render(json.data);
+    open({ skipRefresh: true });
+    const added = json.data.added;
+    if (json.data.notice) showAlert("warning", json.data.notice);
+    else showAlert("success", added ? `${added.title} was added to your cart.` : "Added to your cart.");
+    announce(json.data.notice || (added ? `${added.title} added to your cart.` : "Added to your cart."));
+
+    if (added) {
+      const line = body.querySelector(`[data-mc-line="${CSS.escape(added.cart_id)}"]`);
+      if (line) {
+        line.classList.add("is-new");
+        line.scrollIntoView({ block: "nearest", behavior: reduceMotion.matches ? "auto" : "smooth" });
+      }
+    }
+  }
 })();

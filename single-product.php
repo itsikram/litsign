@@ -87,33 +87,7 @@ if (
     isset($_REQUEST['save_design'], $_REQUEST['design_id'], $_REQUEST['design_data'])
     && Cart::is_session_design($_REQUEST['design_id'])
 ) {
-    $design_id = absint($_REQUEST['design_id']);
-
-    if (!empty($_SESSION['design_data_' . $product_id])) {
-        $old_design_data_array = json_decode(stripslashes($_SESSION['design_data_' . $product_id]), true);
-        $old_design_id = is_array($old_design_data_array) && isset($old_design_data_array['design_id']) ? absint($old_design_data_array['design_id']) : 0;
-        // Only ever delete a design image this visitor uploaded, and never the one being saved.
-        if ($old_design_id && $old_design_id !== $design_id && Cart::is_session_design($old_design_id)) {
-            wp_delete_attachment($old_design_id, true);
-        }
-        $_SESSION['design_data_' . $product_id] = '';
-    }
-
-    $design_url = wp_get_attachment_url($design_id);
-    $design_data_query = $_REQUEST['design_data'];
-    update_post_meta($design_id, '_cl_data', stripslashes($design_data_query));
-
-    $design_data_array = json_decode(stripslashes($design_data_query), true);
-    $design_data_array['design_url'] = $design_url;
-    $design_data_array['design_id'] = $design_id;
-
-    $product_cost = wholesale_cl_design_total($design_data_array, $product_id);
-
-    $design_data_array['total_cost'] = $product_cost;
-    $design_data_array['product_id'] = $product_id;
-
-
-    $_SESSION['design_data_' . $product_id] = stripslashes(json_encode($design_data_array));
+    wholesale_store_session_cl_design($product_id, $_REQUEST['design_id'], $_REQUEST['design_data']);
 
     wp_redirect(get_permalink());
 }
@@ -571,8 +545,9 @@ get_header();
 
                             <?php
                             // Starting size: a square of the minimum area, shown as whole feet plus
-                            // inches (2 ft 2.6 in rather than 2.21 ft + 0 in). Same total as before.
-                            $start_side_in = round(sqrt((float) $product_min_sqft) * 12, 1);
+                            // inches (2 ft 2.6 in rather than 2.21 ft + 0 in). Rounded up, so the
+                            // square is never below the minimum area the cart accepts.
+                            $start_side_in = ceil(round(sqrt((float) $product_min_sqft) * 12, 6) * 10) / 10;
                             $start_ft = (int) floor($start_side_in / 12);
                             $start_in = round($start_side_in - $start_ft * 12, 1);
                             $dimensions = array(
@@ -1006,7 +981,7 @@ get_header();
                         ?>
                             <!-- <div class="row d-flex align-items-end">
                                 <div class="col text-center">
-                                    <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink()), home_url('/login/'))); ?>" class="btn btn-primary">Login to Order This Product</a>
+                                    <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink()), home_url('/login/'))); ?>" class="btn btn-primary" rel="nofollow">Login to Order This Product</a>
                                 </div>
                             </div> -->
                             <div class="row d-flex align-items-end">

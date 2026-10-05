@@ -593,7 +593,8 @@ function wholesale_seo_product_search_names()
 {
 	return array(
 		// Adhesive vinyl (AV 1–12).
-		'Adhesive Vinyl' => 'Printed Adhesive Vinyl',
+		// "Matte" keeps it apart from the Printed Adhesive Vinyl category title.
+		'Adhesive Vinyl' => 'Matte Printed Adhesive Vinyl',
 		'Adhesive Vinyl (High Performance)' => 'High Performance Adhesive Vinyl',
 		'Adhesive Translucent Vinyl' => 'Translucent Adhesive Vinyl',
 		'Frosted Vinyl (Etched)' => 'Frosted Etched Glass Vinyl',
@@ -820,6 +821,75 @@ function wholesale_seo_letter_height_range($slug)
 }
 
 /**
+ * Lowest price a customer can pay for one unit of a product: the checkout's
+ * own quote for the smallest size with the first option of every attribute
+ * and any product discount applied. Channel letters are priced for one letter
+ * at the smallest height without a power supply. Product structured data uses
+ * it so Google sees the same price the page and cart charge.
+ *
+ * @return float 0 when the product has no online price.
+ */
+function wholesale_seo_product_lowest_price($product_id)
+{
+	static $cache = array();
+	$product_id = (int) $product_id;
+	if (isset($cache[$product_id])) {
+		return $cache[$product_id];
+	}
+
+	$cache[$product_id] = 0.0;
+	if (!function_exists('wholesale_price_quote')) {
+		return 0.0;
+	}
+
+	$request = array('letters' => 'A', 'product_quantity' => 1);
+	$choices = array();
+	foreach (wholesale_product_price_attrs($product_id) as $attr) {
+		$options = wholesale_attr_options($attr);
+		if (!empty($attr['name']) && $options) {
+			$request[$attr['name']] = $options[0]['value'];
+			$choices[$attr['name']] = wp_list_pluck($options, 'value');
+		}
+	}
+
+	// The starting size the product page fills in: a square of the minimum
+	// area, rounded up to a tenth of an inch (see single-product.php).
+	$min_sqft = max(0, (float) get_post_meta($product_id, '_min_sqft', true));
+	$side_ft = ($min_sqft > 0 ? ceil(round(sqrt($min_sqft) * 12, 6) * 10) / 10 : 12) / 12;
+	$request['height-ft'] = $side_ft;
+	$request['width-ft'] = $side_ft;
+
+	$quote = wholesale_price_quote($product_id, $request);
+	if (!empty($quote['ok']) && $quote['total'] > 0) {
+		return $cache[$product_id] = (float) $quote['total'];
+	}
+
+	// A product whose minimum height or width is larger than that square.
+	$min_height = (float) get_post_meta($product_id, '_min_height', true);
+	if ($min_height > $side_ft) {
+		$request['height-ft'] = $min_height;
+		$request['width-ft'] = max((float) get_post_meta($product_id, '_min_width', true), $min_sqft / $min_height);
+		$quote = wholesale_price_quote($product_id, $request);
+		if (!empty($quote['ok']) && $quote['total'] > 0) {
+			return $cache[$product_id] = (float) $quote['total'];
+		}
+	}
+
+	// The first option can't be bought on its own (it costs $0): use the
+	// cheapest option that can.
+	foreach ($choices as $name => $values) {
+		foreach (array_slice($values, 1) as $value) {
+			$quote = wholesale_price_quote($product_id, array_merge($request, array($name => $value)));
+			if (!empty($quote['ok']) && $quote['total'] > 0 && (!$cache[$product_id] || $quote['total'] < $cache[$product_id])) {
+				$cache[$product_id] = (float) $quote['total'];
+			}
+		}
+	}
+
+	return $cache[$product_id];
+}
+
+/**
  * Register the FAQ a template shows, so the head can describe it in FAQPage
  * structured data. Call before get_header(). Answers may contain links.
  *
@@ -977,6 +1047,18 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 		<p>
 			<?php if ($heights) : ?>
 				<?php echo esc_html(sprintf('Available with letters from %d to %d inches tall.', $heights[0], $heights[1])); ?>
+			<?php endif; ?>
+			<?php
+			// The same starting price the product's structured data gives Google.
+			$from_price = wholesale_seo_product_lowest_price($product_id);
+			$discount = (float) get_post_meta($product_id, '_discount_percent', true);
+			if ($from_price > 0 && $heights) :
+				?>
+				<?php
+				echo '<strong>' . esc_html(sprintf('Prices start at $%s for one %d inch letter', number_format($from_price, 2), $heights[0])) . '</strong>'
+					. esc_html($discount > 0 ? sprintf(', including the %s%% online discount,', rtrim(rtrim(number_format($discount, 2), '0'), '.')) : '')
+					. ' before options such as a power supply or raceway.';
+				?>
 			<?php endif; ?>
 			Price is per letter by height: choose your height, enter your wording and colors above, and your total updates before you add it to the cart. Every sign is tested before it ships, with an installation pattern and wiring diagram for your installer.
 		</p>

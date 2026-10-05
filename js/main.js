@@ -1045,6 +1045,15 @@
       $('#totalCost').val(costAfterDiscount)
       if (costBeforeDiscount <= 0) {
         e.preventDefault();
+        // No sign text yet: take the visitor to the text box instead of
+        // leaving a dead, disabled button.
+        const letterInput = document.getElementById('letterInput');
+        if (letterInput && !letterInput.value.trim()) {
+          letterInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          letterInput.focus({ preventScroll: true });
+          letterInput.reportValidity();
+          return;
+        }
         $(e.currentTarget).prop('disabled', true);
         return;
       }

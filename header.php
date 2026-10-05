@@ -276,7 +276,7 @@ $logo_id = get_theme_mod('custom_logo');
 												<h4 class="mm-heading">
 													Signs / Letters
 												</h4>
-												<a href="<?php echo esc_url(home_url('/channel-letters/')); ?>" class="mm-link">
+												<a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="mm-link">
 													<span>
 														Custom Channel Letter Signs
 													</span>

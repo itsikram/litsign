@@ -1286,3 +1286,36 @@
     init();
   }
 })();
+
+// "Shop by sign type" rail: show prev/next arrows only while there is more to scroll.
+(() => {
+  const init = () => {
+    document.querySelectorAll('[data-types-rail]').forEach((rail) => {
+      const list = rail.querySelector('[data-types-list]');
+      const prev = rail.querySelector('[data-types-prev]');
+      const next = rail.querySelector('[data-types-next]');
+      if (!list || !prev || !next) return;
+
+      const update = () => {
+        const max = list.scrollWidth - list.clientWidth;
+        prev.hidden = list.scrollLeft <= 4;
+        next.hidden = max <= 4 || list.scrollLeft >= max - 4;
+      };
+      const scrollBy = (direction) => {
+        list.scrollBy({ left: direction * list.clientWidth * 0.8, behavior: 'smooth' });
+      };
+
+      prev.addEventListener('click', () => scrollBy(-1));
+      next.addEventListener('click', () => scrollBy(1));
+      list.addEventListener('scroll', update, { passive: true });
+      window.addEventListener('resize', update);
+      update();
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();

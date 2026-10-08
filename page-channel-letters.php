@@ -524,8 +524,13 @@ get_header();
 <?php if ($is_channel_letters && !$is_cl_landing) : ?>
 <nav class="home-types" aria-label="Shop by sign type">
     <div class="container">
-        <p class="home-types-title">Shop by sign type</p>
-        <ul class="home-types-list">
+        <div class="home-types-head">
+            <p class="home-types-title">Shop by sign type</p>
+            <a class="home-types-all" href="<?php echo esc_url(wholesale_shop_url()); ?>">View all products <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        </div>
+        <div class="home-types-rail" data-types-rail>
+        <button type="button" class="home-types-arrow home-types-arrow--prev" data-types-prev aria-label="Scroll sign types left" hidden><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
+        <ul class="home-types-list" data-types-list>
             <?php
             $type_links = array_merge(
                 array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/inch')),
@@ -542,18 +547,20 @@ get_header();
                         <span class="home-types-image">
                             <?php
                             if ($type_product && has_post_thumbnail($type_product)) {
-                                echo get_the_post_thumbnail($type_product, 'thumbnail', array('loading' => 'lazy', 'decoding' => 'async', 'alt' => ''));
+                                echo get_the_post_thumbnail($type_product, 'product-card', array('sizes' => '(max-width: 575px) 104px, 140px', 'loading' => 'lazy', 'decoding' => 'async', 'alt' => ''));
                             }
                             ?>
                         </span>
                         <span class="home-types-text">
                             <strong><?php echo esc_html($type_link[2]); ?></strong>
-                            <?php if ($type_price) : ?><small>From <?php echo esc_html($type_price . $type_link[4]); ?></small><?php endif; ?>
+                            <?php if ($type_price) : ?><small><span>From</span> <?php echo esc_html($type_price . $type_link[4]); ?></small><?php endif; ?>
                         </span>
                     </a>
                 </li>
             <?php endforeach; ?>
         </ul>
+        <button type="button" class="home-types-arrow home-types-arrow--next" data-types-next aria-label="Scroll sign types right" hidden><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
+        </div>
     </div>
 </nav>
 <?php endif; ?>

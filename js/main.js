@@ -932,7 +932,16 @@
       menu.stop(true, true).toggle(!isOpen);
       button.attr('aria-expanded', String(!isOpen));
       $('.main-header').toggleClass('mega-menu-open', !isOpen);
-      if (!isOpen) sizeMegaMenu();
+      document.documentElement.classList.toggle(
+        "sh-lock",
+        (!isOpen && window.matchMedia("(max-width: 767.98px)").matches) || isMobileMenuOpen()
+      );
+      if (!isOpen) {
+        sizeMegaMenu();
+        if (window.matchMedia("(max-width: 767.98px)").matches) {
+          $('.mega-menu-close').trigger('focus');
+        }
+      }
     })
 
     // Close the product menu from outside clicks and Escape; Escape also closes the slide-in menu.
@@ -954,6 +963,10 @@
     function sizeMegaMenu() {
       const menu = document.getElementById('megaMenu');
       if (!menu || menu.offsetParent === null) return;
+      if (window.matchMedia("(max-width: 767.98px)").matches) {
+        menu.style.removeProperty('--mega-menu-max-height');
+        return;
+      }
       const available = window.innerHeight - menu.getBoundingClientRect().top - 12;
       menu.style.setProperty('--mega-menu-max-height', Math.max(available, 200) + 'px');
     }
@@ -971,7 +984,13 @@
       $('#megaMenu').stop(true, true).hide();
       $('#allProductsBtn').attr('aria-expanded', 'false');
       $('.main-header').removeClass('mega-menu-open');
+      document.documentElement.classList.toggle("sh-lock", isMobileMenuOpen());
     }
+
+    $('.mega-menu-close').click(() => {
+      closeMegaMenu();
+      $('#allProductsBtn').trigger('focus');
+    });
 
     $('.mega-menu-backdrop').click(closeMegaMenu);
 

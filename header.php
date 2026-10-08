@@ -291,6 +291,12 @@ $logo_id = get_theme_mod('custom_logo');
 						<div class="megamenu-container">
 							<button type="button" id="allProductsBtn" aria-expanded="false" aria-controls="megaMenu"><?php echo $icon('grid'); // Static SVG. ?> All Products <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></button>
 							<div id="megaMenu" class="mega-menu">
+								<div class="mega-menu-mobile-header">
+									<span class="mega-menu-mobile-title">All Products</span>
+									<button type="button" class="mega-menu-close" aria-label="<?php esc_attr_e('Close product menu', 'litsign'); ?>">
+										<span aria-hidden="true">&times;</span>
+									</button>
+								</div>
 								<div class="container p-3">
 									<div class="row">
 										<div class="col-md-4">

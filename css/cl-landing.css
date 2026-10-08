@@ -1,0 +1,149 @@
+/*
+ * /custom-channel-letters/ (page-channel-letters.php): trust strip, "why us"
+ * cards, specifications table and the "who installs it" note. Colors and type
+ * follow the .cl-* sections in style.css.
+ */
+
+.cll-trust {
+  background: #172027;
+  color: #ffffff;
+}
+
+.cll-trust-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0 auto;
+  padding-top: 18px;
+  padding-bottom: 18px;
+  list-style: none;
+}
+
+.cll-trust-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cll-trust-list svg {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  color: #1fa8de;
+}
+
+.cll-trust-list strong {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.cll-trust-list small {
+  display: block;
+  color: #b8c4cf;
+  font-size: 0.85rem;
+}
+
+.cll-why {
+  padding: 64px 0;
+  background: #f7f8fc;
+}
+
+.cll-why-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 32px;
+}
+
+.cll-why-card {
+  padding: 24px 22px;
+  border: 1px solid #e6ebf1;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.cll-why-card svg {
+  width: 30px;
+  height: 30px;
+  color: #1fa8de;
+}
+
+.cll-why-card h3 {
+  margin: 14px 0 8px;
+  color: #172027;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.cll-why-card p {
+  margin: 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.cll-specs {
+  padding: 64px 0;
+}
+
+.cll-specs-table th {
+  width: 28%;
+  white-space: nowrap;
+}
+
+.cll-specs-table td {
+  color: #334155;
+  line-height: 1.55;
+}
+
+.cll-install {
+  max-width: 860px;
+  margin: 36px auto 0;
+  padding: 20px 22px;
+  border-left: 4px solid #1fa8de;
+  border-radius: 0 12px 12px 0;
+  background: #f4fbff;
+}
+
+.cll-install h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+}
+
+.cll-install h3 svg {
+  width: 22px;
+  height: 22px;
+  color: #1fa8de;
+}
+
+.cll-install p {
+  margin: 0;
+  color: #334155;
+  line-height: 1.6;
+}
+
+@media (max-width: 991px) {
+  .cll-trust-list,
+  .cll-why-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575px) {
+  .cll-trust-list {
+    gap: 12px;
+  }
+
+  .cll-why-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cll-specs-table th {
+    width: auto;
+    white-space: normal;
+  }
+}

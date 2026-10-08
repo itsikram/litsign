@@ -96,3 +96,43 @@ function wholesale_async_home_guide_styles($tag, $handle)
 	return $async . '<noscript>' . $tag . '</noscript>';
 }
 add_filter('style_loader_tag', 'wholesale_async_home_guide_styles', 10, 2);
+
+/**
+ * Pages a page cache must never store, whatever cache plugin the host uses:
+ * cart, checkout and account screens, the sign builder, pages with a quote
+ * form (their nonce would go stale in the cache), and any request carrying an
+ * ad click ID or campaign tags, which must reach PHP so the theme can store
+ * the click for conversion tracking. Sets DONOTCACHEPAGE (respected by WP
+ * Super Cache, LiteSpeed Cache, W3 Total Cache and WP Rocket) and a private,
+ * no-store header for any proxy or host cache.
+ */
+function wholesale_cache_excluded_request()
+{
+	if (is_user_logged_in() || is_404() || is_search() || get_query_var('wholesale_thank_you') || is_singular('order')) {
+		return true;
+	}
+
+	foreach (array('gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'utm_source', 'utm_medium', 'utm_campaign', 'quote_status', 'newsletter') as $param) {
+		if (isset($_GET[$param])) {
+			return true;
+		}
+	}
+
+	return is_page(array('cart', 'checkout', 'account', 'my-orders', 'my_orders', 'orders', 'track-order', 'login', 'signup', 'pay', 'payment', 'channel-letter-builder', 'b2-calculator', 'contact', 'banners-displays'))
+		|| is_page_template(array('page-channel-letters.php', 'page-channel-letters-ads.php', 'landing-page.php', 'cl_builderr.php', 'b2calc.php', 'cart.php', 'checkout.php', 'account.php', 'my_orders.php', 'login.php', 'signup.php', 'payment.php', 'page-track-order.php'));
+}
+
+function wholesale_cache_exclusions()
+{
+	if (is_admin() || !wholesale_cache_excluded_request()) {
+		return;
+	}
+
+	if (!defined('DONOTCACHEPAGE')) {
+		define('DONOTCACHEPAGE', true);
+	}
+	if (!headers_sent()) {
+		header('Cache-Control: private, no-store, max-age=0');
+	}
+}
+add_action('template_redirect', 'wholesale_cache_exclusions', 5);

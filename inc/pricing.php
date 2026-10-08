@@ -496,3 +496,40 @@ function wholesale_cl_example_price($slug, $letters, $inches)
 
 	return $quote['ok'] ? array('total' => $quote['total'], 'discount' => $quote['discount']) : null;
 }
+
+/**
+ * Whole-number sale percentage for a product: its _discount_percent, or the
+ * saving implied by a struck-through <del> price in its "starting at" text.
+ */
+function wholesale_product_sale_percent($product_id)
+{
+	$percent = (float) get_post_meta($product_id, '_discount_percent', true);
+
+	if ($percent <= 0) {
+		$text = (string) get_post_meta($product_id, '_starting_at_text', true);
+		if (preg_match('/<del>[^$]*\$\s?([\d,]+(?:\.\d+)?)/i', $text, $was) && preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', wp_strip_all_tags($text), $prices)) {
+			$was = (float) str_replace(',', '', $was[1]);
+			$now = (float) str_replace(',', '', end($prices[1]));
+			$percent = $was > $now && $now > 0 ? 100 - $now / $was * 100 : 0;
+		}
+	}
+
+	return (int) round(min(99, max(0, $percent)));
+}
+
+/**
+ * Sale badge for a product image; prints nothing when the product isn't discounted.
+ */
+function wholesale_render_sale_badge($product_id, $percent = null)
+{
+	$percent = null === $percent ? wholesale_product_sale_percent($product_id) : (int) $percent;
+	if ($percent < 1) {
+		return;
+	}
+	?>
+	<span class="sale-badge" aria-label="<?php echo esc_attr(sprintf(__('On sale: save %d%%', 'litsign'), $percent)); ?>">
+		<span class="sale-badge__label" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor"/></svg><?php esc_html_e('Sale', 'litsign'); ?></span>
+		<span class="sale-badge__value" aria-hidden="true"><?php echo esc_html(sprintf(__('%d%% off', 'litsign'), $percent)); ?></span>
+	</span>
+	<?php
+}

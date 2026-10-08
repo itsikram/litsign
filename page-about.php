@@ -72,7 +72,7 @@ get_header();
 	<section class="sf-section<?php echo $story ? ' sf-section--tint' : ''; ?>" aria-labelledby="about-facts-title">
 		<div class="container sf-prose">
 			<p class="cl-kicker">Company facts</p>
-			<h2 id="about-facts-title" class="cl-section-title">Store Front Sign Online at a Glance</h2>
+			<h2 id="about-facts-title" class="cl-section-title">Storefront Sign Online at a Glance</h2>
 			<?php // Matches the Organization and LocalBusiness structured data in the page head. ?>
 			<ul class="sf-facts">
 				<li><strong>Company</strong>Storefront Sign Online LLC, doing business as Store Front Sign Online and Lit Sign Manufacturing</li>

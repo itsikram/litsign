@@ -624,6 +624,9 @@ function wholesale_seo_sitemap_excluded_product_ids()
 		}
 	}
 
+	// Plus products set to noindex or "exclude from sitemap" under SEO (inc/seo-admin/).
+	$ids = (array) apply_filters('wholesale_seo_sitemap_excluded_product_ids', $ids);
+
 	return $ids;
 }
 

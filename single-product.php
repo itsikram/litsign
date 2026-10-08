@@ -159,6 +159,7 @@ get_header();
         <div class="row">
             <div class="col-md-4">
                 <div class="thumbnail-container">
+                    <?php wholesale_render_sale_badge(get_the_ID()); ?>
                     <?php
                     the_post_thumbnail('', array(
                         'class' => 'single-product-thumbnail',

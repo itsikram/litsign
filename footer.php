@@ -91,8 +91,9 @@
         'about' => 'About Us',
         'contact' => 'Contact',
         'track-order' => 'Track Your Order',
-        'shipping-returns' => 'Shipping & Returns',
     ));
+    // Guide pages (shipping, warranty, locations...) appear once approved.
+    $footer_company_links += wholesale_guide_footer_links();
     $footer_legal_links = $footer_page_links(array(
         'terms-conditions' => 'Terms & Conditions',
     ));

@@ -67,6 +67,8 @@ require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
 require_once(dirname(__FILE__) . '/inc/storefront-media.php');
 require_once(dirname(__FILE__) . '/inc/shop-catalog.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
+require_once(dirname(__FILE__) . '/inc/guide-pages.php');
+require_once(dirname(__FILE__) . '/inc/seo-admin/loader.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
 /**
@@ -350,6 +352,7 @@ function wholesale_setting_defaults()
 		'google_ads_builder_start_label' => '',
 		'google_ads_add_to_cart_label' => '',
 		'ga4_measurement_id' => '',
+		'ul_file_number' => '',
 		'email_status_updates' => 1,
 		'payment_method' => 'lightbox',
 		'ticket_business_name' => 'Lit Sign Manufacturing',
@@ -455,6 +458,10 @@ function wholesale_settings_page()
 				<tr><th><label for="wholesale_primary_color">Primary color</label></th><td><input type="color" id="wholesale_primary_color" name="wholesale_primary_color" value="<?php echo esc_attr(wholesale_get_setting('primary_color')); ?>"></td></tr>
 				<tr><th><label for="wholesale_accent_color">Rating/accent color</label></th><td><input type="color" id="wholesale_accent_color" name="wholesale_accent_color" value="<?php echo esc_attr(wholesale_get_setting('accent_color')); ?>"></td></tr>
 				<tr><th><label for="wholesale_sale_price_color">Sale price color</label></th><td><input type="color" id="wholesale_sale_price_color" name="wholesale_sale_price_color" value="<?php echo esc_attr(wholesale_get_setting('sale_price_color')); ?>"></td></tr>
+			</table>
+			<h2 class="title">Certification</h2>
+			<table class="form-table" role="presentation">
+				<tr><th><label for="wholesale_ul_file_number">UL file number</label></th><td><input class="regular-text" id="wholesale_ul_file_number" name="wholesale_ul_file_number" value="<?php echo esc_attr(wholesale_get_setting('ul_file_number')); ?>" placeholder="E123456"><p class="description">Shown on the sign permit, installation and warranty pages so inspectors and customers can look it up. Leave empty to hide it.</p></td></tr>
 			</table>
 			<h2 class="title">Reviews</h2>
 			<table class="form-table" role="presentation">
@@ -1596,10 +1603,13 @@ function wholesale_render_sitemap()
 	));
 
 	$private_page_ids = wholesale_seo_noindex_page_ids();
+	// Pages set to noindex or "exclude from sitemap" under SEO (inc/seo-admin/).
+	$excluded_post_ids = (array) apply_filters('wholesale_seo_sitemap_excluded_post_ids', array());
 
 	foreach ($page_query->posts as $post) {
 		if (('page' === $post->post_type && (in_array($post->post_name, $private_pages, true) || in_array($post->ID, $private_page_ids, true)))
-			|| ('product' === $post->post_type && in_array($post->ID, wholesale_seo_sitemap_excluded_product_ids(), true))) {
+			|| ('product' === $post->post_type && in_array($post->ID, wholesale_seo_sitemap_excluded_product_ids(), true))
+			|| in_array($post->ID, $excluded_post_ids, true)) {
 			continue;
 		}
 
@@ -2202,6 +2212,9 @@ function litsign_scripts()
 	// The quote form styles are shared by both Google Ads landing pages.
 	if (is_page_template('page-channel-letters.php') || is_page('banners-displays')) {
 		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
+		if (is_page_template('page-channel-letters.php')) {
+			wp_enqueue_style('cl-landing', $theme_uri . '/css/cl-landing.css', array('cl-quote'), $asset_version('/css/cl-landing.css'));
+		}
 	}
 	if (is_page(array('storefront-signs', 'about', 'banners-displays', 'channel-letter-cost', 'design-templates')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
 		wp_enqueue_style('wholesale-seo-pages', $theme_uri . '/css/seo-pages.css', array('custom-style'), $asset_version('/css/seo-pages.css'));
@@ -2395,6 +2408,12 @@ function wholesale_has_seo_plugin()
  */
 function wholesale_seo_description()
 {
+	// Set under SEO in wp-admin (inc/seo-admin/); '' keeps the description below.
+	$override = (string) apply_filters('wholesale_seo_description_override', '');
+	if ('' !== $override) {
+		return $override;
+	}
+
 	$keyword_meta = wholesale_seo_keyword_meta();
 	if (!empty($keyword_meta['description'])) {
 		return wholesale_seo_localize_description($keyword_meta['description']);
@@ -2424,10 +2443,10 @@ function wholesale_seo_description()
 		$description = $term && !is_wp_error($term) && $term->description
 			? $term->description
 			: ($term && !is_wp_error($term)
-				? sprintf(__('Shop custom %s from Store Front Sign Online. Signs and print products for retail storefronts and businesses.', 'litsign'), strtolower($term->name))
-				: __('Custom signage for retail storefronts, shipped to businesses across Washington and the USA.', 'litsign'));
+				? sprintf(__('Shop custom %s from Storefront Sign Online. Signs and print products for retail storefronts and businesses.', 'litsign'), strtolower($term->name))
+				: __('Custom signage for retail storefronts, shipped to businesses across the USA.', 'litsign'));
 	} elseif (is_front_page() || is_page_template('home.php') || (is_home() && !is_front_page())) {
-		$description = __('Lit Sign Manufacturing builds custom signage for retail storefronts across Washington and the USA.', 'litsign');
+		$description = __('Storefront Sign Online makes custom LED channel letters and storefront signs in Renton, WA, priced online and shipped to all 50 states.', 'litsign');
 	} elseif (is_singular()) {
 		$description = get_post_meta(get_queried_object_id(), '_seo_description', true);
 
@@ -2485,10 +2504,11 @@ function wholesale_seo_service_area()
 
 function wholesale_seo_area_served_schema()
 {
-	return array(
+	// SEO > Business & Schema can replace this list (inc/seo-admin/).
+	return apply_filters('wholesale_seo_area_served', array(
 		array('@type' => 'State', 'name' => 'Washington', 'containedInPlace' => array('@type' => 'Country', 'name' => 'United States')),
 		array('@type' => 'Country', 'name' => 'United States'),
-	);
+	));
 }
 
 /**
@@ -2501,15 +2521,16 @@ function wholesale_seo_is_sales_page()
 }
 
 /**
- * Add the service area after the product name in a sales page's title:
- * "Front Lit Channel Letters | Custom LED Face Lit Signs" becomes
- * "Front Lit Channel Letters in Washington & USA | ...". The part after the
- * bar is shortened at its first comma, or dropped, to stay within the ~65
- * characters Google shows.
+ * Sales page titles used to get "in Washington & USA" after the product name.
+ * The site sells nationally and location wording now lives on the /locations/
+ * guides, so titles stay as written. Kept as a function (returning the title
+ * unchanged) because other code may call it; the old logic is below for
+ * reference and runs only if the 'wholesale_seo_localize_titles' filter
+ * returns true.
  */
 function wholesale_seo_localize_title($title)
 {
-	if (!wholesale_seo_is_sales_page() || false !== stripos($title, 'Washington')) {
+	if (!apply_filters('wholesale_seo_localize_titles', false) || !wholesale_seo_is_sales_page() || false !== stripos($title, 'Washington')) {
 		return $title;
 	}
 
@@ -2541,11 +2562,16 @@ function wholesale_seo_localize_title($title)
 }
 
 /**
- * End a sales page's description with where we ship, shortening the rest to
- * keep it within about 160 characters.
+ * Sales page descriptions used to end with "Shipped across Washington & the
+ * USA." Off for the same reason as wholesale_seo_localize_title(); the
+ * description is only kept within about 160 characters.
  */
 function wholesale_seo_localize_description($description)
 {
+	if (!apply_filters('wholesale_seo_localize_titles', false)) {
+		return mb_strlen($description) > 160 ? wholesale_seo_trim_description($description, 158) : $description;
+	}
+
 	if (!wholesale_seo_is_sales_page() || false !== stripos($description, 'Washington')) {
 		return $description;
 	}
@@ -2589,15 +2615,15 @@ function wholesale_seo_page_defaults()
 	return array(
 		'about' => array(
 			'title' => __('About Us | Custom Sign Company in Renton, WA Since 2002', 'litsign'),
-			'description' => __('Store Front Sign Online (Lit Sign Manufacturing since 2002) makes custom LED channel letters, storefront signs and large format prints, shipped USA-wide.', 'litsign'),
+			'description' => __('Storefront Sign Online has made custom LED channel letters, storefront signs and large format prints in Renton, WA since 2002, shipped USA-wide.', 'litsign'),
 		),
 		'privacy-policy' => array(
-			'title' => __('Privacy Policy | Store Front Sign Online', 'litsign'),
-			'description' => __('How Store Front Sign Online collects, uses and protects your information when you order signs, request a quote or contact us.', 'litsign'),
+			'title' => __('Privacy Policy | Storefront Sign Online', 'litsign'),
+			'description' => __('How Storefront Sign Online collects, uses and protects your information when you order signs, request a quote or contact us.', 'litsign'),
 		),
 		'shipping-returns' => array(
-			'title' => __('Shipping & Returns | Store Front Sign Online', 'litsign'),
-			'description' => __('Shipping options, delivery times and the return and reprint policy for custom made-to-order signs and prints from Store Front Sign Online.', 'litsign'),
+			'title' => __('Shipping & Returns | Storefront Sign Online', 'litsign'),
+			'description' => __('Shipping options, delivery times and the return and reprint policy for custom made-to-order signs and prints from Storefront Sign Online.', 'litsign'),
 		),
 		'contact' => array(
 			'title' => __('Contact Us | Free Channel Letter & Sign Quote', 'litsign'),
@@ -2629,29 +2655,33 @@ function wholesale_seo_page_defaults()
 			'title' => __('Custom Banners & Display Stands | Printed Banners, Flags & Booths', 'litsign'),
 			'description' => __('Custom vinyl and fabric banners, retractable banner stands, feather flags and trade show displays. See your price online.', 'litsign'),
 		),
+		'reviews' => array(
+			'title' => __('Customer Reviews | Storefront Sign Online', 'litsign'),
+			'description' => __('Read reviews from businesses that ordered channel letters, banners and signs from Storefront Sign Online, or share your own experience.', 'litsign'),
+		),
 		'design-templates' => array(
 			'title' => __('Free Sign Design Templates (PDF, PSD, CDR) & Artwork Guide', 'litsign'),
 			'description' => __('Download free print-ready templates for feather flags, banner stands, tents, table covers and SEG displays, plus how to set up your artwork file.', 'litsign'),
 		),
 		'terms-conditions' => array(
-			'title' => __('Terms & Conditions | Store Front Sign Online', 'litsign'),
-			'description' => __('Ordering, artwork approval, cancellation, returns, reprints and shipping terms for custom signs and prints from Store Front Sign Online.', 'litsign'),
+			'title' => __('Terms & Conditions | Storefront Sign Online', 'litsign'),
+			'description' => __('Ordering, artwork approval, cancellation, returns, reprints and shipping terms for custom signs and prints from Storefront Sign Online.', 'litsign'),
 		),
 		'brands' => array(
-			'title' => __('Sign Brands and Products | Lit Sign Manufacturing', 'litsign'),
-			'description' => __('Explore sign products and brands available from Lit Sign Manufacturing for retail storefronts.', 'litsign'),
+			'title' => __('Sign Brands and Products | Storefront Sign Online', 'litsign'),
+			'description' => __('Explore sign products and brands available from Storefront Sign Online for retail storefronts.', 'litsign'),
 		),
 		'equipment' => array(
-			'title' => __('Sign Equipment | Lit Sign Manufacturing', 'litsign'),
-			'description' => __('Browse sign equipment and related products from Lit Sign Manufacturing for sign shops and business customers.', 'litsign'),
+			'title' => __('Sign Equipment | Storefront Sign Online', 'litsign'),
+			'description' => __('Browse sign equipment and related products from Storefront Sign Online for sign shops and business customers.', 'litsign'),
 		),
 		'parts' => array(
-			'title' => __('Sign Parts and Supplies | Lit Sign Manufacturing', 'litsign'),
-			'description' => __('Shop sign parts and supplies from Lit Sign Manufacturing for retail sign projects.', 'litsign'),
+			'title' => __('Sign Parts and Supplies | Storefront Sign Online', 'litsign'),
+			'description' => __('Shop sign parts and supplies from Storefront Sign Online for retail sign projects.', 'litsign'),
 		),
 		'sign-company-landing-page' => array(
-			'title' => __('Custom Sign Manufacturing | Lit Sign Manufacturing', 'litsign'),
-			'description' => __('Lit Sign Manufacturing creates custom signs for retail storefronts across Washington and the USA.', 'litsign'),
+			'title' => __('Custom Sign Manufacturing | Storefront Sign Online', 'litsign'),
+			'description' => __('Storefront Sign Online makes custom signs for retail storefronts and ships them across the USA.', 'litsign'),
 		),
 	);
 }
@@ -2771,7 +2801,7 @@ function wholesale_seo_keyword_meta()
 
 		if ($term && !is_wp_error($term) && 'signs-letters' === $term->slug) {
 			return array(
-				'title' => __('Storefront Signs & Channel Letters | Store Front Sign Online', 'litsign'),
+				'title' => __('Storefront Signs & Channel Letters | Storefront Sign Online', 'litsign'),
 				'description' => __('Shop custom storefront signs and LED channel letters for retail businesses. Compare lit letter styles and build your sign online.', 'litsign'),
 			);
 		}
@@ -2793,6 +2823,12 @@ function wholesale_seo_keyword_meta()
  */
 function wholesale_seo_url()
 {
+	// A canonical set on the page under SEO (inc/seo-admin/) wins.
+	$override = (string) apply_filters('wholesale_seo_canonical_override', '');
+	if ('' !== $override) {
+		return $override;
+	}
+
 	// The channel letters landing page ranks on its own; ad URLs with ?gclid,
 	// ?style and UTM tags canonicalize to the clean URL.
 	if (wholesale_is_channel_letters_landing()) {
@@ -2830,6 +2866,7 @@ function wholesale_seo_is_noindex()
 	return is_404()
 		|| is_search()
 		|| is_page(wholesale_seo_noindex_page_slugs())
+		|| is_page_template(array('page-channel-letters-ads.php', 'landing-page.php'))
 		|| is_singular(array('order', 'cnn'))
 		|| is_post_type_archive('order')
 		|| get_query_var('wholesale_thank_you');
@@ -2858,10 +2895,13 @@ function wholesale_seo_noindex_page_ids()
 		'posts_per_page' => -1,
 		'fields' => 'ids',
 		'meta_key' => '_wp_page_template',
-		'meta_value' => 'page-channel-letters-ads.php',
+		// Both retired Google Ads landing templates stay out of search.
+		'meta_value' => array('page-channel-letters-ads.php', 'landing-page.php'),
+		'meta_compare' => 'IN',
 	));
 
-	return array_values(array_unique(array_merge($ids, array_map('intval', $ads_pages))));
+	// Guide pages still in review join the list (inc/guide-pages.php).
+	return apply_filters('wholesale_seo_noindex_page_ids', array_values(array_unique(array_merge($ids, array_map('intval', $ads_pages)))));
 }
 
 /**
@@ -2873,7 +2913,7 @@ function wholesale_seo_noindex_page_slugs()
 {
 	// 'pay' only works with a payment link; 'landing-page' is an ads-only page; the
 	// last three are empty placeholders until they have real content.
-	return array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'pay', 'my-orders', 'my_orders', 'orders', 'track-order', 'sample-page', 'sample-page-2', 'b2-calculator', 'landing-page', 'brands', 'parts', 'equipment');
+	return array('account', 'cart', 'checkout', 'login', 'signup', 'payment', 'pay', 'my-orders', 'my_orders', 'orders', 'track-order', 'sample-page', 'sample-page-2', 'b2-calculator', 'landing-page', 'chennel-letter-ads', 'brands', 'parts', 'equipment');
 }
 
 add_filter('document_title_parts', function ($parts) {
@@ -2917,7 +2957,7 @@ add_filter('document_title_parts', function ($parts) {
 		$parts['site'] = '';
 		$parts['tagline'] = '';
 	} elseif (is_singular('product')) {
-		$parts['title'] = sprintf(__('%s | Lit Sign Manufacturing', 'litsign'), get_the_title());
+		$parts['title'] = sprintf(__('%s | Storefront Sign Online', 'litsign'), get_the_title());
 		$parts['site'] = '';
 		$parts['tagline'] = '';
 	} else {
@@ -3183,21 +3223,26 @@ function wholesale_seo_head()
 
 	echo '<link rel="canonical" href="' . esc_url($url) . '">' . "\n";
 	echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
+	// Share-preview overrides from SEO in wp-admin (inc/seo-admin/); unchanged by default.
+	$og_title = (string) apply_filters('wholesale_seo_og_title', $title);
+	$og_description = (string) apply_filters('wholesale_seo_og_description', $description);
+	$og_image = (string) apply_filters('wholesale_seo_og_image', $image);
+
 	echo '<meta property="og:type" content="' . esc_attr(is_singular('product') ? 'product' : 'website') . '">' . "\n";
-	echo '<meta property="og:title" content="' . esc_attr($title) . '">' . "\n";
-	echo '<meta property="og:description" content="' . esc_attr($description) . '">' . "\n";
+	echo '<meta property="og:title" content="' . esc_attr($og_title) . '">' . "\n";
+	echo '<meta property="og:description" content="' . esc_attr($og_description) . '">' . "\n";
 	echo '<meta property="og:url" content="' . esc_url($url) . '">' . "\n";
 	echo '<meta property="og:site_name" content="' . esc_attr(get_bloginfo('name')) . '">' . "\n";
 
-	if ($image) {
-		echo '<meta property="og:image" content="' . esc_url($image) . '">' . "\n";
+	if ($og_image) {
+		echo '<meta property="og:image" content="' . esc_url($og_image) . '">' . "\n";
 	}
 
-	echo '<meta name="twitter:card" content="' . esc_attr($image ? 'summary_large_image' : 'summary') . '">' . "\n";
-	echo '<meta name="twitter:title" content="' . esc_attr($title) . '">' . "\n";
-	echo '<meta name="twitter:description" content="' . esc_attr($description) . '">' . "\n";
-	if ($image) {
-		echo '<meta name="twitter:image" content="' . esc_url($image) . '">' . "\n";
+	echo '<meta name="twitter:card" content="' . esc_attr($og_image ? 'summary_large_image' : 'summary') . '">' . "\n";
+	echo '<meta name="twitter:title" content="' . esc_attr($og_title) . '">' . "\n";
+	echo '<meta name="twitter:description" content="' . esc_attr($og_description) . '">' . "\n";
+	if ($og_image) {
+		echo '<meta name="twitter:image" content="' . esc_url($og_image) . '">' . "\n";
 	}
 
 	$site_id = trailingslashit(home_url('/')) . '#website';
@@ -3228,7 +3273,8 @@ function wholesale_seo_head()
 		'publisher' => array('@id' => $organization_id),
 		'inLanguage' => get_bloginfo('language'),
 	);
-	$entities = array();
+	// Extra entities a template adds before get_header() (e.g. a Service on guide pages).
+	$entities = !empty($GLOBALS['wholesale_page_entities']) ? array_values((array) $GLOBALS['wholesale_page_entities']) : array();
 
 	// Home > [category >] current page, matching the visible breadcrumbs.
 	$breadcrumb_items = array(
@@ -3348,6 +3394,9 @@ function wholesale_seo_head()
 		}
 		if (is_page('about')) {
 			$page['mainEntity'] = array('@id' => $organization_id);
+		}
+		foreach (wholesale_page_ancestor_crumbs() as $ancestor) {
+			$breadcrumb_items[] = array('@type' => 'ListItem', 'position' => 0, 'name' => $ancestor['name'], 'item' => $ancestor['url']);
 		}
 		$breadcrumb_items[] = array(
 			'@type' => 'ListItem',
@@ -3525,14 +3574,14 @@ function wholesale_rank_math_json_ld($data, $jsonld)
 	$organization = array(
 		'@type' => 'Organization',
 		'@id' => $organization_id,
-		'name' => 'Storefront Sign Online LLC',
+		'name' => 'Storefront Sign Online',
 		'url' => home_url('/'),
 		'telephone' => '+1-866-436-2101',
 	);
 	$local_business = array(
 		'@type' => 'LocalBusiness',
 		'@id' => trailingslashit(home_url('/')) . '#localbusiness',
-		'name' => 'Storefront Sign Online LLC',
+		'name' => 'Storefront Sign Online',
 		'url' => home_url('/'),
 		'parentOrganization' => array('@id' => $organization_id),
 		'telephone' => '+1-866-436-2101',
@@ -3588,9 +3637,9 @@ function wholesale_organization_schema()
 	$organization = array(
 		'@type' => 'Organization',
 		'@id' => $organization_id,
-		'name' => 'Storefront Sign Online LLC',
-		// Doing business as Lit Sign Manufacturing since 2002.
-		'alternateName' => array('Store Front Sign Online', 'Lit Sign Manufacturing'),
+		'name' => 'Storefront Sign Online',
+		// The operating company named in the warranty, terms and About page.
+		'legalName' => 'Storefront Sign Online LLC',
 		'foundingDate' => '2002',
 		'url' => home_url('/'),
 		'logo' => get_theme_mod('custom_logo') ? wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full') : '',
@@ -3606,7 +3655,7 @@ function wholesale_organization_schema()
 	$local_business = array(
 		'@type' => 'LocalBusiness',
 		'@id' => $local_business_id,
-		'name' => 'Storefront Sign Online LLC',
+		'name' => 'Storefront Sign Online',
 		'url' => home_url('/'),
 		'parentOrganization' => array('@id' => $organization_id),
 		'telephone' => '+1-866-436-2101',
@@ -3634,22 +3683,49 @@ function wholesale_organization_schema()
 	);
 	$local_business = array_filter($local_business);
 
+	$graph = array(
+		array(
+			'@type' => 'WebSite',
+			'@id' => trailingslashit(home_url('/')) . '#website',
+			'name' => get_bloginfo('name'),
+			'url' => home_url('/'),
+			'publisher' => array('@id' => $organization_id),
+		),
+		$organization,
+		$local_business,
+	);
+	// SEO > Business & Schema (inc/seo-admin/) edits these entities; unchanged by default.
+	$graph = apply_filters('wholesale_seo_organization_graph', $graph);
+
 	echo '<script type="application/ld+json">' . wp_json_encode(array(
 		'@context' => 'https://schema.org',
-		'@graph' => array(
-			array(
-				'@type' => 'WebSite',
-				'@id' => trailingslashit(home_url('/')) . '#website',
-				'name' => get_bloginfo('name'),
-				'url' => home_url('/'),
-				'publisher' => array('@id' => $organization_id),
-			),
-			$organization,
-			$local_business,
-		),
+		'@graph' => $graph,
 	), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
 }
 add_action('wp_head', 'wholesale_organization_schema', 2);
+
+/**
+ * Parent pages of the current page, top first ("Locations", "Washington" on
+ * a city page), as name/url pairs. Empty for top-level pages.
+ *
+ * @return array
+ */
+function wholesale_page_ancestor_crumbs()
+{
+	if (!is_page()) {
+		return array();
+	}
+
+	$crumbs = array();
+	foreach (array_reverse(get_post_ancestors(get_queried_object_id())) as $ancestor_id) {
+		$crumbs[] = array(
+			'name' => wholesale_schema_text(get_the_title($ancestor_id)),
+			'url' => get_permalink($ancestor_id),
+		);
+	}
+
+	return $crumbs;
+}
 
 /**
  * Render visible breadcrumbs for public singular content.
@@ -3676,6 +3752,8 @@ function wholesale_breadcrumbs()
 			);
 		}
 	}
+
+	$items = array_merge($items, wholesale_page_ancestor_crumbs());
 
 	$items[] = array(
 		'name' => wholesale_schema_text(get_the_title()),

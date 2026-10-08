@@ -77,13 +77,16 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
     }
 
     if (empty($images)) {
-        echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span></a>';
+        echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span>';
+        wholesale_render_sale_badge($product_id);
+        echo '</a>';
         return;
     }
 
     $has_gallery = count($images) > 1;
     ?>
     <div class="pb-image-top<?php echo $has_gallery ? ' has-gallery' : ''; ?>" data-gallery>
+        <?php wholesale_render_sale_badge($product_id); ?>
         <a class="pb-gallery-track" href="<?php echo esc_url(get_permalink($product_id)); ?>" tabindex="-1">
             <?php foreach ($images as $index => $image) : ?>
                 <?php $image = wholesale_webp_url($image); ?>
@@ -416,6 +419,14 @@ if ($is_channel_letters) {
             'a' => 'Yes. Every sign is tested before shipment and includes a wiring diagram and an installation pattern for your installer.',
         ),
         array(
+            'q' => 'Who installs my channel letters?',
+            'a' => 'We build, test and ship your sign; we don&rsquo;t install. A licensed electrician or sign installer near you mounts and connects it using the included wiring diagram and installation pattern.',
+        ),
+        array(
+            'q' => 'Do I need a permit for channel letters?',
+            'a' => 'In most cities, yes: lit signs usually need a sign permit and an electrical permit, and many shopping centers have their own sign criteria. Check with your landlord and city before you order; we can size your sign to fit their rules.',
+        ),
+        array(
             'q' => 'Can I pick up my order?',
             'a' => 'Pickup isn&rsquo;t available &mdash; every order ships directly to you.',
         ),
@@ -442,15 +453,15 @@ get_header();
                     <?php if ($hero_style) : ?>
                         <h1 id="home-hero-title" class="home-hero-title"><?php echo wp_kses_post($hero_variants[$hero_style][0]); ?> <span><?php echo esc_html($hero_variants[$hero_style][1]); ?></span></h1>
                     <?php else : ?>
-                        <h1 id="home-hero-title" class="home-hero-title">Custom LED Channel Letter Signs <span>for Your Storefront</span></h1>
+                        <h1 id="home-hero-title" class="home-hero-title">Custom Channel Letter Signs, <span>Priced Online &amp; Made in USA</span></h1>
                     <?php endif; ?>
                     <p class="home-hero-proof">
                         <?php if ($google_rating) : ?>
                             <a class="home-hero-rating" href="#customer-reviews"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
                         <?php endif; ?>
-                        <span><?php echo wholesale_home_icon('flag'); ?> Ships to Washington &amp; all 50 states</span>
+                        <span><?php echo wholesale_home_icon('flag'); ?> Made in Renton, WA &middot; ships to all 50 states</span>
                     </p>
-                    <p class="home-hero-lead">Pick your style, see your exact price online, and get letters that are tested and ready to install&nbsp;&mdash; wiring diagram included.</p>
+                    <p class="home-hero-lead">UL listed LED channel letters, built to order in Renton, Washington. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
                     <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
                     <div class="home-hero-actions home-hero-actions--cl">
                         <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
@@ -477,6 +488,16 @@ get_header();
             </div>
         </div>
     </div>
+    <?php if ($is_channel_letters) : ?>
+    <div class="cll-trust" aria-label="Why our channel letters">
+        <ul class="container cll-trust-list">
+            <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong><small>Labels on every sign section</small></span></li>
+            <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Renton, WA</small></span></li>
+            <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>LED modules &amp; power supplies</small></span></li>
+            <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong><small>Wiring diagram included</small></span></li>
+        </ul>
+    </div>
+    <?php else : ?>
     <div class="home-hero-features" aria-label="Our service benefits">
         <div class="container home-hero-feature-grid">
             <div class="home-hero-feature">
@@ -497,9 +518,10 @@ get_header();
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </section>
 
-<?php if ($is_channel_letters) : ?>
+<?php if ($is_channel_letters && !$is_cl_landing) : ?>
 <nav class="home-types" aria-label="Shop by sign type">
     <div class="container">
         <p class="home-types-title">Shop by sign type</p>
@@ -598,7 +620,7 @@ foreach (array(12, 18, 24) as $example_inches) {
 <?php if ($cl_examples) : ?>
 <section class="cl-examples" aria-labelledby="cl-examples-title">
     <div class="container">
-        <h2 id="cl-examples-title" class="cl-examples-title">Real example prices</h2>
+        <h2 id="cl-examples-title" class="cl-examples-title">Real Example Prices</h2>
         <p class="cl-examples-lead">Front lit (Type 1) channel letters, 6 letters (for example DENTAL), white acrylic faces, standard power supply, no raceway.</p>
         <div class="cl-compare-table-wrap cl-examples-table-wrap">
             <table class="cl-compare-table cl-examples-table">
@@ -978,7 +1000,7 @@ foreach (array(12, 18, 24) as $example_inches) {
         <div class="container">
             <p class="cl-kicker">Compare lighting styles</p>
             <h2 id="cl-compare-title" class="cl-section-title">Front Lit, Back Lit, Halo Lit or Reverse Lit Channel Letters?</h2>
-            <p class="cl-section-lead">Every custom channel letter sign is priced by letter height. Here is how the styles differ and where each one starts.</p>
+            <p class="cl-section-lead">Seven lighting styles, each priced by letter height. Compare how they light up at night and where each one starts.</p>
             <div class="cl-compare-table-wrap">
                 <table class="cl-compare-table">
                     <thead>
@@ -1006,76 +1028,101 @@ foreach (array(12, 18, 24) as $example_inches) {
     </section>
     <?php endif; ?>
 
-    <section class="sf-section cl-guide" aria-labelledby="cl-guide-title">
-        <div class="container sf-prose">
-            <p class="cl-kicker">Channel letter guide</p>
-            <h2 id="cl-guide-title" class="cl-section-title">What Are Channel Letters?</h2>
-            <p>Channel letters are individually built, three-dimensional letters used as exterior business signs. Each letter is a shallow metal &ldquo;channel&rdquo; with LED lighting inside, which is why they are the most common lit sign on retail stores, restaurants, salons and offices. They read clearly by day and glow at night, and every letter is cut to your wording, font and colors.<?php if ($storefront_signs_url) : ?> Comparing sign types for your business? See our <a href="<?php echo esc_url($storefront_signs_url); ?>">storefront signs guide</a>.<?php endif; ?></p>
+    <section class="cll-why" aria-labelledby="cll-why-title">
+        <div class="container">
+            <p class="cl-kicker">Why businesses order from us</p>
+            <h2 id="cll-why-title" class="cl-section-title">A Professional Sign Without the Sign-Shop Runaround</h2>
+            <p class="cl-section-lead">Most sign companies make you wait for a site visit and a quote. We show you the price up front, build every sign to order in our Renton, Washington shop, and ship it ready for your installer.</p>
+            <div class="cll-why-grid">
+                <article class="cll-why-card">
+                    <?php echo wholesale_home_icon('pen'); ?>
+                    <h3>Exact price before you order</h3>
+                    <p>Choose a style, enter your wording and letter height, and the price updates as you go. The total you see is the price you pay, before shipping and tax.</p>
+                </article>
+                <article class="cll-why-card">
+                    <?php echo wholesale_home_icon('message'); ?>
+                    <h3>Logo quotes from a real person</h3>
+                    <p>Have a logo, a custom font or landlord sign criteria? Send it with the form below or text it to <a href="sms:+12066186543">206-618-6543</a>. A sign specialist replies within one business day.</p>
+                </article>
+                <article class="cll-why-card">
+                    <?php echo wholesale_home_icon('badge'); ?>
+                    <h3>Built for inspection</h3>
+                    <p>Outdoor channel letter signs are UL listed and ship with their labels in place, so your electrician and inspector have what they need to sign off.</p>
+                </article>
+                <article class="cll-why-card">
+                    <?php echo wholesale_home_icon('plug'); ?>
+                    <h3>Ready to install on arrival</h3>
+                    <p>Every sign is tested before it ships, with a wiring diagram and an installation pattern, whether it mounts on a raceway or directly to the wall.</p>
+                </article>
+            </div>
+        </div>
+    </section>
 
-            <h3>How channel letters are built</h3>
-            <ul class="sf-facts">
-                <li><strong>Returns</strong>The sides of each letter give it depth: .040 aluminum on standard letters, welded stainless steel on halo, reverse lit, trimless and borderless styles.</li>
-                <li><strong>Faces</strong>Colored acrylic that the light shines through, or a solid metal face on halo lit letters so the light glows out of the back.</li>
-                <li><strong>Trimcap &amp; LEDs</strong>A trimcap holds the face on standard letters (trimless styles skip it). LED modules and a power supply light each letter.</li>
-            </ul>
-
-            <h3>Choosing your letter height</h3>
-            <p>Start with how far away your customers are. A common sign industry rule of thumb is about 1 inch of letter height for every 10 feet of viewing distance, so letters seen from 120 feet away work best at about 12 inches or taller. Our letters start at <?php echo esc_html($cl_min_height); ?> inches<?php if ($cl_max_height) : ?> and go up to <?php echo esc_html($cl_max_height); ?> inches for front lit letters<?php endif; ?>. Measure the space on your fascia, and check any sign criteria in your lease before you choose.</p>
-
-            <h3>Mounting and installation</h3>
-            <p>Letters mount directly to the wall or on a raceway, a metal box that holds the wiring and mounts the sign as one unit so fewer holes go into your building. Every sign is tested before it ships and arrives with an installation pattern and a wiring diagram for your installer. In most areas the electrical connection must be made by a licensed electrician or sign contractor.</p>
-
-            <h3>How channel letter pricing works</h3>
-            <p>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, and you see it before checkout. The table above shows where each style starts; <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+    <section class="cll-specs" aria-labelledby="cll-specs-title">
+        <div class="container">
+            <p class="cl-kicker">Specifications</p>
+            <h2 id="cll-specs-title" class="cl-section-title">How Our Channel Letters Are Built</h2>
+            <p class="cl-section-lead">Commercial-grade components in every style. Each product page lists the full specifications for that style.</p>
+            <div class="cl-compare-table-wrap">
+                <table class="cl-compare-table cll-specs-table">
+                    <tbody>
+                        <tr><th scope="row">Returns (letter sides)</th><td>.040 aluminum on front lit, back lit and dual lit letters; welded stainless steel on halo lit, reverse lit, trimless and borderless letters, sanded and painted</td></tr>
+                        <tr><th scope="row">Faces</th><td>Colored acrylic that the light shines through, or a solid stainless steel face on halo lit letters so the light glows out of the back</td></tr>
+                        <tr><th scope="row">LED lighting</th><td>High-efficiency IP67 LED modules with a 160&deg; beam, 5-year warranty</td></tr>
+                        <tr><th scope="row">Power supply</th><td>12V, 60W Class 2 power supplies, IP67, 5-year warranty</td></tr>
+                        <tr><th scope="row">Letter heights</th><td>From <?php echo esc_html($cl_min_height); ?>&rdquo;<?php if ($cl_max_height) : ?> to <?php echo esc_html($cl_max_height); ?>&rdquo; (front lit)<?php endif; ?>; larger letters up to 48&rdquo; by custom order</td></tr>
+                        <tr><th scope="row">Mounting</th><td>Direct to the wall with the included installation pattern, or on a 5.5&rdquo; &times; 3.5&rdquo; raceway that holds the wiring and mounts the sign as one unit</td></tr>
+                        <tr><th scope="row">Certification</th><td>Outdoor channel letter signs are UL listed with sign section labels<?php $cll_ul = function_exists('wholesale_guide_ul_file_number') ? wholesale_guide_ul_file_number() : ''; if ($cll_ul) : ?> (UL file <?php echo esc_html($cll_ul); ?>)<?php endif; ?></td></tr>
+                        <tr><th scope="row">In the box</th><td>Your tested letters, power supplies, wiring diagram and installation pattern</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </section>
 
 
     <section class="cl-steps" aria-labelledby="cl-steps-title">
         <div class="container">
-            <p class="cl-kicker">Simple ordering</p>
-            <h2 id="cl-steps-title" class="cl-section-title">How Ordering Your Sign Works</h2>
+            <p class="cl-kicker">From order to opening day</p>
+            <h2 id="cl-steps-title" class="cl-section-title">How It Works</h2>
             <ol class="cl-steps-list">
                 <li>
                     <span class="cl-step-number" aria-hidden="true">1</span>
-                    <h3>Choose a style</h3>
-                    <p>Front lit, back lit, dual lit, halo lit, reverse lit or trimless &mdash; compare the styles above.</p>
+                    <h3>Price it or send your logo</h3>
+                    <p>Pick a style above and see your price, <a href="<?php echo esc_url($builder_url); ?>">design it in the sign builder</a>, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a quote</a>.</p>
                 </li>
                 <li>
                     <span class="cl-step-number" aria-hidden="true">2</span>
-                    <h3>Customize &amp; see your price</h3>
-                    <p>Enter your wording, letter height and colors, or <a href="<?php echo esc_url($builder_url); ?>">use the online sign builder</a>. Your price updates as you go.</p>
+                    <h3>Approve your proof</h3>
+                    <p>Production starts only after you approve your final proof in writing, so the sign matches what you expect.</p>
                 </li>
                 <li>
                     <span class="cl-step-number" aria-hidden="true">3</span>
                     <h3>We build &amp; test it</h3>
-                    <p>Your letters are made in the USA, and every sign is tested before it ships.</p>
+                    <p>Your letters are made to order in Renton, WA, and every sign is tested before it ships.</p>
                 </li>
                 <li>
                     <span class="cl-step-number" aria-hidden="true">4</span>
-                    <h3>Ready to install</h3>
-                    <p>Your sign arrives with a wiring diagram and installation pattern. Choose standard, 3-day, 2-day or overnight shipping at checkout.</p>
+                    <h3>Ship &amp; install</h3>
+                    <p>Choose standard, 3-day, 2-day or overnight shipping to any of the 50 states. Your licensed installer mounts it with the included pattern and wiring diagram.</p>
                 </li>
             </ol>
+            <div class="cll-install">
+                <h3><?php echo wholesale_home_icon('plug'); ?> Who installs it?</h3>
+                <p>We build, test and ship; we don&rsquo;t install. A licensed electrician or sign installer near you mounts and connects the sign, and in most areas the sign needs a permit first. Your installer can call us with any questions about the wiring.<?php
+                    $cll_links = array();
+                    foreach (array('sign-permits' => 'How sign permits work', 'how-to-install-channel-letters' => 'Installation guide', 'locations' => 'State permit & licensing guides') as $cll_path => $cll_label) {
+                        $cll_url = function_exists('wholesale_guide_url') ? wholesale_guide_url($cll_path, true) : '';
+                        if ($cll_url) {
+                            $cll_links[] = '<a href="' . esc_url($cll_url) . '">' . esc_html($cll_label) . '</a>';
+                        }
+                    }
+                    echo $cll_links ? ' ' . implode(' &middot; ', $cll_links) : ''; // Escaped above.
+                ?></p>
+            </div>
         </div>
     </section>
 
-    <section class="cl-quality" aria-labelledby="cl-quality-title">
-        <div class="container cl-quality-inner">
-            <div class="cl-quality-copy">
-                <p class="cl-kicker">Built to last</p>
-                <h2 id="cl-quality-title" class="cl-section-title">Commercial-Grade Signs for Your Storefront</h2>
-                <p class="cl-section-lead">Custom channel letters give your business a polished look, with bright, energy-efficient LED lighting that stands out day and night.</p>
-                <a class="cl-button" href="#product-box-container">Compare Styles &amp; Prices <?php echo wholesale_home_icon('arrow'); ?></a>
-            </div>
-            <ul class="cl-quality-list">
-                <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong> outdoor channel letter signs with sign section labels.</span></li>
-                <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong> on listed LED modules, power supplies and qualifying letters.</span></li>
-                <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in USA</strong> with .040 aluminum or welded stainless steel returns and acrylic faces.</span></li>
-                <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong>, with a wiring diagram and installation pattern included.</span></li>
-            </ul>
-        </div>
-    </section>
 
     <section class="cl-help<?php echo $is_cl_landing ? ' cl-help--quote' : ''; ?>" id="quote" aria-labelledby="cl-help-title">
         <div class="container cl-help-inner">
@@ -1085,8 +1132,8 @@ foreach (array(12, 18, 24) as $example_inches) {
                     <h2 id="cl-help-title">Get Your Channel Letter Sign Quote</h2>
                     <p>Tell us what your sign should say and send your logo or a storefront photo. A sign specialist will price the exact letters you need and help you choose the right size and style.</p>
                     <ul class="clq-promise">
-                        <li><?php echo wholesale_home_icon('check'); ?> Free design help from a real person</li>
-                        <li><?php echo wholesale_home_icon('check'); ?> No hidden charges, no obligation</li>
+                        <li><?php echo wholesale_home_icon('check'); ?> A sign specialist prices your exact letters</li>
+                        <li><?php echo wholesale_home_icon('check'); ?> Reply within one business day, no obligation</li>
                         <li><?php echo wholesale_home_icon('check'); ?> Made in USA, UL listed, ready to install</li>
                     </ul>
                 <?php else : ?>

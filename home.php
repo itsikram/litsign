@@ -70,13 +70,16 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
     }
 
     if (empty($images)) {
-        echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span></a>';
+        echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span>';
+        wholesale_render_sale_badge($product_id);
+        echo '</a>';
         return;
     }
 
     $has_gallery = count($images) > 1;
     ?>
     <div class="pb-image-top<?php echo $has_gallery ? ' has-gallery' : ''; ?>" data-gallery>
+        <?php wholesale_render_sale_badge($product_id); ?>
         <a class="pb-gallery-track" href="<?php echo esc_url(get_permalink($product_id)); ?>" tabindex="-1">
             <?php foreach ($images as $index => $image) : ?>
                 <?php $image = wholesale_webp_url($image); ?>

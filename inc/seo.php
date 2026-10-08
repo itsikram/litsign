@@ -52,6 +52,68 @@ function wholesale_removed_spam_status()
 add_action('template_redirect', 'wholesale_removed_spam_status', 2);
 
 /**
+ * The owner's other domains. They are meant to 301 at the server
+ * (seo-plan/domain-redirects.md); if one still reaches WordPress, for example
+ * as a cPanel alias of this site, it is sent to the same path on the main
+ * site here instead of serving a duplicate copy with its own canonical URLs.
+ *
+ * @return string[] Hosts without www.
+ */
+function wholesale_seo_extra_domains()
+{
+	return array(
+		'storefrontsignwholesale.com',
+		'storefrontsignwholesales.com',
+		'onlinestorefrontsigns.com',
+		'mystorefrontsigns.com',
+		'mystorefrontsign.com',
+	);
+}
+
+function wholesale_seo_redirect_extra_domains()
+{
+	if (is_admin() || wp_doing_cron() || (defined('WP_CLI') && WP_CLI) || empty($_SERVER['HTTP_HOST'])) {
+		return;
+	}
+
+	// Only the exact extra domains, with or without www. The main domain, IPs
+	// and localhost never match.
+	$host = strtolower(preg_replace('/^www\.|:\d+$/', '', (string) wp_unslash($_SERVER['HTTP_HOST'])));
+	if (!in_array($host, wholesale_seo_extra_domains(), true)) {
+		return;
+	}
+
+	// Never wp-admin, cron, the REST API or certificate validation, whatever the host.
+	$uri = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '/';
+	$path = (string) wp_parse_url($uri, PHP_URL_PATH);
+	if (preg_match('#/(?:wp-admin/|wp-cron\.php|wp-json(?:/|$)|\.well-known/)#', $path) || isset($_GET['rest_route'])) {
+		return;
+	}
+
+	// Hard-coded target: home_url() may follow the requested host on the live server.
+	wp_redirect('https://storefrontsignonline.com' . ('/' === substr($uri, 0, 1) ? $uri : '/'), 301);
+	exit;
+}
+add_action('init', 'wholesale_seo_redirect_extra_domains', 1);
+
+/**
+ * WordPress's old-slug redirect (a renamed product, e.g. /product/pole-banner-set/,
+ * a Google Ads sitelink) rebuilds the URL without the query string, which drops
+ * ?gclid and UTM tags and breaks ad attribution. Carry them over.
+ */
+function wholesale_seo_old_slug_keep_query($link)
+{
+	$query = isset($_SERVER['QUERY_STRING']) ? (string) wp_unslash($_SERVER['QUERY_STRING']) : '';
+	if ('' === $query || false !== strpos((string) $link, '?')) {
+		return $link;
+	}
+
+	parse_str($query, $args);
+	return $args ? add_query_arg(array_map('rawurlencode', array_filter($args, 'is_scalar')), $link) : $link;
+}
+add_filter('old_slug_redirect_url', 'wholesale_seo_old_slug_keep_query');
+
+/**
  * Permanently redirect leftover placeholder pages to the page that replaces them.
  *
  * @return array Page slug => target URL.
@@ -121,7 +183,8 @@ function wholesale_seo_sitemap_excluded_categories()
 		$excluded[] = 'signs-letters';
 	}
 
-	return $excluded;
+	// Plus categories set to noindex or "exclude from sitemap" under SEO (inc/seo-admin/).
+	return (array) apply_filters('wholesale_seo_sitemap_excluded_categories', $excluded);
 }
 
 /**
@@ -349,7 +412,22 @@ function wholesale_seo_migrations()
 		'2026-10-design-templates-page' => 'wholesale_seo_migrate_design_templates_page',
 		'2026-10-storefront-media' => 'wholesale_seo_migrate_storefront_media',
 		'2026-10-supplier-text' => 'wholesale_seo_migrate_supplier_text',
+		'2026-10-site-title' => 'wholesale_seo_migrate_site_title',
 	);
+}
+
+/**
+ * The site title was "Store Front Sign Online"; the brand is "Storefront Sign
+ * Online" (ads, schema, footer). Only that exact old value is changed, so a
+ * title the owner set by hand is left alone.
+ */
+function wholesale_seo_migrate_site_title()
+{
+	if ('Store Front Sign Online' === get_option('blogname')) {
+		update_option('blogname', 'Storefront Sign Online');
+	}
+
+	return true;
 }
 
 function wholesale_seo_run_migrations()

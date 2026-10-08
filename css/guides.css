@@ -1,0 +1,279 @@
+/*
+ * Guide, location and industry pages (inc/guide-pages.php). Builds on the
+ * .sf-* sections in seo-pages.css and the .cl-* sections in style.css.
+ */
+
+/* Key facts box under a hero or section heading. */
+.gd-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-facts li {
+  padding: 18px 20px;
+  border: 1px solid #e6ebf1;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+}
+
+.gd-facts strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #127ea8;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gd-facts span {
+  color: #172027;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+/* Two-column table of facts (licensing, permits, shipping). */
+.gd-table {
+  width: 100%;
+  margin: 20px 0;
+  border-collapse: collapse;
+  font-size: 0.98rem;
+}
+
+.gd-table th,
+.gd-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid #e6ebf1;
+  text-align: left;
+  vertical-align: top;
+}
+
+.gd-table thead th {
+  background: #f4fbff;
+  color: #172027;
+  font-weight: 700;
+}
+
+.gd-table tbody th {
+  width: 34%;
+  color: #172027;
+  font-weight: 700;
+}
+
+/* Checklists with a tick per item. */
+.gd-checklist {
+  margin: 16px 0 24px;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-checklist li {
+  position: relative;
+  margin-bottom: 10px;
+  padding-left: 30px;
+  line-height: 1.6;
+}
+
+.gd-checklist li::before {
+  content: "\2713";
+  position: absolute;
+  top: 0;
+  left: 4px;
+  color: #17b26a;
+  font-weight: 800;
+}
+
+/* Ordered steps with a number badge. */
+.gd-steps {
+  margin: 20px 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: gd-step;
+}
+
+.gd-steps > li {
+  position: relative;
+  margin-bottom: 22px;
+  padding-left: 52px;
+  counter-increment: gd-step;
+}
+
+.gd-steps > li::before {
+  content: counter(gd-step);
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1fa8de;
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.gd-steps h3 {
+  margin: 4px 0 6px;
+  font-size: 1.1rem;
+}
+
+/* Callouts: who installs, important notes. */
+.gd-note {
+  margin: 24px 0;
+  padding: 18px 20px;
+  border-left: 4px solid #1fa8de;
+  border-radius: 0 12px 12px 0;
+  background: #f4fbff;
+  color: #172027;
+  line-height: 1.6;
+}
+
+.gd-note--warn {
+  border-left-color: #f5ad27;
+  background: #fff8ea;
+}
+
+.gd-note p:last-child {
+  margin-bottom: 0;
+}
+
+/* Official sources under a section. */
+.gd-sources {
+  margin-top: 28px;
+  padding: 18px 20px;
+  border: 1px dashed #cfd8e3;
+  border-radius: 12px;
+  font-size: 0.94rem;
+}
+
+.gd-sources h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.gd-sources ul {
+  margin: 0 0 8px;
+  padding-left: 18px;
+}
+
+.gd-sources-note {
+  margin: 0;
+  color: #52616f;
+}
+
+/* Link grids: states on the hub, neighbouring states, cities, industries. */
+.gd-link-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 24px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-link-grid a,
+.gd-link-grid span {
+  display: block;
+  height: 100%;
+  padding: 14px 16px;
+  border: 1px solid #e6ebf1;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #172027;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.gd-link-grid a:hover,
+.gd-link-grid a:focus-visible {
+  border-color: #1fa8de;
+  color: #127ea8;
+}
+
+.gd-link-grid small {
+  display: block;
+  margin-top: 4px;
+  color: #52616f;
+  font-weight: 400;
+}
+
+.gd-link-grid span {
+  color: #52616f;
+  font-weight: 600;
+}
+
+/* Testimonials and project photos added by the owner. */
+.gd-quotes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.gd-quote {
+  margin: 0;
+  padding: 20px;
+  border: 1px solid #e6ebf1;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.gd-quote figcaption {
+  margin-top: 10px;
+  color: #52616f;
+  font-size: 0.92rem;
+}
+
+.gd-quote img {
+  width: 100%;
+  height: auto;
+  margin-bottom: 12px;
+  border-radius: 10px;
+}
+
+@media (max-width: 767px) {
+  .gd-table,
+  .gd-table tbody,
+  .gd-table tr,
+  .gd-table th,
+  .gd-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .gd-table thead {
+    display: none;
+  }
+
+  .gd-table tbody th {
+    width: 100%;
+    padding-bottom: 2px;
+    border-bottom: 0;
+  }
+
+  .gd-steps > li {
+    padding-left: 46px;
+  }
+}
+
+.gd-subhead {
+  margin: 36px 0 0;
+  font-size: 1.15rem;
+}
+
+.gd-all-link {
+  margin: 20px 0 0;
+  font-weight: 700;
+}
+
+.gd-all-link .cl-icon,
+.gd-all-link svg {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+}

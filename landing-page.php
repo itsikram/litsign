@@ -134,7 +134,7 @@ get_header();
 				<label><span class="screen-reader-text">Sign type</span><select name="sign_type" required><option value="">Select Sign Type*</option><?php if ($landing_products->have_posts()) : while ($landing_products->have_posts()) : $landing_products->the_post(); ?><option><?php echo esc_html(get_the_title()); ?></option><?php endwhile; wp_reset_postdata(); else : foreach ($solutions as $solution) : ?><option><?php echo esc_html($solution[0]); ?></option><?php endforeach; endif; ?></select></label>
 				<button class="landing-button" type="submit" name="landing_quote_submit" value="1">Get free quote</button>
 			</div>
-			<div class="landing-quote-points"><span>Free design support</span><span>No hidden charges</span><span>Quick response</span><span>100% satisfaction guarantee</span></div>
+			<div class="landing-quote-points"><span>Free quotes</span><span>Prices shown online</span><span>Made in USA</span><span>UL listed lit signs</span></div>
 		</form>
 	</section>
 
@@ -171,8 +171,8 @@ get_header();
 
 	<section class="landing-dark-section">
 		<div class="landing-shell container landing-stats-layout">
-			<div><p class="landing-eyebrow">Why choose StorefrontSignOnline?</p><h2>Signs that work as hard as you do.</h2><p>We are a sign company committed to providing high-quality signage solutions with exceptional customer service.</p><ul><li>Over 15 years of industry experience</li><li>Advanced technology &amp; premium materials</li><li>Fast turnaround &amp; on-time delivery</li><li>Nationwide shipping</li><li>Unlimited design support</li></ul><a class="landing-button" href="<?php echo esc_url($contact_url); ?>">About our company <span aria-hidden="true">&rarr;</span></a></div>
-			<div class="landing-stat-grid"><strong>15+<small>Years experience</small></strong><strong>10,000+<small>Signs completed</small></strong><strong>50<small>States served</small></strong><strong>100%<small>Satisfaction</small></strong></div>
+			<div><p class="landing-eyebrow">Why choose StorefrontSignOnline?</p><h2>Signs that work as hard as you do.</h2><p>We make custom signs in Renton, Washington and ship them to businesses in all 50 states, ready for your licensed local installer.</p><ul><li>Making signs since 2002</li><li>Channel letters made in the USA and UL listed</li><li>Every lit sign tested before it ships</li><li>5-year LED warranty</li><li>Standard, 3-day, 2-day and overnight shipping</li></ul><a class="landing-button" href="<?php echo esc_url($contact_url); ?>">About our company <span aria-hidden="true">&rarr;</span></a></div>
+			<div class="landing-stat-grid"><strong>2002<small>Making signs since</small></strong><strong>50<small>States we ship to</small></strong><strong>5-Year<small>LED warranty</small></strong><strong>UL<small>Listed lit signs</small></strong></div>
 		</div>
 	</section>
 

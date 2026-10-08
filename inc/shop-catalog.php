@@ -403,9 +403,7 @@ function wholesale_shop_render_card($product, $index)
 					echo '<span class="sc-card-placeholder" aria-hidden="true"></span>';
 				}
 				?>
-				<?php if ($product['was']) : ?>
-					<span class="sc-badge sc-badge--sale"><?php echo esc_html(sprintf(__('Save %d%%', 'litsign'), round(100 - $product['price'] / $product['was'] * 100))); ?></span>
-				<?php endif; ?>
+				<?php wholesale_render_sale_badge($product['id']); ?>
 			</div>
 			<div class="sc-card-body">
 				<?php if ($product['cat_name']) : ?>

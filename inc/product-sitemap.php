@@ -84,7 +84,7 @@ function wholesale_render_product_sitemap()
 		'post_type' => 'product',
 		'post_status' => 'publish',
 		'posts_per_page' => -1,
-		'post__not_in' => wholesale_seo_duplicate_product_ids(),
+		'post__not_in' => wholesale_seo_sitemap_excluded_product_ids(),
 		'orderby' => 'modified',
 		'order' => 'DESC',
 		'no_found_rows' => true,

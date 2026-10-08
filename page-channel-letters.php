@@ -77,14 +77,14 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
     }
 
     if (empty($images)) {
-        echo '<div class="pb-image-top"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span></div>';
+        echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span></a>';
         return;
     }
 
     $has_gallery = count($images) > 1;
     ?>
     <div class="pb-image-top<?php echo $has_gallery ? ' has-gallery' : ''; ?>" data-gallery>
-        <div class="pb-gallery-track">
+        <a class="pb-gallery-track" href="<?php echo esc_url(get_permalink($product_id)); ?>" tabindex="-1">
             <?php foreach ($images as $index => $image) : ?>
                 <?php $image = wholesale_webp_url($image); ?>
                 <img class="pb-gallery-image<?php echo $index === 0 ? ' is-active' : ''; ?>"
@@ -95,7 +95,7 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
                     decoding="async"
                     data-gallery-index="<?php echo esc_attr($index); ?>">
             <?php endforeach; ?>
-        </div>
+        </a>
         <?php if ($has_gallery) : ?>
             <button type="button" class="pb-gallery-arrow pb-gallery-prev" aria-label="Previous product image">
                 <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>

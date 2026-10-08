@@ -159,9 +159,13 @@ add_action('template_redirect', 'wholesale_seo_redirect_signs_letters', 1);
 function wholesale_seo_redirect_channel_letters()
 {
 	if ('channel-letters' === get_query_var('category_slug') && wholesale_channel_letters_landing_id()) {
+		// Keep ad tags (?gclid, UTM) but drop category_slug: carrying it over
+		// makes the landing page match again and redirect to itself forever.
 		$url = get_permalink(wholesale_channel_letters_landing_id());
-		if (!empty($_SERVER['QUERY_STRING'])) {
-			$url .= '?' . wp_unslash($_SERVER['QUERY_STRING']);
+		$args = array_filter($_GET, 'is_scalar');
+		unset($args['category_slug']);
+		if ($args) {
+			$url = add_query_arg(array_map('rawurlencode', wp_unslash($args)), $url);
 		}
 		wp_safe_redirect($url, 301);
 		exit;

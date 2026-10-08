@@ -540,9 +540,96 @@ function wholesale_seo_duplicate_product_ids()
 	return $ids;
 }
 
+/**
+ * The complete-kit product that a partial variant ("Graphic Only", "Flag Only",
+ * "Sign Only"...) with the same name should point search engines at, or 0.
+ *
+ * Both pages share one description, so Google indexes only one of them and
+ * reports the other as "Crawled - currently not indexed". The variant stays
+ * buyable, in the merchant feed and in related products; only its canonical
+ * and sitemap entry change.
+ */
+function wholesale_seo_product_variant_primary_of($product_id)
+{
+	static $cache = array();
+	$product_id = (int) $product_id;
+	if (isset($cache[$product_id])) {
+		return $cache[$product_id];
+	}
+
+	$partial = array('Graphic Only', 'Flag Only', 'Sign Only', 'Banner Only', 'Hardware Only', 'Half Wall');
+	$cache[$product_id] = 0;
+	if (!in_array(wholesale_seo_product_variant_label($product_id), $partial, true)) {
+		return 0;
+	}
+
+	$siblings = get_posts(array(
+		'post_type' => 'product',
+		'post_status' => 'publish',
+		'title' => get_the_title($product_id),
+		'posts_per_page' => 10,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+		'orderby' => 'ID',
+		'order' => 'ASC',
+		'post__not_in' => array($product_id),
+	));
+
+	foreach ($siblings as $sibling_id) {
+		$label = wholesale_seo_product_variant_label($sibling_id);
+		if ($label && !in_array($label, $partial, true) && !wholesale_seo_product_duplicate_of($sibling_id)) {
+			$cache[$product_id] = (int) $sibling_id;
+			break;
+		}
+	}
+
+	return $cache[$product_id];
+}
+
+/**
+ * The product whose URL a product's canonical tag should use, or 0 for itself.
+ */
+function wholesale_seo_product_canonical_of($product_id)
+{
+	$original = wholesale_seo_product_duplicate_of($product_id);
+
+	return $original ? $original : wholesale_seo_product_variant_primary_of($product_id);
+}
+
+/**
+ * IDs of published products whose canonical points at another product; these
+ * stay out of every sitemap.
+ *
+ * @return int[]
+ */
+function wholesale_seo_sitemap_excluded_product_ids()
+{
+	static $ids = null;
+	if (null !== $ids) {
+		return $ids;
+	}
+
+	$ids = array();
+	$products = get_posts(array(
+		'post_type' => 'product',
+		'post_status' => 'publish',
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+		'no_found_rows' => true,
+	));
+
+	foreach ($products as $product_id) {
+		if (wholesale_seo_product_canonical_of($product_id)) {
+			$ids[] = (int) $product_id;
+		}
+	}
+
+	return $ids;
+}
+
 function wholesale_seo_sitemap_exclude_duplicate_products($args, $post_type)
 {
-	if ('product' === $post_type && ($duplicates = wholesale_seo_duplicate_product_ids())) {
+	if ('product' === $post_type && ($duplicates = wholesale_seo_sitemap_excluded_product_ids())) {
 		$args['post__not_in'] = array_merge(isset($args['post__not_in']) ? (array) $args['post__not_in'] : array(), $duplicates);
 	}
 

@@ -70,14 +70,14 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
     }
 
     if (empty($images)) {
-        echo '<div class="pb-image-top"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span></div>';
+        echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span></a>';
         return;
     }
 
     $has_gallery = count($images) > 1;
     ?>
     <div class="pb-image-top<?php echo $has_gallery ? ' has-gallery' : ''; ?>" data-gallery>
-        <div class="pb-gallery-track">
+        <a class="pb-gallery-track" href="<?php echo esc_url(get_permalink($product_id)); ?>" tabindex="-1">
             <?php foreach ($images as $index => $image) : ?>
                 <?php $image = wholesale_webp_url($image); ?>
                 <img class="pb-gallery-image<?php echo $index === 0 ? ' is-active' : ''; ?>"
@@ -88,7 +88,7 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
                     decoding="async"
                     data-gallery-index="<?php echo esc_attr($index); ?>">
             <?php endforeach; ?>
-        </div>
+        </a>
         <?php if ($has_gallery) : ?>
             <button type="button" class="pb-gallery-arrow pb-gallery-prev" aria-label="Previous product image">
                 <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
@@ -668,6 +668,24 @@ if ('' === $category_description && '' === $category_intro) {
                         </div>
                     <?php
                     }
+                    if ($is_channel_letters) : ?>
+                        <div class="cl-help-card">
+                            <span class="cl-help-card-eyebrow">Need help choosing?</span>
+                            <h3 class="cl-help-card-title">Not sure which channel letter is right for you?</h3>
+                            <p class="cl-help-card-text">Tell us your wall size and logo. A sign specialist will recommend a style and quote it for you.</p>
+                            <ul class="cl-help-card-list">
+                                <li><?php echo wholesale_home_icon('badge'); ?> UL listed for outdoor use</li>
+                                <li><?php echo wholesale_home_icon('shield'); ?> 5-year warranty on listed LEDs</li>
+                                <li><?php echo wholesale_home_icon('plug'); ?> Tested, with a wiring diagram and install pattern</li>
+                                <li><?php echo wholesale_home_icon('flag'); ?> Made in USA, ships to all 50 states</li>
+                            </ul>
+                            <div class="cl-help-card-actions">
+                                <a class="cl-help-card-primary" href="<?php echo esc_url($builder_url); ?>"><?php echo wholesale_home_icon('pen'); ?> Design Your Sign</a>
+                                <a class="cl-help-card-secondary" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
+                                <a class="cl-help-card-phone" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> 866-436-2101</a>
+                            </div>
+                        </div>
+                    <?php endif;
                 } else { ?>
                     <p class="text-muted text-center w-100">No Product Found</p> <?php
                                                                                 } ?>

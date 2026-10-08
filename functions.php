@@ -56,6 +56,7 @@ require_once(dirname(__FILE__) . '/inc/email-log.php');
 require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
+require_once(dirname(__FILE__) . '/inc/product-guides.php');
 require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
 require_once(dirname(__FILE__) . '/inc/product-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
@@ -1598,7 +1599,7 @@ function wholesale_render_sitemap()
 
 	foreach ($page_query->posts as $post) {
 		if (('page' === $post->post_type && (in_array($post->post_name, $private_pages, true) || in_array($post->ID, $private_page_ids, true)))
-			|| ('product' === $post->post_type && in_array($post->ID, wholesale_seo_duplicate_product_ids(), true))) {
+			|| ('product' === $post->post_type && in_array($post->ID, wholesale_seo_sitemap_excluded_product_ids(), true))) {
 			continue;
 		}
 
@@ -2814,7 +2815,7 @@ function wholesale_seo_url()
 		return $term_slug ? wholesale_category_url($term_slug) : $shop_url;
 	}
 
-	if (is_singular('product') && ($original = wholesale_seo_product_duplicate_of(get_queried_object_id()))) {
+	if (is_singular('product') && ($original = wholesale_seo_product_canonical_of(get_queried_object_id()))) {
 		return get_permalink($original);
 	}
 
@@ -3446,7 +3447,7 @@ add_filter('rank_math/frontend/description', 'wholesale_rank_math_channel_letter
 function wholesale_rank_math_canonical($canonical)
 {
 	if (wholesale_is_channel_letters_page() || get_query_var('category_slug')
-		|| (is_singular('product') && wholesale_seo_product_duplicate_of(get_queried_object_id()))) {
+		|| (is_singular('product') && wholesale_seo_product_canonical_of(get_queried_object_id()))) {
 		return wholesale_seo_url();
 	}
 

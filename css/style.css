@@ -1427,6 +1427,7 @@ a.link-primary:focus,
   position: relative;
 }
 .product-box-container .product-box .pb-gallery-track {
+  display: block;
   height: 100%;
   position: relative;
 }
@@ -4915,6 +4916,13 @@ a.review-author-name:hover {
 }
 .product-details .delete-current-design {
   color: #b33a3a;
+  margin-top: 8px;
+}
+.product-details .cl-buttons-container:has(+ .cl-buttons-container) {
+  padding-bottom: 0 !important;
+}
+.product-details .cl-buttons-container + .cl-buttons-container {
+  padding-top: 0 !important;
 }
 .product-details .product-pricing-box {
   margin-top: 18px;
@@ -5488,6 +5496,127 @@ a.review-author-name:hover {
 .product-listing-container--cl .product-box a:focus-visible .pb-cta {
   background: #1fa8de;
   color: #fff;
+}
+
+/* Help card that fills the last slot of the channel letter grid */
+.cl-help-card {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+  padding: 28px 24px;
+  border: 1px solid #bfe6f6;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #effaff 0%, #fff 60%);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.07);
+}
+
+.cl-help-card-eyebrow {
+  color: #137da7;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cl-help-card-title {
+  margin: 8px 0 10px;
+  color: #0f172a;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.cl-help-card-text {
+  margin: 0 0 16px;
+  color: #475569;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.cl-help-card-list {
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-help-card-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 9px;
+  color: #334155;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.cl-help-card-list .cl-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: #1fa8de;
+}
+
+.cl-help-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+}
+
+.cl-help-card-actions a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 14px;
+  border-radius: 6px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.cl-help-card-actions .cl-icon {
+  width: 17px;
+  height: 17px;
+}
+
+.cl-help-card-primary {
+  background: #1fa8de;
+  color: #fff;
+}
+
+.cl-help-card-primary:hover,
+.cl-help-card-primary:focus-visible {
+  background: #168fbe;
+  color: #fff;
+}
+
+.cl-help-card-secondary {
+  border: 1px solid #1fa8de;
+  background: #fff;
+  color: #0f6f96;
+}
+
+.cl-help-card-secondary:hover,
+.cl-help-card-secondary:focus-visible {
+  background: #e8f6fc;
+  color: #0f6f96;
+}
+
+.cl-help-card-actions .cl-help-card-phone {
+  padding: 4px;
+  color: #0f6f96;
+}
+
+.cl-help-card-phone:hover {
+  color: #1fa8de;
+}
+
+@media (min-width: 768px) {
+  .product-listing-container--cl .cl-help-card {
+    margin: 0;
+  }
 }
 
 /* How ordering works */
@@ -6488,5 +6617,51 @@ a.review-author-name:hover {
   .home-hero--category .home-hero-actions {
     flex-wrap: wrap;
     gap: 16px 24px;
+  }
+}
+
+/* Buying guide on product pages (inc/product-guides.php). */
+.product-guide {
+  margin: 40px 0 8px;
+  padding: 32px;
+  border: 1px solid #e6ebf1;
+  border-radius: 16px;
+  background: #f7f8fc;
+}
+
+.product-guide h2 {
+  margin: 0 0 12px;
+  color: #172027;
+  font-size: clamp(1.4rem, 2.4vw, 1.9rem);
+  font-weight: 700;
+}
+
+.product-guide h3 {
+  margin: 22px 0 6px;
+  color: #172027;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.product-guide p,
+.product-guide li {
+  color: #334155;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.product-guide ul {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.product-guide .cl-faq-list {
+  max-width: none;
+  margin: 8px 0 0;
+}
+
+@media (max-width: 575px) {
+  .product-guide {
+    padding: 22px 18px;
   }
 }

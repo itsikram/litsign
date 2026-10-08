@@ -183,6 +183,16 @@
   margin: 20px 0;
 }
 
+/* The channel letter guide spans the full container like the sections around it;
+   only its paragraphs keep a readable line length. */
+.cl-guide .sf-prose {
+  max-width: none;
+}
+
+.cl-guide .sf-prose > p {
+  max-width: 860px;
+}
+
 .sf-price-table {
   min-width: 0;
 }

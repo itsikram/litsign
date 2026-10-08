@@ -66,6 +66,7 @@ require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
 require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
 require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
 require_once(dirname(__FILE__) . '/inc/storefront-media.php');
+require_once(dirname(__FILE__) . '/inc/product-image-alt.php');
 require_once(dirname(__FILE__) . '/inc/shop-catalog.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
 require_once(dirname(__FILE__) . '/inc/guide-pages.php');

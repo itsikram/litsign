@@ -480,7 +480,7 @@ get_header();
                         <input type="hidden" name="discount_percent" value="<?php echo $product_discount_percent; ?>" id="discountPercent">
 
                         <input type="hidden" name="min_sqft" value="<?php echo $product_min_sqft; ?>" id="minSqft">
-                        <input type="hidden" name="total_sqft" value="<?php echo $product_min_sqft; ?>" id="totalSqft">
+                        <input type="hidden" name="total_sqft" value="0" id="totalSqft">
                         <input type="hidden" name="turnaround_cost" value="0" id="turnaroundCost">
 
                         <!-- Product Gruop  -->
@@ -548,9 +548,10 @@ get_header();
                             // Starting size: a square of the minimum area, shown as whole feet plus
                             // inches (2 ft 2.6 in rather than 2.21 ft + 0 in). Rounded up, so the
                             // square is never below the minimum area the cart accepts.
-                            $start_side_in = ceil(round(sqrt((float) $product_min_sqft) * 12, 6) * 10) / 10;
-                            $start_ft = (int) floor($start_side_in / 12);
-                            $start_in = round($start_side_in - $start_ft * 12, 1);
+                            // The calculator starts empty; the price quote enlarges small sizes to the minimum price.
+                            $start_side_in = 0;
+                            $start_ft = 0;
+                            $start_in = 0;
                             $dimensions = array(
                                 'height' => array('label' => 'Height', 'min' => $product_min_height, 'max' => $product_max_height),
                                 'width' => array('label' => 'Width', 'min' => $product_min_width, 'max' => $product_max_width),
@@ -564,7 +565,7 @@ get_header();
                                         <div class="dim-fields" role="group" aria-labelledby="dim-label-<?php echo esc_attr($dim); ?>">
                                             <div class="input-group dim-group">
                                                 <span class="input-group-text" aria-hidden="true">ft</span>
-                                                <input type="number" inputmode="decimal" step="0.1" min="<?php echo esc_attr($dim_info['min'] ?: 0); ?>" max="<?php echo esc_attr($dim_info['max']); ?>" name="<?php echo esc_attr($dim); ?>-ft" id="input-<?php echo esc_attr($dim); ?>-ft" value="<?php echo esc_attr($start_ft); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in feet'); ?>">
+                                                <input type="number" inputmode="decimal" step="0.1" min="0" name="<?php echo esc_attr($dim); ?>-ft" id="input-<?php echo esc_attr($dim); ?>-ft" value="<?php echo esc_attr($start_ft); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in feet'); ?>">
                                             </div>
                                             <div class="input-group dim-group">
                                                 <span class="input-group-text" aria-hidden="true">in</span>
@@ -577,7 +578,7 @@ get_header();
 
                             <div class="row mt-2 mb-3">
                                 <div class="col-8 col-md-9 offset-4 offset-md-3">
-                                    <span class="total-size-sqft" aria-live="polite"><?php echo esc_html($start_side_in); ?>" x <?php echo esc_html($start_side_in); ?>" = <?php echo esc_html($product_min_sqft); ?> ft<sup>2</sup></span>
+                                    <span class="total-size-sqft" aria-live="polite"><?php echo esc_html($start_side_in); ?>" x <?php echo esc_html($start_side_in); ?>" = 0 ft<sup>2</sup></span>
                                 </div>
                             </div>
 
@@ -784,7 +785,7 @@ get_header();
                             <div class="col-8 col-md-9">
                                 <div class="row">
                                     <div class="col">
-                                        <input class="form-control" name="custom-artwork" type="file" id="artwork">
+                                        <input class="form-control" name="custom-artwork" type="file" id="artwork" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/jpeg,image/png,image/gif,image/webp,application/pdf" data-async-upload="artwork" data-async-field="custom-artwork-token">
                                     </div>
                                 </div>
 

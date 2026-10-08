@@ -58,14 +58,13 @@ function wholesale_quote_form_handle(array $args)
 
 	$file_path = '';
 	$file_url = '';
-	$file = $_FILES[$prefix . '_file'] ?? null;
+	$file = wholesale_async_upload_take($_POST[$prefix . '_file_token'] ?? '', 'quote');
+	$file = $file ? $file : ($_FILES[$prefix . '_file'] ?? null);
 	if ($file && UPLOAD_ERR_NO_FILE !== (int) $file['error']) {
 		if (UPLOAD_ERR_OK !== (int) $file['error'] || (int) $file['size'] > WHOLESALE_QUOTE_FORM_MAX_MB * MB_IN_BYTES) {
 			$fail('file_error');
 		}
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		$upload = wp_handle_upload($file, array(
-			'test_form' => false,
+		$upload = wholesale_async_upload_store($file, array(
 			'mimes' => array(
 				'jpg|jpeg|jpe' => 'image/jpeg',
 				'png' => 'image/png',
@@ -214,7 +213,7 @@ function wholesale_quote_form_render(array $args)
 						<textarea name="<?php echo $name('details'); ?>" rows="3" placeholder="e.g. two 3 x 8 ft vinyl banners with grommets, and one retractable stand"></textarea>
 					</label>
 					<label class="clq-upload clq-field--wide">
-						<input type="file" name="<?php echo $name('file'); ?>" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-quote-file>
+						<input type="file" name="<?php echo $name('file'); ?>" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-quote-file data-async-upload="quote" data-async-field="<?php echo $name('file_token'); ?>">
 						<span class="clq-upload-icon"><?php echo wholesale_home_icon('upload'); ?></span>
 						<span class="clq-upload-text"><strong data-quote-file-name>Upload your artwork or logo (optional)</strong><small>JPG, PNG or PDF up to <?php echo esc_html(WHOLESALE_QUOTE_FORM_MAX_MB); ?>&nbsp;MB</small></span>
 					</label>

@@ -172,9 +172,13 @@ class Cart
         $artwork_id = null;
         $attachment_src = null;
 
-        if(isset($_FILES['custom-artwork']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['custom-artwork']['error']) {
+        // Uploaded in the background (inc/async-uploads.php), or posted with the form.
+        $file = wholesale_async_upload_take($_POST['custom-artwork-token'] ?? '', 'artwork');
+        if (!$file && isset($_FILES['custom-artwork']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['custom-artwork']['error']) {
             $file = $_FILES['custom-artwork'];
-            if (UPLOAD_ERR_OK !== (int) $file['error'] || !is_uploaded_file($file['tmp_name'])) {
+        }
+        if ($file) {
+            if (UPLOAD_ERR_OK !== (int) $file['error'] || (empty($file['async']) && !is_uploaded_file($file['tmp_name']))) {
                 $this->redirect_with_error($product_id, 'Your artwork could not be uploaded. Please try again.');
             }
 
@@ -195,7 +199,9 @@ class Cart
 
             $file_ext = $checked_type['ext'];
             $file_name = 'custom-artwork-'.$product_id.'-'.uniqid();
-            $upload_artwork = wp_upload_bits($file_name.'.'.$file_ext, null, file_get_contents($file['tmp_name']));
+            // Move the temp file into uploads instead of reading it into memory and writing it back.
+            $file['name'] = $file_name.'.'.$file_ext;
+            $upload_artwork = wholesale_async_upload_store($file, array('mimes' => $allowed_artwork_types));
             if (!empty($upload_artwork['error'])) {
                 $this->redirect_with_error($product_id, 'Your artwork could not be saved. Please try again.');
             }
@@ -214,8 +220,14 @@ class Cart
             $artwork_id = wp_insert_attachment($attachment, $file_path, 0);
 
             if ($artwork_id && !is_wp_error($artwork_id)) {
-                require_once(ABSPATH . 'wp-admin/includes/image.php');
-                $attach_data = wp_generate_attachment_metadata($artwork_id, $file_path);
+                // Basic metadata only: generating every thumbnail size (or rendering a PDF preview)
+                // made Add To Cart wait several seconds, and nothing shows artwork thumbnails.
+                $attach_data = array('file' => _wp_relative_upload_path($file_path), 'filesize' => (int) $file['size']);
+                $image_size = 0 === strpos($checked_type['type'], 'image/') ? @getimagesize($file_path) : false;
+                if ($image_size) {
+                    $attach_data['width'] = $image_size[0];
+                    $attach_data['height'] = $image_size[1];
+                }
                 wp_update_attachment_metadata($artwork_id, $attach_data);
                 $attachment_src = wp_get_attachment_url($artwork_id);
             } else {

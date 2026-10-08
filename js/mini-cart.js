@@ -404,8 +404,12 @@
       done();
       showAddResult(json);
 
-      const fileInput = form.querySelector('input[type="file"][name="custom-artwork"]');
-      if (fileInput && json.success) fileInput.value = "";
+      const fileInput = form.querySelector('input[type="file"][name="custom-artwork"], input[type="file"][data-async-upload]');
+      if (fileInput && json.success) {
+        fileInput.value = "";
+        // js/async-upload.js: drop the used upload token and restore the field name.
+        fileInput.dispatchEvent(new Event("async-upload:reset"));
+      }
     });
   });
 

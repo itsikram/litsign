@@ -87,14 +87,15 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 
 	$logo_path = '';
 	$logo_url = '';
-	if (!empty($_FILES['cla_logo']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['cla_logo']['error']) {
-		if (UPLOAD_ERR_OK !== (int) $_FILES['cla_logo']['error'] || (int) $_FILES['cla_logo']['size'] > $logo_max_mb * MB_IN_BYTES) {
+	// Uploaded in the background (inc/async-uploads.php), or posted with the form.
+	$logo_file = wholesale_async_upload_take($_POST['cla_logo_token'] ?? '', 'quote');
+	$logo_file = $logo_file ? $logo_file : ($_FILES['cla_logo'] ?? null);
+	if ($logo_file && UPLOAD_ERR_NO_FILE !== (int) $logo_file['error']) {
+		if (UPLOAD_ERR_OK !== (int) $logo_file['error'] || (int) $logo_file['size'] > $logo_max_mb * MB_IN_BYTES) {
 			$fail('file_error');
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-		$upload = wp_handle_upload($_FILES['cla_logo'], array(
-			'test_form' => false,
+		$upload = wholesale_async_upload_store($logo_file, array(
 			'mimes' => array(
 				'jpg|jpeg|jpe' => 'image/jpeg',
 				'png' => 'image/png',
@@ -373,7 +374,7 @@ if (!function_exists('wholesale_cla_icon')) {
 									<textarea name="cla_details" rows="3" placeholder="e.g. &ldquo;BELLA NAILS&rdquo;, about 12 ft wide, red letters, mounted on a raceway"></textarea>
 								</label>
 								<label class="cla-upload cla-field--wide">
-									<input type="file" name="cla_logo" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-cla-file>
+									<input type="file" name="cla_logo" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-cla-file data-async-upload="quote" data-async-field="cla_logo_token">
 									<span class="cla-upload-icon"><?php echo wholesale_cla_icon('upload'); ?></span>
 									<span class="cla-upload-text"><strong data-cla-file-name>Upload your logo (optional)</strong><small>JPG, PNG or PDF up to <?php echo esc_html($logo_max_mb); ?>&nbsp;MB</small></span>
 								</label>

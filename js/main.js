@@ -396,7 +396,7 @@
         } else if (costType == "sqft") {
           let minSqft = parseFloat($('#minSqft').val());
           let totalSqft = parseFloat($('#totalSqft').val())
-          if (minSqft > totalSqft) {
+          if (!$('.dimenstion-calculator').length && minSqft > totalSqft) {
             totalSqft = minSqft;
           }
 
@@ -1057,10 +1057,6 @@
         $(e.currentTarget).prop('disabled', true);
         return;
       }
-      if (totalSqft < minSqft) {
-        e.preventDefault();
-        alert('Minimum: ' + minSqft + 'sqft')
-      }
 
     })
 
@@ -1225,7 +1221,9 @@
 
     let timer;
     let requestId = 0;
-    const refresh = () => {
+    const refresh = (event) => {
+      // Enlarge the size to the minimum price only once the visitor leaves a field, not mid-typing.
+      const mayAdjust = !!event && event.type === 'change';
       clearTimeout(timer);
       timer = setTimeout(async () => {
         const data = new FormData(form);
@@ -1251,6 +1249,19 @@
             return;
           }
 
+          if (quote.adjusted && mayAdjust) {
+            let changed = null;
+            Object.entries(quote.adjusted).forEach(([name, value]) => {
+              const input = form.querySelector('.dimenstion-calculator input[name="' + name + '"]');
+              if (input && parseFloat(input.value || 0) !== value) {
+                input.value = value;
+                changed = input;
+              }
+            });
+            // Re-runs the size display and a fresh quote at the new size.
+            if (changed) changed.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+
           message.hidden = true;
           message.classList.remove('is-hint');
           pricingBox.querySelectorAll('.price-subtotal').forEach((el) => { el.textContent = money(quote.subtotal); });
@@ -1271,7 +1282,7 @@
 
     form.addEventListener('change', refresh);
     form.addEventListener('input', (event) => {
-      if (event.target.matches('#letterInput, input[type="number"]')) refresh();
+      if (event.target.matches('#letterInput, input[type="number"]')) refresh(event);
     });
     // Custom color pickers update hidden selects without bubbling a native change event.
     document.addEventListener('click', (event) => {

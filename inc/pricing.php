@@ -23,6 +23,8 @@ if (!defined('ABSPATH')) {
 const WHOLESALE_RACEWAY_COST_PER_FOOT = 50;
 const WHOLESALE_CL_MIN_INCHES = 8;
 const WHOLESALE_CL_MAX_INCHES = 45;
+// Lowest per-item price for products sized with the sq ft dimensions calculator.
+const WHOLESALE_SQFT_MIN_PRICE = 15;
 
 function wholesale_product_is_channel_letter($product_id)
 {
@@ -238,6 +240,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	$sqft = $min_sqft;
 	$letter_count = 0;
 	$letter_height = 0;
+	$is_sqft_calc = false;
 
 	if ($is_cl && is_array($design)) {
 		$design_total = wholesale_cl_design_quote($product_id, $design);
@@ -291,25 +294,14 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		} elseif ($has_calculator) {
 			$height_ft = (float) ($request['height-ft'] ?? 0) + (float) ($request['height-in'] ?? 0) / 12;
 			$width_ft = (float) ($request['width-ft'] ?? 0) + (float) ($request['width-in'] ?? 0) / 12;
-			$limits = array(
-				'height' => array((float) get_post_meta($product_id, '_min_height', true), (float) get_post_meta($product_id, '_max_height', true), $height_ft),
-				'width' => array((float) get_post_meta($product_id, '_min_width', true), (float) get_post_meta($product_id, '_max_width', true), $width_ft),
-			);
-			foreach ($limits as $label => $limit) {
-				if ($limit[2] <= 0) {
+			// Sq ft calculator products have no size limits; WHOLESALE_SQFT_MIN_PRICE sets the floor.
+			foreach (array('height' => $height_ft, 'width' => $width_ft) as $label => $value) {
+				if ($value <= 0) {
 					return $fail(sprintf('Please enter the %s of your sign.', $label));
 				}
-				if ($limit[0] > 0 && $limit[2] + 0.0001 < $limit[0]) {
-					return $fail(sprintf('The minimum %s is %s ft.', $label, rtrim(rtrim(number_format($limit[0], 2), '0'), '.')));
-				}
-				if ($limit[1] > 0 && $limit[2] - 0.0001 > $limit[1]) {
-					return $fail(sprintf('The maximum %s is %s ft.', $label, rtrim(rtrim(number_format($limit[1], 2), '0'), '.')));
-				}
 			}
+			$is_sqft_calc = true;
 			$sqft = $height_ft * $width_ft;
-			if ($min_sqft > 0 && $sqft + 0.0001 < $min_sqft) {
-				return $fail(sprintf('The minimum size for this product is %s sq ft.', rtrim(rtrim(number_format($min_sqft, 2), '0'), '.')));
-			}
 		}
 
 		$running = $sqft * $price_per_sqft;
@@ -342,7 +334,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 				$amount = $running * $price['amount'] / 100;
 				break;
 			case 'sqft':
-				$amount = max($min_sqft, $sqft) * $price['amount'];
+				$amount = ($is_sqft_calc ? $sqft : max($min_sqft, $sqft)) * $price['amount'];
 				break;
 			case 'lft':
 				$amount = $price['amount'] * ($letter_height * $letter_count / 12);
@@ -355,6 +347,15 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			$lines[] = array('label' => ucwords(str_replace('-', ' ', $attr['name'])) . ': ' . $chosen['label'], 'amount' => $amount);
 		}
 		$running += $amount;
+	}
+
+	$adjusted = null;
+	if ($is_sqft_calc && $running > 0 && $running < WHOLESALE_SQFT_MIN_PRICE && empty($request['_no_floor'])) {
+		$adjusted = wholesale_sqft_floor_size($product_id, $request, $height_ft, $width_ft);
+	}
+	if ($is_sqft_calc && $running > 0 && $running < WHOLESALE_SQFT_MIN_PRICE && empty($request['_no_floor'])) {
+		$lines[] = array('label' => sprintf('Minimum order ($%s)', number_format(WHOLESALE_SQFT_MIN_PRICE, 2)), 'amount' => WHOLESALE_SQFT_MIN_PRICE - $running);
+		$running = WHOLESALE_SQFT_MIN_PRICE;
 	}
 
 	if ($running <= 0) {
@@ -384,10 +385,50 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		'discount' => round($discount, 2),
 		'turnaround' => round($turnaround, 2),
 		'total' => round($subtotal - $discount + $turnaround, 2),
+		// Calculator size that reaches the minimum price, when the entered size falls below it.
+		'adjusted' => $adjusted,
 		'lines' => array_map(static function ($line) {
 			return array('label' => $line['label'], 'amount' => round($line['amount'], 2));
 		}, $lines),
 	);
+}
+
+/**
+ * The smallest calculator size, keeping the entered proportions, whose price
+ * reaches WHOLESALE_SQFT_MIN_PRICE with the chosen options. Each side is
+ * rounded up to 0.1 in and returned as whole feet plus inches.
+ */
+function wholesale_sqft_floor_size($product_id, $request, $height_ft, $width_ft)
+{
+	$price_at = static function ($scale) use ($product_id, $request, $height_ft, $width_ft) {
+		$request['_no_floor'] = 1;
+		$request['height-ft'] = $height_ft * $scale;
+		$request['width-ft'] = $width_ft * $scale;
+		$request['height-in'] = $request['width-in'] = 0;
+		$quote = wholesale_price_quote($product_id, $request);
+		return $quote['ok'] ? $quote['unit_price'] : 0;
+	};
+	$low = 1.0;
+	$high = 2.0;
+	while ($price_at($high) < WHOLESALE_SQFT_MIN_PRICE && $high < 1e6) {
+		$high *= 2;
+	}
+	for ($i = 0; $i < 40; $i++) {
+		$mid = ($low + $high) / 2;
+		if ($price_at($mid) < WHOLESALE_SQFT_MIN_PRICE) {
+			$low = $mid;
+		} else {
+			$high = $mid;
+		}
+	}
+	$size = array();
+	foreach (array('height' => $height_ft, 'width' => $width_ft) as $dim => $value) {
+		$inches = ceil(round($value * $high * 12, 6) * 10) / 10;
+		$feet = (int) floor($inches / 12);
+		$size[$dim . '-ft'] = $feet;
+		$size[$dim . '-in'] = round($inches - $feet * 12, 1);
+	}
+	return $size;
 }
 
 /**

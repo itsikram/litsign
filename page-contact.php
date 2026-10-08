@@ -67,6 +67,9 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 		}
 	}
 
+	// Files already uploaded in the background (inc/async-uploads.php) arrive as tokens.
+	$incoming_files = array_merge(wholesale_async_upload_take_posted('contact_file_tokens', 'contact'), $incoming_files);
+
 	$file_fail = function () use ($redirect_url) {
 		wp_safe_redirect(add_query_arg('quote_status', 'file_error', $redirect_url) . '#contact-form');
 		exit;
@@ -83,8 +86,6 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 
 	$uploaded_files = array();
 	if ($incoming_files) {
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
 		// Keep quote files in their own folder under random names so they can't be guessed.
 		$quote_upload_dir = function ($dirs) {
 			$dirs['subdir'] = '/quote-files' . $dirs['subdir'];
@@ -97,8 +98,7 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 		foreach ($incoming_files as $file) {
 			$original_name = sanitize_file_name(wp_basename($file['name']));
 			$file['name'] = wp_generate_password(12, false) . '-' . $original_name;
-			$upload = wp_handle_upload($file, array(
-				'test_form' => false,
+			$upload = wholesale_async_upload_store($file, array(
 				'mimes' => $quote_file_mimes,
 			));
 
@@ -358,6 +358,11 @@ get_header();
 		var allowed = /\.(jpe?g|png|webp|heic|pdf)$/i;
 		var files = [];
 		var previews = [];
+		// Background uploads (js/async-upload.js): file -> { job, token, progress, label }.
+		var uploads = new Map();
+		var tokenBox = document.createElement('div');
+		tokenBox.hidden = true;
+		form.appendChild(tokenBox);
 
 		function formatSize(bytes) {
 			return bytes < 1048576 ? Math.max(1, Math.round(bytes / 1024)) + ' KB' : (bytes / 1048576).toFixed(1) + ' MB';
@@ -368,12 +373,69 @@ get_header();
 			errorBox.hidden = !message;
 		}
 
+		// Files uploaded in the background go as tokens; any others go with the form post.
 		function sync() {
 			var transfer = new DataTransfer();
+			tokenBox.innerHTML = '';
 			files.forEach(function (file) {
-				transfer.items.add(file);
+				var state = uploads.get(file);
+				if (state && state.token) {
+					var hidden = document.createElement('input');
+					hidden.type = 'hidden';
+					hidden.name = 'contact_file_tokens[]';
+					hidden.value = state.token;
+					tokenBox.appendChild(hidden);
+				} else {
+					transfer.items.add(file);
+				}
 			});
 			input.files = transfer.files;
+		}
+
+		function statusText(file) {
+			var state = uploads.get(file);
+			if (!state || state.failed) {
+				return formatSize(file.size);
+			}
+			return state.token ? formatSize(file.size) + ' · Uploaded ✓' : formatSize(file.size) + ' · Uploading ' + Math.round(state.progress * 100) + '%';
+		}
+
+		function startUpload(file) {
+			// Looked up now: the uploader script loads after this inline script.
+			var asyncApi = window.wholesaleAsyncUpload;
+			if (!asyncApi || !asyncApi.upload) {
+				return;
+			}
+			var state = { progress: 0, token: '', failed: false, label: null };
+			state.job = asyncApi.upload(file, 'contact', function (p) {
+				state.progress = p;
+				if (state.label) {
+					state.label.textContent = statusText(file);
+				}
+			});
+			uploads.set(file, state);
+			asyncApi.track(state.job, form);
+			state.job.promise.then(function (token) {
+				state.token = token;
+			}, function () {
+				// Sent with the form post instead.
+				state.failed = true;
+			}).then(function () {
+				if (uploads.get(file) === state) {
+					if (state.label) {
+						state.label.textContent = statusText(file);
+					}
+					sync();
+				}
+			});
+		}
+
+		function stopUpload(file) {
+			var state = uploads.get(file);
+			if (state) {
+				uploads.delete(file);
+				state.job.abort();
+			}
 		}
 
 		function render() {
@@ -406,7 +468,10 @@ get_header();
 				var name = document.createElement('strong');
 				name.textContent = file.name;
 				var size = document.createElement('small');
-				size.textContent = formatSize(file.size);
+				size.textContent = statusText(file);
+				if (uploads.get(file)) {
+					uploads.get(file).label = size;
+				}
 				meta.appendChild(name);
 				meta.appendChild(size);
 
@@ -416,7 +481,7 @@ get_header();
 				remove.setAttribute('aria-label', 'Remove ' + file.name);
 				remove.innerHTML = '<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
 				remove.addEventListener('click', function () {
-					files.splice(index, 1);
+					stopUpload(files.splice(index, 1)[0]);
 					showError('');
 					sync();
 					render();
@@ -457,6 +522,7 @@ get_header();
 				} else {
 					files.push(file);
 					total += file.size;
+					startUpload(file);
 				}
 			});
 
@@ -496,6 +562,7 @@ get_header();
 		});
 
 		form.addEventListener('submit', function () {
+			sync();
 			if (!submit || !form.checkValidity()) {
 				return;
 			}
@@ -503,7 +570,7 @@ get_header();
 			window.setTimeout(function () {
 				submit.disabled = true;
 				submit.classList.add('is-loading');
-				submit.firstChild.textContent = files.length ? 'Uploading files… ' : 'Sending… ';
+				submit.firstChild.textContent = input.files.length ? 'Uploading files… ' : 'Sending… ';
 			}, 0);
 		});
 	})();

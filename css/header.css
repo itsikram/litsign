@@ -112,6 +112,55 @@
   font-size: 12px;
 }
 
+.site-header .sh-phone-options {
+  display: grid;
+  gap: 2px;
+  width: max-content;
+  margin: 3px 0 1px;
+  padding: 7px 12px;
+  border: 1px solid var(--sh-line);
+  border-radius: 10px;
+  background: var(--sh-soft);
+  text-align: left;
+}
+
+.site-header .sh-phone-options__title {
+  margin-bottom: 1px;
+  color: var(--sh-muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.site-header .sh-phone-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sh-ink);
+  font-size: 14px;
+  line-height: 1.35;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.site-header .sh-phone-option:hover,
+.site-header .sh-phone-option:focus-visible {
+  color: var(--sh-brand-dark);
+}
+
+.site-header .sh-phone-option__label {
+  min-width: 34px;
+  color: var(--sh-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.site-header .sh-phone-option__number {
+  font-weight: 700;
+}
+
 .site-header .sh-actions {
   display: flex;
   flex: 0 0 auto;
@@ -446,6 +495,11 @@ html.sh-lock body {
 
 .site-header .mobile-menu-contact .sh-hours {
   margin-top: 8px;
+}
+
+.site-header .mobile-menu-contact .sh-phone-options {
+  width: 100%;
+  margin-top: 10px;
 }
 
 /* ---------- Tablet and phone ---------- */

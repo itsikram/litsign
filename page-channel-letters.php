@@ -180,14 +180,15 @@ if ($is_cl_landing && 'POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['clq
 
     $logo_path = '';
     $logo_url = '';
-    if (!empty($_FILES['clq_logo']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['clq_logo']['error']) {
-        if (UPLOAD_ERR_OK !== (int) $_FILES['clq_logo']['error'] || (int) $_FILES['clq_logo']['size'] > $logo_max_mb * MB_IN_BYTES) {
+    // Uploaded in the background (inc/async-uploads.php), or posted with the form.
+    $logo_file = wholesale_async_upload_take($_POST['clq_logo_token'] ?? '', 'quote');
+    $logo_file = $logo_file ? $logo_file : ($_FILES['clq_logo'] ?? null);
+    if ($logo_file && UPLOAD_ERR_NO_FILE !== (int) $logo_file['error']) {
+        if (UPLOAD_ERR_OK !== (int) $logo_file['error'] || (int) $logo_file['size'] > $logo_max_mb * MB_IN_BYTES) {
             $fail('file_error');
         }
 
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        $upload = wp_handle_upload($_FILES['clq_logo'], array(
-            'test_form' => false,
+        $upload = wholesale_async_upload_store($logo_file, array(
             'mimes' => array(
                 'jpg|jpeg|jpe' => 'image/jpeg',
                 'png' => 'image/png',
@@ -1220,7 +1221,7 @@ foreach (array(12, 18, 24) as $example_inches) {
                                     <textarea name="clq_details" rows="3" placeholder="e.g. &ldquo;BELLA NAILS&rdquo;, about 12 ft wide, red letters, mounted on a raceway"></textarea>
                                 </label>
                                 <label class="clq-upload clq-field--wide">
-                                    <input type="file" name="clq_logo" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-clq-file>
+                                    <input type="file" name="clq_logo" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-clq-file data-async-upload="quote" data-async-field="clq_logo_token">
                                     <span class="clq-upload-icon"><?php echo wholesale_home_icon('upload'); ?></span>
                                     <span class="clq-upload-text"><strong data-clq-file-name>Upload your logo (optional)</strong><small>JPG, PNG or PDF up to <?php echo esc_html($logo_max_mb); ?>&nbsp;MB</small></span>
                                 </label>

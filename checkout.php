@@ -169,7 +169,7 @@ get_header();
                     </div>
 
                     <label class="checkout-check">
-                        <input type="checkbox" name="same_shipping_address" id="sameShippingAddress" checked>
+                        <input type="checkbox" name="same_shipping_address" id="sameShippingAddress">
                         Ship my sign to this address
                     </label>
 
@@ -223,7 +223,7 @@ get_header();
                 </section>
 
                 <section class="checkout-card" aria-labelledby="checkout-shipping">
-                    <h2 id="checkout-shipping"><span class="checkout-step-number">2</span> Shipping speed</h2>
+                    <h2 id="checkout-shipping"><span class="checkout-step-number">2</span> Shipping Options</h2>
                     <p class="checkout-muted">Every sign is made to order. Dates include production time.</p>
                     <div class="checkout-options" role="radiogroup" aria-labelledby="checkout-shipping">
                         <?php foreach ($shipping_options as $index => $amount) : ?>

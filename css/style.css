@@ -1416,8 +1416,8 @@ a.link-primary:focus,
 .product-box-container .product-box .pb-image-top img {
   width: 100%;
   height: 100%;
-  -o-object-fit: contain;
-  object-fit: contain;
+  -o-object-fit: cover;
+  object-fit: cover;
   display: block;
 }
 .product-box-container .product-box .pb-image-top {
@@ -1433,6 +1433,9 @@ a.link-primary:focus,
 }
 .product-box-container .product-box .pb-gallery-image {
   inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   opacity: 0;
   position: absolute;
   transition: opacity 220ms ease, transform 320ms ease;

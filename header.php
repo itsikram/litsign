@@ -566,6 +566,7 @@ $logo_id = get_theme_mod('custom_logo');
 				'clock'   => '<circle cx="12" cy="12" r="9" ' . $s . ' stroke-width="2"/><path ' . $s . ' stroke-width="2" d="M12 7v5l3 2"/>',
 				'sms'     => '<path ' . $s . ' stroke-width="2" d="M4 5h16v11H9l-5 4z"/>',
 				'mail'    => '<rect x="3" y="5" width="18" height="14" rx="2" ' . $s . ' stroke-width="2"/><path ' . $s . ' stroke-width="2" d="m3 7 9 6 9-6"/>',
+				'next'    => '<path ' . $s . ' stroke-width="2.4" d="m9 6 6 6-6 6"/>',
 			);
 			return '<svg class="ssx-svg" viewBox="0 0 24 24" width="' . (int) $size . '" height="' . (int) $size . '" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
 		};
@@ -1510,6 +1511,690 @@ $logo_id = get_theme_mod('custom_logo');
 					var m = document.cookie.match(/(?:^|;\s*)sso_cart_count=(\d+)/);
 					if (m && parseInt(m[1], 10) > 0) {
 						Array.prototype.forEach.call(root.querySelectorAll('[data-cart-count]'), function(el) {
+							if (!el.textContent.trim()) el.textContent = m[1];
+							el.hidden = false;
+						});
+					}
+				} catch (err) {}
+			})();
+		</script>
+
+		<?php
+		/* ===================================================================
+		 * NEW MOBILE MENU (opened by the existing hamburger button).
+		 * The original top bar is unchanged; only the slide-out menu is new.
+		 * =================================================================== */
+		$ssxm_cta_label = $on_builder ? 'Get a free quote' : 'Design your sign online';
+		?>
+
+		<style>
+			/* The original mobile menu is replaced by the one below. */
+			#siteMobileMenu {
+				display: none !important;
+			}
+
+			html.ssxm-lock {
+				overflow: hidden;
+			}
+
+			.ssxm-scrim {
+				position: fixed;
+				inset: 0;
+				z-index: 100000;
+				background: rgba(10, 24, 40, .55);
+				opacity: 0;
+				visibility: hidden;
+				transition: opacity .25s, visibility 0s .25s;
+				-webkit-tap-highlight-color: transparent;
+			}
+
+			.ssxm-scrim.is-open {
+				opacity: 1;
+				visibility: visible;
+				transition-delay: 0s;
+			}
+
+			.ssxm {
+				--m-blue: #1fa8de;
+				--m-blue-hover: #1790c0;
+				--m-blue-text: #0e7aa6;
+				--m-blue-tint: #e6f6fc;
+				--m-navy: #0d2236;
+				--m-ink: #17222e;
+				--m-muted: #5c6b7a;
+				--m-line: #e2e8ee;
+				--m-soft: #f3f6f9;
+
+				position: fixed;
+				top: 0;
+				right: 0;
+				bottom: 0;
+				z-index: 100001;
+				display: flex;
+				flex-direction: column;
+				width: min(90vw, 400px);
+				background: #fff;
+				color: var(--m-ink);
+				font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+				font-size: 16px;
+				line-height: 1.4;
+				box-shadow: -12px 0 40px rgba(13, 34, 54, .28);
+				transform: translateX(104%);
+				visibility: hidden;
+				transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s .3s;
+			}
+
+			.ssxm.is-open {
+				transform: none;
+				visibility: visible;
+				transition-delay: 0s;
+			}
+
+			.ssxm *,
+			.ssxm *::before,
+			.ssxm *::after {
+				box-sizing: border-box;
+			}
+
+			.ssxm a {
+				color: inherit;
+				text-decoration: none;
+			}
+
+			.ssxm ul {
+				list-style: none;
+				margin: 0;
+				padding: 0;
+			}
+
+			.ssxm p,
+			.ssxm h2 {
+				margin: 0;
+			}
+
+			.ssxm button {
+				font-family: inherit;
+				margin: 0;
+			}
+
+			.ssxm :focus-visible {
+				outline: 3px solid #7ccdee;
+				outline-offset: 2px;
+			}
+
+			.ssxm [hidden] {
+				display: none !important;
+			}
+
+			.ssxm-svg {
+				display: block;
+				flex: none;
+			}
+
+			.ssxm-vh {
+				position: absolute !important;
+				width: 1px;
+				height: 1px;
+				margin: -1px;
+				overflow: hidden;
+				clip: rect(0 0 0 0);
+				white-space: nowrap;
+				border: 0;
+			}
+
+			/* Header */
+			.ssxm__head {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 12px;
+				padding: 12px 12px 12px 18px;
+				border-bottom: 1px solid var(--m-line);
+			}
+
+			.ssxm__logo {
+				display: block;
+				min-width: 0;
+			}
+
+			.ssxm__logo img {
+				display: block;
+				width: 170px;
+				max-width: 100%;
+				height: auto;
+			}
+
+			.ssxm__close {
+				flex: none;
+				display: grid;
+				place-items: center;
+				width: 44px;
+				height: 44px;
+				border: 0;
+				border-radius: 50%;
+				background: var(--m-soft);
+				color: var(--m-ink);
+				cursor: pointer;
+				transition: background-color .15s;
+			}
+
+			.ssxm__close:hover {
+				background: var(--m-line);
+			}
+
+			/* Body */
+			.ssxm__body {
+				flex: 1;
+				overflow-y: auto;
+				overscroll-behavior: contain;
+				-webkit-overflow-scrolling: touch;
+				padding: 16px 18px 24px;
+			}
+
+			.ssxm__search {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				height: 50px;
+				padding: 0 6px 0 16px;
+				border: 1.5px solid #cfd9e2;
+				border-radius: 999px;
+				background: #fff;
+				color: var(--m-muted);
+				transition: border-color .15s, box-shadow .15s;
+			}
+
+			.ssxm__search:focus-within {
+				border-color: var(--m-blue);
+				box-shadow: 0 0 0 4px rgba(31, 168, 222, .18);
+			}
+
+			.ssxm__search input[type="search"] {
+				flex: 1;
+				min-width: 0;
+				height: 100%;
+				padding: 0;
+				border: 0;
+				outline: 0;
+				box-shadow: none;
+				background: transparent;
+				color: var(--m-ink);
+				font: inherit;
+				font-size: 16px;
+				-webkit-appearance: none;
+				appearance: none;
+			}
+
+			.ssxm__search input::placeholder {
+				color: #7d8b99;
+				opacity: 1;
+			}
+
+			.ssxm__search input::-webkit-search-cancel-button {
+				-webkit-appearance: none;
+				display: none;
+			}
+
+			.ssxm__search button {
+				flex: none;
+				display: grid;
+				place-items: center;
+				width: 38px;
+				height: 38px;
+				border: 0;
+				border-radius: 50%;
+				background: var(--m-blue);
+				color: #fff;
+				cursor: pointer;
+			}
+
+			.ssxm__cta {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 8px;
+				min-height: 52px;
+				margin-top: 14px;
+				border-radius: 999px;
+				background: var(--m-blue);
+				color: #fff !important;
+				font-weight: 700;
+				box-shadow: 0 8px 18px rgba(31, 168, 222, .32);
+				transition: background-color .15s;
+			}
+
+			.ssxm__cta:hover {
+				background: var(--m-blue-hover);
+			}
+
+			.ssxm__label {
+				margin: 36px 0 16px;
+				color: var(--m-muted);
+				font-size: 13px;
+				font-weight: 700;
+			}
+
+			/* Rows: links, accordion summary */
+			.ssxm__row,
+			.ssxm__list a,
+			.ssxm-acc>summary {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				min-height: 54px;
+				padding: 0 4px;
+				border-bottom: 1px solid var(--m-line);
+				color: var(--m-ink);
+				font-weight: 600;
+				transition: color .15s, background-color .15s;
+			}
+
+			.ssxm__row:hover,
+			.ssxm__list a:hover,
+			.ssxm-acc>summary:hover {
+				color: var(--m-blue-text);
+			}
+
+			.ssxm__row .ssxm__next,
+			.ssxm-acc>summary .ssxm__next {
+				margin-left: auto;
+				color: #9aa9b7;
+			}
+
+			.ssxm__list a::after {
+				content: "";
+				flex: none;
+				width: 8px;
+				height: 8px;
+				margin-left: auto;
+				margin-right: 4px;
+				border-top: 2px solid #9aa9b7;
+				border-right: 2px solid #9aa9b7;
+				transform: rotate(45deg);
+			}
+
+			.ssxm__list .current-menu-item>a,
+			.ssxm__list .current_page_item>a {
+				color: var(--m-blue-text);
+				box-shadow: inset 3px 0 0 var(--m-blue);
+				padding-left: 12px;
+			}
+
+			.ssxm__badge {
+				min-width: 22px;
+				height: 22px;
+				padding: 0 7px;
+				border-radius: 11px;
+				background: #f04e23;
+				color: #fff;
+				font-size: 12px;
+				font-weight: 700;
+				line-height: 22px;
+				text-align: center;
+			}
+
+			/* All Products accordion */
+			.ssxm-acc>summary {
+				cursor: pointer;
+				list-style: none;
+				font-weight: 700;
+			}
+
+			.ssxm-acc>summary::-webkit-details-marker {
+				display: none;
+			}
+
+			.ssxm-acc>summary .ssxm__ico {
+				display: grid;
+				place-items: center;
+				width: 34px;
+				height: 34px;
+				border-radius: 10px;
+				background: var(--m-blue-tint);
+				color: var(--m-blue-text);
+			}
+
+			.ssxm-acc>summary .ssxm__next {
+				transition: transform .2s;
+				transform: rotate(90deg);
+			}
+
+			.ssxm-acc[open]>summary .ssxm__next {
+				transform: rotate(-90deg);
+			}
+
+			.ssxm-acc__body {
+				padding: 4px 0 14px;
+				border-bottom: 1px solid var(--m-line);
+				background: linear-gradient(180deg, #fafdff, #fff);
+			}
+
+			.ssxm-group__title {
+				margin: 16px 0 4px 4px;
+				font-size: 15px;
+				font-weight: 800;
+			}
+
+			.ssxm-sub {
+				margin-left: 6px;
+				border-left: 2px solid var(--m-line);
+			}
+
+			.ssxm-sub a {
+				display: block;
+				padding: 10px 14px;
+				border-radius: 0 8px 8px 0;
+				color: #2c3a49;
+				font-size: 15px;
+			}
+
+			.ssxm-sub a:hover {
+				background: var(--m-blue-tint);
+				color: var(--m-blue-text);
+			}
+
+			/* Account */
+			.ssxm__pair {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 10px;
+				margin-bottom: 4px;
+			}
+
+			.ssxm__btn {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 8px;
+				min-height: 48px;
+				padding: 0 10px;
+				border: 1.5px solid var(--m-line);
+				border-radius: 12px;
+				font-size: 15px;
+				font-weight: 700;
+				text-align: center;
+				transition: border-color .15s, color .15s, background-color .15s;
+			}
+
+			.ssxm__btn:hover {
+				border-color: var(--m-blue);
+				background: var(--m-blue-tint);
+				color: var(--m-blue-text);
+			}
+
+			/* Footer: always-visible contact */
+			.ssxm__foot {
+				padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+				border-top: 1px solid var(--m-line);
+				background: var(--m-soft);
+			}
+
+			.ssxm__contact {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				min-height: 46px;
+				padding: 0 14px;
+				border-radius: 12px;
+				background: #fff;
+				border: 1px solid var(--m-line);
+				font-weight: 600;
+				transition: border-color .15s;
+			}
+
+			.ssxm__contact+.ssxm__contact {
+				margin-top: 8px;
+			}
+
+			.ssxm__contact:hover {
+				border-color: var(--m-blue);
+			}
+
+			.ssxm__contact .ssxm-svg {
+				color: var(--m-blue);
+			}
+
+			.ssxm__contact span {
+				color: var(--m-muted);
+				font-weight: 600;
+			}
+
+			.ssxm__contact strong {
+				margin-left: auto;
+				font-size: 16px;
+				font-weight: 800;
+			}
+
+			.ssxm__hours {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				gap: 6px;
+				margin-top: 10px;
+				color: var(--m-muted);
+				font-size: 13px;
+			}
+
+			@media (min-width: 992px) {
+
+				.ssxm,
+				.ssxm-scrim {
+					display: none !important;
+				}
+			}
+
+			@media (max-width: 360px) {
+				.ssxm__pair {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			@media (prefers-reduced-motion: reduce) {
+
+				.ssxm,
+				.ssxm *,
+				.ssxm-scrim {
+					transition-duration: 0s !important;
+					transition-delay: 0s !important;
+				}
+			}
+		</style>
+
+		<div class="ssxm-scrim" id="ssxmScrim" aria-hidden="true"></div>
+
+		<div class="ssxm" id="ssxMobileMenu" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e('Menu', 'litsign'); ?>">
+			<div class="ssxm__head">
+				<a class="ssxm__logo" href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr(get_bloginfo('name') . ' home'); ?>">
+					<?php
+					if ($logo_id) {
+						echo wp_get_attachment_image($logo_id, 'full', false, array(
+							'alt'      => get_bloginfo('name'),
+							'loading'  => 'lazy',
+							'decoding' => 'async',
+							'sizes'    => '170px',
+						));
+					} else {
+						echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" width="2417" height="261" loading="lazy" decoding="async">';
+					}
+					?>
+				</a>
+				<button type="button" class="ssxm__close" id="ssxmClose" aria-label="<?php esc_attr_e('Close menu', 'litsign'); ?>">
+					<?php echo $ssx_icon('close', 22); // Static SVG. ?>
+				</button>
+			</div>
+
+			<div class="ssxm__body">
+				<form class="ssxm__search" role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
+					<label class="ssxm-vh" for="ssxmSearchInput"><?php esc_html_e('Search products', 'litsign'); ?></label>
+					<?php echo $ssx_icon('search', 20); // Static SVG. ?>
+					<input id="ssxmSearchInput" type="search" name="s" placeholder="<?php esc_attr_e('Search products…', 'litsign'); ?>" autocomplete="off" enterkeyhint="search">
+					<?php if ($search_post_type) : ?>
+						<input type="hidden" name="post_type" value="<?php echo esc_attr($search_post_type); ?>">
+					<?php endif; ?>
+					<button type="submit" aria-label="<?php esc_attr_e('Search', 'litsign'); ?>"><?php echo $ssx_icon('search', 18); // Static SVG. ?></button>
+				</form>
+
+				<a class="ssxm__cta" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($ssxm_cta_label); ?></a>
+
+				<p class="ssxm__label my-3">Shop</p>
+				<details class="ssxm-acc">
+					<summary>
+						<span class="ssxm__ico"><?php echo $ssx_icon('grid', 18); // Static SVG. ?></span>
+						All Products
+						<span class="ssxm__next"><?php echo $ssx_icon('next', 18); // Static SVG. ?></span>
+					</summary>
+					<div class="ssxm-acc__body">
+						<?php foreach ($mega_columns as $column) : ?>
+							<?php foreach ($column as $group) : ?>
+								<p class="ssxm-group__title"><?php echo esc_html($group['title']); ?></p>
+								<ul class="ssxm-sub">
+									<?php foreach ($group['links'] as $link) : ?>
+										<li><a href="<?php echo esc_url($link[1]); ?>"><?php echo esc_html($link[0]); ?></a></li>
+									<?php endforeach; ?>
+								</ul>
+							<?php endforeach; ?>
+						<?php endforeach; ?>
+					</div>
+				</details>
+				<?php wp_nav_menu(array(
+					'theme_location'  => 'header-bottom-menu',
+					'container'       => 'nav',
+					'container_class' => 'ssxm__list',
+					'container_aria_label' => __('Product categories', 'litsign'),
+					'items_wrap'      => '<ul>%3$s</ul>',
+					'fallback_cb'     => false,
+					'depth'           => 1,
+				)); ?>
+
+				<p class="ssxm__label my-3">Your account</p>
+				<div class="ssxm__pair">
+					<?php foreach ($account_links as $url => $label) : ?>
+						<a class="ssxm__btn" href="<?php echo esc_url($url); ?>"><?php echo esc_html($label); ?></a>
+					<?php endforeach; ?>
+				</div>
+				<a class="ssxm__row" href="<?php echo esc_url(home_url('/cart/')); ?>">
+					<?php echo $ssx_icon('cart', 20); // Static SVG. ?>
+					Cart
+					<span class="ssxm__badge" data-cart-count hidden></span>
+					<span class="ssxm__next"><?php echo $ssx_icon('next', 18); // Static SVG. ?></span>
+				</a>
+				<a class="ssxm__row" href="<?php echo esc_url(home_url('/checkout/')); ?>">
+					Checkout
+					<span class="ssxm__next"><?php echo $ssx_icon('next', 18); // Static SVG. ?></span>
+				</a>
+				<a class="ssxm__row" href="<?php echo esc_url('mailto:' . $ssx_email); ?>">
+					<?php echo $ssx_icon('mail', 20); // Static SVG. ?>
+					<?php echo esc_html($ssx_email); ?>
+				</a>
+			</div>
+
+			<div class="ssxm__foot">
+				<a class="ssxm__contact" href="<?php echo esc_url($phone_href); ?>">
+					<?php echo $ssx_icon('phone', 18); // Static SVG. ?>
+					<span>Cell:</span>
+					<strong><?php echo esc_html($phone_display); ?></strong>
+				</a>
+				<a class="ssxm__contact" href="<?php echo esc_url($sms_href); ?>">
+					<?php echo $ssx_icon('sms', 18); // Static SVG. ?>
+					<span>Text:</span>
+					<strong><?php echo esc_html($phone_display); ?></strong>
+				</a>
+				<p class="ssxm__hours"><?php echo $ssx_icon('clock', 14); // Static SVG. ?> Mon&ndash;Fri 8am&ndash;5pm PST</p>
+			</div>
+		</div>
+
+		<script>
+			(function() {
+				var menu = document.getElementById('ssxMobileMenu'),
+					scrim = document.getElementById('ssxmScrim'),
+					closeBtn = document.getElementById('ssxmClose');
+				if (!menu) return;
+				var trigger = null,
+					desktop = window.matchMedia('(min-width: 992px)');
+
+				var isOpen = function() {
+					return menu.classList.contains('is-open');
+				};
+
+				function setTriggers(expanded) {
+					Array.prototype.forEach.call(document.querySelectorAll('.mobile-menu-trigger'), function(t) {
+						t.setAttribute('aria-controls', 'ssxMobileMenu');
+						t.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+					});
+				}
+
+				function open() {
+					menu.classList.add('is-open');
+					scrim.classList.add('is-open');
+					document.documentElement.classList.add('ssxm-lock');
+					setTriggers(true);
+					setTimeout(function() {
+						closeBtn.focus();
+					}, 80);
+				}
+
+				function close(restore) {
+					if (!isOpen()) return;
+					menu.classList.remove('is-open');
+					scrim.classList.remove('is-open');
+					document.documentElement.classList.remove('ssxm-lock');
+					setTriggers(false);
+					if (restore !== false && trigger && trigger.focus) trigger.focus();
+				}
+
+				// Take over the existing hamburger button (capture phase, so the old menu code never runs).
+				window.addEventListener('click', function(e) {
+					var t = e.target.closest ? e.target.closest('.mobile-menu-trigger') : null;
+					if (!t) return;
+					e.preventDefault();
+					e.stopImmediatePropagation();
+					trigger = t;
+					isOpen() ? close() : open();
+				}, true);
+
+				closeBtn.addEventListener('click', function() {
+					close();
+				});
+				scrim.addEventListener('click', function() {
+					close();
+				});
+				menu.addEventListener('click', function(e) {
+					if (e.target.closest('a[href]')) close(false);
+				});
+				document.addEventListener('keydown', function(e) {
+					if (!isOpen()) return;
+					if (e.key === 'Escape') {
+						close();
+						return;
+					}
+					if (e.key !== 'Tab') return;
+					var items = Array.prototype.filter.call(
+						menu.querySelectorAll('a[href], button:not([disabled]), summary, input:not([type="hidden"])'),
+						function(el) {
+							return el.offsetParent !== null;
+						});
+					if (!items.length) return;
+					var first = items[0],
+						last = items[items.length - 1];
+					if (e.shiftKey && document.activeElement === first) {
+						e.preventDefault();
+						last.focus();
+					} else if (!e.shiftKey && document.activeElement === last) {
+						e.preventDefault();
+						first.focus();
+					}
+				});
+				var onBreakpoint = function() {
+					if (desktop.matches) close(false);
+				};
+				if (desktop.addEventListener) desktop.addEventListener('change', onBreakpoint);
+				else if (desktop.addListener) desktop.addListener(onBreakpoint);
+
+				// Cart count badge (pages are cached, so it comes from the cookie).
+				try {
+					var m = document.cookie.match(/(?:^|;\s*)sso_cart_count=(\d+)/);
+					if (m && parseInt(m[1], 10) > 0) {
+						Array.prototype.forEach.call(menu.querySelectorAll('[data-cart-count]'), function(el) {
 							if (!el.textContent.trim()) el.textContent = m[1];
 							el.hidden = false;
 						});

@@ -7,14 +7,7 @@
  * sort options, highlighted matches, product prices (when WooCommerce is active),
  * pagination, a helpful "no results" state and a contact band.
  *
- * Tip: the grid looks best with a multiple of 12 results per page. Add this to
- * functions.php (it can't live in a template, the query has already run by then):
- *
- *   add_action('pre_get_posts', function ($q) {
- *       if (!is_admin() && $q->is_main_query() && $q->is_search()) {
- *           $q->set('posts_per_page', 12);
- *       }
- *   });
+ * Search pagination is configured for 12 results per page in functions.php.
  *
  * @link https://developer.wordpress.org/themes/basics/template-hierarchy/#search-result
  *

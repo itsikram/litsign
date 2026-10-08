@@ -311,6 +311,14 @@ function wholesale_setup()
 }
 add_action('after_setup_theme', 'wholesale_setup');
 
+function wholesale_search_results_per_page($query)
+{
+	if (!is_admin() && $query->is_main_query() && $query->is_search()) {
+		$query->set('posts_per_page', 12);
+	}
+}
+add_action('pre_get_posts', 'wholesale_search_results_per_page');
+
 function wholesale_hide_admin_bar_for_subscribers()
 {
 	if (!is_user_logged_in()) {
@@ -749,6 +757,11 @@ function wholesale_site_domain()
 	$host = (string) wp_parse_url(home_url(), PHP_URL_HOST);
 
 	return preg_replace('/^www\./i', '', $host);
+}
+
+function wholesale_channel_letter_default_cover_url()
+{
+	return get_template_directory_uri() . '/img/channel-letter-default-cover.svg';
 }
 
 /**

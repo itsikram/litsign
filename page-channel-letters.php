@@ -77,6 +77,15 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
     }
 
     if (empty($images)) {
+        $default_cover = !empty($GLOBALS['wholesale_channel_letter_landing']) ? wholesale_channel_letter_default_cover_url() : '';
+        if ($default_cover) {
+            echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1">';
+            echo '<img class="pb-gallery-image is-active" src="' . esc_url(wholesale_webp_url($default_cover)) . '" alt="' . esc_attr($product_title) . '" loading="' . esc_attr($loading) . '" decoding="async" width="800" height="600">';
+            wholesale_render_sale_badge($product_id);
+            echo '</a>';
+            return;
+        }
+
         echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span>';
         wholesale_render_sale_badge($product_id);
         echo '</a>';

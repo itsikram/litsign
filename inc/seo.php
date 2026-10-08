@@ -184,23 +184,6 @@ add_action('template_redirect', 'wholesale_seo_redirect_feeds', 1);
 remove_action('wp_head', 'feed_links', 2);
 remove_action('wp_head', 'feed_links_extra', 3);
 
-/**
- * Add the Storefront Signs guide to the main category menu.
- */
-function wholesale_seo_storefront_signs_menu_item($items, $args)
-{
-	$url = wholesale_seo_storefront_signs_url();
-	if (!$url || empty($args->theme_location) || 'header-bottom-menu' !== $args->theme_location || false !== strpos($items, $url)) {
-		return $items;
-	}
-
-	$current = is_page('storefront-signs') ? ' current-menu-item' : '';
-	$link = '<li class="menu-item menu-item-storefront-signs' . $current . '"><a href="' . esc_url($url) . '"' . ($current ? ' aria-current="page"' : '') . '>Storefront Signs</a></li>';
-
-	return $link . $items;
-}
-add_filter('wp_nav_menu_items', 'wholesale_seo_storefront_signs_menu_item', 10, 2);
-
 function wholesale_seo_sitemap_taxonomy_args($args, $taxonomy)
 {
 	if ('product_category' !== $taxonomy) {

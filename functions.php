@@ -64,6 +64,7 @@ require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
 require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
 require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
 require_once(dirname(__FILE__) . '/inc/storefront-media.php');
+require_once(dirname(__FILE__) . '/inc/shop-catalog.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 
@@ -732,6 +733,32 @@ function wholesale_contact_admin_recipients()
 }
 
 /**
+ * The site's domain without "www.", e.g. storefrontsignonline.com.
+ */
+function wholesale_site_domain()
+{
+	$host = (string) wp_parse_url(home_url(), PHP_URL_HOST);
+
+	return preg_replace('/^www\./i', '', $host);
+}
+
+/**
+ * Tag a contact notification with the website it came from, so the shared
+ * inbox can tell sites apart. Adds "[domain]" to the subject and a
+ * "Website:" line to the top of the body.
+ *
+ * @return array{0: string, 1: string} Subject and body.
+ */
+function wholesale_contact_mail_tag($subject, $body, $html = false)
+{
+	$domain = wholesale_site_domain();
+	$subject = '[' . $domain . '] ' . $subject;
+	$body = 'Website: ' . $domain . ($html ? '<br>' : "\n") . $body;
+
+	return array($subject, $body);
+}
+
+/**
  * Process a public review submission.
  */
 function wholesale_handle_review_submission()
@@ -806,6 +833,7 @@ function wholesale_handle_review_submission()
 	$body .= wholesale_setting_enabled('auto_publish_reviews')
 		? "This review was published automatically.\n"
 		: 'Approve or edit it here: ' . admin_url('edit.php?post_status=pending&post_type=review_submission') . "\n";
+	list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
 	$headers = array(
 		'Content-Type: text/plain; charset=UTF-8',
 		'Reply-To: ' . $name . ' <' . $email . '>',
@@ -2587,6 +2615,10 @@ function wholesale_seo_page_defaults()
 			// The prices are live, so the year stays current.
 			'title' => sprintf(__('Channel Letter Cost: Real Prices per Letter & Height (%s)', 'litsign'), wp_date('Y')),
 			'description' => __('How much do channel letters cost? See real per-letter prices for 7 lit styles from 8" to 36", example sign totals, and what adds to the price.', 'litsign'),
+		),
+		'shop' => array(
+			'title' => __('Shop Custom Signs, Banners & Displays | Prices Online', 'litsign'),
+			'description' => __('Shop LED channel letters, vinyl banners, window graphics, flags, banner stands and trade show displays. Filter by category and price, then order online.', 'litsign'),
 		),
 		'storefront-signs' => array(
 			'title' => __('Storefront Signs | Custom Lit Business Signs, Priced Online', 'litsign'),
@@ -5121,6 +5153,7 @@ function handle_connect_mail($request)
 		"Reply-To: $name <$email>",
 	);
 	$body = "Name: $name<br>Email: $email<br><br>Message:<br>$message";
+	list($subject, $body) = wholesale_contact_mail_tag($subject, $body, true);
 
 	$sent = wp_mail($to, $subject, $body, $headers);
 
@@ -5158,6 +5191,7 @@ function handle_portfolio_mail($request)
 		"Reply-To: $name <$email>",
 	);
 	$body = "Name: $name<br>Email: $email<br><br>Message:<br>$message";
+	list($subject, $body) = wholesale_contact_mail_tag($subject, $body, true);
 
 	$sent = wp_mail($to, $subject, $body, $headers);
 

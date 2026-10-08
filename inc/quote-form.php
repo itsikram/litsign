@@ -117,9 +117,10 @@ function wholesale_quote_form_handle(array $args)
 		. 'Artwork: ' . ($file_url ? $file_url : 'Not uploaded') . "\n"
 		. ($source ? "Ad source: {$source}\n" : '')
 		. "\nSize, quantity and details:\n{$details}\n";
+	list($subject, $body) = wholesale_contact_mail_tag(sprintf('New %s quote request from %s', strtolower($args['project_label']), $name), $body);
 	wp_mail(
 		wholesale_contact_admin_recipients(),
-		sprintf('New %s quote request from %s', strtolower($args['project_label']), $name),
+		$subject,
 		$body,
 		array('Content-Type: text/plain; charset=UTF-8', 'Reply-To: ' . $name . ' <' . $email . '>'),
 		$file_path ? array($file_path) : array()

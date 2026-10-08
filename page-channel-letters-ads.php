@@ -156,6 +156,7 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 		'From: ' . get_option('admin_email'),
 	);
 
+	list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
 	wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers, $logo_path ? array($logo_path) : array());
 	wholesale_send_quote_confirmation($submission_id);
 

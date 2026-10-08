@@ -6401,3 +6401,92 @@ a.review-author-name:hover {
     gap: 12px;
   }
 }
+
+/* Category hero: breadcrumb, category H1 and description replace the old shop header card. */
+.home-hero--category .home-hero-copy {
+  max-width: 640px;
+}
+
+.home-hero-breadcrumb ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 13px;
+  padding: 0;
+  list-style: none;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.home-hero-breadcrumb li + li::before {
+  content: "/";
+  margin-right: 6px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.home-hero-breadcrumb a {
+  color: #fff;
+  text-decoration: none;
+}
+
+.home-hero-breadcrumb a:hover,
+.home-hero-breadcrumb a:focus-visible {
+  color: #1fa8de;
+}
+
+.home-hero--category .home-hero-copy .home-hero-title {
+  font-size: clamp(2.1rem, 3.6vw, 3.6rem);
+}
+
+.home-hero--category .home-hero-lead {
+  max-width: 600px;
+  margin-bottom: 12px;
+}
+
+.home-hero-intro {
+  max-width: 600px;
+  margin: 0 0 24px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.home-hero-intro--lead {
+  margin-top: 19px;
+  color: rgba(255, 255, 255, 0.93);
+  font-size: clamp(0.95rem, 1.2vw, 1.08rem);
+}
+
+.home-hero-intro a {
+  color: #7fd3f4;
+  text-decoration: underline;
+}
+
+.home-hero-intro a:hover,
+.home-hero-intro a:focus-visible {
+  color: #fff;
+}
+
+@media only screen and (max-width: 767px) {
+  .home-hero--category .home-hero-content {
+    height: auto;
+    min-height: 0;
+  }
+
+  .home-hero--category .home-hero-copy {
+    padding: 40px 16px 44px;
+  }
+
+  .home-hero--category .home-hero-copy .home-hero-title {
+    font-size: clamp(1.9rem, 8.5vw, 2.6rem);
+    line-height: 1.15;
+  }
+
+  .home-hero--category .home-hero-actions {
+    flex-wrap: wrap;
+    gap: 16px 24px;
+  }
+}

@@ -275,11 +275,21 @@ get_header();
 
 
 
-// Print the array for testing
+// Category heading and copy for the hero. The H1 comes from the SEO map in
+// inc/seo-content.php when set, else the category name; the lead is the
+// description edited under Products > Categories, then the SEO intro.
+$category_seo = $current_term ? wholesale_seo_category_meta() : array();
+$category_seo = $current_term && isset($category_seo[$current_term->slug]) ? $category_seo[$current_term->slug] : array();
+$shop_heading = $current_term ? (!empty($category_seo['h1']) ? $category_seo['h1'] : $current_term->name) : __('Custom Signs', 'litsign');
+$category_description = $current_term ? trim(wp_strip_all_tags($current_term->description)) : '';
+$category_intro = !empty($category_seo['intro']) ? $category_seo['intro'] : '';
+if ('' === $category_description && '' === $category_intro) {
+    $category_description = __('Shop custom signage designed and built for your business.', 'litsign');
+}
 
 ?>
 
-<section class="home-hero<?php echo $is_channel_letters ? ' home-hero--cl' : ''; ?>" aria-labelledby="home-hero-title">
+<section class="home-hero<?php echo $is_channel_letters ? ' home-hero--cl' : ' home-hero--category'; ?>" aria-labelledby="home-hero-title">
     <div class="home-hero-content">
         <div class="container home-hero-inner">
             <div class="home-hero-copy">
@@ -303,9 +313,21 @@ get_header();
                         <span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PST &middot; or <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a></span>
                     </p>
                 <?php else : ?>
-                    <p class="home-hero-eyebrow">Premium quality signs &amp; letters</p>
-                    <p id="home-hero-title" class="home-hero-title">Make Your Brand <br class="home-hero-mobile-break"><span> Stand Out</span></p>
-                <p class="home-hero-lead">Custom LED channel letters, storefront signs, acrylic signs and more.<br class="home-hero-desktop-break"> Built for businesses that want to be seen.</p>
+                    <nav class="home-hero-breadcrumb" aria-label="<?php esc_attr_e('Breadcrumb', 'litsign'); ?>">
+                        <ol>
+                            <li><a href="<?php echo esc_url(home_url('/')); ?>"><?php esc_html_e('Home', 'litsign'); ?></a></li>
+                            <?php if ($current_term) : ?>
+                                <li aria-current="page"><?php echo esc_html($current_term->name); ?></li>
+                            <?php endif; ?>
+                        </ol>
+                    </nav>
+                    <h1 id="home-hero-title" class="home-hero-title"><?php echo esc_html($shop_heading); ?></h1>
+                <?php if ('' !== $category_description) : ?>
+                    <p class="home-hero-lead"><?php echo esc_html($category_description); ?></p>
+                <?php endif; ?>
+                <?php if ('' !== $category_intro) : ?>
+                    <p class="home-hero-intro<?php echo '' === $category_description ? ' home-hero-intro--lead' : ''; ?>"><?php echo wp_kses_post($category_intro); ?></p>
+                <?php endif; ?>
                 <div class="home-hero-actions">
                     <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>
                     <button class="home-hero-video-link" type="button" data-youtube-video="https://www.youtube-nocookie.com/embed?listType=search&amp;list=channel%20letter%20signs" aria-controls="homeVideoModal" aria-haspopup="dialog">
@@ -317,27 +339,8 @@ get_header();
             </div>
         </div>
     </div>
+    <?php if ($is_channel_letters) : ?>
     <div class="home-hero-features" aria-label="Our service benefits">
-        <?php if ($is_channel_letters) : ?>
-        <div class="container home-hero-feature-grid">
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('flag'); ?></span>
-                <span><strong>Made in USA</strong><small>Built to order for your business.</small></span>
-            </div>
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('badge'); ?></span>
-                <span><strong>UL Listed</strong><small>Outdoor signs ship with UL labels.</small></span>
-            </div>
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('shield'); ?></span>
-                <span><strong>5-Year LED Warranty</strong><small>On listed LED modules &amp; power supplies.</small></span>
-            </div>
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('plug'); ?></span>
-                <span><strong>Tested Before Shipping</strong><small>Arrives ready to install.</small></span>
-            </div>
-        </div>
-        <?php else : ?>
         <div class="container home-hero-feature-grid">
             <div class="home-hero-feature">
                 <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-truck-fast"></i></span>
@@ -356,8 +359,8 @@ get_header();
                 <span><strong>100% Satisfaction</strong><small>Your success is our priority.</small></span>
             </div>
         </div>
-        <?php endif; ?>
     </div>
+    <?php endif; ?>
 </section>
 
 <div class="home-video-modal" id="homeVideoModal" hidden aria-hidden="true">
@@ -408,14 +411,13 @@ get_header();
 
 </script>
 
-<?php if ($is_channel_letters) : ?>
 <nav class="home-types" aria-label="Shop by sign type">
     <div class="container">
         <p class="home-types-title">Shop by sign type</p>
         <ul class="home-types-list">
             <?php
             $type_links = array_merge(
-                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters')),
+                array(array('standard-channel-letter-front-lit', $is_channel_letters ? '#product-box-container' : wholesale_category_url('channel-letters'), 'Channel Letters')),
                 $more_products
             );
             foreach ($type_links as $type_link) :
@@ -443,32 +445,13 @@ get_header();
     </div>
 </nav>
 
+<?php if ($is_channel_letters) : ?>
 <div class="container">
     <header class="cl-shop-header">
         <p class="cl-kicker">Step 1 &middot; Choose your style</p>
         <h2 class="cl-section-title">Channel Letter Styles &amp; Starting Prices</h2>
         <p class="cl-section-lead">Every custom storefront sign is built to order. Open a style to pick your letter height, colors and wording and see your exact price before checkout.</p>
         <p class="cl-shop-header-help">Not sure which style fits your storefront? <a href="tel:+18664362101">Call 866-436-2101</a> or <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
-    </header>
-</div>
-<?php else : ?>
-<div class="container">
-    <header class="shop-header">
-        <?php
-        $shop_heading_tag = $is_channel_letters ? 'h2' : 'h1';
-        $category_seo = $current_term ? wholesale_seo_category_meta() : array();
-        $category_seo = $current_term && isset($category_seo[$current_term->slug]) ? $category_seo[$current_term->slug] : array();
-        $shop_heading = $current_term ? (!empty($category_seo['h1']) ? $category_seo['h1'] : $current_term->name) : __('Custom Signs', 'litsign');
-        ?>
-        <<?php echo $shop_heading_tag; ?> class="shop-header-title text-center fs-2"><?php echo esc_html($is_channel_letters ? __('Shop Channel Letter Sign Styles', 'litsign') : $shop_heading); ?></<?php echo $shop_heading_tag; ?>>
-        <?php if (!$is_channel_letters && !empty($category_seo['intro'])) : ?>
-            <p class="shop-header-intro text-center mb-0"><?php echo wp_kses_post($category_seo['intro']); ?></p>
-        <?php else : ?>
-            <p class="text-center fs-5 mb-0"><?php echo esc_html($is_channel_letters ? __('Create a stronger storefront presence with custom LED channel letters made for retail businesses.', 'litsign') : ($current_term ? $current_term->description : __('Shop custom signage designed and built for your business.', 'litsign'))); ?></p>
-        <?php endif; ?>
-        <?php if ($is_channel_letters) : ?>
-            <p class="text-center mt-3"><a class="btn btn-primary" href="<?php echo esc_url($contact_url); ?>">Request a Channel Letter Sign Quote</a></p>
-        <?php endif; ?>
     </header>
 </div>
 <?php endif; ?>

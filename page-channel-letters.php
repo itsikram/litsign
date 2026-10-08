@@ -245,6 +245,7 @@ if ($is_cl_landing && 'POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['clq
         'Reply-To: ' . $name . ' <' . $email . '>',
     );
 
+    list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
     wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers, $logo_path ? array($logo_path) : array());
     wholesale_send_quote_confirmation($submission_id);
 
@@ -477,26 +478,6 @@ get_header();
         </div>
     </div>
     <div class="home-hero-features" aria-label="Our service benefits">
-        <?php if ($is_channel_letters) : ?>
-        <div class="container home-hero-feature-grid">
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('flag'); ?></span>
-                <span><strong>Made in USA</strong><small>Built to order for your business.</small></span>
-            </div>
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('badge'); ?></span>
-                <span><strong>UL Listed</strong><small>Outdoor signs ship with UL labels.</small></span>
-            </div>
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('shield'); ?></span>
-                <span><strong>5-Year LED Warranty</strong><small>On listed LED modules &amp; power supplies.</small></span>
-            </div>
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('plug'); ?></span>
-                <span><strong>Tested Before Shipping</strong><small>Arrives ready to install.</small></span>
-            </div>
-        </div>
-        <?php else : ?>
         <div class="container home-hero-feature-grid">
             <div class="home-hero-feature">
                 <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-truck-fast"></i></span>
@@ -515,9 +496,45 @@ get_header();
                 <span><strong>100% Satisfaction</strong><small>Your success is our priority.</small></span>
             </div>
         </div>
-        <?php endif; ?>
     </div>
 </section>
+
+<?php if ($is_channel_letters) : ?>
+<nav class="home-types" aria-label="Shop by sign type">
+    <div class="container">
+        <p class="home-types-title">Shop by sign type</p>
+        <ul class="home-types-list">
+            <?php
+            $type_links = array_merge(
+                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/inch')),
+                array_map(static function ($item) {
+                    return array($item[0], $item[1], $item[2], '', '');
+                }, $more_products)
+            );
+            foreach ($type_links as $type_link) :
+                $type_product = wholesale_seo_product($type_link[0]);
+                $type_price = wholesale_home_from_price($type_link[0]);
+            ?>
+                <li>
+                    <a class="home-types-item" href="<?php echo esc_url($type_link[1]); ?>">
+                        <span class="home-types-image">
+                            <?php
+                            if ($type_product && has_post_thumbnail($type_product)) {
+                                echo get_the_post_thumbnail($type_product, 'thumbnail', array('loading' => 'lazy', 'decoding' => 'async', 'alt' => ''));
+                            }
+                            ?>
+                        </span>
+                        <span class="home-types-text">
+                            <strong><?php echo esc_html($type_link[2]); ?></strong>
+                            <?php if ($type_price) : ?><small>From <?php echo esc_html($type_price . $type_link[4]); ?></small><?php endif; ?>
+                        </span>
+                    </a>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+    </div>
+</nav>
+<?php endif; ?>
 
 <div class="home-video-modal" id="homeVideoModal" hidden aria-hidden="true">
     <div class="home-video-modal-backdrop" data-video-modal-close></div>
@@ -1192,41 +1209,6 @@ foreach (array(12, 18, 24) as $example_inches) {
             <?php endif; ?>
         </div>
     </section>
-
-    <nav class="home-types" aria-label="Shop by sign type">
-        <div class="container">
-            <p class="home-types-title">Shop by sign type</p>
-            <ul class="home-types-list">
-                <?php
-                $type_links = array_merge(
-                    array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/inch')),
-                    array_map(static function ($item) {
-                        return array($item[0], $item[1], $item[2], '', '');
-                    }, $more_products)
-                );
-                foreach ($type_links as $type_link) :
-                    $type_product = wholesale_seo_product($type_link[0]);
-                    $type_price = wholesale_home_from_price($type_link[0]);
-                ?>
-                    <li>
-                        <a class="home-types-item" href="<?php echo esc_url($type_link[1]); ?>">
-                            <span class="home-types-image">
-                                <?php
-                                if ($type_product && has_post_thumbnail($type_product)) {
-                                    echo get_the_post_thumbnail($type_product, 'thumbnail', array('loading' => 'lazy', 'decoding' => 'async', 'alt' => ''));
-                                }
-                                ?>
-                            </span>
-                            <span class="home-types-text">
-                                <strong><?php echo esc_html($type_link[2]); ?></strong>
-                                <?php if ($type_price) : ?><small>From <?php echo esc_html($type_price . $type_link[4]); ?></small><?php endif; ?>
-                            </span>
-                        </a>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    </nav>
 
     <section class="cl-faq" aria-labelledby="cl-faq-title">
         <div class="container">

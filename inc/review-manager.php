@@ -561,24 +561,31 @@ add_filter('handle_bulk_actions-edit-review_submission', function ($redirect, $a
 	}
 
 	$status = 'wholesale_approve' === $action ? 'publish' : 'pending';
-	$done = $skipped = 0;
+	$done = $skipped = $failed = 0;
 
 	foreach (array_map('absint', $post_ids) as $review_id) {
 		$post = get_post($review_id);
-		if (!$post || 'review_submission' !== $post->post_type || $status === $post->post_status || !current_user_can('edit_post', $review_id)) {
+		if (!$post || 'review_submission' !== $post->post_type || $status === $post->post_status) {
 			continue;
 		}
-		// Same rule as the bulk card: samples and JSON imports are approved one at a time.
-		if ('publish' === $status && (wholesale_review_is_sample($review_id) || 'import' === get_post_meta($review_id, '_review_source', true))) {
+		if (!current_user_can('edit_post', $review_id) || ('publish' === $status && !current_user_can('publish_post', $review_id))) {
 			$skipped++;
 			continue;
 		}
-		if (!is_wp_error(wp_update_post(array('ID' => $review_id, 'post_status' => $status), true))) {
+		// Sample reviews are placeholders and must never be published.
+		if ('publish' === $status && wholesale_review_is_sample($review_id)) {
+			$skipped++;
+			continue;
+		}
+		$result = wp_update_post(array('ID' => $review_id, 'post_status' => $status), true);
+		if (is_wp_error($result) || $status !== get_post_status($review_id)) {
+			$failed++;
+		} else {
 			$done++;
 		}
 	}
 
-	return add_query_arg(array('wholesale_bulk' => $action, 'wholesale_done' => $done, 'wholesale_skipped' => $skipped), remove_query_arg(array('wholesale_bulk', 'wholesale_done', 'wholesale_skipped'), $redirect));
+	return add_query_arg(array('wholesale_bulk' => $action, 'wholesale_done' => $done, 'wholesale_skipped' => $skipped, 'wholesale_failed' => $failed), remove_query_arg(array('wholesale_bulk', 'wholesale_done', 'wholesale_skipped', 'wholesale_failed'), $redirect));
 }, 10, 3);
 
 add_action('admin_notices', function () {
@@ -588,17 +595,22 @@ add_action('admin_notices', function () {
 	}
 	$done = absint($_GET['wholesale_done'] ?? 0);
 	$skipped = absint($_GET['wholesale_skipped'] ?? 0);
+	$failed = absint($_GET['wholesale_failed'] ?? 0);
 	$message = 'wholesale_approve' === $_GET['wholesale_bulk']
 		? sprintf('%d reviews approved and shown on the site.', $done)
 		: sprintf('%d reviews moved to awaiting approval.', $done);
 	if ($skipped) {
-		$message .= ' ' . sprintf('%d skipped: sample and JSON-imported reviews must be approved one at a time from Reviews by Product.', $skipped);
+		$message .= ' ' . sprintf('%d skipped because you lack permission or they are protected sample reviews.', $skipped);
 	}
-	printf('<div class="notice notice-%s is-dismissible"><p>%s</p></div>', $skipped ? 'warning' : 'success', esc_html($message));
+	if ($failed) {
+		$message .= ' ' . sprintf('%d could not be updated. Check the selected reviews and try again.', $failed);
+	}
+	$notice_type = $failed ? 'error' : ($skipped ? 'warning' : 'success');
+	printf('<div class="notice notice-%s is-dismissible"><p>%s</p></div>', $notice_type, esc_html($message));
 });
 
 add_filter('removable_query_args', function ($args) {
-	return array_merge($args, array('wholesale_bulk', 'wholesale_done', 'wholesale_skipped'));
+	return array_merge($args, array('wholesale_bulk', 'wholesale_done', 'wholesale_skipped', 'wholesale_failed'));
 });
 
 add_action('restrict_manage_posts', function ($post_type) {

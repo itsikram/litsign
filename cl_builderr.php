@@ -94,6 +94,7 @@ get_header();
 
 <input type="hidden" id="faceColorPicker" value="#ffffff">
 <input type="hidden" id="productPermalink" value="<?php echo esc_url($ticket_builder ? $ticket_builder['save_url'] : get_permalink($product_id)); ?>">
+<input type="hidden" id="isTicketBuilder" value="<?php echo $ticket_builder ? '1' : '0'; ?>">
 
 <?php if ($ticket_builder) : ?>
     <div class="wpt-builder-bar" role="status">

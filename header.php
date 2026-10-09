@@ -2640,7 +2640,7 @@ $logo_id = get_theme_mod('custom_logo');
 		<?php
 		/* ===================================================================
 		 * LIVE SEARCH (async results for the header search + mobile menu search)
-		 * Endpoint: /wp-json/ssx/v1/search  (see inc/ssx-live-search.php).
+		 * Endpoint: /wp-json/ssx/v1/search  (see ssx-live-search.php).
 		 * If that file is not loaded yet, the script falls back to the core
 		 * /wp-json/wp/v2/search endpoint (titles + links only, no images/prices).
 		 * =================================================================== */

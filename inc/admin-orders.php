@@ -70,8 +70,92 @@ add_filter('manage_order_posts_columns', function ($columns) {
 add_action('manage_order_posts_custom_column', function ($column, $post_id) {
 	if ('payment' === $column) {
 		echo wholesale_payment_badge($post_id); // Escaped in the helper.
+		printf(
+			'<span class="hidden wholesale-order-quick-data" data-order-status="%s" data-payment-status="%s" data-carrier="%s" data-tracking="%s" data-delivery="%s"></span>',
+			esc_attr(get_post_status($post_id)),
+			esc_attr(wholesale_get_payment_status($post_id)),
+			esc_attr(get_post_meta($post_id, '_tracking_carrier', true)),
+			esc_attr(get_post_meta($post_id, '_tracking_number', true)),
+			esc_attr(get_post_meta($post_id, 'estimate_delivery_time', true))
+		);
 	}
 }, 10, 2);
+
+add_action('quick_edit_custom_box', function ($column_name, $post_type) {
+	if ('order' !== $post_type || 'payment' !== $column_name) {
+		return;
+	}
+	?>
+	<fieldset class="inline-edit-col-right wholesale-order-quick-edit">
+		<div class="inline-edit-col">
+			<label>
+				<span class="title"><?php esc_html_e('Payment status', 'litsign'); ?></span>
+				<select name="wholesale_payment_status">
+					<option value=""><?php esc_html_e('Not recorded', 'litsign'); ?></option>
+					<?php foreach (wholesale_payment_statuses() as $value => $item) : ?>
+						<option value="<?php echo esc_attr($value); ?>"><?php echo esc_html($item[0]); ?></option>
+					<?php endforeach; ?>
+				</select>
+			</label>
+			<label>
+				<span class="title"><?php esc_html_e('Carrier', 'litsign'); ?></span>
+				<select name="wholesale_tracking_carrier">
+					<option value=""><?php esc_html_e('Select carrier', 'litsign'); ?></option>
+					<option value="ups">UPS</option>
+					<option value="fedex">FedEx</option>
+					<option value="usps">USPS</option>
+					<option value="freight">Freight / other</option>
+				</select>
+			</label>
+			<label>
+				<span class="title"><?php esc_html_e('Tracking number', 'litsign'); ?></span>
+				<input type="text" name="wholesale_tracking_number" autocomplete="off">
+			</label>
+			<label>
+				<span class="title"><?php esc_html_e('Estimated delivery', 'litsign'); ?></span>
+				<input type="text" name="wholesale_estimated_delivery" placeholder="e.g. Oct 20 or 3-5 business days">
+			</label>
+			<label class="alignleft">
+				<input type="checkbox" name="wholesale_notify_customer" value="1">
+				<span><?php esc_html_e('Email customer if order status changes', 'litsign'); ?></span>
+			</label>
+		</div>
+	</fieldset>
+	<?php
+}, 10, 2);
+
+add_action('admin_footer-edit.php', function () {
+	$screen = get_current_screen();
+	if (!$screen || 'order' !== $screen->post_type) {
+		return;
+	}
+	?>
+	<script>
+		jQuery(function ($) {
+			if (typeof inlineEditPost === 'undefined') {
+				return;
+			}
+			var edit = inlineEditPost.edit;
+			inlineEditPost.edit = function (id) {
+				edit.apply(this, arguments);
+				var postId = typeof id === 'object' ? this.getId(id) : id;
+				var row = $('#post-' + postId);
+				var data = row.find('.wholesale-order-quick-data');
+				var form = $('#edit-' + postId);
+				if (!data.length || !form.length) {
+					return;
+				}
+				form.find('[name="order_status"]').val(data.attr('data-order-status'));
+				form.find('[name="wholesale_payment_status"]').val(data.attr('data-payment-status'));
+				form.find('[name="wholesale_tracking_carrier"]').val(data.attr('data-carrier'));
+				form.find('[name="wholesale_tracking_number"]').val(data.attr('data-tracking'));
+				form.find('[name="wholesale_estimated_delivery"]').val(data.attr('data-delivery'));
+				form.find('[name="wholesale_notify_customer"]').prop('checked', false);
+			};
+		});
+	</script>
+	<?php
+});
 
 // Friendlier order number and colored status badges in the existing columns.
 add_action('admin_footer-edit.php', function () {
@@ -359,15 +443,38 @@ function wholesale_merge_order_address($stored, $posted, $prefix, $with_email)
 
 // Runs before the theme's status handler (priority 10) so status emails see the new tracking number.
 add_action('save_post_order', function ($post_id) {
-	if (!isset($_POST['wholesale_fulfillment_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['wholesale_fulfillment_nonce'])), 'wholesale_fulfillment') || !current_user_can('edit_post', $post_id)) {
+	$is_quick_edit = wp_doing_ajax()
+		&& 'inline-save' === ($_POST['action'] ?? '')
+		&& isset($_POST['_inline_edit']);
+	if ($is_quick_edit) {
+		check_ajax_referer('inlineeditnonce', '_inline_edit');
+	} elseif (
+		!isset($_POST['wholesale_fulfillment_nonce'])
+		|| !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['wholesale_fulfillment_nonce'])), 'wholesale_fulfillment')
+	) {
 		return;
 	}
-	update_post_meta($post_id, '_tracking_carrier', sanitize_key(wp_unslash($_POST['wholesale_tracking_carrier'] ?? '')));
-	update_post_meta($post_id, '_tracking_number', sanitize_text_field(wp_unslash($_POST['wholesale_tracking_number'] ?? '')));
-	$payment_status = sanitize_key(wp_unslash($_POST['wholesale_payment_status'] ?? ''));
-	if (isset(wholesale_payment_statuses()[$payment_status]) && $payment_status !== get_post_meta($post_id, '_payment_status', true)) {
-		update_post_meta($post_id, '_payment_status', $payment_status);
-		update_post_meta($post_id, '_payment_verified_by', get_current_user_id());
+	if (!current_user_can('edit_post', $post_id)) {
+		return;
+	}
+	if (isset($_POST['wholesale_tracking_carrier'])) {
+		$carrier = sanitize_key(wp_unslash($_POST['wholesale_tracking_carrier']));
+		if (in_array($carrier, array('', 'ups', 'fedex', 'usps', 'freight'), true)) {
+			update_post_meta($post_id, '_tracking_carrier', $carrier);
+		}
+	}
+	if (isset($_POST['wholesale_tracking_number'])) {
+		update_post_meta($post_id, '_tracking_number', sanitize_text_field(wp_unslash($_POST['wholesale_tracking_number'])));
+	}
+	if (isset($_POST['wholesale_payment_status'])) {
+		$payment_status = sanitize_key(wp_unslash($_POST['wholesale_payment_status']));
+		if ($is_quick_edit && '' === $payment_status) {
+			delete_post_meta($post_id, '_payment_status');
+			delete_post_meta($post_id, '_payment_verified_by');
+		} elseif (isset(wholesale_payment_statuses()[$payment_status]) && $payment_status !== get_post_meta($post_id, '_payment_status', true)) {
+			update_post_meta($post_id, '_payment_status', $payment_status);
+			update_post_meta($post_id, '_payment_verified_by', get_current_user_id());
+		}
 	}
 	if (empty($_POST['wholesale_notify_customer'])) {
 		$GLOBALS['wholesale_skip_status_email'] = true;
@@ -378,6 +485,9 @@ add_action('save_post_order', function ($post_id) {
 
 	// Addresses and ship date are only rewritten when staff opened the edit form.
 	if (empty($_POST['wo_details_edited'])) {
+		if ($is_quick_edit && isset($_POST['wholesale_estimated_delivery'])) {
+			update_post_meta($post_id, 'estimate_delivery_time', sanitize_text_field(wp_unslash($_POST['wholesale_estimated_delivery'])));
+		}
 		return;
 	}
 	$billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));

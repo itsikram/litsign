@@ -296,16 +296,17 @@ get_header();
 
 
 
-// Category heading and copy for the hero. The H1 comes from the SEO map in
-// inc/seo-content.php when set, else the category name; the lead is the
-// description edited under Products > Categories, then the SEO intro.
+// Category heading and copy for the hero. The heading and description are
+// managed under Products > Categories; the SEO intro is a fallback.
 $category_seo = $current_term ? wholesale_seo_category_meta() : array();
 $category_seo = $current_term && isset($category_seo[$current_term->slug]) ? $category_seo[$current_term->slug] : array();
-$shop_heading = $current_term ? (!empty($category_seo['h1']) ? $category_seo['h1'] : $current_term->name) : __('Custom Signs', 'litsign');
-$category_description = $current_term ? trim(wp_strip_all_tags($current_term->description)) : '';
-$category_intro = !empty($category_seo['intro']) ? $category_seo['intro'] : '';
-if ('' === $category_description && '' === $category_intro) {
+$shop_heading = $current_term ? $current_term->name : __('Custom Signs', 'litsign');
+$category_description = $current_term ? trim((string) $current_term->description) : '';
+$category_description_text = trim(wp_strip_all_tags($category_description));
+$category_intro = '' === $category_description_text && !empty($category_seo['intro']) ? $category_seo['intro'] : '';
+if ('' === $category_description_text && '' === $category_intro) {
     $category_description = __('Shop custom signage designed and built for your business.', 'litsign');
+    $category_description_text = $category_description;
 }
 
 ?>
@@ -343,11 +344,11 @@ if ('' === $category_description && '' === $category_intro) {
                         </ol>
                     </nav>
                     <h1 id="home-hero-title" class="home-hero-title"><?php echo esc_html($shop_heading); ?></h1>
-                <?php if ('' !== $category_description) : ?>
-                    <p class="home-hero-lead"><?php echo esc_html($category_description); ?></p>
+                <?php if ('' !== $category_description_text) : ?>
+                    <div class="home-hero-lead"><?php echo wp_kses_post(wpautop($category_description)); ?></div>
                 <?php endif; ?>
                 <?php if ('' !== $category_intro) : ?>
-                    <p class="home-hero-intro<?php echo '' === $category_description ? ' home-hero-intro--lead' : ''; ?>"><?php echo wp_kses_post($category_intro); ?></p>
+                    <p class="home-hero-intro<?php echo '' === $category_description_text ? ' home-hero-intro--lead' : ''; ?>"><?php echo wp_kses_post($category_intro); ?></p>
                 <?php endif; ?>
                 <div class="home-hero-actions">
                     <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>

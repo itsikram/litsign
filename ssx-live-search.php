@@ -3,8 +3,8 @@
 /**
  * Live (async) search endpoint used by the header search.
  *
- * Add this line to functions.php:
- *     require_once get_template_directory() . '/inc/ssx-live-search.php';
+ * Loaded from functions.php:
+ *     require_once get_template_directory() . '/ssx-live-search.php';
  *
  * Endpoint: GET /wp-json/ssx/v1/search?q=banner&post_type=product&limit=6
  * Response: { "total": 12, "items": [ { id, title, url, image, type, price } ] }

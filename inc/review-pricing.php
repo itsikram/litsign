@@ -1,6 +1,6 @@
 <?php
 /**
- * One-time price updates for reviewed products in selected product categories.
+ * One-time price updates for products in selected product categories.
  *
  * @package litsign
  */
@@ -20,12 +20,6 @@ function wholesale_review_pricing_target_products($category_ids = array())
 		'fields' => 'ids',
 		'orderby' => 'title',
 		'order' => 'ASC',
-		'meta_query' => array(
-			array(
-				'key' => '_show_in_list',
-				'value' => 'on',
-			),
-		),
 	);
 	if ($category_ids) {
 		$query['tax_query'] = array(
@@ -38,12 +32,7 @@ function wholesale_review_pricing_target_products($category_ids = array())
 		);
 	}
 
-	$products = get_posts($query);
-
-	$stats = wholesale_review_stats_by_product();
-	return array_values(array_filter($products, static function ($product_id) use ($stats) {
-		return !empty($stats[$product_id]['published']);
-	}));
+	return get_posts($query);
 }
 
 function wholesale_review_pricing_category_ids()
@@ -256,7 +245,7 @@ function wholesale_review_pricing_handle()
 
 		$selection_mode_raw = wp_unslash($_POST['selection_mode'] ?? '');
 		$selection_mode = is_scalar($selection_mode_raw) ? sanitize_key((string) $selection_mode_raw) : '';
-		$all_reviewed_products = wholesale_review_pricing_target_products();
+		$all_products = wholesale_review_pricing_target_products();
 		if ('category' === $selection_mode) {
 			$category_ids = wholesale_review_pricing_category_ids();
 			if (!$category_ids) {
@@ -264,7 +253,7 @@ function wholesale_review_pricing_handle()
 			}
 			$selected_products = wholesale_review_pricing_target_products($category_ids);
 			if (!$selected_products) {
-				wp_die('No published products with approved reviews were found in the selected categories.');
+				wp_die('No published products were found in the selected categories.');
 			}
 		} elseif ('manual' === $selection_mode) {
 			$raw_product_ids = isset($_POST['product_ids']) ? (array) wp_unslash($_POST['product_ids']) : array();
@@ -273,11 +262,11 @@ function wholesale_review_pricing_handle()
 			});
 			$requested_ids = array_values(array_unique(array_filter(array_map('absint', $raw_product_ids))));
 			if (!$requested_ids) {
-				wp_die('Select at least one reviewed product.');
+				wp_die('Select at least one product.');
 			}
-			$selected_products = array_values(array_intersect($requested_ids, $all_reviewed_products));
+			$selected_products = array_values(array_intersect($requested_ids, $all_products));
 			if (!$selected_products) {
-				wp_die('None of the selected products are published products with approved reviews.');
+				wp_die('None of the selected products are published products.');
 			}
 		} else {
 			wp_die('Choose whether to select products by category or manually.');
@@ -336,7 +325,7 @@ function wholesale_review_pricing_admin_page()
 	?>
 	<div class="wrap">
 		<h1>Review Product Sale Pricing</h1>
-		<p>Choose published, listed products with at least one approved, non-sample review. Category selection includes products assigned to the selected category or any of its subcategories. Manual selection offers reviewed products across all categories.</p>
+		<p>Choose any published product, whether or not it has reviews. Category selection includes products assigned to the selected category or any of its subcategories. Manual selection offers all published products across all categories.</p>
 		<p>Each selected product gets a random regular-price increase in the chosen range. Its sale discount is recalculated to keep the current product price unchanged. Calculator minimums and expedite add-ons keep their existing behavior. Original product pricing is backed up and can be restored below.</p>
 		<?php if ($result) : ?>
 			<div class="notice notice-success is-dismissible"><p>
@@ -357,8 +346,8 @@ function wholesale_review_pricing_admin_page()
 				?>
 			</p></div>
 		<?php endif; ?>
-		<p><strong><?php echo esc_html(count($products)); ?></strong> reviewed product(s) found; <strong><?php echo esc_html($pending_count); ?></strong> have not been updated by this tool.</p>
-		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('Apply the price change to the selected reviewed products?');">
+		<p><strong><?php echo esc_html(count($products)); ?></strong> published product(s) found; <strong><?php echo esc_html($pending_count); ?></strong> have not been updated by this tool.</p>
+		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('Apply the price change to the selected products?');">
 			<input type="hidden" name="action" value="wholesale_review_pricing">
 			<input type="hidden" name="task" value="apply">
 			<?php wp_nonce_field('wholesale_review_pricing'); ?>

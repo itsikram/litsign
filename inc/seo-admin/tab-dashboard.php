@@ -196,7 +196,7 @@ function wholesale_seo_brand_fallbacks()
 
 	foreach ($iterator as $file) {
 		$path = str_replace('\\', '/', substr($file->getPathname(), strlen($root) + 1));
-		if ('php' !== $file->getExtension() || preg_match('#^(cmb2|stripe-php|utils|inc/seo-admin)/#', $path)) {
+		if ('php' !== $file->getExtension() || preg_match('#^(cmb2|utils|inc/seo-admin)/#', $path)) {
 			continue;
 		}
 		foreach ((array) file($file->getPathname()) as $number => $line) {

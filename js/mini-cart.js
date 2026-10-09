@@ -109,6 +109,7 @@
     body.removeAttribute("aria-busy");
     updateBadges(parseInt(data.count, 10) || 0);
     loaded = true;
+    document.dispatchEvent(new CustomEvent("wholesale:cart-updated"));
   };
 
   const lineOf = (el) => el.closest("[data-mc-line]");

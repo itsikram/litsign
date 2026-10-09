@@ -1197,6 +1197,37 @@ function wholesale_vi_admin_menu()
 }
 add_action('admin_menu', 'wholesale_vi_admin_menu');
 
+function wholesale_vi_admin_bar_menu($admin_bar)
+{
+	if (!current_user_can('manage_options')) {
+		return;
+	}
+
+	$admin_bar->add_node(array(
+		'id' => 'wholesale-visitor-insights',
+		'title' => __('Visitor Insights', 'litsign'),
+		'href' => wholesale_vi_url('wholesale-insights'),
+	));
+
+	$views = array(
+		'wholesale-insights' => __('Overview', 'litsign'),
+		'wholesale-insights-live' => __('Live Visitors', 'litsign'),
+		'wholesale-insights-visitors' => __('Visitors', 'litsign'),
+		'wholesale-insights-ads' => __('Google Ads', 'litsign'),
+		'wholesale-insights-settings' => __('Settings', 'litsign'),
+	);
+
+	foreach ($views as $page => $title) {
+		$admin_bar->add_node(array(
+			'id' => 'wholesale-visitor-insights-' . $page,
+			'parent' => 'wholesale-visitor-insights',
+			'title' => $title,
+			'href' => wholesale_vi_url($page),
+		));
+	}
+}
+add_action('admin_bar_menu', 'wholesale_vi_admin_bar_menu', 100);
+
 function wholesale_vi_admin_assets($hook)
 {
 	if (false === strpos($hook, 'wholesale-insights')) {

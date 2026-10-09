@@ -3,6 +3,7 @@ let detailTableBody = document.getElementById("detailTableBody");
 // start constant
 const container = document.getElementById("container");
 const previewContainer = document.getElementById("previewContainer");
+const isTicketBuilder = document.getElementById("isTicketBuilder")?.value === "1";
 const textInput = document.getElementById("textInput");
 const fontSelect = document.getElementById("fontSelect");
 const faceColorPicker = document.getElementById("faceColorPicker");
@@ -6392,6 +6393,16 @@ window.addEventListener("load", function (e) {
       const extras = store.getState()["extras"];
       const updatedState = { elements, extras, contentDimenstion };
       const designData = JSON.stringify(updatedState);
+      if (!isTicketBuilder && freshMediaData.url) {
+        try {
+          localStorage.setItem(
+            "sfs_chat_saved_cl_preview",
+            JSON.stringify({ id: freshMediaData.id, url: freshMediaData.url }),
+          );
+        } catch (storageError) {
+          console.warn("Could not retain the saved channel-letter preview for live chat.", storageError);
+        }
+      }
       const redirectUrl = `${productPermalink}?save_design=true&design_data=${encodeURIComponent(designData)}&design_id=${freshMediaData.id}`;
       window.location.href = redirectUrl;
       return;

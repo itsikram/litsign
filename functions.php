@@ -73,6 +73,7 @@ require_once(dirname(__FILE__) . '/inc/performance.php');
 require_once(dirname(__FILE__) . '/inc/guide-pages.php');
 require_once(dirname(__FILE__) . '/inc/seo-admin/loader.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
+require_once(dirname(__FILE__) . '/ssx-live-search.php');
 
 /**
  * Sets up theme defaults and registers support for various WordPress features.
@@ -182,18 +183,50 @@ function wholesale_setup()
 	register_post_type(
 		'product',
 		array(
-			'label' => 'Product',
+			'label' => 'Products',
 			'supports' => array('title', 'editor', 'thumbnail'),
 			'labels' => array(
 				'name' => 'Products',
-				'singular_name' => 'Product'
-
+				'singular_name' => 'Product',
+				'menu_name' => 'Products',
+				'name_admin_bar' => 'Product',
+				'add_new' => 'Add New',
+				'add_new_item' => 'Add New Product',
+				'new_item' => 'New Product',
+				'edit_item' => 'Edit Product',
+				'view_item' => 'View Product',
+				'view_items' => 'View Products',
+				'all_items' => 'All Products',
+				'search_items' => 'Search Products',
+				'parent_item_colon' => 'Parent Products:',
+				'not_found' => 'No products found.',
+				'not_found_in_trash' => 'No products found in Trash.',
+				'archives' => 'Product Archives',
+				'attributes' => 'Product Attributes',
+				'insert_into_item' => 'Insert into product',
+				'uploaded_to_this_item' => 'Uploaded to this product',
+				'featured_image' => 'Product Image',
+				'set_featured_image' => 'Set product image',
+				'remove_featured_image' => 'Remove product image',
+				'use_featured_image' => 'Use as product image',
+				'filter_items_list' => 'Filter products list',
+				'filter_by_date' => 'Filter products by date',
+				'items_list_navigation' => 'Products list navigation',
+				'items_list' => 'Products list',
+				'item_published' => 'Product published.',
+				'item_published_privately' => 'Product published privately.',
+				'item_reverted_to_draft' => 'Product reverted to draft.',
+				'item_scheduled' => 'Product scheduled.',
+				'item_updated' => 'Product updated.',
+				'item_link' => 'Product link',
+				'item_link_description' => 'A link to a product.',
 			),
 			'public' => true,
 			'publicly_queryable' => true,
 			'show_in_rest' => true,
 			'has_archive' => false,
 			'rewrite' => array('slug' => 'product'),
+			'menu_icon' => 'dashicons-cart',
 		)
 	);
 	register_post_type('cnn', array(
@@ -208,7 +241,37 @@ function wholesale_setup()
 	));
 
 	register_post_type('order', array(
-		'label' => 'Order',
+		'label' => 'Orders',
+		'labels' => array(
+			'name' => 'Orders',
+			'singular_name' => 'Order',
+			'menu_name' => 'Orders',
+			'name_admin_bar' => 'Order',
+			'add_new' => 'Add New',
+			'add_new_item' => 'Add New Order',
+			'new_item' => 'New Order',
+			'edit_item' => 'Edit Order',
+			'view_item' => 'View Order',
+			'view_items' => 'View Orders',
+			'all_items' => 'All Orders',
+			'search_items' => 'Search Orders',
+			'parent_item_colon' => 'Parent Orders:',
+			'not_found' => 'No orders found.',
+			'not_found_in_trash' => 'No orders found in Trash.',
+			'archives' => 'Order Archives',
+			'attributes' => 'Order Attributes',
+			'filter_items_list' => 'Filter orders list',
+			'filter_by_date' => 'Filter orders by date',
+			'items_list_navigation' => 'Orders list navigation',
+			'items_list' => 'Orders list',
+			'item_published' => 'Order published.',
+			'item_published_privately' => 'Order published privately.',
+			'item_reverted_to_draft' => 'Order reverted to draft.',
+			'item_scheduled' => 'Order scheduled.',
+			'item_updated' => 'Order updated.',
+			'item_link' => 'Order link',
+			'item_link_description' => 'A link to an order.',
+		),
 		'public' => true,
 		'exclude_from_search' => true, // Orders contain customer details; never list them in site search.
 		'show_in_nav_menus' => false,
@@ -217,6 +280,7 @@ function wholesale_setup()
 		'rewrite' => array('slug' => 'order'), // Custom slug for your post type
 		'query_var' => 'store_order',
 		'show_in_rest' => true, // Enable block editor support
+		'menu_icon' => 'dashicons-clipboard',
 	));
 
 	register_post_type('contact_submission', array(
@@ -576,6 +640,67 @@ function wholesale_add_settings_page()
 	add_options_page('Storefront Sign Settings', 'Storefront Sign', 'manage_options', 'wholesale-settings', 'wholesale_settings_page');
 }
 add_action('admin_menu', 'wholesale_add_settings_page');
+
+function wholesale_admin_bar_store_shortcuts($admin_bar)
+{
+	if (!current_user_can('manage_options')) {
+		return;
+	}
+
+	$admin_bar->add_node(array(
+		'id' => 'wholesale-store-admin',
+		'title' => __('Store Admin', 'litsign'),
+		'href' => admin_url('edit.php?post_type=order'),
+	));
+
+	$shortcuts = array(
+		'orders' => array(__('Orders', 'litsign'), admin_url('edit.php?post_type=order')),
+		'products' => array(__('Products', 'litsign'), admin_url('edit.php?post_type=product')),
+		'settings' => array(__('Storefront Sign Settings', 'litsign'), admin_url('options-general.php?page=wholesale-settings')),
+		'contact-submissions' => array(__('Contact Submissions', 'litsign'), admin_url('edit.php?post_type=contact_submission')),
+		'seo-settings' => array(__('SEO Settings', 'litsign'), admin_url('admin.php?page=wholesale-seo-general')),
+	);
+
+	foreach ($shortcuts as $id => $shortcut) {
+		$admin_bar->add_node(array(
+			'id' => 'wholesale-store-admin-' . $id,
+			'parent' => 'wholesale-store-admin',
+			'title' => $shortcut[0],
+			'href' => $shortcut[1],
+		));
+	}
+}
+add_action('admin_bar_menu', 'wholesale_admin_bar_store_shortcuts', 110);
+
+function wholesale_admin_bar_edit_product_category($admin_bar)
+{
+	$term = null;
+	$term_slug = get_query_var('category_slug');
+	if ($term_slug) {
+		$term = get_term_by('slug', sanitize_title($term_slug), 'product_category');
+	} elseif (is_tax('product_category')) {
+		$queried_term = get_queried_object();
+		if ($queried_term instanceof WP_Term && 'product_category' === $queried_term->taxonomy) {
+			$term = $queried_term;
+		}
+	}
+
+	if (!$term || is_wp_error($term) || !current_user_can('edit_term', $term->term_id)) {
+		return;
+	}
+
+	$edit_link = get_edit_term_link($term->term_id, 'product_category', 'product');
+	if (!$edit_link) {
+		return;
+	}
+
+	$admin_bar->add_node(array(
+		'id' => 'wholesale-edit-product-category',
+		'title' => __('Edit Category', 'litsign'),
+		'href' => $edit_link,
+	));
+}
+add_action('admin_bar_menu', 'wholesale_admin_bar_edit_product_category', 120);
 
 function wholesale_newsletter_table_name()
 {
@@ -2099,16 +2224,15 @@ function wholesale_order_quick_edit_status($column_name, $post_type)
 		return;
 	}
 
-	$statuses = wp_list_pluck(wholesale_order_status_info(), 'label');
-	$statuses['on_hold'] .= ' (legacy)';
+	$statuses = wholesale_order_status_info();
 	?>
 	<fieldset class="inline-edit-col-right">
 		<div class="inline-edit-col">
 			<label>
 				<span class="title"><?php esc_html_e('Order status', 'litsign'); ?></span>
 				<select name="order_status">
-					<?php foreach ($statuses as $status => $label) : ?>
-						<option value="<?php echo esc_attr($status); ?>"><?php echo esc_html($label); ?></option>
+					<?php foreach ($statuses as $status => $info) : ?>
+						<option value="<?php echo esc_attr($status); ?>"><?php echo esc_html($info['label'] . ('on_hold' === $status ? ' (legacy)' : '')); ?></option>
 					<?php endforeach; ?>
 				</select>
 			</label>
@@ -2836,9 +2960,12 @@ function wholesale_seo_keyword_meta()
 
 		$category_meta = $term && !is_wp_error($term) ? wholesale_seo_category_meta() : array();
 		if (isset($category_meta[$term->slug])) {
+			$title = get_term_meta($term->term_id, '_wholesale_seo_title', true);
+			$description = get_term_meta($term->term_id, '_wholesale_seo_description', true);
+
 			return array(
-				'title' => $category_meta[$term->slug]['title'],
-				'description' => $category_meta[$term->slug]['description'],
+				'title' => $title ? $title : $category_meta[$term->slug]['title'],
+				'description' => $description ? $description : $category_meta[$term->slug]['description'],
 			);
 		}
 	}
@@ -5182,15 +5309,22 @@ function edit_taxonomy_image_field($term)
 		<td>
 			<input type="text" id="taxonomy-image" name="taxonomy-image" value="<?php echo esc_attr($image_url); ?>" />
 			<p class="description"><?php _e('Upload an image for this term.', 'wholesale'); ?></p>
-			<button class="button button-secondary upload_image_button">Upload Image</button>
-			<?php if ($image_url): ?>
-				<br><img src="<?php echo esc_url($image_url); ?>" alt="" style="max-width:150px;margin-top:10px;" />
-			<?php endif; ?>
+			<button type="button" class="button button-secondary upload_image_button">Upload Image</button>
+			<button type="button" class="button remove_image_button"<?php echo $image_url ? '' : ' hidden'; ?>>Remove Image</button>
+			<div class="taxonomy-image-preview">
+				<?php if ($image_url): ?>
+					<img src="<?php echo esc_url($image_url); ?>" alt="" style="max-width:150px;margin-top:10px;" />
+				<?php endif; ?>
+			</div>
 		</td>
 	</tr>
 	<script>
 		jQuery(document).ready(function ($) {
 			var mediaUploader;
+			var $imageField = $('#taxonomy-image');
+			var $imagePreview = $('.taxonomy-image-preview');
+			var $removeButton = $('.remove_image_button');
+
 			$('.upload_image_button').click(function (e) {
 				e.preventDefault();
 				if (mediaUploader) {
@@ -5206,9 +5340,23 @@ function edit_taxonomy_image_field($term)
 				});
 				mediaUploader.on('select', function () {
 					var attachment = mediaUploader.state().get('selection').first().toJSON();
-					$('#taxonomy-image').val(attachment.url);
+					$imageField.val(attachment.url);
+					$imagePreview.empty().append(
+						$('<img>', {
+							src: attachment.url,
+							alt: '',
+							css: { maxWidth: '150px', marginTop: '10px' }
+						})
+					);
+					$removeButton.prop('hidden', false);
 				});
 				mediaUploader.open();
+			});
+
+			$removeButton.click(function () {
+				$imageField.val('');
+				$imagePreview.empty();
+				$(this).prop('hidden', true);
 			});
 		});
 	</script>
@@ -5221,7 +5369,12 @@ add_action('product_category_edit_form_fields', 'edit_taxonomy_image_field', 10,
 function save_taxonomy_image_field($term_id)
 {
 	if (isset($_POST['taxonomy-image'])) {
-		update_term_meta($term_id, 'taxonomy-image', esc_url_raw($_POST['taxonomy-image']));
+		$image_url = esc_url_raw(wp_unslash($_POST['taxonomy-image']));
+		if ($image_url) {
+			update_term_meta($term_id, 'taxonomy-image', $image_url);
+		} else {
+			delete_term_meta($term_id, 'taxonomy-image');
+		}
 	}
 	if (isset($_POST['taxonomy-ref'])) {
 		update_term_meta($term_id, 'taxonomy-ref', esc_html($_POST['taxonomy-ref']));
@@ -5231,6 +5384,40 @@ add_action('edited_category', 'save_taxonomy_image_field', 10, 2);
 add_action('create_category', 'save_taxonomy_image_field', 10, 2);
 add_action('edited_product_category', 'save_taxonomy_image_field', 10, 2);
 add_action('create_product_category', 'save_taxonomy_image_field', 10, 2);
+
+function wholesale_product_category_description_editor($hook)
+{
+	if (!in_array($hook, array('edit-tags.php', 'term.php'), true)) {
+		return;
+	}
+
+	$screen = get_current_screen();
+	if (!$screen || 'product_category' !== $screen->taxonomy) {
+		return;
+	}
+
+	wp_enqueue_editor();
+	wp_add_inline_script(
+		'editor',
+		"jQuery(function () {
+			var description = document.getElementById('description');
+			if (!description || !window.wp || !wp.editor) {
+				return;
+			}
+			wp.editor.initialize('description', {
+				tinymce: {
+					wpautop: true,
+					toolbar1: 'formatselect,bold,italic,bullist,numlist,blockquote,alignleft,aligncenter,alignright,link,unlink,undo,redo',
+					toolbar2: ''
+				},
+				quicktags: true,
+				mediaButtons: false
+			});
+		});",
+		'after'
+	);
+}
+add_action('admin_enqueue_scripts', 'wholesale_product_category_description_editor');
 
 
 add_action('rest_api_init', function () {

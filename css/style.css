@@ -4191,6 +4191,27 @@ a.review-author-name:hover {
     margin: 12px 0;
     border-color: #e2e8f0;
   }
+
+  .home .product-listing-container--cl .product-box .pb-image-top {
+    aspect-ratio: 1 / 1;
+  }
+
+  .home .product-listing-container--cl .product-box .pb-details {
+    padding: 18px 20px 20px;
+  }
+
+  .home .product-listing-container--cl .product-box .pb-details .pb-title {
+    margin-bottom: 10px;
+    font-size: 18px !important;
+  }
+
+  .home .product-listing-container--cl .product-box .pb-description-list {
+    line-height: 1.55;
+  }
+
+  .home .product-listing-container--cl .product-box .pb-description-list ul {
+    margin-bottom: 12px;
+  }
 }
 
 /* Channel letter content is intentionally secondary to the product grid. */

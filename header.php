@@ -158,6 +158,8 @@ $logo_id = get_theme_mod('custom_logo');
 			: array(home_url('/login/') => 'Log in', home_url('/signup/') => 'Register');
 		$phone_display = '866-436-2101';
 		$phone_href = 'tel:+18664362101';
+		$text_display = '206-618-6543';
+		$text_href = 'sms:+12066186543';
 		// Inline icons: the theme's icon font is a small subset without these glyphs.
 		$icon = static function ($name) {
 			$paths = array(
@@ -205,9 +207,9 @@ $logo_id = get_theme_mod('custom_logo');
 								<span class="sh-phone-option__label">Cell:</span>
 								<span class="sh-phone-option__number"><?php echo esc_html($phone_display); ?></span>
 							</a>
-							<a class="sh-phone-option" href="<?php echo esc_url('sms:+18664362101'); ?>">
+							<a class="sh-phone-option" href="<?php echo esc_url($text_href); ?>">
 								<span class="sh-phone-option__label">Text:</span>
-								<span class="sh-phone-option__number"><?php echo esc_html($phone_display); ?></span>
+								<span class="sh-phone-option__number"><?php echo esc_html($text_display); ?></span>
 							</a>
 						</div>
 						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PST</p>
@@ -277,9 +279,9 @@ $logo_id = get_theme_mod('custom_logo');
 								<span class="sh-phone-option__label">Cell:</span>
 								<span class="sh-phone-option__number"><?php echo esc_html($phone_display); ?></span>
 							</a>
-							<a class="sh-phone-option" href="<?php echo esc_url('sms:+18664362101'); ?>">
+							<a class="sh-phone-option" href="<?php echo esc_url($text_href); ?>">
 								<span class="sh-phone-option__label">Text:</span>
-								<span class="sh-phone-option__number"><?php echo esc_html($phone_display); ?></span>
+								<span class="sh-phone-option__number"><?php echo esc_html($text_display); ?></span>
 							</a>
 						</div>
 						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PST</p>
@@ -542,7 +544,6 @@ $logo_id = get_theme_mod('custom_logo');
 		 * =================================================================== */
 
 		$ssx_email = 'TR@StorefrontSignOnline.com';
-		$sms_href  = 'sms:+18664362101';
 
 		// Search: limit results to products. Set to '' to search the whole site instead.
 		$search_post_type = 'product';
@@ -1685,10 +1686,10 @@ $logo_id = get_theme_mod('custom_logo');
 							<span class="ssx-tb__label">Cell:</span>
 							<strong><?php echo esc_html($phone_display); ?></strong>
 						</a>
-						<a class="ssx-tb" href="<?php echo esc_url($sms_href); ?>">
+						<a class="ssx-tb" href="<?php echo esc_url($text_href); ?>">
 							<?php echo $ssx_icon('sms', 17); // Static SVG. ?>
 							<span class="ssx-tb__label">Text:</span>
-							<strong><?php echo esc_html($phone_display); ?></strong>
+							<strong><?php echo esc_html($text_display); ?></strong>
 						</a>
 						<a class="ssx-tb" href="<?php echo esc_url('mailto:' . $ssx_email); ?>">
 							<?php echo $ssx_icon('mail', 17); // Static SVG. ?>
@@ -2528,10 +2529,10 @@ $logo_id = get_theme_mod('custom_logo');
 					<span>Cell:</span>
 					<strong><?php echo esc_html($phone_display); ?></strong>
 				</a>
-				<a class="ssxm__contact" href="<?php echo esc_url($sms_href); ?>">
+				<a class="ssxm__contact" href="<?php echo esc_url($text_href); ?>">
 					<?php echo $ssx_icon('sms', 18); // Static SVG. ?>
 					<span>Text:</span>
-					<strong><?php echo esc_html($phone_display); ?></strong>
+					<strong><?php echo esc_html($text_display); ?></strong>
 				</a>
 				<p class="ssxm__hours"><?php echo $ssx_icon('clock', 14); // Static SVG. ?> Mon&ndash;Fri 8am&ndash;5pm PST</p>
 			</div>

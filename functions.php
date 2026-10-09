@@ -46,6 +46,7 @@ if (file_exists(dirname(__FILE__) . '/template/display_admin_orders.php')) {
 require_once(dirname(__FILE__) . '/inc/orders.php');
 require_once(dirname(__FILE__) . '/inc/reviews.php');
 require_once(dirname(__FILE__) . '/inc/review-manager.php');
+require_once(dirname(__FILE__) . '/inc/review-pricing.php');
 require_once(dirname(__FILE__) . '/inc/order-reviews.php');
 require_once(dirname(__FILE__) . '/inc/pricing.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');

@@ -558,6 +558,22 @@ function wholesale_product_sale_percent($product_id)
 	return (int) round(min(99, max(0, $percent)));
 }
 
+function wholesale_price_with_sale($product_id, $regular_price)
+{
+	$regular_price = round((float) $regular_price, 2);
+	$discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
+	$sale_price = round($regular_price * (1 - ($discount / 100)), 2);
+	$format = static function ($amount) {
+		return '$' . number_format($amount, 2, '.', ',');
+	};
+
+	if ($discount <= 0 || $sale_price >= $regular_price) {
+		return esc_html($format($regular_price));
+	}
+
+	return '<del class="product-price-regular">' . esc_html($format($regular_price)) . '</del> <span class="product-price-sale">' . esc_html($format($sale_price)) . '</span>';
+}
+
 /**
  * Sale badge for a product image; prints nothing when the product isn't discounted.
  */

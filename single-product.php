@@ -25,7 +25,7 @@ $starting_at_text = get_post_meta(get_the_ID(), "_starting_at_text", true);
 $price_per_sqft = floatval(get_post_meta(get_the_ID(), '_price_per_sqft', true));
 
 $product_min_price = round(floatval($product_min_sqft) * floatval($price_per_sqft), 2);
-$product_discount_percent = intVal(get_post_meta(get_the_ID(), '_discount_percent', true));
+$product_discount_percent = (float) get_post_meta(get_the_ID(), '_discount_percent', true);
 
 $product_group_json = get_post_meta(get_the_ID(), '_product_group_data', true);
 $product_group_array = json_decode($product_group_json, true);
@@ -935,7 +935,7 @@ get_header();
                         <?php if ($product_discount_percent) { ?>
                             <div class="row totalSaving-container" style="color: gray">
                                 <div class="col-6">
-                                    <span class="fs-6"><?php echo $product_discount_percent ?>% discount</span>
+                                    <span class="fs-6"><?php echo esc_html(rtrim(rtrim(number_format($product_discount_percent, 2, '.', ''), '0'), '.')); ?>% discount</span>
                                 </div>
                                 <div class="col-6 price-subtotal-container">
                                     <span class="fs-6 d-block "><span>-$</span><span class="price-saving"><?php echo format_price(get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>

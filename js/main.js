@@ -91,7 +91,7 @@
       });
     }
 
-    let discountPercent = parseInt($('#discountPercent').val());
+    let discountPercent = parseFloat($('#discountPercent').val()) || 0;
     let pricePerSqft = parseFloat($('#pricePerSqft').val()|| 0).toFixed(2)
 
     function interpolate(x,isCap) {

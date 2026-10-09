@@ -886,9 +886,9 @@ foreach (array(12, 18, 24) as $example_inches) {
 
 
                                                                         if (str_contains($value, '/')) {
-                                                                            echo get_variant_cost($price_per_sqft, explode('/', $value)[0]);
+                                                                            echo wp_kses_post(wholesale_price_with_sale(get_the_ID(), get_variant_cost($price_per_sqft, explode('/', $value)[0])));
                                                                         } else {
-                                                                            echo get_variant_cost($price_per_sqft, $value);
+                                                                            echo wp_kses_post(wholesale_price_with_sale(get_the_ID(), get_variant_cost($price_per_sqft, $value)));
                                                                         }
 
                                                                         ?>

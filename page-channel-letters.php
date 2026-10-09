@@ -153,6 +153,11 @@ $hero_variants = array(
 $hero_style = isset($_GET['style']) ? sanitize_key(wp_unslash($_GET['style'])) : '';
 $hero_style = isset($hero_variants[$hero_style]) ? $hero_style : '';
 
+$page_hero_image = get_the_post_thumbnail_url(get_the_ID(), 'large');
+$page_hero_image = $page_hero_image ? wholesale_webp_url(esc_url_raw($page_hero_image)) : '';
+$default_page_hero_image = wholesale_webp_url(get_template_directory_uri() . '/img/hero-1920.webp');
+$page_hero_background = wholesale_hero_background_style($page_hero_image, $default_page_hero_image);
+
 if ($is_cl_landing && 'POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['clq_submit'])) {
     $field = static function ($key) {
         return isset($_POST[$key]) ? sanitize_text_field(wp_unslash($_POST[$key])) : '';
@@ -455,7 +460,7 @@ get_header();
 ?>
 
 <section class="home-hero<?php echo $is_channel_letters ? ' home-hero--cl' : ''; ?>" aria-labelledby="home-hero-title">
-    <div class="home-hero-content">
+    <div class="home-hero-content" style="<?php echo esc_attr($page_hero_background); ?>">
         <div class="container home-hero-inner">
             <div class="home-hero-copy">
                 <?php if ($is_channel_letters) : ?>

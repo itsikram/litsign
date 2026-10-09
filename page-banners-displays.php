@@ -178,10 +178,15 @@ wholesale_seo_set_page_faq(array(
 ));
 
 get_header();
+
+$page_hero_image = get_the_post_thumbnail_url(get_the_ID(), 'large');
+$page_hero_image = $page_hero_image ? wholesale_webp_url(esc_url_raw($page_hero_image)) : '';
+$default_page_hero_image = wholesale_webp_url(get_template_directory_uri() . '/img/hero-1920.webp');
+$page_hero_background = wholesale_hero_background_style($page_hero_image, $default_page_hero_image);
 ?>
 
 <main id="primary" class="sf-page bd-page">
-	<section class="bd-hero" aria-labelledby="bd-title">
+	<section class="bd-hero" aria-labelledby="bd-title" style="<?php echo esc_attr($page_hero_background); ?>">
 		<div class="container">
 			<?php wholesale_breadcrumbs(); ?>
 			<div class="bd-hero-grid">

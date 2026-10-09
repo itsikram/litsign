@@ -125,17 +125,26 @@ $builder_url = home_url('/channel-letter-builder/');
 $GLOBALS['wholesale_channel_letter_landing'] = $is_channel_letters;
 
 $current_term_id = $current_term ?  $current_term->term_id : 0;
+$current_term_image = $current_term_id ? get_term_meta($current_term_id, 'taxonomy-image', true) : '';
 $current_term_ref = get_term_meta($current_term_id, 'taxonomy-ref', true);
 
 $ref_term = null;
+$ref_term_image = '';
 if ($current_term_ref) {
     $ref_term = get_term_by('slug', $current_term_ref, 'product_category');
-    $ref_term_id = $ref_term->term_id;
+    if ($ref_term && !is_wp_error($ref_term)) {
+        $ref_term_id = $ref_term->term_id;
 
-    $ref_term_title = $ref_term->name;
-    $ref_term_desc = $ref_term->description;
-    $ref_term_image = get_term_meta($ref_term_id, 'taxonomy-image', true);
+        $ref_term_title = $ref_term->name;
+        $ref_term_desc = $ref_term->description;
+        $ref_term_image = get_term_meta($ref_term_id, 'taxonomy-image', true);
+    }
 }
+
+$category_hero_image = $current_term_image ? $current_term_image : $ref_term_image;
+$category_hero_image = $category_hero_image ? wholesale_webp_url(esc_url_raw($category_hero_image)) : '';
+$default_category_hero_image = wholesale_webp_url(get_template_directory_uri() . '/img/hero-1920.webp');
+$category_hero_background = wholesale_hero_background_style($category_hero_image, $default_category_hero_image);
 
 function get_nested_terms($taxonomy = 'product_category', $args = array())
 {
@@ -302,7 +311,7 @@ if ('' === $category_description && '' === $category_intro) {
 ?>
 
 <section class="home-hero<?php echo $is_channel_letters ? ' home-hero--cl' : ' home-hero--category'; ?>" aria-labelledby="home-hero-title">
-    <div class="home-hero-content">
+    <div class="home-hero-content" style="<?php echo esc_attr($category_hero_background); ?>">
         <div class="container home-hero-inner">
             <div class="home-hero-copy">
                 <?php if ($is_channel_letters) : ?>

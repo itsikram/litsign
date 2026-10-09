@@ -765,6 +765,18 @@ function wholesale_channel_letter_default_cover_url()
 	return get_template_directory_uri() . '/img/channel-letter-default-cover.svg';
 }
 
+function wholesale_hero_background_style($image_url = '', $fallback_image_url = '')
+{
+	$bg_image = $image_url ? $image_url : $fallback_image_url;
+	if (!$bg_image) {
+		return '';
+	}
+
+	$overlay = "linear-gradient(90deg, rgba(3, 24, 53, 0.97) 0%, rgba(3, 24, 53, 0.89) 31%, rgba(3, 24, 53, 0.36) 56%, rgba(3, 24, 53, 0.08) 100%), url('" . esc_url($bg_image) . "')";
+
+	return "background-image: {$overlay}; background-position: center center; background-size: cover; background-repeat: no-repeat;";
+}
+
 /**
  * Tag a contact notification with the website it came from, so the shared
  * inbox can tell sites apart. Adds "[domain]" to the subject and a

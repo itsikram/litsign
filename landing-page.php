@@ -157,7 +157,7 @@ get_header();
 								<hr>
 								<div class="start-at-pricing">
 									<span class="pb-title-short">Starting at</span>
-									<span class="pb-price"><?php echo wp_kses_post(get_post_meta(get_the_ID(), '_starting_at_text', true)); ?></span>
+									<span class="pb-price"><?php echo wp_kses_post(wholesale_price_no_cents(get_post_meta(get_the_ID(), '_starting_at_text', true))); ?></span>
 								</div>
 							</div>
 						</a>

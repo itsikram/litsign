@@ -369,7 +369,7 @@ function wholesale_shop_filter($products, $state)
  */
 function wholesale_shop_money($amount)
 {
-	return '$' . number_format((float) $amount, 2);
+	return wholesale_whole_dollars($amount);
 }
 
 /**
@@ -428,7 +428,7 @@ function wholesale_shop_render_card($product, $index)
 						<p class="sc-card-price">
 							<span class="sc-card-price-label"><?php esc_html_e('Starting at', 'litsign'); ?></span>
 							<span class="sc-card-price-value">
-								<?php if ($product['was']) : ?><del><?php echo esc_html(wholesale_shop_money($product['was'])); ?></del><?php endif; ?>
+								<?php if ($product['was'] && wholesale_shop_money($product['was']) !== wholesale_shop_money($product['price'])) : ?><del><?php echo esc_html(wholesale_shop_money($product['was'])); ?></del><?php endif; ?>
 								<strong><?php echo esc_html(wholesale_shop_money($product['price'])); ?></strong><small><?php echo esc_html($units[$product['unit']][2]); ?></small>
 							</span>
 						</p>

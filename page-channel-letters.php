@@ -883,16 +883,7 @@ foreach (array(12, 18, 24) as $example_inches) {
                                                                 </a></th>
                                                             <td>
                                                                 <a href="<?php echo get_permalink(get_the_ID()) . '?' . $starting_at_options . '=' . $value; ?>">
-                                                                    $<?php
-
-
-                                                                        if (str_contains($value, '/')) {
-                                                                            echo wp_kses_post(wholesale_price_with_sale(get_the_ID(), get_variant_cost($price_per_sqft, explode('/', $value)[0])));
-                                                                        } else {
-                                                                            echo wp_kses_post(wholesale_price_with_sale(get_the_ID(), get_variant_cost($price_per_sqft, $value)));
-                                                                        }
-
-                                                                        ?>
+                                                                    <?php echo wp_kses_post(wholesale_price_no_cents(wholesale_price_with_sale(get_the_ID(), get_variant_cost($price_per_sqft, str_contains($value, '/') ? explode('/', $value)[0] : $value)))); ?>
                                                                 </a>
                                                             </td>
 
@@ -912,7 +903,7 @@ foreach (array(12, 18, 24) as $example_inches) {
                                                 Starting at
                                             </span>
                                             <span class="pb-price">
-                                                <?php echo $starting_at_text; ?>
+                                                <?php echo wholesale_price_no_cents($starting_at_text); ?>
                                             </span>
                                         <?php
                                         }; ?>
@@ -1014,7 +1005,7 @@ foreach (array(12, 18, 24) as $example_inches) {
         $cl_compare_rows[] = array(
             'style' => $cl_style,
             'url' => get_permalink($cl_product),
-            'price' => get_post_meta($cl_product->ID, '_starting_at_text', true),
+            'price' => wholesale_price_no_cents(get_post_meta($cl_product->ID, '_starting_at_text', true)),
         );
     }
     ?>

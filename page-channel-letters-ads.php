@@ -407,7 +407,7 @@ if (!function_exists('wholesale_cla_icon')) {
 					</header>
 					<div class="cla-style-grid">
 						<?php while ($styles->have_posts()) : $styles->the_post(); ?>
-							<?php $start_price = get_post_meta(get_the_ID(), '_starting_at_text', true); ?>
+							<?php $start_price = wholesale_price_no_cents(get_post_meta(get_the_ID(), '_starting_at_text', true)); ?>
 							<article class="cla-style-card">
 								<a class="cla-style-image" href="<?php the_permalink(); ?>" tabindex="-1" aria-hidden="true">
 									<?php if (has_post_thumbnail()) : ?>

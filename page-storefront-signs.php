@@ -118,7 +118,7 @@ get_header();
 				<?php foreach ($sign_types as $type) : ?>
 					<?php
 					$type_product = wholesale_seo_product($type[0]);
-					$type_price = wholesale_seo_product_starting_text($type[0]);
+					$type_price = wholesale_price_no_cents(wholesale_seo_product_starting_text($type[0]));
 					?>
 					<article class="sf-type-card">
 						<a class="sf-type-image" href="<?php echo esc_url($type[1]); ?>" tabindex="-1" aria-hidden="true">

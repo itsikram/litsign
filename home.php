@@ -649,7 +649,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                                             <?php if ($size_prices || trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
                                                 <p class="pb-price-summary">
                                                     <span class="pb-title-short">Starting at</span>
-                                                    <span class="pb-price"><?php echo trim(wp_strip_all_tags((string) $starting_at_text)) !== '' ? wholesale_emphasize_price($starting_at_text) : '<strong>$' . esc_html(number_format(min($size_prices), 2)) . '</strong>'; ?></span>
+                                                    <span class="pb-price"><?php echo trim(wp_strip_all_tags((string) $starting_at_text)) !== '' ? wholesale_emphasize_price(wholesale_price_no_cents($starting_at_text)) : '<strong>' . esc_html(wholesale_whole_dollars(min($size_prices))) . '</strong>'; ?></span>
                                                 </p>
                                             <?php endif; ?>
                                             <table class="table">
@@ -668,16 +668,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                                                                 </a></th>
                                                             <td>
                                                                 <a href="<?php echo get_permalink(get_the_ID()) . '?' . $starting_at_options . '=' . $value; ?>">
-                                                                    $<?php
-
-
-                                                                        if (str_contains($value, '/')) {
-                                                                            echo get_variant_cost($price_per_sqft, explode('/', $value)[0]);
-                                                                        } else {
-                                                                            echo get_variant_cost($price_per_sqft, $value);
-                                                                        }
-
-                                                                        ?>
+                                                                    <?php echo esc_html(wholesale_whole_dollars(get_variant_cost($price_per_sqft, str_contains($value, '/') ? explode('/', $value)[0] : $value))); ?>
                                                                 </a>
                                                             </td>
 
@@ -697,7 +688,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                                                 Starting at
                                             </span>
                                             <span class="pb-price">
-                                                <?php echo $is_channel_letters ? $starting_at_text : wholesale_emphasize_price($starting_at_text); ?>
+                                                <?php echo $is_channel_letters ? wholesale_price_no_cents($starting_at_text) : wholesale_emphasize_price(wholesale_price_no_cents($starting_at_text)); ?>
                                             </span>
                                         <?php
                                         }; ?>
@@ -819,7 +810,7 @@ if ('' === $category_description_text && '' === $category_intro) {
         $cl_compare_rows[] = array(
             'style' => $cl_style,
             'url' => get_permalink($cl_product),
-            'price' => get_post_meta($cl_product->ID, '_starting_at_text', true),
+            'price' => wholesale_price_no_cents(get_post_meta($cl_product->ID, '_starting_at_text', true)),
         );
     }
     ?>
@@ -889,7 +880,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                 <?php foreach ($more_products as $item) : ?>
                     <?php
                     $item_product = wholesale_seo_product($item[0]);
-                    $item_price = wholesale_seo_product_starting_text($item[0]);
+                    $item_price = wholesale_price_no_cents(wholesale_seo_product_starting_text($item[0]));
                     ?>
                     <article class="sf-type-card">
                         <a class="sf-type-image" href="<?php echo esc_url($item[1]); ?>" tabindex="-1" aria-hidden="true">

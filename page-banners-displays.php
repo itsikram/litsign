@@ -246,7 +246,7 @@ $page_hero_background = wholesale_hero_background_style($page_hero_image, $defau
 				<?php foreach ($lines as $line) : ?>
 					<?php
 					$line_url = wholesale_category_url($line[0]);
-					$line_price = wholesale_seo_product_starting_text($line[1]);
+					$line_price = wholesale_price_no_cents(wholesale_seo_product_starting_text($line[1]));
 					$line_name = wp_strip_all_tags(html_entity_decode($line[2], ENT_QUOTES, 'UTF-8'));
 					?>
 					<article class="sf-type-card bd-card" id="<?php echo esc_attr($line[4]); ?>">
@@ -308,7 +308,7 @@ $page_hero_background = wholesale_hero_background_style($page_hero_image, $defau
 						continue;
 					}
 					$name = wp_strip_all_tags(get_the_title($product));
-					$price = wholesale_seo_product_starting_text($slug);
+					$price = wholesale_price_no_cents(wholesale_seo_product_starting_text($slug));
 					?>
 					<a class="bd-product" href="<?php echo esc_url(get_permalink($product)); ?>">
 						<span class="bd-product-image"><?php echo $product_image($slug, $name, '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 25vw'); ?></span>

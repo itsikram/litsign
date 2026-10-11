@@ -494,7 +494,7 @@ function wholesale_guide_render_products($slugs)
 	<div class="sf-type-grid">
 		<?php foreach ($cards as $card) : ?>
 			<?php list($product, $slug, $note) = $card; ?>
-			<?php $price = wholesale_seo_product_starting_text($slug); ?>
+			<?php $price = wholesale_price_no_cents(wholesale_seo_product_starting_text($slug)); ?>
 			<article class="sf-type-card">
 				<a class="sf-type-image" href="<?php echo esc_url(get_permalink($product)); ?>" tabindex="-1" aria-hidden="true">
 					<?php

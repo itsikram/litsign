@@ -2404,6 +2404,8 @@ function wholesale_vi_event_text($event)
 			return array('yes-alt', 'Purchased — ' . $label, 'won');
 		case 'quote_submit':
 			return array('format-chat', 'Submitted a quote request — ' . $label, 'good');
+		case 'exit_survey':
+			return array('feedback', 'Answered the exit survey: “' . $label . '”', 'warn');
 	}
 
 	return array('marker', $event->type . ' ' . $label, '');

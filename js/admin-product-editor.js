@@ -87,6 +87,36 @@
 		});
 	}
 
+	/* ----------------------------------------- rich text: keep unedited HTML */
+
+	// Before posting the meta boxes, WordPress has TinyMCE write every rich text
+	// field back to its textarea, which reorders attributes and drops some (for
+	// example loading="lazy") even when nobody edited the field. When the content
+	// is the same as when the editor opened, send the stored HTML back instead.
+	// Edits made in either the Visual or the Text tab change the content, so they
+	// are never replaced.
+	function guardRichText(editor) {
+		if (!editor || editor.ssoGuarded || !editor.getElement || !editor.getElement() || editor.getElement().tagName !== 'TEXTAREA') return;
+		editor.ssoGuarded = true;
+		const original = editor.getElement().value;
+		let opened = null;
+		const capture = () => {
+			try { opened = editor.getContent({ save: true }); } catch (e) { opened = null; }
+		};
+		if (editor.initialized) capture();
+		else editor.on('init', capture);
+		editor.on('SaveContent', (e) => {
+			if (opened === null || (editor.isHidden && editor.isHidden())) return;
+			if (e.content === opened) e.content = original;
+		});
+	}
+
+	function guardAllRichText() {
+		if (!window.tinymce) return;
+		(tinymce.editors ? Object.values(tinymce.editors) : []).forEach(guardRichText);
+		if (tinymce.on) tinymce.on('AddEditor', (e) => guardRichText(e.editor));
+	}
+
 	/* ============================================================ OPTIONS EDITOR */
 
 	const PRICE_TYPES = [
@@ -1192,7 +1222,7 @@
 			}
 			if (id === 'pricing') intro.push(Preview.html());
 			if (hiddenCount) {
-				intro.push('<p class="sso-hidden-note">' + hiddenCount + ' field' + (hiddenCount === 1 ? ' is' : 's are') + ' hidden because ' + esc(reasons.join(' and ')) + '. Their saved values are kept. <button type="button" class="button-link sso-show-hidden">' + (this.showHidden ? 'Hide them' : 'Show them') + '</button></p>');
+				intro.push('<p class="sso-hidden-note">' + hiddenCount + ' field' + (hiddenCount === 1 ? ' is' : 's are') + ' hidden because ' + esc(reasons.join(' and ')) + '. ' + (hiddenCount === 1 ? 'Its saved value is' : 'Their saved values are') + ' kept. <button type="button" class="button-link sso-show-hidden">' + (this.showHidden ? 'Hide them' : 'Show them') + '</button></p>');
 			}
 			if (id === 'pricing' && !Product.hasCalculator() && !isCl) {
 				intro.push('<p class="sso-help">The size calculator is off, so the base price is minimum sq ft × price per sq ft (usually 1 × the item price).</p>');
@@ -1674,9 +1704,13 @@
 
 	/* =================================================================== BOOT */
 
+	// As early as possible, so no editor writes back before the guard is in place.
+	guardAllRichText();
+
 	$(function () {
 		if (!document.body.classList.contains('post-type-product')) return;
 
+		guardAllRichText();
 		showStoredValues();
 		AttrEditor.init();
 		ClEditor.init();
@@ -1723,10 +1757,26 @@
 			});
 		}
 
+		// Ctrl+S: the block editor only saves on its own when the post content changed,
+		// so also save when only product fields changed. Problems still stop it.
+		if (isBlockEditor()) {
+			document.addEventListener('keydown', (e) => {
+				if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || String(e.key).toLowerCase() !== 's') return;
+				const editor = wp.data.select('core/editor');
+				if (editor.isSavingPost()) return;
+				if (editor.isPostSavingLocked()) { Gate.reveal(); return; }
+				if (!editor.isEditedPostDirty() && Status.isDirty()) {
+					e.preventDefault();
+					wp.data.dispatch('core/editor').savePost();
+				}
+			}, true);
+		}
+
 		Status.bind();
 		Sections.refreshType();
 		Sections.show(Sections.current);
 		// Let CMB2 and TinyMCE finish setting up before recording what "unchanged" means.
-		setTimeout(() => { Status.takeBaseline(); Checks.run(); Status.refresh(); }, 800);
+		// (js/admin-script.js also sets some checkboxes on load, without a change event.)
+		setTimeout(() => { Sections.refreshType(); Sections.apply(); Status.takeBaseline(); Checks.run(); Status.refresh(); }, 800);
 	});
 })(jQuery);

@@ -128,7 +128,7 @@ get_header();
 									'loading' => 'lazy',
 									'decoding' => 'async',
 									'alt' => wp_strip_all_tags(html_entity_decode($type[2], ENT_QUOTES, 'UTF-8')),
-									'sizes' => '(max-width: 575px) 100vw, (max-width: 991px) 50vw, 25vw',
+									'sizes' => '(max-width: 575px) 112px, (max-width: 991px) 50vw, 25vw',
 								));
 							}
 							?>

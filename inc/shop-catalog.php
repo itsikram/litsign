@@ -136,7 +136,7 @@ function wholesale_shop_pricing_labels()
 	return array(
 		'sqft' => array(__('Priced per sq ft', 'litsign'), __('Printed to your size', 'litsign'), '/sq ft'),
 		'item' => array(__('Priced per item', 'litsign'), __('Set sizes & kits', 'litsign'), '/item'),
-		'inch' => array(__('Priced per letter inch', 'litsign'), __('Channel letters', 'litsign'), '/inch'),
+		'inch' => array(__('Priced per letter', 'litsign'), __('Channel letters', 'litsign'), '/letter'),
 	);
 }
 
@@ -270,7 +270,7 @@ function wholesale_shop_products()
 		if (preg_match('/<del>[^$]*\$\s?([\d,]+(?:\.\d+)?)/i', $starting_text, $del)) {
 			$was = (float) str_replace(',', '', $del[1]);
 		}
-		$unit = false !== strpos($plain, 'inch') ? 'inch' : (preg_match('/ft|sq/', $plain) ? 'sqft' : 'item');
+		$unit = preg_match('/inch|per letter/', $plain) ? 'inch' : (preg_match('/ft|sq/', $plain) ? 'sqft' : 'item');
 
 		// Up to three feature bullets from the listing (or short) description.
 		$features = array();

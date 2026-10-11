@@ -97,6 +97,7 @@ get_header();
 <input type="hidden" id="faceColorPicker" value="#ffffff">
 <input type="hidden" id="productPermalink" value="<?php echo esc_url($ticket_builder ? $ticket_builder['save_url'] : get_permalink($product_id)); ?>">
 <input type="hidden" id="isTicketBuilder" value="<?php echo $ticket_builder ? '1' : '0'; ?>">
+<input type="hidden" id="clProductId" value="<?php echo esc_attr($product_id); ?>">
 
 <?php if ($ticket_builder) : ?>
     <div class="wpt-builder-bar" role="status">
@@ -143,6 +144,12 @@ get_header();
 
             </div>
 
+        </div>
+        <?php // Phones and tablets show this panel as a bottom sheet (opened from the Edit button on the canvas). ?>
+        <div class="cl-sheet-bar">
+            <span class="cl-sheet-grip" aria-hidden="true"></span>
+            <p class="cl-sheet-title" id="clSheetTitle">Edit letters</p>
+            <button type="button" class="cl-sheet-done" id="clSheetDone">Done</button>
         </div>
         <div class="left-sidebar-container">
             <ul class="sidebar-item-container">
@@ -328,6 +335,17 @@ get_header();
         </div>
         <div class="cl-canvas-wrap">
             <div id="container" aria-label="Design canvas"></div>
+            <?php // js/cl.js keeps this next to the selected element's transformer. ?>
+            <button type="button" class="cl-edit-pill" id="clEditPill" aria-label="Edit selected element" title="Edit" aria-controls="leftSidebar" aria-expanded="false" hidden>
+                <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m13.5 6.5 4 4" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
+            </button>
+            <?php // Shown by js/cl.js after it restores an unsaved draft from this browser. ?>
+            <div class="cl-draft-notice" id="clDraftNotice" role="status" hidden>
+                <span>Restored your unsaved design from <span id="clDraftAge">earlier</span>.</span>
+                <button type="button" class="cl-draft-discard" id="clDraftDiscard">Discard</button>
+                <button type="button" class="cl-draft-close" id="clDraftClose" aria-label="Dismiss">&times;</button>
+            </div>
+            <p class="cl-canvas-tip">Tap a letter or shape, then tap <span class="cl-tip-icon"><svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true" focusable="false"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/></svg><span class="visually-hidden">the edit icon</span></span> to change its text, font, colors and size.</p>
             <?php // Shown while the canvas is empty; js/cl.js toggles it with the element count. ?>
             <div class="cl-empty-state" id="clEmptyState">
                 <form class="cl-empty-card" id="clStartForm" autocomplete="off">

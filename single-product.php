@@ -199,7 +199,10 @@ get_header();
                     <div class="product-price-per-sqft text-end py-2 text-secondary">
                         <!-- $<?php echo number_format($price_per_sqft, 2, '.', ','); ?> <?php if ($product_slug != 'acrylic-prints' && $product_slug != 'canvas-wrap') : ?> per ft<sup>2</sup> <?php endif; ?> -->
 
-                        <?php echo $starting_at_text; ?>
+                        <?php if (trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
+                            <span class="product-price-label">Starting at</span>
+                        <?php endif; ?>
+                        <span class="product-price-value"><?php echo wholesale_emphasize_price($starting_at_text); ?></span>
                     </div>
 
                 <?php }; ?>
@@ -439,7 +442,7 @@ get_header();
                                                             <?php foreach ($single_attr->options as $option) {
                                                                 foreach ($option as $name => $price) {
                                                             ?>
-                                                                    <option <?php if ($attr_name  == 'height') { ?> data-size="<?php echo intval($name); ?>" <?php }; ?> value="<?php echo $price; ?>"><?php echo $name; ?></option>
+                                                                    <option <?php if ($attr_name  == 'height') { ?> data-size="<?php echo intval($name); ?>" <?php }; ?> value="<?php echo $price; ?>"><?php echo 'height' == $attr_name && intval($name) > 0 ? esc_html(intval($name) . ' Inch') : $name; /* Heights always read "24 Inch", whatever the stored label's spacing or case. */ ?></option>
                                                             <?php  }
                                                             }; ?>
                                                         </select>
@@ -459,7 +462,7 @@ get_header();
                                                     if ($attr_name == 'height') { ?>
                                                         <span id="hiddenText" style="visibility: hidden; position: absolute; white-space: nowrap; font-size: 16px; font-family: Arial;"></span>
                                                         <span id="widthDisplay" class="form-text">
-                                                            Aproximate Width: <b>0 Inch</b>
+                                                            Approximate Width: <b>0 Inch</b>
                                                         </span>
                                                     <?Php }
 
@@ -734,7 +737,7 @@ get_header();
                                                         <?php foreach ($single_attr->options as $option) {
                                                             foreach ($option as $name => $price) {
                                                         ?>
-                                                                <option <?php if ($attr_name  == 'height') { ?> data-size="<?php echo intval($name); ?>" <?php }; ?> value="<?php echo $price; ?>"><?php echo $name; ?></option>
+                                                                <option <?php if ($attr_name  == 'height') { ?> data-size="<?php echo intval($name); ?>" <?php }; ?> value="<?php echo $price; ?>"><?php echo 'height' == $attr_name && intval($name) > 0 ? esc_html(intval($name) . ' Inch') : $name; /* Heights always read "24 Inch", whatever the stored label's spacing or case. */ ?></option>
                                                         <?php  }
                                                         }; ?>
                                                     </select>
@@ -1090,7 +1093,7 @@ get_header();
 
                     <?php
                     } else {
-                        echo wholesale_seo_fill_missing_alt(get_the_content(), $product_image_label);
+                        echo wholesale_seo_fill_missing_alt(wholesale_seo_strip_facility_block(get_the_content()), $product_image_label);
                     }
 
                     ?>

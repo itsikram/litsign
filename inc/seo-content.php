@@ -1239,6 +1239,39 @@ function wholesale_seo_fill_missing_alt($html, $label)
 }
 
 /**
+ * Remove the supplier's "Available Production Facility" block (WA/CA
+ * Headquarters, TX and PA Print Facility) from stored product HTML. It names
+ * facilities the business does not have and repeated the same text on every
+ * product page. The stored content is left as it is.
+ */
+function wholesale_seo_strip_facility_block($html)
+{
+	$html = (string) $html;
+	if (!preg_match('#(?:<h\d[^>]*>\s*)?Available (?:Production|Distribution) Facility#i', $html, $start, PREG_OFFSET_CAPTURE)) {
+		return $html;
+	}
+	$from = $start[0][1];
+
+	if (!preg_match('#P\s?A Print Facility(?:\s*</span>)?#i', $html, $end, PREG_OFFSET_CAPTURE, $from) || $end[0][1] - $from > 3000) {
+		return $html;
+	}
+	$to = $end[0][1] + strlen($end[0][0]);
+
+	// Close the wrappers the block opened (facility-bar, icon rows), then
+	// drop the divider that separated it from the description.
+	$open = preg_match_all('#<div\b#i', substr($html, $from, $to - $from)) - preg_match_all('#</div>#i', substr($html, $from, $to - $from));
+	while ($open > 0 && preg_match('#\G\s*</div>#i', $html, $close, 0, $to)) {
+		$to += strlen($close[0]);
+		$open--;
+	}
+	if (preg_match('#\G(?:\s|&nbsp;)*<hr\s*/?>#i', $html, $divider, 0, $to)) {
+		$to += strlen($divider[0]);
+	}
+
+	return substr($html, 0, $from) . substr($html, $to);
+}
+
+/**
  * Readable alt text for a media library image, or '' when nothing reliable is
  * known (for example customer design uploads with generated file names).
  */

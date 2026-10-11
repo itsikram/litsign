@@ -116,6 +116,44 @@ add_action('cmb2_admin_init', function () {
 }, 20);
 
 /**
+ * CMB2 deletes a meta row when the field is saved empty. A row that is already
+ * stored as '' is left in place, so an untouched Update doesn't remove it
+ * (get_post_meta() reads '' either way).
+ */
+add_filter('cmb2_override_meta_remove', function ($override, $args) {
+	if (null !== $override || 'post' !== ($args['type'] ?? '') || 'product' !== get_post_type($args['id'] ?? 0)) {
+		return $override;
+	}
+	$key = $args['field_id'] ?? '';
+	if ('' !== $key && metadata_exists('post', $args['id'], $key) && array('') === get_post_meta($args['id'], $key, false)) {
+		return true;
+	}
+	return $override;
+}, 10, 2);
+
+/**
+ * A text or rich text field sent back exactly as stored keeps its stored bytes.
+ * CMB2 would otherwise run it through its cleaning again on every Update (for
+ * rich text, wp_kses_post() drops attributes such as decoding="async"). Changed
+ * values are cleaned as before. CMB2 works with slashed values here.
+ */
+function wholesale_pe_keep_unchanged_value($override, $value, $object_id, $field_args)
+{
+	if (null !== $override || !is_string($value) || empty($field_args['id']) || 'product' !== get_post_type($object_id)) {
+		return $override;
+	}
+	$stored = get_post_meta($object_id, $field_args['id'], false);
+	if (array(wp_unslash($value)) === $stored && is_string($stored[0])) {
+		return $value;
+	}
+	return $override;
+}
+foreach (array('text', 'text_small', 'text_medium', 'textarea', 'textarea_small', 'wysiwyg') as $wholesale_pe_type) {
+	add_filter("cmb2_sanitize_{$wholesale_pe_type}", 'wholesale_pe_keep_unchanged_value', 10, 4);
+}
+unset($wholesale_pe_type);
+
+/**
  * Swap the render callbacks of the options and channel letter boxes, keeping
  * their ids and positions. (remove_meta_box() + add_meta_box() with the same
  * id would not re-add a removed box.)
@@ -199,12 +237,49 @@ add_action('init', function () {
 	}
 });
 
+/**
+ * Same checks and cleaning as save_product_attr_meta(), except that an option
+ * group sent back exactly as stored is kept as stored. Otherwise the cleaning
+ * (which appends the name to options sharing a bare price) would also rewrite
+ * older groups nobody edited.
+ */
 function wholesale_pe_save_product_attr($post_id)
 {
-	if (isset($_POST['product_attr']) && trim(wp_unslash((string) $_POST['product_attr'])) === (string) get_post_meta($post_id, 'product_attr', true)) {
+	if ((defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || !current_user_can('edit_post', $post_id) || !isset($_POST['product_attr'])) {
 		return;
 	}
-	save_product_attr_meta($post_id);
+	$raw = trim(wp_unslash((string) $_POST['product_attr']));
+	$stored = (string) get_post_meta($post_id, 'product_attr', true);
+	if ('' === $raw || '[{' === $raw || $raw === $stored) {
+		return;
+	}
+	$attrs = json_decode($raw, true);
+	if (!is_array($attrs)) {
+		set_transient('wholesale_attr_save_error_' . get_current_user_id(), $post_id, 60);
+		return;
+	}
+	$clean = wholesale_normalize_product_attrs($attrs);
+
+	$old_by_name = array();
+	$old = json_decode($stored, true);
+	foreach (is_array($old) ? $old : array() as $old_attr) {
+		if (is_array($old_attr) && isset($old_attr['name']) && !isset($old_by_name[(string) $old_attr['name']])) {
+			$old_by_name[(string) $old_attr['name']] = $old_attr;
+		}
+	}
+	$sent_by_name = array();
+	foreach ($attrs as $attr) {
+		if (is_array($attr) && isset($attr['name']) && !isset($sent_by_name[(string) $attr['name']])) {
+			$sent_by_name[(string) $attr['name']] = $attr;
+		}
+	}
+	foreach ($clean as $i => $attr) {
+		$name = $attr['name'];
+		if (isset($old_by_name[$name], $sent_by_name[$name]) && $sent_by_name[$name] === $old_by_name[$name]) {
+			$clean[$i] = $old_by_name[$name];
+		}
+	}
+	update_post_meta($post_id, 'product_attr', wp_slash(wp_json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
 }
 
 function wholesale_pe_save_product_cl($post_id)

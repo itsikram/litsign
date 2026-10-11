@@ -124,12 +124,7 @@ function wholesale_render_category_sitemap()
 		return;
 	}
 
-	$terms = get_terms(array(
-		'taxonomy' => 'product_category',
-		'hide_empty' => true,
-		'orderby' => 'name',
-	));
-	$terms = is_wp_error($terms) ? array() : $terms;
+	$terms = wholesale_seo_sitemap_categories();
 
 	nocache_headers();
 	header('Content-Type: application/xml; charset=UTF-8');

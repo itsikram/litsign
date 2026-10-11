@@ -1224,7 +1224,8 @@ function createHistorySnapshot() {
       delete attrs.textIndex;
       delete attrs.transformer;
       return {
-        id: item.id,
+        // Store elements are keyed by the Konva node id; restoreSnapshot matches on it.
+        id: item.node._id,
         type: item.type,
         attrs,
         points: item.node.points ? item.node.points() : null,
@@ -2888,6 +2889,7 @@ let updateFocusedTransformer = (node) => {
   });
 
   layer.batchDraw();
+  syncElementEditor();
 };
 
 let updateLeftsideBar = () => {
@@ -3318,10 +3320,12 @@ if (stage.height() > canvasHeight) {
   stage.draw();
 }
 
+// Phones and tablets hide the preview (the panel is a closed sheet), so it can start
+// at 0 px; Konva cannot draw shadowed text into an empty canvas, so keep at least 1 px.
 const previewStage = new Konva.Stage({
   container: previewContainer,
-  width: previewCanvasWidth,
-  height: previewCanvasWidth,
+  width: previewCanvasWidth || 1,
+  height: previewCanvasWidth || 1,
   background: "#F5F5F5",
 });
 
@@ -4613,16 +4617,13 @@ window.addEventListener("load", function (e) {
     textInput.value = text;
     triggerTransformEvent();
   });
-  // On phones the letters field sits below the canvas: after a tap on Text, take the
-  // visitor straight to it with the placeholder selected so typing replaces it.
+  // Phones and tablets: after a tap on Text, open the edit sheet with the placeholder
+  // text selected so typing replaces it.
   addTextBtn.addEventListener("click", function (e) {
-    if (!e.isTrusted || !window.matchMedia("(max-width: 767.98px)").matches) {
+    if (!e.isTrusted || !clEditorUsesSheet()) {
       return;
     }
-    const fieldTop = textInput.getBoundingClientRect().top + window.scrollY;
-    window.scrollTo({ top: Math.max(0, fieldTop - window.innerHeight * 0.4), behavior: "smooth" });
-    textInput.focus({ preventScroll: true });
-    textInput.select();
+    openElementEditor({ focusText: true });
   });
 
   addRacewayButton.addEventListener("click", function () {
@@ -4704,13 +4705,9 @@ window.addEventListener("load", function (e) {
       textInput.value = text;
       addTextBtn.click();
       startText.value = "";
-      // Phones: bring the canvas up under the site header so the font, color and
-      // size options below it come into view.
-      if (window.matchMedia("(max-width: 767.98px)").matches) {
-        const header = document.querySelector("header");
-        const headerHeight = header && getComputedStyle(header).position !== "static" ? header.offsetHeight : 0;
-        const canvasTop = container.getBoundingClientRect().top + window.scrollY;
-        window.scrollTo({ top: Math.max(0, canvasTop - headerHeight - 8), behavior: "smooth" });
+      // Phones and tablets: step 2 (font & colors) opens right away in the edit sheet.
+      if (clEditorUsesSheet()) {
+        openElementEditor();
       }
     });
     startText.addEventListener("input", () => startText.removeAttribute("aria-invalid"));
@@ -6398,6 +6395,8 @@ window.addEventListener("load", function (e) {
               : "Your design could not be added to the cart.",
           );
         }
+        // It's in the cart now, so a reload shouldn't bring it back as an unsaved draft.
+        clearBuilderDraft();
         if (document.getElementById("miniCart")) {
           // js/mini-cart.js renders the drawer and opens it.
           document.dispatchEvent(new CustomEvent("wholesale:minicart-added", { detail: json }));
@@ -6509,6 +6508,8 @@ window.addEventListener("load", function (e) {
         }
       }
       const redirectUrl = `${productPermalink}?save_design=true&design_data=${encodeURIComponent(designData)}&design_id=${freshMediaData.id}`;
+      // The saved design comes back from the session from now on.
+      clearBuilderDraft();
       window.location.href = redirectUrl;
       return;
 
@@ -6845,17 +6846,31 @@ window.addEventListener("load", function (e) {
     }
   };
 
-  if (isEditDesign) {
+  clBuilderActions.addText = addText;
+  clBuilderActions.addShape = addShape;
+  clBuilderActions.addRaceway = addRaceway;
+
+  // An unsaved draft from this tab (or an earlier visit) wins over the saved design it
+  // started from; otherwise restore the saved design, then start autosaving drafts.
+  const builderDraft = readBuilderDraft();
+  if (builderDraft) {
+    restoreBuilderDraft(builderDraft, () => {
+      if (isEditDesign) {
+        const fonts = editDesignElements.map((element) => element.font && element.font.code).filter(Boolean);
+        return Promise.all(fonts.map(ensureFontLoaded)).then(restoreEditDesign);
+      }
+    });
+  } else if (isEditDesign) {
     // Letters are measured (and priced) from the rendered font, so load the design's fonts first.
     const designFonts = editDesignElements
       .map((element) => element.font && element.font.code)
       .filter(Boolean);
-    Promise.all(designFonts.map(ensureFontLoaded)).then(restoreEditDesign);
+    Promise.all(designFonts.map(ensureFontLoaded))
+      .then(restoreEditDesign)
+      .finally(startBuilderDraftAutosave);
+  } else {
+    startBuilderDraftAutosave();
   }
-
-  clBuilderActions.addText = addText;
-  clBuilderActions.addShape = addShape;
-  clBuilderActions.addRaceway = addRaceway;
 
   // end script
 });
@@ -6935,3 +6950,543 @@ window.addEventListener("load", function (e) {
     }).observe(slider, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"] });
   }
 })();
+
+// Edit button that follows the selected element's transformer. On phones and tablets
+// it opens the element settings as a bottom sheet; on desktop it points the visitor
+// at the settings panel beside the canvas.
+var clElementEditor = null;
+
+function clEditorUsesSheet() {
+  return window.matchMedia("(max-width: 991.98px)").matches;
+}
+
+function getElementEditor() {
+  if (clElementEditor) {
+    return clElementEditor;
+  }
+  const button = document.getElementById("clEditPill");
+  const sidebar = document.getElementById("leftSidebar");
+  if (!button || !sidebar || typeof stage === "undefined" || typeof layer === "undefined") {
+    return null;
+  }
+  clElementEditor = {
+    button,
+    sidebar,
+    title: document.getElementById("clSheetTitle"),
+    done: document.getElementById("clSheetDone"),
+    dragging: false,
+  };
+
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openElementEditor();
+  });
+  if (clElementEditor.done) {
+    clElementEditor.done.addEventListener("click", () => closeElementEditor());
+  }
+  sidebar.addEventListener("animationend", (event) => {
+    if (event.animationName === "cl-panel-flash") {
+      sidebar.classList.remove("is-flash");
+    }
+  });
+
+  // The button tracks every redraw: drag, resize handles, zoom, undo, window resize.
+  layer.on("draw", positionElementEditButton);
+  stage.on("dragstart", () => {
+    clElementEditor.dragging = true;
+    button.hidden = true;
+  });
+  stage.on("dragend", () => {
+    clElementEditor.dragging = false;
+    positionElementEditButton();
+  });
+  // Double-click / double-tap on an element is a shortcut for the Edit button.
+  stage.on("dblclick dbltap", (event) => {
+    const target = event.target;
+    const isDesignNode = nodeLists.some(
+      (item) =>
+        item.node === target ||
+        (typeof item.node.isAncestorOf === "function" && item.node.isAncestorOf(target)),
+    );
+    if (isDesignNode && selectedNode) {
+      openElementEditor();
+    }
+  });
+
+  window.matchMedia("(max-width: 991.98px)").addEventListener("change", () => {
+    closeElementEditor();
+    positionElementEditButton();
+  });
+
+  // Escape closes the sheet, unless an option picker is open (that closes first).
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      const slider = document.getElementById("leftSidebarSlider");
+      if (
+        event.key === "Escape" &&
+        isElementEditorOpen() &&
+        !(slider && slider.classList.contains("is-open"))
+      ) {
+        closeElementEditor();
+        button.focus({ preventScroll: true });
+      }
+    },
+    true,
+  );
+
+  // Keep the sheet above the on-screen keyboard while one of its fields has focus.
+  if (window.visualViewport) {
+    const syncKeyboardOffset = () => {
+      const viewport = window.visualViewport;
+      const offset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      document.documentElement.style.setProperty("--cl-keyboard-offset", Math.round(offset) + "px");
+      document.documentElement.style.setProperty("--cl-visible-height", Math.round(viewport.height) + "px");
+    };
+    window.visualViewport.addEventListener("resize", syncKeyboardOffset);
+    window.visualViewport.addEventListener("scroll", syncKeyboardOffset);
+    syncKeyboardOffset();
+  }
+
+  return clElementEditor;
+}
+
+function getSelectedTransformer() {
+  if (!selectedNode || !selectedNode.getLayer()) {
+    return null;
+  }
+  const transformer = selectedNode.getAttr("transformer");
+  return transformer && transformer.getLayer() && transformer.isVisible() ? transformer : null;
+}
+
+function getElementKindLabel(node) {
+  if (!node) {
+    return "element";
+  }
+  if (node.getAttr("textIndex")) {
+    return "raceway";
+  }
+  return node.getClassName() === "Text" ? "letters" : "shape";
+}
+
+function positionElementEditButton() {
+  const editor = clElementEditor;
+  if (!editor) {
+    return;
+  }
+  const transformer = getSelectedTransformer();
+  if (!transformer || editor.dragging || nodeLists.length === 0) {
+    editor.button.hidden = true;
+    return;
+  }
+
+  const canvasEl = stage.container();
+  const areaWidth = canvasEl.clientWidth;
+  const areaHeight = canvasEl.clientHeight;
+  const box = transformer.getClientRect();
+  if (box.x > areaWidth || box.y > areaHeight || box.x + box.width < 0 || box.y + box.height < 0) {
+    editor.button.hidden = true;
+    return;
+  }
+
+  editor.button.hidden = false;
+  const buttonWidth = editor.button.offsetWidth;
+  const buttonHeight = editor.button.offsetHeight;
+  const gap = 2;
+  const edge = 6;
+  // Diagonally outside the top-right resize handle. Near the canvas edges it flips to the
+  // left and/or bottom corner, and is clamped inside the canvas as a last resort.
+  let vertical = "top";
+  let horizontal = "right";
+  let top = box.y - buttonHeight - gap;
+  if (top < edge) {
+    top = box.y + box.height + gap;
+    vertical = "bottom";
+  }
+  if (top + buttonHeight > areaHeight - edge) {
+    top = Math.min(Math.max(edge, box.y + edge), areaHeight - buttonHeight - edge);
+  }
+  let left = box.x + box.width + gap;
+  if (left + buttonWidth > areaWidth - edge) {
+    left = box.x - buttonWidth - gap;
+    horizontal = "left";
+  }
+  left = Math.max(edge, Math.min(left, areaWidth - buttonWidth - edge));
+  const placement = vertical + "-" + horizontal;
+
+  const offsetX = canvasEl.offsetLeft + canvasEl.clientLeft;
+  const offsetY = canvasEl.offsetTop + canvasEl.clientTop;
+  editor.button.dataset.placement = placement;
+  editor.button.style.transform =
+    "translate(" + Math.round(offsetX + left) + "px, " + Math.round(offsetY + top) + "px)";
+}
+
+// Runs whenever the selection changes (called from updateFocusedTransformer).
+function syncElementEditor() {
+  const editor = getElementEditor();
+  if (!editor) {
+    return;
+  }
+  const kind = getElementKindLabel(selectedNode);
+  editor.button.setAttribute("aria-label", "Edit selected " + kind);
+  if (editor.title) {
+    editor.title.textContent = "Edit " + kind;
+  }
+  if (!selectedNode) {
+    closeElementEditor();
+  }
+  positionElementEditButton();
+}
+
+function isElementEditorOpen() {
+  return !!clElementEditor && clElementEditor.sidebar.classList.contains("is-sheet-open");
+}
+
+function openElementEditor(options = {}) {
+  const editor = getElementEditor();
+  if (!editor || !selectedNode) {
+    return;
+  }
+  const textRow = editor.sidebar.querySelector(".item-textInput");
+  const editsText = textRow && getComputedStyle(textRow).display !== "none";
+
+  if (!clEditorUsesSheet()) {
+    // Desktop: the panel is already beside the canvas; draw the eye to it.
+    const rect = editor.sidebar.getBoundingClientRect();
+    if (rect.top < 0 || rect.top > window.innerHeight - 120) {
+      editor.sidebar.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+    editor.sidebar.classList.remove("is-flash");
+    void editor.sidebar.offsetWidth;
+    editor.sidebar.classList.add("is-flash");
+    const field = editsText ? textInput : editor.sidebar.querySelector(".select-face");
+    if (field) {
+      field.focus({ preventScroll: true });
+      if (field === textInput) {
+        const end = textInput.value.length;
+        textInput.setSelectionRange(end, end);
+      }
+    }
+    return;
+  }
+
+  const wasOpen = isElementEditorOpen();
+  editor.sidebar.classList.add("is-sheet-open");
+  document.body.classList.add("cl-editor-open");
+  editor.button.setAttribute("aria-expanded", "true");
+
+  if (options.focusText && editsText) {
+    textInput.focus({ preventScroll: true });
+    textInput.select();
+  } else if (!wasOpen && editor.done) {
+    editor.done.focus({ preventScroll: true });
+  }
+  keepSelectionAboveSheet();
+}
+
+function closeElementEditor() {
+  const editor = clElementEditor;
+  if (!editor || !isElementEditorOpen()) {
+    return;
+  }
+  const slider = document.getElementById("leftSidebarSlider");
+  if (slider && slider.classList.contains("is-open")) {
+    hideLeftSlider();
+  }
+  if (editor.sidebar.contains(document.activeElement)) {
+    document.activeElement.blur();
+  }
+  editor.sidebar.classList.remove("is-sheet-open");
+  document.body.classList.remove("cl-editor-open");
+  editor.button.setAttribute("aria-expanded", "false");
+  positionElementEditButton();
+}
+
+// Scroll so the selected element sits in the strip between the site header and the sheet.
+function keepSelectionAboveSheet() {
+  const editor = clElementEditor;
+  const transformer = getSelectedTransformer();
+  if (!editor || !transformer) {
+    return;
+  }
+  const header = document.querySelector(".main-header") || document.querySelector("header");
+  const headerBottom =
+    header && getComputedStyle(header).position !== "static"
+      ? Math.max(0, header.getBoundingClientRect().bottom)
+      : 0;
+  const sheetTop = window.innerHeight - editor.sidebar.offsetHeight;
+  const canvasRect = stage.container().getBoundingClientRect();
+  const box = transformer.getClientRect();
+  const elementTop = canvasRect.top + box.y;
+  const elementBottom = elementTop + box.height;
+  if (elementTop >= headerBottom + 8 && elementBottom <= sheetTop - 8) {
+    return;
+  }
+  const freeCenter = headerBottom + (sheetTop - headerBottom) / 2;
+  const delta = (elementTop + elementBottom) / 2 - freeCenter;
+  if (Math.abs(delta) > 8) {
+    window.scrollBy({ top: delta, behavior: "smooth" });
+  }
+}
+
+// Unsaved-design drafts. Every change is kept in localStorage (per product) so reloading
+// or reopening the tab brings the design back. A draft remembers which saved design it
+// started from ("base") and is dropped once a newer design is saved or added to the cart.
+// The admin ticket builder never uses drafts.
+var clDraft = {
+  enabled: false,
+  timer: null,
+  lastSignature: null,
+};
+var CL_DRAFT_VERSION = 1;
+var CL_DRAFT_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+
+function getBuilderDraftKey() {
+  const productInput = document.getElementById("clProductId");
+  const productId = productInput ? productInput.value : "";
+  // "builder" in the key also lets clearSavedBuilderDesign() (Clear all) remove it.
+  return productId ? "sfs_cl_builder_draft_" + productId : null;
+}
+
+// Short fingerprint of the saved design the page loaded with ("" for a new design).
+function getBuilderDraftBase() {
+  const source = (document.getElementById("editDesignData") || {}).value || "";
+  let hash = 5381;
+  for (let index = 0; index < source.length; index++) {
+    hash = ((hash << 5) + hash + source.charCodeAt(index)) | 0;
+  }
+  return source.length + ":" + (hash >>> 0).toString(36);
+}
+
+function builderDraftsAvailable() {
+  if (isTicketBuilder || !getBuilderDraftKey()) {
+    return false;
+  }
+  try {
+    return typeof window.localStorage !== "undefined";
+  } catch (error) {
+    return false;
+  }
+}
+
+function readBuilderDraft() {
+  if (!builderDraftsAvailable()) {
+    return null;
+  }
+  const key = getBuilderDraftKey();
+  try {
+    const draft = JSON.parse(localStorage.getItem(key) || "null");
+    const usable =
+      draft &&
+      draft.v === CL_DRAFT_VERSION &&
+      draft.base === getBuilderDraftBase() &&
+      Date.now() - (draft.savedAt || 0) < CL_DRAFT_MAX_AGE &&
+      draft.snapshot &&
+      Array.isArray(draft.snapshot.elements) &&
+      draft.snapshot.elements.length > 0;
+    if (!usable) {
+      if (draft) {
+        localStorage.removeItem(key);
+      }
+      return null;
+    }
+    return draft;
+  } catch (error) {
+    return null;
+  }
+}
+
+// Drops values JSON can't round-trip (images, canvases) so restoring never sets them to {}.
+function builderDraftReplacer(key, value) {
+  if (
+    (typeof HTMLImageElement !== "undefined" && value instanceof HTMLImageElement) ||
+    (typeof HTMLCanvasElement !== "undefined" && value instanceof HTMLCanvasElement)
+  ) {
+    return undefined;
+  }
+  return value;
+}
+
+function writeBuilderDraft() {
+  clearTimeout(clDraft.timer);
+  clDraft.timer = null;
+  if (!clDraft.enabled || historyRestoring) {
+    return;
+  }
+  const signature = getHistorySignature();
+  if (signature === clDraft.lastSignature) {
+    return;
+  }
+  const key = getBuilderDraftKey();
+  try {
+    if (nodeLists.length === 0) {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(
+        key,
+        JSON.stringify(
+          {
+            v: CL_DRAFT_VERSION,
+            savedAt: Date.now(),
+            base: getBuilderDraftBase(),
+            snapshot: createHistorySnapshot(),
+          },
+          builderDraftReplacer,
+        ),
+      );
+    }
+    clDraft.lastSignature = signature;
+  } catch (error) {
+    // Storage full or blocked (private mode): the builder keeps working without drafts.
+  }
+}
+
+function scheduleBuilderDraftSave() {
+  if (!clDraft.enabled) {
+    return;
+  }
+  clearTimeout(clDraft.timer);
+  clDraft.timer = setTimeout(writeBuilderDraft, 400);
+}
+
+// Removes the draft and treats the current canvas as already saved.
+function clearBuilderDraft() {
+  clearTimeout(clDraft.timer);
+  clDraft.timer = null;
+  const key = getBuilderDraftKey();
+  try {
+    if (key) {
+      localStorage.removeItem(key);
+    }
+  } catch (error) {
+    // Nothing stored, nothing to remove.
+  }
+  if (typeof nodeLists !== "undefined") {
+    clDraft.lastSignature = getHistorySignature();
+  }
+}
+
+function startBuilderDraftAutosave() {
+  if (clDraft.enabled || !builderDraftsAvailable()) {
+    return;
+  }
+  clDraft.enabled = true;
+  clDraft.lastSignature = getHistorySignature();
+
+  // Store changes cover text, size, colors, extras and add/remove; drag and resize
+  // handles are caught when they end.
+  store.subscribe(scheduleBuilderDraftSave);
+  stage.on("dragend transformend", scheduleBuilderDraftSave);
+  // Write immediately when the tab is hidden or closed.
+  window.addEventListener("pagehide", writeBuilderDraft);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      writeBuilderDraft();
+    }
+  });
+}
+
+function restoreBuilderDraft(draft, fallback) {
+  const snapshot = draft.snapshot;
+  // Letters are measured from the rendered font, so load the draft's fonts first.
+  const fonts = snapshot.elements.map((element) => element.font && element.font.code).filter(Boolean);
+  Promise.all(fonts.map(ensureFontLoaded))
+    .then(() => {
+      loadState(snapshot);
+      if (nodeLists.length === 0) {
+        throw new Error("Draft had no restorable elements.");
+      }
+      syncBuilderExtrasControls(snapshot.extras);
+      updatePreview(null, null);
+      updateLeftsideBar();
+      showBuilderDraftNotice(draft.savedAt);
+    })
+    .catch((error) => {
+      console.warn("Could not restore the channel letter draft.", error);
+      clearBuilderDraft();
+      loadState({ elements: [], extras: initialExtras, nodes: [] });
+      return fallback ? fallback() : null;
+    })
+    .finally(() => {
+      document.body.classList.remove("cl-draft-restoring");
+      startBuilderDraftAutosave();
+    });
+}
+
+// The builder starts on window "load" (after every image and font), so until then show
+// "Restoring your design…" instead of the empty start panel when a draft is waiting.
+if (readBuilderDraft()) {
+  const startPanel = document.getElementById("clEmptyState");
+  if (startPanel) {
+    startPanel.hidden = true;
+  }
+  document.body.classList.add("cl-draft-restoring");
+}
+
+// Power supply / lighting / cable: re-select the draft's choices so the labels match and
+// their prices come from the current product settings.
+function syncBuilderExtrasControls(extras) {
+  if (!extras) {
+    return;
+  }
+  const choices = [];
+  if (extras.powerSupply && extras.powerSupply.value) {
+    choices.push(["ps", String(extras.powerSupply.value).toLowerCase()]);
+  }
+  if (extras.lit && extras.lit.value) {
+    choices.push(["lit", extras.lit.value === "Back Lit" ? "both" : "front"]);
+  }
+  if (extras.cable && extras.cable.value) {
+    choices.push(["cable", String(parseInt(extras.cable.value, 10) || 0)]);
+  }
+  choices.forEach(([type, value]) => {
+    const option = document.querySelector(
+      '.bottombar-list-item[data-type="' + type + '"][data-value="' + value + '"]',
+    );
+    if (option) {
+      option.dispatchEvent(new CustomEvent("click", { bubbles: true }));
+    }
+  });
+}
+
+function formatBuilderDraftAge(savedAt) {
+  const minutes = Math.round((Date.now() - savedAt) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return minutes + " min ago";
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return hours + (hours === 1 ? " hour ago" : " hours ago");
+  const days = Math.round(hours / 24);
+  return days + (days === 1 ? " day ago" : " days ago");
+}
+
+function showBuilderDraftNotice(savedAt) {
+  const notice = document.getElementById("clDraftNotice");
+  if (!notice) {
+    return;
+  }
+  const age = document.getElementById("clDraftAge");
+  if (age) {
+    age.textContent = formatBuilderDraftAge(savedAt || Date.now());
+  }
+  notice.hidden = false;
+  const hide = () => {
+    notice.hidden = true;
+  };
+  const hideTimer = setTimeout(hide, 12000);
+  const close = document.getElementById("clDraftClose");
+  if (close) {
+    close.addEventListener("click", () => {
+      clearTimeout(hideTimer);
+      hide();
+    }, { once: true });
+  }
+  const discard = document.getElementById("clDraftDiscard");
+  if (discard) {
+    discard.addEventListener("click", () => {
+      clDraft.enabled = false;
+      clearBuilderDraft();
+      // A fresh load shows the saved design (if any) or the empty builder.
+      window.location.reload();
+    }, { once: true });
+  }
+}

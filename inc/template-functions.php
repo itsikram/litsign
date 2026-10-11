@@ -63,3 +63,30 @@ function wholesale_home_icon($name)
 
 	return '<svg class="cl-icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
 }
+
+/**
+ * Wraps the current price in "starting at" text in <strong> so cards and the product
+ * page can show the amount large and the unit small. The current price is the last
+ * dollar amount outside <del>; e.g. "<del>$9.16</del> $8.25 per ft<sup>2</sup>".
+ */
+function wholesale_emphasize_price($html)
+{
+	$html = (string) $html;
+	if ('' === trim($html) || false !== stripos($html, '<strong')) {
+		return $html;
+	}
+
+	$parts = preg_split('/(<del\b.*?<\/del>)/is', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
+	for ($i = count($parts) - 1; $i >= 0; $i--) {
+		if (0 === stripos($parts[$i], '<del')) {
+			continue;
+		}
+		if (preg_match_all('/\$\s?[\d,]+(?:\.\d+)?/', $parts[$i], $matches, PREG_OFFSET_CAPTURE)) {
+			$last = end($matches[0]);
+			$parts[$i] = substr($parts[$i], 0, $last[1]) . '<strong>' . $last[0] . '</strong>' . substr($parts[$i], $last[1] + strlen($last[0]));
+			break;
+		}
+	}
+
+	return implode('', $parts);
+}

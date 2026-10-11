@@ -1,0 +1,296 @@
+/* Exit survey (inc/exit-survey.php, js/exit-survey.js). Loaded on demand. */
+.sso-es {
+  --es-brand: #1fa8de;
+  --es-brand-dark: #1287b5;
+  --es-brand-soft: #eaf7fd;
+  --es-ink: #172027;
+  --es-muted: #5b6b7b;
+  --es-line: #e3e9ef;
+  --es-bg: #ffffff;
+  --es-soft: #f6f9fb;
+  --es-good: #17b26a;
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  font-family: var(--font-sans, "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif);
+  color: var(--es-ink);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.sso-es *, .sso-es *::before, .sso-es *::after { box-sizing: border-box; }
+.sso-es [hidden] { display: none !important; }
+html.sso-es-lock, html.sso-es-lock body { overflow: hidden; }
+/* The live chat bubble sits above everything; hide it while the survey is open. */
+html.sso-es-lock #sfs-chat-root { visibility: hidden; }
+
+.sso-es__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 32, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.sso-es__dialog {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--es-bg);
+  border-radius: 18px;
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.08);
+  padding: 32px 32px 26px;
+  opacity: 0;
+  transform: translateY(14px) scale(0.98);
+  transition: opacity 0.22s ease, transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.sso-es__dialog::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  border-radius: 18px 18px 0 0;
+  background: linear-gradient(90deg, var(--es-brand), #4cc3ee);
+}
+.sso-es.is-open .sso-es__backdrop { opacity: 1; }
+.sso-es.is-open .sso-es__dialog { opacity: 1; transform: none; }
+
+.sso-es__close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--es-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s, color 0.15s;
+}
+.sso-es__close:hover { background: var(--es-soft); color: var(--es-ink); }
+.sso-es__close svg { width: 20px; height: 20px; }
+
+.sso-es svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.sso-es__eyebrow {
+  display: inline-block;
+  margin: 0 0 10px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--es-brand-soft);
+  color: var(--es-brand-dark);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.sso-es__title {
+  margin: 0 36px 8px 0;
+  font-family: var(--font-display, var(--font-sans, inherit));
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--es-ink);
+}
+.sso-es__title:focus { outline: none; }
+.sso-es__lead { margin: 0 0 20px; font-size: 14.5px; color: var(--es-muted); }
+
+.sso-es__form { margin: 0; }
+.sso-es__fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.sso-es__sr {
+  position: absolute !important;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.sso-es__options { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sso-es__option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1.5px solid var(--es-line);
+  border-radius: 12px;
+  background: var(--es-bg);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--es-ink);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.sso-es__option:hover { border-color: #b9dcec; background: var(--es-soft); }
+.sso-es__option input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+.sso-es__option-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--es-soft);
+  color: var(--es-muted);
+  transition: background 0.15s, color 0.15s;
+}
+.sso-es__option-icon svg { width: 18px; height: 18px; }
+.sso-es__option.is-checked {
+  border-color: var(--es-brand);
+  background: var(--es-brand-soft);
+  box-shadow: 0 0 0 3px rgba(31, 168, 222, 0.14);
+}
+.sso-es__option.is-checked .sso-es__option-icon { background: var(--es-brand); color: #fff; }
+.sso-es__option:has(input:focus-visible) { outline: 2px solid var(--es-brand-dark); outline-offset: 2px; }
+/* The last answer ("Something else") spans the row when the count is odd. */
+.sso-es__option:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
+.sso-es__more { margin-top: 18px; animation: sso-es-in 0.25s ease; }
+.sso-es__label { display: block; margin: 0 0 6px; font-size: 13.5px; font-weight: 600; color: var(--es-ink); }
+.sso-es__label span { font-weight: 400; color: var(--es-muted); margin-left: 4px; font-size: 12.5px; }
+.sso-es__input {
+  display: block;
+  width: 100%;
+  margin: 0 0 14px;
+  padding: 11px 13px;
+  border: 1.5px solid var(--es-line);
+  border-radius: 10px;
+  background: var(--es-bg);
+  color: var(--es-ink);
+  font: inherit;
+  font-size: 16px; /* 16px stops iOS zooming into the field */
+  line-height: 1.4;
+  resize: vertical;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.sso-es__input::placeholder { color: #94a3b8; }
+.sso-es__input:focus { outline: none; border-color: var(--es-brand); box-shadow: 0 0 0 3px rgba(31, 168, 222, 0.16); }
+textarea.sso-es__input { min-height: 84px; }
+.sso-es__trap { position: absolute !important; left: -9999px !important; width: 1px; height: 1px; opacity: 0; }
+
+/* The buttons stay in view while the expanded form scrolls on short screens. */
+.sso-es__actions { display: flex; align-items: center; gap: 12px; position: sticky; bottom: -26px; z-index: 1; margin: 20px -32px 0; padding: 14px 32px 16px; background: var(--es-bg); }
+.sso-es__dialog.is-expanded .sso-es__actions { border-top: 1px solid var(--es-line); }
+.sso-es__submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 26px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--es-brand);
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(31, 168, 222, 0.28);
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.sso-es__submit:hover { background: var(--es-brand-dark); }
+.sso-es__submit:active { transform: translateY(1px); }
+.sso-es__submit:focus-visible, .sso-es__skip:focus-visible, .sso-es__close:focus-visible, .sso-es__contact-link:focus-visible {
+  outline: 2px solid var(--es-brand-dark);
+  outline-offset: 2px;
+}
+.sso-es__submit:disabled { background: #b8c4cf; box-shadow: none; cursor: not-allowed; }
+.sso-es__skip {
+  border: 0;
+  background: none;
+  padding: 10px 6px;
+  color: var(--es-muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: transparent;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+.sso-es__skip:hover { color: var(--es-ink); text-decoration-color: currentColor; }
+
+/* Thank-you step */
+.sso-es__done { text-align: center; padding-top: 6px; }
+.sso-es__done .sso-es__title { margin: 0 0 8px; }
+.sso-es__done .sso-es__lead { max-width: 440px; margin: 0 auto 22px; }
+.sso-es__done-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  background: rgba(23, 178, 106, 0.12);
+  color: var(--es-good);
+  animation: sso-es-pop 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.3);
+}
+.sso-es__done-icon svg { width: 30px; height: 30px; stroke-width: 2.4; }
+.sso-es__contact { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; text-align: left; }
+.sso-es__contact-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--es-line);
+  border-radius: 12px;
+  color: var(--es-ink);
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+.sso-es__contact-link:hover { border-color: var(--es-brand); background: var(--es-brand-soft); color: var(--es-ink); }
+.sso-es__contact-link svg { flex: none; width: 20px; height: 20px; color: var(--es-brand); }
+.sso-es__contact-link strong { display: block; font-size: 14px; font-weight: 600; }
+.sso-es__contact-link small { display: block; font-size: 12px; color: var(--es-muted); }
+.sso-es__continue { width: 100%; }
+
+@keyframes sso-es-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@keyframes sso-es-pop { from { transform: scale(0.5); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Phones: a sheet that slides up from the bottom */
+@media (max-width: 600px) {
+  .sso-es { align-items: flex-end; padding: 0; }
+  .sso-es__dialog {
+    max-width: none;
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: 20px 20px 0 0;
+    padding: 26px 18px calc(18px + env(safe-area-inset-bottom));
+    transform: translateY(100%);
+  }
+  .sso-es__dialog::before { border-radius: 20px 20px 0 0; }
+  .sso-es__title { font-size: 19px; }
+  .sso-es__lead { font-size: 14px; margin-bottom: 16px; }
+  .sso-es__options { grid-template-columns: 1fr; gap: 6px; }
+  .sso-es__option { min-height: 48px; padding: 8px 12px; }
+  .sso-es__option-icon { width: 30px; height: 30px; }
+  .sso-es__actions { flex-direction: column-reverse; align-items: stretch; gap: 4px; bottom: calc(-18px - env(safe-area-inset-bottom)); margin: 16px -18px 0; padding: 10px 18px calc(10px + env(safe-area-inset-bottom)); border-top: 1px solid var(--es-line); }
+  .sso-es__submit { width: 100%; }
+  .sso-es__contact { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sso-es__backdrop, .sso-es__dialog { transition: none; }
+  .sso-es__more, .sso-es__done-icon { animation: none; }
+}

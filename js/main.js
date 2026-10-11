@@ -66,6 +66,31 @@
       setGalleryImage(gallery, 0);
     });
 
+    // Touch: a horizontal swipe on a card image shows the next/previous photo
+    // instead of opening the product.
+    galleries.filter((gallery) => gallery.classList.contains('has-gallery')).forEach((gallery) => {
+      let startX = 0;
+      let startY = 0;
+      let swiped = false;
+      gallery.addEventListener('touchstart', (event) => {
+        startX = event.touches[0].clientX;
+        startY = event.touches[0].clientY;
+        swiped = false;
+      }, { passive: true });
+      gallery.addEventListener('touchend', (event) => {
+        const dx = event.changedTouches[0].clientX - startX;
+        const dy = event.changedTouches[0].clientY - startY;
+        if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        swiped = true;
+        setGalleryImage(gallery, Number(gallery.dataset.galleryIndex || 0) + (dx < 0 ? 1 : -1));
+      }, { passive: true });
+      gallery.addEventListener('click', (event) => {
+        if (!swiped) return;
+        swiped = false;
+        event.preventDefault();
+      }, true);
+    });
+
     if (revealElements.length) {
       document.documentElement.classList.add('scroll-effects-enabled');
       const viewportHeight = window.innerHeight;
@@ -148,7 +173,7 @@
         }
       });
 
-      $('#widthDisplay').html(`Aproximate Width: <b> ${totalWidth.toFixed(1)} Inches</b>`)
+      $('#widthDisplay').html(`Approximate Width: <b> ${totalWidth.toFixed(1)} Inches</b>`)
     }
 
     let updatePrice = (subPrice, price,from) => {
@@ -1370,4 +1395,26 @@
   } else {
     init();
   }
+})();
+
+// Image skeletons (css/ui-polish.css section 7): the frame shimmers until its
+// photo loads or fails. A capture listener catches lazy images loading later.
+(function () {
+  const frames = '.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media';
+  const done = (img) => {
+    const frame = img.closest(frames);
+    if (frame) frame.classList.add('sk-done');
+  };
+  const onImage = (event) => {
+    if (event.target.tagName === 'IMG') done(event.target);
+  };
+  document.addEventListener('load', onImage, true);
+  document.addEventListener('error', onImage, true);
+  document.querySelectorAll(frames).forEach((frame) => {
+    const imgs = [...frame.querySelectorAll('img')];
+    // No photo at all (placeholder icon), or one already finished loading.
+    if (!imgs.length || imgs.some((img) => img.complete && img.getAttribute('src'))) {
+      frame.classList.add('sk-done');
+    }
+  });
 })();

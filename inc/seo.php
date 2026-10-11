@@ -188,6 +188,59 @@ function wholesale_seo_sitemap_excluded_categories()
 }
 
 /**
+ * Whether a product category lists any products, counting its subcategories.
+ * Hubs such as /indoor-outdoor-displays/ hold no products directly, so core's
+ * hide_empty dropped them from every sitemap.
+ */
+function wholesale_seo_category_has_products($term)
+{
+	if ((int) $term->count > 0) {
+		return true;
+	}
+
+	foreach (get_term_children($term->term_id, $term->taxonomy) as $child_id) {
+		$child = get_term($child_id, $term->taxonomy);
+		if ($child && !is_wp_error($child) && (int) $child->count > 0) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Product categories for the sitemaps: every category with products of its
+ * own or in a subcategory.
+ *
+ * @return WP_Term[]
+ */
+function wholesale_seo_sitemap_categories()
+{
+	$terms = get_terms(array(
+		'taxonomy' => 'product_category',
+		'hide_empty' => false,
+		'orderby' => 'name',
+	));
+
+	return is_wp_error($terms) ? array() : array_values(array_filter($terms, 'wholesale_seo_category_has_products'));
+}
+
+/**
+ * A category page with nothing to list is thin content: keep it out of search.
+ */
+function wholesale_seo_is_empty_category_page()
+{
+	$slug = get_query_var('category_slug');
+	if (!$slug) {
+		return false;
+	}
+
+	$term = get_term_by('slug', sanitize_title($slug), 'product_category');
+
+	return $term && !is_wp_error($term) && !wholesale_seo_category_has_products($term);
+}
+
+/**
  * URL of the published Storefront Signs guide, or ''.
  */
 function wholesale_seo_storefront_signs_url()
@@ -261,6 +314,15 @@ function wholesale_seo_sitemap_taxonomy_args($args, $taxonomy)
 	foreach (wholesale_seo_sitemap_excluded_categories() as $slug) {
 		$term = get_term_by('slug', $slug, 'product_category');
 		if ($term && !is_wp_error($term)) {
+			$excluded[] = (int) $term->term_id;
+		}
+	}
+
+	// Keep hub categories whose products sit in subcategories; drop the
+	// truly empty ones instead.
+	$args['hide_empty'] = false;
+	foreach (get_terms(array('taxonomy' => 'product_category', 'hide_empty' => false)) as $term) {
+		if (!wholesale_seo_category_has_products($term)) {
 			$excluded[] = (int) $term->term_id;
 		}
 	}
@@ -414,7 +476,88 @@ function wholesale_seo_migrations()
 		'2026-10-supplier-text' => 'wholesale_seo_migrate_supplier_text',
 		'2026-10-site-title' => 'wholesale_seo_migrate_site_title',
 		'2026-10-brand-chat-alt' => 'wholesale_seo_migrate_brand_chat_alt',
+		'2026-10-product-typos' => 'wholesale_seo_migrate_product_typos',
+		'2026-10-short-descriptions' => 'wholesale_seo_migrate_short_descriptions',
 	);
+}
+
+/**
+ * Meta descriptions for the pages whose generated snippet was under 110
+ * characters. Saved as the SEO screen's description, and only where that field
+ * is still empty, so the owner can edit or clear them there.
+ */
+function wholesale_seo_migrate_short_descriptions()
+{
+	if (!function_exists('wholesale_seo_save_object_values')) {
+		return false;
+	}
+
+	$products = array(
+		'acrylic-prints' => 'Custom acrylic prints: full color graphics back-mounted on 1/4" acrylic sheet for a glossy gallery look. Choose 16x24, 20x30 or 24x36 inches.',
+		'adhesive-window-perf' => 'Perforated window vinyl (70/30) shows your graphic outside while you still see out from inside. Black adhesive backing for one-way vision.',
+		'canvas-wrap' => 'Canvas wrap prints: your photo or artwork printed on photo quality artist canvas and stretched, so it arrives ready to hang. Priced online.',
+		'custom-seg-fabric' => 'Custom SEG fabric graphics up to 40\' x 10\': 6oz UV printed polyester with a 3mm x 11mm silicone edge that fits SEG frames. Priced online.',
+		'mesh-banner' => 'Custom mesh banners: 10oz vinyl with 70/30 perforation lets wind pass through on fences and buildings. Full color UV printed, indoor or outdoor.',
+		'round-table-cover' => 'Custom round table covers for bar and standard height tables, full color dye sublimated on 8.8oz tension fabric. See your price online.',
+		'spike-econo-flag' => 'Econo flag ground spike: powder coated steel, 28.5" tall, for setting an Econo flag in grass, sand or soil. Fits the Econo pole set. Spike only.',
+		'tension-fabric' => 'Tension fabric banners: 8.8oz 2-way stretch polyester, dye sublimated for vivid color, for trade show displays and fabric wraps. Priced online.',
+		'tent-flag' => 'Tent flag: add a printed flag to your Storefront Sign Online event tent. A clamp connector attaches it to the hex frame leg, so no base is needed.',
+	);
+	foreach ($products as $slug => $description) {
+		$product = get_page_by_path($slug, OBJECT, 'product');
+		if ($product && '' === (string) get_post_meta($product->ID, '_wholesale_seo_description', true)) {
+			wholesale_seo_save_object_values('post', $product->ID, array('description' => $description));
+		}
+	}
+
+	$term = get_term_by('slug', 'banner-stand-hardware', 'product_category');
+	if ($term && !is_wp_error($term) && '' === (string) get_term_meta($term->term_id, '_wholesale_seo_description', true)) {
+		wholesale_seo_save_object_values('term', $term->term_id, array('description' => 'Replacement hardware for retractable banner stands and tension fabric stands: bases, poles and frames that fit our graphics. Graphic not included.'));
+	}
+
+	return true;
+}
+
+/**
+ * Spelling mistakes from the supplier copy that show in product pages and in
+ * Google snippets ("Permanant adhesive backing").
+ */
+function wholesale_seo_migrate_product_typos()
+{
+	global $wpdb;
+
+	$fixes = array(
+		'Permanant' => 'Permanent',
+		'permanant' => 'permanent',
+		'stablility' => 'stability',
+		'stablity' => 'stability',
+	);
+	$fix = static function ($text) use ($fixes) {
+		return str_replace(array_keys($fixes), array_values($fixes), $text);
+	};
+
+	$posts = $wpdb->get_results("SELECT ID, post_content FROM {$wpdb->posts} WHERE post_type = 'product' AND (post_content LIKE '%ermanant%' OR post_content LIKE '%stabli%ity%' OR post_content LIKE '%stablity%')");
+	foreach ($posts as $post) {
+		$clean = $fix($post->post_content);
+		if ($clean !== $post->post_content) {
+			$wpdb->update($wpdb->posts, array('post_content' => $clean), array('ID' => $post->ID));
+			clean_post_cache($post->ID);
+		}
+	}
+
+	$metas = $wpdb->get_results("SELECT pm.meta_id, pm.post_id, pm.meta_value FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = 'product' AND pm.meta_key IN ('_product_short_desc', '_product_list_desc', '_product_description', '_product_component', '_product_faq', '_seo_description') AND (pm.meta_value LIKE '%ermanant%' OR pm.meta_value LIKE '%stablity%' OR pm.meta_value LIKE '%stablility%')");
+	foreach ($metas as $meta) {
+		if (is_serialized($meta->meta_value)) {
+			continue;
+		}
+		$clean = $fix($meta->meta_value);
+		if ($clean !== $meta->meta_value) {
+			$wpdb->update($wpdb->postmeta, array('meta_value' => $clean), array('meta_id' => $meta->meta_id));
+			wp_cache_delete($meta->post_id, 'post_meta');
+		}
+	}
+
+	return true;
 }
 
 /**

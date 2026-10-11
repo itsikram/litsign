@@ -1161,9 +1161,201 @@
   .cl-tool-label { font-size: 9px; }
 }
 
+/* ------------------------------------------------------------------ */
+/* Edit button on the selected element + element editor sheet          */
+/* ------------------------------------------------------------------ */
+
+/* Round icon-only button; cl.js moves it with transform to sit just above the selected
+   element's transformer. */
+.dt-container .cl-edit-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.7);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Bigger hit area than the visible circle (44px on touch screens). */
+.dt-container .cl-edit-pill::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; }
+.dt-container .cl-edit-pill:hover { background: #1d4ed8; }
+.dt-container .cl-edit-pill[hidden] { display: none; }
+.dt-container .cl-edit-pill svg { display: block; }
+@media (pointer: coarse) {
+  .dt-container .cl-edit-pill { width: 34px; height: 34px; }
+  .dt-container .cl-edit-pill::before { inset: -5px; }
+}
+
+.cl-sheet-bar,
+.cl-canvas-tip { display: none; }
+
+/* "Restored your unsaved design" notice over the top of the canvas. */
+.dt-container .cl-draft-notice {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 4px 10px;
+  width: max-content;
+  max-width: calc(100% - 20px);
+  padding: 6px 6px 6px 14px;
+  border: 1px solid #b9dcee;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 10px 28px -14px rgba(20, 32, 44, 0.45);
+  font-size: 13px;
+  color: var(--cl-ink);
+  transform: translateX(-50%);
+}
+.dt-container .cl-draft-notice[hidden] { display: none; }
+body.cl-draft-restoring .dt-container .cl-canvas-wrap::after {
+  content: "Restoring your design\2026";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  border-radius: var(--cl-radius);
+  background: rgba(245, 247, 249, 0.94);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cl-muted);
+}
+.dt-container .cl-draft-discard {
+  flex: none;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 1px solid #b9dcee;
+  border-radius: 999px;
+  background: var(--cl-accent-soft);
+  color: var(--cl-accent-ink);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.dt-container .cl-draft-discard:hover { border-color: var(--cl-accent); }
+.dt-container .cl-draft-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--cl-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.dt-container .cl-draft-close:hover { background: var(--cl-soft); color: var(--cl-ink); }
+@media (max-width: 575.98px) {
+  .dt-container .cl-draft-notice { border-radius: 14px; font-size: 12px; line-height: 1.35; }
+}
+
+/* Desktop: the Edit button flashes the settings panel beside the canvas. */
+.dt-container .left-sidebar.is-flash { animation: cl-panel-flash 1.4s ease-out; }
+@keyframes cl-panel-flash {
+  0%, 35% { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35), var(--cl-shadow); }
+  100% { box-shadow: var(--cl-shadow); }
+}
+
+@media (max-width: 991.98px) {
+  /* Phones and tablets: the settings panel leaves the page and opens as a bottom
+     sheet from the Edit button, so the canvas stays in view while editing. */
+  .dt-container .left-sidebar { display: none; }
+  .dt-container .left-sidebar.is-sheet-open {
+    position: fixed;
+    right: 0;
+    bottom: var(--cl-keyboard-offset, 0px);
+    left: 0;
+    z-index: 1056;
+    display: flex;
+    flex-direction: column;
+    max-height: 58vh;
+    max-height: min(58svh, 520px, calc(var(--cl-visible-height, 100svh) - 96px));
+    border-width: 1px 0 0;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -16px 44px -18px rgba(20, 32, 44, 0.45);
+    animation: cl-sheet-up 0.22s ease-out;
+  }
+  @keyframes cl-sheet-up {
+    from { opacity: 0; transform: translateY(32px); }
+  }
+  .dt-container .left-sidebar.is-sheet-open .left-sidebar-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    -webkit-overflow-scrolling: touch;
+  }
+  /* The canvas above the sheet already shows the element. */
+  .dt-container .left-sidebar li.item-preview { display: none; }
+  /* Compact rows so most options fit without scrolling the sheet. */
+  .dt-container .left-sidebar.is-sheet-open li.sidebar-item { padding: 10px 16px; }
+  .dt-container .left-sidebar.is-sheet-open li.cl-option-row { padding-top: 6px !important; padding-bottom: 6px !important; }
+  .dt-container .left-sidebar.is-sheet-open .cl-option-value { min-height: 44px; }
+  .dt-container .left-sidebar.is-sheet-open .cl-field-label { margin-bottom: 4px; }
+
+  .dt-container .cl-sheet-bar {
+    position: relative;
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 16px 10px;
+  }
+  .cl-sheet-grip { position: absolute; top: 7px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 2px; background: #cdd5de; }
+  .cl-sheet-title { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.25; color: var(--cl-ink); }
+  .dt-container .cl-sheet-done {
+    flex: none;
+    min-height: 40px;
+    padding: 0 20px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--cl-accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .dt-container .cl-sheet-done:hover { background: var(--cl-accent-ink); }
+
+  /* 16px keeps iOS from zooming the page when a field gets focus. */
+  .dt-container .left-sidebar .form-control { font-size: 16px; }
+
+  body.cl-editor-open .dt-container .cl-edit-pill { display: none; }
+
+  body.cl-has-elements .dt-container .cl-canvas-tip {
+    display: block;
+    margin: 8px 4px 0;
+    font-size: 13px;
+    line-height: 1.4;
+    text-align: center;
+    color: var(--cl-muted);
+  }
+  .cl-tip-icon { display: inline-grid; place-items: center; width: 20px; height: 20px; margin: 0 1px; border-radius: 50%; background: #2563eb; color: #fff; vertical-align: -5px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dt-container *,
   .dt-container *::before,
   .dt-container *::after,
   .cl-sheet-backdrop { transition: none !important; }
+  .dt-container .left-sidebar { animation: none !important; }
 }

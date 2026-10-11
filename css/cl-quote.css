@@ -409,3 +409,11 @@
     margin-top: 20px;
   }
 }
+
+/* Hero: one real worked price under the buttons (wholesale_cl_worked_example_text) */
+.home-hero-example {
+  margin: 12px 0 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}

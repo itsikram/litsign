@@ -395,7 +395,7 @@ if ($is_channel_letters) {
         ),
         array(
             'q' => 'How much do channel letters cost?',
-            'a' => 'Channel letters are priced by letter height, so each style lists a starting price per inch. Open a style, enter your wording, letter height and colors, and you&rsquo;ll see your full price before checkout. For large or unusual projects, <a href="' . esc_url($contact_url) . '">request a free quote</a>.',
+            'a' => 'Channel letters are priced by letter height, so each style lists its starting price for one letter at the smallest height. Open a style, enter your wording, letter height and colors, and you&rsquo;ll see your full price before checkout. For large or unusual projects, <a href="' . esc_url($contact_url) . '">request a free quote</a>.',
         ),
         array(
             'q' => 'What are channel letters made of?',
@@ -479,9 +479,10 @@ get_header();
                     <p class="home-hero-lead">UL listed LED channel letters, built to order in Washington and California. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
                     <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
                     <div class="home-hero-actions home-hero-actions--cl">
-                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
+                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per letter</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
                         <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
                     </div>
+                    <?php $cl_example_text = function_exists('wholesale_cl_worked_example_text') ? wholesale_cl_worked_example_text() : ''; ?><?php if ($cl_example_text) : ?><p class="home-hero-example"><?php echo wp_kses_post($cl_example_text); ?></p><?php endif; ?>
                     <p class="home-hero-logo"><a href="<?php echo esc_url($contact_url); ?>">Have a logo? Send it for a free quote</a> <span>or <a href="sms:+12066186543">text your logo to 206-618-6543</a></span></p>
                     <p class="home-hero-help">
                         <?php echo wholesale_home_icon('phone'); ?>
@@ -548,7 +549,7 @@ get_header();
         <ul class="home-types-list" data-types-list>
             <?php
             $type_links = array_merge(
-                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/inch')),
+                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/letter')),
                 array_map(static function ($item) {
                     return array($item[0], $item[1], $item[2], '', '');
                 }, $more_products)

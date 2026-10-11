@@ -69,7 +69,7 @@ if (!empty($all_products[0]['thumb'])) {
 wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'How is the price of a custom sign worked out?',
-		'a' => 'Each product shows where it starts. Printed products such as banners, vinyl and window graphics are priced per square foot of your size; flags, stands, frames and tents are priced per item; channel letters are priced per inch of letter height. Open any product, choose your size and options, and you see your full price before checkout.',
+		'a' => 'Each product shows where it starts. Printed products such as banners, vinyl and window graphics are priced per square foot of your size; flags, stands, frames and tents are priced per item; channel letters are priced per letter by letter height. Open any product, choose your size and options, and you see your full price before checkout.',
 	),
 	array(
 		'q' => 'Can I upload my own artwork?',

@@ -251,7 +251,7 @@ $page_hero_background = wholesale_hero_background_style($page_hero_image, $defau
 					?>
 					<article class="sf-type-card bd-card" id="<?php echo esc_attr($line[4]); ?>">
 						<a class="sf-type-image" href="<?php echo esc_url($line_url); ?>" tabindex="-1" aria-hidden="true">
-							<?php echo $product_image($line[1], $line_name, '(max-width: 575px) 100vw, (max-width: 991px) 50vw, 25vw'); ?>
+							<?php echo $product_image($line[1], $line_name, '(max-width: 575px) 112px, (max-width: 991px) 50vw, 25vw'); ?>
 						</a>
 						<div class="sf-type-body">
 							<h3><a href="<?php echo esc_url($line_url); ?>"><?php echo wp_kses_post($line[2]); ?></a></h3>

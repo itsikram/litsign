@@ -50,7 +50,7 @@ function wholesale_product_guides()
 			'uses' => array('Large parking lot and property signs', 'Building, dock and warehouse identification', 'Construction and job site signs that stay up for months', 'Custom-size reflective panels for gates and entrances'),
 			'faq' => array(
 				array('q' => 'How is this different from a reflective aluminum sign?', 'a' => 'The sandwich board is a thicker 1/8" aluminum composite panel and can be any size from 3" x 4" to 48" x 96". The reflective aluminum sign is a thinner .040 aluminum sheet in three standard sizes.'),
-				array('q' => 'Can large sizes be shipped?', 'a' => 'Signs up to 46" x 38" or 48" x 30" ship. Larger panels, up to 48" x 96", are available for store pickup at our California locations.'),
+				array('q' => 'Can large sizes be shipped?', 'a' => 'Signs up to 46" x 38" or 48" x 30" ship. Larger panels, up to 48" x 96", are store pickup only.'),
 				array('q' => 'Can it be printed on both sides?', 'a' => 'Yes, choose single sided (4/0) or double sided (4/4) printing.'),
 			),
 			'related' => array('aluminum-sandwich-board', 'dry-erase-aluminum-sandwich-board', 'reflective-aluminum-sign', 'reflective-pvc-board'),
@@ -337,6 +337,244 @@ function wholesale_product_guides()
 				array('q' => 'Does it fit rectangle flags?', 'a' => 'No, it is made for teardrop, feather convex and feather angled flags.'),
 			),
 			'related' => array('ground-stake', 'cross-base', 'teardrop-flag-pole', 'feather-angled-flag-pole'),
+		),
+
+		'cross-base' => array(
+			'intro' => array(
+				'The cross base holds a feather, teardrop or rectangle flag upright on hard, flat ground where a stake can&rsquo;t go: concrete, asphalt, tile or carpet. It works indoors and out, and the flag&rsquo;s bottom pole slides straight onto the center connector.',
+				'It stands 27" x 27" with legs spread, 9.25" high, and weighs 6.73 lb. When the event is over the legs fold inward, so it packs small and fits in a flag carrying bag. Outdoors, drop a water bag over it for extra weight in the wind.',
+			),
+			'uses' => array('Sidewalks, parking lots and storefront entrances', 'Showrooms, lobbies and trade show floors', 'Car lots, grand openings and weekend sales', 'Replacing a lost or broken base'),
+			'faq' => array(
+				array('q' => 'Is it heavy enough for outdoor use?', 'a' => 'On calm days, yes. In wind, add a <a href="/product/water-bag/">water bag</a> on top, or choose the 22 lb <a href="/product/square-base/">square base</a> instead.'),
+				array('q' => 'Which flags does it fit?', 'a' => 'Feather, teardrop and rectangle flags. Econo flags use their own ground spike.'),
+				array('q' => 'Is a flag included?', 'a' => 'No. This listing is the base only; the flag and poles are sold separately or as a flag and pole set.'),
+			),
+			'related' => array('water-bag', 'square-base', 'ground-stake', 'feather-convex-flag-pole'),
+		),
+
+		'square-base' => array(
+			'intro' => array(
+				'The square base is the heaviest base we offer for feather, teardrop and rectangle flags. It is powder coated iron, 16" x 16" and 4" high, and weighs 22 lb, so it keeps a flag standing on hard surfaces without stakes or extra ballast.',
+				'It comes in two pieces, the square plate and the pole connector. The low, flat profile sits close to the ground and is easy to step around, which makes it a good fit for sidewalks, entrances and indoor floors.',
+			),
+			'uses' => array('Storefront sidewalks and entryways', 'Indoor retail floors, malls and showrooms', 'Gas stations, car lots and drive-throughs', 'Long-running displays that stay up for weeks'),
+			'faq' => array(
+				array('q' => 'Square base or cross base?', 'a' => 'The square base is heavier (22 lb vs 6.73 lb) and more stable on its own. The <a href="/product/cross-base/">cross base</a> is lighter and folds flat for travel.'),
+				array('q' => 'Can I add a water bag?', 'a' => 'Yes. The <a href="/product/water-bag/">water bag</a> fits over both the square base and the cross base.'),
+				array('q' => 'Does it fit in the flag carrying bag?', 'a' => 'No. The square base ships and stores separately from the flag carrying bag.'),
+			),
+			'related' => array('cross-base', 'water-bag', 'ground-stake', 'teardrop-flag-pole'),
+		),
+
+		'water-bag' => array(
+			'intro' => array(
+				'A water bag is the cheapest way to make a flag base more stable. Fill it with water, set it over the base, then install your flag. Filled, it weighs about 23 lb, which keeps a cross base from tipping in the wind.',
+				'It measures 19" across and 2.5" high, with a 5" center opening that fits around the pole connector. Empty, it folds flat and packs into the flag carrying bag, and it is reusable from event to event.',
+			),
+			'uses' => array('Outdoor events on concrete or asphalt', 'Windy storefront and roadside spots', 'Adding weight to a cross base', 'Indoor displays in busy walkways'),
+			'faq' => array(
+				array('q' => 'Which bases does it fit?', 'a' => 'The <a href="/product/cross-base/">cross base</a> and the <a href="/product/square-base/">square base</a>.'),
+				array('q' => 'Can I fill it with sand instead of water?', 'a' => 'Yes. Water is easiest, but any ballast that fits through the fill opening works.'),
+				array('q' => 'Is a flag or base included?', 'a' => 'No. This listing is the water bag only.'),
+			),
+			'related' => array('cross-base', 'square-base', 'carrying-bag', 'feather-angled-flag-pole'),
+		),
+
+		'feather-pole-set' => array(
+			'intro' => array(
+				'This is a replacement pole set for feather angled flags. The top fiberglass sections flex to give the flag its shape, and the bottom aluminum sections stay rigid for strength, so the flag holds its shape in the wind without snapping.',
+				'Choose the size that matches your flag: Small (110" tall, 4 pieces, 1 lb), Medium (134", 4 pieces, 1 lb), Large (177", 4 pieces, 1.5 lb) or X-Large (220", 5 pieces, 2.5 lb). A nylon pole bag is included.',
+			),
+			'uses' => array('Replacing bent or lost poles', 'Reusing a flag graphic you already own', 'Keeping a spare set for events', 'Swapping in new graphics on existing hardware'),
+			'faq' => array(
+				array('q' => 'Which bases does it work with?', 'a' => 'The <a href="/product/ground-stake/">ground stake</a>, <a href="/product/cross-base/">cross base</a> and <a href="/product/square-base/">square base</a>, with or without a water bag.'),
+				array('q' => 'How do I pick the size?', 'a' => 'Use the same size as your flag graphic: Small, Medium, Large or X-Large.'),
+				array('q' => 'Is a flag included?', 'a' => 'No. For a printed flag with poles, order the <a href="/product/feather-angled-flag-pole/">feather angled flag and pole set</a>.'),
+			),
+			'related' => array('feather-angled-flag-pole', 'ground-stake', 'cross-base', 'carrying-bag'),
+		),
+
+		'rectangle-pole-set' => array(
+			'intro' => array(
+				'The rectangle pole set holds a rectangle flag straight and tight, with one horizontal pole across the top and aluminum vertical poles below. It is the replacement or spare set for our rectangle flags.',
+				'All sizes are 24.5" wide. Small is 98.5" tall (3 poles, 2 lb), Medium 138" (4 poles, 3 lb) and Large 177" (5 poles, 3.5 lb). The poles fit our ground stakes, cross bases and square bases.',
+			),
+			'uses' => array('Replacing damaged rectangle flag poles', 'Reusing a rectangle flag graphic', 'Spare hardware for multi-site events', 'Swapping seasonal flags on one pole set'),
+			'faq' => array(
+				array('q' => 'Does it fit feather or teardrop flags?', 'a' => 'No. It is made for rectangle flags only. Feather angled flags use the <a href="/product/feather-pole-set/">feather pole set</a>.'),
+				array('q' => 'Which base should I use?', 'a' => 'A <a href="/product/ground-stake/">ground stake</a> for soft ground, or a <a href="/product/cross-base/">cross base</a> or <a href="/product/square-base/">square base</a> for hard surfaces.'),
+				array('q' => 'Is a flag included?', 'a' => 'No. For a printed flag with poles, order the <a href="/product/rectangle-flag-pole/">rectangle flag and pole set</a>.'),
+			),
+			'related' => array('rectangle-flag-pole', 'ground-stake', 'square-base', 'cross-base'),
+		),
+
+		'spike-econo-flag' => array(
+			'intro' => array(
+				'The Econo ground spike anchors an Econo flag in grass, sand or soil. It is powder coated steel to resist rust, 28.5" tall and 3.4 lb, and pushes into soft ground by hand or with a mallet.',
+				'It works with Econo flag hardware only. Feather, teardrop and rectangle flags use the standard ground stake instead.',
+			),
+			'uses' => array('Lawns and roadside grass strips', 'Outdoor sales, fairs and markets', 'Replacing a lost or bent spike', 'A spare spike for extra Econo flags'),
+			'faq' => array(
+				array('q' => 'Does it fit my feather flag?', 'a' => 'Only Econo flags. For feather, teardrop and rectangle flags, use the <a href="/product/ground-stake/">ground stake</a>.'),
+				array('q' => 'Can I use it on concrete?', 'a' => 'No, it is for soft ground only.'),
+				array('q' => 'Is a flag included?', 'a' => 'No. For a printed Econo flag with poles, see the <a href="/product/econo-feather-flag-pole/">Econo feather flag</a>.'),
+			),
+			'related' => array('econo-feather-flag-pole', 'econo-stock-flag-pole', 'pole-set-econo-flag', 'ground-stake'),
+		),
+
+		'pole-set-econo-flag' => array(
+			'intro' => array(
+				'This lightweight aluminum pole set is made for the 16\' Econo flag. Its curved top pole and free-flying edge let the flag catch the eye without wrapping around the pole, and it assembles in minutes.',
+				'The set is four aluminum poles, three straight and one curved. It pairs with the Econo ground spike for installation in grass or soil.',
+			),
+			'uses' => array('Replacing lost or bent Econo poles', 'Reusing an Econo flag graphic', 'Spare hardware for extra flags', 'Seasonal flag swaps'),
+			'faq' => array(
+				array('q' => 'Which flags does it fit?', 'a' => 'The 16\' Econo flag only.'),
+				array('q' => 'What base do I need?', 'a' => 'The <a href="/product/spike-econo-flag/">Econo ground spike</a>.'),
+				array('q' => 'Is a flag included?', 'a' => 'No, poles only. For a printed flag with poles, see the <a href="/product/econo-feather-flag-pole/">Econo feather flag</a>.'),
+			),
+			'related' => array('econo-feather-flag-pole', 'spike-econo-flag', 'econo-stock-flag-pole', 'feather-pole-set'),
+		),
+
+		'flag-pole-and-bracket' => array(
+			'intro' => array(
+				'The flag pole and bracket kit mounts a custom pole flag on a wall or porch post. The 74.5" two-piece aluminum pole has a chrome ball on top, and its top section spins on ball bearings, so the flag doesn&rsquo;t tangle and lasts longer.',
+				'The white powder coated bracket holds the pole at two angles. Clips to secure the flag and a plastic ring for grommets are included. It is recommended for 2\' x 3\' or 3\' x 5\' flags. Buy the pole, the bracket, or both as a set.',
+			),
+			'uses' => array('Storefront and porch flags', 'Business, school and team flags', 'Open and seasonal promotion flags', 'Replacing a worn pole or bracket'),
+			'faq' => array(
+				array('q' => 'What size flag does it fit?', 'a' => '2\' x 3\' and 3\' x 5\' flags, including our <a href="/product/custom-pole-flag-pole/">custom pole flag</a>.'),
+				array('q' => 'Will the flag wrap around the pole?', 'a' => 'The top section spins on ball bearings, which keeps the flag from wrapping in the wind.'),
+				array('q' => 'Can I buy just the bracket?', 'a' => 'Yes. Choose Bracket Only, Flag Pole Only, or Pole &amp; Bracket.'),
+			),
+			'related' => array('custom-pole-flag-pole', 'rectangle-flag-pole', 'ground-stake', 'carrying-bag'),
+		),
+
+		'x-stand-hardware-only' => array(
+			'intro' => array(
+				'The X-stand is the most budget-friendly banner stand. Its aluminum and graphite frame hooks into the four corner grommets of a banner and pulls it flat, and it is light enough to carry with one hand. A nylon carry bag is included.',
+				'Choose 24" x 63" or 32" x 71" to match your banner. This listing is hardware only; to order a printed banner with the stand, choose the X-stand graphic and stand set.',
+			),
+			'uses' => array('Trade show and lobby displays on a budget', 'Temporary signs for events and pop-ups', 'Replacing a broken X-stand', 'Reusing grommeted banners you already own'),
+			'faq' => array(
+				array('q' => 'Is a banner included?', 'a' => 'No. For a printed banner with the stand, order the <a href="/product/x-stand-graphic-stand/">X-stand banner and stand</a>.'),
+				array('q' => 'What kind of banner does it hold?', 'a' => 'A banner with a grommet in each corner, in the size that matches the stand: 24" x 63" or 32" x 71".'),
+				array('q' => 'X-stand or retractable?', 'a' => 'The X-stand costs less and weighs less. A <a href="/product/standard-retractable-insert-stand/">retractable banner stand</a> rolls the banner into its base for protection and sets up faster.'),
+			),
+			'related' => array('x-stand-graphic-stand', 'standard-retractable-hardware-only', 'table-top-banner-stand', 'deluxe-retractable-hardware-only'),
+		),
+
+		'deluxe-retractable-hardware-only' => array(
+			'intro' => array(
+				'The Deluxe retractable is a step up from the Standard stand: a wider, sturdier aluminum base with polished chrome end caps. The banner rolls into the base when you are done, and the telescopic support pole adjusts the height.',
+				'It holds a 33" x 81" banner, single or double sided. The set includes the base, support pole and top banner rail, plus a carry bag. Add the optional LED light for dim venues. This listing is hardware only.',
+			),
+			'uses' => array('Upgrading a fleet of standard stands', 'Trade shows, conferences and lobbies', 'Reusing 33" x 81" retractable banners', 'Double sided banners in open walkways'),
+			'faq' => array(
+				array('q' => 'Is a banner included?', 'a' => 'No. For a printed banner with the stand, order the <a href="/product/deluxe-retractable-insert-stand/">Deluxe retractable banner stand with graphic</a>.'),
+				array('q' => 'Can it show a banner on both sides?', 'a' => 'Yes. Choose the double sided 33" x 81" option.'),
+				array('q' => 'Can I add a light?', 'a' => 'Yes, choose the LED light option or add the <a href="/product/led-light-for-banner-stand/">LED light for banner stands</a>.'),
+			),
+			'related' => array('deluxe-retractable-insert-stand', 'standard-retractable-hardware-only', 'sd-retractable-hardware-only', 'led-light-for-banner-stand'),
+		),
+
+		'sd-retractable-hardware-only' => array(
+			'intro' => array(
+				'The SD retractable is our premium banner stand, with a sleek, low-profile base and chrome end caps. The adjustable support pole lets it hold banners of different heights, and the banner retracts into the base for storage.',
+				'It comes in 36" x 92", 48" x 92" and 60" x 92" widths, so it suits larger booths and backdrops. The set includes the base, support pole and top banner rail, plus a carry case. The LED light is optional. This listing is hardware only.',
+			),
+			'uses' => array('Wide banners for trade show booths', 'Upscale lobbies and showrooms', 'Stage and event backdrops', 'Replacing a worn premium stand'),
+			'faq' => array(
+				array('q' => 'Is a banner included?', 'a' => 'No. For a printed banner with the stand, order the <a href="/product/sd-retractable-sd-retractable-insert-stand/">SD retractable banner stand with graphic</a>.'),
+				array('q' => 'What sizes are available?', 'a' => '36" x 92", 48" x 92" and 60" x 92".'),
+				array('q' => 'Can I add a light?', 'a' => 'Yes. Choose the LED light option or see the <a href="/product/led-light-for-banner-stand/">LED light for banner stands</a>.'),
+			),
+			'related' => array('sd-retractable-sd-retractable-insert-stand', 'deluxe-retractable-hardware-only', 'standard-retractable-hardware-only', 'led-light-for-banner-stand'),
+		),
+
+		'step-and-repeat-backdrop-hardware-only' => array(
+			'intro' => array(
+				'This heavy duty backdrop frame holds step and repeat banners for red carpets, photo walls, press events and trade show booths. Telescoping tubes adjust the width and height, and heavyweight feet keep it steady.',
+				'It holds graphics from 6\' x 4\' up to 10\' x 8\', and the graphic is easy to change between events. A carry bag is included. This listing is hardware only.',
+			),
+			'uses' => array('Red carpet and press photo walls', 'Galas, weddings and sponsor events', 'Trade show booth backdrops', 'Reusing step and repeat banners you already own'),
+			'faq' => array(
+				array('q' => 'Is a banner included?', 'a' => 'No. For a printed backdrop with the frame, order the <a href="/product/step-and-repeat-backdrop-graphic-frame/">step and repeat backdrop with graphic</a>.'),
+				array('q' => 'What size banners does it hold?', 'a' => 'Anything from 6\' x 4\' up to 10\' x 8\'; the tubes telescope to fit.'),
+				array('q' => 'Is it easy to transport?', 'a' => 'Yes. It breaks down into tubes and feet and packs into the included carry bag.'),
+			),
+			'related' => array('step-and-repeat-backdrop-graphic-frame', 'sd-retractable-hardware-only', 'tension-fabric-stand-hardware-only', 'straight-tension-fabric-displays-graphic-frame'),
+		),
+
+		'event-tent-frame-only' => array(
+			'intro' => array(
+				'This is the 10\' x 10\' aluminum frame for our custom event tents, without the canopy. Heavy duty 40 mm hex legs give it strength outdoors, and the expandable lattice frame is simple to set up.',
+				'Telescopic legs set the height from 124.5" to 137". Each leg has a metal foot plate ready to stake down, and ropes, stakes and a standard carrying bag are included. The frame weighs 43 lb.',
+			),
+			'uses' => array('Replacing a damaged tent frame', 'Adding a second tent for a printed canopy you own', 'Farmers markets, fairs and sports events', 'Outdoor promotions and street festivals'),
+			'faq' => array(
+				array('q' => 'Is the canopy included?', 'a' => 'No. For a printed canopy with the frame, order the <a href="/product/event-tent-full-canopy-graphic-frame/">custom event tent</a>.'),
+				array('q' => 'How tall is it?', 'a' => 'The legs adjust from 124.5" to 137" high, on a 120" x 120" footprint.'),
+				array('q' => 'How do I keep it steady in wind?', 'a' => 'Stake the foot plates and tie down the ropes. On pavement, add the <a href="/product/sandbag-4pc-set/">4-piece sandbag set</a>.'),
+			),
+			'related' => array('event-tent-full-canopy-graphic-frame', 'sandbag-4pc-set', 'carrying-bag-w-wheels', 'tent-walls-full-color-full-wall'),
+		),
+
+		'sandbag-4pc-set' => array(
+			'intro' => array(
+				'Tent sandbags keep a 10\' x 10\' event tent planted on pavement or in wind, where stakes can&rsquo;t go. The set has four nylon bags, one per leg, and each bag wraps the leg with velcro ties.',
+				'Each bag has two compartments and holds up to 19 lb of sand, for 76 lb of total weight. Fill them on site, then empty and reuse them at the next event. Sand is not included.',
+			),
+			'uses' => array('Tents on parking lots, sidewalks and asphalt', 'Windy beach and park events', 'Farmers markets and street fairs', 'Any event that bans ground stakes'),
+			'faq' => array(
+				array('q' => 'How much weight does it add?', 'a' => 'Up to 19 lb per bag, 76 lb across the four legs.'),
+				array('q' => 'Does it fit your tent frame?', 'a' => 'Yes, it is made for the legs of our <a href="/product/event-tent-frame-only/">aluminum event tent frame</a>.'),
+				array('q' => 'Is sand included?', 'a' => 'No. The bags ship empty; fill them with sand or other ballast.'),
+			),
+			'related' => array('event-tent-frame-only', 'event-tent-full-canopy-graphic-frame', 'carrying-bag-w-wheels', 'half-wall-hardware'),
+		),
+
+		'carrying-bag-w-wheels' => array(
+			'intro' => array(
+				'An event tent frame is sturdy but heavy. This wheeled carrying bag lets you roll the frame on dual hard rubber casters instead of carrying it, with several handles for lifting it in and out of a vehicle.',
+				'It has a hardware compartment for the frame and a separate compartment for graphics and accessories, so the canopy and walls travel with the tent.',
+			),
+			'uses' => array('Moving a tent across parking lots and fields', 'Vendors who set up every weekend', 'Keeping graphics with the frame', 'Replacing a worn standard tent bag'),
+			'faq' => array(
+				array('q' => 'Does it fit your tent frame?', 'a' => 'Yes, it is made for our 10\' x 10\' <a href="/product/event-tent-frame-only/">aluminum event tent frame</a>.'),
+				array('q' => 'Is there room for the canopy?', 'a' => 'Yes, the graphics and accessories compartment holds printed tent graphics.'),
+				array('q' => 'Is a tent included?', 'a' => 'No, this listing is the bag only.'),
+			),
+			'related' => array('event-tent-frame-only', 'event-tent-full-canopy-graphic-frame', 'sandbag-4pc-set', 'flag-holder-hardware'),
+		),
+
+		'half-wall-hardware' => array(
+			'intro' => array(
+				'Half wall hardware holds a printed half wall straight and secure between two legs of an event tent. The telescopic support pole runs through the wall&rsquo;s pole pocket and packs short enough to fit in the tent bag.',
+				'Two hex clamps, one straight and one offset, fix the pole to our aluminum hex tent legs. Buy the clamps only, the support pole only, or the pole with both clamps.',
+			),
+			'uses' => array('Adding a branded half wall to a tent', 'Creating a counter-height front for vendor booths', 'Replacing a lost clamp or pole', 'Moving a half wall between tents'),
+			'faq' => array(
+				array('q' => 'Does it fit any tent?', 'a' => 'The clamps are made for our 40 mm aluminum hex tent legs.'),
+				array('q' => 'Is the wall graphic included?', 'a' => 'No. Order the printed wall from our <a href="/product/tent-walls-full-color-full-wall/">custom tent walls</a>.'),
+				array('q' => 'Can I buy just the clamps?', 'a' => 'Yes. Choose 2 hex clamps only, the support pole only, or the pole with 2 clamps.'),
+			),
+			'related' => array('tent-walls-full-color-full-wall', 'event-tent-frame-only', 'flag-holder-hardware', 'sandbag-4pc-set'),
+		),
+
+		'flag-holder-hardware' => array(
+			'intro' => array(
+				'The flag holder attaches a feather or teardrop flag directly to the leg of an event tent, so your flag flies right at the booth without a separate base. It holds one flag.',
+				'The full set is a metal flag adapter that fits the bottom of the flag pole plus two hex clamps (one straight, one offset) for any of the four tent legs. It is approved for small and medium feather and teardrop flags. Buy the full set, the adapter only, or the clamps only.',
+			),
+			'uses' => array('Adding a flag to a vendor or sponsor tent', "Booths on pavement where stakes can't go", 'Making a tent easier to spot in a crowded event', 'Pairing tent and flag branding'),
+			'faq' => array(
+				array('q' => 'Which flags does it hold?', 'a' => 'Small and medium <a href="/product/feather-convex-flag-pole/">feather</a> and <a href="/product/teardrop-flag-pole/">teardrop</a> flags.'),
+				array('q' => 'Does it fit any tent?', 'a' => 'The clamps are made for our aluminum hex tent legs.'),
+				array('q' => 'Can I mount two flags?', 'a' => 'Each set holds one flag. Order a second set for another leg.'),
+			),
+			'related' => array('tent-flag', 'event-tent-frame-only', 'teardrop-flag-pole', 'half-wall-hardware'),
 		),
 
 		'pole-banner-set-banner-hardware' => array(

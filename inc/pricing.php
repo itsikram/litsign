@@ -539,6 +539,94 @@ function wholesale_cl_example_price($slug, $letters, $inches)
 }
 
 /**
+ * Lowest price of one channel letter: the cheapest letter height on the product
+ * page, with no paid options, before and after the product discount. This is the
+ * same price wholesale_price_quote() charges for that letter, so a "from" price
+ * built on it is always one a buyer can actually pay.
+ *
+ * @return array|null array('regular' => float, 'price' => float, 'height' => int) or null.
+ */
+function wholesale_cl_from_price($product_id)
+{
+	static $cache = array();
+	$product_id = (int) $product_id;
+	if (array_key_exists($product_id, $cache)) {
+		return $cache[$product_id];
+	}
+
+	$cache[$product_id] = null;
+	foreach (wholesale_product_price_attrs($product_id) as $attr) {
+		if ('height' !== ($attr['name'] ?? '')) {
+			continue;
+		}
+		foreach (wholesale_attr_options($attr) as $option) {
+			$value = (float) $option['value'];
+			if ($value > 0 && (null === $cache[$product_id] || $value < $cache[$product_id]['regular'])) {
+				$cache[$product_id] = array('regular' => $value, 'price' => 0.0, 'height' => (int) $option['label']);
+			}
+		}
+	}
+	if ($cache[$product_id]) {
+		$discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
+		$cache[$product_id]['price'] = round($cache[$product_id]['regular'] * (1 - $discount / 100), 2);
+	}
+
+	return $cache[$product_id];
+}
+
+/**
+ * "Starting at" text for a channel letter, from its real per-letter price:
+ * "$133.20 per letter", or "<del>$148</del> $133.20 per letter" while a product
+ * discount is set. Replaces the hand-typed per-inch text, which quoted prices
+ * no letter height actually reached.
+ */
+function wholesale_cl_starting_text($product_id)
+{
+	$from = wholesale_cl_from_price($product_id);
+	if (!$from) {
+		return '';
+	}
+	$money = static function ($amount) {
+		return '$' . (floor($amount) == $amount ? number_format($amount) : number_format($amount, 2));
+	};
+	$now = $money($from['price']) . ' per letter';
+
+	return $from['price'] < $from['regular'] ? '<del>' . $money($from['regular']) . ' </del><span style="color: green">' . $now . '</span>' : $now;
+}
+
+/**
+ * One worked example under the "from" price: 6 front lit letters at 12 inches with
+ * the standard power supply (wholesale_cl_example_price()), plus the cheapest
+ * channel letter shipping rate the checkout charges. Empty when it can't be priced.
+ */
+function wholesale_cl_worked_example_text()
+{
+	$example = wholesale_cl_example_price('standard-channel-letter-front-lit', 6, 12);
+	if (!$example) {
+		return '';
+	}
+	$rates = array_values(array_filter(explode(',', (string) wholesale_get_setting('channel_shipping_options')), 'is_numeric'));
+	$shipping = $rates ? (float) min($rates) : 0;
+
+	return sprintf('Example: 6 front lit letters, 12&Prime; tall, with power supply: $%s', number_format($example['total'], 2))
+		. ($shipping > 0 ? sprintf(' + $%s shipping', floor($shipping) == $shipping ? number_format($shipping) : number_format($shipping, 2)) : '');
+}
+
+/**
+ * On the storefront, every reader of a channel letter's _starting_at_text (cards,
+ * category pages, comparison tables, the builder's product switcher) gets the
+ * computed text above. The admin editor still shows and saves the stored value.
+ */
+add_filter('get_post_metadata', function ($value, $object_id, $meta_key) {
+	if ('_starting_at_text' !== $meta_key || null !== $value || (is_admin() && !wp_doing_ajax()) || 'product' !== get_post_type($object_id) || !wholesale_product_is_channel_letter($object_id)) {
+		return $value;
+	}
+	$text = wholesale_cl_starting_text($object_id);
+
+	return '' !== $text ? array($text) : $value;
+}, 10, 3);
+
+/**
  * Whole-number sale percentage for a product: its _discount_percent, or the
  * saving implied by a struck-through <del> price in its "starting at" text.
  */

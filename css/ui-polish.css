@@ -1,0 +1,812 @@
+/*
+ * Layout polish layer (wholesale_ui_polish_assets(), prints after typography.css).
+ *
+ *   1. Category product cards (home.php listing for every category except channel letters)
+ *   2. Shop page cards (inc/shop-catalog.php)
+ *   3. Product page: price, options form, description, related products
+ *   4. Guide and location pages (inc/guide-pages.php, page-location.php)
+ *   5. Small text floor on phones
+ *
+ * Card language follows the Shop page cards: square photo, two-line title,
+ * "Starting at" label over a bold price, quiet unit text.
+ */
+
+/* ---------- 1. Category product cards ---------- */
+.product-listing-container:not(.product-listing-container--cl) .product-box-container {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 22px;
+  padding: 4px 0 0;
+  overflow: visible;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box-container .product-box,
+.product-listing-container:not(.product-listing-container--cl) .product-box-container .product-box:last-child {
+  width: auto;
+  float: none;
+  clear: none;
+  margin: 0;
+  border: 1px solid #e3e9ef;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 16px rgba(15, 23, 42, 0.05);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box-container .product-box:hover,
+.product-listing-container:not(.product-listing-container--cl) .product-box-container .product-box:focus-within {
+  float: none;
+  margin-top: 0;
+  border-color: rgba(31, 168, 222, 0.4);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06), 0 18px 40px rgba(15, 23, 42, 0.1);
+  transform: translateY(-2px);
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-image-top {
+  aspect-ratio: 1 / 1;
+  background: #f3f8fb;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-image-top img {
+  object-fit: cover;
+}
+
+/* The card body link fills the rest of the card so the price row sits at the bottom. */
+.product-listing-container:not(.product-listing-container--cl) .product-box > a:not(.pb-image-top) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-details {
+  padding: 14px 16px 16px;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-details .pb-title {
+  display: -webkit-box;
+  margin: 0 0 6px;
+  overflow: hidden;
+  color: #172027;
+  font-size: 1rem !important;
+  font-weight: 650;
+  line-height: 1.35;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .product-rating {
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  margin: 0 0 10px;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-details .pb-description-list {
+  color: #5b6b7b;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-details .pb-description-list ul {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-details .pb-description-list ul li {
+  display: none;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-details .pb-description-list ul li:nth-child(-n + 3) {
+  position: relative;
+  display: block;
+  padding-left: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-details .pb-description-list ul li:nth-child(-n + 3)::before {
+  content: "";
+  position: absolute;
+  top: 0.6em;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(31, 168, 222, 0.55);
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-details .start-at-pricing {
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  min-height: 0;
+  padding-top: 12px;
+  border-top-color: #e3e9ef;
+  color: #5b6b7b;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-title-short {
+  color: #5b6b7b;
+  font-size: 0.78rem !important;
+  font-weight: 500;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-price {
+  color: #5b6b7b;
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-price strong {
+  color: #172027;
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-price del {
+  margin-right: 2px;
+  color: #8a99a8;
+  font-size: 0.85rem;
+}
+
+.product-listing-container:not(.product-listing-container--cl) .product-box .pb-price sup {
+  font-size: 0.65em;
+}
+
+/* Size tables (flags, fabric displays): the table on wide cards, one price line on phones. */
+.product-box .start-at-pricing--table {
+  display: block !important;
+}
+
+.product-box .start-at-pricing--table .table {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.product-box .start-at-pricing--table .table th,
+.product-box .start-at-pricing--table .table td {
+  padding: 5px 0;
+  border-color: #eef2f6;
+}
+
+.product-box .start-at-pricing--table .table td {
+  color: #172027 !important;
+  font-weight: 700;
+}
+
+.product-box .pb-price-summary {
+  display: none;
+  margin: 0;
+}
+
+.product-box .pb-shop-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  color: #1287b5;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.product-box .pb-shop-cta .cl-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+.product-box:hover .pb-shop-cta .cl-icon {
+  transform: translateX(3px);
+}
+
+@media (max-width: 767.98px) {
+  .product-listing-container:not(.product-listing-container--cl) .product-box-container {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 8px 0 0;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box-container .product-box {
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 3px 10px rgba(15, 23, 42, 0.05);
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box-container .product-box:hover {
+    transform: none;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-details {
+    padding: 10px 12px 12px;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-details .pb-title {
+    min-height: 0;
+    margin-bottom: 4px;
+    font-size: 0.92rem !important;
+    line-height: 1.3;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .product-rating {
+    flex-wrap: nowrap;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .product-rating-stars {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .product-rating-word {
+    display: none;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-description-list,
+  .product-box .pb-shop-cta {
+    display: none;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-details .start-at-pricing {
+    display: block;
+    padding-top: 8px;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-title-short {
+    display: block;
+    font-size: 0.72rem !important;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-price {
+    display: block;
+    font-size: 0.74rem;
+    white-space: normal;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-price strong {
+    font-size: 1.05rem;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-price del {
+    font-size: 0.78rem;
+  }
+
+  .product-box .start-at-pricing--table .table {
+    display: none;
+  }
+
+  .product-box .pb-price-summary {
+    display: block;
+  }
+
+  /* Half-width cards: swipe the photo (js/main.js); the counter shows there are more. */
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-image-top.has-gallery .pb-gallery-arrow {
+    display: none;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .pb-gallery-count {
+    bottom: 6px;
+    padding: 3px 7px;
+    font-size: 10.5px;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .sale-badge {
+    top: 6px;
+    left: 6px;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .sale-badge__label,
+  .product-listing-container:not(.product-listing-container--cl) .product-box .sale-badge__value {
+    padding: 5px 6px;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box .sale-badge__label svg {
+    display: none;
+  }
+}
+
+/* Category sidebar: clears the sticky site header and scrolls on its own when it is
+   taller than the window (otherwise its last links are unreachable). */
+@media (min-width: 768px) {
+  .product-listing-container .category-filter-menu-wrapper {
+    top: 160px;
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+}
+
+/* Tablets: the 1/6 sidebar column was ~100px and wrapped every word. */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+  .product-listing-container:not(.product-listing-container--cl) > .row > .col-md-2 {
+    flex: 0 0 auto;
+    width: 30%;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) > .row > .col-md-10 {
+    flex: 0 0 auto;
+    width: 70%;
+  }
+}
+
+/* ---------- 2. Shop page cards ---------- */
+.sc-card-cat {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+  .sc-card-cat {
+    margin-bottom: 3px;
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+  }
+
+  .sc-card-rating {
+    margin-bottom: 6px;
+    font-size: 0.76rem;
+  }
+
+  .sc-card-price-label {
+    font-size: 0.7rem;
+  }
+}
+
+/* ---------- 3. Product page ---------- */
+.product-details .product-price-per-sqft {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-top: 14px;
+  padding: 14px 16px !important;
+  border: 1px solid #d3ecf7;
+  border-radius: 12px;
+  background: #f3fafd;
+  color: #475569 !important;
+  font-size: 0.95rem;
+  text-align: left !important;
+}
+
+.product-details .product-price-label {
+  flex-basis: 100%;
+  color: #5b6b7b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.product-details .product-price-value strong {
+  color: #172027;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.product-details .product-price-value del {
+  margin-right: 4px;
+  color: #8a99a8;
+  font-size: 1rem;
+}
+
+.product-details .product-price-value sup {
+  font-size: 0.65em;
+}
+
+/* Product description (tabs for channel letters, plain content otherwise): steady heading rhythm. */
+.product-details .product-main-desc h1,
+.product-details .product-main-desc h2:not(.fs-3) {
+  margin: 1.6em 0 0.5em;
+  color: #172027;
+  font-size: 1.55rem;
+  line-height: 1.25;
+}
+
+.product-details .product-main-desc h3 {
+  margin: 1.5em 0 0.45em;
+  color: #172027;
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+
+.product-details .product-main-desc h4,
+.product-details .product-main-desc h5 {
+  margin: 1.4em 0 0.4em;
+  color: #172027;
+  font-size: 1.08rem !important;
+  line-height: 1.35;
+}
+
+.product-details .product-main-desc .tab-content .tab-pane > :first-child,
+.product-details .product-main-desc .tab-content .tab-pane > div > :first-child,
+.product-details .product-main-desc > h2.fs-3 + * {
+  margin-top: 0;
+}
+
+.product-details .product-main-desc p {
+  margin: 0 0 1em;
+}
+
+.product-details .product-main-desc ul:not(.nav),
+.product-details .product-main-desc ol {
+  margin: 0 0 1.1em;
+  padding-left: 1.25em;
+}
+
+.product-details .product-main-desc li:not(.nav-item) {
+  margin-bottom: 0.35em;
+}
+
+/* Related products */
+.related-product-name {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.related-product-price {
+  margin-top: auto;
+  color: #172027;
+  font-weight: 700;
+}
+
+@media (max-width: 767.98px) {
+  .product-details .product-title {
+    font-size: 26px !important;
+    line-height: 1.18;
+  }
+
+  .product-details .product-intro {
+    margin-bottom: 18px !important;
+    font-size: 15px;
+  }
+
+  .product-details .product-main-desc {
+    margin-top: 32px;
+    padding-top: 24px;
+  }
+
+  .product-details .product-main-desc > h2 {
+    margin-bottom: 12px !important;
+    font-size: 1.4rem !important;
+  }
+
+  .product-details .product-main-desc {
+    font-size: 15.5px;
+  }
+
+  .product-details .product-main-desc .tab-content {
+    padding: 18px 0;
+    font-size: 15.5px;
+  }
+
+  .product-details .product-main-desc h1,
+  .product-details .product-main-desc h2:not(.fs-3) {
+    font-size: 1.3rem;
+  }
+
+  .product-details .product-main-desc h3 {
+    font-size: 1.12rem;
+  }
+
+  .product-details .product-main-desc h4,
+  .product-details .product-main-desc h5 {
+    font-size: 1rem !important;
+  }
+
+  .related-products {
+    margin-top: 32px;
+  }
+
+  .related-products-head h2 {
+    font-size: 1.25rem;
+  }
+
+  .related-product-name {
+    padding: 10px 12px 2px;
+    font-size: 0.9rem;
+  }
+
+  .related-product-price {
+    padding: 0 12px 12px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Phones: option labels sit above full-width controls instead of a cramped 1/3 column. */
+@media (max-width: 575.98px) {
+  .product-details .product-attibute-box,
+  .product-details .product-pricing-box {
+    padding: 18px 16px;
+  }
+
+  .product-details .product-attibute-box .row > .col-4,
+  .product-details .product-attibute-box .row > .col-8 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  .product-details .product-attibute-box .row > .offset-4 {
+    margin-left: 0;
+  }
+
+  .product-details .product-attibute-box .row.align-items-center + .row.align-items-center {
+    margin-top: 14px !important;
+  }
+
+  .product-details .product-attibute-box .row > .col-4 > label,
+  .product-details .product-attibute-box .row > .col-4 > .dim-label {
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+
+  .product-details .product-attibute-box .form-control,
+  .product-details .product-attibute-box .form-select {
+    min-height: 46px;
+    font-size: 16px;
+  }
+
+  .product-details .product-price-value strong {
+    font-size: 1.45rem;
+  }
+}
+
+/* ---------- 4. Guide and location pages ---------- */
+/* Hero buttons: one shared top margin (each button had its own, which doubled the
+   gap once they stack) and matching corners. */
+.sf-hero-actions {
+  margin-top: 24px;
+}
+
+.sf-hero-actions > a {
+  margin-top: 0;
+}
+
+.sf-hero-actions .sf-button-outline {
+  border-radius: 6px;
+}
+
+.sf-type-card {
+  position: relative;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.sf-type-card:hover,
+.sf-type-card:focus-within {
+  border-color: rgba(31, 168, 222, 0.4);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.1);
+}
+
+/* The whole card opens the product. */
+.sf-type-body h3 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.sf-type-body p a {
+  position: relative;
+  z-index: 2;
+}
+
+.sf-type-price del {
+  color: #8a99a8;
+  font-weight: 500;
+}
+
+@media (max-width: 575.98px) {
+  /* Compact row cards: photo on the left, details on the right. */
+  .sf-type-grid {
+    gap: 12px;
+    margin-top: 22px;
+  }
+
+  .sf-type-card {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  }
+
+  .sf-type-image {
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 112px;
+  }
+
+  .sf-type-body {
+    padding: 12px 14px;
+  }
+
+  .sf-type-body h3 {
+    margin-bottom: 4px;
+    font-size: 1rem;
+    line-height: 1.3;
+  }
+
+  .sf-type-body p {
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+
+  .sf-type-body p:not(.sf-type-price) {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+  }
+
+  .sf-type-body .sf-type-price {
+    padding-top: 8px;
+    font-size: 0.95rem;
+  }
+
+  .sf-type-price small {
+    font-size: 0.68rem;
+  }
+
+  /* Key facts: one card with divided rows instead of four tall cards. */
+  .gd-facts {
+    gap: 0;
+    margin-top: 24px;
+    overflow: hidden;
+    border: 1px solid #e6ebf1;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+  }
+
+  .gd-facts li {
+    padding: 12px 16px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .gd-facts li + li {
+    border-top: 1px solid #eef2f6;
+  }
+
+  .gd-facts strong {
+    font-size: 0.72rem;
+  }
+
+  /* Two-column fact tables (no header row) read as stacked label/value pairs. */
+  .gd-table:not(:has(thead)),
+  .gd-table:not(:has(thead)) tbody,
+  .gd-table:not(:has(thead)) tr,
+  .gd-table:not(:has(thead)) th,
+  .gd-table:not(:has(thead)) td {
+    display: block;
+    width: 100%;
+  }
+
+  .gd-table:not(:has(thead)) tr {
+    padding: 12px 0;
+    border-bottom: 1px solid #e6ebf1;
+  }
+
+  .gd-table:not(:has(thead)) th,
+  .gd-table:not(:has(thead)) td {
+    padding: 0;
+    border: 0;
+  }
+
+  .gd-table:not(:has(thead)) th {
+    margin-bottom: 2px;
+    font-size: 0.9rem;
+  }
+
+  .gd-table:has(thead) {
+    font-size: 0.88rem;
+  }
+
+  .gd-table:has(thead) th,
+  .gd-table:has(thead) td {
+    padding: 10px 8px;
+  }
+
+  .gd-note {
+    padding: 14px 16px;
+  }
+
+  .sf-hero-title {
+    font-size: 1.85rem;
+  }
+
+  .sf-prose p {
+    font-size: 1rem;
+    line-height: 1.65;
+  }
+}
+
+/* ---------- 5. Small text floor on phones ---------- */
+@media (max-width: 767.98px) {
+  .home-hero--cl .home-hero-eyebrow,
+  .home-hero-eyebrow {
+    font-size: 11.5px;
+  }
+
+  .home-types-text small {
+    font-size: 11.5px;
+  }
+
+  .sale-badge {
+    font-size: 11px;
+  }
+
+  .product-rating-value,
+  .product-rating-count {
+    font-size: 12px;
+  }
+}
+
+/* ---------- 6. Category page hero: 200px taller ----------
+   100px more space above and below the copy, and every minimum height raised by
+   200px, so the hero grows by exactly 200px whether its copy or its minimum sets
+   the height (old minimums: 430px desktop, 400px tablet, none on phones). */
+.home-hero--category .home-hero-content {
+  min-height: 630px;
+  padding-top: 100px;
+  padding-bottom: 100px;
+}
+
+@media only screen and (max-width: 991px) {
+  .home-hero--category .home-hero-content {
+    min-height: 600px;
+  }
+}
+
+@media only screen and (max-width: 767px) {
+  .home-hero--category .home-hero-content {
+    min-height: 0;
+  }
+}
+
+/* ---------- 7. Image skeletons ----------
+   A grey placeholder with a moving shine sits behind each product photo until it
+   loads; js/main.js adds .sk-done to the frame on load or error. The shine is a
+   pseudo-element behind the image (isolation + z-index -1), so a loaded photo
+   always paints over it, even before the script runs. */
+:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media) {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media):not(.sk-done) {
+  background-color: #e9eff4;
+}
+
+:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media):not(.sk-done)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(100deg, rgba(255, 255, 255, 0) 20%, rgba(255, 255, 255, 0.7) 50%, rgba(255, 255, 255, 0) 80%);
+  transform: translateX(-100%);
+  animation: sk-shine 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes sk-shine {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media):not(.sk-done)::before {
+    animation: none;
+    transform: none;
+    background: none;
+  }
+}

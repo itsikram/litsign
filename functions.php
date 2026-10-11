@@ -64,6 +64,7 @@ require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
 require_once(dirname(__FILE__) . '/inc/quote-form.php');
 require_once(dirname(__FILE__) . '/inc/async-uploads.php');
 require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
+require_once(dirname(__FILE__) . '/inc/exit-survey.php');
 require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
 require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
 require_once(dirname(__FILE__) . '/inc/storefront-media.php');
@@ -1227,7 +1228,8 @@ function wholesale_render_product_rating($product_id, $class = '')
 		echo '<span class="product-rating-star ' . esc_attr($state) . '">&#9733;</span>';
 	}
 	echo '</span><span class="product-rating-value">' . esc_html(number_format($review_data['rating'], 1)) . '</span>';
-	echo '<span class="product-rating-count">(' . esc_html(number_format_i18n($review_data['count'])) . ' reviews)</span>';
+	// The word is wrapped so narrow cards can show just "(3)".
+	echo '<span class="product-rating-count">(' . esc_html(number_format_i18n($review_data['count'])) . '<span class="product-rating-word"> ' . esc_html(1 === (int) $review_data['count'] ? 'review' : 'reviews') . '</span>)</span>';
 	echo '</div>';
 }
 
@@ -1962,12 +1964,9 @@ function wholesale_render_sitemap()
 		}
 	}
 
-	$terms = get_terms(array(
-		'taxonomy' => 'product_category',
-		'hide_empty' => true,
-	));
+	$terms = wholesale_seo_sitemap_categories();
 
-	if (!is_wp_error($terms)) {
+	if ($terms) {
 		foreach ($terms as $term) {
 			// The channel-letter route canonicalizes to the home page.
 			if (in_array($term->slug, wholesale_seo_sitemap_excluded_categories(), true)) {
@@ -2619,6 +2618,20 @@ function wholesale_typography_assets()
 add_action('wp_enqueue_scripts', 'wholesale_typography_assets', 99);
 
 /**
+ * Layout polish for product cards, product pages and guide/location pages, mostly
+ * for phones (css/ui-polish.css). Prints after typography.css so it wins ties.
+ */
+function wholesale_ui_polish_assets()
+{
+	if (is_admin() || is_page('channel-letter-builder')) {
+		return;
+	}
+	$path = '/css/ui-polish.css';
+	wp_enqueue_style('wholesale-ui-polish', get_template_directory_uri() . $path, array('wholesale-typography'), (string) filemtime(get_template_directory() . $path));
+}
+add_action('wp_enqueue_scripts', 'wholesale_ui_polish_assets', 100);
+
+/**
  * Preload both font files: body text and the hero heading use them above the fold.
  */
 function wholesale_preload_typography_fonts()
@@ -3142,14 +3155,14 @@ function wholesale_seo_keyword_meta()
 	if (wholesale_is_channel_letters_landing()) {
 		return array(
 			'title' => __('Custom Channel Letter Signs | UL Listed LED, Made in USA', 'litsign'),
-			'description' => __('Custom LED channel letter signs, built to order and UL listed. See your price per inch online or get a free quote.', 'litsign'),
+			'description' => __('Custom LED channel letter signs, built to order and UL listed. See your exact price online or get a free quote.', 'litsign'),
 		);
 	}
 
 	if (wholesale_is_channel_letters_page()) {
 		return array(
 			'title' => __('Channel Letters | Custom LED Signs, See Your Price Online', 'litsign'),
-			'description' => __('Custom LED channel letters built to order: front lit, back lit, halo lit, reverse lit and trimless. See your price per inch online. UL listed, made in USA.', 'litsign'),
+			'description' => __('Custom LED channel letters built to order: front lit, back lit, halo lit, reverse lit and trimless. See your exact price online. UL listed, made in USA.', 'litsign'),
 		);
 	}
 
@@ -3243,7 +3256,8 @@ function wholesale_seo_is_noindex()
 		|| is_page_template(array('page-channel-letters-ads.php', 'landing-page.php'))
 		|| is_singular(array('order', 'cnn'))
 		|| is_post_type_archive('order')
-		|| get_query_var('wholesale_thank_you');
+		|| get_query_var('wholesale_thank_you')
+		|| wholesale_seo_is_empty_category_page();
 }
 
 /**

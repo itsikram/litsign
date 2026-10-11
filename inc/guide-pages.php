@@ -503,7 +503,7 @@ function wholesale_guide_render_products($slugs)
 							'loading' => 'lazy',
 							'decoding' => 'async',
 							'alt' => wholesale_schema_text(get_the_title($product)),
-							'sizes' => '(max-width: 575px) 100vw, (max-width: 991px) 50vw, 25vw',
+							'sizes' => '(max-width: 575px) 112px, (max-width: 991px) 50vw, 25vw',
 						));
 					}
 					?>

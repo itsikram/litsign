@@ -1589,6 +1589,8 @@ a.link-primary:focus,
 
 .product-box-container .product-box .pb-price span {
   color: #1fa8de !important;
+  /* "$133.20 per letter" stays on one line instead of breaking before "letter". */
+  white-space: nowrap;
 }
 
 .product-box-container .product-box .pb-details .pb-title {
@@ -6504,7 +6506,7 @@ a.review-author-name:hover {
 }
 
 .product-pricing-box .product-assurance li::before {
-  content: "¹3";
+  content: "\2713";
   margin-right: 8px;
   color: #117a4c;
   font-weight: 700;

@@ -221,6 +221,9 @@ function wholesale_home_from_price($slug)
 function wholesale_home_price_unit($slug)
 {
     $text = strtolower(wp_strip_all_tags(wholesale_seo_product_starting_text($slug)));
+    if (false !== strpos($text, 'letter')) {
+        return '/letter';
+    }
     if (false !== strpos($text, 'inch')) {
         return '/inch';
     }
@@ -255,7 +258,7 @@ if ($is_channel_letters) {
         ),
         array(
             'q' => 'How much do channel letters cost?',
-            'a' => 'Channel letters are priced by letter height, so each style lists a starting price per inch. Open a style, enter your wording, letter height and colors, and you&rsquo;ll see your full price before checkout. For large or unusual projects, <a href="' . esc_url($contact_url) . '">request a free quote</a>.',
+            'a' => 'Channel letters are priced by letter height, so each style lists its starting price for one letter at the smallest height. Open a style, enter your wording, letter height and colors, and you&rsquo;ll see your full price before checkout. For large or unusual projects, <a href="' . esc_url($contact_url) . '">request a free quote</a>.',
         ),
         array(
             'q' => 'What are channel letters made of?',
@@ -338,9 +341,10 @@ if ('' === $category_description_text && '' === $category_intro) {
                     <p class="home-hero-lead">UL listed LED channel letters, built to order in Washington and California. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
                     <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
                     <div class="home-hero-actions home-hero-actions--cl">
-                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
+                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per letter</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
                         <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
                     </div>
+                    <?php $cl_example_text = function_exists('wholesale_cl_worked_example_text') ? wholesale_cl_worked_example_text() : ''; ?><?php if ($cl_example_text) : ?><p class="home-hero-example"><?php echo wp_kses_post($cl_example_text); ?></p><?php endif; ?>
                     <p class="home-hero-logo"><a href="<?php echo esc_url($contact_url); ?>">Have a logo? Send it for a free quote</a> <span>or <a href="sms:+12066186543">text your logo to 206-618-6543</a></span></p>
                     <p class="home-hero-help">
                         <?php echo wholesale_home_icon('phone'); ?>
@@ -623,7 +627,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                             <?php $is_first_product = false; ?>
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-details">
-                                    <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
+                                    <h2 class="pb-title fs-6<?php echo $is_channel_letters ? ' text-truncate' : ''; ?>" title="<?php echo esc_attr(get_the_title()); ?>">
                                         <?php echo esc_html(get_the_title()); ?>
                                     </h2>
                                     <?php wholesale_render_product_rating(get_the_ID()); ?>
@@ -631,12 +635,23 @@ if ('' === $category_description_text && '' === $category_intro) {
                                         <?php echo wp_kses_post($short_desc); ?>
                                     </div>
                                     <hr>
-                                    <div class="start-at-pricing">
+                                    <div class="start-at-pricing<?php echo $starting_at_options ? ' start-at-pricing--table' : ''; ?>">
 
                                         <?php if ($starting_at_options) {
                                             $product_size_data = get_product_attribute_data(get_the_ID(), $starting_at_options);
-
+                                            // Phones show one "Starting at" line instead of the size table.
+                                            $size_prices = array();
+                                            foreach ($product_size_data as $size_value) {
+                                                $size_prices[] = get_variant_cost($price_per_sqft, str_contains($size_value, '/') ? explode('/', $size_value)[0] : $size_value);
+                                            }
+                                            $size_prices = array_filter($size_prices);
                                         ?>
+                                            <?php if ($size_prices || trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
+                                                <p class="pb-price-summary">
+                                                    <span class="pb-title-short">Starting at</span>
+                                                    <span class="pb-price"><?php echo trim(wp_strip_all_tags((string) $starting_at_text)) !== '' ? wholesale_emphasize_price($starting_at_text) : '<strong>$' . esc_html(number_format(min($size_prices), 2)) . '</strong>'; ?></span>
+                                                </p>
+                                            <?php endif; ?>
                                             <table class="table">
                                                 <tbody>
 
@@ -682,7 +697,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                                                 Starting at
                                             </span>
                                             <span class="pb-price">
-                                                <?php echo $starting_at_text; ?>
+                                                <?php echo $is_channel_letters ? $starting_at_text : wholesale_emphasize_price($starting_at_text); ?>
                                             </span>
                                         <?php
                                         }; ?>
@@ -690,6 +705,8 @@ if ('' === $category_description_text && '' === $category_intro) {
                                     </div>
                                     <?php if ($is_channel_letters) : ?>
                                         <span class="pb-cta">Get your price <?php echo wholesale_home_icon('arrow'); ?></span>
+                                    <?php else : ?>
+                                        <span class="pb-shop-cta" aria-hidden="true">Choose size &amp; options <?php echo wholesale_home_icon('arrow'); ?></span>
                                     <?php endif; ?>
 
                                 </div>

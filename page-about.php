@@ -14,12 +14,15 @@ $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $storefront_signs_url = function_exists('wholesale_seo_storefront_signs_url') ? wholesale_seo_storefront_signs_url() : '';
 $story = trim((string) get_post_field('post_content', get_queried_object_id()));
+// The page's featured image, when set, is the hero background.
+$hero_image = get_the_post_thumbnail_url(get_queried_object_id(), '2048x2048');
+$hero_style = $hero_image ? wholesale_hero_background_style(wholesale_webp_url(esc_url_raw($hero_image))) : '';
 
 get_header();
 ?>
 
 <main id="primary" class="sf-page">
-	<section class="sf-hero" aria-labelledby="about-title">
+	<section class="sf-hero<?php echo $hero_style ? ' sf-hero--photo' : ''; ?>" aria-labelledby="about-title"<?php echo $hero_style ? ' style="' . esc_attr($hero_style) . '"' : ''; ?>>
 		<div class="container">
 			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">About us</p>

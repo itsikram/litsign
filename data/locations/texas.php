@@ -12,13 +12,13 @@ return array(
 	'slug' => 'texas',
 	'name' => 'Texas',
 	'abbr' => 'TX',
-	'status' => 'review',
+	'status' => 'live',
 	'neighbors' => array('new-mexico', 'oklahoma', 'arkansas', 'louisiana'),
 	'seo_title' => 'Storefront Signs Shipped to Texas | TDLR Sign License Guide',
 	'seo_description' => 'Channel letters shipped to Texas businesses, plus who can install them (TDLR electrical sign contractors) and how city sign permits work, including Houston.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to Texas',
 	'intro' => array(
-		'Texas businesses can price custom LED channel letters online, then have them built in Renton, Washington and shipped to their storefront, ready for a licensed Texas sign installer.',
+		'Texas businesses can price custom LED channel letters online, then have them built in Washington and California and shipped to their storefront, ready for a licensed Texas sign installer.',
 		'Texas is one of the few states that licenses sign electricians as their own trade. The Texas Department of Licensing and Regulation (TDLR) issues Electrical Sign Contractor licenses for businesses and Master Sign Electrician, Journeyman Sign Electrician and Electrical Sign Apprentice licenses for individuals. Sign permits themselves come from each city, and big cities like Houston run their own sign departments.',
 		'Strip centers across Texas often spell out the sign in the lease: letter height, colors and mounting. Get the criteria from your landlord before you design.',
 	),
@@ -80,7 +80,7 @@ return array(
 	'faq' => array(
 		array(
 			'q' => 'Is there a channel letter company near me in Texas?',
-			'a' => 'We ship custom channel letters anywhere in Texas from our shop in Renton, WA. We don&rsquo;t install, so you&rsquo;ll hire a TDLR-licensed electrical sign contractor near you to mount and connect it.',
+			'a' => 'We ship custom channel letters anywhere in Texas from our shops in Washington and California. We don&rsquo;t install, so you&rsquo;ll hire a TDLR-licensed electrical sign contractor near you to mount and connect it.',
 		),
 		array(
 			'q' => 'What license does a sign installer need in Texas?',

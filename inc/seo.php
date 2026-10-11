@@ -413,6 +413,7 @@ function wholesale_seo_migrations()
 		'2026-10-storefront-media' => 'wholesale_seo_migrate_storefront_media',
 		'2026-10-supplier-text' => 'wholesale_seo_migrate_supplier_text',
 		'2026-10-site-title' => 'wholesale_seo_migrate_site_title',
+		'2026-10-brand-chat-alt' => 'wholesale_seo_migrate_brand_chat_alt',
 	);
 }
 
@@ -425,6 +426,29 @@ function wholesale_seo_migrate_site_title()
 {
 	if ('Store Front Sign Online' === get_option('blogname')) {
 		update_option('blogname', 'Storefront Sign Online');
+	}
+
+	return true;
+}
+
+/**
+ * The live chat widget's business name and two logo alt texts still said
+ * "Store Front Sign Online", which printed on every page.
+ */
+function wholesale_seo_migrate_brand_chat_alt()
+{
+	global $wpdb;
+
+	$chat = get_option('sfs_chat_settings');
+	if (is_array($chat) && isset($chat['business_name']) && 'Store Front Sign Online' === $chat['business_name']) {
+		$chat['business_name'] = 'Storefront Sign Online';
+		update_option('sfs_chat_settings', $chat);
+	}
+
+	$ids = $wpdb->get_col("SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_wp_attachment_image_alt' AND meta_value LIKE '%Store Front Sign Online%'");
+	foreach ($ids as $id) {
+		$alt = (string) get_post_meta($id, '_wp_attachment_image_alt', true);
+		update_post_meta($id, '_wp_attachment_image_alt', str_replace('Store Front Sign Online', 'Storefront Sign Online', $alt));
 	}
 
 	return true;

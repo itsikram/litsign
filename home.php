@@ -141,9 +141,20 @@ if ($current_term_ref) {
     }
 }
 
-$category_hero_image = $current_term_image ? $current_term_image : $ref_term_image;
+// The linked hardware category's image is a product close-up, not a scene, so
+// it is not used as the hero background; the default hero photo is used instead.
+$category_hero_image = $current_term_image;
+// The home page hero uses the home page's own featured image. Without one it
+// falls back to the /custom-channel-letters/ hero photo.
+if ($is_channel_letters && is_front_page()) {
+    $front_page_hero_image = get_the_post_thumbnail_url((int) get_option('page_on_front'), '2048x2048');
+    if (!$front_page_hero_image && wholesale_channel_letters_landing_id()) {
+        $front_page_hero_image = get_the_post_thumbnail_url(wholesale_channel_letters_landing_id(), 'large');
+    }
+    $category_hero_image = $front_page_hero_image ? $front_page_hero_image : $category_hero_image;
+}
 $category_hero_image = $category_hero_image ? wholesale_webp_url(esc_url_raw($category_hero_image)) : '';
-$default_category_hero_image = wholesale_webp_url(get_template_directory_uri() . '/img/hero-1920.webp');
+$default_category_hero_image = wholesale_default_hero_url();
 $category_hero_background = wholesale_hero_background_style($category_hero_image, $default_category_hero_image);
 
 function get_nested_terms($taxonomy = 'product_category', $args = array())
@@ -322,13 +333,15 @@ if ('' === $category_description_text && '' === $category_intro) {
                         <?php if ($google_rating) : ?>
                             <a class="home-hero-rating" href="#customer-reviews"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
                         <?php endif; ?>
-                        <span><?php echo wholesale_home_icon('flag'); ?> Ships to Washington &amp; all 50 states</span>
+                        <span><?php echo wholesale_home_icon('flag'); ?> Made in Washington &amp; California &middot; ships to all 50 states</span>
                     </p>
-                    <p class="home-hero-lead">Pick your style, see your exact price online, and get letters that are tested and ready to install&nbsp;&mdash; wiring diagram included.</p>
+                    <p class="home-hero-lead">UL listed LED channel letters, built to order in Washington and California. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
+                    <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
                     <div class="home-hero-actions home-hero-actions--cl">
                         <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
                         <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
                     </div>
+                    <p class="home-hero-logo"><a href="<?php echo esc_url($contact_url); ?>">Have a logo? Send it for a free quote</a> <span>or <a href="sms:+12066186543">text your logo to 206-618-6543</a></span></p>
                     <p class="home-hero-help">
                         <?php echo wholesale_home_icon('phone'); ?>
                         Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
@@ -362,25 +375,13 @@ if ('' === $category_description_text && '' === $category_intro) {
         </div>
     </div>
     <?php if ($is_channel_letters) : ?>
-    <div class="home-hero-features" aria-label="Our service benefits">
-        <div class="container home-hero-feature-grid">
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-truck-fast"></i></span>
-                <span><strong>Fast &amp; Reliable Shipping</strong><small>Get your signs on time.</small></span>
-            </div>
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-shield-halved"></i></span>
-                <span><strong>High Quality Products</strong><small>Built to last.</small></span>
-            </div>
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-gear"></i></span>
-                <span><strong>Expert Support</strong><small>We're here to help.</small></span>
-            </div>
-            <div class="home-hero-feature">
-                <span class="home-hero-feature-icon" aria-hidden="true"><i class="fa-solid fa-star"></i></span>
-                <span><strong>100% Satisfaction</strong><small>Your success is our priority.</small></span>
-            </div>
-        </div>
+    <div class="cll-trust" aria-label="Why our channel letters">
+        <ul class="container cll-trust-list">
+            <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong><small>Labels on every sign section</small></span></li>
+            <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Washington &amp; California</small></span></li>
+            <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>LED modules &amp; power supplies</small></span></li>
+            <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong><small>Wiring diagram included</small></span></li>
+        </ul>
     </div>
     <?php endif; ?>
 </section>

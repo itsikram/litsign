@@ -150,7 +150,9 @@ get_header();
     if (!$product_intro && $terms && !is_wp_error($terms)) {
         $product_intro = trim((string) $terms[0]->description);
     }
-    if ($product_intro) :
+    // Channel letters show their feature list under the gallery instead of under the title.
+    $product_intro_below_gallery = $product_category_slug === 'channel-letters';
+    if ($product_intro && !$product_intro_below_gallery) :
     ?>
         <div class="product-intro mb-4"><?php echo wp_kses_post($product_intro); ?></div>
     <?php endif; ?>
@@ -160,15 +162,18 @@ get_header();
             <div class="col-md-4">
                 <div class="thumbnail-container">
                     <?php wholesale_render_sale_badge(get_the_ID()); ?>
-                    <?php
-                    the_post_thumbnail('', array(
-                        'class' => 'single-product-thumbnail',
-                        'alt' => esc_attr(get_the_title()),
-                        'loading' => 'eager',
-                        'fetchpriority' => 'high',
-                        'decoding' => 'async',
-                    ));
-                    ?>
+                    <div class="product-image-zoom" data-zoom-src="<?php echo esc_url(get_the_post_thumbnail_url(get_the_ID(), 'full')); ?>">
+                        <?php
+                        the_post_thumbnail('', array(
+                            'class' => 'single-product-thumbnail',
+                            'alt' => esc_attr(get_the_title()),
+                            'loading' => 'eager',
+                            'fetchpriority' => 'high',
+                            'decoding' => 'async',
+                        ));
+                        ?>
+                        <div class="product-image-zoom__lens" aria-hidden="true"></div>
+                    </div>
                 </div>
                 <?php if ($product_gallery_images) : ?>
                     <div class="product-gallery-container my-3">
@@ -184,6 +189,9 @@ get_header();
                         } ?>
                     </div>
 
+                <?php endif; ?>
+                <?php if ($product_intro && $product_intro_below_gallery) : ?>
+                    <div class="product-intro product-intro--below-gallery"><?php echo wp_kses_post($product_intro); ?></div>
                 <?php endif; ?>
                 <?php if ($product_category_slug != 'channel-letters') { ?>
 

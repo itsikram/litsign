@@ -2374,7 +2374,7 @@ a.link-primary:focus,
 .customer-review-section {
   padding: 58px 0 40px;
   background: #f3f4f6;
-  font-family: "gotham-medium", "nimbus-sans", "Segoe UI", sans-serif;
+  font-family: var(--font-sans, "Segoe UI", sans-serif);
 }
 
 .customer-review-header {
@@ -2385,7 +2385,7 @@ a.link-primary:focus,
 .customer-review-header h2 {
   margin: 0;
   color: #0d2e4d;
-  font-family: "gotham-medium", "nimbus-sans", "Segoe UI", sans-serif;
+  font-family: var(--font-display, "Segoe UI", sans-serif);
   font-size: clamp(2.2rem, 2.7vw, 3.2rem);
   font-weight: 700;
   line-height: 1.15;
@@ -2395,7 +2395,7 @@ a.link-primary:focus,
 .customer-review-header p {
   margin: 8px 0 0;
   color: #4d6477;
-  font-family: "gotham-medium", "nimbus-sans", "Segoe UI", sans-serif;
+  font-family: var(--font-sans, "Segoe UI", sans-serif);
   font-size: clamp(0.95rem, 1.3vw, 1.25rem);
   font-style: normal;
   font-weight: 600;
@@ -2744,7 +2744,7 @@ a.review-author-name:hover {
 .newsletter-copy h3 {
   margin: 0;
   color: #fff;
-  font-family: "gotham-medium", "nimbus-sans", "Segoe UI", sans-serif;
+  font-family: var(--font-display, "Segoe UI", sans-serif);
   font-size: clamp(1.8rem, 2vw, 2.3rem);
   font-weight: 700;
   line-height: 1.2;
@@ -2763,7 +2763,7 @@ a.review-author-name:hover {
   padding: 10px 14px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 10px;
-  font-family: "gotham-medium", "nimbus-sans", "Segoe UI", sans-serif;
+  font-family: var(--font-sans, "Segoe UI", sans-serif);
   font-size: 0.9rem;
   font-weight: 600;
 }
@@ -2816,7 +2816,7 @@ a.review-author-name:hover {
   border: 0;
   background: #f47b2a;
   color: #fff;
-  font-family: "gotham-medium", "nimbus-sans", "Segoe UI", sans-serif;
+  font-family: var(--font-sans, "Segoe UI", sans-serif);
   font-size: 1.02rem;
   font-weight: 700;
   cursor: pointer;
@@ -4894,6 +4894,14 @@ a.review-author-name:hover {
   font-size: 16px;
   line-height: 1.65;
 }
+.product-details .product-intro--below-gallery {
+  margin: 16px 0 0 !important;
+  font-size: 15px;
+}
+.product-details .product-intro--below-gallery ul {
+  margin: 0;
+  padding-left: 20px;
+}
 .product-details > main > article > form > .row {
   align-items: flex-start;
   gap: 28px 0;
@@ -4910,6 +4918,33 @@ a.review-author-name:hover {
 .product-details .single-product-thumbnail {
   border: 0 !important;
   border-radius: 10px;
+}
+.product-details .product-image-zoom {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 10px;
+}
+.product-details .product-image-zoom .single-product-thumbnail {
+  display: block;
+}
+.product-details .product-image-zoom__lens {
+  position: absolute;
+  inset: 0;
+  background-color: #fff;
+  background-repeat: no-repeat;
+  background-size: 250%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.product-details .product-image-zoom.is-zooming .product-image-zoom__lens {
+  opacity: 1;
+}
+@media (hover: hover) and (pointer: fine) {
+  .product-details .product-image-zoom {
+    cursor: zoom-in;
+  }
 }
 .product-details .product-gallery-container {
   display: grid;
@@ -6333,6 +6368,7 @@ a.review-author-name:hover {
   }
 
   .home-hero--cl .home-hero-copy .home-hero-title span {
+    display: inline;
     white-space: normal;
   }
 
@@ -7048,5 +7084,70 @@ a.review-author-name:hover {
   }
   .sale-badge__label svg {
     display: none;
+  }
+}
+
+/* Hero photo set per page by wholesale_hero_background_style() as --hero-image.
+   Desktop darkens the left side behind the copy; phones, where the copy spans
+   the full width, darken from the top down. */
+.home-hero-content[style*="--hero-image"],
+.bd-hero[style*="--hero-image"],
+.sf-hero[style*="--hero-image"] {
+  background-color: #031835;
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(3, 24, 53, 0.97) 0%,
+      rgba(3, 24, 53, 0.89) 31%,
+      rgba(3, 24, 53, 0.36) 56%,
+      rgba(3, 24, 53, 0.08) 100%
+    ),
+    var(--hero-image-best, var(--hero-image));
+  background-position: center center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+@media only screen and (max-width: 991px) {
+  .home-hero-content[style*="--hero-image"],
+  .bd-hero[style*="--hero-image"],
+  .sf-hero[style*="--hero-image"] {
+    background-image:
+      linear-gradient(
+        90deg,
+        rgba(3, 24, 53, 0.96) 0%,
+        rgba(3, 24, 53, 0.9) 50%,
+        rgba(3, 24, 53, 0.7) 80%,
+        rgba(3, 24, 53, 0.45) 100%
+      ),
+      var(--hero-image-best, var(--hero-image));
+    background-position: 65% center;
+  }
+}
+
+@media only screen and (max-width: 767px) {
+  .home-hero-content[style*="--hero-image"],
+  .bd-hero[style*="--hero-image"],
+  .sf-hero[style*="--hero-image"] {
+    background-image:
+      linear-gradient(
+        180deg,
+        rgba(3, 24, 53, 0.94) 0%,
+        rgba(3, 24, 53, 0.8) 55%,
+        rgba(3, 24, 53, 0.6) 100%
+      ),
+      var(--hero-image-best, var(--hero-image));
+    background-position: 70% center;
+  }
+}
+
+/* The AVIF copy (--hero-image-set) is used only where image-set() with
+   type() works; elsewhere --hero-image-best stays unset and the plain photo
+   in --hero-image is used. */
+@supports (background-image: image-set(url("a.avif") type("image/avif"))) {
+  .home-hero-content,
+  .bd-hero,
+  .sf-hero {
+    --hero-image-best: var(--hero-image-set);
   }
 }

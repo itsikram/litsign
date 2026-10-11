@@ -14,13 +14,13 @@ return array(
 	'slug' => 'california',
 	'name' => 'California',
 	'abbr' => 'CA',
-	'status' => 'review',
+	'status' => 'live',
 	'neighbors' => array('oregon', 'nevada', 'arizona'),
 	'seo_title' => 'Storefront Signs Shipped to California | C-45 & Permit Guide',
 	'seo_description' => 'Channel letters shipped to California businesses, with who can install them (CSLB C-45 and C-10 contractors), how city sign permits work, and LA rules.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to California',
 	'intro' => array(
-		'California businesses can design and price custom LED channel letters online, then have them built in Renton, Washington and shipped to their storefront, ready for a licensed California installer.',
+		'California businesses can design and price custom LED channel letters online, then have them built in Washington and California and shipped to their storefront, ready for a licensed California installer.',
 		'California is the one state where the license for sign work is easy to name: the Contractors State License Board has a dedicated C-45 Sign Contractor classification that covers building, installing and wiring electric signs. What varies is everything local. Each city or county runs its own sign code and permit counter, and in Los Angeles an illuminated sign permit is only issued to a licensed sign or electrical contractor.',
 		'Before you order, collect three things: your landlord&rsquo;s sign criteria, your city&rsquo;s size and lighting limits, and a quote from a C-45 or C-10 contractor to install. Then size your sign to fit.',
 	),
@@ -82,7 +82,7 @@ return array(
 	'faq' => array(
 		array(
 			'q' => 'Can I get a channel letter sign near me in California?',
-			'a' => 'You can order online and have it shipped to your storefront anywhere in California. We manufacture in Renton, WA and don&rsquo;t install, so you&rsquo;ll hire a licensed C-45 sign contractor or C-10 electrical contractor near you to install it.',
+			'a' => 'You can order online and have it shipped to your storefront anywhere in California. We build channel letters in Washington and California and don&rsquo;t install, so you&rsquo;ll hire a licensed C-45 sign contractor or C-10 electrical contractor near you to install it.',
 		),
 		array(
 			'q' => 'What license does a sign installer need in California?',

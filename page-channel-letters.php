@@ -155,7 +155,7 @@ $hero_style = isset($hero_variants[$hero_style]) ? $hero_style : '';
 
 $page_hero_image = get_the_post_thumbnail_url(get_the_ID(), 'large');
 $page_hero_image = $page_hero_image ? wholesale_webp_url(esc_url_raw($page_hero_image)) : '';
-$default_page_hero_image = wholesale_webp_url(get_template_directory_uri() . '/img/hero-1920.webp');
+$default_page_hero_image = wholesale_default_hero_url();
 $page_hero_background = wholesale_hero_background_style($page_hero_image, $default_page_hero_image);
 
 if ($is_cl_landing && 'POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['clq_submit'])) {
@@ -474,9 +474,9 @@ get_header();
                         <?php if ($google_rating) : ?>
                             <a class="home-hero-rating" href="#customer-reviews"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
                         <?php endif; ?>
-                        <span><?php echo wholesale_home_icon('flag'); ?> Made in Renton, WA &middot; ships to all 50 states</span>
+                        <span><?php echo wholesale_home_icon('flag'); ?> Made in Washington &amp; California &middot; ships to all 50 states</span>
                     </p>
-                    <p class="home-hero-lead">UL listed LED channel letters, built to order in Renton, Washington. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
+                    <p class="home-hero-lead">UL listed LED channel letters, built to order in Washington and California. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
                     <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
                     <div class="home-hero-actions home-hero-actions--cl">
                         <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
@@ -507,7 +507,7 @@ get_header();
     <div class="cll-trust" aria-label="Why our channel letters">
         <ul class="container cll-trust-list">
             <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong><small>Labels on every sign section</small></span></li>
-            <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Renton, WA</small></span></li>
+            <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Washington &amp; California</small></span></li>
             <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>LED modules &amp; power supplies</small></span></li>
             <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong><small>Wiring diagram included</small></span></li>
         </ul>
@@ -1054,7 +1054,7 @@ foreach (array(12, 18, 24) as $example_inches) {
         <div class="container">
             <p class="cl-kicker">Why businesses order from us</p>
             <h2 id="cll-why-title" class="cl-section-title">A Professional Sign Without the Sign-Shop Runaround</h2>
-            <p class="cl-section-lead">Most sign companies make you wait for a site visit and a quote. We show you the price up front, build every sign to order in our Renton, Washington shop, and ship it ready for your installer.</p>
+            <p class="cl-section-lead">Most sign companies make you wait for a site visit and a quote. We show you the price up front, build every sign to order in our Washington and California shops, and ship it ready for your installer.</p>
             <div class="cll-why-grid">
                 <article class="cll-why-card">
                     <?php echo wholesale_home_icon('pen'); ?>
@@ -1121,7 +1121,7 @@ foreach (array(12, 18, 24) as $example_inches) {
                 <li>
                     <span class="cl-step-number" aria-hidden="true">3</span>
                     <h3>We build &amp; test it</h3>
-                    <p>Your letters are made to order in Renton, WA, and every sign is tested before it ships.</p>
+                    <p>Your letters are made to order in Washington and California, and every sign is tested before it ships.</p>
                 </li>
                 <li>
                     <span class="cl-step-number" aria-hidden="true">4</span>

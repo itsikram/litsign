@@ -32,6 +32,11 @@ const backLitCost = parseFloat(document.getElementById("backLitCost").value);
 const eightFtcableCost = parseFloat(
   document.getElementById("eightFtcableCost").value,
 );
+// Product sale percentage; the cart takes it off the whole design total.
+const discountPercent = Math.min(
+  100,
+  Math.max(0, parseFloat(document.getElementById("clDiscountPercent")?.value) || 0),
+);
 const hasTrimcap = document.getElementById("hasTrimcap").value;
 const hasReturn = document.getElementById("hasReturn").value;
 const hasFace = document.getElementById("hasFace").value;
@@ -488,8 +493,20 @@ let nodeLists = [];
 let previewNodeLists = [];
 let currentPreviewNode = null;
 
+const emptyState = document.getElementById("clEmptyState");
+
 function updateSaveButtonState() {
   const hasElements = nodeLists.length > 0;
+  if (emptyState) {
+    emptyState.hidden = hasElements;
+  }
+  const wasEmpty = !document.body.classList.contains("cl-has-elements");
+  document.body.classList.toggle("cl-has-elements", hasElements);
+  // Phones hide the settings panel while the canvas is empty, so the element
+  // preview has to be measured again once the panel appears.
+  if (hasElements && wasEmpty) {
+    resizePreviewStage();
+  }
   saveBtn.disabled = !hasElements;
   saveBtn.setAttribute("aria-disabled", String(!hasElements));
   if (addToCartBtn && !addToCartBtn.hasAttribute("aria-busy")) {
@@ -1916,7 +1933,7 @@ function syncCanvasBackground() {
 // Function to zoom the stage with center focus
 function zoomStage(scaleFactor) {
   const oldScale = stage.scaleX();
-  const newScale = Math.min(3, Math.max(0.5, oldScale * scaleFactor));
+  const newScale = Math.min(3, Math.max(0.3, oldScale * scaleFactor));
   const scaleRatio = newScale / oldScale;
   const oldPos = stage.position();
   const center = {
@@ -3096,145 +3113,181 @@ let updateLeftsideBar = () => {
   updateDimenstionDisplay();
 };
 
-let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
-  detailTableBody.innerHTML = "";
-  for (let i = 0; i < elements.length; i++) {
-    let detailTableTR = document.createElement("tr");
-    let detailTableId = document.createElement("td");
-    detailTableId.innerText = getNodeIndex(elements[i].id);
-    detailTableTR.appendChild(detailTableId);
+const formatMoney = (amount) =>
+  "$" +
+  normalizeCost(amount).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
-    let detailTableType = document.createElement("td");
-    let isChannelLetter =
-      elements[i].text != undefined && elements[i].text.length > 0
-        ? "Channel Letter"
-        : "Raceway";
+const salePrice = (amount) =>
+  normalizeCost(amount) * (1 - discountPercent / 100);
+
+// Design totals, matching wholesale_cl_design_quote() and wholesale_price_quote():
+// power supply, lighting and cable are only charged once there is something to
+// power, and the sale percentage comes off the whole total.
+const getDesignTotals = (elements, extras) => {
+  let elementTotal = 0;
+  elements.forEach((element) => {
+    elementTotal += normalizeCost(element.cost) + normalizeCost(element.colorCost);
+  });
+  const hasElements = elements.length > 0;
+  const powerSupply =
+    hasElements && extras.powerSupply && extras.powerSupply.qty > 0
+      ? normalizeCost(extras.powerSupply.cost)
+      : 0;
+  const litPercent =
+    hasElements && extras.lit && extras.lit.qty > 0 ? normalizeCost(extras.lit.cost) : 0;
+  const lit = (elementTotal * litPercent) / 100;
+  const cable =
+    hasElements && extras.cable && extras.cable.qty > 0 ? normalizeCost(extras.cable.cost) : 0;
+  const regular = hasElements ? elementTotal + powerSupply + lit + cable : 0;
+  const sale = salePrice(regular);
+
+  return { elementTotal, powerSupply, litPercent, lit, cable, regular, sale, saving: regular - sale };
+};
+
+const getElementLabel = (element, elementNode) => {
+  if (element.text != undefined) {
+    return element.text.length > 0 ? "Channel letters" : "Raceway";
+  }
+  const labels = { Rect: "Rectangle", RegularPolygon: "Triangle", Line: "Arrow", Star: "Starburst", Circle: "Oval" };
+  const className = elementNode.getClassName();
+  if (className == "Shape") {
+    return elementNode.getAttr("shapeLabel") || "Custom shape";
+  }
+  if (className == "Rect" && elementNode.getAttr("textIndex")) {
+    return "Raceway";
+  }
+  return labels[className] || className;
+};
+
+const createCell = (text, className) => {
+  const cell = document.createElement("td");
+  if (className) {
+    cell.className = className;
+  }
+  if (text !== undefined) {
+    cell.textContent = text;
+  }
+  return cell;
+};
+
+// Regular price cell, plus a sale price cell when the product is on sale.
+const appendPriceCells = (row, amount) => {
+  row.appendChild(createCell(formatMoney(amount), "num cost-regular"));
+  if (discountPercent > 0) {
+    row.appendChild(createCell(formatMoney(salePrice(amount)), "num cost-sale"));
+  }
+};
+
+let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
+  const totals = getDesignTotals(elements, extras);
+  const priceColumns = discountPercent > 0 ? 2 : 1;
+  detailTableBody.innerHTML = "";
+
+  if (!elements.length) {
+    const emptyRow = document.createElement("tr");
+    const emptyCell = createCell(
+      "Add letters, a shape or a raceway to see your price.",
+      "cost-empty",
+    );
+    emptyCell.colSpan = 5 + priceColumns;
+    emptyRow.appendChild(emptyCell);
+    detailTableBody.appendChild(emptyRow);
+  }
+
+  for (let i = 0; i < elements.length; i++) {
     const elementNode = getNodeById(elements[i].id);
     if (!elementNode) {
       continue;
     }
-    if (elements[i].text == undefined) {
-      let currentNodeType = elementNode.getClassName();
-      if (currentNodeType == "Rect") {
-        currentNodeType = "Rectangle";
-      }
-      if (currentNodeType == "RegularPolygon") {
-        currentNodeType = "Triangle";
-      }
-      if (currentNodeType == "Line") {
-        currentNodeType = "Arrow";
-      }
-      if (currentNodeType == "Star") {
-        currentNodeType = "Starburst";
-      }
-      if (currentNodeType == "Shape") {
-        currentNodeType = elementNode.getAttr("shapeLabel") || "Custom shape";
-      }
-      detailTableType.innerText = currentNodeType;
-      detailTableTR.appendChild(detailTableType);
-    } else {
-      detailTableType.innerText = isChannelLetter;
-      detailTableTR.appendChild(detailTableType);
-    }
-
-    let detailTableDimenstion = document.createElement("td");
     const elementHeight = normalizeCost(elements[i].height);
     const elementWidth = normalizeCost(elements[i].width);
     const elementCost = normalizeCost(elements[i].cost);
     const elementColorCost = normalizeCost(elements[i].colorCost);
-    detailTableDimenstion.innerText = `${elementHeight.toFixed(1)} x ${elementWidth.toFixed(1)}`;
-    detailTableTR.appendChild(detailTableDimenstion);
 
-    let detailTableCost = document.createElement("td");
-    detailTableCost.innerText = "$" + elementCost.toFixed(1);
+    const row = document.createElement("tr");
+    row.appendChild(createCell(String(getNodeIndex(elements[i].id)), "cost-index"));
 
-    detailTableTR.appendChild(detailTableCost);
-    let detailTableColorCost = document.createElement("td");
-    detailTableColorCost.innerText = "$" + elementColorCost.toFixed(1);
-    detailTableTR.appendChild(detailTableColorCost);
+    const typeCell = createCell(undefined, "cost-element");
+    const typeName = document.createElement("strong");
+    typeName.textContent = getElementLabel(elements[i], elementNode);
+    typeCell.appendChild(typeName);
+    const letterText = (elements[i].text || "").trim();
+    if (letterText) {
+      const letterCount = letterText.replace(/\s/g, "").length;
+      const detail = document.createElement("span");
+      detail.textContent = `“${letterText}” · ${letterCount} ${letterCount == 1 ? "letter" : "letters"}`;
+      typeCell.appendChild(detail);
+    }
+    row.appendChild(typeCell);
 
-    let detailTableTotalCost = document.createElement("td");
-    detailTableTotalCost.innerText =
-      `$${(elementCost + elementColorCost).toFixed(2)}`;
-    detailTableTR.appendChild(detailTableTotalCost);
-
-    detailTableBody.appendChild(detailTableTR);
+    row.appendChild(
+      createCell(`${elementHeight.toFixed(1)}″ × ${elementWidth.toFixed(1)}″`, "cost-size"),
+    );
+    row.appendChild(createCell(formatMoney(elementCost), "num"));
+    row.appendChild(createCell(formatMoney(elementColorCost), "num"));
+    appendPriceCells(row, elementCost + elementColorCost);
+    detailTableBody.appendChild(row);
   }
-  if (extras.powerSupply.qty > 0) {
-    let detailTableTR = document.createElement("tr");
 
-    let detailTablePsTitle = document.createElement("td");
-    //detailTablePsTitle.classList.add('fw-bold')
-    detailTablePsTitle.innerHTML =
-      'Power Supply: <span class="fw-bold" >' +
-      extras.powerSupply.value +
-      "</span>";
-    let detailTablePsCost = document.createElement("td");
-    detailTablePsTitle.setAttribute("colspan", 5);
+  const appendExtraRow = (label, value, amount) => {
+    const row = document.createElement("tr");
+    row.className = "cost-extra";
+    const labelCell = createCell(undefined);
+    labelCell.colSpan = 5;
+    labelCell.textContent = label + ": ";
+    const valueText = document.createElement("strong");
+    valueText.textContent = value;
+    labelCell.appendChild(valueText);
+    row.appendChild(labelCell);
+    if (normalizeCost(amount) === 0) {
+      const includedCell = createCell("Included", "num cost-included");
+      includedCell.colSpan = discountPercent > 0 ? 2 : 1;
+      row.appendChild(includedCell);
+    } else {
+      appendPriceCells(row, amount);
+    }
+    detailTableBody.appendChild(row);
+  };
 
-    detailTablePsCost.innerText =
-      `$${normalizeCost(extras.powerSupply.cost).toFixed(2)}`;
-    detailTableTR.appendChild(detailTablePsTitle);
-    detailTableTR.appendChild(detailTablePsCost);
-    detailTableBody.appendChild(detailTableTR);
-  }
-  if (extras.lit && extras.lit.qty > 0) {
-    if (isLitOption) {
-      let detailTableTR = document.createElement("tr");
-      let totalElementCost = normalizeCost(
-        detailTableBody.dataset.totalElementCost,
+  if (elements.length) {
+    if (extras.powerSupply && extras.powerSupply.qty > 0) {
+      appendExtraRow("Power supply", extras.powerSupply.value, totals.powerSupply);
+    }
+    if (isLitOption && extras.lit && extras.lit.qty > 0) {
+      // "Back Lit" is the stored value the server prices; the option reads "Front and Back Lit".
+      const litLabel = extras.lit.value == "Back Lit" ? "Front and Back Lit" : extras.lit.value;
+      appendExtraRow(
+        "Lighting",
+        totals.litPercent ? `${litLabel} (+${totals.litPercent}%)` : litLabel,
+        totals.lit,
       );
-      let litCostPercent = normalizeCost(extras.lit.cost);
-      let litCost = (totalElementCost * litCostPercent) / 100;
-      let detailTableLitTitle = document.createElement("td");
-      detailTableLitTitle.innerHTML =
-        'Lit: <span class="fw-bold" >' + extras.lit.value + "</span>";
-      let detailTableLitCost = document.createElement("td");
-      detailTableLitTitle.setAttribute("colspan", 5);
-
-      let litCostText =
-        litCost != 0 ? `$${litCost.toFixed(2)} (${litCostPercent}%)` : `$0.00`;
-
-      detailTableLitCost.innerText = litCostText;
-      detailTableTR.appendChild(detailTableLitTitle);
-      detailTableTR.appendChild(detailTableLitCost);
-      detailTableBody.appendChild(detailTableTR);
+    }
+    if (extras.cable && extras.cable.qty > 0) {
+      appendExtraRow("LED cable", extras.cable.value, totals.cable);
     }
   }
-  if (extras.cable.qty > 0) {
-    let detailTableTR = document.createElement("tr");
 
-    let detailTableCableTitle = document.createElement("td");
-    //detailTableCableTitle.classList.add('fw-bold')
-    detailTableCableTitle.innerHTML =
-      'Cable: <span class="fw-bold" >' + extras.cable.value + "</span>";
-    let detailTableCableCost = document.createElement("td");
-    detailTableCableTitle.setAttribute("colspan", 5);
-
-    detailTableCableCost.innerText =
-      `$${normalizeCost(extras.cable.cost).toFixed(2)}`;
-    detailTableTR.appendChild(detailTableCableTitle);
-    detailTableTR.appendChild(detailTableCableCost);
-    detailTableBody.appendChild(detailTableTR);
+  const summary = document.getElementById("costSummary");
+  if (summary) {
+    const count = elements.length;
+    let summaryHtml =
+      `<div class="cost-summary-row"><span>${count} ${count == 1 ? "element" : "elements"}</span><span></span></div>`;
+    if (discountPercent > 0) {
+      summaryHtml +=
+        `<div class="cost-summary-row"><span>Regular price</span><del>${formatMoney(totals.regular)}</del></div>` +
+        `<div class="cost-summary-row cost-summary-saving"><span>Sale discount (${+discountPercent.toFixed(2)}% off)</span><span>−${formatMoney(totals.saving)}</span></div>` +
+        `<div class="cost-summary-row cost-summary-total"><span>Sale price</span><strong>${formatMoney(totals.sale)}</strong></div>`;
+    } else {
+      summaryHtml +=
+        `<div class="cost-summary-row cost-summary-total"><span>Total</span><strong>${formatMoney(totals.regular)}</strong></div>`;
+    }
+    summary.innerHTML = summaryHtml;
   }
 
-  let detailTableTR = document.createElement("tr");
-
-  let detailTablePriceTitle = document.createElement("td");
-  detailTablePriceTitle.classList.add("fw-bold");
-  detailTablePriceTitle.innerHTML =
-    'Total : <span class="text-primary"> ' + 0 + " </span> Objects";
-
-  let detailTableTotalPrice = document.createElement("td");
-  detailTablePriceTitle.setAttribute("colspan", 3);
-  detailTablePriceTitle.id = "dtTotalObjDisplay";
-  detailTableTotalPrice.setAttribute("colspan", 3);
-  detailTableTotalPrice.id = "dtTotalPriceDisplay";
-  detailTableTotalPrice.innerHTML =
-    'Total Price: <span class="text-success fw-bold">$' + 0 + "</span>";
-  detailTableTR.appendChild(detailTablePriceTitle);
-  detailTableTR.appendChild(detailTableTotalPrice);
-  detailTableBody.appendChild(detailTableTR);
+  return totals;
 };
 
 function dataURLtoBlob(dataurl) {
@@ -3358,7 +3411,7 @@ stage.add(layer);
 
 layer.add(background);
 
-const mobileDefaultZoom = 0.8;
+const mobileDefaultZoom = 0.6;
 if (window.matchMedia("(max-width: 767.98px)").matches) {
   stage.scale({ x: mobileDefaultZoom, y: mobileDefaultZoom });
   stage.position({
@@ -4560,6 +4613,17 @@ window.addEventListener("load", function (e) {
     textInput.value = text;
     triggerTransformEvent();
   });
+  // On phones the letters field sits below the canvas: after a tap on Text, take the
+  // visitor straight to it with the placeholder selected so typing replaces it.
+  addTextBtn.addEventListener("click", function (e) {
+    if (!e.isTrusted || !window.matchMedia("(max-width: 767.98px)").matches) {
+      return;
+    }
+    const fieldTop = textInput.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({ top: Math.max(0, fieldTop - window.innerHeight * 0.4), behavior: "smooth" });
+    textInput.focus({ preventScroll: true });
+    textInput.select();
+  });
 
   addRacewayButton.addEventListener("click", function () {
     saveState();
@@ -4622,6 +4686,46 @@ window.addEventListener("load", function (e) {
       setShapeMenuOpen(false);
     }
   });
+
+  // Empty canvas: type the sign text first, or start from a shape or raceway.
+  const startForm = document.getElementById("clStartForm");
+  if (startForm) {
+    const startText = document.getElementById("clStartText");
+    startForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = startText.value.trim();
+      if (!text) {
+        startText.setAttribute("aria-invalid", "true");
+        startText.focus();
+        return;
+      }
+      startText.removeAttribute("aria-invalid");
+      startText.blur();
+      textInput.value = text;
+      addTextBtn.click();
+      startText.value = "";
+      // Phones: bring the canvas up under the site header so the font, color and
+      // size options below it come into view.
+      if (window.matchMedia("(max-width: 767.98px)").matches) {
+        const header = document.querySelector("header");
+        const headerHeight = header && getComputedStyle(header).position !== "static" ? header.offsetHeight : 0;
+        const canvasTop = container.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo({ top: Math.max(0, canvasTop - headerHeight - 8), behavior: "smooth" });
+      }
+    });
+    startText.addEventListener("input", () => startText.removeAttribute("aria-invalid"));
+    startForm.querySelector('[data-start="shape"]').addEventListener("click", (e) => {
+      e.stopPropagation();
+      setShapeMenuOpen(true);
+      const first = shapeDropdown.querySelector(".shape");
+      if (first) {
+        first.focus({ preventScroll: true });
+      }
+    });
+    startForm.querySelector('[data-start="raceway"]').addEventListener("click", () => {
+      addRacewayButton.click();
+    });
+  }
 
   // Custom shape dialog: regular polygon, star / burst, or an uploaded SVG outline.
   const customShapeModalEl = document.getElementById("customShapeModal");
@@ -5119,32 +5223,33 @@ window.addEventListener("load", function (e) {
       updateDimenstionDisplay();
     }
     fontSize = parseFloat(sizeHeightInput.value) * dpi || 20;
-    activeFontCode = document
-      .querySelector(".select-font")
-      .dataset.active.split("/")[1];
-    activeFaceCode = document
-      .querySelector(".select-face")
-      .dataset.active.split("/")[1];
-    activeTrimcapColorCode = document
-      .querySelector(".select-trimcap")
-      .dataset.active.split("/")[1];
-    activeReturnColorCode = document
-      .querySelector(".select-return")
-      .dataset.active.split("/")[1];
-    activeReturnSizeCode = parseFloat(
-      document
-        .querySelector(".select-return")
-        .dataset.activeSecond.split("/")[1],
-    );
-    activeTrimcapSizeCode = parseFloat(
-      document
-        .querySelector(".select-trimcap")
-        .dataset.activeSecond.split("/")[1],
-    );
+    // The size halves ("activeSecond") are only set once the visitor picks a return
+    // or trimcap size; until then keep the product defaults.
+    const pickerCode = (selector, key) => {
+      const value = document.querySelector(selector)?.dataset[key];
+      return value ? value.split("/")[1] : undefined;
+    };
+    activeFontCode = pickerCode(".select-font", "active") ?? activeFontCode;
+    activeFaceCode = pickerCode(".select-face", "active") ?? activeFaceCode;
+    activeTrimcapColorCode = pickerCode(".select-trimcap", "active") ?? activeTrimcapColorCode;
+    activeReturnColorCode = pickerCode(".select-return", "active") ?? activeReturnColorCode;
+    const returnSizeCode = parseFloat(pickerCode(".select-return", "activeSecond"));
+    if (Number.isFinite(returnSizeCode)) {
+      activeReturnSizeCode = returnSizeCode;
+    }
+    const trimcapSizeCode = parseFloat(pickerCode(".select-trimcap", "activeSecond"));
+    if (Number.isFinite(trimcapSizeCode)) {
+      activeTrimcapSizeCode = trimcapSizeCode;
+    }
 
+    if (!selectedNode) {
+      return;
+    }
     updateDimenstionDisplay();
     updateHeightWidthDisplay();
-    selectedNode.width(undefined);
+    if (selectedNodeType === "Text") {
+      selectedNode.width(undefined);
+    }
   });
 
   faceColorPicker.addEventListener("change", function () {
@@ -6460,58 +6565,30 @@ window.addEventListener("load", function (e) {
     });
   });
 
-  store.subscribe(() => {
-    let totalCost = 0;
-    let totalColorCost = 0;
+  const displayCost = document.getElementById("displayCost");
+  const displayRegularCost = document.getElementById("displayRegularCost");
+  const displaySaving = document.getElementById("displaySaving");
 
+  store.subscribe(() => {
     let elements = store.getState()["elements"];
     let extras = store.getState()["extras"];
-    updateDetailTable(elements, extras);
-    elements.forEach((element) => {
-      totalCost += normalizeCost(element.cost);
-      totalColorCost += normalizeCost(element.colorCost);
-    });
+    const totals = updateDetailTable(elements, extras);
+    const onSale = discountPercent > 0 && totals.regular > 0;
 
-    let psCost =
-      extras.powerSupply.qty > 0
-        ? normalizeCost(extras.powerSupply.cost)
-        : 0;
-    let litCostPecent =
-      extras.lit && extras.lit.qty > 0
-        ? normalizeCost(extras.lit.cost)
-        : 0;
-    let litCost = ((totalCost + totalColorCost) * litCostPecent) / 100;
-    let cableCost =
-      extras.cable.qty > 0 ? normalizeCost(extras.cable.cost) : 0;
+    displayCost.textContent = formatMoney(onSale ? totals.sale : totals.regular);
+    if (displayRegularCost) {
+      displayRegularCost.hidden = !onSale;
+      displayRegularCost.innerHTML =
+        '<span class="visually-hidden">Regular price </span>' + formatMoney(totals.regular);
+    }
+    if (displaySaving) {
+      displaySaving.hidden = !onSale;
+      displaySaving.textContent = onSale ? "You save " + formatMoney(totals.saving) : "";
+    }
 
-    detailTableBody.dataset.totalElementCost = parseFloat(
-      totalCost + totalColorCost,
-    );
-    // Power supply, lighting and cable are only charged once there is something to power.
-    totalCost = elements.length ? totalCost + psCost + litCost + cableCost : 0;
-
-    document.getElementById("displayCost").innerText =
-      "$" + (totalCost + totalColorCost).toFixed(2);
-    document.getElementById("dtTotalPriceDisplay").innerHTML =
-      'Price: <span class="text-success fw-bold">$' +
-      (totalCost + totalColorCost).toFixed(2) +
-      "</span>";
-
-    let totalObjects = store.getState()["elements"].length;
-
-    document.getElementById("dtTotalObjDisplay").innerHTML =
-      'Total : <span class="text-primary"> ' +
-      totalObjects +
-      " </span> Objects";
-
-    document.getElementById("dtTotalPriceDisplay").innerHTML =
-      'Total Price: <span class="text-success fw-bold">$' +
-      (totalCost + totalColorCost).toFixed(2) +
-      "</span>";
-
-    document.querySelector("#totalObject .value").innerText = totalObjects;
-    console.log(store.getState());
+    document.querySelector("#totalObject .value").innerText = elements.length;
   });
+  updateDetailTable(store.getState()["elements"], store.getState()["extras"]);
   console.log(editDesignElements);
 
   let restoreEditDesign = () => {
@@ -6804,6 +6881,12 @@ window.addEventListener("load", function (e) {
 
   // Power supply / lighting / cable menus close when tapping anywhere else.
   document.addEventListener("click", (event) => {
+    // Choosing an option closes its menu (info buttons inside a row leave it open).
+    const chosen = event.target.closest(".bottombar-list-item");
+    if (chosen && !event.target.closest(".info-btn-container")) {
+      closeBottomMenus(null);
+      return;
+    }
     closeBottomMenus(event.target.closest(".bottombar-left-item"));
     if (!event.target.closest(".info-btn-container")) {
       closeInfoPopovers();

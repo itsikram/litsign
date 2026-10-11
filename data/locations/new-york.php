@@ -12,13 +12,13 @@ return array(
 	'slug' => 'new-york',
 	'name' => 'New York',
 	'abbr' => 'NY',
-	'status' => 'review',
+	'status' => 'live',
 	'neighbors' => array('new-jersey', 'pennsylvania', 'connecticut', 'massachusetts', 'vermont'),
 	'seo_title' => 'Storefront Signs Shipped to New York | NYC Sign Permit Guide',
 	'seo_description' => 'Channel letters shipped to New York businesses, with how electrician licensing works locally and NYC DOB sign permits, sign hangers and lit-sign rules.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to New York',
 	'intro' => array(
-		'New York businesses can price custom LED channel letters online and have them built in Renton, Washington and shipped ready for a licensed local installer, whether the storefront is in Manhattan or upstate.',
+		'New York businesses can price custom LED channel letters online and have them built in Washington and California and shipped ready for a licensed local installer, whether the storefront is in Manhattan or upstate.',
 		'New York has no statewide electrician license. Licensing is handled locally, by cities, counties and towns, so the rules for who can connect your sign depend on where your business is. New York City has the most detailed system: the Department of Buildings licenses electricians and sign hangers, issues sign permits, and requires an annual permit for some lit signs.',
 		'If you&rsquo;re in the city, plan for a licensed sign hanger and a licensed electrician. Upstate, call your city or county building department to ask who licenses electricians there.',
 	),
@@ -79,7 +79,7 @@ return array(
 	'faq' => array(
 		array(
 			'q' => 'Is there a sign company near me in New York that ships channel letters?',
-			'a' => 'We ship custom channel letters anywhere in New York State from Renton, WA. We don&rsquo;t install; in New York City you&rsquo;ll need a DOB-licensed sign hanger and electrician, and elsewhere a locally licensed electrician.',
+			'a' => 'We ship custom channel letters anywhere in New York State from Washington and California. We don&rsquo;t install; in New York City you&rsquo;ll need a DOB-licensed sign hanger and electrician, and elsewhere a locally licensed electrician.',
 		),
 		array(
 			'q' => 'Does New York State license electricians?',

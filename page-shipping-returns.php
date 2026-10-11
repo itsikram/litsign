@@ -29,7 +29,7 @@ $money = static function ($rates, $index) {
 wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'Do you ship to all 50 states?',
-		'a' => 'Yes. Every order is made in Renton, Washington and shipped to your address anywhere in the United States. Pickup isn&rsquo;t available.',
+		'a' => 'Yes. Every order is made to order and shipped from Washington or California to your address anywhere in the United States. Pickup isn&rsquo;t available.',
 	),
 	array(
 		'q' => 'When will my sign ship?',
@@ -58,7 +58,7 @@ get_header();
 			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">Shipping &amp; returns</p>
 			<h1 id="gd-title" class="sf-hero-title">Shipping &amp; Returns</h1>
-			<p class="sf-hero-lead">Every sign is made to order in Renton, Washington and shipped to all 50 states. Choose standard, 3-day, 2-day or overnight shipping at checkout; the dates you see there include production time.</p>
+			<p class="sf-hero-lead">Every sign is made to order and shipped from Washington or California to all 50 states. Choose standard, 3-day, 2-day or overnight shipping at checkout; the dates you see there include production time.</p>
 			<ul class="gd-facts">
 				<li><strong>Ships to</strong><span>All 50 states, to your address (no pickup)</span></li>
 				<li><strong>Speeds</strong><span>Standard (3&ndash;6 business days), 3-day, 2-day, overnight</span></li>

@@ -447,6 +447,39 @@
 }
 .dt-container #container canvas { touch-action: none; }
 
+/* Start panel over the empty canvas (cl.js hides it once something is added). */
+.cl-canvas-wrap { position: relative; min-width: 0; }
+.cl-empty-state {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border-radius: var(--cl-radius);
+  background: rgba(245, 247, 249, 0.94);
+}
+.cl-empty-state[hidden] { display: none; }
+.cl-empty-card { width: min(100%, 440px); margin: 0; padding: 22px; background: var(--cl-surface); border: 1px solid var(--cl-line); border-radius: 16px; box-shadow: var(--cl-shadow); }
+.cl-empty-step { display: inline-block; margin-bottom: 8px; padding: 3px 9px; border-radius: 999px; background: var(--cl-accent-soft); color: var(--cl-accent-ink); font-size: 12px; font-weight: 700; }
+.cl-empty-title { display: block; margin: 0 0 12px; font-size: 20px; font-weight: 700; line-height: 1.25; color: var(--cl-ink); }
+.cl-empty-row { display: flex; gap: 8px; }
+.cl-empty-row .form-control { flex: 1; min-width: 0; min-height: 48px; padding: 10px 14px; border: 1px solid #cdd5de; border-radius: 10px; font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
+.cl-empty-row .form-control:focus { border-color: var(--cl-accent); box-shadow: 0 0 0 3px rgba(31, 168, 222, 0.18); }
+.cl-empty-row .form-control[aria-invalid="true"] { border-color: var(--cl-danger); box-shadow: 0 0 0 3px rgba(179, 45, 46, 0.15); }
+.cl-empty-row .btn { flex: none; min-height: 48px; padding: 10px 18px; border-radius: 10px; border: 0; background: var(--cl-accent); color: #fff; font-weight: 700; }
+.cl-empty-row .btn:hover { background: var(--cl-accent-ink); }
+.cl-empty-alt { margin: 12px 0 0; font-size: 14px; color: var(--cl-muted); }
+.cl-link-btn { padding: 0; border: 0; background: none; color: var(--cl-accent-ink); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.cl-empty-steps { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 16px 0 0; padding: 14px 0 0; border-top: 1px solid var(--cl-line); list-style: none; counter-reset: cl-step 1; font-size: 13px; color: var(--cl-muted); }
+.cl-empty-steps li { counter-increment: cl-step; }
+.cl-empty-steps li::before { content: counter(cl-step); display: inline-grid; place-items: center; width: 18px; height: 18px; margin-right: 6px; border-radius: 50%; background: var(--cl-soft); color: var(--cl-ink); font-size: 11px; font-weight: 700; }
+
+/* Phone-only labels */
+.cl-tool-label,
+.cl-extras-title { display: none; }
+
 /* ------------------------------------------------------------------ */
 /* Bottom bar: extras, price, save                                     */
 /* ------------------------------------------------------------------ */
@@ -536,6 +569,12 @@
 .cl-stat > span:first-child { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--cl-muted); }
 .cl-stat .value { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .cl-stat--price .value { font-size: 22px; }
+.cl-stat--price .value { display: inline-flex; align-items: baseline; justify-content: flex-end; flex-wrap: wrap; gap: 0 8px; }
+.cl-stat--price .cl-stat-label { display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.cl-price-regular { font-size: 14px; font-weight: 500; color: var(--cl-muted); text-decoration-thickness: 1px; }
+.cl-price-saving { font-size: 12px; font-weight: 700; color: #1a7f45; }
+.cl-sale-badge { display: inline-block; padding: 2px 7px; border-radius: 999px; background: #e3f6ea; color: #1a7f45; font-size: 10px; font-weight: 700; letter-spacing: 0.02em; text-transform: none; white-space: nowrap; }
+.cl-sale-badge--lg { margin-left: auto; margin-right: 12px; padding: 4px 10px; font-size: 12px; }
 
 .dt-container .bottom-right .btn { min-height: 44px; padding: 8px 18px; border-radius: 8px; font-weight: 600; }
 .dt-container .cl-btn-secondary { border: 1px solid #cdd5de; background: #fff; color: var(--cl-ink); }
@@ -840,6 +879,35 @@
 #costModal .cost-breakdown-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 #costModal .cost-breakdown-table table { margin-bottom: 0; font-variant-numeric: tabular-nums; }
 #costModal .cost-breakdown-table thead th { background: #f4f7fa; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: #5b6573; white-space: nowrap; }
+#costModal .modal-header { align-items: center; }
+#costModal .cl-sale-badge--lg + .btn-close { margin-left: 0; }
+#costModal .cost-modal-subtitle { margin: 2px 0 0; font-size: 13px; color: var(--cl-muted, #5b6573); }
+#costModal .modal-body { padding: 16px 20px 20px; }
+#costModal .cost-breakdown-table { border: 1px solid #e1e6ec; border-radius: 10px; }
+#costModal .cost-table { font-size: 14px; color: #14202c; vertical-align: middle; }
+#costModal .cost-table th,
+#costModal .cost-table td { padding: 10px 12px; border-bottom: 1px solid #e1e6ec; text-align: left; }
+#costModal .cost-table thead th { border-bottom-width: 1px; }
+#costModal .cost-table tbody tr:last-child td { border-bottom: 0; }
+#costModal .cost-table .num { text-align: right; white-space: nowrap; }
+#costModal .cost-table .cost-index { width: 1%; color: #5b6573; font-weight: 600; }
+#costModal .cost-table .cost-element strong { display: block; font-weight: 600; }
+#costModal .cost-table .cost-element span { display: block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: #5b6573; }
+#costModal .cost-table .cost-size { white-space: nowrap; color: #5b6573; }
+#costModal .cost-table .cost-extra td { background: #f9fbfc; color: #5b6573; }
+#costModal .cost-table .cost-extra strong { color: #14202c; font-weight: 600; }
+#costModal .cost-table .cost-regular { font-weight: 600; }
+#costModal .cost-table.has-sale .cost-regular { font-weight: 500; color: #5b6573; text-decoration: line-through; text-decoration-thickness: 1px; }
+#costModal .cost-table .cost-sale { font-weight: 700; color: #1a7f45; }
+#costModal .cost-table .cost-included { font-size: 12px; font-weight: 600; color: #5b6573; }
+#costModal .cost-table .cost-empty { padding: 28px 12px; text-align: center; color: #5b6573; }
+#costModal .cost-summary { display: grid; gap: 6px; width: min(100%, 340px); margin: 16px 0 0 auto; padding: 14px 16px; border-radius: 10px; background: #f4f7fa; font-variant-numeric: tabular-nums; }
+#costModal .cost-summary-row { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; color: #5b6573; }
+#costModal .cost-summary-row del { color: #5b6573; }
+#costModal .cost-summary-saving { color: #1a7f45; font-weight: 600; }
+#costModal .cost-summary-total { margin-top: 4px; padding-top: 10px; border-top: 1px solid #e1e6ec; color: #14202c; font-size: 16px; font-weight: 700; }
+#costModal .cost-summary-total strong { font-size: 20px; color: var(--cl-accent-ink, #0c7fae); }
+#costModal .cost-modal-note { margin: 12px 0 0; font-size: 12px; color: #5b6573; text-align: right; }
 
 /* ------------------------------------------------------------------ */
 /* Tablet and phone                                                    */
@@ -863,7 +931,8 @@
   .dt-container .editor-container { display: contents; }
   .dt-container > * { min-width: 0; }
   .dt-container .editor-topbar { order: 1; }
-  .dt-container #container { order: 2; height: clamp(300px, calc(100svh - 340px), 560px) !important; }
+  .dt-container .cl-canvas-wrap { order: 2; }
+  .dt-container #container { height: clamp(300px, calc(100svh - 340px), 560px) !important; }
   /* No stacking context here, so the fixed bottom sheet can sit above the price bar. */
   .dt-container .left-sidebar { order: 3; grid-area: auto; z-index: auto; }
   .dt-container .editor-bottombar {
@@ -942,9 +1011,13 @@
   .cl-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .dt-container .editor-topbar .left { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .dt-container .topbar-left-button { justify-content: center; min-height: 44px; padding: 8px 6px; font-size: 13px; }
-  .dt-container .editor-topbar .right { padding-top: 8px; border-top: 1px solid var(--cl-line); }
-  .dt-container .editor-topbar .button-group { justify-content: space-between; gap: 2px; }
-  .dt-container .editor-topbar .button-group button { width: 42px; height: 42px; }
+  /* Edit tools: icon over a short label, spread across the row. */
+  .dt-container .editor-topbar .right { padding-top: 6px; border-top: 1px solid var(--cl-line); }
+  .dt-container .editor-topbar .button-group { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+  .dt-container .editor-topbar .button-group button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: auto; height: 50px; }
+  .dt-container .editor-topbar .button-group button i { font-size: 15px; }
+  .cl-tool-label { display: block; max-width: 100%; overflow: hidden; font-size: 10px; font-weight: 600; line-height: 1; color: var(--cl-muted); white-space: nowrap; text-overflow: ellipsis; }
+  .cl-divider { display: none; }
   .dt-container .shape-dropdown { position: static; }
 
   /* Shape menu opens as a sheet above the keyboard-free bottom */
@@ -966,33 +1039,111 @@
   .dt-container .shapes-container { max-height: 70vh; overflow-y: auto; }
   .dt-container .shapes-container .shape-custom { grid-column: 1 / -1; }
 
-  .dt-container .editor-bottombar { gap: 10px; margin: 0 -10px; padding-left: 10px; padding-right: 10px; }
-  .dt-container .bottom-left { width: 100%; flex-wrap: nowrap; }
-  .dt-container .bottombar-left-item { flex: 1 1 0; min-width: 0; justify-content: space-between; padding: 6px 10px; min-height: 46px; }
-  .dt-container .bottombar-left-item .current-item { min-width: 0; }
+  /* Shorter picker sheet so the element preview stays visible above it. */
+  .dt-container .left-sidebar-slider,
+  .dt-container .left-sidebar-slider:has(.direction-right) { max-height: 62svh; }
+
+  /* Shorter canvas so the edit options below it are in view. */
+  .dt-container #container { height: clamp(260px, 46svh, 420px) !important; }
+  .cl-empty-state { align-items: flex-start; padding: 12px; overflow-y: auto; }
+  .cl-empty-card { padding: 16px; }
+  .cl-empty-title { font-size: 18px; }
+  .cl-empty-row .btn { padding: 10px 14px; }
+  .cl-empty-steps { gap: 6px 12px; font-size: 12px; }
+
+  /* Until something is on the canvas, only the start panel is needed. */
+  body:not(.cl-has-elements) .dt-container .editor-topbar .right,
+  body:not(.cl-has-elements) .dt-container .left-sidebar,
+  body:not(.cl-has-elements) .dt-container .bottom-left,
+  body:not(.cl-has-elements) .dt-container .bottom-right { display: none; }
+
+  /* Selected element settings */
+  .dt-container .left-sidebar .cl-panel-heading { margin-bottom: 0; }
+  .dt-container #previewContainer { height: 72px; min-height: 72px; }
+  .dt-container li.item-textInput .form-control { min-height: 48px; font-size: 17px; font-weight: 600; }
+  .dt-container .cl-option-value { min-height: 46px; }
+
+  /* The bottom bar splits: lighting & power become a normal card, and only the price
+     and buttons stay pinned to the bottom of the screen. */
+  .dt-container .editor-bottombar { display: contents; }
+  .dt-container .bottom-left {
+    order: 4;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    background: var(--cl-surface);
+    border: 1px solid var(--cl-line);
+    border-radius: var(--cl-radius);
+    box-shadow: var(--cl-shadow);
+  }
+  .cl-extras-title { display: block; grid-column: 1 / -1; margin: 0 0 2px; font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--cl-muted); }
+  .dt-container .bottombar-overlay { inset: 0; border-radius: var(--cl-radius); }
+  /* One full-width row per option; its choices expand in place below it. */
+  .dt-container .bottombar-left-item { flex-wrap: wrap; min-width: 0; justify-content: space-between; gap: 0 10px; padding: 8px 14px; min-height: 54px; }
+  .dt-container .bottombar-left-item .current-item { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 10px; min-width: 0; }
   .dt-container .bottombar-left-item .value,
   .dt-container .bottombar-left-item .cl-chip-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .dt-container .bottombar-left-item .value { font-size: 13px; }
-  .cl-chip-label { font-size: 10px; }
-  /* Menus open as a full-width panel above the chip row. */
-  .dt-container .bottombar-left-item { position: static; }
-  .dt-container .bottombar-item-list-container { left: 0; right: 0; width: auto; max-width: none; }
+  .dt-container .bottombar-left-item .value { font-size: 15px; }
+  .cl-chip-label { font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+  .dt-container .bottombar-left-item > i { transform: rotate(180deg); }
+  .dt-container .bottombar-left-item.is-open > i { transform: none; }
+  .dt-container .bottombar-left-item:hover { background: var(--cl-surface); border-color: #cdd5de; }
+  .dt-container .bottombar-left-item.is-open { background: var(--cl-surface); border-color: var(--cl-accent); }
+  .dt-container .bottombar-item-list-container { position: static; flex-basis: 100%; width: auto; max-width: none; margin: 8px 0 2px; padding: 4px 0 0; border: 0; border-top: 1px solid var(--cl-line); border-radius: 0; box-shadow: none; }
+  .dt-container .bottombar-list-item { min-height: 48px; font-size: 15px; }
 
   .dt-container .bottom-right {
+    order: 5;
+    position: sticky;
+    bottom: 0;
+    z-index: 35;
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    width: 100%;
-    margin-left: 0;
-    gap: 8px 12px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas: "price price price price details details" "save save cart cart cart cart" "status status status status status status";
+    align-items: center;
+    gap: 8px 10px;
+    width: auto;
+    margin: 0 -10px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--cl-surface);
+    border-top: 1px solid var(--cl-line);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -10px 30px -18px rgba(20, 32, 44, 0.45);
   }
   .dt-container #totalObject { display: none; }
+  .dt-container #totalCost { grid-area: price; }
+  .dt-container #totalCost .value { flex-wrap: nowrap; }
   .cl-stat { text-align: left; }
   .cl-stat--price .value { font-size: 20px; }
-  .dt-container #detailBtn { padding: 8px 12px; }
-  .dt-container #saveBtn { grid-column: auto; }
-  .dt-container #clAddToCartBtn,
-  .dt-container .cl-cart-status { grid-column: 1 / -1; }
-  .dt-container .cl-cart-status { text-align: left; }
+  .cl-stat--price .value,
+  .cl-stat--price .cl-stat-label { justify-content: flex-start; white-space: nowrap; }
+  .cl-stat--price .value { gap: 0 6px; }
+  .cl-price-regular { font-size: 13px; }
+  /* The badge already shows the percentage; keep the sticky bar short on phones. */
+  .cl-price-saving { display: none; }
+  #costModal .cost-summary { width: 100%; }
+  #costModal .cost-modal-note { text-align: left; }
+  .dt-container .bottom-right #detailBtn {
+    grid-area: details;
+    justify-self: end;
+    min-height: 40px;
+    padding: 6px 2px;
+    border: 0;
+    background: none;
+    color: var(--cl-accent-ink);
+    font-size: 14px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    white-space: nowrap;
+  }
+  .dt-container .bottom-right #saveBtn { grid-area: save; min-height: 48px; padding: 8px 10px; background: #fff; color: var(--cl-accent-ink); border: 1px solid var(--cl-accent); font-size: 14px; }
+  .dt-container .bottom-right #saveBtn:disabled { background: #fff; color: #9fc9dc; border-color: #cfe3ec; }
+  .dt-container .bottom-right #clAddToCartBtn { grid-area: cart; min-height: 48px; padding: 8px 12px; font-size: 15px; }
+  .dt-container .bottom-right:not(:has(#clAddToCartBtn)) { grid-template-areas: "price price price price details details" "save save save save save save" "status status status status status status"; }
+  .dt-container .bottom-right:not(:has(#clAddToCartBtn)) #saveBtn { background: var(--cl-accent); color: #fff; }
+  .dt-container .cl-cart-status { grid-area: status; text-align: left; }
 
   .dt-container .info-btn-content { position: fixed; top: auto; bottom: 16px; left: 12px; right: 12px; width: auto; z-index: 1080; }
 
@@ -1007,10 +1158,7 @@
   .dt-container .topbar-left-button img { display: none; }
   /* ...but keep the icons inside the shape menu, which has room for them. */
   .dt-container .shapes-container img { display: block; }
-  .dt-container .editor-topbar .button-group button { width: 38px; }
-  .cl-divider { display: none; }
-  .dt-container #detailBtn { padding: 8px 10px; font-size: 13px; }
-  .dt-container #saveBtn { padding-left: 14px; padding-right: 14px; }
+  .cl-tool-label { font-size: 9px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

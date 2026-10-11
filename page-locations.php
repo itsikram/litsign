@@ -24,7 +24,7 @@ foreach (wholesale_guide_states() as $slug => $state) {
 wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'Do you ship storefront signs to every state?',
-		'a' => 'Yes. Every sign is made to order in Renton, Washington and shipped to your address in any of the 50 states, with standard, 3-day, 2-day and overnight options.',
+		'a' => 'Yes. Every sign is made to order and shipped from Washington or California to your address in any of the 50 states, with standard, 3-day, 2-day and overnight options.',
 	),
 	array(
 		'q' => 'Do you install signs in my state?',
@@ -49,9 +49,9 @@ get_header();
 			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">Shipped to all 50 states</p>
 			<h1 id="gd-title" class="sf-hero-title">Storefront Signs Shipped to Your State</h1>
-			<p class="sf-hero-lead">We make custom channel letters and storefront signs in Renton, Washington and ship them anywhere in the US, ready for a licensed local installer. Our state guides cover who may install a lit sign where you are and how permits work, with links to the official sources.</p>
+			<p class="sf-hero-lead">We make custom channel letters in Washington and California, plus storefront signs, and ship them anywhere in the US, ready for a licensed local installer. Our state guides cover who may install a lit sign where you are and how permits work, with links to the official sources.</p>
 			<ul class="gd-facts">
-				<li><strong>Made in</strong><span>Renton, WA, USA</span></li>
+				<li><strong>Made in</strong><span>Washington &amp; California, USA</span></li>
 				<li><strong>Ships to</strong><span>All 50 states</span></li>
 				<li><strong>Installed by</strong><span>Your licensed local sign installer or electrician</span></li>
 				<li><strong>In the box</strong><span>Tested sign, wiring diagram and install pattern</span></li>
@@ -90,7 +90,7 @@ get_header();
 				</li>
 				<li>
 					<h3>We build, test and ship</h3>
-					<p>Your sign is made to order in Renton and tested before it ships. Choose standard, 3-day, 2-day or overnight shipping<?php if ($shipping_url) : ?> (<a href="<?php echo esc_url($shipping_url); ?>">options and prices</a>)<?php endif; ?>.</p>
+					<p>Your sign is made to order and tested before it ships from Washington or California. Choose standard, 3-day, 2-day or overnight shipping<?php if ($shipping_url) : ?> (<a href="<?php echo esc_url($shipping_url); ?>">options and prices</a>)<?php endif; ?>.</p>
 				</li>
 				<li>
 					<h3>Your installer puts it up</h3>

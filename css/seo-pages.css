@@ -287,3 +287,53 @@
     padding: 22px 18px;
   }
 }
+
+/* Hero with a photo (the page's featured image): white text on the dark
+   overlay from the --hero-image rules in style.css. */
+.sf-hero--photo {
+  padding-bottom: 72px;
+  color: #ffffff;
+}
+
+.sf-hero--photo .site-breadcrumbs ol {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.sf-hero--photo .site-breadcrumbs a {
+  color: #7fd3f2;
+}
+
+.sf-hero--photo .site-breadcrumbs [aria-current="page"] {
+  color: #ffffff;
+}
+
+.sf-hero--photo .cl-kicker {
+  color: #7fd3f2;
+}
+
+.sf-hero--photo .sf-hero-title {
+  max-width: 620px;
+  color: #ffffff;
+}
+
+/* Keep the copy on the dark left side of the photo. */
+.sf-hero--photo .sf-hero-lead {
+  max-width: 560px;
+}
+
+.sf-hero--photo .sf-hero-lead,
+.sf-hero--photo .sf-hero-points {
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.sf-hero--photo .sf-button-outline {
+  border-color: #ffffff;
+  color: #ffffff;
+}
+
+.sf-hero--photo .sf-button-outline:hover,
+.sf-hero--photo .sf-button-outline:focus-visible {
+  border-color: #1fa8de;
+}

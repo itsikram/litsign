@@ -22,7 +22,7 @@
   margin: 0;
   background: #fff;
   color: var(--cla-text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif);
   font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;

@@ -70,8 +70,10 @@ require_once(dirname(__FILE__) . '/inc/storefront-media.php');
 require_once(dirname(__FILE__) . '/inc/product-image-alt.php');
 require_once(dirname(__FILE__) . '/inc/shop-catalog.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
+require_once(dirname(__FILE__) . '/inc/cache-clear.php');
 require_once(dirname(__FILE__) . '/inc/guide-pages.php');
 require_once(dirname(__FILE__) . '/inc/seo-admin/loader.php');
+require_once(dirname(__FILE__) . '/inc/admin-product-editor.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 require_once(dirname(__FILE__) . '/ssx-live-search.php');
 
@@ -404,6 +406,7 @@ function wholesale_setting_defaults()
 {
 	return array(
 		'primary_color' => '#1fa8de',
+		'default_hero_image' => 0,
 		'accent_color' => '#f5ad27',
 		'sale_price_color' => '#1fa8de',
 		'show_product_ratings' => 1,
@@ -496,11 +499,18 @@ function wholesale_setting_sanitizer($key)
 		'ticket_default_message' => 'sanitize_textarea_field',
 		'quote_autoreply_message' => 'sanitize_textarea_field',
 		'ticket_due_days' => 'wholesale_sanitize_days',
+		'default_hero_image' => 'wholesale_sanitize_image_id',
 	);
 
 	return $sanitizers[$key] ?? 'sanitize_text_field';
 }
 add_action('admin_init', 'wholesale_register_settings');
+
+function wholesale_sanitize_image_id($value)
+{
+	$id = absint($value);
+	return $id && wp_attachment_is_image($id) ? $id : 0;
+}
 
 function wholesale_sanitize_days($value)
 {
@@ -533,6 +543,18 @@ function wholesale_settings_page()
 				<tr><th><label for="wholesale_primary_color">Primary color</label></th><td><input type="color" id="wholesale_primary_color" name="wholesale_primary_color" value="<?php echo esc_attr(wholesale_get_setting('primary_color')); ?>"></td></tr>
 				<tr><th><label for="wholesale_accent_color">Rating/accent color</label></th><td><input type="color" id="wholesale_accent_color" name="wholesale_accent_color" value="<?php echo esc_attr(wholesale_get_setting('accent_color')); ?>"></td></tr>
 				<tr><th><label for="wholesale_sale_price_color">Sale price color</label></th><td><input type="color" id="wholesale_sale_price_color" name="wholesale_sale_price_color" value="<?php echo esc_attr(wholesale_get_setting('sale_price_color')); ?>"></td></tr>
+				<?php
+				$hero_image_id = (int) wholesale_get_setting('default_hero_image');
+				$hero_preview = $hero_image_id ? wp_get_attachment_image_url($hero_image_id, 'medium_large') : '';
+				$hero_built_in = get_template_directory_uri() . '/img/hero-1920.webp';
+				?>
+				<tr><th>Default hero image</th><td class="wholesale-hero-setting">
+					<input type="hidden" id="wholesale_default_hero_image" name="wholesale_default_hero_image" value="<?php echo esc_attr((string) $hero_image_id); ?>">
+					<img id="wholesale-hero-preview" src="<?php echo esc_url($hero_preview ? $hero_preview : $hero_built_in); ?>" data-built-in="<?php echo esc_url($hero_built_in); ?>" alt="" style="display:block;width:100%;max-width:480px;aspect-ratio:12/5;object-fit:cover;border-radius:6px;background:#031835;margin-bottom:8px;">
+					<button type="button" class="button" id="wholesale-hero-select">Choose image</button>
+					<button type="button" class="button-link-delete" id="wholesale-hero-remove" style="margin-left:8px;<?php echo $hero_image_id ? '' : 'display:none;'; ?>">Use the built-in photo</button>
+					<p class="description">Hero background for product categories and pages that have no image of their own. The home page and the Channel Letters page use the Channel Letters page's featured image instead. Best size: at least 2400 &times; 1000 px, landscape, with the main subject on the right and a darker, quiet left side where the headline sits. Phones show the right-hand part of the photo. A smaller AVIF copy is made automatically a few seconds after the first page view.</p>
+				</td></tr>
 			</table>
 			<h2 class="title">Certification</h2>
 			<table class="form-table" role="presentation">
@@ -634,6 +656,45 @@ function wholesale_settings_page()
 	</div>
 	<?php
 }
+
+function wholesale_settings_page_scripts($hook)
+{
+	if ('settings_page_wholesale-settings' !== $hook) {
+		return;
+	}
+
+	wp_enqueue_media();
+	wp_add_inline_script('media-editor', <<<'JS'
+jQuery(function ($) {
+	var frame;
+	var $input = $('#wholesale_default_hero_image');
+	var $preview = $('#wholesale-hero-preview');
+	var $remove = $('#wholesale-hero-remove');
+
+	$('#wholesale-hero-select').on('click', function () {
+		if (!frame) {
+			frame = wp.media({ title: 'Default hero image', button: { text: 'Use this image' }, library: { type: 'image' }, multiple: false });
+			frame.on('select', function () {
+				var image = frame.state().get('selection').first().toJSON();
+				var sizes = image.sizes || {};
+				$input.val(image.id);
+				$preview.attr('src', (sizes.medium_large || sizes.large || image).url);
+				$remove.show();
+			});
+		}
+		frame.open();
+	});
+
+	$remove.on('click', function () {
+		$input.val('0');
+		$preview.attr('src', $preview.data('built-in'));
+		$remove.hide();
+	});
+});
+JS
+	);
+}
+add_action('admin_enqueue_scripts', 'wholesale_settings_page_scripts');
 
 function wholesale_add_settings_page()
 {
@@ -898,9 +959,125 @@ function wholesale_hero_background_style($image_url = '', $fallback_image_url = 
 		return '';
 	}
 
-	$overlay = "linear-gradient(90deg, rgba(3, 24, 53, 0.97) 0%, rgba(3, 24, 53, 0.89) 31%, rgba(3, 24, 53, 0.36) 56%, rgba(3, 24, 53, 0.08) 100%), url('" . esc_url($bg_image) . "')";
+	// Remembered so wholesale_preload_front_page_hero() can preload the same file.
+	$GLOBALS['wholesale_hero_image'] = $bg_image;
 
-	return "background-image: {$overlay}; background-position: center center; background-size: cover; background-repeat: no-repeat;";
+	// Only the photo is set here. The dark overlay, crop and position come from
+	// the --hero-image rules at the end of css/style.css, so phones get a
+	// top-to-bottom overlay that keeps full-width text readable.
+	$image = "url('" . esc_url($bg_image) . "')";
+	$style = "--hero-image: {$image};";
+
+	// An AVIF copy is about half the size. It goes in its own variable, which
+	// style.css only uses where image-set() is supported, so older browsers
+	// keep the plain photo instead of losing the background.
+	$avif = wholesale_hero_avif_url($bg_image);
+	if ($avif) {
+		$style .= " --hero-image-set: image-set(url('" . esc_url($avif) . "') type('image/avif'), {$image} type('image/webp'));";
+	}
+
+	return $style;
+}
+
+/**
+ * AVIF copy of a hero photo, or '' when there is none yet. Uploaded photos
+ * get theirs from a background WP-Cron job (encoding takes a few seconds, so
+ * it never runs during a visitor's page load); until then the WebP is used.
+ */
+function wholesale_hero_avif_url($image_url)
+{
+	if (wholesale_is_default_hero($image_url)) {
+		return wholesale_default_hero_avif_url();
+	}
+
+	$uploads = wp_get_upload_dir();
+	$base_path = wp_parse_url($uploads['baseurl'], PHP_URL_PATH);
+	$url_path = (string) wp_parse_url($image_url, PHP_URL_PATH);
+	if (!$base_path || 0 !== strpos($url_path, $base_path . '/') || !preg_match('/\.(png|jpe?g)(\.webp)?$/i', $url_path)) {
+		return '';
+	}
+
+	$file = $uploads['basedir'] . preg_replace('/\.webp$/i', '', substr($url_path, strlen($base_path)));
+	$avif_file = $file . '.avif';
+	if (file_exists($avif_file) && file_exists($file) && filesize($avif_file) > 0 && filemtime($avif_file) >= filemtime($file)) {
+		return $uploads['baseurl'] . substr(preg_replace('/\.webp$/i', '', $url_path), strlen($base_path)) . '.avif';
+	}
+
+	$skipped = (array) get_option('wholesale_avif_skipped', array());
+	if (function_exists('imageavif') && file_exists($file) && !in_array($file, $skipped, true)
+		&& !wp_next_scheduled('wholesale_make_hero_avif', array($file))) {
+		wp_schedule_single_event(time(), 'wholesale_make_hero_avif', array($file));
+	}
+
+	return '';
+}
+
+function wholesale_make_hero_avif($file)
+{
+	$uploads = wp_get_upload_dir();
+	if (!function_exists('imageavif') || !is_string($file) || 0 !== strpos(wp_normalize_path($file), wp_normalize_path($uploads['basedir']) . '/')
+		|| !preg_match('/\.(png|jpe?g)$/i', $file) || !file_exists($file) || filesize($file) > 8 * MB_IN_BYTES) {
+		return;
+	}
+
+	// Recorded as skipped before encoding, so a run that dies (time or memory
+	// limit) is never retried; cleared again only on success.
+	$skipped = (array) get_option('wholesale_avif_skipped', array());
+	$skipped[] = $file;
+	update_option('wholesale_avif_skipped', array_slice(array_unique($skipped), -50), false);
+
+	$image = preg_match('/\.png$/i', $file) ? @imagecreatefrompng($file) : @imagecreatefromjpeg($file);
+	if (!$image) {
+		return;
+	}
+	if (function_exists('set_time_limit')) {
+		@set_time_limit(120);
+	}
+	imagepalettetotruecolor($image);
+	imagealphablending($image, false);
+	imagesavealpha($image, true);
+	// Encode to a temporary name and rename when done, so pages never link a half-written file.
+	$avif_file = $file . '.avif';
+	$tmp_file = $avif_file . '.tmp';
+	$saved = @imageavif($image, $tmp_file, 50, 6);
+	imagedestroy($image);
+
+	// Keep it only when it beats the WebP (or the original).
+	$compare = file_exists($file . '.webp') ? $file . '.webp' : $file;
+	if ($saved && file_exists($tmp_file) && filesize($tmp_file) > 0 && filesize($tmp_file) < filesize($compare) && @rename($tmp_file, $avif_file)) {
+		update_option('wholesale_avif_skipped', array_values(array_diff((array) get_option('wholesale_avif_skipped', array()), array($file))), false);
+	}
+	@unlink($tmp_file);
+}
+add_action('wholesale_make_hero_avif', 'wholesale_make_hero_avif');
+
+/**
+ * Hero photo for pages without their own image: the one chosen under
+ * Settings > Storefront Sign, or the photo that ships with the theme.
+ */
+function wholesale_default_hero_url()
+{
+	$id = (int) wholesale_get_setting('default_hero_image');
+	if ($id) {
+		// 2048px wide covers large screens; WordPress returns the original when it is smaller.
+		$url = wp_get_attachment_image_url($id, '2048x2048');
+		if ($url) {
+			return wholesale_webp_url($url);
+		}
+	}
+
+	return get_template_directory_uri() . '/img/hero-1920.webp';
+}
+
+function wholesale_is_default_hero($image_url)
+{
+	return get_template_directory_uri() . '/img/hero-1920.webp' === $image_url
+		&& file_exists(get_template_directory() . '/img/hero-1920.avif');
+}
+
+function wholesale_default_hero_avif_url()
+{
+	return get_template_directory_uri() . '/img/hero-1920.avif';
 }
 
 /**
@@ -1363,17 +1540,27 @@ function wholesale_dequeue_dashicons()
 add_action('wp_enqueue_scripts', 'wholesale_dequeue_dashicons', 100);
 
 /**
- * Make the CSS hero image discoverable while the stylesheet is loading.
+ * Make the hero background image discoverable while the stylesheets load. It
+ * is the largest paint on the home page and the channel letter page.
+ *
+ * Templates that build their hero before get_header() go through
+ * wholesale_hero_background_style(), which records the exact file used.
  */
 function wholesale_preload_front_page_hero()
 {
-	if (is_front_page()) {
-		// Browsers without AVIF support skip this preload and use the WebP from style.css.
-		printf(
-			'<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n",
-			esc_url(get_template_directory_uri() . '/img/hero-1920.avif')
-		);
+	$image = isset($GLOBALS['wholesale_hero_image']) ? $GLOBALS['wholesale_hero_image'] : '';
+	if (!$image && !is_front_page()) {
+		return;
 	}
+
+	$avif = $image ? wholesale_hero_avif_url($image) : wholesale_default_hero_avif_url();
+	if ($avif) {
+		// Browsers without AVIF support skip this preload and use the WebP fallback.
+		printf('<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n", esc_url($avif));
+		return;
+	}
+
+	printf('<link rel="preload" as="image" href="%s" fetchpriority="high">' . "\n", esc_url($image));
 }
 add_action('wp_head', 'wholesale_preload_front_page_hero', 1);
 
@@ -1461,6 +1648,9 @@ function wholesale_inline_small_styles($tag, $handle)
 		'litsign-style' => '/style.css',
 		'font-awesome' => '/css/icons.css',
 		'wholesale-header' => '/css/header.css',
+		'cl-quote' => '/css/cl-quote.css',
+		'cl-landing' => '/css/cl-landing.css',
+		'wholesale-typography' => '/css/typography.css',
 	);
 
 	if (is_admin() || is_rtl() || !isset($files[$handle])) {
@@ -2361,10 +2551,11 @@ function litsign_scripts()
 	if (is_page_template('landing-page.php')) {
 		wp_enqueue_style('landing-page', $theme_uri . '/css/landing-page.css', array('litsign-style', 'custom-style'), $asset_version('/css/landing-page.css'));
 	}
-	// The quote form styles are shared by both Google Ads landing pages.
-	if (is_page_template('page-channel-letters.php') || is_page('banners-displays')) {
+	// The quote form styles are shared by both Google Ads landing pages. The
+	// home page reuses the channel letters hero and trust strip.
+	if (is_page_template('page-channel-letters.php') || is_page('banners-displays') || is_front_page()) {
 		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
-		if (is_page_template('page-channel-letters.php')) {
+		if (is_page_template('page-channel-letters.php') || is_front_page()) {
 			wp_enqueue_style('cl-landing', $theme_uri . '/css/cl-landing.css', array('cl-quote'), $asset_version('/css/cl-landing.css'));
 		}
 	}
@@ -2412,6 +2603,34 @@ function litsign_scripts()
 	}
 }
 add_action('wp_enqueue_scripts', 'litsign_scripts');
+
+/**
+ * Site-wide typography: Inter (text) and Plus Jakarta Sans (headings), self-hosted
+ * in fonts/ and declared in css/typography.css. Enqueued late so that file prints
+ * after every page stylesheet.
+ */
+function wholesale_typography_assets()
+{
+	if (is_admin()) {
+		return;
+	}
+	wp_enqueue_style('wholesale-typography', get_template_directory_uri() . '/css/typography.css', array(), (string) filemtime(get_template_directory() . '/css/typography.css'));
+}
+add_action('wp_enqueue_scripts', 'wholesale_typography_assets', 99);
+
+/**
+ * Preload both font files: body text and the hero heading use them above the fold.
+ */
+function wholesale_preload_typography_fonts()
+{
+	if (is_admin()) {
+		return;
+	}
+	foreach (array('inter-latin-var.woff2', 'plus-jakarta-sans-latin-var.woff2') as $font) {
+		printf('<link rel="preload" href="%s" as="font" type="font/woff2" crossorigin>' . "\n", esc_url(get_template_directory_uri() . '/fonts/' . $font));
+	}
+}
+add_action('wp_head', 'wholesale_preload_typography_fonts', 2);
 
 /**
  * Upload builder preview images for authenticated users.
@@ -2598,7 +2817,7 @@ function wholesale_seo_description()
 				? sprintf(__('Shop custom %s from Storefront Sign Online. Signs and print products for retail storefronts and businesses.', 'litsign'), strtolower($term->name))
 				: __('Custom signage for retail storefronts, shipped to businesses across the USA.', 'litsign'));
 	} elseif (is_front_page() || is_page_template('home.php') || (is_home() && !is_front_page())) {
-		$description = __('Storefront Sign Online makes custom LED channel letters and storefront signs in Renton, WA, priced online and shipped to all 50 states.', 'litsign');
+		$description = __('Storefront Sign Online makes custom LED channel letters in Washington and California and storefront signs, priced online and shipped to all 50 states.', 'litsign');
 	} elseif (is_singular()) {
 		$description = get_post_meta(get_queried_object_id(), '_seo_description', true);
 
@@ -2767,7 +2986,7 @@ function wholesale_seo_page_defaults()
 	return array(
 		'about' => array(
 			'title' => __('About Us | Custom Sign Company in Renton, WA Since 2002', 'litsign'),
-			'description' => __('Storefront Sign Online has made custom LED channel letters, storefront signs and large format prints in Renton, WA since 2002, shipped USA-wide.', 'litsign'),
+			'description' => __('Renton, WA sign company since 2002. Custom LED channel letters made in Washington and California, plus storefront signs and prints, shipped USA-wide.', 'litsign'),
 		),
 		'privacy-policy' => array(
 			'title' => __('Privacy Policy | Storefront Sign Online', 'litsign'),

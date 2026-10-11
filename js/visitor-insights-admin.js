@@ -11,10 +11,14 @@
     if (parent) parent.appendChild(el);
     return el;
   };
+  // Top of the y axis: four equal whole-number steps of 1, 2, 2.5 or 5 x 10^n,
+  // so the gridline labels never repeat or skip (6 gave 0, 2, 3, 5, 6).
   const niceMax = (value) => {
     if (value <= 4) return 4;
-    const step = Math.pow(10, Math.floor(Math.log10(value)));
-    return Math.ceil(value / step / (value / step > 5 ? 2 : 1)) * step * (value / step > 5 ? 2 : 1);
+    const raw = value / 4;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+    const steps = magnitude >= 10 ? [1, 2, 2.5, 5, 10] : [1, 2, 5, 10];
+    return steps.find((s) => s * magnitude >= raw) * magnitude * 4;
   };
 
   const tooltip = (host) => {
@@ -153,7 +157,12 @@
     });
     try {
       if (window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
-        await navigator.clipboard.write([new ClipboardItem({ 'text/plain': report.then((text) => new Blob([text], { type: 'text/plain' })) })]);
+        try {
+          await navigator.clipboard.write([new ClipboardItem({ 'text/plain': report.then((text) => new Blob([text], { type: 'text/plain' })) })]);
+        } catch (error) {
+          // Browsers that can't take a pending ClipboardItem.
+          await navigator.clipboard.writeText(await report);
+        }
       } else if (navigator.clipboard) {
         await navigator.clipboard.writeText(await report);
       } else {
@@ -182,21 +191,31 @@
     const copy = event.target.closest('.wvi-copy');
     if (copy) {
       event.preventDefault();
-      const done = () => {
-        const original = copy.textContent;
-        copy.textContent = 'Copied';
+      const original = copy.dataset.label || copy.textContent;
+      copy.dataset.label = original;
+      const done = (copied) => {
+        copy.textContent = copied ? 'Copied' : 'Copy failed';
         setTimeout(() => { copy.textContent = original; }, 1500);
       };
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(copy.dataset.copy).then(done);
-      } else {
+      // The clipboard API only exists on https; fall back to a selected
+      // textarea.
+      const fallback = () => {
         const area = document.createElement('textarea');
         area.value = copy.dataset.copy;
+        area.setAttribute('readonly', '');
+        area.style.position = 'fixed';
+        area.style.opacity = '0';
         document.body.appendChild(area);
         area.select();
-        document.execCommand('copy');
+        let copied = false;
+        try { copied = document.execCommand('copy'); } catch (error) { /* blocked */ }
         area.remove();
-        done();
+        done(copied);
+      };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(copy.dataset.copy).then(() => done(true), fallback);
+      } else {
+        fallback();
       }
       return;
     }
@@ -278,8 +297,21 @@
     });
   };
 
+  // Logged out, or the page outlived its security token: retrying can't help.
+  let expired = false;
+  const expire = () => {
+    expired = true;
+    status.classList.add('is-error');
+    updated.textContent = '';
+    const link = document.createElement('a');
+    link.href = window.location.href;
+    link.textContent = 'Session expired · reload';
+    updated.appendChild(link);
+    toggle.hidden = true;
+  };
+
   const refresh = async (force) => {
-    if (busy || paused || document.hidden) return;
+    if (busy || paused || expired || document.hidden) return;
     busy = true;
     const data = new FormData();
     data.append('action', 'wholesale_vi_refresh');
@@ -288,8 +320,16 @@
     data.append('version', force ? '' : version);
     try {
       const response = await fetch(settings.ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' });
-      const json = await response.json();
+      // admin-ajax answers "-1" (bad nonce) or "0" (logged out) instead of JSON.
+      const text = await response.text();
+      if (text === '-1' || text === '0') {
+        expire();
+        busy = false;
+        return;
+      }
+      const json = JSON.parse(text);
       if (!json.success) throw new Error('refresh failed');
+      if (json.data.nonce) settings.nonce = json.data.nonce;
       if (online) online.textContent = json.data.online;
       if (json.data.changed) {
         if (userIsBusy()) {

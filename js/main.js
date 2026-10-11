@@ -761,7 +761,29 @@
       $(".thumbnail-container .single-product-thumbnail").removeAttr('srcset')
       $(".thumbnail-container .single-product-thumbnail").attr("src", imageSrc);
       $(".thumbnail-container").css("height", containerHeight);
+      $(".product-image-zoom").attr("data-zoom-src", imageSrc);
     });
+
+    // zoom the main product image on hover (mouse only, not touch)
+
+    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      $(".product-image-zoom")
+        .on("mouseenter", function () {
+          let zoomSrc = $(this).attr("data-zoom-src");
+          if (!zoomSrc) return;
+          $(this).find(".product-image-zoom__lens").css("background-image", `url("${zoomSrc}")`);
+          $(this).addClass("is-zooming");
+        })
+        .on("mousemove", function (e) {
+          let rect = this.getBoundingClientRect();
+          let x = ((e.clientX - rect.left) / rect.width) * 100;
+          let y = ((e.clientY - rect.top) / rect.height) * 100;
+          $(this).find(".product-image-zoom__lens").css("background-position", `${x}% ${y}%`);
+        })
+        .on("mouseleave", function () {
+          $(this).removeClass("is-zooming");
+        });
+    }
 
     // handle product categories click
 

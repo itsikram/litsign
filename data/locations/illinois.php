@@ -12,13 +12,13 @@ return array(
 	'slug' => 'illinois',
 	'name' => 'Illinois',
 	'abbr' => 'IL',
-	'status' => 'review',
+	'status' => 'live',
 	'neighbors' => array('wisconsin', 'indiana', 'iowa', 'missouri', 'kentucky'),
 	'seo_title' => 'Storefront Signs Shipped to Illinois | Chicago Sign Permits',
 	'seo_description' => 'Channel letters shipped to Illinois businesses, with how local electrician licensing works and Chicago Department of Buildings sign permit rules.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to Illinois',
 	'intro' => array(
-		'Illinois businesses can price custom LED channel letters online, then have them built in Renton, Washington and shipped ready for a licensed local installer.',
+		'Illinois businesses can price custom LED channel letters online, then have them built in Washington and California and shipped ready for a licensed local installer.',
 		'Like New York, Illinois leaves electrician licensing to local governments rather than the state, so the license your installer needs depends on the town where your storefront is. Chicago runs its own licensing and its own sign permits, and in Chicago every electric sign needs a permit.',
 		'If your business is in a Chicago suburb, call the village or city building department early: many license electrical contractors themselves and may or may not accept a license from another town.',
 	),
@@ -78,7 +78,7 @@ return array(
 	'faq' => array(
 		array(
 			'q' => 'Is there a channel letter sign company near me in Illinois?',
-			'a' => 'We ship custom channel letters anywhere in Illinois from Renton, WA. We don&rsquo;t install, so you&rsquo;ll hire an electrical contractor licensed by your city or village to connect it.',
+			'a' => 'We ship custom channel letters anywhere in Illinois from Washington and California. We don&rsquo;t install, so you&rsquo;ll hire an electrical contractor licensed by your city or village to connect it.',
 		),
 		array(
 			'q' => 'Does Illinois license electricians statewide?',

@@ -118,7 +118,7 @@ $icon = static function ($name, $size = 20) {
 		--srp-soft: #f3f6f9;
 
 		color: var(--srp-ink);
-		font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+		font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
 		font-size: 15px;
 		line-height: 1.5;
 		background: #fff;

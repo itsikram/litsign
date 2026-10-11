@@ -1,0 +1,122 @@
+/*
+ * Site-wide typography (loaded last, see wholesale_typography_assets()).
+ *
+ * Inter for reading text and UI, Plus Jakarta Sans for headings. Element
+ * selectors only, so component classes keep their own sizes and spacing;
+ * this file sets the families, rhythm and rendering everything inherits.
+ * Sign-preview fonts (builder, product customizer) are not affected.
+ */
+
+/* Self-hosted variable fonts, latin subset (preloaded in wholesale_preload_typography_fonts()). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/inter-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 500 800;
+  font-display: swap;
+  src: url("../fonts/plus-jakarta-sans-latin-var.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --bs-body-font-family: var(--font-sans);
+  --bs-body-line-height: 1.6;
+  --bs-font-monospace: var(--font-mono);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-kerning: normal;
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings: tighter tracking and leading as size grows, balanced line breaks. */
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4, .h5, .h6,
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+h1, .h1,
+.display-1, .display-2, .display-3, .display-4, .display-5, .display-6 {
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+h2, .h2 {
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+h5, .h5,
+h6, .h6 {
+  font-weight: 650;
+  letter-spacing: -0.005em;
+}
+
+/* Reading text: no stranded last words, readable link underlines. */
+p, li, dd, dt, blockquote, figcaption, td, th {
+  text-wrap: pretty;
+}
+
+a {
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: from-font;
+}
+
+strong, b {
+  font-weight: 700;
+}
+
+small, .small {
+  letter-spacing: 0.005em;
+}
+
+/* Buttons and form controls share the text face (browsers default them to system fonts). */
+button, input, select, textarea, optgroup,
+.btn, .form-control, .form-select {
+  font-family: inherit;
+}
+
+.btn {
+  letter-spacing: 0.005em;
+}
+
+/* Prices, quantities and order tables line up digit-for-digit. */
+table, .table, input[type="number"],
+[class*="price"], [class*="total"], [class*="qty"] {
+  font-variant-numeric: tabular-nums;
+}
+
+code, kbd, pre, samp {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: rgba(31, 168, 222, 0.22);
+}

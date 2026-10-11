@@ -47,7 +47,7 @@ wholesale_seo_set_page_faq(array(
 	),
 	array(
 		'q' => 'Does Storefront Sign Online pull permits or install signs?',
-		'a' => 'No. We manufacture your sign in Renton, WA, test it and ship it to you. A licensed sign installer or electrician in your area handles the permit and installation. We include the wiring diagram and install pattern they need, and we&rsquo;re happy to answer their questions by phone.',
+		'a' => 'No. We make your sign to order, test it and ship it to you from Washington or California. A licensed sign installer or electrician in your area handles the permit and installation. We include the wiring diagram and install pattern they need, and we&rsquo;re happy to answer their questions by phone.',
 	),
 ));
 

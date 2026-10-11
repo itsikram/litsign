@@ -279,6 +279,15 @@
   display: none;
 }
 
+/* Without the bottom row the header's top-only padding leaves the logo and icons low. */
+.page-id-439 .site-header {
+  padding-bottom: 10px;
+}
+
+.page-id-439 .site-header.is-scrolled {
+  padding-bottom: 6px;
+}
+
 .site-header .header-bottom {
   margin: 10px 0 0;
   padding: 10px 0;
@@ -564,6 +573,10 @@ html.sh-lock body {
 @media (max-width: 767.98px) {
   .site-header {
     padding-top: 8px;
+  }
+
+  .page-id-439 .site-header:not(.is-scrolled) {
+    padding-bottom: 8px;
   }
 
   .site-header > .container {

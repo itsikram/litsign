@@ -57,6 +57,8 @@ if ($product_id > 0) {
     $default_return = get_post_meta($product_id, '_default_return', true) ? get_post_meta($product_id, '_default_return', true) : 0;
     $default_trimcap = get_post_meta($product_id, '_default_trimcap', true) ? get_post_meta($product_id, '_default_trimcap', true) : 0;
     $default_color_cost = get_post_meta($product_id, '_default_color_cost', true) ? get_post_meta($product_id, '_default_color_cost', true) : 0;
+    // Same sale percentage the cart applies (wholesale_price_quote() in inc/pricing.php).
+    $discount_percent = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
 
     $default_data_json = json_encode(array(
         'trimcap' => $default_trimcap,
@@ -127,6 +129,7 @@ get_header();
 <input type="hidden" id="standarPsCost" value="<?php echo $standard_ps_cost ? $standard_ps_cost : 90; ?>">
 <input type="hidden" id="backLitCost" value="<?php echo $backlit_cost ? $backlit_cost : 100; ?>">
 <input type="hidden" id="eightFtcableCost" value="<?php echo $eight_ft_cable_cost ? $eight_ft_cable_cost : 70; ?>">
+<input type="hidden" id="clDiscountPercent" value="<?php echo esc_attr($discount_percent); ?>">
 
 <!-- <button id="addPatternButton">Add Pattern</button> -->
 
@@ -311,22 +314,47 @@ get_header();
                 </div>
                 <div class="right">
                     <div class="button-group" role="group" aria-label="Edit">
-                        <button type="button" title="Undo (Ctrl+Z)" aria-label="Undo" id="undoBtn" disabled><i class="fa-solid fa-rotate-left" aria-hidden="true"></i></button>
-                        <button type="button" title="Redo (Ctrl+Y)" aria-label="Redo" id="redoBtn" disabled><i class="fa-solid fa-rotate-right" aria-hidden="true"></i></button>
+                        <button type="button" title="Undo (Ctrl+Z)" aria-label="Undo" id="undoBtn" disabled><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Undo</span></button>
+                        <button type="button" title="Redo (Ctrl+Y)" aria-label="Redo" id="redoBtn" disabled><i class="fa-solid fa-rotate-right" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Redo</span></button>
                         <span class="cl-divider" aria-hidden="true"></span>
-                        <button type="button" title="Duplicate" aria-label="Duplicate selected" id="duplicateBtn"><i class="fa-solid fa-clone" aria-hidden="true"></i></button>
-                        <button type="button" title="Zoom in" aria-label="Zoom in" id="zoomInBtn"><i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i></button>
-                        <button type="button" title="Zoom out" aria-label="Zoom out" id="zoomOutBtn"><i class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i></button>
-                        <button type="button" title="Delete" aria-label="Delete selected" id="deleteBtn"><i class="fa-solid fa-trash-can" aria-hidden="true"></i></button>
-                        <button type="button" title="Clear builder" aria-label="Clear builder" id="clearBuilderBtn"><i class="fa-solid fa-broom" aria-hidden="true"></i></button>
+                        <button type="button" title="Duplicate" aria-label="Duplicate selected" id="duplicateBtn"><i class="fa-solid fa-clone" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Copy</span></button>
+                        <button type="button" title="Zoom in" aria-label="Zoom in" id="zoomInBtn"><i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Zoom in</span></button>
+                        <button type="button" title="Zoom out" aria-label="Zoom out" id="zoomOutBtn"><i class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Zoom out</span></button>
+                        <button type="button" title="Delete" aria-label="Delete selected" id="deleteBtn"><i class="fa-solid fa-trash-can" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Delete</span></button>
+                        <button type="button" title="Clear builder" aria-label="Clear builder" id="clearBuilderBtn"><i class="fa-solid fa-broom" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Clear all</span></button>
                     </div>
                 </div>
             </div>
         </div>
-        <div id="container" aria-label="Design canvas"></div>
+        <div class="cl-canvas-wrap">
+            <div id="container" aria-label="Design canvas"></div>
+            <?php // Shown while the canvas is empty; js/cl.js toggles it with the element count. ?>
+            <div class="cl-empty-state" id="clEmptyState">
+                <form class="cl-empty-card" id="clStartForm" autocomplete="off">
+                    <span class="cl-empty-step">Step 1</span>
+                    <label for="clStartText" class="cl-empty-title">Type the letters for your sign</label>
+                    <div class="cl-empty-row">
+                        <input type="text" id="clStartText" class="form-control" placeholder="e.g. OPEN 24" maxlength="60" enterkeyhint="done">
+                        <button type="submit" class="btn btn-primary">Add letters</button>
+                    </div>
+                    <p class="cl-empty-alt">
+                        Or start with a
+                        <button type="button" class="cl-link-btn" data-start="shape">shape</button>
+                        or a
+                        <button type="button" class="cl-link-btn" data-start="raceway">raceway</button>.
+                    </p>
+                    <ol class="cl-empty-steps">
+                        <li>Pick font &amp; colors</li>
+                        <li>Choose lighting</li>
+                        <li><?php echo $ticket_builder ? 'Save design to ticket' : 'Add to cart'; ?></li>
+                    </ol>
+                </form>
+            </div>
+        </div>
 
         <div class="editor-bottombar">
             <div class="bottom-left">
+                <p class="cl-extras-title">Lighting &amp; power</p>
                 <?php if ($is_ps_option) : ?>
 
                     <div id="powerSupply" class="bottombar-left-item" role="button" tabindex="0" aria-haspopup="true">
@@ -444,12 +472,19 @@ get_header();
                         0
                     </span>
                 </div>
-                <div id="totalCost" class="cl-stat cl-stat--price">
-                    <span>Total</span>
-                    <span class="value">
-                        <span class="main-color" id="displayCost"> $0</span>
-
+                <div id="totalCost" class="cl-stat cl-stat--price<?php echo $discount_percent > 0 ? ' has-sale' : ''; ?>" aria-live="polite">
+                    <span class="cl-stat-label">
+                        <?php if ($discount_percent > 0) : ?>
+                            Sale price <span class="cl-sale-badge"><?php echo esc_html(round($discount_percent, 2)); ?>% off</span>
+                        <?php else : ?>
+                            Total
+                        <?php endif; ?>
                     </span>
+                    <span class="value">
+                        <del class="cl-price-regular" id="displayRegularCost" hidden><span class="visually-hidden">Regular price </span>$0.00</del>
+                        <span class="main-color" id="displayCost">$0.00</span>
+                    </span>
+                    <span class="cl-price-saving" id="displaySaving" hidden></span>
                 </div>
                 <button type="button" data-bs-toggle="modal" data-bs-target="#costModal" id="detailBtn"
                     class="btn cl-btn-secondary">Price details</button>
@@ -474,20 +509,29 @@ get_header();
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="costModalLabel">Cost Breakdown</h5>
+                <div>
+                    <h5 class="modal-title" id="costModalLabel">Price breakdown</h5>
+                    <p class="cost-modal-subtitle"><?php echo esc_html($product_title); ?></p>
+                </div>
+                <?php if ($discount_percent > 0) : ?>
+                    <span class="cl-sale-badge cl-sale-badge--lg"><?php echo esc_html(round($discount_percent, 2)); ?>% off sale</span>
+                <?php endif; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="table-responsive cost-breakdown-table">
-                    <table class="table table-bordered text-center">
+                    <table class="table cost-table<?php echo $discount_percent > 0 ? ' has-sale' : ''; ?>">
                         <thead>
                             <tr>
-                                <th scope="col">Id</th>
-                                <th scope="col">Type</th>
-                                <th scope="col">Dimension</th>
-                                <th scope="col">Cost</th>
-                                <th scope="col">Face Cost</th>
-                                <th scope="col">Price</th>
+                                <th scope="col">#</th>
+                                <th scope="col">Element</th>
+                                <th scope="col">Size (H × W)</th>
+                                <th scope="col" class="num">Base price</th>
+                                <th scope="col" class="num">Face color</th>
+                                <th scope="col" class="num">Regular</th>
+                                <?php if ($discount_percent > 0) : ?>
+                                    <th scope="col" class="num">Sale</th>
+                                <?php endif; ?>
                             </tr>
                         </thead>
                         <tbody id="detailTableBody" data-haslitoption="<?php echo $is_lit_option ?>">
@@ -495,6 +539,8 @@ get_header();
                         </tbody>
                     </table>
                 </div>
+                <div class="cost-summary" id="costSummary" aria-live="polite"></div>
+                <p class="cost-modal-note">Prices are per sign, in USD. Shipping and tax are added at checkout. Installation is not included.</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>

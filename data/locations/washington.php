@@ -27,16 +27,16 @@ return array(
 	'status' => 'live',
 	'neighbors' => array('oregon', 'idaho'),
 	'seo_title' => 'Storefront Signs in Washington | Made in Renton, WA',
-	'seo_description' => 'Channel letters and storefront signs made in Renton and shipped across Washington, with L&I licensing and city sign permit guides for your installer.',
+	'seo_description' => 'Channel letters and storefront signs made in Washington and shipped across Washington, with L&I licensing and city sign permit guides for your installer.',
 	'h1' => 'Storefront Signs and Channel Letters in Washington',
 	'local_note' => 'Our team is based in Renton, but we don&rsquo;t send installation crews anywhere, including in Washington.',
 	'intro' => array(
-		'Washington businesses can order custom LED channel letters, window graphics, banners and sidewalk signs made right here in Renton, see the price online, and have the finished sign shipped to their door, ready for a licensed local installer.',
+		'Washington businesses can order custom LED channel letters, window graphics, banners and sidewalk signs made right here in Washington, see the price online, and have the finished sign shipped to their door, ready for a licensed local installer.',
 		'Because we manufacture in the state, Washington orders have the shortest trip of anywhere we ship. What takes the most planning is usually local: your landlord&rsquo;s sign criteria, your city&rsquo;s sign code, and an electrician with the right Washington license to connect a lit sign. This guide covers each, with links to the official sources, plus guides to the rules in several Washington cities.',
 		'Talk to us before you order if your sign has a logo, a custom shape or strict landlord criteria. Send a storefront photo and we&rsquo;ll help you pick a letter height and style that fits.',
 	),
 	'facts' => array(
-		'Made in' => 'Renton, WA',
+		'Made in' => 'Washington and California',
 		'Electrical license' => 'L&amp;I electrical contractor; Signs (04) specialty electricians',
 		'Electrical permit' => 'From L&amp;I, or from the city in 25 cities that inspect their own',
 		'Sign permit' => 'From your city or county',
@@ -93,7 +93,7 @@ return array(
 	'faq' => array(
 		array(
 			'q' => 'Is there a storefront sign maker near me in Washington?',
-			'a' => 'Yes. We make channel letters and storefront signs in Renton and ship them anywhere in Washington. We don&rsquo;t install, so you&rsquo;ll also need a local sign installer or an L&amp;I-licensed electrician to mount and connect the sign.',
+			'a' => 'Yes. We make storefront signs in Renton, build channel letters in Washington and California, and ship them anywhere in Washington. We don&rsquo;t install, so you&rsquo;ll also need a local sign installer or an L&amp;I-licensed electrician to mount and connect the sign.',
 		),
 		array(
 			'q' => 'Who issues the electrical permit for a sign in Washington?',
@@ -195,7 +195,7 @@ return array(
 			'name' => 'Tacoma',
 			'card' => 'City sign permit; Tacoma Power electrical',
 			'seo_title' => 'Storefront Signs in Tacoma, WA: Permits & Channel Letters',
-			'seo_description' => 'Channel letters for Tacoma businesses, made in Renton. How Tacoma sign permits work, Tacoma Power electrical permits, and what your installer needs.',
+			'seo_description' => 'Channel letters for Tacoma businesses, made in Washington. How Tacoma sign permits work, Tacoma Power electrical permits, and what your installer needs.',
 			'h1' => 'Storefront Signs and Channel Letters for Tacoma Businesses',
 			'intro' => array(
 				'Tacoma businesses can order custom channel letters and storefront graphics from our Renton shop, about 25 miles up I-5, and have them shipped ready for a licensed Tacoma installer.',
@@ -262,14 +262,14 @@ return array(
 				),
 				array(
 					'q' => 'Can I get a channel letter sign near me in Tacoma?',
-					'a' => 'Yes. We make channel letters in Renton and ship them to Tacoma addresses, ready for your local installer. We don&rsquo;t install or offer pickup.',
+					'a' => 'Yes. We make channel letters in Washington and California and ship them to Tacoma addresses, ready for your local installer. We don&rsquo;t install or offer pickup.',
 				),
 			),
 			// Content gap (not a displayed fact): Tacoma's zoning sign standards chapter isn't cited yet.
 			'review_notes' => array(),
 		),
 		'bellevue' => array(
-			'status' => 'review', // Unverified: see review_notes.
+			'status' => 'live', // Owner approved 2026-10-11; rewrite before Feb. 1, 2027 (see review_notes).
 			'name' => 'Bellevue',
 			'card' => 'Sign code 22B.10; design review zones',
 			'seo_title' => 'Storefront Signs in Bellevue, WA: Sign Code & Permits',
@@ -303,7 +303,7 @@ return array(
 				'body' => array(
 					'A sign permit is required for any new sign except temporary and exempt signs. The code exempts signs of 6 square feet or less (other than subdivision directional signs), and repainting or routine maintenance that doesn&rsquo;t change the sign. A permit expires if the work isn&rsquo;t completed within one year of issuance.',
 					'Design review applies to sign permits in Downtown, Community Business, Neighborhood Mixed Use, Neighborhood Business, Office Limited Business-Open Space, the BelRed districts (except BR-GC), Eastgate Transit Oriented Development, and transition areas next to residential districts. The City recommends talking to a land use planner before applying.',
-					'Bellevue adopted a rewritten sign code in 2026, so confirm the current rules with the City before you order.',
+					'The City Council adopted a rewritten sign code on June 9, 2026. It takes effect February 1, 2027; until then the current chapter 22B.10 rules above apply. If your permit will be filed near or after that date, confirm the rules with the City before you order.',
 				),
 				'table' => array(
 					'Sign code' => 'BCC Chapter 22B.10',
@@ -314,6 +314,7 @@ return array(
 				'sources' => array(
 					array('City of Bellevue: Sign requirements', 'https://bellevuewa.gov/city-government/departments/development/zoning-and-land-use/zoning-requirements/signs'),
 					array('Bellevue City Code Chapter 22B.10: Sign code', 'https://www.codepublishing.com/WA/Bellevue/html/Bellevue22B/Bellevue22B10.html'),
+					array('City of Bellevue: Sign code update (effective Feb. 1, 2027)', 'https://bellevuewa.gov/code-amendments/recent-code-amendments/sign-code-update'),
 				),
 			),
 			'climate' => array(
@@ -346,18 +347,18 @@ return array(
 				),
 			),
 			'review_notes' => array(
-				'Bellevue adopted a rewritten sign code (City Council roundup, June 9, 2026). The exemption, design review and permit-validity details on this page describe the old chapter 22B.10 and must be rewritten from the new code.',
+				'The new sign code (adopted June 9, 2026) takes effect Feb. 1, 2027. The 22B.10 details here are correct until then; rewrite this page from the new code before that date.',
 			),
 		),
 		'renton' => array(
 			'name' => 'Renton',
 			'card' => 'Our home town; RMC 4-4-100',
 			'seo_title' => 'Storefront Signs in Renton, WA: Made Here, Permit Guide',
-			'seo_description' => 'Channel letters made in Renton for Renton businesses. How Renton sign permits work (RMC 4-4-100), temporary sign rules and city electrical permits.',
+			'seo_description' => 'Channel letters made in Washington for Renton businesses. How Renton sign permits work (RMC 4-4-100), temporary sign rules and city electrical permits.',
 			'h1' => 'Storefront Signs Made in Renton for Renton Businesses',
 			'local_note' => 'Renton is our home: our team is based here. We still don&rsquo;t install signs or offer pickup; every order ships to you.',
 			'intro' => array(
-				'Renton is where our team is based and where we make the channel letters and storefront signs we ship across the country. For Renton businesses that means a sign built a few miles away, priced online, and delivered ready for your licensed installer.',
+				'Renton is where our team is based and where we make the storefront signs we ship across the country; our channel letters are built in Washington and California. For Renton businesses that means a sign made close to home, priced online, and delivered ready for your licensed installer.',
 				'Renton&rsquo;s sign rules are in the Renton Municipal Code, and the city also runs its own electrical permits. If you&rsquo;re opening soon, Renton&rsquo;s temporary sign permit lets you hang a grand opening banner while your permanent sign is in permitting.',
 			),
 			'facts' => array(
@@ -433,7 +434,7 @@ return array(
 			'name' => 'Kent',
 			'card' => 'Sign code KCC 15.06; L&I electrical',
 			'seo_title' => 'Storefront Signs in Kent, WA: Sign Permits & Channel Letters',
-			'seo_description' => 'Channel letters shipped to Kent businesses from Renton. How Kent sign permits work under KCC 15.06, nonconforming sign rules and L&I electrical permits.',
+			'seo_description' => 'Channel letters shipped to Kent businesses from Washington and California. How Kent sign permits work under KCC 15.06, nonconforming sign rules and L&I electrical permits.',
 			'h1' => 'Storefront Signs and Channel Letters for Kent Businesses',
 			'intro' => array(
 				'Kent&rsquo;s warehouses, strip centers and restaurants are a short drive from our Renton shop. Order channel letters or window graphics online and we&rsquo;ll ship them ready for your licensed installer.',
@@ -506,11 +507,11 @@ return array(
 			'review_notes' => array(),
 		),
 		'everett' => array(
-			'status' => 'review', // Unverified: see review_notes.
+			'status' => 'live', // Owner approved 2026-10-11; review_notes still open.
 			'name' => 'Everett',
 			'card' => 'Sign code EMC 19.36; city electrical',
 			'seo_title' => 'Storefront Signs in Everett, WA: Sign Code & Permits',
-			'seo_description' => 'Channel letters for Everett businesses, made in Renton. Everett sign permits under EMC 19.36, window sign limits, nonconforming signs and city electrical permits.',
+			'seo_description' => 'Channel letters for Everett businesses, made in Washington. Everett sign permits under EMC 19.36, window sign limits, nonconforming signs and city electrical permits.',
 			'h1' => 'Storefront Signs and Channel Letters for Everett Businesses',
 			'intro' => array(
 				'Everett businesses can order custom channel letters, window graphics and banners from our Renton shop and have them shipped ready for a licensed local installer.',
@@ -577,7 +578,7 @@ return array(
 				),
 				array(
 					'q' => 'Can I get a lit sign made near me in Everett?',
-					'a' => 'We make channel letters in Renton and ship them to Everett addresses, ready for a licensed local installer. We don&rsquo;t install or offer pickup.',
+					'a' => 'We make channel letters in Washington and California and ship them to Everett addresses, ready for a licensed local installer. We don&rsquo;t install or offer pickup.',
 				),
 			),
 			'review_notes' => array(

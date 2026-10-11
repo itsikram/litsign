@@ -842,9 +842,30 @@ function wholesale_vi_bounce_sql($alias = 's')
 	return "({$alias}.pageviews <= 1 AND {$alias}.engaged_seconds < 10 AND {$alias}.stage < 3 AND {$alias}.is_lead = 0 AND {$alias}.order_id = 0)";
 }
 
-function wholesale_vi_tz_offset()
+/**
+ * SQL turning a GMT datetime column into site time for a date range. Uses the
+ * offset in force at each moment, so days and hours stay right across a
+ * daylight-saving change (today's offset alone would shift a 90-day chart).
+ */
+function wholesale_vi_local_sql($column, $start_gmt, $end_gmt)
 {
-	return (int) wp_timezone()->getOffset(new DateTime('now', wp_timezone()));
+	$tz = wp_timezone();
+	$from = strtotime($start_gmt . ' UTC');
+	$transitions = $tz->getTransitions($from, strtotime($end_gmt . ' UTC'));
+	if (!$transitions || count($transitions) < 2) {
+		$offset = (int) $tz->getOffset(new DateTime('@' . $from));
+		return "DATE_ADD({$column}, INTERVAL {$offset} SECOND)";
+	}
+
+	// The first entry is the offset at the start of the range; each later
+	// one is a change.
+	$case = 'CASE';
+	for ($i = 1, $n = count($transitions); $i < $n; $i++) {
+		$case .= sprintf(" WHEN %s < '%s' THEN %d", $column, gmdate('Y-m-d H:i:s', $transitions[$i]['ts']), (int) $transitions[$i - 1]['offset']);
+	}
+	$case .= ' ELSE ' . (int) end($transitions)['offset'] . ' END';
+
+	return "DATE_ADD({$column}, INTERVAL ({$case}) SECOND)";
 }
 
 /**
@@ -858,37 +879,39 @@ function wholesale_vi_period()
 	$today = $now->setTime(0, 0);
 	$key = isset($_GET['period']) ? sanitize_key(wp_unslash($_GET['period'])) : '7d';
 	$labels = array('today' => 'Today', 'yesterday' => 'Yesterday', '7d' => 'Last 7 days', '30d' => 'Last 30 days', '90d' => 'Last 90 days', 'custom' => 'Custom');
+	$presets = array(
+		'today' => array($today, $now),
+		'yesterday' => array($today->modify('-1 day'), $today),
+		'7d' => array($today->modify('-6 days'), $now),
+		'30d' => array($today->modify('-29 days'), $now),
+		'90d' => array($today->modify('-89 days'), $now),
+	);
+	if (!isset($presets[$key]) && 'custom' !== $key) {
+		$key = '7d';
+	}
 
-	switch ($key) {
-		case 'today':
-			$start = $today;
-			$end = $now;
-			break;
-		case 'yesterday':
-			$start = $today->modify('-1 day');
-			$end = $today;
-			break;
-		case '30d':
-			$start = $today->modify('-29 days');
-			$end = $now;
-			break;
-		case '90d':
-			$start = $today->modify('-89 days');
-			$end = $now;
-			break;
-		case 'custom':
-			$from = DateTimeImmutable::createFromFormat('!Y-m-d', sanitize_text_field(wp_unslash($_GET['from'] ?? '')), $tz);
-			$to = DateTimeImmutable::createFromFormat('!Y-m-d', sanitize_text_field(wp_unslash($_GET['to'] ?? '')), $tz);
-			if ($from && $to && $from <= $to) {
-				$start = $from;
-				$end = min($to->modify('+1 day'), $now);
-				break;
-			}
-			// Fall through to the default range when the dates are missing.
-		default:
-			$key = '7d';
-			$start = $today->modify('-6 days');
-			$end = $now;
+	// The toolbar always sends its two dates. They only make a custom range
+	// when they differ from the preset being viewed, so changing a filter
+	// keeps "Last 30 days" instead of turning it into "Custom".
+	$from = DateTimeImmutable::createFromFormat('!Y-m-d', sanitize_text_field(wp_unslash($_GET['from'] ?? '')), $tz);
+	$to = DateTimeImmutable::createFromFormat('!Y-m-d', sanitize_text_field(wp_unslash($_GET['to'] ?? '')), $tz);
+	if ($from && $to) {
+		if ($from > $to) {
+			list($from, $to) = array($to, $from);
+		}
+		if ('custom' !== $key && ($from != $presets[$key][0] || $to != $presets[$key][1]->modify('-1 second')->setTime(0, 0))) {
+			$key = 'custom';
+		}
+	} elseif ('custom' === $key) {
+		$key = '7d';
+	}
+
+	if ('custom' === $key) {
+		$start = $from;
+		// A range that starts in the future is empty; keep it one day long.
+		$end = $from > $now ? $from->modify('+1 day') : min($to->modify('+1 day'), $now);
+	} else {
+		list($start, $end) = $presets[$key];
 	}
 
 	$length = max(1, $end->getTimestamp() - $start->getTimestamp());
@@ -1042,8 +1065,8 @@ function wholesale_vi_series($period, $filters = array())
 {
 	global $wpdb;
 	list($where, $params) = wholesale_vi_where($period['start_gmt'], $period['end_gmt'], $filters);
-	$offset = wholesale_vi_tz_offset();
-	$bucket = $period['hourly'] ? "DATE_FORMAT(DATE_ADD(s.started_at, INTERVAL {$offset} SECOND), '%%Y-%%m-%%d %%H:00')" : "DATE(DATE_ADD(s.started_at, INTERVAL {$offset} SECOND))";
+	$local = wholesale_vi_local_sql('s.started_at', $period['start_gmt'], $period['end_gmt']);
+	$bucket = $period['hourly'] ? "DATE_FORMAT({$local}, '%%Y-%%m-%%d %%H:00')" : "DATE({$local})";
 
 	$rows = $wpdb->get_results($wpdb->prepare(
 		"SELECT {$bucket} AS bucket, COUNT(*) AS sessions, SUM(s.channel = 'google_ads') AS ads, SUM(s.order_id > 0 OR s.is_lead = 1) AS conversions
@@ -1238,10 +1261,14 @@ function wholesale_vi_admin_assets($hook)
 	$uri = get_template_directory_uri();
 	wp_enqueue_style('wholesale-vi-admin', $uri . '/css/visitor-insights.css', array(), (string) filemtime($dir . '/css/visitor-insights.css'));
 	wp_enqueue_script('wholesale-vi-admin', $uri . '/js/visitor-insights-admin.js', array(), (string) filemtime($dir . '/js/visitor-insights-admin.js'), true);
+	// The Live tab and a single visit are cheap to redraw and change by the
+	// second; the reports run ~35 queries per redraw, so check them less often.
+	$page = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+	$fast = 'wholesale-insights-live' === $page || ('wholesale-insights-visitors' === $page && !empty($_GET['session']));
 	wp_localize_script('wholesale-vi-admin', 'wholesaleVIAdmin', array(
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'nonce' => wp_create_nonce('wholesale_vi_live'),
-		'interval' => 5000,
+		'interval' => $fast ? 5000 : 20000,
 	));
 }
 add_action('admin_enqueue_scripts', 'wholesale_vi_admin_assets');
@@ -1259,7 +1286,8 @@ function wholesale_vi_tabs()
 
 function wholesale_vi_url($page, $args = array())
 {
-	return add_query_arg(array_merge(array('page' => $page), $args), admin_url('admin.php'));
+	// add_query_arg() does not encode values; a search for "a&b" or "c++" would break the link.
+	return add_query_arg(urlencode_deep(array_merge(array('page' => $page), $args)), admin_url('admin.php'));
 }
 
 /* Formatting helpers --------------------------------------------------- */
@@ -1511,7 +1539,8 @@ function wholesale_vi_ajax_refresh()
 		wp_send_json_error(null, 400);
 	}
 
-	$response = array('online' => wholesale_vi_live_count(), 'changed' => false);
+	// A fresh nonce each time keeps a tab left open for days updating.
+	$response = array('online' => wholesale_vi_live_count(), 'changed' => false, 'nonce' => wp_create_nonce('wholesale_vi_live'));
 	$version = wholesale_vi_data_version($page);
 	if ($version !== (string) wp_unslash($_POST['version'] ?? '')) {
 		ob_start();
@@ -1543,7 +1572,7 @@ function wholesale_vi_render_toolbar($period, $page, $filters = array(), $show =
 				<input type="date" name="from" value="<?php echo esc_attr($period['start']->format('Y-m-d')); ?>" aria-label="From">
 				<span>–</span>
 				<input type="date" name="to" value="<?php echo esc_attr($period['end']->modify('-1 second')->format('Y-m-d')); ?>" aria-label="To">
-				<input type="hidden" name="period" value="custom">
+				<input type="hidden" name="period" value="<?php echo esc_attr($period['key']); ?>">
 			</label>
 			<?php if (in_array('channel', $show, true)) : ?>
 				<select name="channel" aria-label="Traffic source">
@@ -1631,7 +1660,7 @@ function wholesale_vi_render_funnel($m, $title = 'Purchase funnel')
 					<span class="wvi-funnel-label"><?php echo esc_html($label); ?></span>
 					<span class="wvi-funnel-bar"><i style="width:<?php echo esc_attr(max(0.6, 100 * $counts[$i] / $max)); ?>%"></i></span>
 					<span class="wvi-funnel-num"><strong><?php echo esc_html(number_format_i18n($counts[$i])); ?></strong> <?php echo esc_html(wholesale_vi_pct($counts[$i], $counts[1], 1)); ?></span>
-					<span class="wvi-funnel-drop"><?php echo $i > 1 && $counts[$i - 1] > 0 ? esc_html('−' . number_format_i18n($drop, 0) . '% lost') : ''; ?></span>
+					<span class="wvi-funnel-drop"><?php echo $i > 1 && $counts[$i - 1] > 0 ? esc_html($drop >= 0.5 ? '−' . number_format_i18n($drop, 0) . '% lost' : 'none lost') : ''; ?></span>
 				</li>
 			<?php endforeach; ?>
 		</ol>
@@ -1777,7 +1806,7 @@ function wholesale_vi_report_data($period, $filters, $ads)
 	));
 
 	$hours = array_fill(0, 24, array('sessions' => 0, 'conversions' => 0));
-	foreach (wholesale_vi_breakdown('HOUR(DATE_ADD(s.started_at, INTERVAL ' . wholesale_vi_tz_offset() . ' SECOND))', $start, $end, $filters, 24) as $row) {
+	foreach (wholesale_vi_breakdown('HOUR(' . wholesale_vi_local_sql('s.started_at', $start, $end) . ')', $start, $end, $filters, 24) as $row) {
 		$hours[(int) $row['label']] = array('sessions' => (int) $row['sessions'], 'conversions' => (int) ($row['orders'] + $row['leads']));
 	}
 
@@ -1910,7 +1939,7 @@ function wholesale_vi_render_report($ads)
 									<td><?php echo wholesale_vi_device_icon($row['device']); // phpcs:ignore ?> <?php echo esc_html(str_replace('_', ' ', $row['timezone'])); ?></td>
 									<td><?php echo $row['orders'] > 0 ? '<span class="wvi-badge is-green">Bought</span>' : ($row['leads'] > 0 ? '<span class="wvi-badge is-blue">Lead</span>' : '<span class="wvi-badge is-red">Nothing</span>'); ?></td>
 									<td><?php echo esc_html(wholesale_vi_ago($row['last_seen'])); ?></td>
-									<td><a href="<?php echo esc_url(wholesale_vi_url('wholesale-insights-visitors', array('period' => $period['key'], 'from' => $period['start']->format('Y-m-d'), 'to' => $period['end']->modify('-1 second')->format('Y-m-d'), 's' => $row['ip']))); ?>">View visits →</a></td>
+									<td><a href="<?php echo esc_url(wholesale_vi_url('wholesale-insights-visitors', array('period' => $period['key'], 'from' => $period['start']->format('Y-m-d'), 'to' => $period['end']->modify('-1 second')->format('Y-m-d'), 'channel' => 'google_ads', 's' => $row['ip']))); ?>">View visits →</a></td>
 								</tr>
 							<?php endforeach; ?>
 						</tbody>
@@ -1960,7 +1989,7 @@ function wholesale_vi_render_report($ads)
 								<td class="num"><?php echo esc_html($row['hits']); ?></td>
 								<td class="num"><?php echo esc_html($row['sessions']); ?></td>
 								<td><?php echo esc_html(wholesale_vi_ago($row['last_at'])); ?></td>
-								<td><a href="<?php echo esc_url(wholesale_vi_url('wholesale-insights-visitors', array('period' => $period['key'], 'from' => $period['start']->format('Y-m-d'), 'to' => $period['end']->modify('-1 second')->format('Y-m-d'), 'event' => $row['type'], 'channel' => $filters['channel']))); ?>">Visits →</a></td>
+								<td><a href="<?php echo esc_url(wholesale_vi_url('wholesale-insights-visitors', array('period' => $period['key'], 'from' => $period['start']->format('Y-m-d'), 'to' => $period['end']->modify('-1 second')->format('Y-m-d'), 'event' => $row['type'], 'channel' => $filters['channel'], 'device' => $filters['device']))); ?>">Visits →</a></td>
 							</tr>
 						<?php endforeach; ?>
 						<?php foreach ($not_found as $row) : ?>
@@ -2275,8 +2304,18 @@ function wholesale_vi_render_visitors()
 			<?php if ($pages > 1) : ?>
 				<div class="wvi-pagination">
 					<?php
+					// Built from the filters, not the request URL: live updates render
+					// this list inside admin-ajax.php.
+					$list_args = array_filter(array_merge($filters, array(
+						'period' => $period['key'],
+						'from' => 'custom' === $period['key'] ? $period['start']->format('Y-m-d') : '',
+						'to' => 'custom' === $period['key'] ? $period['end']->modify('-1 second')->format('Y-m-d') : '',
+						'outcome' => $outcome,
+						'event' => $event,
+						's' => $search,
+					)));
 					echo paginate_links(array( // phpcs:ignore WordPress.Security.EscapeOutput
-						'base' => add_query_arg('paged', '%#%'),
+						'base' => add_query_arg('paged', '%#%', wholesale_vi_url('wholesale-insights-visitors', $list_args)),
 						'format' => '',
 						'current' => $paged,
 						'total' => $pages,
@@ -2406,7 +2445,7 @@ function wholesale_vi_render_session($id)
 		'Landing page' => '<a href="' . esc_url(wholesale_vi_site_link($session->landing_url)) . '" target="_blank" rel="noopener" class="wvi-break">' . esc_html(wholesale_vi_short_path($session->landing_url, 80)) . '</a>',
 		'Device' => wholesale_vi_device_icon($session->device) . ' ' . esc_html(ucfirst($session->device) . ' · ' . $session->os . ' · ' . $session->browser . ($session->screen ? ' · ' . $session->screen : '')),
 		'Location' => esc_html(wholesale_vi_location($session) ?: '—') . ($session->language ? ' <span class="wvi-muted">(' . esc_html($session->language) . ')</span>' : ''),
-		'IP address' => $session->ip ? '<code>' . esc_html($session->ip) . '</code> <a href="' . esc_url(wholesale_vi_url('wholesale-insights-visitors', array('period' => '90d', 's' => $session->ip))) . '">all visits from this IP</a>' : '—',
+		'IP address' => $session->ip ? '<code>' . esc_html($session->ip) . '</code> <a href="' . esc_url(wholesale_vi_url('wholesale-insights-visitors', array('period' => 'custom', 'from' => wp_date('Y-m-d', time() - max(7, (int) wholesale_vi_setting('retention_days')) * DAY_IN_SECONDS), 'to' => wp_date('Y-m-d'), 's' => $session->ip))) . '">all visits from this IP</a>' : '—',
 		'Visitor' => ((int) $session->is_new ? 'First visit' : 'Returning visitor') . ' · ' . (count($others) + 1) . ' visit(s) on record',
 	);
 	if ((int) $session->order_id) {
@@ -3016,7 +3055,7 @@ function wholesale_vi_export_markdown($period, $filters)
 
 function wholesale_vi_export_url($args = array())
 {
-	return wp_nonce_url(add_query_arg(array_merge(array('action' => 'wholesale_vi_export'), $args), admin_url('admin-post.php')), 'wholesale_vi_export');
+	return wp_nonce_url(add_query_arg(urlencode_deep(array_merge(array('action' => 'wholesale_vi_export'), $args)), admin_url('admin-post.php')), 'wholesale_vi_export');
 }
 
 function wholesale_vi_export()

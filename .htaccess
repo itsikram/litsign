@@ -13,6 +13,8 @@
 	AddOutputFilterByType DEFLATE text/plain text/html text/xml text/css
 	AddOutputFilterByType DEFLATE application/xml application/xhtml+xml application/rss+xml
 	AddOutputFilterByType DEFLATE application/javascript application/x-javascript application/json
+	# The live server sends .js files as text/javascript.
+	AddOutputFilterByType DEFLATE text/javascript image/svg+xml
 </IfModule>
 
 <IfModule mod_headers.c>

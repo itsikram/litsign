@@ -2,7 +2,7 @@
   --orange: #f36b21;
   --ink: #111820;
   color: #172027;
-  font-family: "havetica-rounded-bold", "helvetica-condensed-bold";
+  font-family: var(--font-sans, system-ui, sans-serif);
   background: #fff;
 }
 .landing-page * {

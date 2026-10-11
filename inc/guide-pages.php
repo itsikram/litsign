@@ -113,8 +113,8 @@ function wholesale_guide_registry()
 		'warranty' => array(
 			'title' => 'Warranty',
 			'template' => 'page-warranty.php',
-			// Review until the owner confirms which letter types and whether labor are covered.
-			'status' => 'review',
+			// Owner approved going live 2026-10-11; letter types and labor coverage still unconfirmed.
+			'status' => 'live',
 			'seo_title' => '5-Year Channel Letter Warranty | Storefront Sign Online',
 			'seo_description' => 'What our five-year channel letter warranty covers, what it excludes, and how to make a claim. Every sign is tested before it ships.',
 		),
@@ -130,7 +130,7 @@ function wholesale_guide_registry()
 			'template' => 'page-locations.php',
 			'status' => 'live',
 			'seo_title' => 'Storefront Signs Shipped to Every State | Permit Guides',
-			'seo_description' => 'Channel letters and storefront signs shipped from Renton, WA to all 50 states, with state guides to sign permits and licensed installers.',
+			'seo_description' => 'Channel letters and storefront signs shipped from Washington and California to all 50 states, with state guides to sign permits and licensed installers.',
 		),
 		'industries' => array(
 			'title' => 'Industries',
@@ -383,7 +383,7 @@ function wholesale_guide_styles()
 add_action('wp_enqueue_scripts', 'wholesale_guide_styles', 20);
 
 /**
- * The organization these pages describe: ships from Renton, WA, does not
+ * The organization these pages describe: ships from Washington and California, does not
  * install. Used as the provider of Service entities on guide pages.
  */
 function wholesale_guide_organization_ref()
@@ -460,7 +460,7 @@ function wholesale_guide_render_help($title = 'Talk to a Real Sign Specialist', 
 				<p><?php echo wp_kses_post($text); ?></p>
 				<ul class="cl-help-details">
 					<li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
-					<li><?php echo wholesale_home_icon('pin'); ?> Made in Renton, WA &middot; shipped to all 50 states</li>
+					<li><?php echo wholesale_home_icon('pin'); ?> Channel letters made in Washington &amp; California &middot; shipped to all 50 states</li>
 				</ul>
 			</div>
 			<div class="cl-help-actions">

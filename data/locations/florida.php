@@ -12,13 +12,13 @@ return array(
 	'slug' => 'florida',
 	'name' => 'Florida',
 	'abbr' => 'FL',
-	'status' => 'review',
+	'status' => 'live',
 	'neighbors' => array('georgia', 'alabama'),
 	'seo_title' => 'Storefront Signs Shipped to Florida | Sign License & Permits',
 	'seo_description' => 'Channel letters shipped to Florida businesses: who can install them (Sign Specialty electrical contractors), Florida Building Code permits and Miami-Dade rules.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to Florida',
 	'intro' => array(
-		'Florida businesses can design and price custom LED channel letters online, then have them made in Renton, Washington and shipped ready for a licensed Florida sign contractor to install.',
+		'Florida businesses can design and price custom LED channel letters online, then have them made in Washington and California and shipped ready for a licensed Florida sign contractor to install.',
 		'Two things set Florida apart. The state licenses a <strong>Sign Specialty</strong> electrical contractor specifically for electric signs, and every sign permit is reviewed against the Florida Building Code, including its wind design rules, which are strictest in the High-Velocity Hurricane Zone of Miami-Dade and Broward counties.',
 		'Because wind and structural review can add time, start the permit conversation with your installer before you order, and leave room in your opening schedule.',
 	),
@@ -79,7 +79,7 @@ return array(
 	'faq' => array(
 		array(
 			'q' => 'Is there a storefront sign company near me in Florida?',
-			'a' => 'We ship custom storefront signs anywhere in Florida from Renton, WA. We don&rsquo;t install, so you&rsquo;ll hire a licensed Florida sign specialty or electrical contractor near you to permit and install it.',
+			'a' => 'We ship custom storefront signs anywhere in Florida from Washington and California. We don&rsquo;t install, so you&rsquo;ll hire a licensed Florida sign specialty or electrical contractor near you to permit and install it.',
 		),
 		array(
 			'q' => 'What license does a sign installer need in Florida?',

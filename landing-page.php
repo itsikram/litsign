@@ -171,7 +171,7 @@ get_header();
 
 	<section class="landing-dark-section">
 		<div class="landing-shell container landing-stats-layout">
-			<div><p class="landing-eyebrow">Why choose StorefrontSignOnline?</p><h2>Signs that work as hard as you do.</h2><p>We make custom signs in Renton, Washington and ship them to businesses in all 50 states, ready for your licensed local installer.</p><ul><li>Making signs since 2002</li><li>Channel letters made in the USA and UL listed</li><li>Every lit sign tested before it ships</li><li>5-year LED warranty</li><li>Standard, 3-day, 2-day and overnight shipping</li></ul><a class="landing-button" href="<?php echo esc_url($contact_url); ?>">About our company <span aria-hidden="true">&rarr;</span></a></div>
+			<div><p class="landing-eyebrow">Why choose StorefrontSignOnline?</p><h2>Signs that work as hard as you do.</h2><p>We make custom signs in Washington and California and ship them to businesses in all 50 states, ready for your licensed local installer.</p><ul><li>Making signs since 2002</li><li>Channel letters made in the USA and UL listed</li><li>Every lit sign tested before it ships</li><li>5-year LED warranty</li><li>Standard, 3-day, 2-day and overnight shipping</li></ul><a class="landing-button" href="<?php echo esc_url($contact_url); ?>">About our company <span aria-hidden="true">&rarr;</span></a></div>
 			<div class="landing-stat-grid"><strong>2002<small>Making signs since</small></strong><strong>50<small>States we ship to</small></strong><strong>5-Year<small>LED warranty</small></strong><strong>UL<small>Listed lit signs</small></strong></div>
 		</div>
 	</section>

@@ -2,7 +2,7 @@
 /**
  * State and city guide pages (/locations/{state}/ and /locations/{state}/{city}/).
  *
- * Content comes from data/locations/{state}.php. We ship from Renton, WA and
+ * Content comes from data/locations/{state}.php. We ship from WA and CA and
  * never install: the page covers shipping to the area, who may install and
  * connect a sign there, and how permits work, with official sources. Projects,
  * reviews and installer referrals render only when real ones are in the data.
@@ -25,11 +25,11 @@ $shipping_url = wholesale_guide_url('shipping-returns');
 $state_url = wholesale_guide_url('locations/' . $state['slug']);
 $locations_url = wholesale_guide_url('locations');
 
-// Ground transit from Renton is shown once verified in the data file;
+// Ground transit is shown once verified in the data file;
 // until then the page states the checkout's own standard range.
 $transit = isset($place['transit']) ? $place['transit'] : (isset($state['transit']) ? $state['transit'] : array());
 $transit_text = !empty($transit['verified']) && !empty($transit['days'])
-	? sprintf('Standard shipping to %s usually takes %s business days in transit from Renton, WA.', $place_name, $transit['days'])
+	? sprintf('Standard shipping to %s usually takes %s business days in transit.', $place_name, $transit['days'])
 	: 'Standard shipping takes 3&ndash;6 business days in transit; 3-day, 2-day and overnight shipping are available at checkout.';
 
 $faq = isset($place['faq']) ? $place['faq'] : array();
@@ -41,7 +41,7 @@ $area = $is_city
 	: array('@type' => 'State', 'name' => $state['name'], 'containedInPlace' => array('@type' => 'Country', 'name' => 'United States'));
 wholesale_guide_add_service_schema(
 	sprintf('Storefront signs and channel letters shipped to %s', $place_name),
-	sprintf('Custom LED channel letters and storefront signs made in Renton, WA and shipped to %s, ready for a licensed local installer.', $place_name),
+	sprintf('Custom LED channel letters and storefront signs shipped from Washington and California to %s, ready for a licensed local installer.', $place_name),
 	$area
 );
 
@@ -81,7 +81,7 @@ get_header();
 			<h2 id="gd-about-title" class="cl-section-title"><?php echo esc_html(sprintf('Ordering a Storefront Sign for %s', $place_name)); ?></h2>
 			<?php $paragraphs(array_slice((array) $place['intro'], 1)); ?>
 			<div class="gd-note">
-				<p><strong>We build and ship; a local pro installs.</strong> Your sign is made and tested in Renton, Washington and shipped to your door with a wiring diagram and install pattern. A licensed sign installer or electrician in <?php echo esc_html($place_name); ?> mounts and connects it. <?php echo wp_kses_post(!empty($place['local_note']) ? $place['local_note'] : sprintf('We don&rsquo;t have an office or installation crew in %s.', esc_html($is_city ? $place['name'] : $state['name']))); ?></p>
+				<p><strong>We build and ship; a local pro installs.</strong> Your sign is made, tested and shipped to your door from Washington or California with a wiring diagram and install pattern. A licensed sign installer or electrician in <?php echo esc_html($place_name); ?> mounts and connects it. <?php echo wp_kses_post(!empty($place['local_note']) ? $place['local_note'] : sprintf('We don&rsquo;t have an office or installation crew in %s.', esc_html($is_city ? $place['name'] : $state['name']))); ?></p>
 			</div>
 		</div>
 	</section>

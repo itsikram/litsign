@@ -137,7 +137,7 @@ $logo_id = get_theme_mod('custom_logo');
 		}
 
 		body {
-			font-family: 'havetica-rounded-bold', 'helvetica-condensed-bold';
+			font-family: var(--font-sans, system-ui, sans-serif);
 		}
 	</style>
 
@@ -184,7 +184,8 @@ $logo_id = get_theme_mod('custom_logo');
 									'loading' => 'eager',
 									'decoding' => 'async',
 									'fetchpriority' => 'high',
-									'sizes' => '(max-width: 767px) 240px, 400px',
+									// Same sizes as the desktop header logo below, so both pick one file.
+									'sizes' => '(max-width: 767px) 240px, (max-width: 991px) 400px, (max-width: 1199px) 250px, 400px',
 								));
 							} else {
 								echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async">';
@@ -416,7 +417,7 @@ $logo_id = get_theme_mod('custom_logo');
 														Indoor Banner
 													</span>
 												</a>
-												<a href="<?php echo esc_url(home_url('/product/pole-banner-set/')); ?>" class="mm-link">
+												<a href="<?php echo esc_url(home_url('/product/pole-banner-set-banner-hardware/')); ?>" class="mm-link">
 													<span>
 														Pole Banner
 													</span>
@@ -599,7 +600,7 @@ $logo_id = get_theme_mod('custom_logo');
 					array('Backlit Banner', home_url('/product/backlit-banner/')),
 					array('Mesh Banner', home_url('/product/mesh-banner/')),
 					array('Indoor Banner', home_url('/product/indoor-banner-super-smooth/')),
-					array('Pole Banner', home_url('/product/pole-banner-set/')),
+					array('Pole Banner', home_url('/product/pole-banner-set-banner-hardware/')),
 					array('9oz Fabric Banner', home_url('/product/fabric-banner-9oz-wrinkle-free-copy/')),
 					array('Blockout Fabric Banner', home_url('/product/blockout-fabric-banner/')),
 					array('Tension Fabric', home_url('/product/tension-fabric/')),
@@ -657,7 +658,7 @@ $logo_id = get_theme_mod('custom_logo');
 				z-index: 1030;
 				background: #fff;
 				color: var(--ssx-ink);
-				font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+				font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
 				font-size: 15px;
 				line-height: 1.4;
 				box-shadow: 0 1px 0 var(--ssx-line), 0 6px 18px rgba(13, 34, 54, .05);
@@ -1265,7 +1266,7 @@ $logo_id = get_theme_mod('custom_logo');
 				background: #fff;
 				box-shadow: 0 18px 40px rgba(13, 34, 54, .18);
 				color: var(--r-ink);
-				font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+				font: 15px/1.4 var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
 				text-align: left;
 				animation: ssx-r-in .14s ease-out;
 			}
@@ -1683,7 +1684,7 @@ $logo_id = get_theme_mod('custom_logo');
 					<div class="ssx-topbar__left">
 						<a class="ssx-tb" href="<?php echo esc_url($phone_href); ?>">
 							<?php echo $ssx_icon('phone', 17); // Static SVG. ?>
-							<span class="ssx-tb__label">Cell:</span>
+							<span class="ssx-tb__label">Toll Free:</span>
 							<strong><?php echo esc_html($phone_display); ?></strong>
 						</a>
 						<a class="ssx-tb" href="<?php echo esc_url($text_href); ?>">
@@ -1718,7 +1719,7 @@ $logo_id = get_theme_mod('custom_logo');
 								'loading'       => 'eager',
 								'decoding'      => 'async',
 								'fetchpriority' => 'high',
-								'sizes'         => '(max-width: 1199px) 250px, 400px',
+								'sizes'         => '(max-width: 767px) 240px, (max-width: 991px) 400px, (max-width: 1199px) 250px, 400px',
 							));
 						} else {
 							echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async">';
@@ -2010,7 +2011,7 @@ $logo_id = get_theme_mod('custom_logo');
 				width: min(90vw, 400px);
 				background: #fff;
 				color: var(--m-ink);
-				font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+				font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
 				font-size: 16px;
 				line-height: 1.4;
 				box-shadow: -12px 0 40px rgba(13, 34, 54, .28);
@@ -2526,7 +2527,7 @@ $logo_id = get_theme_mod('custom_logo');
 			<div class="ssxm__foot">
 				<a class="ssxm__contact" href="<?php echo esc_url($phone_href); ?>">
 					<?php echo $ssx_icon('phone', 18); // Static SVG. ?>
-					<span>Cell:</span>
+					<span>Toll Free:</span>
 					<strong><?php echo esc_html($phone_display); ?></strong>
 				</a>
 				<a class="ssxm__contact" href="<?php echo esc_url($text_href); ?>">

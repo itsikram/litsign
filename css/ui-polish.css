@@ -772,21 +772,27 @@
 }
 
 /* ---------- 7. Image skeletons ----------
-   A grey placeholder with a moving shine sits behind each product photo until it
-   loads; js/main.js adds .sk-done to the frame on load or error. The shine is a
-   pseudo-element behind the image (isolation + z-index -1), so a loaded photo
-   always paints over it, even before the script runs. */
-:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media) {
+   Every product thumbnail frame shows a grey placeholder with a moving shine
+   while its photo loads. js/main.js (skeleton block at the end) adds .sk-done
+   once the visible photo has loaded or failed.
+
+   First load: the placeholder sits behind the image (isolation + z-index -1),
+   so a photo always paints over it, even before the script runs.
+   Photo change (card gallery arrow/swipe, product page thumbnail): the script
+   adds .sk-swap and the placeholder covers the old photo until the new one has
+   loaded. Sale badges and gallery controls stay on top. */
+:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media, .cla-style-image, .bd-product-image, .sc-cat-tile-img, .cart-line-image) {
   position: relative;
   overflow: hidden;
   isolation: isolate;
 }
 
-:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media):not(.sk-done) {
+:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media, .cla-style-image, .bd-product-image, .sc-cat-tile-img, .cart-line-image):not(.sk-done) {
   background-color: #e9eff4;
 }
 
-:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media):not(.sk-done)::before {
+/* Moving shine. */
+:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media, .cla-style-image, .bd-product-image, .sc-cat-tile-img, .cart-line-image):not(.sk-done)::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -797,6 +803,20 @@
   pointer-events: none;
 }
 
+/* Solid fill that hides the previous photo during a change. */
+:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media, .cla-style-image, .bd-product-image, .sc-cat-tile-img, .cart-line-image).sk-swap:not(.sk-done)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: #e9eff4;
+  pointer-events: none;
+}
+
+:is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media, .cla-style-image, .bd-product-image, .sc-cat-tile-img, .cart-line-image).sk-swap:not(.sk-done)::after {
+  z-index: 1;
+}
+
 @keyframes sk-shine {
   to {
     transform: translateX(100%);
@@ -804,7 +824,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media):not(.sk-done)::before {
+  :is(.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media, .cla-style-image, .bd-product-image, .sc-cat-tile-img, .cart-line-image):not(.sk-done)::after {
     animation: none;
     transform: none;
     background: none;

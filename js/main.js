@@ -1397,24 +1397,52 @@
   }
 })();
 
-// Image skeletons (css/ui-polish.css section 7): the frame shimmers until its
-// photo loads or fails. A capture listener catches lazy images loading later.
+// Image skeletons (css/ui-polish.css section 7): a product thumbnail frame
+// shimmers until the photo it is showing has loaded (or failed). When a frame
+// switches photo (card gallery arrow/swipe, product page thumbnail click) it
+// gets .sk-swap, so the placeholder covers the old photo until the new one is in.
 (function () {
-  const frames = '.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media';
-  const done = (img) => {
-    const frame = img.closest(frames);
-    if (frame) frame.classList.add('sk-done');
+  const frames = '.pb-image-top, .sc-card-media, .sf-type-image, .related-product-image, .home-types-image, .product-image-zoom, .gallery-image-item, .srp-card__media, .cla-style-image, .bd-product-image, .sc-cat-tile-img, .cart-line-image';
+  // The photo on show: the active slide in a card gallery, otherwise the only image.
+  const shownImage = (frame) => frame.querySelector('img.pb-gallery-image.is-active') || frame.querySelector('img');
+  const isReady = (img) => !img || (img.complete && Boolean(img.getAttribute('src') || img.getAttribute('srcset')));
+  const sync = (frame, isChange) => {
+    const img = shownImage(frame);
+    frame.skImage = img;
+    frame.skSrc = img ? img.getAttribute('src') : null;
+    if (isReady(img)) {
+      frame.classList.add('sk-done');
+      frame.classList.remove('sk-swap');
+    } else {
+      frame.classList.remove('sk-done');
+      if (isChange) frame.classList.add('sk-swap');
+    }
   };
+  const frameOf = (node) => (node && node.tagName === 'IMG' ? node.closest(frames) : null);
+
+  document.querySelectorAll(frames).forEach((frame) => sync(frame, false));
+
+  // Load and error don't bubble; capture catches lazy images loading later.
   const onImage = (event) => {
-    if (event.target.tagName === 'IMG') done(event.target);
+    const frame = frameOf(event.target);
+    if (frame) sync(frame, false);
   };
   document.addEventListener('load', onImage, true);
   document.addEventListener('error', onImage, true);
-  document.querySelectorAll(frames).forEach((frame) => {
-    const imgs = [...frame.querySelectorAll('img')];
-    // No photo at all (placeholder icon), or one already finished loading.
-    if (!imgs.length || imgs.some((img) => img.complete && img.getAttribute('src'))) {
-      frame.classList.add('sk-done');
-    }
-  });
+
+  // A new src, or another gallery slide becoming active, is a photo change.
+  // The observer runs before the next paint, so the old photo never flashes.
+  new MutationObserver((records) => {
+    const changed = new Set();
+    records.forEach((record) => {
+      const frame = frameOf(record.target);
+      if (frame) changed.add(frame);
+    });
+    // Only a different photo counts; class churn on the same slide (e.g. the
+    // gallery setup on page load) keeps the first-load behaviour.
+    changed.forEach((frame) => {
+      const img = shownImage(frame);
+      sync(frame, img !== frame.skImage || (img && img.getAttribute('src') !== frame.skSrc));
+    });
+  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['src', 'srcset', 'class'] });
 })();

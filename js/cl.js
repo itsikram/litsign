@@ -32,11 +32,19 @@ const backLitCost = parseFloat(document.getElementById("backLitCost").value);
 const eightFtcableCost = parseFloat(
   document.getElementById("eightFtcableCost").value,
 );
-// Product sale percentage; the cart takes it off the whole design total.
-const discountPercent = Math.min(
+// The product's own discount gives its everyday price: the cart takes it off the whole
+// design total, but it is never shown as a sale.
+const everydayPercent = Math.min(
   100,
   Math.max(0, parseFloat(document.getElementById("clDiscountPercent")?.value) || 0),
 );
+// Dated sale from Settings > Storefront Sign (0 outside its dates): the cart takes it off
+// the everyday price, and only it is shown as a sale.
+const discountPercent = Math.min(
+  100,
+  Math.max(0, parseFloat(document.getElementById("clPromoPercent")?.value) || 0),
+);
+const promoEnds = document.getElementById("clPromoPercent")?.dataset.ends || "";
 const hasTrimcap = document.getElementById("hasTrimcap").value;
 const hasReturn = document.getElementById("hasReturn").value;
 const hasFace = document.getElementById("hasFace").value;
@@ -509,6 +517,7 @@ function updateSaveButtonState() {
   }
   saveBtn.disabled = !hasElements;
   saveBtn.setAttribute("aria-disabled", String(!hasElements));
+  updateSelectAllButton();
   if (addToCartBtn && !addToCartBtn.hasAttribute("aria-busy")) {
     addToCartBtn.disabled = !hasElements;
     addToCartBtn.setAttribute("aria-disabled", String(!hasElements));
@@ -1263,6 +1272,7 @@ function loadState(snapshot) {
 }
 
 function restoreSnapshot(snapshot) {
+  clearMultiSelection();
   nodeLists.forEach((item) => {
     const text = item.node.getAttr("textIndex");
     item.node.destroy();
@@ -1985,6 +1995,10 @@ function triggerTransformEvent() {
 }
 
 function updateHeightWidthInput(height, width, type) {
+  if (isMultiSelectActive() && clMultiSelect.transforming) {
+    renderMultiSelectionSize();
+    return;
+  }
   let nodeHeight = height ? parseFloat(height) : false;
   let nodeWidth = width ? parseFloat(width) : false;
   switch (type) {
@@ -2055,6 +2069,10 @@ function updateHeightWidthInput(height, width, type) {
 
 function updateNodeDimensionInputs(node, type = null) {
   if (!node) {
+    return;
+  }
+  if (isInMultiSelection(node) && !clMultiSelect.applying) {
+    renderMultiSelectionSize();
     return;
   }
 
@@ -2235,6 +2253,10 @@ let handleChooseItemClick = (
 ) => {
   removeClassFromSiblings(slideChooseContainer, "active");
   slideChooseItem.classList.add("active");
+  if (isMultiSelectActive() && !clMultiSelect.applying) {
+    applyChoiceToMultiSelection(slideChooseItem, slideChooseContainer, actionId);
+    return;
+  }
 
   let itemType = slideChooseItem.dataset.type;
   let itemValue = slideChooseItem.dataset.value;
@@ -2860,6 +2882,10 @@ let updateActiveItem = (type, value) => {
 };
 
 let updateDimenstionDisplay = () => {
+  if (isMultiSelectActive()) {
+    renderMultiSelectionHeading();
+    return;
+  }
   let elementIndexNumber = "#" + getNodeIndex(selectedNode._id);
   let elementDimenstionText = getTextDimensions(selectedNode);
 
@@ -2871,6 +2897,14 @@ const focusedTransformColor = "#2563eb";
 const unfocusedTransformColor = "#808080";
 
 let updateFocusedTransformer = (node) => {
+  // Selecting anything outside the group (a new element, a raceway) ends group editing.
+  if (isMultiSelectActive()) {
+    if (isInMultiSelection(node)) {
+      showMultiSelectionTransformer();
+      return;
+    }
+    clearMultiSelection();
+  }
   stage.find("Transformer").forEach((transformer) => {
     const isFocused = node && transformer === node.getAttr("transformer");
     transformer.borderStroke(
@@ -2893,6 +2927,13 @@ let updateFocusedTransformer = (node) => {
 };
 
 let updateLeftsideBar = () => {
+  if (isMultiSelectActive()) {
+    if (isInMultiSelection(selectedNode)) {
+      renderMultiSelectionPanel();
+      return;
+    }
+    clearMultiSelection();
+  }
   updateFocusedTransformer(selectedNode);
   document
     .getElementById("cornerRadiusContainer")
@@ -3122,12 +3163,15 @@ const formatMoney = (amount) =>
     maximumFractionDigits: 2,
   });
 
+// An amount at the everyday price, and after any dated sale.
+const everydayPrice = (amount) =>
+  normalizeCost(amount) * (1 - everydayPercent / 100);
 const salePrice = (amount) =>
-  normalizeCost(amount) * (1 - discountPercent / 100);
+  everydayPrice(amount) * (1 - discountPercent / 100);
 
 // Design totals, matching wholesale_cl_design_quote() and wholesale_price_quote():
 // power supply, lighting and cable are only charged once there is something to
-// power, and the sale percentage comes off the whole total.
+// power, and the product discount, then any dated sale, come off the whole total.
 const getDesignTotals = (elements, extras) => {
   let elementTotal = 0;
   elements.forEach((element) => {
@@ -3143,8 +3187,9 @@ const getDesignTotals = (elements, extras) => {
   const lit = (elementTotal * litPercent) / 100;
   const cable =
     hasElements && extras.cable && extras.cable.qty > 0 ? normalizeCost(extras.cable.cost) : 0;
-  const regular = hasElements ? elementTotal + powerSupply + lit + cable : 0;
-  const sale = salePrice(regular);
+  const listed = hasElements ? elementTotal + powerSupply + lit + cable : 0;
+  const regular = everydayPrice(listed);
+  const sale = salePrice(listed);
 
   return { elementTotal, powerSupply, litPercent, lit, cable, regular, sale, saving: regular - sale };
 };
@@ -3175,9 +3220,9 @@ const createCell = (text, className) => {
   return cell;
 };
 
-// Regular price cell, plus a sale price cell when the product is on sale.
+// Everyday price cell, plus a sale price cell during a dated sale.
 const appendPriceCells = (row, amount) => {
-  row.appendChild(createCell(formatMoney(amount), "num cost-regular"));
+  row.appendChild(createCell(formatMoney(everydayPrice(amount)), "num cost-regular"));
   if (discountPercent > 0) {
     row.appendChild(createCell(formatMoney(salePrice(amount)), "num cost-sale"));
   }
@@ -3228,8 +3273,8 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     row.appendChild(
       createCell(`${elementHeight.toFixed(1)}″ × ${elementWidth.toFixed(1)}″`, "cost-size"),
     );
-    row.appendChild(createCell(formatMoney(elementCost), "num"));
-    row.appendChild(createCell(formatMoney(elementColorCost), "num"));
+    row.appendChild(createCell(formatMoney(everydayPrice(elementCost)), "num"));
+    row.appendChild(createCell(formatMoney(everydayPrice(elementColorCost)), "num"));
     appendPriceCells(row, elementCost + elementColorCost);
     detailTableBody.appendChild(row);
   }
@@ -3280,7 +3325,7 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     if (discountPercent > 0) {
       summaryHtml +=
         `<div class="cost-summary-row"><span>Regular price</span><del>${formatMoney(totals.regular)}</del></div>` +
-        `<div class="cost-summary-row cost-summary-saving"><span>Sale discount (${+discountPercent.toFixed(2)}% off)</span><span>−${formatMoney(totals.saving)}</span></div>` +
+        `<div class="cost-summary-row cost-summary-saving"><span>Sale discount (${+discountPercent.toFixed(2)}% off${promoEnds ? ", ends " + promoEnds : ""})</span><span>−${formatMoney(totals.saving)}</span></div>` +
         `<div class="cost-summary-row cost-summary-total"><span>Sale price</span><strong>${formatMoney(totals.sale)}</strong></div>`;
     } else {
       summaryHtml +=
@@ -6308,6 +6353,7 @@ window.addEventListener("load", function (e) {
   // Uploads a PNG of the canvas (selection handles hidden) through wholesale_upload_design
   // and returns the attachment id with the design JSON the product page and cart expect.
   async function uploadDesignSnapshot() {
+    exitMultiSelection();
     const transformers = [];
     nodeLists.forEach((nodeContainer) => {
       const transformer = nodeContainer.node.getAttr("transformer");
@@ -6422,6 +6468,7 @@ window.addEventListener("load", function (e) {
     if (saveBtn.disabled) {
       return;
     }
+    exitMultiSelection();
 
     const originalButtonText = saveBtn.textContent.trim();
     const loadingImage = document.createElement("img");
@@ -7052,6 +7099,9 @@ function getElementEditor() {
 }
 
 function getSelectedTransformer() {
+  if (isMultiSelectActive()) {
+    return clMultiSelect.transformer;
+  }
   if (!selectedNode || !selectedNode.getLayer()) {
     return null;
   }
@@ -7060,6 +7110,9 @@ function getSelectedTransformer() {
 }
 
 function getElementKindLabel(node) {
+  if (isMultiSelectActive()) {
+    return clMultiSelect.nodes.length + " items";
+  }
   if (!node) {
     return "element";
   }
@@ -7490,3 +7543,580 @@ function showBuilderDraftNotice(savedAt) {
     }, { once: true });
   }
 }
+
+// Select all: one transformer around every letter and shape (raceways excluded) so
+// font, colors, size and position change together. selectedNode stays on a "lead"
+// element (a text when there is one) so the settings panel and option pickers keep
+// working; every change is replayed on each selected element through the same code
+// a single selection uses, with selectedNode pointing at that element.
+var clMultiSelect = {
+  active: false,
+  nodes: [],
+  lead: null,
+  transformer: null,
+  applying: false,
+  transforming: false,
+  pendingChoice: null,
+  dragFrame: null,
+};
+
+function isMultiSelectActive() {
+  return !!(clMultiSelect && clMultiSelect.active);
+}
+
+function isInMultiSelection(node) {
+  return isMultiSelectActive() && !!node && clMultiSelect.nodes.includes(node);
+}
+
+function getMultiSelectableNodes() {
+  return nodeLists
+    .map((item) => item.node)
+    .filter((node) => node && node.getLayer() && !node.getAttr("textIndex"));
+}
+
+function isTypingTarget(element) {
+  return (
+    !!element &&
+    (element.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(element.tagName))
+  );
+}
+
+function updateSelectAllButton() {
+  const button = document.getElementById("selectAllBtn");
+  if (!button) {
+    return;
+  }
+  const active = isMultiSelectActive();
+  button.disabled = !active && getMultiSelectableNodes().length < 2;
+  button.setAttribute("aria-pressed", String(active));
+  button.title = active ? "Done editing all (Esc)" : "Select all letters and shapes (Ctrl+A)";
+}
+
+// Design-space box around the whole selection.
+function getMultiSelectionBounds() {
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  clMultiSelect.nodes.forEach((node) => {
+    const bounds = getNodeDesignBounds(node);
+    left = Math.min(left, bounds.x);
+    top = Math.min(top, bounds.y);
+    right = Math.max(right, bounds.x + bounds.width);
+    bottom = Math.max(bottom, bounds.y + bounds.height);
+  });
+  if (!Number.isFinite(left)) {
+    return { x: 0, y: 0, width: 0, height: 0 };
+  }
+  return { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+// Runs callback with selectedNode set to each element in turn (the store reducer and
+// the per-element handlers read selectedNode), then puts the previous selection back.
+function runOnMultiSelection(nodes, callback) {
+  const previousNode = selectedNode;
+  const previousType = selectedNodeType;
+  clMultiSelect.applying = true;
+  try {
+    nodes.forEach((node) => {
+      if (!node.getLayer()) {
+        return;
+      }
+      selectedNode = node;
+      selectedNodeType = node.getClassName();
+      callback(node);
+    });
+  } finally {
+    clMultiSelect.applying = false;
+    selectedNode = previousNode;
+    selectedNodeType = previousType;
+  }
+}
+
+// Largest change in scale that keeps every element inside the product's size limits.
+function clampMultiScale(factor) {
+  let lowest = 0;
+  let highest = Infinity;
+  clMultiSelect.nodes.forEach((node) => {
+    const bounds = getNodeDesignBounds(node);
+    const height = bounds.height / dpi;
+    const width = bounds.width / dpi;
+    if (height > 0) {
+      lowest = Math.max(lowest, minHeight / height);
+      highest = Math.min(highest, maxHeight / height);
+    }
+    // Letters are limited by height only, as in the single-element editor.
+    if (node.getClassName() !== "Text" && width > 0) {
+      lowest = Math.max(lowest, minWidth / width);
+      highest = Math.min(highest, maxWidth / width);
+    }
+  });
+  if (factor > 1) {
+    return Math.max(1, Math.min(factor, highest));
+  }
+  if (factor < 1) {
+    return Math.min(1, Math.max(factor, lowest));
+  }
+  return 1;
+}
+
+function showMultiSelectionTransformer() {
+  stage.find("Transformer").forEach((transformer) => {
+    if (transformer === clMultiSelect.transformer) {
+      transformer.moveToTop();
+      transformer.show();
+      transformer.forceUpdate();
+    } else {
+      transformer.hide();
+    }
+  });
+  layer.batchDraw();
+  syncElementEditor();
+}
+
+function renderMultiSelectionSize() {
+  const box = getMultiSelectionBounds();
+  sizeHeightInput.removeAttribute("readonly");
+  sizeWidthInput.removeAttribute("readonly");
+  sizeHeightInput.value = pxToIn(box.height);
+  sizeWidthInput.value = pxToIn(box.width);
+}
+
+function renderMultiSelectionHeading() {
+  const box = getMultiSelectionBounds();
+  elementIndexContainer.textContent = clMultiSelect.nodes.length + " items";
+  elementDimenstionContainer.textContent = "H:" + pxToIn(box.height) + " x W:" + pxToIn(box.width);
+}
+
+// Shows the shared choice on an option row, or "Mixed" when the elements differ.
+function syncMultiOptionLabel(type, key, nodes) {
+  const values = nodes
+    .map((node) => getElementById(node._id))
+    .filter((element) => element && element[key] && element[key].code !== undefined)
+    .map((element) => element[key]);
+  if (!values.length) {
+    return;
+  }
+  updateActiveItem(type, values[0].title + "/" + values[0].code);
+  if (values.some((value) => value.code !== values[0].code)) {
+    const name = document.querySelector(".select-" + type + " .name");
+    if (name) {
+      name.textContent = "Mixed";
+    }
+  }
+}
+
+function renderMultiSelectionPanel() {
+  const nodes = clMultiSelect.nodes;
+  const texts = nodes.filter((node) => node.getClassName() === "Text");
+  const setDisplay = (selector, display) => {
+    const element = document.querySelector(selector);
+    if (element) {
+      element.style.setProperty("display", display, "important");
+    }
+  };
+
+  showMultiSelectionTransformer();
+  setDisplay("#leftSidebar .item-textInput", "none");
+  setDisplay("#leftSidebar .item-font", texts.length ? "flex" : "none");
+  setDisplay("#leftSidebar .item-face", "flex");
+  setDisplay("#leftSidebar .item-return", "flex");
+  setDisplay("#leftSidebar .item-trimcap", hasTrimcap == "on" ? "flex" : "none");
+  setDisplay("#cornerRadiusContainer", "none");
+
+  if (texts.length) {
+    syncMultiOptionLabel("font", "font", texts);
+  }
+  syncMultiOptionLabel("face", "faceColor", nodes);
+  syncMultiOptionLabel("return", "returnColor", nodes);
+  syncMultiOptionLabel("trimcap", "trimcapColor", nodes);
+  const leadElement = getElementById(clMultiSelect.lead._id);
+  if (leadElement && leadElement.returnSize) {
+    updateActiveItem("return-size", leadElement.returnSize.title + "/" + leadElement.returnSize.code);
+  }
+  if (leadElement && leadElement.trimcapSize) {
+    updateActiveItem("trimcap-size", leadElement.trimcapSize.title + "/" + leadElement.trimcapSize.code);
+  }
+
+  const hint = document.querySelector("#leftSidebar .cl-panel-hint");
+  if (hint) {
+    if (hint.dataset.defaultText === undefined) {
+      hint.dataset.defaultText = hint.textContent;
+    }
+    hint.textContent =
+      "Changes apply to all " + nodes.length + " selected items. Drag to move them together, " +
+      "use the corner handles to resize. Tap one item to edit it alone.";
+  }
+
+  renderMultiSelectionHeading();
+  renderMultiSelectionSize();
+}
+
+// Re-selects the lead element (so the preview shows it) and redraws the group panel.
+function refreshMultiSelection() {
+  if (!isMultiSelectActive()) {
+    return;
+  }
+  const lead = clMultiSelect.lead;
+  selectedNode = lead;
+  selectedNodeType = lead.getClassName();
+  lead.fire("click");
+  renderMultiSelectionPanel();
+}
+
+function selectAllElements() {
+  const nodes = getMultiSelectableNodes();
+  if (nodes.length < 2) {
+    if (nodes.length === 1) {
+      nodes[0].fire("click");
+    }
+    return;
+  }
+
+  clearMultiSelection();
+  hideLeftSlider();
+
+  const transformer = new Konva.Transformer({
+    nodes,
+    keepRatio: true,
+    rotateEnabled: false,
+    rotateLineVisible: false,
+    enabledAnchors: ["top-left", "top-right", "bottom-left", "bottom-right"],
+    borderStroke: focusedTransformColor,
+    borderDash: [6, 4],
+    borderStrokeWidth: 2,
+    anchorStroke: focusedTransformColor,
+    anchorFill: "#ffffff",
+    name: "cl-multi-transformer",
+    boundBoxFunc: (oldBox, newBox) => {
+      if (oldBox.width <= 0 || newBox.width <= 1 || newBox.height <= 1) {
+        return oldBox;
+      }
+      const factor = newBox.width / oldBox.width;
+      return Math.abs(clampMultiScale(factor) - factor) > 1e-6 ? oldBox : newBox;
+    },
+  });
+  layer.add(transformer);
+  transformer.on("transformstart", () => {
+    clMultiSelect.transforming = true;
+  });
+  // Each element's own transformend handler has run by the next frame; finish after it.
+  transformer.on("transformend", () => {
+    requestAnimationFrame(finalizeMultiTransform);
+  });
+
+  clMultiSelect.active = true;
+  clMultiSelect.nodes = nodes;
+  clMultiSelect.lead = nodes.find((node) => node.getClassName() === "Text") || nodes[0];
+  clMultiSelect.transformer = transformer;
+  duplicateBtn.disabled = true;
+  updateSelectAllButton();
+  refreshMultiSelection();
+}
+
+// Drops the group selection without redrawing the panel (callers do that).
+function clearMultiSelection() {
+  if (!isMultiSelectActive()) {
+    return;
+  }
+  const transformer = clMultiSelect.transformer;
+  clMultiSelect.active = false;
+  clMultiSelect.nodes = [];
+  clMultiSelect.lead = null;
+  clMultiSelect.transformer = null;
+  clMultiSelect.transforming = false;
+  if (transformer) {
+    transformer.destroy();
+  }
+  duplicateBtn.disabled = false;
+  const hint = document.querySelector("#leftSidebar .cl-panel-hint");
+  if (hint && hint.dataset.defaultText !== undefined) {
+    hint.textContent = hint.dataset.defaultText;
+  }
+  updateSelectAllButton();
+  layer.batchDraw();
+}
+
+// Leaves group editing and shows the current element (the lead, or the one tapped).
+function exitMultiSelection() {
+  if (!isMultiSelectActive()) {
+    return;
+  }
+  clearMultiSelection();
+  if (selectedNode && selectedNode.getLayer()) {
+    selectedNode.fire("click");
+  } else {
+    updateLeftsideBar();
+  }
+}
+
+// Turns the scale left by the group transformer into real sizes and saves each element.
+function finalizeMultiTransform() {
+  if (!isMultiSelectActive()) {
+    return;
+  }
+  clMultiSelect.transforming = false;
+  runOnMultiSelection(clMultiSelect.nodes, (node) => {
+    if (node.getClassName() === "Text" && (node.scaleX() !== 1 || node.scaleY() !== 1)) {
+      // Letters are sized by font size; keep them unscaled like the height field does.
+      node.fontSize(node.fontSize() * Math.abs(node.scaleY()));
+      node.scale({ x: 1, y: 1 });
+    }
+    node.fire("transformend");
+  });
+  updateHeightWidthDisplay();
+  refreshMultiSelection();
+}
+
+function scaleMultiSelection(requestedFactor) {
+  const factor = clampMultiScale(requestedFactor);
+  if (!Number.isFinite(factor) || Math.abs(factor - 1) < 0.0005) {
+    renderMultiSelectionSize();
+    return;
+  }
+  saveState();
+  const box = getMultiSelectionBounds();
+  clMultiSelect.nodes.forEach((node) => {
+    const before = getNodeDesignBounds(node);
+    node.scale({ x: node.scaleX() * factor, y: node.scaleY() * factor });
+    const after = getNodeDesignBounds(node);
+    node.x(node.x() + box.x + (before.x - box.x) * factor - after.x);
+    node.y(node.y() + box.y + (before.y - box.y) * factor - after.y);
+  });
+  finalizeMultiTransform();
+}
+
+function persistMultiSelectionPositions() {
+  runOnMultiSelection(clMultiSelect.nodes, (node) => {
+    store.dispatch({
+      type: "UPDATE_ELEMENT",
+      payload: { id: node._id, x: node.x(), y: node.y() },
+    });
+  });
+}
+
+// An option picked from the picker, applied to every selected element.
+function applyChoiceToMultiSelection(slideChooseItem, slideChooseContainer, actionId) {
+  // The picker calls handleChooseItemClick once per column; apply the choice once.
+  if (clMultiSelect.pendingChoice === slideChooseItem) {
+    return;
+  }
+  clMultiSelect.pendingChoice = slideChooseItem;
+  Promise.resolve().then(() => {
+    clMultiSelect.pendingChoice = null;
+  });
+
+  const isFont = actionId === "font";
+  const targets = clMultiSelect.nodes.filter((node) => !isFont || node.getClassName() === "Text");
+  if (!targets.length) {
+    hideLeftSlider();
+    return;
+  }
+
+  saveState();
+  if (isFont) {
+    applyFontToMultiSelection(targets, slideChooseItem.dataset.name, slideChooseItem.dataset.value);
+  } else {
+    runOnMultiSelection(targets, () => {
+      handleChooseItemClick(slideChooseItem, slideChooseContainer, actionId);
+    });
+  }
+  hideLeftSlider();
+  // Element handlers queue their own redraws for the next frame; refresh after them.
+  requestAnimationFrame(refreshMultiSelection);
+}
+
+function applyFontToMultiSelection(texts, fontTitle, fontCode) {
+  fontFamily = fontCode;
+  activeFontCode = fontCode;
+  activeFontTitle = fontTitle;
+  const fontSelector = document.querySelector(".select-font");
+  if (fontSelector) {
+    fontSelector.dataset.active = fontTitle + "/" + fontCode;
+    fontSelector.querySelector(".name").textContent = fontTitle;
+  }
+
+  runOnMultiSelection(texts, (node) => {
+    node.fontFamily(fontCode);
+    store.dispatch({
+      type: "UPDATE_ELEMENT",
+      payload: { id: node._id, font: { title: fontTitle, code: fontCode } },
+    });
+    setTextFSI(node._id, "yes");
+    // Saves the new width (the letters' height does not change with the font).
+    node.fire("transformend");
+  });
+
+  // Measure again once the web font has arrived; the first pass may have used a fallback.
+  ensureFontLoaded(fontCode).then(() => {
+    const loaded = texts.filter((node) => node.getLayer() && node.fontFamily() === fontCode);
+    if (!loaded.length) {
+      return;
+    }
+    runOnMultiSelection(loaded, (node) => {
+      node.fontSize(node.fontSize() + 0.1);
+      node.fontSize(node.fontSize() - 0.1);
+      node.fire("transformend");
+    });
+    layer.batchDraw();
+    updateHeightWidthDisplay();
+    if (isMultiSelectActive()) {
+      refreshMultiSelection();
+    }
+  });
+  layer.batchDraw();
+  updateHeightWidthDisplay();
+}
+
+function deleteMultiSelection() {
+  const nodes = clMultiSelect.nodes.slice();
+  saveState();
+  clearMultiSelection();
+  nodes.forEach((node) => {
+    selectedNode = node;
+    selectedNodeType = node.getClassName();
+    store.dispatch({ type: "REMOVE_ELEMENT", payload: { id: node._id } });
+    const index = nodeLists.findIndex((item) => item.node === node);
+    if (index !== -1) {
+      nodeLists.splice(index, 1);
+    }
+    const transformer = node.getAttr("transformer");
+    if (transformer) {
+      transformer.destroy();
+    }
+    node.destroy();
+  });
+  selectedNode = null;
+  selectedNodeType = null;
+  updateSaveButtonState();
+  layer.draw();
+  updatePreview(null, null);
+  updateHeightWidthInput(100, 100);
+  updateHeightWidthDisplay();
+  updateLeftsideBar();
+  updateBottombarOverlay();
+}
+
+(function setupMultiSelect() {
+  const button = document.getElementById("selectAllBtn");
+  if (!button || typeof stage === "undefined") {
+    return;
+  }
+
+  button.addEventListener("click", () => {
+    if (isMultiSelectActive()) {
+      exitMultiSelection();
+    } else {
+      selectAllElements();
+    }
+  });
+
+  // These listeners are added before the builder's own (those wait for window load), so
+  // they run first and take over while several elements are selected.
+  const scaleFromInput = (input, dimension) => (event) => {
+    if (!isMultiSelectActive() || clMultiSelect.applying) {
+      return;
+    }
+    event.stopImmediatePropagation();
+    const current = getMultiSelectionBounds()[dimension];
+    const requested = parseFloat(input.value) * dpi;
+    if (!(requested > 0) || !(current > 0)) {
+      renderMultiSelectionSize();
+      return;
+    }
+    scaleMultiSelection(requested / current);
+  };
+  sizeHeightInput.addEventListener("change", scaleFromInput(sizeHeightInput, "height"));
+  sizeWidthInput.addEventListener("change", scaleFromInput(sizeWidthInput, "width"));
+
+  deleteBtn.addEventListener("click", (event) => {
+    if (!isMultiSelectActive()) {
+      return;
+    }
+    event.stopImmediatePropagation();
+    // The Delete key also "clicks" this button; never wipe the group while typing.
+    if (!event.isTrusted && isTypingTarget(document.activeElement)) {
+      return;
+    }
+    deleteMultiSelection();
+  });
+
+  duplicateBtn.addEventListener("click", (event) => {
+    if (isMultiSelectActive()) {
+      event.stopImmediatePropagation();
+    }
+  });
+
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      const typing = isTypingTarget(document.activeElement);
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "a") {
+        const inBuilder =
+          document.activeElement === document.body ||
+          (document.activeElement && document.activeElement.closest(".dt-container"));
+        if (!typing && inBuilder && getMultiSelectableNodes().length > 1) {
+          event.preventDefault();
+          if (!isMultiSelectActive()) {
+            selectAllElements();
+          }
+        }
+        return;
+      }
+      if (!isMultiSelectActive() || typing) {
+        return;
+      }
+      if (event.key === "Escape") {
+        // An open option picker or editing sheet closes first.
+        const slider = document.getElementById("leftSidebarSlider");
+        if (!(slider && slider.classList.contains("is-open")) && !isElementEditorOpen()) {
+          exitMultiSelection();
+        }
+        return;
+      }
+      const step = { ArrowUp: [0, -5], ArrowDown: [0, 5], ArrowLeft: [-5, 0], ArrowRight: [5, 0] }[
+        event.key
+      ];
+      if (!step) {
+        return;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      clMultiSelect.nodes.forEach((node) => node.move({ x: step[0], y: step[1] }));
+      persistMultiSelectionPositions();
+      updateHeightWidthDisplay();
+      renderMultiSelectionHeading();
+      layer.batchDraw();
+    },
+    true,
+  );
+
+  // Tapping one element, or empty canvas, goes back to editing a single element.
+  stage.on("click tap", (event) => {
+    if (!isMultiSelectActive()) {
+      return;
+    }
+    const transformer = clMultiSelect.transformer;
+    if (transformer && (event.target === transformer || transformer.isAncestorOf(event.target))) {
+      return;
+    }
+    exitMultiSelection();
+  });
+
+  // Dragging one selected element moves the rest; save every element's new position.
+  stage.on("dragend", () => {
+    if (!isMultiSelectActive() || clMultiSelect.dragFrame) {
+      return;
+    }
+    clMultiSelect.dragFrame = requestAnimationFrame(() => {
+      clMultiSelect.dragFrame = null;
+      if (!isMultiSelectActive()) {
+        return;
+      }
+      persistMultiSelectionPositions();
+      refreshMultiSelection();
+    });
+  });
+
+  updateSelectAllButton();
+})();

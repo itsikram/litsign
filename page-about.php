@@ -66,7 +66,7 @@ get_header();
 			<h3>See your price before you order</h3>
 			<p>Every product shows its price online. Choose a channel letter style, enter your wording, letter height and colors, or use the <a href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">online sign builder</a>, and your total updates as you go. For logos and larger projects, <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
 			<h3>Built to order and tested</h3>
-			<p>Every sign is made to order. Channel letters are tested before they ship and arrive ready to install, with a wiring diagram and installation pattern for your installer. Listed LED modules, power supplies and qualifying letters carry a five-year warranty.</p>
+			<p>Every sign is made to order. Channel letters are tested before they ship and arrive ready to install, with a wiring diagram and installation pattern for your installer. All 7 channel letter styles carry a five-year warranty, and the LED modules and power supplies each carry their own five-year warranty.</p>
 			<h3>Real people to help</h3>
 			<p>Our sign specialists answer calls, texts and email Monday to Friday, 8am to 5pm Pacific, and can help you pick a style, size your letters or check your artwork before you order.</p>
 		</div>

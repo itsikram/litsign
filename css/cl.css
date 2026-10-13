@@ -424,6 +424,10 @@
 }
 .dt-container .editor-topbar .button-group button:hover { background: var(--cl-soft); border-color: var(--cl-line); }
 .dt-container .editor-topbar .button-group button:disabled { opacity: 0.35; cursor: default; background: transparent; border-color: transparent; }
+/* Select all: pressed while every letter and shape is being edited together. */
+.dt-container .editor-topbar .button-group .cl-tool-icon { display: block; flex: none; }
+.dt-container .editor-topbar .button-group #selectAllBtn[aria-pressed="true"] { background: var(--cl-accent-soft); border-color: var(--cl-accent); color: var(--cl-accent-ink); }
+.dt-container .editor-topbar .button-group #selectAllBtn[aria-pressed="true"] .cl-tool-label { color: var(--cl-accent-ink); }
 .dt-container #deleteBtn:hover,
 .dt-container #clearBuilderBtn:hover { color: var(--cl-danger); background: #fbe9e9; }
 .cl-divider { width: 1px; height: 24px; margin: 0 2px; background: var(--cl-line); }
@@ -1013,10 +1017,12 @@
   .dt-container .topbar-left-button { justify-content: center; min-height: 44px; padding: 8px 6px; font-size: 13px; }
   /* Edit tools: icon over a short label, spread across the row. */
   .dt-container .editor-topbar .right { padding-top: 6px; border-top: 1px solid var(--cl-line); }
-  .dt-container .editor-topbar .button-group { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+  .dt-container .editor-topbar .button-group { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; }
   .dt-container .editor-topbar .button-group button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: auto; height: 50px; }
   .dt-container .editor-topbar .button-group button i { font-size: 15px; }
   .cl-tool-label { display: block; max-width: 100%; overflow: hidden; font-size: 10px; font-weight: 600; line-height: 1; color: var(--cl-muted); white-space: nowrap; text-overflow: ellipsis; }
+  /* Eight tools share the row; labels may use the gap between buttons. */
+  .dt-container .editor-topbar .button-group .cl-tool-label { max-width: calc(100% + 6px); margin: 0 -3px; }
   .cl-divider { display: none; }
   .dt-container .shape-dropdown { position: static; }
 

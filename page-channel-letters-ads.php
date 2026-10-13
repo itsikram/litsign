@@ -261,7 +261,7 @@ if (!function_exists('wholesale_cla_icon')) {
 				if ($logo_id) {
 					echo wp_get_attachment_image($logo_id, 'full', false, array('alt' => get_bloginfo('name'), 'class' => 'cla-logo', 'loading' => 'eager', 'decoding' => 'async', 'sizes' => '240px'));
 				} else {
-					echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="cla-logo" width="2417" height="261" loading="eager" decoding="async">';
+					echo wholesale_logo_fallback_html('cla-logo');
 				}
 				?>
 			</a>
@@ -454,7 +454,7 @@ if (!function_exists('wholesale_cla_icon')) {
 				</div>
 				<ul class="cla-why-list">
 					<li><?php echo wholesale_cla_icon('badge'); ?><span><strong>UL listed</strong> outdoor channel letter signs with sign section labels.</span></li>
-					<li><?php echo wholesale_cla_icon('shield'); ?><span><strong>5-year warranty</strong> on listed LED modules, power supplies and qualifying letters.</span></li>
+					<li><?php echo wholesale_cla_icon('shield'); ?><span><strong>5-year warranty</strong> on all 7 channel letter styles, plus the LED modules and power supplies.</span></li>
 					<li><?php echo wholesale_cla_icon('flag'); ?><span><strong>Made in USA</strong> with .040 aluminum or welded stainless steel returns and acrylic faces.</span></li>
 					<li><?php echo wholesale_cla_icon('truck'); ?><span><strong>Fast shipping options</strong>: standard, 3-day, 2-day or overnight after manufacturing.</span></li>
 				</ul>
@@ -491,7 +491,7 @@ if (!function_exists('wholesale_cla_icon')) {
 					</details>
 					<details>
 						<summary>What warranty do I get?</summary>
-						<p>Outdoor channel letter signs are UL listed with sign section labels. Listed LED modules, power supplies and qualifying letters carry a five-year warranty.</p>
+						<p>Outdoor channel letter signs are UL listed with sign section labels. All 7 channel letter styles carry a five-year warranty, and the LED modules and power supplies each carry their own five-year warranty.</p>
 					</details>
 					<details>
 						<summary>Can I pick up my order?</summary>

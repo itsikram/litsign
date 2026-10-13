@@ -95,12 +95,13 @@ $occasions = array(
 	)),
 );
 
-// Banner materials: product slug, material, best for, outdoors.
+// Banner materials: product slug, material, best for, outdoors, and an optional "from"
+// label for products sold as a fixed-price set (priced by wholesale_product_default_total()).
 $materials = array(
 	array('13oz-vinyl-banner', '13oz Vinyl', 'Storefronts, sales and everyday outdoor use', 'Yes'),
 	array('18oz-blockout-banner', '18oz Blockout Vinyl', 'Double-sided banners and long outdoor runs', 'Yes'),
 	array('mesh-banner', 'Mesh Vinyl', 'Fences, scaffolding and windy locations', 'Yes'),
-	array('pole-banner-set-banner-hardware', 'Pole Banner Set', 'Street and parking lot light poles', 'Yes'),
+	array('pole-banner-set-banner-hardware', 'Pole Banner Set', 'Street and parking lot light poles', 'Yes', 'Sets from'),
 	array('fabric-banner-9oz-wrinkle-free-copy', '9oz Wrinkle-Free Fabric', 'Indoor backdrops, events and photos', 'Indoor'),
 	array('backlit-banner', 'Backlit Banner', 'Lightboxes and illuminated displays', 'In a lightbox'),
 );
@@ -354,12 +355,13 @@ $page_hero_background = wholesale_hero_background_style($page_hero_image, $defau
 					<tbody>
 						<?php foreach ($materials as $material) : ?>
 							<?php $url = $product_url($material[0]); ?>
+							<?php $set_total = isset($material[4]) ? wholesale_product_default_total($material[0]) : null; ?>
 							<?php if ($url) : ?>
 								<tr>
 									<th scope="row"><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($material[1]); ?></a></th>
 									<td><?php echo esc_html($material[2]); ?></td>
 									<td><?php echo esc_html($material[3]); ?></td>
-									<td class="cl-compare-price"><?php echo wp_kses_post(wholesale_seo_product_starting_text($material[0])); ?></td>
+									<td class="cl-compare-price"><?php echo null !== $set_total ? esc_html($material[4] . ' $' . number_format($set_total, 2)) : wp_kses_post(wholesale_seo_product_starting_text($material[0])); ?></td>
 								</tr>
 							<?php endif; ?>
 						<?php endforeach; ?>

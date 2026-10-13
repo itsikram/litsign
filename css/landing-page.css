@@ -20,8 +20,7 @@
       rgba(16, 24, 30, 0.98) 0%,
       rgba(16, 24, 30, 0.88) 38%,
       rgba(16, 24, 30, 0.32) 100%
-    ),
-    url("../img/footer-bg-2.jpg") center/cover;
+    );
   color: #fff;
   padding: 0 0 26px;
   position: relative;
@@ -114,9 +113,11 @@
   bottom: 0;
   width: 55%;
   height: 88%;
+  /* Was img/footer-bg-1.jpg, a supplier photo of CA, TX and PA facilities
+     the business does not have. */
   background:
     linear-gradient(130deg, #10181e 5%, transparent 30%),
-    url("../img/footer-bg-1.jpg") center/cover;
+    radial-gradient(ellipse at 60% 45%, #2b3c48 0%, #16222b 55%, #10181e 100%);
   opacity: 0.82;
 }
 .landing-sign-mockup {
@@ -562,14 +563,15 @@
       rgba(7, 16, 24, 0.18) 68%,
       rgba(7, 16, 24, 0.08) 100%
     ),
-    url("../img/landing-hero-1440.webp") center center / cover no-repeat;
+    /* Set in Settings > Storefront Sign > Images (wholesale_landing_hero_style()). */
+    var(--landing-hero-wide, none) center center / cover no-repeat;
 }
 
 @media (max-width: 767px) {
   .landing-page .landing-hero {
     background:
       linear-gradient(90deg, rgba(7, 16, 24, 0.94) 0%, rgba(7, 16, 24, 0.82) 34%, rgba(7, 16, 24, 0.18) 68%, rgba(7, 16, 24, 0.08) 100%),
-      url("../img/landing-hero-960.webp") center center / cover no-repeat;
+      var(--landing-hero-phone, none) center center / cover no-repeat;
   }
 }
 

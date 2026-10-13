@@ -239,6 +239,52 @@ function wholesale_ads_click_conversions()
 }
 
 /**
+ * Conversion labels fixed in the theme (purchase, website calls).
+ */
+const WHOLESALE_ADS_PURCHASE_LABEL = 'UkFKCJGGp_kcEPW2yt9E';
+const WHOLESALE_ADS_CALL_LABEL = 'OK42COLkgPocEPW2yt9E';
+
+/**
+ * The quote request label: the theme setting, else the built-in default.
+ */
+function wholesale_ads_lead_label()
+{
+	$label = trim((string) wholesale_get_setting('google_ads_lead_label'));
+
+	return '' !== $label ? $label : wholesale_setting_defaults()['google_ads_lead_label'];
+}
+
+/**
+ * Conversions the theme always sends, for the settings page.
+ *
+ * @return array[] Each: name, label, when.
+ */
+function wholesale_ads_builtin_conversions()
+{
+	return array(
+		array('name' => 'Purchase', 'label' => WHOLESALE_ADS_PURCHASE_LABEL, 'when' => 'Once per order on the order confirmation page, with the order total, order number and customer details (enhanced conversions).'),
+		array('name' => 'Quote request', 'label' => wholesale_ads_lead_label(), 'when' => 'Once per quote, on the page the quote form returns to (contact page, /custom-channel-letters/, /banners-displays/, landing pages).'),
+		array('name' => 'Calls from website', 'label' => WHOLESALE_ADS_CALL_LABEL, 'when' => 'Google shows ad visitors a forwarding number in place of 866-436-2101 and counts their calls. Not a click event.'),
+	);
+}
+
+/**
+ * Every label the theme sends from its own triggers, so a page-view
+ * conversion box can't send the same action a second time.
+ *
+ * @return string[]
+ */
+function wholesale_ads_sitewide_labels()
+{
+	$labels = wp_list_pluck(wholesale_ads_builtin_conversions(), 'label');
+	foreach (array_keys(wholesale_ads_click_conversions()) as $key) {
+		$labels[] = trim((string) wholesale_get_setting($key));
+	}
+
+	return array_values(array_filter($labels));
+}
+
+/**
  * The GA4 measurement ID from the theme settings, or '' when unset or malformed.
  */
 function wholesale_ga4_measurement_id()
@@ -280,13 +326,21 @@ function wholesale_ads_click_tracking_script()
 				gtag('event', 'conversion', params);
 			}
 
+			// A double tap on the same link counts once.
+			var lastTap = {};
+			function tap(key) {
+				var now = Date.now();
+				if (lastTap[key] && now - lastTap[key] < 3000) return;
+				lastTap[key] = now;
+				convert(key);
+			}
 			document.addEventListener('click', function (e) {
 				var link = e.target.closest ? e.target.closest('a[href]') : null;
 				if (!link) return;
 				var href = link.getAttribute('href').trim().toLowerCase();
-				if (0 === href.indexOf('tel:')) convert('phone_tap');
-				else if (0 === href.indexOf('sms:')) convert('sms_tap');
-				else if (0 === href.indexOf('mailto:')) convert('email_tap');
+				if (0 === href.indexOf('tel:')) tap('phone_tap');
+				else if (0 === href.indexOf('sms:')) tap('sms_tap');
+				else if (0 === href.indexOf('mailto:')) tap('email_tap');
 			}, true);
 
 			var started = false;

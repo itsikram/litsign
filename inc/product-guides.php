@@ -45,12 +45,12 @@ function wholesale_product_guides()
 		'reflective-aluminum-sandwich-board' => array(
 			'intro' => array(
 				'A reflective aluminum sandwich board is a 1/8" thick aluminum composite panel faced with 4 mil reflective vinyl, so your sign stays visible in low light and at night. It is the most rigid and longest lasting reflective sign we make.',
-				'Unlike the fixed sizes of a reflective aluminum sign, it is cut to any size from 3" x 4" up to 48" x 96". Corners are rounded to 1/4" and you can add .25" holes for mounting. It is waterproof and UV safe for years of outdoor use. Sizes over 46" x 38" (or 48" x 30") are store pickup only.',
+				'Unlike the fixed sizes of a reflective aluminum sign, it is cut to any size from 3" x 4" up to 48" x 96". Corners are rounded to 1/4" and you can add .25" holes for mounting. It is waterproof and UV safe for years of outdoor use. Sizes over 46" x 38" (or 48" x 30") are too big to ship by parcel, so call 866-436-2101 before ordering one.',
 			),
 			'uses' => array('Large parking lot and property signs', 'Building, dock and warehouse identification', 'Construction and job site signs that stay up for months', 'Custom-size reflective panels for gates and entrances'),
 			'faq' => array(
 				array('q' => 'How is this different from a reflective aluminum sign?', 'a' => 'The sandwich board is a thicker 1/8" aluminum composite panel and can be any size from 3" x 4" to 48" x 96". The reflective aluminum sign is a thinner .040 aluminum sheet in three standard sizes.'),
-				array('q' => 'Can large sizes be shipped?', 'a' => 'Signs up to 46" x 38" or 48" x 30" ship. Larger panels, up to 48" x 96", are store pickup only.'),
+				array('q' => 'Can large sizes be shipped?', 'a' => 'Signs up to 46" x 38" or 48" x 30" ship by parcel. Larger panels, up to 48" x 96", are too big to ship by parcel, so call 866-436-2101 before ordering one.'),
 				array('q' => 'Can it be printed on both sides?', 'a' => 'Yes, choose single sided (4/0) or double sided (4/4) printing.'),
 			),
 			'related' => array('aluminum-sandwich-board', 'dry-erase-aluminum-sandwich-board', 'reflective-aluminum-sign', 'reflective-pvc-board'),
@@ -59,7 +59,7 @@ function wholesale_product_guides()
 		'reflective-coroplast-sign-hstake' => array(
 			'intro' => array(
 				'Reflective coroplast signs are lightweight 4mm corrugated plastic signs faced with 4 mil reflective vinyl, so they catch headlights and stay readable around the clock. They cost far less than aluminum, which makes them a smart choice for signs that need to stay up for weeks or months rather than years.',
-				'Coroplast is waterproof and UV safe. Order the sign with an H-stake to push it straight into a lawn or roadside, or order the sign only. Custom sizes run up to 48" x 96"; anything over 46" x 38" (or 48" x 30") is store pickup only.',
+				'Coroplast is waterproof and UV safe. Order the sign with an H-stake to push it straight into a lawn or roadside, or order the sign only. Custom sizes run up to 48" x 96"; anything over 46" x 38" (or 48" x 30") is too big to ship by parcel, so call 866-436-2101 before ordering one.',
 			),
 			'uses' => array('Event parking and direction signs', 'Roadside and lawn signs that must be seen at dusk', 'Construction, detour and temporary notice signs', 'Open house and real estate directional signs'),
 			'faq' => array(
@@ -87,7 +87,7 @@ function wholesale_product_guides()
 		'dry-erase-aluminum-sandwich-board' => array(
 			'intro' => array(
 				'A dry erase aluminum sandwich board gives you a printed, branded sign that you can still write on. Your design is UV printed onto adhesive vinyl, finished with a gloss dry erase coating and mounted on a 1/8" aluminum composite panel, so daily specials, schedules and notes wipe clean while the printed graphics stay put.',
-				'Aluminum is waterproof and UV safe, so the board works inside or out for years. It is cut to any size from 3" x 4" up to 48" x 96", single or double sided. Sizes over 46" x 38" (or 48" x 30") are store pickup only.',
+				'Aluminum is waterproof and UV safe, so the board works inside or out for years. It is cut to any size from 3" x 4" up to 48" x 96", single or double sided. Sizes over 46" x 38" (or 48" x 30") are too big to ship by parcel, so call 866-436-2101 before ordering one.',
 			),
 			'uses' => array('Restaurant and cafe specials boards', 'Job site, warehouse and production schedules', 'Classroom, gym and office planning boards', 'Event check-in and wayfinding boards'),
 			'faq' => array(
@@ -101,13 +101,13 @@ function wholesale_product_guides()
 		'foam-board' => array(
 			'intro' => array(
 				'Foam board is the lightest rigid sign we print: a 3/16" white foamcore panel with your design UV printed directly on the surface. It stays flat, looks sharp up close and is easy to carry, which is why it is the go-to choice for presentations and indoor displays.',
-				'Foam board is for indoor use only and is not waterproof. Sizes run up to 48" x 96", single or double sided; anything over 46" x 38" (or 48" x 30") is store pickup only. For signs that go outside, choose <a href="/product/coroplast/">coroplast</a> or <a href="/product/pvc-board/">PVC board</a>.',
+				'Foam board is for indoor use only and is not waterproof. Sizes run up to 48" x 96", single or double sided; anything over 46" x 38" (or 48" x 30") is too big to ship by parcel, so call 866-436-2101 before ordering one. For signs that go outside, choose <a href="/product/coroplast/">coroplast</a> or <a href="/product/pvc-board/">PVC board</a>.',
 			),
 			'uses' => array('Presentation boards and easel signs', 'Welcome signs and seating charts for weddings and events', 'Trade show and conference posters', 'In-store promotions and wall signs'),
 			'faq' => array(
 				array('q' => 'Can foam board be used outdoors?', 'a' => 'No. Foamcore is not waterproof and will warp in rain or humidity. Use coroplast or PVC board outdoors.'),
 				array('q' => 'Will it stand on an easel?', 'a' => 'Yes. At 3/16" thick it is rigid enough to stand on a standard easel at poster sizes such as 18" x 24" or 24" x 36".'),
-				array('q' => 'What is the largest size?', 'a' => 'Up to 48" x 96". Boards over 46" x 38" or 48" x 30" are store pickup only.'),
+				array('q' => 'What is the largest size?', 'a' => 'Up to 48" x 96". Boards over 46" x 38" or 48" x 30" are too big to ship by parcel, so call 866-436-2101 before ordering one.'),
 			),
 			'related' => array('pvc-board', 'coroplast', 'posters', 'canvas-wrap'),
 		),

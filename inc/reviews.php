@@ -21,7 +21,28 @@ const WHOLESALE_GOOGLE_REVIEWS_BACKUP = 'wholesale_google_reviews_last_good';
  */
 function wholesale_google_reviews($force_refresh = false)
 {
-	$api_key = trim((string) wholesale_get_setting('google_places_api_key'));
+	$data = wholesale_fetch_google_reviews($force_refresh);
+	if (!$data) {
+		return $data;
+	}
+
+	// Only show reviews at or above the minimum star rating set in Settings. The
+	// overall rating and review count still come straight from Google.
+	$min_rating = wholesale_sanitize_star_rating(wholesale_get_setting('google_reviews_min_rating'));
+	$data['reviews'] = array_values(array_filter($data['reviews'], static function ($review) use ($min_rating) {
+		return $review['rating'] >= $min_rating;
+	}));
+
+	return $data;
+}
+
+/**
+ * Raw Places API response (all reviews), cached. Use wholesale_google_reviews().
+ */
+function wholesale_fetch_google_reviews($force_refresh = false)
+{
+	// Only a real Google key is ever sent (see wholesale_sanitize_google_api_key()).
+	$api_key = wholesale_sanitize_google_api_key(wholesale_get_setting('google_places_api_key'));
 	$place_id = trim((string) wholesale_get_setting('google_place_id'));
 
 	if (!$api_key || !$place_id) {
@@ -314,7 +335,7 @@ function wholesale_handle_refresh_google_reviews()
 		wp_die('Not allowed.');
 	}
 	check_admin_referer('wholesale_refresh_google_reviews');
-	wholesale_google_reviews(true);
+	wholesale_fetch_google_reviews(true);
 	wp_safe_redirect(add_query_arg('google_reviews_refreshed', '1', admin_url('options-general.php?page=wholesale-settings')) . '#google-reviews');
 	exit;
 }

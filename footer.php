@@ -16,15 +16,13 @@
 
 
 <footer class="footer">
-    <p class="text-center text-muted fs-5">
-        Storefront Sign’s Samples
-    </p>
-    <div class="footer-bg-image-2 text-center">
-        <div class="button-container">
-        </div>
-
-        <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bd-2.webp?ver=' . _S_VERSION); ?>" alt="Samples of storefront signs and channel letters" loading="lazy" decoding="async">
-    </div>
+    <?php
+    // The "Storefront Sign's Samples" collage (img/footer-bd-2.webp) and the
+    // "We are expanding" banner (img/footer-bg-1.png) were removed: the collage
+    // showed other companies' storefront signs (Starbucks, Chase, Google, Zara...)
+    // as this shop's work, and the banner listed CA, TX and PA facilities the
+    // business does not have.
+    ?>
     <div class="container my-3 text-center">
         <a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
 
@@ -49,10 +47,6 @@
         </div>
     </div>
     <?php endif; ?>
-
-    <div class="footer-bg-image-1">
-        <img src="<?php echo esc_url(get_template_directory_uri() . '/img/footer-bg-1.png?ver=' . _S_VERSION); ?>" alt="" width="1635" height="325" loading="lazy" decoding="async">
-    </div>
 
     <?php wholesale_render_review_slider(); ?>
 
@@ -149,11 +143,11 @@
                                 'sizes' => '260px',
                             ));
                         } else {
-                            echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" width="2417" height="261" loading="lazy" decoding="async">';
+                            echo wholesale_logo_fallback_html();
                         }
                         ?>
                     </a>
-                    <p class="sf-brand__text">Custom LED channel letters and large format prints for storefronts across the USA, built and tested before they ship since 2002.</p>
+                    <p class="sf-brand__text">Custom LED channel letters and large format prints for storefronts across the USA, built and tested before shipping since 2002.</p>
                     <ul class="sf-badges">
                         <li><?php echo $footer_icon('check'); // Static SVG. ?>Made in USA</li>
                         <li><?php echo $footer_icon('check'); // Static SVG. ?>UL Listed</li>
@@ -215,14 +209,21 @@
                             <span>
                                 <span class="sf-contact__label">Customer service</span>
                                 Mon&ndash;Fri, 8:00am&ndash;5:00pm PST
-                                <span class="sf-contact__note"><span class="sf-live-dot" aria-hidden="true"></span>Live chat online</span>
+                                <?php
+                                // "Online" only during the hours above (Pacific), not at night or on weekends.
+                                $sf_now = new DateTime('now', new DateTimeZone('America/Los_Angeles'));
+                                $sf_open = $sf_now->format('N') < 6 && (int) $sf_now->format('Gi') >= 800 && (int) $sf_now->format('Gi') < 1700;
+                                ?>
+                                <span class="sf-contact__note"><?php if ($sf_open) : ?><span class="sf-live-dot" aria-hidden="true"></span>Live chat online<?php else : ?>Leave a chat message anytime<?php endif; ?></span>
                             </span>
                         </li>
                         <li>
                             <span class="sf-contact__icon"><?php echo $footer_icon('pin'); // Static SVG. ?></span>
                             <span>
                                 <span class="sf-contact__label">Headquarters</span>
-                                Triton Towers Three, 707 S. Grady Way Suite 600, Renton, WA 98057
+                                Triton Towers Three,<br>
+                                707 S. Grady Way Suite 600<br>
+                                Renton, WA 98057
                                 <span class="sf-contact__note">Pick up is not available</span>
                             </span>
                         </li>

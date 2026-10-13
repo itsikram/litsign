@@ -10,8 +10,9 @@
  *  - Fixed products: minimum sq ft × price per sq ft (usually 1 × the base price).
  *  - Each priced option is added in page order: "N" or "N/label" adds N, "N/%" adds N% of the
  *    running price, "N/sqft" adds N per sq ft, "N/lft" adds N per linear foot of letters.
- *  - Quantity multiplies everything; the product discount applies after quantity; same-day
- *    turnaround adds 100% of the undiscounted price.
+ *  - Quantity multiplies everything; the product discount applies after quantity, then any
+ *    dated sale (wholesale_product_promotion()); same-day turnaround adds 100% of the
+ *    undiscounted price.
  *
  * @package litsign
  */
@@ -23,8 +24,65 @@ if (!defined('ABSPATH')) {
 const WHOLESALE_RACEWAY_COST_PER_FOOT = 50;
 const WHOLESALE_CL_MIN_INCHES = 8;
 const WHOLESALE_CL_MAX_INCHES = 45;
-// Lowest per-item price for products sized with the sq ft dimensions calculator.
+// Default lowest per-item price for products sized with the sq ft dimensions calculator.
+// A product can set its own with _min_order_price (see wholesale_product_min_order()).
 const WHOLESALE_SQFT_MIN_PRICE = 15;
+
+/**
+ * Lowest price one item of a calculator product can cost, after the product's own
+ * _discount_percent: its _min_order_price, or WHOLESALE_SQFT_MIN_PRICE when that is
+ * empty. 0 means no minimum.
+ */
+function wholesale_product_min_order($product_id)
+{
+	$value = trim((string) get_post_meta($product_id, '_min_order_price', true));
+	return is_numeric($value) ? max(0.0, (float) $value) : (float) WHOLESALE_SQFT_MIN_PRICE;
+}
+
+/**
+ * Smallest area (sq ft) the size calculator accepts: the area whose price per sq ft,
+ * after the product's own discount, reaches its minimum order price. Rounded up to
+ * 0.01 sq ft, the precision it is shown at. 0 when there is no minimum.
+ */
+function wholesale_product_min_area($product_id)
+{
+	if (get_post_meta($product_id, '_hide_calculator', true) || wholesale_product_min_sides($product_id)) {
+		return 0.0;
+	}
+	$rate = max(0, (float) get_post_meta($product_id, '_price_per_sqft', true));
+	$keep = (100 - min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)))) / 100;
+	$min_price = wholesale_product_min_order($product_id);
+	if ($rate <= 0 || $keep <= 0 || $min_price <= 0) {
+		return 0.0;
+	}
+	return ceil(round($min_price / ($rate * $keep), 6) * 100) / 100;
+}
+
+/**
+ * Size calculator products (like B2Sign): a smallest width and height, from the
+ * product's _min_width / _min_height in inches (6" when empty). Any size from there up
+ * can be ordered; one that costs less than the minimum order price pays that minimum.
+ * array(width_in, height_in), or null for products without the size calculator.
+ */
+function wholesale_product_min_sides($product_id)
+{
+	if (get_post_meta($product_id, '_hide_calculator', true) || wholesale_product_is_channel_letter($product_id)) {
+		return null;
+	}
+	$width = (float) get_post_meta($product_id, '_min_width', true);
+	$height = (float) get_post_meta($product_id, '_min_height', true);
+	return array($width > 0 ? $width : 6.0, $height > 0 ? $height : 6.0);
+}
+
+/**
+ * Example size for wholesale_product_min_area(): the smallest square in whole inches
+ * that reaches it, e.g. 14" x 14".
+ */
+function wholesale_min_area_example($area)
+{
+	$side = (int) ceil(round(sqrt($area) * 12, 6));
+	return sprintf('%d" x %d"', $side, $side);
+}
 
 function wholesale_product_is_channel_letter($product_id)
 {
@@ -83,6 +141,17 @@ function wholesale_request_attr_value($request, $attr_name)
 		}
 	}
 	return null;
+}
+
+/**
+ * A preset "size" dropdown (12" x 18", 24" x 36", ...). When the product shows the
+ * width/height calculator the typed size sets the price, so this attribute is neither
+ * shown nor charged; it only applies while the calculator is hidden.
+ */
+function wholesale_attr_is_preset_size($attr)
+{
+	$css = (string) ($attr['cssClass'] ?? '');
+	return 'size' === strtolower(trim((string) ($attr['name'] ?? ''))) && false === strpos($css, 'size-width-inch') && false === strpos($css, 'size-height-inch');
 }
 
 function wholesale_same_day_available()
@@ -294,7 +363,8 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		} elseif ($has_calculator) {
 			$height_ft = (float) ($request['height-ft'] ?? 0) + (float) ($request['height-in'] ?? 0) / 12;
 			$width_ft = (float) ($request['width-ft'] ?? 0) + (float) ($request['width-in'] ?? 0) / 12;
-			// Sq ft calculator products have no size limits; WHOLESALE_SQFT_MIN_PRICE sets the floor.
+			// The smallest size: a width and height (wholesale_product_min_sides()), or else the
+			// area that reaches the minimum order price (wholesale_product_min_area()).
 			foreach (array('height' => $height_ft, 'width' => $width_ft) as $label => $value) {
 				if ($value <= 0) {
 					return $fail(sprintf('Please enter the %s of your sign.', $label));
@@ -302,6 +372,14 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			}
 			$is_sqft_calc = true;
 			$sqft = $height_ft * $width_ft;
+			$min_sides = wholesale_product_min_sides($product_id);
+			if ($min_sides && ($width_ft * 12 < $min_sides[0] - 0.000001 || $height_ft * 12 < $min_sides[1] - 0.000001)) {
+				return $fail(sprintf('The smallest size for this product is %s" x %s" (width x height). Please enter a larger size.', $min_sides[0] + 0, $min_sides[1] + 0));
+			}
+			$min_area = wholesale_product_min_area($product_id);
+			if ($sqft < $min_area - 0.000001) {
+				return $fail(sprintf('The smallest size for this product is %s sq ft (for example %s). Please enter a larger size.', number_format($min_area, 2), wholesale_min_area_example($min_area)));
+			}
 		}
 
 		$running = $sqft * $price_per_sqft;
@@ -313,6 +391,10 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		$css = (string) ($attr['cssClass'] ?? '');
 		// Single-option attributes are shown as fixed text, and avoid-price ones are handled above.
 		if (count($options) < 2 || false !== strpos($css, 'avoid-price') || 'height' === ($attr['name'] ?? '') && $is_cl) {
+			continue;
+		}
+		// The calculator's typed size replaces a preset size dropdown.
+		if ($is_sqft_calc && wholesale_attr_is_preset_size($attr)) {
 			continue;
 		}
 
@@ -349,23 +431,32 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		$running += $amount;
 	}
 
-	$adjusted = null;
-	if ($is_sqft_calc && $running > 0 && $running < WHOLESALE_SQFT_MIN_PRICE && empty($request['_no_floor'])) {
-		$adjusted = wholesale_sqft_floor_size($product_id, $request, $height_ft, $width_ft);
-	}
-	if ($is_sqft_calc && $running > 0 && $running < WHOLESALE_SQFT_MIN_PRICE && empty($request['_no_floor'])) {
-		$lines[] = array('label' => sprintf('Minimum order ($%s)', number_format(WHOLESALE_SQFT_MIN_PRICE, 2)), 'amount' => WHOLESALE_SQFT_MIN_PRICE - $running);
-		$running = WHOLESALE_SQFT_MIN_PRICE;
-	}
-
 	if ($running <= 0) {
 		return $fail('Please choose your product options so we can calculate a price.');
 	}
 
+	// The size stays exactly as entered. When one item would cost less than the
+	// product's minimum after its own price adjustment, the item price is raised so
+	// that it comes to exactly the minimum after the adjustment.
+	$discount_percent = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
+	$minimum_order = 0;
+	$min_price = $is_sqft_calc && $discount_percent < 100 ? wholesale_product_min_order($product_id) : 0;
+	if ($min_price > 0 && $running * (100 - $discount_percent) / 100 < $min_price) {
+		$raised = $min_price * 100 / (100 - $discount_percent);
+		$lines[] = array('label' => sprintf('Minimum order ($%s)', number_format($min_price, 2)), 'amount' => $raised - $running);
+		$running = $raised;
+		$minimum_order = $min_price;
+	}
+
 	$quantity = min(1000, max(1, absint($request['product_quantity'] ?? 1)));
 	$subtotal = $running * $quantity;
-	$discount_percent = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
 	$discount = $subtotal * $discount_percent / 100;
+	// A dated sale (Settings > Storefront Sign) comes off the everyday price, after the
+	// product's own price adjustment above. Zero outside the sale's dates.
+	$everyday = $subtotal - $discount;
+	$promo_percent = wholesale_product_promotion_percent($product_id);
+	$promo_discount = $promo_percent > 0 ? $everyday * $promo_percent / 100 : 0.0;
+	$discount += $promo_discount;
 
 	$turnaround = 0.0;
 	if (!$is_cl && isset($request['turnaround_option']) && 'same_day' === $request['turnaround_option']) {
@@ -383,52 +474,18 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		'subtotal' => round($subtotal, 2),
 		'discount_percent' => $discount_percent,
 		'discount' => round($discount, 2),
+		// The price before any dated sale, and the sale's share of the discount.
+		'everyday' => round($everyday, 2),
+		'promo_percent' => $promo_percent,
+		'promo_discount' => round($promo_discount, 2),
 		'turnaround' => round($turnaround, 2),
 		'total' => round($subtotal - $discount + $turnaround, 2),
-		// Calculator size that reaches the minimum price, when the entered size falls below it.
-		'adjusted' => $adjusted,
+		// The minimum order price when it replaced the calculator price, else 0.
+		'minimum_order' => $minimum_order,
 		'lines' => array_map(static function ($line) {
 			return array('label' => $line['label'], 'amount' => round($line['amount'], 2));
 		}, $lines),
 	);
-}
-
-/**
- * The smallest calculator size, keeping the entered proportions, whose price
- * reaches WHOLESALE_SQFT_MIN_PRICE with the chosen options. Each side is
- * rounded up to 0.1 in and returned as whole feet plus inches.
- */
-function wholesale_sqft_floor_size($product_id, $request, $height_ft, $width_ft)
-{
-	$price_at = static function ($scale) use ($product_id, $request, $height_ft, $width_ft) {
-		$request['_no_floor'] = 1;
-		$request['height-ft'] = $height_ft * $scale;
-		$request['width-ft'] = $width_ft * $scale;
-		$request['height-in'] = $request['width-in'] = 0;
-		$quote = wholesale_price_quote($product_id, $request);
-		return $quote['ok'] ? $quote['unit_price'] : 0;
-	};
-	$low = 1.0;
-	$high = 2.0;
-	while ($price_at($high) < WHOLESALE_SQFT_MIN_PRICE && $high < 1e6) {
-		$high *= 2;
-	}
-	for ($i = 0; $i < 40; $i++) {
-		$mid = ($low + $high) / 2;
-		if ($price_at($mid) < WHOLESALE_SQFT_MIN_PRICE) {
-			$low = $mid;
-		} else {
-			$high = $mid;
-		}
-	}
-	$size = array();
-	foreach (array('height' => $height_ft, 'width' => $width_ft) as $dim => $value) {
-		$inches = ceil(round($value * $high * 12, 6) * 10) / 10;
-		$feet = (int) floor($inches / 12);
-		$size[$dim . '-ft'] = $feet;
-		$size[$dim . '-in'] = round($inches - $feet * 12, 1);
-	}
-	return $size;
 }
 
 /**
@@ -539,12 +596,106 @@ function wholesale_cl_example_price($slug, $letters, $inches)
 }
 
 /**
+ * Grand Total a fixed-price product (one with the size calculator hidden, like a pole
+ * banner set) shows on its product page before the buyer changes anything: the first
+ * choice of every option, quantity 1, from wholesale_price_quote(), so it's the price
+ * the cart charges. Null for calculator products, or when it can't be priced.
+ */
+function wholesale_product_default_total($slug)
+{
+	$product = get_page_by_path($slug, OBJECT, 'product');
+	if (!$product || !get_post_meta($product->ID, '_hide_calculator', true)) {
+		return null;
+	}
+	$request = array('product_quantity' => 1);
+	foreach (wholesale_product_price_attrs($product->ID) as $attr) {
+		$options = wholesale_attr_options($attr);
+		if ($options && !empty($attr['name'])) {
+			$request[$attr['name']] = $options[0]['value'];
+		}
+	}
+	$quote = wholesale_price_quote($product->ID, $request);
+
+	return $quote['ok'] ? (float) $quote['total'] : null;
+}
+
+/**
+ * The dated sale from Settings > Storefront Sign that applies to a product right now:
+ * array('percent' => float, 'ends' => int), 'ends' being the last second of the sale's
+ * end date in Pacific time, or null. Products sell at their everyday price (after their
+ * own _discount_percent adjustment, which is never shown as a sale); only this sale shows
+ * a badge or a struck-through price, and only between its start and end dates.
+ */
+function wholesale_product_promotion($product_id)
+{
+	$window = wholesale_promotion_window();
+	if (!$window) {
+		return null;
+	}
+	if ('channel-letters' === $window['scope'] || 'other' === $window['scope']) {
+		if (('channel-letters' === $window['scope']) !== wholesale_product_is_channel_letter($product_id)) {
+			return null;
+		}
+	}
+
+	return array('percent' => $window['percent'], 'ends' => $window['ends']);
+}
+
+/**
+ * The sale settings when today is within the sale's dates, whatever products it covers:
+ * array('percent', 'ends', 'scope'), or null.
+ */
+function wholesale_promotion_window()
+{
+	static $window = false;
+	if (false === $window) {
+		$window = null;
+		$percent = min(90, max(0, (float) wholesale_get_setting('promo_percent')));
+		$zone = new DateTimeZone('America/Los_Angeles');
+		$start = DateTime::createFromFormat('!Y-m-d', (string) wholesale_get_setting('promo_start'), $zone);
+		$end = DateTime::createFromFormat('!Y-m-d', (string) wholesale_get_setting('promo_end'), $zone);
+		if ($percent > 0 && $start && $end) {
+			$ends = $end->modify('+1 day')->getTimestamp() - 1;
+			if (time() >= $start->getTimestamp() && time() <= $ends) {
+				$window = array('percent' => $percent, 'ends' => $ends, 'scope' => (string) wholesale_get_setting('promo_scope'));
+			}
+		}
+	}
+
+	return $window;
+}
+
+function wholesale_product_promotion_percent($product_id)
+{
+	$promotion = wholesale_product_promotion($product_id);
+	return $promotion ? (float) $promotion['percent'] : 0.0;
+}
+
+/**
+ * An everyday price after the dated sale, or the price unchanged when no sale is running.
+ */
+function wholesale_promotion_price($product_id, $everyday_price)
+{
+	$percent = wholesale_product_promotion_percent($product_id);
+	return $percent > 0 ? round($everyday_price * (1 - $percent / 100), 2) : $everyday_price;
+}
+
+/**
+ * "Oct 31": the last day of a sale, for "ends ..." labels.
+ */
+function wholesale_promotion_end_text($promotion)
+{
+	return wp_date('M j', $promotion['ends'], new DateTimeZone('America/Los_Angeles'));
+}
+
+/**
  * Lowest price of one channel letter: the cheapest letter height on the product
- * page, with no paid options, before and after the product discount. This is the
- * same price wholesale_price_quote() charges for that letter, so a "from" price
- * built on it is always one a buyer can actually pay.
+ * page, with no paid options: before the product discount ('regular'), after it
+ * ('everyday') and after any dated sale too ('price'). 'price' is what
+ * wholesale_price_quote() charges for that letter, so a "from" price built on it is
+ * always one a buyer can actually pay.
  *
- * @return array|null array('regular' => float, 'price' => float, 'height' => int) or null.
+ * @return array|null array('regular' => float, 'everyday' => float, 'price' => float, 'height' => int) or null.
  */
 function wholesale_cl_from_price($product_id)
 {
@@ -568,7 +719,10 @@ function wholesale_cl_from_price($product_id)
 	}
 	if ($cache[$product_id]) {
 		$discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
-		$cache[$product_id]['price'] = round($cache[$product_id]['regular'] * (1 - $discount / 100), 2);
+		$everyday = $cache[$product_id]['regular'] * (1 - $discount / 100);
+		$promo_percent = wholesale_product_promotion_percent($product_id);
+		$cache[$product_id]['everyday'] = round($everyday, 2);
+		$cache[$product_id]['price'] = round($promo_percent > 0 ? $everyday * (1 - $promo_percent / 100) : $everyday, 2);
 	}
 
 	return $cache[$product_id];
@@ -576,9 +730,9 @@ function wholesale_cl_from_price($product_id)
 
 /**
  * "Starting at" text for a channel letter, from its real per-letter price:
- * "$133.20 per letter", or "<del>$148</del> $133.20 per letter" while a product
- * discount is set. Replaces the hand-typed per-inch text, which quoted prices
- * no letter height actually reached.
+ * "$133.20 per letter", or "<del>$133.20</del> $119.88 per letter" during a dated
+ * sale. Replaces the hand-typed per-inch text, which quoted prices no letter height
+ * actually reached.
  */
 function wholesale_cl_starting_text($product_id)
 {
@@ -591,7 +745,7 @@ function wholesale_cl_starting_text($product_id)
 	};
 	$now = $money($from['price']) . ' per letter';
 
-	return $from['price'] < $from['regular'] ? '<del>' . $money($from['regular']) . ' </del><span style="color: green">' . $now . '</span>' : $now;
+	return $from['price'] < $from['everyday'] ? '<del>' . $money($from['everyday']) . ' </del><span style="color: green">' . $now . '</span>' : $now;
 }
 
 /**
@@ -613,66 +767,99 @@ function wholesale_cl_worked_example_text()
 }
 
 /**
- * On the storefront, every reader of a channel letter's _starting_at_text (cards,
- * category pages, comparison tables, the builder's product switcher) gets the
- * computed text above. The admin editor still shows and saves the stored value.
+ * A stored "starting at" text as shoppers see it. Any struck-through <del> price is
+ * dropped, because product prices are everyday prices, not sales. During a dated sale
+ * the price is struck through and the sale price follows it.
+ */
+function wholesale_starting_text_for_sale($product_id, $text)
+{
+	$text = trim(preg_replace('/<del\b[^>]*>.*?<\/del>\s*/is', '', (string) $text));
+	if (wholesale_product_promotion_percent($product_id) <= 0 || !preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', $text, $prices, PREG_OFFSET_CAPTURE)) {
+		return $text;
+	}
+	$last = end($prices[0]);
+	$sale = wholesale_promotion_price($product_id, (float) str_replace(',', '', end($prices[1])[0]));
+
+	return substr($text, 0, $last[1]) . '<del>' . $last[0] . '</del> $' . number_format($sale, 2) . substr($text, $last[1] + strlen($last[0]));
+}
+
+/**
+ * On the storefront, every reader of a product's _starting_at_text (cards, category
+ * pages, comparison tables, the builder's product switcher) gets the text shoppers
+ * should see: the computed per-letter text above for channel letters, the stored text
+ * through wholesale_starting_text_for_sale() for everything else. The admin editor
+ * still shows and saves the stored value.
  */
 add_filter('get_post_metadata', function ($value, $object_id, $meta_key) {
-	if ('_starting_at_text' !== $meta_key || null !== $value || (is_admin() && !wp_doing_ajax()) || 'product' !== get_post_type($object_id) || !wholesale_product_is_channel_letter($object_id)) {
+	static $reading = false;
+	if ($reading || '_starting_at_text' !== $meta_key || null !== $value || (is_admin() && !wp_doing_ajax()) || 'product' !== get_post_type($object_id)) {
 		return $value;
 	}
-	$text = wholesale_cl_starting_text($object_id);
+	$text = wholesale_product_is_channel_letter($object_id) ? wholesale_cl_starting_text($object_id) : '';
+	if ('' === $text) {
+		$reading = true;
+		$stored = (string) get_post_meta($object_id, '_starting_at_text', true);
+		$reading = false;
+		// Size calculator products: always the per sq ft rate the cart charges (after the
+		// product's own discount), so the text can't fall behind a rate change.
+		$rate = (float) get_post_meta($object_id, '_price_per_sqft', true);
+		if ($rate > 0 && !get_post_meta($object_id, '_hide_calculator', true) && ('' === $stored || preg_match('/per\s*(ft|sq)/i', $stored))) {
+			$discount = min(100, max(0, (float) get_post_meta($object_id, '_discount_percent', true)));
+			$stored = '$' . number_format(round($rate * (100 - $discount) / 100, 2), 2) . ' per ft<sup>2</sup>';
+		}
+		if ('' === $stored) {
+			return $value;
+		}
+		$text = wholesale_starting_text_for_sale($object_id, $stored);
+		// Stored text varies ("$539per item", "Per Item"); show one form.
+		$text = preg_replace(array('/(\$[\d,]+(?:\.\d+)?)(?=per\b)/i', '/\bper\s+item\b/i'), array('$1 ', 'per item'), $text);
+	}
 
-	return '' !== $text ? array($text) : $value;
+	return array($text);
 }, 10, 3);
 
 /**
- * Whole-number sale percentage for a product: its _discount_percent, or the
- * saving implied by a struck-through <del> price in its "starting at" text.
+ * Whole-number percentage for a product's sale badge: the dated sale running now,
+ * rounded down so the badge never overstates it, or 0.
  */
 function wholesale_product_sale_percent($product_id)
 {
-	$percent = (float) get_post_meta($product_id, '_discount_percent', true);
-
-	if ($percent <= 0) {
-		$text = (string) get_post_meta($product_id, '_starting_at_text', true);
-		if (preg_match('/<del>[^$]*\$\s?([\d,]+(?:\.\d+)?)/i', $text, $was) && preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', wp_strip_all_tags($text), $prices)) {
-			$was = (float) str_replace(',', '', $was[1]);
-			$now = (float) str_replace(',', '', end($prices[1]));
-			$percent = $was > $now && $now > 0 ? 100 - $now / $was * 100 : 0;
-		}
-	}
-
-	return (int) round(min(99, max(0, $percent)));
+	return (int) floor(min(99, wholesale_product_promotion_percent($product_id)));
 }
 
+/**
+ * Shopper price for one of a product's option amounts: the everyday price (after the
+ * product discount), struck through with the sale price after it during a dated sale.
+ */
 function wholesale_price_with_sale($product_id, $regular_price)
 {
 	$regular_price = round((float) $regular_price, 2);
 	$discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
-	$sale_price = round($regular_price * (1 - ($discount / 100)), 2);
+	$everyday = round($regular_price * (1 - ($discount / 100)), 2);
+	$sale_price = wholesale_promotion_price($product_id, $everyday);
 	$format = static function ($amount) {
 		return '$' . number_format($amount, 2, '.', ',');
 	};
 
-	if ($discount <= 0 || $sale_price >= $regular_price) {
-		return esc_html($format($regular_price));
+	if ($sale_price >= $everyday) {
+		return esc_html($format($everyday));
 	}
 
-	return '<del class="product-price-regular">' . esc_html($format($regular_price)) . '</del> <span class="product-price-sale">' . esc_html($format($sale_price)) . '</span>';
+	return '<del class="product-price-regular">' . esc_html($format($everyday)) . '</del> <span class="product-price-sale">' . esc_html($format($sale_price)) . '</span>';
 }
 
 /**
- * Sale badge for a product image; prints nothing when the product isn't discounted.
+ * Sale badge for a product image; prints nothing unless a dated sale applies to it.
  */
 function wholesale_render_sale_badge($product_id, $percent = null)
 {
 	$percent = null === $percent ? wholesale_product_sale_percent($product_id) : (int) $percent;
-	if ($percent < 1) {
+	$promotion = wholesale_product_promotion($product_id);
+	if ($percent < 1 || !$promotion) {
 		return;
 	}
 	?>
-	<span class="sale-badge" aria-label="<?php echo esc_attr(sprintf(__('On sale: save %d%%', 'litsign'), $percent)); ?>">
+	<span class="sale-badge" aria-label="<?php echo esc_attr(sprintf(__('On sale: save %1$d%% through %2$s', 'litsign'), $percent, wholesale_promotion_end_text($promotion))); ?>">
 		<span class="sale-badge__label" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor"/></svg><?php esc_html_e('Sale', 'litsign'); ?></span>
 		<span class="sale-badge__value" aria-hidden="true"><?php echo esc_html(sprintf(__('%d%% off', 'litsign'), $percent)); ?></span>
 	</span>

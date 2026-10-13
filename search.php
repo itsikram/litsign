@@ -787,6 +787,9 @@ $icon = static function ($name, $size = 20) {
 
 		.srp-toolbar {
 			flex-direction: column;
+			/* A wrapping column sizes its line to the widest bar (398px on a
+			   375px phone), which scrolled the whole page sideways. */
+			flex-wrap: nowrap;
 			align-items: stretch;
 		}
 
@@ -943,14 +946,23 @@ $icon = static function ($name, $size = 20) {
 						if ('post' === get_post_type()) {
 							$type_name = 'Article';
 						}
-						$excerpt = wp_trim_words(wp_strip_all_tags(strip_shortcodes(get_the_excerpt())), 22, '…');
-
+						$excerpt = '';
 						$price_html = '';
-						if ('product' === get_post_type() && function_exists('wc_get_product')) {
-							$product = wc_get_product($post_id);
-							if ($product && '' !== $product->get_price()) {
-								$price_html = $product->get_price_html();
+						if ('product' === get_post_type()) {
+							// A product's stored description opens with turnaround and
+							// supplier notes; its feature bullets describe it better.
+							$bullets = (string) get_post_meta($post_id, '_product_short_desc', true);
+							$bullets = trim(preg_replace('/\s+/', ' ', wp_strip_all_tags(preg_replace('#\.?\s*</li>#i', '. ', $bullets))));
+							$excerpt = wp_trim_words(preg_replace('/(?:\.\s*)+$/', '', $bullets), 22, '…');
+
+							// Same whole-dollar "starting at" price as the product cards.
+							$starting = (string) get_post_meta($post_id, '_starting_at_text', true);
+							if ('' !== trim(wp_strip_all_tags($starting))) {
+								$price_html = 'From ' . wp_kses(wholesale_price_no_cents($starting), array('sup' => array(), 'del' => array()));
 							}
+						}
+						if ('' === $excerpt) {
+							$excerpt = wp_trim_words(wp_strip_all_tags(strip_shortcodes(get_the_excerpt())), 22, '…');
 						}
 					?>
 						<li>

@@ -75,8 +75,10 @@ $example_heights = array(12, 18, 24);
 
 $front_lit = wholesale_seo_product('standard-channel-letter-front-lit');
 $front_lit_url = $front_lit ? get_permalink($front_lit) : home_url('/');
-$discount = $front_lit ? (float) get_post_meta($front_lit->ID, '_discount_percent', true) : 0;
-$discount_text = $discount > 0 ? rtrim(rtrim(number_format($discount, 2), '0'), '.') . '%' : '';
+// Only a dated sale (Settings > Storefront Sign) is described as a discount: "10% sale
+// that ends Nov 30". Prices below come from the checkout, so they include it either way.
+$promotion = $front_lit ? wholesale_product_promotion($front_lit->ID) : null;
+$discount_text = $promotion ? sprintf('%s%% sale that ends %s', rtrim(rtrim(number_format($promotion['percent'], 2), '0'), '.'), wholesale_promotion_end_text($promotion)) : '';
 $front_lit_heights = wholesale_seo_letter_height_range('standard-channel-letter-front-lit');
 
 // Option prices straight from the product and checkout settings.
@@ -101,7 +103,7 @@ $example_24 = $cl_price('standard-channel-letter-front-lit', 24, $example_name, 
 wholesale_seo_set_page_faq(array_values(array_filter(array(
 	$cheapest_8 && $example_12 && $example_24 ? array(
 		'q' => 'How much do channel letters cost?',
-		'a' => sprintf('Our channel letters start at %s for one 8 inch front lit letter%s. A typical 8-letter business name in front lit letters costs about %s at 12 inches tall and %s at 24 inches tall, including a standard power supply, before shipping. Halo lit and trimless styles cost more per letter.', $money($cheapest_8), $discount_text ? ' with our ' . $discount_text . ' online discount' : '', $money($example_12), $money($example_24)),
+		'a' => sprintf('Our channel letters start at %s for one 8 inch front lit letter%s. A typical 8-letter business name in front lit letters costs about %s at 12 inches tall and %s at 24 inches tall, including a standard power supply, before shipping. Halo lit and trimless styles cost more per letter.', $money($cheapest_8), $discount_text ? ' with our ' . $discount_text : '', $money($example_12), $money($example_24)),
 	) : null,
 	array(
 		'q' => 'Why are channel letters priced per letter?',
@@ -144,7 +146,7 @@ get_header();
 				<a class="sf-button-outline" href="<?php echo esc_url($contact_url); ?>">Get a Free Quote</a>
 			</div>
 			<ul class="sf-hero-points">
-				<?php if ($discount_text) : ?><li><?php echo esc_html($discount_text); ?> online discount included</li><?php endif; ?>
+				<?php if ($discount_text) : ?><li><?php echo esc_html(ucfirst($discount_text)); ?> included</li><?php endif; ?>
 				<li>Made in the USA</li>
 				<li>UL listed for outdoor use</li>
 				<li>Shipped ready to install</li>
@@ -156,7 +158,7 @@ get_header();
 		<div class="container">
 			<p class="cl-kicker">Price per letter</p>
 			<h2 id="clc-table-title" class="cl-section-title">Channel Letter Prices by Style and Height</h2>
-			<p class="cl-section-lead">Price for one letter<?php echo $discount_text ? ', after the ' . esc_html($discount_text) . ' online discount' : ''; ?>, before the power supply, raceway and shipping. Multiply by the number of letters in your sign.</p>
+			<p class="cl-section-lead">Price for one letter<?php echo $discount_text ? ', after the ' . esc_html($discount_text) : ''; ?>, before the power supply, raceway and shipping. Multiply by the number of letters in your sign.</p>
 			<div class="cl-compare-table-wrap">
 				<table class="cl-compare-table sf-price-table">
 					<thead>
@@ -196,7 +198,7 @@ get_header();
 			<div class="container sf-prose">
 				<p class="cl-kicker">Example signs</p>
 				<h2 id="clc-example-title" class="cl-section-title">What a Typical Storefront Sign Costs</h2>
-				<p>Here is what an 8-letter business name costs in front lit channel letters, including a standard power supply and the online discount<?php echo $shipping_price ? ', before ' . esc_html($money($shipping_price)) . ' standard shipping' : ''; ?>:</p>
+				<p>Here is what an 8-letter business name costs in front lit channel letters, including a standard power supply<?php echo $discount_text ? ' and the ' . esc_html($discount_text) : ''; ?><?php echo $shipping_price ? ', before ' . esc_html($money($shipping_price)) . ' standard shipping' : ''; ?>:</p>
 				<div class="cl-compare-table-wrap">
 					<table class="cl-compare-table sf-price-table">
 						<thead>

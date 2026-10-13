@@ -130,7 +130,7 @@ class Cart
         $corners = isset($request['corners']) ? $request['corners'] : '';
         $windslit = isset($request['windslit']) ? $request['windslit'] : '';
         $velcro = isset($request['velcro']) ? $request['velcro'] : '';
-        $of_sides = isset($request['of-side']) ? $request['of-side'] : '';
+        $of_sides = isset($request['of-sides']) ? $request['of-sides'] : (isset($request['of-side']) ? $request['of-side'] : '');
         $pole_pocket = isset($request['pole-pocket']) ? $request['pole-pocket'] : '';
         $stand_off = isset($request['stand-off']) ? $request['stand-off'] : '';
 
@@ -158,6 +158,7 @@ class Cart
         $pennant_flag = isset($request['pennant-flag']) ? $request['pennant-flag'] : '';
         $holes_punch = isset($request['holes-punch']) ? $request['holes-punch'] : '';
         $corner_style = isset($request['corner-style']) ? $request['corner-style'] : '';
+        $round_corners = isset($request['round-corners']) ? $request['round-corners'] : '';
         $backside = isset($request['backside']) ? $request['backside'] : '';
         $table_height = isset($request['table-height']) ? $request['table-height'] : '';
         $table_diameter = isset($request['table-diameter']) ? $request['table-diameter'] : '';
@@ -247,53 +248,21 @@ class Cart
             $width_ft = isset($request['width-ft']) ? floatval($request['width-ft']) : '0';
             $height_in = isset($request['height-in']) ? floatval($request['height-in']) : '0';
             $width_in = isset($request['width-in']) ? floatval($request['width-in']) : '0';
-            $height = "";
-            $width = "";
-
-			$height_ft_text = "$height_ft Foot ";
-			$width_ft_text = "$width_ft Foot ";
-
-			$height_in_text = "$height_in Inch";
-			$width_in_text = "$width_in Inch ";
-
-			
-
-
-			if($height_ft > 1) {
-
-				$height_ft_text = "$height_ft Foots ";
-
-				$height = $height_ft_text;
-				if($height_in > 1) {
-					$height_in_text = "$height_in Inchs";
-					$height = $height_ft_text.$height_in_text;
-
-				}else {
-					$height_in_text = '';
-					$height = $height_ft_text.$height_in_text;
-
-				}
-			}else {
-				$height = "";
-			}
-
-
-
-			if($width_ft > 1) {
-				$width_ft_text = "$width_ft Foots ";
-				$width = $width_ft_text;
-				
-				if($width_in > 1) {
-					$width_in_text = "$width_in Inches";
-                    $width = $width_ft_text.$width_in_text;
-                }else {
-					$width_in_text = "";
-					
-				}
-					
-			}else {
-				$width = "";
-			}
+            // "2 Feet 6 Inches". This is the only record of the ordered size on
+            // the order, so every non-zero part is kept: sizes of 1 ft or less
+            // (a 1 ft x 3 ft banner, 0 ft 18 in) used to lose their height or width.
+            $size_text = static function ($feet, $inches) {
+                $parts = array();
+                if ($feet > 0) {
+                    $parts[] = $feet . (1 == $feet ? ' Foot' : ' Feet');
+                }
+                if ($inches > 0) {
+                    $parts[] = $inches . (1 == $inches ? ' Inch' : ' Inches');
+                }
+                return implode(' ', $parts);
+            };
+            $height = $size_text((float) $height_ft, (float) $height_in);
+            $width = $size_text((float) $width_ft, (float) $width_in);
 
         }
 
@@ -429,6 +398,7 @@ class Cart
                 'Pennant Flag' => $this->getTitleByValue($product_id,$pennant_flag),
                 'Holes Punch' => $this->getTitleByValue($product_id,$holes_punch),
                 'Corner Style' => $this->getTitleByValue($product_id,$corner_style),
+                'Round Corners' => $this->getTitleByValue($product_id,$round_corners),
                 'Backside' => $this->getTitleByValue($product_id,$backside),
                 'Table Height' => $this->getTitleByValue($product_id,$table_height),
                 'Table Diameter' => $this->getTitleByValue($product_id,$table_diameter),

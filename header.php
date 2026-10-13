@@ -70,8 +70,7 @@ $logo_id = get_theme_mod('custom_logo');
 		@font-face {
 			font-family: 'nimbus-sans';
 			/*a name to be used later*/
-			src: url('<?php echo get_template_directory_uri() . '/fonts/NimbusSanL-Bol.woff2'; ?>') format('woff2'),
-				url('<?php echo get_template_directory_uri() . '/fonts/NimbusSanL-Bol.otf'; ?>') format('opentype');
+			src: url('<?php echo get_template_directory_uri() . '/fonts/NimbusSanL-Bol.woff2'; ?>') format('woff2');
 			font-weight: bold;
 			font-display: swap;
 			/*URL to font*/
@@ -79,41 +78,40 @@ $logo_id = get_theme_mod('custom_logo');
 
 		@font-face {
 			font-family: 'type-writer';
-			src: url('<?php echo get_template_directory_uri() . '/fonts/TYPEWR_B.TTF'; ?>');
+			src: url('<?php echo get_template_directory_uri() . '/fonts/TYPEWR_B.woff2'; ?>') format('woff2');
 			font-weight: bold;
 			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'alegreya';
-			src: url('<?php echo get_template_directory_uri() . '/fonts/Alegreya-VariableFont_wght.ttf'; ?>');
+			src: url('<?php echo get_template_directory_uri() . '/fonts/Alegreya-VariableFont_wght.woff2'; ?>') format('woff2');
 			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'anton';
-			src: url('<?php echo get_template_directory_uri() . '/fonts/Anton-Regular.ttf'; ?>');
+			src: url('<?php echo get_template_directory_uri() . '/fonts/Anton-Regular.woff2'; ?>') format('woff2');
 			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'gotham-medium';
-			src: url('<?php echo get_template_directory_uri() . '/fonts/gotham-medium.woff2'; ?>') format('woff2'),
-				url('<?php echo get_template_directory_uri() . '/fonts/gotham-medium.otf'; ?>') format('opentype');
+			src: url('<?php echo get_template_directory_uri() . '/fonts/gotham-medium.woff2'; ?>') format('woff2');
 			font-weight: 900;
 			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'helvetica-condensed-bold';
-			src: url('<?php echo get_template_directory_uri() . '/fonts/helvetica-condensed-bold.otf'; ?>');
+			src: url('<?php echo get_template_directory_uri() . '/fonts/helvetica-condensed-bold.woff2'; ?>') format('woff2');
 			font-weight: 900;
 			font-display: swap;
 		}
 
 		@font-face {
 			font-family: 'helvetica-rounded-bold';
-			src: url('<?php echo get_template_directory_uri() . '/fonts/helvetica-rounded-bold.otf'; ?>');
+			src: url('<?php echo get_template_directory_uri() . '/fonts/helvetica-rounded-bold.woff2'; ?>') format('woff2');
 			font-weight: 900;
 			font-display: swap;
 		}
@@ -188,7 +186,7 @@ $logo_id = get_theme_mod('custom_logo');
 									'sizes' => '(max-width: 767px) 240px, (max-width: 991px) 400px, (max-width: 1199px) 250px, 400px',
 								));
 							} else {
-								echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async">';
+								echo wholesale_logo_fallback_html('header-logo');
 							}
 							?>
 						</a>
@@ -1722,7 +1720,7 @@ $logo_id = get_theme_mod('custom_logo');
 								'sizes'         => '(max-width: 767px) 240px, (max-width: 991px) 400px, (max-width: 1199px) 250px, 400px',
 							));
 						} else {
-							echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" class="header-logo" width="2417" height="261" loading="eager" decoding="async">';
+							echo wholesale_logo_fallback_html('header-logo');
 						}
 						?>
 					</a>
@@ -2450,7 +2448,7 @@ $logo_id = get_theme_mod('custom_logo');
 							'sizes'    => '170px',
 						));
 					} else {
-						echo '<img src="' . esc_url(get_template_directory_uri() . '/img/logo.png') . '" alt="' . esc_attr(get_bloginfo('name')) . '" width="2417" height="261" loading="lazy" decoding="async">';
+						echo wholesale_logo_fallback_html();
 					}
 					?>
 				</a>

@@ -423,19 +423,70 @@ function wholesale_shipping_label($index)
 }
 
 /**
- * Longest production time in the cart plus transit for the chosen shipping speed.
+ * $date plus $days business days (Saturdays and Sundays skipped).
  */
-function wholesale_estimated_ship_date($cart, $shipping_index = 0)
+function wholesale_add_business_days(DateTime $date, $days)
+{
+	$date = clone $date;
+	while ($days > 0) {
+		$date->modify('+1 day');
+		if ($date->format('N') < 6) {
+			$days--;
+		}
+	}
+	return $date;
+}
+
+/**
+ * Production business days for the cart: the longest product turnaround, and
+ * at least 4 for channel letters, whose product pages say 2-4 business days.
+ */
+function wholesale_cart_production_days($cart)
 {
 	$turnaround = 1;
 	foreach ($cart->get_items() as $item) {
 		$turnaround = max($turnaround, (int) get_post_meta(absint($item->product_id), '_product_turnaround', true));
 	}
-	$transit = array(5, 3, 2, 0);
-	$days = $turnaround + ($transit[(int) $shipping_index] ?? 5);
-	$date = new DateTime('now', wp_timezone());
-	$date->modify('+' . $days . ' days');
-	return $date->format('D M. j');
+	return wholesale_cart_has_channel_letters($cart) ? max($turnaround, 4) : $turnaround;
+}
+
+/**
+ * When the order should ship: its production business days counted from the
+ * order day in Pacific time, the shop's time zone (the site's WordPress time
+ * zone may be UTC). Orders placed after 4pm or on a weekend count from the
+ * next business day. The old version added calendar days plus transit, so
+ * "Ships by" dates landed on weekends and included delivery time.
+ */
+function wholesale_estimated_ship_datetime($cart, ?DateTime $now = null)
+{
+	$now = $now ? clone $now : new DateTime('now', new DateTimeZone('America/Los_Angeles'));
+	$order_day = clone $now;
+	$order_day->setTime(0, 0);
+	if ($now->format('N') >= 6 || (int) $now->format('G') >= 16) {
+		$order_day = wholesale_add_business_days($order_day, 1);
+	}
+	return wholesale_add_business_days($order_day, wholesale_cart_production_days($cart));
+}
+
+/**
+ * Ship date as "Tue Oct. 13", saved with the order and shown as "Estimated to
+ * ship by" on the thank-you page, order emails and order tracking. The ship
+ * date doesn't depend on the shipping speed; the argument is kept for callers.
+ */
+function wholesale_estimated_ship_date($cart, $shipping_index = 0)
+{
+	return wholesale_estimated_ship_datetime($cart)->format('D M. j');
+}
+
+/**
+ * Estimated delivery for a shipping speed (standard, 3-day, 2-day, overnight):
+ * the ship date plus that speed's transit business days, using the slow end
+ * of standard shipping's 3-6 days.
+ */
+function wholesale_estimated_delivery_date($cart, $shipping_index = 0)
+{
+	$transit = array(6, 3, 2, 1);
+	return wholesale_add_business_days(wholesale_estimated_ship_datetime($cart), $transit[(int) $shipping_index] ?? 6)->format('D M. j');
 }
 
 /**
@@ -843,7 +894,7 @@ function wholesale_purchase_conversion()
 			window.gtag('set', 'user_data', <?php echo wp_json_encode($user_data); ?>);
 			<?php endif; ?>
 			window.gtag('event', 'conversion', {
-				send_to: 'AW-18454059893/UkFKCJGGp_kcEPW2yt9E',
+				send_to: <?php echo wp_json_encode('AW-18454059893/' . WHOLESALE_ADS_PURCHASE_LABEL); ?>,
 				value: <?php echo wp_json_encode(round($value, 2)); ?>,
 				currency: 'USD',
 				transaction_id: <?php echo wp_json_encode($transaction_id); ?>

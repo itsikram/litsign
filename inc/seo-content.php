@@ -531,6 +531,9 @@ function wholesale_seo_duplicate_product_ids()
 		'no_found_rows' => true,
 	));
 
+	// One query for every product row instead of one per product.
+	_prime_post_caches($products, false, false);
+
 	foreach ($products as $product_id) {
 		if (wholesale_seo_product_duplicate_of($product_id)) {
 			$ids[] = (int) $product_id;
@@ -972,12 +975,18 @@ function wholesale_seo_product_lowest_price($product_id)
 		}
 	}
 
-	// The starting size the product page fills in: a square of the minimum
-	// area, rounded up to a tenth of an inch (see single-product.php).
-	$min_sqft = max(0, (float) get_post_meta($product_id, '_min_sqft', true));
+	// The smallest size the calculator accepts (or the minimum sq ft, when larger):
+	// a square side rounded up to a tenth of an inch, by a width giving exactly that area.
+	$min_sqft = max(0, (float) get_post_meta($product_id, '_min_sqft', true), wholesale_product_min_area($product_id));
 	$side_ft = ($min_sqft > 0 ? ceil(round(sqrt($min_sqft) * 12, 6) * 10) / 10 : 12) / 12;
 	$request['height-ft'] = $side_ft;
-	$request['width-ft'] = $side_ft;
+	$request['width-ft'] = $min_sqft > 0 ? $min_sqft / $side_ft : $side_ft;
+	// Rigid Signs and Magnets: the smallest width and height (the minimum charge applies).
+	$min_sides = wholesale_product_min_sides($product_id);
+	if ($min_sides) {
+		$request['width-ft'] = $min_sides[0] / 12;
+		$request['height-ft'] = $min_sides[1] / 12;
+	}
 
 	$quote = wholesale_price_quote($product_id, $request);
 	if (!empty($quote['ok']) && $quote['total'] > 0) {
@@ -1171,12 +1180,13 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 			<?php
 			// The same starting price the product's structured data gives Google.
 			$from_price = wholesale_seo_product_lowest_price($product_id);
-			$discount = (float) get_post_meta($product_id, '_discount_percent', true);
+			// Only a dated sale is described as a discount; the everyday price is just the price.
+			$promotion = wholesale_product_promotion($product_id);
 			if ($from_price > 0 && $heights) :
 				?>
 				<?php
 				echo '<strong>' . esc_html(sprintf('Prices start at $%s for one %d inch letter', number_format($from_price, 2), $heights[0])) . '</strong>'
-					. esc_html($discount > 0 ? sprintf(', including the %s%% online discount,', rtrim(rtrim(number_format($discount, 2), '0'), '.')) : '')
+					. esc_html($promotion ? sprintf(', including the %s%% sale that ends %s,', rtrim(rtrim(number_format($promotion['percent'], 2), '0'), '.'), wholesale_promotion_end_text($promotion)) : ',')
 					. ' before options such as a power supply or raceway.';
 				$cost_page = get_page_by_path('channel-letter-cost');
 				if ($cost_page && 'publish' === $cost_page->post_status) {
@@ -1269,6 +1279,71 @@ function wholesale_seo_strip_facility_block($html)
 	}
 
 	return substr($html, 0, $from) . substr($html, $to);
+}
+
+/**
+ * Remove the supplier's store pickup text from stored product HTML: the
+ * "Store pickup only available in our California locations" line under the
+ * facility list and the banner FAQ "What size of banner could I do store
+ * pickup?". The business has no pickup and no California store. The supplier's
+ * pickup-only note for rigid boards over 46" x 38" (or 48" x 30") becomes a
+ * call-first note, since boards that size are too big to ship by parcel.
+ * Run it before wholesale_seo_strip_facility_block(), so the pickup line no
+ * longer sits between the facility list and its divider. The stored content is
+ * left as it is.
+ */
+function wholesale_seo_strip_pickup_claims($html)
+{
+	$html = (string) $html;
+	if (!preg_match('/pick\s?-?up/i', $html)) {
+		return $html;
+	}
+
+	// Straight, encoded and curly (UTF-8 bytes) inch marks.
+	$in = '(?:"|&quot;|&#8221;|&rdquo;|\xE2\x80\x9D|\xE2\x80\xB3)';
+	$result = preg_replace(
+		array(
+			'#(?:<p>\s*)?Store pick\s?-?up only available in our California locations?\.?(?:\s*</p>)?#i',
+			// The banner FAQ as a <dt>/<dd> pair; one product has the question without an answer.
+			'#\s*<dt>\s*Q:\s*What size of banner (?:could|can) I (?:do )?store pick\s?-?up\?\s*</dt>(?:\s*<dd>.*?</dd>)?#is',
+			// The same FAQ stored as plain text lines.
+			'#Q:\s*What size of banner (?:could|can) I (?:do )?store pick\s?-?up\?[ \t]*(?:\r?\n[ \t]*A:\s*You can store pick\s?-?up any size[^\r\n<]*)?\r?\n?#i',
+			// "~" delimiter: $in contains "#".
+			'~\((?:store pick\s?-?up only for size over|sizes over)\s*46' . $in . '\s*x\s*38' . $in . '\s*or\s*48' . $in . '\s*x\s*30' . $in . '\s*(?:-\s*(?:<strong>)?\s*Store Pick\s?-?up Only\s*(?:</strong>)?\s*)?\)~i',
+		),
+		array(
+			'',
+			'',
+			'',
+			'(sizes over 46" x 38" or 48" x 30" are too big to ship by parcel; call <a href="tel:+18664362101">866-436-2101</a> before ordering)',
+		),
+		$html
+	);
+
+	return null === $result ? $html : $result;
+}
+
+/**
+ * Stored product HTML as shoppers should see it: the supplier's pickup text and
+ * facility list removed, and FAQ questions whose answer was lost in the
+ * supplier copy (a <dt> followed by another <dt> or the end of the list)
+ * dropped. 15 products had such unanswered questions.
+ */
+function wholesale_seo_clean_product_content($html)
+{
+	$html = wholesale_seo_strip_pickup_claims($html);
+
+	$clean = preg_replace(
+		array(
+			'#\s*<dt>(?:(?!</dt>).)*</dt>(?=\s*(?:</dl>|<dt>))#is',
+			'#<h4[^>]*>\s*Frequently asked questions\s*</h4>\s*<dl[^>]*>\s*</dl>#i',
+		),
+		'',
+		$html
+	);
+	$html = null === $clean ? $html : $clean;
+
+	return wholesale_seo_strip_facility_block($html);
 }
 
 /**

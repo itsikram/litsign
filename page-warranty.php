@@ -21,7 +21,7 @@ $ul_number = wholesale_guide_ul_file_number();
 wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'How long is the channel letter warranty?',
-		'a' => 'Five years from the date your sign ships, against defects in materials and workmanship.',
+		'a' => 'Five years from the date your sign ships, on all 7 channel letter styles, against defects in materials and workmanship.',
 	),
 	array(
 		'q' => 'What do you do if a covered part fails?',
@@ -64,7 +64,7 @@ get_header();
 		<div class="container sf-prose">
 			<p class="cl-kicker">The terms</p>
 			<h2 id="gd-covered-title" class="cl-section-title">What&rsquo;s Covered</h2>
-			<p>Storefront Sign Online LLC warrants its front lit and front &amp; back lit channel letters and lit logo shapes to be free from defects in materials and workmanship for five years from the date of shipment. The LED modules and standard power supplies used in our letters each carry their own five-year warranty, as listed in the sign builder.</p>
+			<p>Storefront Sign Online LLC warrants all 7 of its channel letter styles (front lit, back lit, front &amp; back lit (dual lit), halo lit, reverse lit, trimless and borderless) and its lit logo shapes to be free from defects in materials and workmanship for five years from the date of shipment. The LED modules and standard power supplies used in our letters each carry their own five-year warranty, as listed in the sign builder.</p>
 			<p>If a covered product proves defective during the warranty period, we will, at our option:</p>
 			<ul class="gd-checklist">
 				<li>repair the product, at no charge for parts or for phone and email support, or</li>

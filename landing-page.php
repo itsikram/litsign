@@ -10,7 +10,7 @@ $theme_uri = get_template_directory_uri();
 $contact_url = get_page_by_path('contact') ? get_permalink(get_page_by_path('contact')) : home_url('/contact/');
 $landing_url = get_permalink();
 $logo_id = get_theme_mod('custom_logo');
-$logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'full') : $theme_uri . '/img/logo.png';
+$logo_url = $logo_id ? wp_get_attachment_image_url($logo_id, 'full') : '';
 
 if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['landing_quote_submit'])) {
 	$redirect_url = $landing_url ? $landing_url : home_url('/');
@@ -101,7 +101,7 @@ get_header();
 ?>
 
 <main class="landing-page">
-	<section class="landing-hero">
+	<section class="landing-hero" style="<?php echo esc_attr(wholesale_landing_hero_style()); ?>">
 		<div class="landing-shell container landing-hero-inner">
 			<div class="landing-hero-copy">
 				<p class="landing-eyebrow">Professional signage. Delivered nationwide.</p>

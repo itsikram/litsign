@@ -1085,7 +1085,7 @@
 	/* =============================================================== SECTIONS */
 
 	const SECTIONS = [
-		{ id: 'pricing', label: 'Pricing and size', fields: ['_hide_calculator', '_price_per_sqft', '_discount_percent', '_min_sqft', '_min_height', '_max_height', '_min_width', '_max_width', '_starting_at_text', '_starting_at_options'] },
+		{ id: 'pricing', label: 'Pricing and size', fields: ['_hide_calculator', '_size_presets', '_price_per_sqft', '_discount_percent', '_min_order_price', '_min_sqft', '_min_height', '_max_height', '_min_width', '_max_width', '_starting_at_text', '_starting_at_options'] },
 		{ id: 'options', label: 'Options', boxes: ['product_attr'] },
 		{ id: 'cl', label: 'Channel letters', boxes: ['product_cl_data', 'product_extra_options'], fields: ['_trimcap_color', '_return_color', '_info_content_face_text', '_info_content_face_image', '_info_content_return_text', '_info_content_return_image', '_info_content_trimcap_text', '_info_content_trimcap_image'] },
 		{ id: 'descriptions', label: 'Descriptions and FAQ', boxes: ['product_additional_info'], fields: ['_product_short_desc', '_product_list_desc', '_product_review_text'] },
@@ -1307,6 +1307,8 @@
 
 			attrs.forEach((attr) => {
 				if (attr.options.length < 2 || /avoid-price/.test(attr.cssClass) || (attr.name === 'height' && isCl)) return;
+				// The calculator's typed size replaces a preset "size" dropdown (wholesale_attr_is_preset_size()).
+				if (isSqftCalc && String(attr.name).trim().toLowerCase() === 'size' && !/size-(width|height)-inch/.test(attr.cssClass)) return;
 				const option = this.chosen(attr);
 				const price = this.parse(option.value);
 				let amount;
@@ -1318,12 +1320,16 @@
 				running += amount;
 			});
 
-			const floor = D.sqftMinPrice || 15;
-			if (isSqftCalc && running > 0 && running < floor) {
-				lines.push(['Minimum order (' + money(floor) + ')', floor - running]);
-				running = floor;
-			}
 			if (running <= 0) return { error: 'This works out to $0. Check the price per sq ft and options.', lines };
+			// wholesale_product_min_order(): empty uses the site default, 0 means none. The
+			// minimum is what one item costs after the everyday price adjustment.
+			const minField = fieldVal('_min_order_price').trim();
+			const floor = isNum(minField) ? Math.max(0, num(minField)) : (D.sqftMinPrice || 15);
+			const keep = (100 - Math.min(100, Math.max(0, phpFloat(fieldVal('_discount_percent'))))) / 100;
+			if (isSqftCalc && keep > 0 && floor > 0 && running * keep < floor) {
+				lines.push(['Minimum order (' + money(floor) + ')', floor / keep - running]);
+				running = floor / keep;
+			}
 			return this.finish(running, lines);
 		},
 
@@ -1436,7 +1442,7 @@
 	/* ================================================================= CHECKS */
 
 	const NUMERIC = {
-		_price_per_sqft: 'Price per square foot', _discount_percent: 'Discount', _min_sqft: 'Minimum square feet',
+		_price_per_sqft: 'Price per square foot', _discount_percent: 'Discount', _min_order_price: 'Minimum order price', _size_presets: 'Size presets', _min_sqft: 'Minimum square feet',
 		_min_height: 'Minimum height', _max_height: 'Maximum height', _min_width: 'Minimum width', _max_width: 'Maximum width',
 		_standard_ps_cost: 'Power supply price', _backlit_cost: 'Back-lit upcharge', _eight_ft_cable_cost: '8 ft cable price',
 		_default_color_cost: 'Default face color cost', _order_by_index: 'Sort position',

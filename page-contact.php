@@ -209,7 +209,7 @@ get_header();
 				</div>
 
 				<?php if ('sent' === $quote_status) : ?>
-					<div class="contact-message contact-message-success" role="status">Thanks! Your request has been sent. Our team will be in touch soon.</div>
+					<div class="contact-message contact-message-success" role="status">Thanks! Your request has been sent. A sign specialist will reply within one business day. Need it sooner? Call <a href="tel:+18664362101">866-436-2101</a>.</div>
 				<?php elseif ('file_error' === $quote_status) : ?>
 					<div class="contact-message contact-message-error" role="alert">One of your files couldn’t be uploaded. Please attach up to <?php echo esc_html($quote_file_max_count); ?> JPG, PNG, WEBP, HEIC or PDF files, each under <?php echo esc_html(size_format($quote_file_max_bytes)); ?>, and try again.</div>
 				<?php elseif ('error' === $quote_status) : ?>

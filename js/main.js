@@ -116,7 +116,10 @@
       });
     }
 
+    // The product discount gives the everyday price and is never shown as a sale; a dated
+    // sale (#promoPercent, 0 outside its dates) comes off the everyday price.
     let discountPercent = parseFloat($('#discountPercent').val()) || 0;
+    let promoPercent = parseFloat($('#promoPercent').val()) || 0;
     let pricePerSqft = parseFloat($('#pricePerSqft').val()|| 0).toFixed(2)
 
     function interpolate(x,isCap) {
@@ -188,13 +191,16 @@
       function formatNumberWithCommas(number) {
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
       }
-      let subTotalPrice = (subPrice).toFixed(2)
-      let totalPrice = (discountPercent ? price - ((price / 100) * discountPercent) : price).toFixed(2)
+      // The subtotal and saving rows only show during a dated sale: everyday price, sale saving.
+      let everydaySubPrice = subPrice - ((subPrice / 100) * discountPercent)
+      let subTotalPrice = (everydaySubPrice).toFixed(2)
+      let everydayPrice = discountPercent ? price - ((price / 100) * discountPercent) : price
+      let totalPrice = (promoPercent ? everydayPrice - ((everydayPrice / 100) * promoPercent) : everydayPrice).toFixed(2)
 
 
       // display saving price
       $(".product-pricing-box .price-subtotal-container  .price-saving").text(
-        formatNumberWithCommas(((subPrice / 100) * discountPercent).toFixed(2))
+        formatNumberWithCommas(((everydaySubPrice / 100) * promoPercent).toFixed(2))
 
       );
 
@@ -312,15 +318,17 @@
 
 
     let updateDisplay = (height, width) => {
-      let totalHeightIn = (height * 12).toFixed(1);
-      let totalWidthIn = (width * 12).toFixed(1);
+      let totalHeightIn = +(height * 12).toFixed(1);
+      let totalWidthIn = +(width * 12).toFixed(1);
       let totalSqft = height * width;
       let pricePerSqft = parseFloat(
         $(".product-attibute-box #pricePerSqft").val()
       );
       let subTotalPrice = pricePerSqft * totalSqft;
       let totalPrice = pricePerSqft * totalSqft;
-      let dimentionText = `${totalHeightIn}" x ${totalWidthIn}" = ${totalSqft.toFixed(
+      // B2Sign-style size box (Rigid Signs and Magnets) reads width x height.
+      let widthFirst = $(".product-attibute-box .total-size-sqft").attr("data-order") === "wh";
+      let dimentionText = `${widthFirst ? totalWidthIn : totalHeightIn}" x ${widthFirst ? totalHeightIn : totalWidthIn}" = ${totalSqft.toFixed(
         2
       )} ft<sup>2</sup> `;
       // display dimention
@@ -330,15 +338,8 @@
         totalSqft
       );
       updatePrice(subTotalPrice, totalPrice,'updateDisplay');
-      // change slelects to default
-
-
-      $(".product-attibute-box .dynamic-select:not(.avoid-price)").each(function (e) {
-        let firstOptionVal = $(this).children().first().val()
-        $(this).val(firstOptionVal);
-        $(this).attr("data-cCost", 0)
-      });
-
+      // The customer's option choices stay as they are; the live price quote
+      // (wholesale_price_quote) prices the size and every chosen option.
     };
 
     let validateCalcInputs = (e) => {
@@ -465,6 +466,49 @@
 
       }
     );
+    // 12 inches or more in an inch box: carry the whole feet over to the feet box
+    // (18 in -> 1 ft 6 in). Capture phase, so the size and price handlers below
+    // already see the moved values.
+    document.addEventListener('change', (e) => {
+      const inch = e.target;
+      if (!inch.matches || !inch.matches('.dimenstion-calculator input[name$="-in"]')) return;
+      const value = parseFloat(inch.value);
+      if (!(value >= 12)) return;
+      const feet = inch.form && inch.form.querySelector('input[name="' + inch.name.replace(/-in$/, '-ft') + '"]');
+      if (!feet) return;
+      feet.value = (parseFloat(feet.value) || 0) + Math.floor(value / 12);
+      inch.value = Math.round((value % 12) * 100) / 100;
+    }, true);
+
+    // Scrolling the page over a focused size box must not change the size.
+    document.addEventListener('wheel', (e) => {
+      if (e.target === document.activeElement && e.target.matches && e.target.matches('.dimenstion-calculator input[type="number"]')) e.target.blur();
+    }, { passive: true });
+
+    // Preset size dropdown (Rigid Signs and Magnets): a preset fills in the width and
+    // height; typing a size picks the matching preset, or Custom size.
+    const sizePreset = document.getElementById('pbSizePreset');
+    if (sizePreset && sizePreset.form) {
+      const dimBox = (dim) => sizePreset.form.querySelector('input[name="' + dim + '-in"]');
+      sizePreset.addEventListener('change', () => {
+        const option = sizePreset.selectedOptions[0];
+        if (!option || !option.dataset.width) return;
+        [['width', option.dataset.width], ['height', option.dataset.height]].forEach(([dim, value]) => {
+          const box = dimBox(dim);
+          if (!box) return;
+          box.value = value;
+          box.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      });
+      sizePreset.form.addEventListener('change', (e) => {
+        if (e.target !== dimBox('width') && e.target !== dimBox('height')) return;
+        const width = parseFloat(dimBox('width').value) || 0;
+        const height = parseFloat(dimBox('height').value) || 0;
+        const match = [...sizePreset.options].find((o) => o.dataset.width && parseFloat(o.dataset.width) === width && parseFloat(o.dataset.height) === height);
+        sizePreset.value = match ? match.value : (width || height ? 'custom' : '');
+      });
+    }
+
     // change dimension inputs
     $(document).on("change", ".product-attibute-box .dimenstion-calculator input", (e) => {
       switch (e.target.name) {
@@ -562,9 +606,6 @@
         default:
           break;
       }
-      resetTurnaround();
-
-
     });
 
     // update display on total cost change
@@ -1108,6 +1149,9 @@
       let costBeforeDiscount = parseFloat($('#totalCost').val()).toFixed(2);
       let discountCost = ((costBeforeDiscount * discountPercent) / 100).toFixed(2)
       let costAfterDiscount = costBeforeDiscount - discountCost
+      if (promoPercent) {
+        costAfterDiscount = costAfterDiscount - ((costAfterDiscount * promoPercent) / 100)
+      }
       $('#totalCost').val(costAfterDiscount)
       if (costBeforeDiscount <= 0) {
         e.preventDefault();
@@ -1275,6 +1319,19 @@
       pricingBox.querySelector('.total-container')?.after(message);
     }
 
+    // The calculator keeps the size exactly as typed. Below the minimum order
+    // price the server charges the minimum instead; say so under the size.
+    const sizeDisplay = form.querySelector('.total-size-sqft');
+    const dimensionInputs = [...form.querySelectorAll('.dimenstion-calculator input')];
+    let sizeNote = null;
+    if (sizeDisplay && dimensionInputs.length) {
+      sizeNote = document.createElement('p');
+      sizeNote.className = 'price-quote-message is-hint pb-size-note';
+      sizeNote.setAttribute('role', 'status');
+      sizeNote.hidden = true;
+      (sizeDisplay.closest('.pb-size-summary') || sizeDisplay).after(sizeNote);
+    }
+
     let turnaroundRow = pricingBox.querySelector('.price-turnaround-row');
     if (!turnaroundRow) {
       turnaroundRow = document.createElement('div');
@@ -1287,9 +1344,7 @@
 
     let timer;
     let requestId = 0;
-    const refresh = (event) => {
-      // Enlarge the size to the minimum price only once the visitor leaves a field, not mid-typing.
-      const mayAdjust = !!event && event.type === 'change';
+    const refresh = () => {
       clearTimeout(timer);
       timer = setTimeout(async () => {
         const data = new FormData(form);
@@ -1311,27 +1366,21 @@
             message.textContent = needsText ? 'Type your sign text above to see your exact price.' : quote.error;
             message.classList.toggle('is-hint', !!needsText);
             message.hidden = false;
+            if (sizeNote) sizeNote.hidden = true;
             addButtons.forEach((button) => { button.disabled = !needsText; });
             return;
           }
 
-          if (quote.adjusted && mayAdjust) {
-            let changed = null;
-            Object.entries(quote.adjusted).forEach(([name, value]) => {
-              const input = form.querySelector('.dimenstion-calculator input[name="' + name + '"]');
-              if (input && parseFloat(input.value || 0) !== value) {
-                input.value = value;
-                changed = input;
-              }
-            });
-            // Re-runs the size display and a fresh quote at the new size.
-            if (changed) changed.dispatchEvent(new Event('change', { bubbles: true }));
+          if (sizeNote) {
+            sizeNote.hidden = !(quote.minimum_order > 0);
+            sizeNote.textContent = quote.minimum_order > 0 ? 'Your size is below our minimum order, so the minimum price applies.' : '';
           }
 
           message.hidden = true;
           message.classList.remove('is-hint');
-          pricingBox.querySelectorAll('.price-subtotal').forEach((el) => { el.textContent = money(quote.subtotal); });
-          pricingBox.querySelectorAll('.price-saving').forEach((el) => { el.textContent = money(quote.discount); });
+          // Shown only during a dated sale: the everyday price and what the sale takes off it.
+          pricingBox.querySelectorAll('.price-subtotal').forEach((el) => { el.textContent = money('everyday' in quote ? quote.everyday : quote.subtotal); });
+          pricingBox.querySelectorAll('.price-saving').forEach((el) => { el.textContent = money('promo_discount' in quote ? quote.promo_discount : quote.discount); });
           pricingBox.querySelectorAll('.price-total').forEach((el) => { el.textContent = money(quote.total); });
           turnaroundRow.hidden = !(quote.turnaround > 0);
           turnaroundRow.querySelector('.price-turnaround').textContent = money(quote.turnaround);

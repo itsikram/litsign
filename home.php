@@ -149,7 +149,7 @@ $category_hero_image = $current_term_image;
 if ($is_channel_letters && is_front_page()) {
     $front_page_hero_image = get_the_post_thumbnail_url((int) get_option('page_on_front'), '2048x2048');
     if (!$front_page_hero_image && wholesale_channel_letters_landing_id()) {
-        $front_page_hero_image = get_the_post_thumbnail_url(wholesale_channel_letters_landing_id(), 'large');
+        $front_page_hero_image = get_the_post_thumbnail_url(wholesale_channel_letters_landing_id(), '2048x2048');
     }
     $category_hero_image = $front_page_hero_image ? $front_page_hero_image : $category_hero_image;
 }
@@ -286,7 +286,7 @@ if ($is_channel_letters) {
         ),
         array(
             'q' => 'What materials and warranty do I get?',
-            'a' => 'Outdoor channel letter signs are UL listed with sign section labels. Listed LED modules, power supplies and qualifying letters carry a five-year warranty.',
+            'a' => 'Outdoor channel letter signs are UL listed with sign section labels. All 7 channel letter styles carry a five-year warranty, and the LED modules and power supplies each carry their own five-year warranty.',
         ),
         array(
             'q' => 'How long will it take to get my sign?',
@@ -383,7 +383,7 @@ if ('' === $category_description_text && '' === $category_intro) {
         <ul class="container cll-trust-list">
             <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong><small>Labels on every sign section</small></span></li>
             <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Washington &amp; California</small></span></li>
-            <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>LED modules &amp; power supplies</small></span></li>
+            <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>All 7 channel letter styles</small></span></li>
             <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong><small>Wiring diagram included</small></span></li>
         </ul>
     </div>
@@ -713,7 +713,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                             <p class="cl-help-card-text">Tell us your wall size and logo. A sign specialist will recommend a style and quote it for you.</p>
                             <ul class="cl-help-card-list">
                                 <li><?php echo wholesale_home_icon('badge'); ?> UL listed for outdoor use</li>
-                                <li><?php echo wholesale_home_icon('shield'); ?> 5-year warranty on listed LEDs</li>
+                                <li><?php echo wholesale_home_icon('shield'); ?> 5-year warranty on all 7 styles</li>
                                 <li><?php echo wholesale_home_icon('plug'); ?> Tested, with a wiring diagram and install pattern</li>
                                 <li><?php echo wholesale_home_icon('flag'); ?> Made in USA, ships to all 50 states</li>
                             </ul>
@@ -947,7 +947,7 @@ if ('' === $category_description_text && '' === $category_intro) {
             </div>
             <ul class="cl-quality-list">
                 <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong> outdoor channel letter signs with sign section labels.</span></li>
-                <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong> on listed LED modules, power supplies and qualifying letters.</span></li>
+                <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong> on all 7 channel letter styles, plus the LED modules and power supplies.</span></li>
                 <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in USA</strong> with .040 aluminum or welded stainless steel returns and acrylic faces.</span></li>
                 <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong>, with a wiring diagram and installation pattern included.</span></li>
             </ul>

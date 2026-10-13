@@ -74,9 +74,14 @@ function wholesale_preload_landing_hero()
 		return;
 	}
 
-	$img = get_template_directory_uri() . '/img/';
-	printf('<link rel="preload" as="image" href="%s" type="image/webp" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($img . 'landing-hero-960.webp'));
-	printf('<link rel="preload" as="image" href="%s" type="image/webp" media="(min-width: 768px)" fetchpriority="high">' . "\n", esc_url($img . 'landing-hero-1440.webp'));
+	// Set in Settings > Storefront Sign > Images.
+	$hero = wholesale_landing_hero_urls();
+	if ($hero['phone']) {
+		printf('<link rel="preload" as="image" href="%s" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($hero['phone']));
+	}
+	if ($hero['wide']) {
+		printf('<link rel="preload" as="image" href="%s" media="(min-width: 768px)" fetchpriority="high">' . "\n", esc_url($hero['wide']));
+	}
 }
 add_action('wp_head', 'wholesale_preload_landing_hero', 1);
 
@@ -124,7 +129,12 @@ function wholesale_cache_excluded_request()
 
 function wholesale_cache_exclusions()
 {
-	if (is_admin() || !wholesale_cache_excluded_request()) {
+	if (is_admin()) {
+		return;
+	}
+
+	if (!wholesale_cache_excluded_request()) {
+		wholesale_send_revalidate_headers();
 		return;
 	}
 
@@ -133,9 +143,79 @@ function wholesale_cache_exclusions()
 	}
 	if (!headers_sent()) {
 		header('Cache-Control: private, no-store, max-age=0');
+		wholesale_send_revalidate_headers();
 	}
 }
 add_action('template_redirect', 'wholesale_cache_exclusions', 5);
+
+/**
+ * Whether PHP has already queued a response header with this name.
+ */
+function wholesale_response_has_header($name)
+{
+	foreach (headers_list() as $header) {
+		if (0 === stripos($header, $name . ':')) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Make browsers check back before reusing a page. The live host's root
+ * .htaccess has "ExpiresDefault 1 year", and mod_expires adds it to any
+ * response that has no Expires header of its own, so product pages and the
+ * home page were kept in visitors' browsers for a year: returning visitors
+ * saw old prices and sale dates, and forms with day-old nonces failed.
+ * Sending an Expires header (and a Cache-Control when none is set yet, such
+ * as the session's no-store) keeps mod_expires out of HTML responses.
+ */
+function wholesale_send_revalidate_headers()
+{
+	if (headers_sent()) {
+		return;
+	}
+	if (!wholesale_response_has_header('Cache-Control')) {
+		header('Cache-Control: no-cache, max-age=0, must-revalidate');
+	}
+	if (!wholesale_response_has_header('Expires')) {
+		header('Expires: Wed, 11 Jan 1984 05:00:00 GMT');
+	}
+}
+
+/**
+ * REST responses to anonymous visitors have no cache headers of their own
+ * (WordPress only adds them for logged-in users), so mod_expires gave them a
+ * year as well. Give each one an Expires header that matches its
+ * Cache-Control, so a route that allows caching (the live search's 60
+ * seconds) keeps it and everything else is checked again.
+ */
+function wholesale_rest_cache_headers($response)
+{
+	if (!$response instanceof WP_HTTP_Response) {
+		return $response;
+	}
+
+	$cache = '';
+	foreach ($response->get_headers() as $key => $value) {
+		if (0 === strcasecmp($key, 'Expires')) {
+			return $response;
+		}
+		if (0 === strcasecmp($key, 'Cache-Control')) {
+			$cache = (string) $value;
+		}
+	}
+
+	if ('' === $cache) {
+		$response->header('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+	}
+	$max_age = preg_match('/\bmax-age=(\d+)/', $cache, $match) ? (int) $match[1] : 0;
+	$response->header('Expires', $max_age ? gmdate('D, d M Y H:i:s', time() + $max_age) . ' GMT' : 'Wed, 11 Jan 1984 05:00:00 GMT');
+
+	return $response;
+}
+add_filter('rest_post_dispatch', 'wholesale_rest_cache_headers', 99);
 
 /**
  * Stylesheets that never style anything in the first view, loaded without

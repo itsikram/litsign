@@ -378,6 +378,26 @@ function wholesale_product_image_alt_find_product_id_by_attachment($attachment_i
 		return 0;
 	}
 
+	$map = wholesale_product_image_alt_attachment_product_map();
+
+	return isset($map[$attachment_id]) ? $map[$attachment_id] : 0;
+}
+
+/**
+ * Attachment ID => product ID for every product's featured and gallery
+ * images, built once per request. The first product in query order that
+ * uses an image wins, as a product-by-product scan would find it.
+ *
+ * @return array
+ */
+function wholesale_product_image_alt_attachment_product_map()
+{
+	static $map = null;
+	if (null !== $map) {
+		return $map;
+	}
+	$map = array();
+
 	$products = get_posts(array(
 		'post_type' => 'product',
 		'post_status' => 'publish',
@@ -385,27 +405,115 @@ function wholesale_product_image_alt_find_product_id_by_attachment($attachment_i
 		'fields' => 'ids',
 		'no_found_rows' => true,
 	));
+	if (!$products) {
+		return $map;
+	}
+
+	// Load every product row and its meta in one go instead of per product.
+	_prime_post_caches($products, false, true);
+
+	$galleries = array();
+	$urls = array();
+	foreach ($products as $product_id) {
+		$gallery = get_post_meta($product_id, '_product_gallery', true);
+		$galleries[$product_id] = is_array($gallery) ? $gallery : array();
+		foreach ($galleries[$product_id] as $value) {
+			if (is_string($value)) {
+				$urls[$value] = true;
+			}
+		}
+	}
+	$url_ids = wholesale_product_image_alt_attachment_ids_by_url(array_keys($urls));
 
 	foreach ($products as $product_id) {
-		$thumbnail = (int) get_post_thumbnail_id($product_id);
-		if ($thumbnail === $attachment_id) {
-			return (int) $product_id;
+		$used = array((int) get_post_thumbnail_id($product_id));
+		foreach ($galleries[$product_id] as $key => $value) {
+			if (is_numeric($key)) {
+				$used[] = (int) $key;
+			}
+			if (is_string($value) && !empty($url_ids[$value])) {
+				$used[] = $url_ids[$value];
+			}
 		}
-
-		$gallery = get_post_meta($product_id, '_product_gallery', true);
-		if (is_array($gallery)) {
-			foreach ($gallery as $key => $value) {
-				if (is_numeric($key) && (int) $key === $attachment_id) {
-					return (int) $product_id;
-				}
-				if (is_string($value) && attachment_url_to_postid($value) === $attachment_id) {
-					return (int) $product_id;
-				}
+		foreach ($used as $id) {
+			if ($id && !isset($map[$id])) {
+				$map[$id] = (int) $product_id;
 			}
 		}
 	}
 
-	return 0;
+	return $map;
+}
+
+/**
+ * attachment_url_to_postid() for many URLs with one query per 200 URLs.
+ *
+ * @param string[] $urls Image URLs.
+ * @return array URL => attachment ID (0 when not found).
+ */
+function wholesale_product_image_alt_attachment_ids_by_url($urls)
+{
+	global $wpdb;
+
+	$ids = array();
+	if (!$urls) {
+		return $ids;
+	}
+
+	// Plugins that filter the lookup get the core function, one URL at a time.
+	if (has_filter('pre_attachment_url_to_postid') || has_filter('attachment_url_to_postid')) {
+		foreach ($urls as $url) {
+			$ids[$url] = (int) attachment_url_to_postid($url);
+		}
+		return $ids;
+	}
+
+	// Same path rules as attachment_url_to_postid().
+	$dir = wp_get_upload_dir();
+	$site_url = parse_url($dir['url']);
+	$paths = array();
+	foreach ($urls as $url) {
+		$path = $url;
+		$image_path = parse_url($path);
+		if (isset($image_path['scheme']) && $image_path['scheme'] !== $site_url['scheme']) {
+			$path = str_replace($image_path['scheme'], $site_url['scheme'], $path);
+		}
+		if (str_starts_with($path, $dir['baseurl'] . '/')) {
+			$path = substr($path, strlen($dir['baseurl'] . '/'));
+		}
+		$paths[$url] = $path;
+	}
+
+	// The meta_value comparison ignores case, so group rows the same way.
+	$rows = array();
+	foreach (array_chunk(array_values(array_unique($paths)), 200) as $chunk) {
+		$placeholders = implode(',', array_fill(0, count($chunk), '%s'));
+		$results = $wpdb->get_results($wpdb->prepare(
+			"SELECT post_id, meta_value FROM $wpdb->postmeta WHERE meta_key = '_wp_attached_file' AND meta_value IN ($placeholders) ORDER BY meta_id",
+			$chunk
+		));
+		foreach ($results as $row) {
+			$rows[strtolower($row->meta_value)][] = $row;
+		}
+	}
+
+	foreach ($paths as $url => $path) {
+		$matches = isset($rows[strtolower($path)]) ? $rows[strtolower($path)] : array();
+		$post_id = 0;
+		if ($matches) {
+			// First result, but prefer a case-sensitive match, as core does.
+			$post_id = (int) reset($matches)->post_id;
+			foreach ($matches as $row) {
+				if ($path === $row->meta_value) {
+					$post_id = (int) $row->post_id;
+					break;
+				}
+			}
+		}
+		$ids[$url] = $post_id;
+	}
+
+	return $ids;
 }
 
 /**

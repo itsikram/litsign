@@ -57,8 +57,13 @@ if ($product_id > 0) {
     $default_return = get_post_meta($product_id, '_default_return', true) ? get_post_meta($product_id, '_default_return', true) : 0;
     $default_trimcap = get_post_meta($product_id, '_default_trimcap', true) ? get_post_meta($product_id, '_default_trimcap', true) : 0;
     $default_color_cost = get_post_meta($product_id, '_default_color_cost', true) ? get_post_meta($product_id, '_default_color_cost', true) : 0;
-    // Same sale percentage the cart applies (wholesale_price_quote() in inc/pricing.php).
+    // Same percentages the cart applies (wholesale_price_quote() in inc/pricing.php): the
+    // product discount gives the everyday price and is never shown as a sale; only a dated
+    // sale (wholesale_product_promotion()) is.
     $discount_percent = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
+    $promotion = wholesale_product_promotion($product_id);
+    $promo_percent = $promotion ? (float) $promotion['percent'] : 0;
+    $promo_ends = $promotion ? wholesale_promotion_end_text($promotion) : '';
 
     $default_data_json = json_encode(array(
         'trimcap' => $default_trimcap,
@@ -131,6 +136,7 @@ get_header();
 <input type="hidden" id="backLitCost" value="<?php echo $backlit_cost ? $backlit_cost : 100; ?>">
 <input type="hidden" id="eightFtcableCost" value="<?php echo $eight_ft_cable_cost ? $eight_ft_cable_cost : 70; ?>">
 <input type="hidden" id="clDiscountPercent" value="<?php echo esc_attr($discount_percent); ?>">
+<input type="hidden" id="clPromoPercent" value="<?php echo esc_attr($promo_percent ?? 0); ?>" data-ends="<?php echo esc_attr($promo_ends ?? ''); ?>">
 
 <!-- <button id="addPatternButton">Add Pattern</button> -->
 
@@ -324,6 +330,7 @@ get_header();
                         <button type="button" title="Undo (Ctrl+Z)" aria-label="Undo" id="undoBtn" disabled><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Undo</span></button>
                         <button type="button" title="Redo (Ctrl+Y)" aria-label="Redo" id="redoBtn" disabled><i class="fa-solid fa-rotate-right" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Redo</span></button>
                         <span class="cl-divider" aria-hidden="true"></span>
+                        <button type="button" title="Select all letters and shapes (Ctrl+A)" aria-label="Select all letters and shapes" aria-pressed="false" id="selectAllBtn" disabled><svg class="cl-tool-icon" viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3.2 2.4"/><rect x="7.5" y="7.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg><span class="cl-tool-label" aria-hidden="true">Select all</span></button>
                         <button type="button" title="Duplicate" aria-label="Duplicate selected" id="duplicateBtn"><i class="fa-solid fa-clone" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Copy</span></button>
                         <button type="button" title="Zoom in" aria-label="Zoom in" id="zoomInBtn"><i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Zoom in</span></button>
                         <button type="button" title="Zoom out" aria-label="Zoom out" id="zoomOutBtn"><i class="fa-solid fa-magnifying-glass-minus" aria-hidden="true"></i><span class="cl-tool-label" aria-hidden="true">Zoom out</span></button>
@@ -490,10 +497,10 @@ get_header();
                         0
                     </span>
                 </div>
-                <div id="totalCost" class="cl-stat cl-stat--price<?php echo $discount_percent > 0 ? ' has-sale' : ''; ?>" aria-live="polite">
+                <div id="totalCost" class="cl-stat cl-stat--price<?php echo !empty($promo_percent) ? ' has-sale' : ''; ?>" aria-live="polite">
                     <span class="cl-stat-label">
-                        <?php if ($discount_percent > 0) : ?>
-                            Sale price <span class="cl-sale-badge"><?php echo esc_html(round($discount_percent, 2)); ?>% off</span>
+                        <?php if (!empty($promo_percent)) : ?>
+                            Sale price <span class="cl-sale-badge" title="<?php echo esc_attr('Ends ' . $promo_ends); ?>"><?php echo esc_html(round($promo_percent, 2)); ?>% off</span>
                         <?php else : ?>
                             Total
                         <?php endif; ?>
@@ -531,14 +538,14 @@ get_header();
                     <h5 class="modal-title" id="costModalLabel">Price breakdown</h5>
                     <p class="cost-modal-subtitle"><?php echo esc_html($product_title); ?></p>
                 </div>
-                <?php if ($discount_percent > 0) : ?>
-                    <span class="cl-sale-badge cl-sale-badge--lg"><?php echo esc_html(round($discount_percent, 2)); ?>% off sale</span>
+                <?php if (!empty($promo_percent)) : ?>
+                    <span class="cl-sale-badge cl-sale-badge--lg"><?php echo esc_html(round($promo_percent, 2) . '% off sale, ends ' . $promo_ends); ?></span>
                 <?php endif; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="table-responsive cost-breakdown-table">
-                    <table class="table cost-table<?php echo $discount_percent > 0 ? ' has-sale' : ''; ?>">
+                    <table class="table cost-table<?php echo !empty($promo_percent) ? ' has-sale' : ''; ?>">
                         <thead>
                             <tr>
                                 <th scope="col">#</th>
@@ -546,8 +553,8 @@ get_header();
                                 <th scope="col">Size (H × W)</th>
                                 <th scope="col" class="num">Base price</th>
                                 <th scope="col" class="num">Face color</th>
-                                <th scope="col" class="num">Regular</th>
-                                <?php if ($discount_percent > 0) : ?>
+                                <th scope="col" class="num"><?php echo !empty($promo_percent) ? 'Regular' : 'Price'; ?></th>
+                                <?php if (!empty($promo_percent)) : ?>
                                     <th scope="col" class="num">Sale</th>
                                 <?php endif; ?>
                             </tr>

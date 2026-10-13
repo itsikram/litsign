@@ -457,6 +457,12 @@
 }
 
 @media (max-width: 767.98px) {
+  /* style.css turns off the sticky photo box on phones (position: static), which left the
+     sale badge placed against the page, under the header; keep it on the photo. */
+  .product-details .thumbnail-container {
+    position: relative;
+  }
+
   .product-details .product-title {
     font-size: 26px !important;
     line-height: 1.18;

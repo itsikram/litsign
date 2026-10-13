@@ -2624,22 +2624,39 @@ a.review-author-name:hover {
 
 .review-dots {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
-  margin-top: 14px;
+  margin-top: 7px;
 }
 
+/* 24px tap target (WCAG 2.5.8); the visible 9px dot is drawn by ::before. */
 .review-dot {
-  width: 9px;
-  height: 9px;
+  position: relative;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
-  border-radius: 50%;
-  background: rgba(13, 46, 77, 0.22);
+  background: transparent;
   cursor: pointer;
 }
 
+.review-dot::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(13, 46, 77, 0.22);
+  transform: translate(-50%, -50%);
+}
+
 .review-dot.is-active {
+  width: 32px;
+}
+
+.review-dot.is-active::before {
   width: 24px;
   border-radius: 999px;
   background: #0d2e4d;
@@ -6814,6 +6831,42 @@ a.review-author-name:hover {
     min-width: 36px;
     padding: 0 8px;
   }
+}
+/* Rigid Signs and Magnets: B2Sign-style size box. "Width [  ] in", optional preset
+   dropdown above, and a grey summary panel (size, rate, minimums) below. */
+.product-details .product-attibute-box .pb-size-b2 .pb-size-preset {
+  min-height: 42px;
+  margin-bottom: 10px;
+}
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-input {
+  border-radius: 0 !important;
+  border-right: 0;
+  text-align: right;
+}
+.product-details .product-attibute-box .pb-size-b2 .dim-group .input-group-text:last-child {
+  min-width: 36px;
+  border-right: 1px solid #cbd5e1;
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  color: #94a3b8;
+  font-weight: 400;
+}
+.product-details .product-attibute-box .pb-size-summary {
+  padding: 14px 12px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #475569;
+  text-align: center;
+  font-size: 13px;
+}
+.product-details .product-attibute-box .pb-size-summary .total-size-sqft {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+.product-details .product-attibute-box .pb-size-summary .pb-min-size {
+  margin-top: 4px;
+  color: #64748b;
 }
 
 /* Related products under a product page (wholesale_seo_render_related_products). */

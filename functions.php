@@ -46,7 +46,10 @@ if (file_exists(dirname(__FILE__) . '/template/display_admin_orders.php')) {
 require_once(dirname(__FILE__) . '/inc/orders.php');
 require_once(dirname(__FILE__) . '/inc/reviews.php');
 require_once(dirname(__FILE__) . '/inc/review-manager.php');
-require_once(dirname(__FILE__) . '/inc/review-pricing.php');
+// inc/review-pricing.php (the "Review Product Sale Pricing" tool) is retired: it raised
+// regular prices to create crossed-out "was" prices nobody paid. Sales now come only from
+// the dated promotion under Settings > Storefront Sign. Its per-product snapshots of the
+// original prices stay in post meta (_wholesale_review_pricing_snapshot).
 require_once(dirname(__FILE__) . '/inc/order-reviews.php');
 require_once(dirname(__FILE__) . '/inc/pricing.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');
@@ -61,6 +64,7 @@ require_once(dirname(__FILE__) . '/inc/product-guides.php');
 require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
 require_once(dirname(__FILE__) . '/inc/product-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
+require_once(dirname(__FILE__) . '/inc/ads-page-conversions.php');
 require_once(dirname(__FILE__) . '/inc/quote-form.php');
 require_once(dirname(__FILE__) . '/inc/async-uploads.php');
 require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
@@ -70,7 +74,12 @@ require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
 require_once(dirname(__FILE__) . '/inc/storefront-media.php');
 require_once(dirname(__FILE__) . '/inc/product-image-alt.php');
 require_once(dirname(__FILE__) . '/inc/shop-catalog.php');
+require_once(dirname(__FILE__) . '/inc/theme-images.php');
+require_once(dirname(__FILE__) . '/inc/settings-page.php');
+require_once(dirname(__FILE__) . '/inc/media-sync.php');
+require_once(dirname(__FILE__) . '/inc/theme-zip.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
+require_once(dirname(__FILE__) . '/inc/page-loader.php');
 require_once(dirname(__FILE__) . '/inc/cache-clear.php');
 require_once(dirname(__FILE__) . '/inc/guide-pages.php');
 require_once(dirname(__FILE__) . '/inc/seo-admin/loader.php');
@@ -424,6 +433,8 @@ function wholesale_setting_defaults()
 		'channel_shipping_options' => '50,200,250,300',
 		'google_places_api_key' => defined('WHOLESALE_GOOGLE_PLACES_API_KEY') ? WHOLESALE_GOOGLE_PLACES_API_KEY : '',
 		'google_place_id' => '',
+		// Google reviews below this many stars are hidden on the site.
+		'google_reviews_min_rating' => 4,
 		'google_ads_lead_label' => '-4S9CMyui4EdEPW2yt9E',
 		'google_ads_phone_tap_label' => '',
 		'google_ads_sms_tap_label' => '',
@@ -431,7 +442,14 @@ function wholesale_setting_defaults()
 		'google_ads_builder_start_label' => '',
 		'google_ads_add_to_cart_label' => '',
 		'ga4_measurement_id' => '',
+		'page_loader_enabled' => 0,
 		'ul_file_number' => '',
+		// Dated sale (wholesale_product_promotion() in inc/pricing.php). Off until a
+		// percentage and both dates are set.
+		'promo_percent' => '0',
+		'promo_start' => '',
+		'promo_end' => '',
+		'promo_scope' => 'all',
 		'email_status_updates' => 1,
 		'payment_method' => 'lightbox',
 		'ticket_business_name' => 'Lit Sign Manufacturing',
@@ -501,9 +519,47 @@ function wholesale_setting_sanitizer($key)
 		'quote_autoreply_message' => 'sanitize_textarea_field',
 		'ticket_due_days' => 'wholesale_sanitize_days',
 		'default_hero_image' => 'wholesale_sanitize_image_id',
+		'page_loader_enabled' => 'wholesale_sanitize_page_loader_enabled',
+		'promo_percent' => 'wholesale_sanitize_promo_percent',
+		'promo_start' => 'wholesale_sanitize_date',
+		'promo_end' => 'wholesale_sanitize_date',
+		'promo_scope' => 'wholesale_sanitize_promo_scope',
+		'google_places_api_key' => 'wholesale_sanitize_google_api_key',
+		'google_reviews_min_rating' => 'wholesale_sanitize_star_rating',
 	);
 
 	return $sanitizers[$key] ?? 'sanitize_text_field';
+}
+
+/**
+ * A Google API key ("AIza" and 35 more characters), or ''. Anything else is
+ * dropped: a password manager had filled this password field with the
+ * payment gateway PIN, which would have been sent to Google with every
+ * reviews request once a Place ID was set.
+ */
+function wholesale_sanitize_google_api_key($value)
+{
+	$value = trim((string) $value);
+	return preg_match('/^AIza[0-9A-Za-z_-]{35}$/', $value) ? $value : '';
+}
+
+/** A whole star rating from 1 to 5. */
+function wholesale_sanitize_star_rating($value)
+{
+	return max(1, min(5, absint($value)));
+}
+
+/**
+ * One-time cleanup (runs with the theme's other migrations): remove a stored
+ * Places API key that isn't a Google key, such as the autofilled gateway PIN.
+ */
+function wholesale_migrate_places_key_cleanup()
+{
+	$stored = get_option('wholesale_google_places_api_key', null);
+	if (null !== $stored && '' === wholesale_sanitize_google_api_key($stored)) {
+		update_option('wholesale_google_places_api_key', '');
+	}
+	return true;
 }
 add_action('admin_init', 'wholesale_register_settings');
 
@@ -518,6 +574,28 @@ function wholesale_sanitize_days($value)
 	return min(365, max(0, (int) $value));
 }
 
+function wholesale_sanitize_page_loader_enabled($value)
+{
+	return is_scalar($value) && '1' === (string) $value ? 1 : 0;
+}
+
+function wholesale_sanitize_promo_percent($value)
+{
+	return is_numeric($value) ? rtrim(rtrim(number_format(min(90, max(0, (float) $value)), 2, '.', ''), '0'), '.') : '0';
+}
+
+// "2026-11-27", or '' for an empty or invalid date.
+function wholesale_sanitize_date($value)
+{
+	$date = DateTime::createFromFormat('!Y-m-d', trim((string) $value));
+	return $date && $date->format('Y-m-d') === trim((string) $value) ? $date->format('Y-m-d') : '';
+}
+
+function wholesale_sanitize_promo_scope($value)
+{
+	return in_array($value, array('all', 'channel-letters', 'other'), true) ? $value : 'all';
+}
+
 function wholesale_sanitize_payment_method($value)
 {
 	return 'direct' === $value ? 'direct' : 'lightbox';
@@ -527,181 +605,6 @@ function wholesale_sanitize_decimal($value)
 {
 	return is_numeric($value) && (float) $value >= 0 ? number_format((float) $value, 2, '.', '') : '0.00';
 }
-
-function wholesale_settings_page()
-{
-	if (!current_user_can('manage_options')) {
-		return;
-	}
-	?>
-	<div class="wrap">
-		<h1>Storefront Sign Settings</h1>
-		<p>Manage the website defaults that can be updated immediately without editing theme files.</p>
-		<form action="options.php" method="post">
-			<?php settings_fields('wholesale_settings'); ?>
-			<h2 class="title">Branding</h2>
-			<table class="form-table" role="presentation">
-				<tr><th><label for="wholesale_primary_color">Primary color</label></th><td><input type="color" id="wholesale_primary_color" name="wholesale_primary_color" value="<?php echo esc_attr(wholesale_get_setting('primary_color')); ?>"></td></tr>
-				<tr><th><label for="wholesale_accent_color">Rating/accent color</label></th><td><input type="color" id="wholesale_accent_color" name="wholesale_accent_color" value="<?php echo esc_attr(wholesale_get_setting('accent_color')); ?>"></td></tr>
-				<tr><th><label for="wholesale_sale_price_color">Sale price color</label></th><td><input type="color" id="wholesale_sale_price_color" name="wholesale_sale_price_color" value="<?php echo esc_attr(wholesale_get_setting('sale_price_color')); ?>"></td></tr>
-				<?php
-				$hero_image_id = (int) wholesale_get_setting('default_hero_image');
-				$hero_preview = $hero_image_id ? wp_get_attachment_image_url($hero_image_id, 'medium_large') : '';
-				$hero_built_in = get_template_directory_uri() . '/img/hero-1920.webp';
-				?>
-				<tr><th>Default hero image</th><td class="wholesale-hero-setting">
-					<input type="hidden" id="wholesale_default_hero_image" name="wholesale_default_hero_image" value="<?php echo esc_attr((string) $hero_image_id); ?>">
-					<img id="wholesale-hero-preview" src="<?php echo esc_url($hero_preview ? $hero_preview : $hero_built_in); ?>" data-built-in="<?php echo esc_url($hero_built_in); ?>" alt="" style="display:block;width:100%;max-width:480px;aspect-ratio:12/5;object-fit:cover;border-radius:6px;background:#031835;margin-bottom:8px;">
-					<button type="button" class="button" id="wholesale-hero-select">Choose image</button>
-					<button type="button" class="button-link-delete" id="wholesale-hero-remove" style="margin-left:8px;<?php echo $hero_image_id ? '' : 'display:none;'; ?>">Use the built-in photo</button>
-					<p class="description">Hero background for product categories and pages that have no image of their own. The home page and the Channel Letters page use the Channel Letters page's featured image instead. Best size: at least 2400 &times; 1000 px, landscape, with the main subject on the right and a darker, quiet left side where the headline sits. Phones show the right-hand part of the photo. A smaller AVIF copy is made automatically a few seconds after the first page view.</p>
-				</td></tr>
-			</table>
-			<h2 class="title">Certification</h2>
-			<table class="form-table" role="presentation">
-				<tr><th><label for="wholesale_ul_file_number">UL file number</label></th><td><input class="regular-text" id="wholesale_ul_file_number" name="wholesale_ul_file_number" value="<?php echo esc_attr(wholesale_get_setting('ul_file_number')); ?>" placeholder="E123456"><p class="description">Shown on the sign permit, installation and warranty pages so inspectors and customers can look it up. Leave empty to hide it.</p></td></tr>
-			</table>
-			<h2 class="title">Reviews</h2>
-			<table class="form-table" role="presentation">
-				<?php foreach (array(
-					'show_product_ratings' => 'Show ratings on product cards',
-					'show_product_reviews' => 'Show reviews on product pages',
-					'allow_verified_reviews' => 'Allow reviews from customers with completed orders',
-					'auto_publish_reviews' => 'Publish customer reviews automatically',
-				) as $key => $label) : ?>
-					<tr><th><?php echo esc_html($label); ?></th><td><input type="hidden" name="wholesale_<?php echo esc_attr($key); ?>" value="0"><label><input type="checkbox" name="wholesale_<?php echo esc_attr($key); ?>" value="1" <?php checked(wholesale_setting_enabled($key)); ?>> Enabled</label></td></tr>
-				<?php endforeach; ?>
-			</table>
-			<h2 class="title">Customer emails</h2>
-			<table class="form-table" role="presentation">
-				<tr><th>Order status emails</th><td><input type="hidden" name="wholesale_email_status_updates" value="0"><label><input type="checkbox" name="wholesale_email_status_updates" value="1" <?php checked(wholesale_setting_enabled('email_status_updates')); ?>> Email customers when their order goes into production, ships (with tracking), is put on hold, cancelled or refunded</label></td></tr>
-				<tr><th>Quote request confirmation</th><td><input type="hidden" name="wholesale_quote_autoreply" value="0"><label><input type="checkbox" name="wholesale_quote_autoreply" value="1" <?php checked(wholesale_setting_enabled('quote_autoreply')); ?>> Email customers a confirmation with a copy of their request as soon as they submit a quote form</label><p class="description">Reply to a request from its screen under <a href="<?php echo esc_url(admin_url('edit.php?post_type=contact_submission')); ?>">Contact Submissions</a>.</p></td></tr>
-				<tr><th><label for="wholesale_quote_autoreply_subject">Confirmation subject</label></th><td><input class="large-text" id="wholesale_quote_autoreply_subject" name="wholesale_quote_autoreply_subject" value="<?php echo esc_attr(wholesale_get_setting('quote_autoreply_subject')); ?>"></td></tr>
-				<tr><th><label for="wholesale_quote_autoreply_message">Confirmation message</label></th><td><textarea class="large-text" rows="4" id="wholesale_quote_autoreply_message" name="wholesale_quote_autoreply_message"><?php echo esc_textarea(wholesale_get_setting('quote_autoreply_message')); ?></textarea><p class="description">Placeholders: <code>{name}</code> customer's first name, <code>{store}</code> business name (from Payment tickets below), <code>{project}</code> project type. A copy of what they sent is added below the message.</p></td></tr>
-			</table>
-			<h2 class="title" id="payment-tickets">Payment tickets</h2>
-			<p>Used by <a href="<?php echo esc_url(admin_url('edit.php?post_type=payment_ticket')); ?>">Payment Tickets</a>: the customer's payment page, the payment request email and new tickets.</p>
-			<table class="form-table" role="presentation">
-				<tr><th><label for="wholesale_ticket_business_name">Business name</label></th><td><input class="regular-text" id="wholesale_ticket_business_name" name="wholesale_ticket_business_name" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_name')); ?>"></td></tr>
-				<tr><th><label for="wholesale_ticket_business_phone">Phone</label></th><td><input class="regular-text" id="wholesale_ticket_business_phone" name="wholesale_ticket_business_phone" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_phone')); ?>"></td></tr>
-				<tr><th><label for="wholesale_ticket_business_email">Email</label></th><td><input type="email" class="regular-text" id="wholesale_ticket_business_email" name="wholesale_ticket_business_email" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_email')); ?>"><p class="description">Shown to customers and used as the Reply-To address, so their replies reach you.</p></td></tr>
-				<tr><th><label for="wholesale_ticket_business_address">Address</label></th><td><input class="large-text" id="wholesale_ticket_business_address" name="wholesale_ticket_business_address" value="<?php echo esc_attr(wholesale_get_setting('ticket_business_address')); ?>"><p class="description">Shown in the "From" section of the payment page and in the email footer.</p></td></tr>
-				<tr><th><label for="wholesale_ticket_email_subject">Email subject</label></th><td><input class="large-text" id="wholesale_ticket_email_subject" name="wholesale_ticket_email_subject" value="<?php echo esc_attr(wholesale_get_setting('ticket_email_subject')); ?>"><p class="description">Placeholders: <code>{number}</code> ticket number, <code>{title}</code> project name, <code>{amount}</code> total due, <code>{business}</code> business name.</p></td></tr>
-				<tr><th>Email new tickets automatically</th><td><input type="hidden" name="wholesale_ticket_auto_send" value="0"><label><input type="checkbox" name="wholesale_ticket_auto_send" value="1" <?php checked(wholesale_setting_enabled('ticket_auto_send')); ?>> Email the customer as soon as a new ticket is saved with a customer, items and a total</label><p class="description">Use "Save draft without sending" on a ticket to keep working on it first. Customers also get a receipt when they pay, and the <a href="<?php echo esc_url(admin_url('admin.php?page=wholesale-emails-smtp')); ?>">store notification recipients</a> get a blind copy of every payment request and receipt.</p></td></tr>
-				<tr><th><label for="wholesale_ticket_default_message">Default message</label></th><td><textarea class="large-text" rows="3" id="wholesale_ticket_default_message" name="wholesale_ticket_default_message" placeholder="e.g. Thanks for choosing us! Production starts once payment is received."><?php echo esc_textarea(wholesale_get_setting('ticket_default_message')); ?></textarea><p class="description">Pre-filled as the message to the customer on new tickets. You can still change it on each ticket.</p></td></tr>
-				<tr><th>Sales tax on new tickets</th><td><input type="hidden" name="wholesale_ticket_default_tax" value="0"><label><input type="checkbox" name="wholesale_ticket_default_tax" value="1" <?php checked(wholesale_setting_enabled('ticket_default_tax')); ?>> Start new tickets with the checkout tax rate (<?php echo esc_html(wholesale_get_setting('tax_rate')); ?>%)</label></td></tr>
-				<tr><th><label for="wholesale_ticket_due_days">Pay-by period</label></th><td><input type="number" min="0" step="1" class="small-text" id="wholesale_ticket_due_days" name="wholesale_ticket_due_days" value="<?php echo esc_attr((string) wholesale_get_setting('ticket_due_days')); ?>"> days<p class="description">New tickets get a pay-by date this many days ahead, and the link stops accepting payment after it. Use 0 for no pay-by date.</p></td></tr>
-			</table>
-			<h2 class="title" id="google-ads">Google Ads</h2>
-			<table class="form-table" role="presentation">
-				<tr><th><label for="wholesale_google_ads_lead_label">Quote request conversion label</label></th><td><input class="regular-text" id="wholesale_google_ads_lead_label" name="wholesale_google_ads_lead_label" value="<?php echo esc_attr(wholesale_get_setting('google_ads_lead_label')); ?>" placeholder="AbC-D_efG-h12_34-567"><p class="description">Sent when someone submits a quote form: the contact page, the sign landing page and the <strong>Channel Letters</strong> page (/custom-channel-letters/). In Google Ads, create a "Submit lead form" conversion action and paste the part after <code>AW-18454059893/</code> from its event snippet.</p></td></tr>
-				<?php foreach (wholesale_ads_click_conversions() as $key => $conversion) : ?>
-					<tr><th><label for="wholesale_<?php echo esc_attr($key); ?>"><?php echo esc_html($conversion['label']); ?></label></th><td><input class="regular-text" id="wholesale_<?php echo esc_attr($key); ?>" name="wholesale_<?php echo esc_attr($key); ?>" value="<?php echo esc_attr(wholesale_get_setting($key)); ?>" placeholder="Leave empty to turn off"><p class="description"><?php echo esc_html($conversion['help']); ?> Create it in Google Ads as a <strong>Secondary</strong> conversion action and paste the part after <code>AW-18454059893/</code>.</p></td></tr>
-				<?php endforeach; ?>
-				<tr><th><label for="wholesale_ga4_measurement_id">Google Analytics 4 measurement ID</label></th><td><input class="regular-text" id="wholesale_ga4_measurement_id" name="wholesale_ga4_measurement_id" value="<?php echo esc_attr(wholesale_get_setting('ga4_measurement_id')); ?>" placeholder="G-XXXXXXXXXX"><p class="description">From Google Analytics: Admin &gt; Data streams &gt; your web stream. Purchases, checkouts and quote requests are then also sent to Analytics. Leave empty to turn off.</p></td></tr>
-			</table>
-			<h2 class="title" id="google-reviews">Google reviews</h2>
-			<p>Shows your Google Business rating and latest reviews in the site-wide review slider, next to reviews you approve under <a href="<?php echo esc_url(admin_url('edit.php?post_type=review_submission')); ?>">Customer Reviews</a>.</p>
-			<table class="form-table" role="presentation">
-				<tr><th><label for="wholesale_google_places_api_key">Google Places API key</label></th><td><input type="password" class="regular-text" id="wholesale_google_places_api_key" name="wholesale_google_places_api_key" value="<?php echo esc_attr(wholesale_get_setting('google_places_api_key')); ?>" autocomplete="off"><p class="description">Create it in Google Cloud Console with the <strong>Places API (New)</strong> enabled, and restrict it to that API.</p></td></tr>
-				<tr><th><label for="wholesale_google_place_id">Google Place ID</label></th><td><input class="regular-text" id="wholesale_google_place_id" name="wholesale_google_place_id" value="<?php echo esc_attr(wholesale_get_setting('google_place_id')); ?>" placeholder="ChIJ..."><p class="description">Find it with Google's <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener">Place ID finder</a>.</p></td></tr>
-				<?php $google_status = wholesale_google_reviews(); ?>
-				<?php if ($google_status) : ?>
-					<tr><th>Status</th><td>
-						<?php if (!empty($google_status['error'])) : ?>
-							<p style="color:#b32d2e;"><strong>Last refresh failed:</strong> <?php echo esc_html($google_status['error']); ?></p>
-						<?php endif; ?>
-						<p><?php echo esc_html(sprintf('%s stars from %s reviews; %d shown in the slider. Checked %s ago.', number_format((float) $google_status['rating'], 1), number_format_i18n((int) $google_status['count']), count($google_status['reviews']), human_time_diff((int) $google_status['checked'], time()))); ?></p>
-						<p><a class="button" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=wholesale_refresh_google_reviews'), 'wholesale_refresh_google_reviews')); ?>">Refresh now</a></p>
-					</td></tr>
-				<?php endif; ?>
-			</table>
-			<h2 class="title">Payment gateway</h2>
-			<table class="form-table" role="presentation">
-				<tr><th>Disable card payment</th><td><input type="hidden" name="wholesale_payment_disabled" value="0"><label><input type="checkbox" name="wholesale_payment_disabled" value="1" <?php checked(wholesale_setting_enabled('payment_disabled')); ?>> Create orders for manual payment instead</label></td></tr>
-				<tr><th>Card payment method</th><td>
-					<fieldset>
-						<label><input type="radio" name="wholesale_payment_method" value="lightbox" <?php checked('lightbox', wholesale_payment_method()); ?>> <strong>Converge secure window (Lightbox)</strong> &mdash; recommended</label>
-						<p class="description" style="margin:2px 0 10px 24px;">Customers type their card into Elavon's own secure window, so card numbers never pass through this website. Your Converge user must have <em>Hosted Payments</em> enabled.</p>
-						<label><input type="radio" name="wholesale_payment_method" value="direct" <?php checked('direct', wholesale_payment_method()); ?>> <strong>Card fields on this website (direct)</strong></label>
-						<p class="description" style="margin:2px 0 0 24px;">The previous method: card fields on the checkout page, charged by this server through the Converge API. Card numbers pass through (but are never stored on) this server, which puts the site in a stricter PCI compliance scope.</p>
-					</fieldset>
-				</td></tr>
-				<tr><th>Test mode</th><td><input type="hidden" name="wholesale_payment_test_mode" value="0"><label><input type="checkbox" name="wholesale_payment_test_mode" value="1" <?php checked(wholesale_setting_enabled('payment_test_mode')); ?>> Use the Converge demo endpoint</label></td></tr>
-				<tr><th><label for="wholesale_merchant_id">Merchant ID</label></th><td><input class="regular-text" id="wholesale_merchant_id" name="wholesale_merchant_id" value="<?php echo esc_attr(wholesale_get_setting('merchant_id')); ?>"></td></tr>
-				<tr><th><label for="wholesale_gateway_user_id">Gateway user ID</label></th><td><input class="regular-text" id="wholesale_gateway_user_id" name="wholesale_gateway_user_id" value="<?php echo esc_attr(wholesale_get_setting('gateway_user_id')); ?>"></td></tr>
-				<tr><th><label for="wholesale_gateway_pin">Gateway PIN</label></th><td><input type="password" class="regular-text" id="wholesale_gateway_pin" name="wholesale_gateway_pin" value="<?php echo esc_attr(wholesale_get_setting('gateway_pin')); ?>" autocomplete="new-password"></td></tr>
-			</table>
-			<h2 class="title">Checkout defaults</h2>
-			<table class="form-table" role="presentation">
-				<tr><th><label for="wholesale_tax_rate">Tax rate (%)</label></th><td><input type="number" min="0" step="0.01" id="wholesale_tax_rate" name="wholesale_tax_rate" value="<?php echo esc_attr(wholesale_get_setting('tax_rate')); ?>"></td></tr>
-				<tr><th><label for="wholesale_standard_shipping_options">Standard shipping options</label></th><td><input class="regular-text" id="wholesale_standard_shipping_options" name="wholesale_standard_shipping_options" value="<?php echo esc_attr(wholesale_get_setting('standard_shipping_options')); ?>"><p class="description">Comma-separated amounts, from fastest to slowest.</p></td></tr>
-				<tr><th><label for="wholesale_channel_shipping_options">Channel-letter shipping options</label></th><td><input class="regular-text" id="wholesale_channel_shipping_options" name="wholesale_channel_shipping_options" value="<?php echo esc_attr(wholesale_get_setting('channel_shipping_options')); ?>"><p class="description">Comma-separated amounts, from fastest to slowest.</p></td></tr>
-			</table>
-			<?php submit_button('Save settings'); ?>
-		</form>
-
-		<?php $mail_status = wholesale_mail_status(); ?>
-		<hr>
-		<h2 class="title" id="email-delivery">Email delivery</h2>
-		<p>
-			<?php if ('smtp' === $mail_status['mode']) : ?>
-				<strong style="color:#1a7a47;">SMTP</strong> through <code><?php echo esc_html($mail_status['host']); ?></code>.
-			<?php elseif ('default' === $mail_status['mode']) : ?>
-				<strong>Default WordPress mailer</strong> (PHP mail()).
-			<?php else : ?>
-				<strong style="color:#b32d2e;">SMTP is not working.</strong> <?php echo esc_html($mail_status['problem']); ?>
-			<?php endif; ?>
-			SMTP settings, test emails and the log of every email sent are under <a href="<?php echo esc_url(admin_url('admin.php?page=wholesale-emails-smtp')); ?>">Emails</a>.
-		</p>
-	</div>
-	<?php
-}
-
-function wholesale_settings_page_scripts($hook)
-{
-	if ('settings_page_wholesale-settings' !== $hook) {
-		return;
-	}
-
-	wp_enqueue_media();
-	wp_add_inline_script('media-editor', <<<'JS'
-jQuery(function ($) {
-	var frame;
-	var $input = $('#wholesale_default_hero_image');
-	var $preview = $('#wholesale-hero-preview');
-	var $remove = $('#wholesale-hero-remove');
-
-	$('#wholesale-hero-select').on('click', function () {
-		if (!frame) {
-			frame = wp.media({ title: 'Default hero image', button: { text: 'Use this image' }, library: { type: 'image' }, multiple: false });
-			frame.on('select', function () {
-				var image = frame.state().get('selection').first().toJSON();
-				var sizes = image.sizes || {};
-				$input.val(image.id);
-				$preview.attr('src', (sizes.medium_large || sizes.large || image).url);
-				$remove.show();
-			});
-		}
-		frame.open();
-	});
-
-	$remove.on('click', function () {
-		$input.val('0');
-		$preview.attr('src', $preview.data('built-in'));
-		$remove.hide();
-	});
-});
-JS
-	);
-}
-add_action('admin_enqueue_scripts', 'wholesale_settings_page_scripts');
-
-function wholesale_add_settings_page()
-{
-	add_options_page('Storefront Sign Settings', 'Storefront Sign', 'manage_options', 'wholesale-settings', 'wholesale_settings_page');
-}
-add_action('admin_menu', 'wholesale_add_settings_page');
 
 function wholesale_admin_bar_store_shortcuts($admin_bar)
 {
@@ -1425,7 +1328,7 @@ function wholesale_deferred_conversion_tracking()
 				<?php if (wholesale_ga4_measurement_id()) : ?>
 				window.gtag('config', <?php echo wp_json_encode(wholesale_ga4_measurement_id()); ?>);
 				<?php endif; ?>
-				window.gtag('config', 'AW-18454059893/OK42COLkgPocEPW2yt9E', {
+				window.gtag('config', <?php echo wp_json_encode('AW-18454059893/' . WHOLESALE_ADS_CALL_LABEL); ?>, {
 					'phone_conversion_number': '866-436-2101'
 				});
 			};
@@ -1470,8 +1373,7 @@ function wholesale_track_quote_lead($source)
 	update_post_meta($lead_id, '_conversion_tracked', current_time('mysql'));
 
 	add_action('wp_footer', function () use ($lead_id, $source) {
-		$label = trim((string) wholesale_get_setting('google_ads_lead_label'));
-		$label = '' !== $label ? $label : wholesale_setting_defaults()['google_ads_lead_label'];
+		$label = wholesale_ads_lead_label();
 		$email = (string) get_post_meta($lead_id, '_contact_email', true);
 		$digits = preg_replace('/\D/', '', (string) get_post_meta($lead_id, '_contact_phone', true));
 		$phone = 10 === strlen($digits) ? '+1' . $digits : (11 === strlen($digits) && '1' === $digits[0] ? '+' . $digits : '');
@@ -3001,6 +2903,16 @@ function wholesale_seo_page_defaults()
 			'title' => __('About Us | Custom Sign Company in Renton, WA Since 2002', 'litsign'),
 			'description' => __('Renton, WA sign company since 2002. Custom LED channel letters made in Washington and California, plus storefront signs and prints, shipped USA-wide.', 'litsign'),
 		),
+		// The WordPress pages are titled "cart" and "checkout" (lowercase), which
+		// showed in the browser tab. Both pages are noindex.
+		'cart' => array(
+			'title' => __('Your Cart | Storefront Sign Online', 'litsign'),
+			'description' => __('Review the signs in your cart, then choose shipping and pay securely at checkout.', 'litsign'),
+		),
+		'checkout' => array(
+			'title' => __('Secure Checkout | Storefront Sign Online', 'litsign'),
+			'description' => __('Enter your shipping details and pay securely for your custom signs.', 'litsign'),
+		),
 		'privacy-policy' => array(
 			'title' => __('Privacy Policy | Storefront Sign Online', 'litsign'),
 			'description' => __('How Storefront Sign Online collects, uses and protects your information when you order signs, request a quote or contact us.', 'litsign'),
@@ -4354,6 +4266,14 @@ add_action('cmb2_admin_init', function () {
 			'id' => '_discount_percent',
 		)
 	);
+	// Empty uses the site default (WHOLESALE_SQFT_MIN_PRICE); see wholesale_product_min_order().
+	$product->add_field(
+		array(
+			'name' => __('Minimum Order Price', 'tm'),
+			'type' => 'text',
+			'id' => '_min_order_price',
+		)
+	);
 
 
 	$product->add_field(
@@ -4425,6 +4345,14 @@ add_action('cmb2_admin_init', function () {
 			'id' => '_hide_calculator',
 			'type' => 'checkbox',
 			'default' => 'on'
+		)
+	);
+	// Rigid Signs and Magnets pages: a preset size dropdown above the width/height boxes (single-product.php).
+	$product->add_field(
+		array(
+			'name' => __('Show Size Presets', 'tm'),
+			'id' => '_size_presets',
+			'type' => 'checkbox',
 		)
 	);
 
@@ -4983,6 +4911,11 @@ function wholesale_send_html_mail($to, $subject, $html, $headers = array(), $fro
 function start_session()
 {
 	if (session_id()) {
+		return;
+	}
+	// Cron runs and requests that already produced output can't set the session cookie.
+	if (headers_sent() || wp_doing_cron() || PHP_SAPI === 'cli') {
+		$_SESSION = $_SESSION ?? array();
 		return;
 	}
 	if (empty($_COOKIE[session_name()]) && !wholesale_request_needs_new_session()) {
@@ -5732,6 +5665,9 @@ function handle_portfolio_mail($request)
 
 function allow_cross_origin_requests()
 {
+	if (headers_sent() || wp_doing_cron()) {
+		return;
+	}
 	header("Access-Control-Allow-Origin: *");
 	header("Access-Control-Allow-Methods: POST, GET, OPTIONS");
 	header("Access-Control-Allow-Headers: Content-Type");
@@ -5755,6 +5691,16 @@ if (!defined('DISALLOW_FILE_EDIT')) {
 
 add_filter('xmlrpc_enabled', '__return_false');
 add_filter('xmlrpc_methods', '__return_empty_array');
+
+// Front-end pages can't be framed by other sites (clickjacking on checkout and
+// account pages) or MIME-sniffed. wp-admin and wp-login.php already send
+// X-Frame-Options themselves.
+add_action('send_headers', function () {
+	if (!headers_sent()) {
+		header('X-Frame-Options: SAMEORIGIN');
+		header('X-Content-Type-Options: nosniff');
+	}
+});
 
 // Hide usernames from anonymous REST requests (/wp-json/wp/v2/users).
 add_filter('rest_endpoints', function ($endpoints) {

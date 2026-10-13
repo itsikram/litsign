@@ -478,7 +478,48 @@ function wholesale_seo_migrations()
 		'2026-10-brand-chat-alt' => 'wholesale_seo_migrate_brand_chat_alt',
 		'2026-10-product-typos' => 'wholesale_seo_migrate_product_typos',
 		'2026-10-short-descriptions' => 'wholesale_seo_migrate_short_descriptions',
+		'2026-10-13oz-banner-description' => 'wholesale_seo_migrate_13oz_banner_description',
+		// Not SEO, but it rides the same once-per-site runner (functions.php).
+		'2026-10-places-key-cleanup' => 'wholesale_migrate_places_key_cleanup',
 	);
+}
+
+/**
+ * The 13oz banner's description and spec were the 18oz blockout banner's
+ * supplier copy ("Our 18oz. blockout matte vinyl banner material...", "UV
+ * Printed 18 oz. Matte Vinyl Banner"), and its FAQ listed grommets as free,
+ * which they are not on 13oz banners. The Merchant Center feed sends this
+ * description to Google Shopping. Only those sentences change.
+ */
+function wholesale_seo_migrate_13oz_banner_description()
+{
+	$product = get_page_by_path('13oz-vinyl-banner', OBJECT, 'product');
+	if (!$product) {
+		return true;
+	}
+
+	$content = str_replace(
+		array(
+			'Our 18oz. blockout matte vinyl banner material is our premium heavy weight vinyl, it is often used for street banners and light pole banners. This material has pvc vinyl faces front and back with a blockout layer in between, scrim fibers reinforce this material so it will hold up in the toughest conditions.',
+			'<li>UV Printed 18 oz. Matte Vinyl Banner</li>',
+			'<li>Grommet (free)</li>',
+		),
+		array(
+			'Our 13oz. matte scrim vinyl banner is the everyday choice for grand openings, sales, events and storefront promotions. Scrim fibers inside the vinyl make it strong and tear resistant, it works indoors and outdoors, and the matte finish keeps glare down so your message is easy to read. When both sides of a banner will be seen, choose our <a href="' . esc_url(home_url('/product/18oz-blockout-banner/')) . '">18oz. blockout banner</a>, which stops light showing through.',
+			'<li>UV Printed 13 oz. Matte Scrim Vinyl Banner</li>',
+			'<li>Grommets</li>',
+		),
+		$product->post_content
+	);
+
+	if ($content !== $product->post_content) {
+		wp_update_post(array(
+			'ID' => $product->ID,
+			'post_content' => wp_slash($content),
+		));
+	}
+
+	return true;
 }
 
 /**

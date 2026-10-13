@@ -22,3 +22,16 @@
 		Header set Cache-Control "public, max-age=31536000, immutable"
 	</FilesMatch>
 </IfModule>
+
+# WordPress includes the theme's PHP files; nothing requests them over HTTP.
+# Direct requests (a nightly one hit index.php) only logged fatal errors, and
+# zips, logs, notes and data files in this folder are not meant to be public.
+<FilesMatch "\.(?:php|zip|log|md|txt|json|lock|dist|scss|map|sql|bak)$|^(?:error_log|\.gitignore|\.eslintrc|\.stylelintrc\.json)$">
+	<IfModule mod_authz_core.c>
+		Require all denied
+	</IfModule>
+	<IfModule !mod_authz_core.c>
+		Order allow,deny
+		Deny from all
+	</IfModule>
+</FilesMatch>

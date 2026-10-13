@@ -224,14 +224,14 @@ get_header();
 
                 <section class="checkout-card" aria-labelledby="checkout-shipping">
                     <h2 id="checkout-shipping"><span class="checkout-step-number">2</span> Shipping Options</h2>
-                    <p class="checkout-muted">Every sign is made to order. Dates include production time.</p>
+                    <p class="checkout-muted">Every sign is made to order and ships by <?php echo esc_html(wholesale_estimated_ship_date($cart)); ?>. Delivery dates include production time.</p>
                     <div class="checkout-options" role="radiogroup" aria-labelledby="checkout-shipping">
                         <?php foreach ($shipping_options as $index => $amount) : ?>
                             <label class="checkout-option">
                                 <input type="radio" name="shipping_method" value="<?php echo esc_attr($amount); ?>" <?php checked(0, $index); ?> required data-shipping-amount="<?php echo esc_attr($amount); ?>">
                                 <span class="checkout-option-body">
                                     <strong><?php echo esc_html(wholesale_shipping_label($index)); ?></strong>
-                                    <small>Ships by <?php echo esc_html(wholesale_estimated_ship_date($cart, $index)); ?></small>
+                                    <small>Est. delivery <?php echo esc_html(wholesale_estimated_delivery_date($cart, $index)); ?></small>
                                 </span>
                                 <span class="checkout-option-price"><?php echo esc_html($money($amount)); ?></span>
                             </label>

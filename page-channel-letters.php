@@ -153,7 +153,8 @@ $hero_variants = array(
 $hero_style = isset($_GET['style']) ? sanitize_key(wp_unslash($_GET['style'])) : '';
 $hero_style = isset($hero_variants[$hero_style]) ? $hero_style : '';
 
-$page_hero_image = get_the_post_thumbnail_url(get_the_ID(), 'large');
+// 2048px wide so the full-width hero stays sharp on large screens ('large' is only 1024px).
+$page_hero_image = get_the_post_thumbnail_url(get_the_ID(), '2048x2048');
 $page_hero_image = $page_hero_image ? wholesale_webp_url(esc_url_raw($page_hero_image)) : '';
 $default_page_hero_image = wholesale_default_hero_url();
 $page_hero_background = wholesale_hero_background_style($page_hero_image, $default_page_hero_image);
@@ -423,7 +424,7 @@ if ($is_channel_letters) {
         ),
         array(
             'q' => 'What materials and warranty do I get?',
-            'a' => 'Outdoor channel letter signs are UL listed with sign section labels. Listed LED modules, power supplies and qualifying letters carry a five-year warranty.',
+            'a' => 'Outdoor channel letter signs are UL listed with sign section labels. All 7 channel letter styles carry a five-year warranty, and the LED modules and power supplies each carry their own five-year warranty.',
         ),
         array(
             'q' => 'How long will it take to get my sign?',
@@ -509,7 +510,7 @@ get_header();
         <ul class="container cll-trust-list">
             <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong><small>Labels on every sign section</small></span></li>
             <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Washington &amp; California</small></span></li>
-            <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>LED modules &amp; power supplies</small></span></li>
+            <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>All 7 channel letter styles</small></span></li>
             <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong><small>Wiring diagram included</small></span></li>
         </ul>
     </div>

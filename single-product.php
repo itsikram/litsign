@@ -26,6 +26,10 @@ $price_per_sqft = floatval(get_post_meta(get_the_ID(), '_price_per_sqft', true))
 
 $product_min_price = round(floatval($product_min_sqft) * floatval($price_per_sqft), 2);
 $product_discount_percent = (float) get_post_meta(get_the_ID(), '_discount_percent', true);
+// The everyday price is the price after $product_discount_percent; only a dated sale
+// (wholesale_product_promotion()) is shown as a discount.
+$product_promotion = wholesale_product_promotion(get_the_ID());
+$product_promo_percent = $product_promotion ? (float) $product_promotion['percent'] : 0;
 
 $product_group_json = get_post_meta(get_the_ID(), '_product_group_data', true);
 $product_group_array = json_decode($product_group_json, true);
@@ -62,19 +66,27 @@ $product_price = 0;
 
 $product_category_slug = isset($terms[0]) ? $terms[0]->slug : '';
 
-function get_discount_amount($totalPrice)
+// Everyday price: after the product discount, before any dated sale.
+function get_everyday_amount($totalPrice)
 {
     global $product_discount_percent;
     $discountPercent = $product_discount_percent;
     return $totalPrice - (($totalPrice * $discountPercent) / 100);
 }
 
+// Price to pay: the everyday price, less the dated sale while one is running.
+function get_discount_amount($totalPrice)
+{
+    global $product_promo_percent;
+    $everyday = get_everyday_amount($totalPrice);
+    return $product_promo_percent > 0 ? $everyday - (($everyday * $product_promo_percent) / 100) : $everyday;
+}
+
+// What the dated sale saves off the everyday price.
 function get_saving($totalPrice)
 {
-    global $product_discount_percent;
-
-    $discountPercent = $product_discount_percent;
-    return (($totalPrice * $discountPercent) / 100);
+    global $product_promo_percent;
+    return (get_everyday_amount($totalPrice) * $product_promo_percent) / 100;
 }
 
 
@@ -205,6 +217,18 @@ get_header();
                         <span class="product-price-value"><?php echo wholesale_emphasize_price($starting_at_text); ?></span>
                     </div>
 
+                <?php } elseif (trim(wp_strip_all_tags((string) $starting_at_text)) !== '') {
+                    // Channel letters: the computed per-letter "from" price, so visitors
+                    // arriving from an ad see a price before they type their sign text.
+                    $cl_from = function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price(get_the_ID()) : null;
+                    ?>
+                    <div class="product-price-per-sqft text-end py-2 text-secondary">
+                        <span class="product-price-label">Starting at</span>
+                        <span class="product-price-value"><?php echo wholesale_emphasize_price($starting_at_text); ?></span>
+                        <?php if (!empty($cl_from['height'])) : ?>
+                            <small class="d-block"><?php echo esc_html(sprintf('One %d inch letter, before options such as a power supply', $cl_from['height'])); ?></small>
+                        <?php endif; ?>
+                    </div>
                 <?php }; ?>
             </div>
             <div class="col-md-8">
@@ -215,6 +239,7 @@ get_header();
                         <input type="hidden" name="design_id" value="<?php echo $design_id ? $design_id : ''; ?>">
                         <input type="hidden" name="turnaround_cost" value="0" id="turnaroundCost">
                         <input type="hidden" name="discount_percent" value="<?php echo $product_discount_percent; ?>" id="discountPercent">
+                        <input type="hidden" value="<?php echo esc_attr($product_promo_percent); ?>" id="promoPercent">
 
                         <div class="row">
                             <div class="col">
@@ -489,6 +514,7 @@ get_header();
                     <div class="product-attibute-box mb-3">
                         <input type="hidden" name="total_cost" value="<?php echo $product_min_price > 0 ? $product_min_price : $product_price; ?>" id="totalCost">
                         <input type="hidden" name="discount_percent" value="<?php echo $product_discount_percent; ?>" id="discountPercent">
+                        <input type="hidden" value="<?php echo esc_attr($product_promo_percent); ?>" id="promoPercent">
 
                         <input type="hidden" name="min_sqft" value="<?php echo $product_min_sqft; ?>" id="minSqft">
                         <input type="hidden" name="total_sqft" value="0" id="totalSqft">
@@ -556,6 +582,71 @@ get_header();
                             <input type="hidden" name="price_per_sqft" value="<?php echo $price_per_sqft; ?>" id="pricePerSqft">
 
                             <?php
+                            $min_area = wholesale_product_min_area(get_the_ID());
+                            // Rigid Signs and Magnets: B2Sign-style size box. Width then height, in inches,
+                            // with an optional preset size dropdown (_size_presets) that only fills them in.
+                            if (has_term('rigid-signs-and-magnets', 'product_category', get_the_ID())) :
+                                $size_presets = array();
+                                if (get_post_meta(get_the_ID(), '_size_presets', true)) {
+                                    foreach ($product_attr_array as $preset_attr) {
+                                        if (!wholesale_attr_is_preset_size((array) $preset_attr)) {
+                                            continue;
+                                        }
+                                        foreach ($preset_attr->options as $option) {
+                                            foreach ($option as $name => $price) {
+                                                if (preg_match('/(\d+(?:\.\d+)?)\D+?(\d+(?:\.\d+)?)/', $name, $m)) {
+                                                    $size_presets[(float) $m[1] . 'x' . (float) $m[2]] = array((float) $m[1], (float) $m[2]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                $rate_shown = $price_per_sqft * (100 - min(100, max(0, $product_discount_percent))) / 100;
+                                $min_charge = wholesale_product_min_order(get_the_ID());
+                            ?>
+                                <div class="row d-fex align-items-center mt-2 dimenstion-calculator dim-row pb-size-b2">
+                                    <div class="col-md-3 col-4">
+                                        <span class="dim-label" id="dim-label-size">Size</span>
+                                    </div>
+                                    <div class="col-8 col-md-9">
+                                        <?php if ($size_presets) : ?>
+                                            <select class="form-select pb-size-preset" id="pbSizePreset" aria-label="Choose a size">
+                                                <option value="">Choose a size</option>
+                                                <?php foreach ($size_presets as $key => $wh) :
+                                                    $orientation = $wh[0] > $wh[1] ? 'Landscape' : ($wh[0] < $wh[1] ? 'Portrait' : 'Square'); ?>
+                                                    <option value="<?php echo esc_attr($key); ?>" data-width="<?php echo esc_attr($wh[0]); ?>" data-height="<?php echo esc_attr($wh[1]); ?>"><?php echo esc_html(sprintf('%s" x %s" (w x h) %s', $wh[0], $wh[1], $orientation)); ?></option>
+                                                <?php endforeach; ?>
+                                                <option value="custom">Custom size</option>
+                                            </select>
+                                        <?php endif; ?>
+                                        <div class="dim-fields" role="group" aria-labelledby="dim-label-size">
+                                            <?php foreach (array('width' => 'Width', 'height' => 'Height') as $dim => $dim_label) : ?>
+                                                <div class="input-group dim-group">
+                                                    <span class="input-group-text" aria-hidden="true"><?php echo esc_html($dim_label); ?></span>
+                                                    <input type="number" inputmode="decimal" step="any" min="0" name="<?php echo esc_attr($dim); ?>-in" id="input-<?php echo esc_attr($dim); ?>-in" value="0" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_label . ' in inches'); ?>">
+                                                    <span class="input-group-text" aria-hidden="true">in</span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mt-2 mb-3">
+                                    <div class="col-8 col-md-9 offset-4 offset-md-3">
+                                        <div class="pb-size-summary">
+                                            <span class="total-size-sqft" data-order="wh" aria-live="polite">0" x 0" = 0 ft<sup>2</sup></span>
+                                            <small class="d-block">$<?php echo esc_html(number_format($rate_shown, 2)); ?>/ft<sup>2</sup><?php if ($min_charge > 0) : ?> <span aria-hidden="true">|</span> min charge $<?php echo esc_html(number_format($min_charge, 2)); ?><?php endif; ?></small>
+                                            <?php $min_sides = wholesale_product_min_sides(get_the_ID());
+                                            if ($min_sides) : ?>
+                                                <small class="d-block pb-min-size">Minimum size: <?php echo esc_html(sprintf('%s" x %s"', $min_sides[0] + 0, $min_sides[1] + 0)); ?></small>
+                                            <?php elseif ($min_area > 0) : ?>
+                                                <small class="d-block pb-min-size">Minimum size: <?php echo esc_html(number_format($min_area, 2)); ?> ft<sup>2</sup> (e.g. <?php echo esc_html(wholesale_min_area_example($min_area)); ?>)</small>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php else : ?>
+                            <?php
                             // Starting size: a square of the minimum area, shown as whole feet plus
                             // inches (2 ft 2.6 in rather than 2.21 ft + 0 in). Rounded up, so the
                             // square is never below the minimum area the cart accepts.
@@ -576,11 +667,11 @@ get_header();
                                         <div class="dim-fields" role="group" aria-labelledby="dim-label-<?php echo esc_attr($dim); ?>">
                                             <div class="input-group dim-group">
                                                 <span class="input-group-text" aria-hidden="true">ft</span>
-                                                <input type="number" inputmode="decimal" step="0.1" min="0" name="<?php echo esc_attr($dim); ?>-ft" id="input-<?php echo esc_attr($dim); ?>-ft" value="<?php echo esc_attr($start_ft); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in feet'); ?>">
+                                                <input type="number" inputmode="decimal" step="any" min="0" name="<?php echo esc_attr($dim); ?>-ft" id="input-<?php echo esc_attr($dim); ?>-ft" value="<?php echo esc_attr($start_ft); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in feet'); ?>">
                                             </div>
                                             <div class="input-group dim-group">
                                                 <span class="input-group-text" aria-hidden="true">in</span>
-                                                <input type="number" inputmode="decimal" step="0.1" min="0" max="12" name="<?php echo esc_attr($dim); ?>-in" id="input-<?php echo esc_attr($dim); ?>-in" value="<?php echo esc_attr($start_in); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in inches'); ?>">
+                                                <input type="number" inputmode="decimal" step="any" min="0" name="<?php echo esc_attr($dim); ?>-in" id="input-<?php echo esc_attr($dim); ?>-in" value="<?php echo esc_attr($start_in); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in inches'); ?>">
                                             </div>
                                         </div>
                                     </div>
@@ -590,8 +681,15 @@ get_header();
                             <div class="row mt-2 mb-3">
                                 <div class="col-8 col-md-9 offset-4 offset-md-3">
                                     <span class="total-size-sqft" aria-live="polite"><?php echo esc_html($start_side_in); ?>" x <?php echo esc_html($start_side_in); ?>" = 0 ft<sup>2</sup></span>
+                                    <?php $min_sides = wholesale_product_min_sides(get_the_ID());
+                                    if ($min_sides) : ?>
+                                        <small class="d-block text-muted pb-min-size">Minimum size: <?php echo esc_html(sprintf('%s" x %s" (width x height)', $min_sides[0] + 0, $min_sides[1] + 0)); ?><?php $min_charge = wholesale_product_min_order(get_the_ID()); if ($min_charge > 0) : ?> &middot; min charge $<?php echo esc_html(number_format($min_charge, 2)); ?><?php endif; ?></small>
+                                    <?php elseif ($min_area > 0) : ?>
+                                        <small class="d-block text-muted pb-min-size">Minimum size: <?php echo esc_html(number_format($min_area, 2)); ?> ft<sup>2</sup> (e.g. <?php echo esc_html(wholesale_min_area_example($min_area)); ?>)</small>
+                                    <?php endif; ?>
                                 </div>
                             </div>
+                            <?php endif; ?>
 
 
 
@@ -613,6 +711,10 @@ get_header();
                         if ($product_category_slug != 'channel-letters') {
                             foreach ($product_attr_array as $single_attr) {
                                 $attr_name = $single_attr->name;
+                                // The width/height calculator above replaces a preset size dropdown.
+                                if ($is_hide_calculator != 'on' && wholesale_attr_is_preset_size((array) $single_attr)) {
+                                    continue;
+                                }
 
                                 if ($attr_name == 'face' || $attr_name == 'trimcap' || $attr_name == 'return') {
                         ?>
@@ -844,13 +946,12 @@ get_header();
 
                                     </div>
                                     <?php
-                                    date_default_timezone_set('America/Los_Angeles');
+                                    // Pacific time, without changing PHP's default timezone
+                                    // (WordPress expects it to stay UTC for the rest of the page).
+                                    $currentTime = new DateTime('now', new DateTimeZone('America/Los_Angeles'));
 
-                                    // Get the current time
-                                    $currentTime = new DateTime();
-
-                                    // Check if the current time is before noon (12 PM)
-                                    if ($currentTime->format('H') < 12) { ?>
+                                    // Same day ships only on weekdays, for orders before noon.
+                                    if ($currentTime->format('H') < 12 && $currentTime->format('N') < 6) { ?>
                                         <div class="col-12 col-md-6">
                                             <div class="row">
                                                 <div class="col-md-12 col-12">
@@ -921,9 +1022,10 @@ get_header();
 
                 <div class="product-pricing-box">
                     <div class="container">
-                        <div class="row subtotal-container">
+                        <?php // The everyday price only shows (as "Regular price") during a dated sale. ?>
+                        <div class="row subtotal-container"<?php echo $product_promo_percent > 0 ? '' : ' hidden'; ?>>
                             <div class="col-6">
-                                <span class="fs-6">Total <?php echo $product_discount_percent > 0 ? '' : '' ?></span>
+                                <span class="fs-6"><?php echo $product_promo_percent > 0 ? 'Regular price' : 'Total'; ?></span>
                             </div>
                             <div class="col-6 price-subtotal-container">
                                 <span class="fs-6 d-block "><span>$</span><span class="price-subtotal"><?php
@@ -931,22 +1033,22 @@ get_header();
 
                                                                                                         if ($product_category_slug == 'channel-letters') {
                                                                                                             if ($has_cl_design) {
-                                                                                                                echo format_price($product_min_price > 0 ? $product_min_price : $product_price);
+                                                                                                                echo format_price(get_everyday_amount($product_min_price > 0 ? $product_min_price : $product_price));
                                                                                                             } else {
                                                                                                                 echo '0';
                                                                                                             }
                                                                                                         } else {
-                                                                                                            echo format_price($product_min_price > 0 ? $product_min_price : $product_price);
+                                                                                                            echo format_price(get_everyday_amount($product_min_price > 0 ? $product_min_price : $product_price));
                                                                                                         }
 
                                                                                                         ?>
                                     </span></span>
                             </div>
                         </div>
-                        <?php if ($product_discount_percent) { ?>
+                        <?php if ($product_promo_percent > 0) { ?>
                             <div class="row totalSaving-container" style="color: gray">
                                 <div class="col-6">
-                                    <span class="fs-6"><?php echo esc_html(rtrim(rtrim(number_format($product_discount_percent, 2, '.', ''), '0'), '.')); ?>% discount</span>
+                                    <span class="fs-6"><?php echo esc_html(sprintf('Sale: %s%% off, ends %s', rtrim(rtrim(number_format($product_promo_percent, 2, '.', ''), '0'), '.'), wholesale_promotion_end_text($product_promotion))); ?></span>
                                 </div>
                                 <div class="col-6 price-subtotal-container">
                                     <span class="fs-6 d-block "><span>-$</span><span class="price-saving"><?php echo format_price(get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>
@@ -1093,7 +1195,7 @@ get_header();
 
                     <?php
                     } else {
-                        echo wholesale_seo_fill_missing_alt(wholesale_seo_strip_facility_block(get_the_content()), $product_image_label);
+                        echo wholesale_seo_fill_missing_alt(wholesale_seo_clean_product_content(get_the_content()), $product_image_label);
                     }
 
                     ?>

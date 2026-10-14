@@ -43,6 +43,33 @@ function wholesale_es_setting($key)
 	return isset($settings[$key]) ? $settings[$key] : null;
 }
 
+/**
+ * The on/off switch on Settings > Storefront Sign posts
+ * wholesale_exit_survey_enabled. It is saved into wholesale_es_settings, the
+ * same value the Exit Survey page edits, and never stored as its own option.
+ */
+function wholesale_es_register_theme_setting()
+{
+	register_setting('wholesale_settings', 'wholesale_exit_survey_enabled', array(
+		'type' => 'integer',
+		'sanitize_callback' => static function ($value) {
+			return is_scalar($value) && '1' === (string) $value ? 1 : 0;
+		},
+	));
+}
+add_action('admin_init', 'wholesale_es_register_theme_setting');
+
+function wholesale_es_save_theme_setting($value, $old_value)
+{
+	$saved = get_option('wholesale_es_settings', array());
+	$saved = is_array($saved) ? $saved : array();
+	$saved['enabled'] = $value ? 1 : 0;
+	update_option('wholesale_es_settings', $saved);
+
+	return $old_value;
+}
+add_filter('pre_update_option_wholesale_exit_survey_enabled', 'wholesale_es_save_theme_setting', 10, 2);
+
 function wholesale_es_table()
 {
 	global $wpdb;

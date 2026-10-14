@@ -326,7 +326,7 @@
       );
       let subTotalPrice = pricePerSqft * totalSqft;
       let totalPrice = pricePerSqft * totalSqft;
-      // B2Sign-style size box (Rigid Signs and Magnets) reads width x height.
+      // B2Sign-style size box (every size calculator product) reads width x height.
       let widthFirst = $(".product-attibute-box .total-size-sqft").attr("data-order") === "wh";
       let dimentionText = `${widthFirst ? totalWidthIn : totalHeightIn}" x ${widthFirst ? totalHeightIn : totalWidthIn}" = ${totalSqft.toFixed(
         2
@@ -485,7 +485,7 @@
       if (e.target === document.activeElement && e.target.matches && e.target.matches('.dimenstion-calculator input[type="number"]')) e.target.blur();
     }, { passive: true });
 
-    // Preset size dropdown (Rigid Signs and Magnets): a preset fills in the width and
+    // Preset size dropdown (_size_presets products): a preset fills in the width and
     // height; typing a size picks the matching preset, or Custom size.
     const sizePreset = document.getElementById('pbSizePreset');
     if (sizePreset && sizePreset.form) {

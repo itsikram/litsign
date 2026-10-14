@@ -435,7 +435,7 @@ function wholesale_setting_defaults()
 		'google_place_id' => '',
 		// Google reviews below this many stars are hidden on the site.
 		'google_reviews_min_rating' => 4,
-		'google_ads_lead_label' => '-4S9CMyui4EdEPW2yt9E',
+		'google_ads_lead_label' => '7oUSCO-44ZsdEPW2yt9E',
 		'google_ads_phone_tap_label' => '',
 		'google_ads_sms_tap_label' => '',
 		'google_ads_email_tap_label' => '',

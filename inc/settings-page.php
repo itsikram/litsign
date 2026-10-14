@@ -165,6 +165,18 @@ function wholesale_settings_page()
 							</td></tr>
 						</table>
 					</div>
+					<?php if (function_exists('wholesale_es_setting')) : ?>
+					<div class="wss-card">
+						<div class="wss-card__head" id="exit-survey"><h2>Exit survey</h2></div>
+						<table class="form-table" role="presentation">
+							<tr><th scope="row">Enable exit survey</th><td>
+								<input type="hidden" name="wholesale_exit_survey_enabled" value="0">
+								<label class="wss-toggle"><input type="checkbox" name="wholesale_exit_survey_enabled" value="1" <?php checked((bool) wholesale_es_setting('enabled')); ?>> Show the &ldquo;Before you go, what stopped you from ordering today?&rdquo; popup to visitors about to leave</label>
+								<p class="description">Answers, phone/tablet and timing options are under <a href="<?php echo esc_url(admin_url('admin.php?page=wholesale-es')); ?>">Visitor Insights &rsaquo; Exit Survey</a>. This is the same switch as the one there.</p>
+							</td></tr>
+						</table>
+					</div>
+					<?php endif; ?>
 					<div class="wss-card">
 						<div class="wss-card__head"><h2>Certification</h2></div>
 						<table class="form-table" role="presentation">

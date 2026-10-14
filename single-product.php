@@ -583,9 +583,8 @@ get_header();
 
                             <?php
                             $min_area = wholesale_product_min_area(get_the_ID());
-                            // Rigid Signs and Magnets: B2Sign-style size box. Width then height, in inches,
+                            // Every size calculator product: B2Sign-style size box. Width then height, in inches,
                             // with an optional preset size dropdown (_size_presets) that only fills them in.
-                            if (has_term('rigid-signs-and-magnets', 'product_category', get_the_ID())) :
                                 $size_presets = array();
                                 if (get_post_meta(get_the_ID(), '_size_presets', true)) {
                                     foreach ($product_attr_array as $preset_attr) {
@@ -645,51 +644,6 @@ get_header();
                                         </div>
                                     </div>
                                 </div>
-                            <?php else : ?>
-                            <?php
-                            // Starting size: a square of the minimum area, shown as whole feet plus
-                            // inches (2 ft 2.6 in rather than 2.21 ft + 0 in). Rounded up, so the
-                            // square is never below the minimum area the cart accepts.
-                            // The calculator starts empty; the price quote enlarges small sizes to the minimum price.
-                            $start_side_in = 0;
-                            $start_ft = 0;
-                            $start_in = 0;
-                            $dimensions = array(
-                                'height' => array('label' => 'Height', 'min' => $product_min_height, 'max' => $product_max_height),
-                                'width' => array('label' => 'Width', 'min' => $product_min_width, 'max' => $product_max_width),
-                            );
-                            foreach ($dimensions as $dim => $dim_info) : ?>
-                                <div class="row d-fex align-items-center mt-2 dimenstion-calculator dim-row">
-                                    <div class="col-md-3 col-4">
-                                        <span class="dim-label" id="dim-label-<?php echo esc_attr($dim); ?>"><?php echo esc_html($dim_info['label']); ?></span>
-                                    </div>
-                                    <div class="col-8 col-md-9">
-                                        <div class="dim-fields" role="group" aria-labelledby="dim-label-<?php echo esc_attr($dim); ?>">
-                                            <div class="input-group dim-group">
-                                                <span class="input-group-text" aria-hidden="true">ft</span>
-                                                <input type="number" inputmode="decimal" step="any" min="0" name="<?php echo esc_attr($dim); ?>-ft" id="input-<?php echo esc_attr($dim); ?>-ft" value="<?php echo esc_attr($start_ft); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in feet'); ?>">
-                                            </div>
-                                            <div class="input-group dim-group">
-                                                <span class="input-group-text" aria-hidden="true">in</span>
-                                                <input type="number" inputmode="decimal" step="any" min="0" name="<?php echo esc_attr($dim); ?>-in" id="input-<?php echo esc_attr($dim); ?>-in" value="<?php echo esc_attr($start_in); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_info['label'] . ' in inches'); ?>">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
-
-                            <div class="row mt-2 mb-3">
-                                <div class="col-8 col-md-9 offset-4 offset-md-3">
-                                    <span class="total-size-sqft" aria-live="polite"><?php echo esc_html($start_side_in); ?>" x <?php echo esc_html($start_side_in); ?>" = 0 ft<sup>2</sup></span>
-                                    <?php $min_sides = wholesale_product_min_sides(get_the_ID());
-                                    if ($min_sides) : ?>
-                                        <small class="d-block text-muted pb-min-size">Minimum size: <?php echo esc_html(sprintf('%s" x %s" (width x height)', $min_sides[0] + 0, $min_sides[1] + 0)); ?><?php $min_charge = wholesale_product_min_order(get_the_ID()); if ($min_charge > 0) : ?> &middot; min charge $<?php echo esc_html(number_format($min_charge, 2)); ?><?php endif; ?></small>
-                                    <?php elseif ($min_area > 0) : ?>
-                                        <small class="d-block text-muted pb-min-size">Minimum size: <?php echo esc_html(number_format($min_area, 2)); ?> ft<sup>2</sup> (e.g. <?php echo esc_html(wholesale_min_area_example($min_area)); ?>)</small>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <?php endif; ?>
 
 
 
@@ -1316,6 +1270,37 @@ get_header();
                     <button type="submit" class="btn btn-primary">Submit review</button>
                 </form>
             </div>
+            <script>
+            // Review links (My orders, shipping email) open this form. The page
+            // shifts while images and the builder load, so the browser's own
+            // anchor jump lands short; scroll again once layout settles.
+            (function () {
+                if (!/^#(write-review|product-reviews)$/.test(location.hash)) return;
+                if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+                var toForm = function () {
+                    var card = document.getElementById('write-review');
+                    // Desktop uses #ssxHeader, phones .main-header; the hidden one measures 0.
+                    var offset = 16;
+                    document.querySelectorAll('#ssxHeader, .main-header').forEach(function (header) {
+                        offset = Math.max(offset, header.getBoundingClientRect().height + 16);
+                    });
+                    // 'instant' overrides the site-wide smooth scroll, which
+                    // gets cut short while the page is still loading.
+                    window.scrollTo({ top: card.getBoundingClientRect().top + window.pageYOffset - offset, behavior: 'instant' });
+                };
+                var stop = false;
+                ['wheel', 'touchstart', 'keydown'].forEach(function (type) {
+                    window.addEventListener(type, function () { stop = true; }, { once: true, passive: true });
+                });
+                var settle = function () { if (!stop) toForm(); };
+                document.addEventListener('DOMContentLoaded', settle);
+                window.addEventListener('load', function () {
+                    settle();
+                    setTimeout(settle, 400);
+                    setTimeout(settle, 1200);
+                });
+            })();
+            </script>
         <?php elseif ('reviewed' === $review_eligibility['reason'] && 'sent' !== $review_status && 'already_reviewed' !== $review_status) : ?>
             <p class="product-review-note">Thanks, you have already reviewed this product. It appears here once approved.</p>
         <?php elseif (!is_user_logged_in()) : ?>

@@ -41,7 +41,7 @@ function wholesale_order_review_url($order_id, $product_id)
 	return add_query_arg(array(
 		'review_order' => absint($order_id),
 		'review_token' => wholesale_order_review_token($order_id, $product_id),
-	), get_permalink($product_id)) . '#product-reviews';
+	), get_permalink($product_id)) . '#write-review';
 }
 
 /**

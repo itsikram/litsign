@@ -11,7 +11,7 @@
  * Name of the Google Ads conversion action that offline sales are uploaded to.
  * It must match the action's name in Google Ads exactly.
  */
-const WHOLESALE_ADS_OFFLINE_CONVERSION = 'Closed sale (offline)';
+const WHOLESALE_ADS_OFFLINE_CONVERSION = 'Quote won (offline import)';
 
 /**
  * Order screen: show whether the order came from a Google ad.

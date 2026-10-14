@@ -6832,7 +6832,7 @@ a.review-author-name:hover {
     padding: 0 8px;
   }
 }
-/* Rigid Signs and Magnets: B2Sign-style size box. "Width [  ] in", optional preset
+/* Size calculator products: B2Sign-style size box. "Width [  ] in", optional preset
    dropdown above, and a grey summary panel (size, rate, minimums) below. */
 .product-details .product-attibute-box .pb-size-b2 .pb-size-preset {
   min-height: 42px;

@@ -1107,6 +1107,7 @@ a.checkout-pay:hover {
 
 .order-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   margin: 0;
   padding: 0;
@@ -1294,14 +1295,42 @@ a.checkout-pay:hover {
 
 @media (max-width: 575px) {
   .order-row {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    align-items: start;
+    gap: 12px 14px;
+    padding: 16px;
+  }
+
+  .order-row img {
+    width: 56px;
+    height: 56px;
+  }
+
+  .order-row-main {
+    grid-column: 2;
+  }
+
+  .order-row-main:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .order-row-number {
+    overflow-wrap: anywhere;
   }
 
   .order-row-side {
+    grid-column: 1 / -1;
     flex-direction: row;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    width: 100%;
+    padding-top: 12px;
+    border-top: 1px solid var(--shop-line);
+  }
+
+  .order-row-side .order-write-review {
+    margin-top: 0;
   }
 }
 

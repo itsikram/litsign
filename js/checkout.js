@@ -448,7 +448,22 @@
       status.dataset.type = type;
       status.hidden = !message;
       if (message && type === 'error' && scroll) status.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      fieldStatus = false;
     };
+    // While the status is a "fix the highlighted fields" summary, keep its count in step
+    // with the fields as the customer corrects them, and drop it once none are left.
+    let fieldStatus = false;
+    const showFieldStatus = (count) => {
+      showStatus(count === 1 ? 'Please fix the highlighted field.' : `Please fix the ${count} highlighted fields.`, 'error', false);
+      fieldStatus = true;
+    };
+    const refreshFieldStatus = () => {
+      if (!fieldStatus) return;
+      const count = fieldsOf(form).filter((input) => isActive(input) && input.getAttribute('aria-invalid') === 'true').length;
+      if (count) showFieldStatus(count);
+      else showStatus('');
+    };
+    ['input', 'change', 'focusout'].forEach((type) => form.addEventListener(type, refreshFieldStatus));
     // A server error about one field is shown next to that field.
     const showError = (error) => {
       const input = error.field && (form.elements[error.field] || (error.field === 'card_exp' && form.elements.card_exp_month));
@@ -456,7 +471,7 @@
         setError(input, error.message);
         input.focus({ preventScroll: true });
         input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        showStatus('Please check the highlighted field.', 'error', false);
+        showFieldStatus(1);
         return;
       }
       showStatus(error.message);
@@ -489,7 +504,7 @@
 
       const invalid = validateForm(form);
       if (invalid.length) {
-        showStatus(invalid.length === 1 ? 'Please fix the highlighted field.' : `Please fix the ${invalid.length} highlighted fields.`, 'error', false);
+        showFieldStatus(invalid.length);
         return;
       }
 

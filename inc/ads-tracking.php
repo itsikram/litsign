@@ -242,7 +242,7 @@ function wholesale_ads_click_conversions()
  * Conversion labels fixed in the theme (purchase, website calls).
  */
 const WHOLESALE_ADS_PURCHASE_LABEL = 'UkFKCJGGp_kcEPW2yt9E';
-const WHOLESALE_ADS_CALL_LABEL = 'OK42COLkgPocEPW2yt9E';
+const WHOLESALE_ADS_CALL_LABEL = 'e7GrCJqb85sdEPW2yt9E';
 
 /**
  * The quote request label: the theme setting, else the built-in default.

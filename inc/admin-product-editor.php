@@ -53,7 +53,7 @@ function wholesale_pe_field_copy()
 			'_product_gallery' => array('Product gallery images', 'Extra photos shown in the product page gallery. Drag to reorder.'),
 			'_product_group_data' => array('Product group links (raw)', 'Buttons that switch between related versions of this product. Edited with the list above; this raw box is kept for reference.'),
 			'_hide_calculator' => array('Hide the size calculator', 'Ticked: customers pick from the options only (fixed-size product). Not ticked: customers type a width and height and pay per square foot.'),
-			'_size_presets' => array('Show preset size dropdown', 'Rigid Signs and Magnets products with the size calculator: ticked shows a size dropdown (from its size options, plus Custom size) that fills in the width and height. Price is still per square foot.'),
+			'_size_presets' => array('Show preset size dropdown', 'Products with the size calculator: ticked shows a size dropdown (from its size options, plus Custom size) that fills in the width and height. Price is still per square foot.'),
 			'_show_in_list' => array('Show in product lists', 'Ticked: the product appears in shop and category lists.'),
 			'_has_upload_artwork' => array('Allow artwork upload', 'Ticked: customers can upload their artwork file on the product page.'),
 			'_product_turnaround' => array('Production time (business days)', 'Shown as the turnaround on the product page. Example: 2'),

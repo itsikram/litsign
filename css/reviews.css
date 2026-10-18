@@ -94,6 +94,61 @@
   font-weight: 600;
 }
 
+/* Google review invite (shipped orders only) */
+.order-google-review {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 20px;
+  margin-bottom: 20px;
+}
+.order-google-review strong {
+  color: #0d2e4d;
+}
+.order-google-review p {
+  margin: 4px 0 0;
+  color: #5b6b7b;
+  font-size: 0.92rem;
+}
+.order-google-review-btn,
+.order-google-review-link,
+.product-review-google {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.order-google-review-btn {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid #dadce0;
+  border-radius: 8px;
+  background: #fff;
+  color: #1a73e8;
+}
+.order-google-review-btn:hover {
+  border-color: #1a73e8;
+  color: #1a73e8;
+}
+.order-google-review-link {
+  margin-top: 6px;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #1a73e8;
+}
+.product-review-google {
+  margin-left: 6px;
+  color: #1a73e8;
+}
+@media (max-width: 600px) {
+  .order-google-review-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* /reviews/ page */
 .reviews-page {
   padding: 40px 0 56px;

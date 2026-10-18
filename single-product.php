@@ -1179,10 +1179,11 @@ get_header();
     ?>
     <?php if ($show_product_reviews) : ?>
     <section class="product-reviews" id="product-reviews" aria-labelledby="product-reviews-title">
+        <?php $google_review_url = in_array($review_status, array('sent', 'already_reviewed'), true) ? wholesale_google_write_review_url() : ''; ?>
         <?php if ('sent' === $review_status) : ?>
-            <div class="product-review-alert" role="status">Thank you! Your review has been submitted and will appear here once our team approves it.</div>
+            <div class="product-review-alert" role="status">Thank you! Your review has been submitted and will appear here once our team approves it.<?php if ($google_review_url) : ?> <a class="product-review-google" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo wholesale_google_logo_svg(16); ?> Share it on Google too</a><?php endif; ?></div>
         <?php elseif ('already_reviewed' === $review_status) : ?>
-            <div class="product-review-alert" role="status">You have already reviewed this product for this order. Thank you!</div>
+            <div class="product-review-alert" role="status">You have already reviewed this product for this order. Thank you!<?php if ($google_review_url) : ?> <a class="product-review-google" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo wholesale_google_logo_svg(16); ?> Review us on Google</a><?php endif; ?></div>
         <?php elseif ('not_eligible' === $review_status) : ?>
             <div class="product-review-alert product-review-alert-error" role="alert">Reviews are available once your order for this product is complete.</div>
         <?php elseif ('disabled' === $review_status) : ?>

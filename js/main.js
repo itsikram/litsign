@@ -1032,6 +1032,12 @@
       }
     })
 
+    // Phone bottom bar opens the same product menu (the header's button is hidden there).
+    $('.cl-mobile-bar-products').click(e => {
+      e.stopPropagation();
+      $('#allProductsBtn').trigger('click');
+    });
+
     // Close the product menu from outside clicks and Escape; Escape also closes the slide-in menu.
     $(document).on('click', (e) => {
       if ($('.main-header').hasClass('mega-menu-open') && !$(e.target).closest('#megaMenu, #allProductsBtn').length) {

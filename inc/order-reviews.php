@@ -182,12 +182,25 @@ function wholesale_order_unreviewed_products($order_id)
 }
 
 /**
+ * Google review link for a shipped (completed) order, or ''. Google reviews are for the
+ * business as a whole, so the order only has to be shipped; no per-product check.
+ */
+function wholesale_order_google_review_url($order_id)
+{
+	if ('completed' !== get_post_status($order_id) || !function_exists('wholesale_google_write_review_url')) {
+		return '';
+	}
+	return wholesale_google_write_review_url();
+}
+
+/**
  * "How did it turn out?" block for the shipped email. Already escaped.
  */
 function wholesale_order_review_email_html($order_id)
 {
 	$links = wholesale_order_unreviewed_products($order_id);
-	if (!$links) {
+	$google_url = wholesale_order_google_review_url($order_id);
+	if (!$links && !$google_url) {
 		return '';
 	}
 
@@ -196,6 +209,9 @@ function wholesale_order_review_email_html($order_id)
 		. '<p style="margin:0 0 10px;color:#5b6b7b;font-size:14px;">Your review helps other business owners choose the right sign. It only takes a minute.</p>';
 	foreach ($links as $product_id => $url) {
 		$html .= '<p style="margin:6px 0 0;"><a href="' . esc_url($url) . '" style="color:#1287b5;font-weight:700;">&#9733; Review ' . esc_html(get_the_title($product_id)) . '</a></p>';
+	}
+	if ($google_url) {
+		$html .= '<p style="margin:' . ($links ? '12px' : '6px') . ' 0 0;"><a href="' . esc_url($google_url) . '" style="display:inline-block;padding:9px 16px;border-radius:6px;background:#1a73e8;color:#ffffff;font-weight:700;text-decoration:none;">&#9733; Review us on Google</a></p>';
 	}
 	return $html . '</div>';
 }

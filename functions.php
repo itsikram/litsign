@@ -82,6 +82,7 @@ require_once(dirname(__FILE__) . '/inc/performance.php');
 require_once(dirname(__FILE__) . '/inc/page-loader.php');
 require_once(dirname(__FILE__) . '/inc/cache-clear.php');
 require_once(dirname(__FILE__) . '/inc/guide-pages.php');
+require_once(dirname(__FILE__) . '/inc/developer-page.php');
 require_once(dirname(__FILE__) . '/inc/seo-admin/loader.php');
 require_once(dirname(__FILE__) . '/inc/admin-product-editor.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
@@ -441,6 +442,7 @@ function wholesale_setting_defaults()
 		'google_ads_email_tap_label' => '',
 		'google_ads_builder_start_label' => '',
 		'google_ads_add_to_cart_label' => '',
+		'google_ads_chat_start_label' => '',
 		'ga4_measurement_id' => '',
 		'page_loader_enabled' => 0,
 		'ul_file_number' => '',

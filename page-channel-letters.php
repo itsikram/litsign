@@ -1283,9 +1283,9 @@ foreach (array(12, 18, 24) as $example_inches) {
     </section>
 
     <nav class="cl-mobile-bar" aria-label="Quick actions">
-        <a class="cl-mobile-bar-call" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> Call</a>
+        <button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo wholesale_home_icon('grid'); ?> All Products</button>
         <a class="cl-mobile-bar-quote" href="<?php echo esc_url($contact_url); ?>">Free Quote</a>
-        <a class="cl-mobile-bar-shop" href="#product-box-container">See Prices</a>
+        <a class="cl-mobile-bar-shop" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
     </nav>
 <?php endif; ?>
 

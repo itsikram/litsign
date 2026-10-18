@@ -46,6 +46,12 @@ $product_image = static function ($slug, $alt, $sizes, $eager = false) {
 	));
 };
 
+// Card prices are whole dollars, except per-ft² prices: rounding $3.30 up to $4 would
+// overstate the price the ads quote, so those keep their cents.
+$card_price = static function ($html) {
+	return preg_match('/per ft/i', wp_strip_all_tags((string) $html)) ? $html : wholesale_price_no_cents($html);
+};
+
 // Product lines: category slug, product whose photo and price represent it, name, summary,
 // stable anchor id (for ads and sitelinks, e.g. /banners-displays/#flags).
 $lines = array(
@@ -66,7 +72,7 @@ $best_sellers = array(
 	'mesh-banner' => 'Fences &amp; windy spots',
 	'standard-retractable-insert-stand' => 'Most popular stand',
 	'x-stand-graphic-stand' => 'Budget indoor stand',
-	'step-and-repeat-backdrop-graphic-frame' => 'Photo backdrops',
+	'pole-banner-set-banner-hardware' => 'Street &amp; parking lot poles',
 	'feather-angled-flag-pole' => 'Roadside attention',
 	'10ft-seg-fabric-display-graphic-frame' => 'Trade show back wall',
 );
@@ -80,7 +86,7 @@ $occasions = array(
 	)),
 	array('occasion-trade-show', 'Trade Shows &amp; Expos', 'Build a booth that draws people in from the aisle and packs into the trunk afterwards.', array(
 		'10ft-seg-fabric-display-graphic-frame' => '10ft back wall',
-		'deluxe-retractable-insert-stand' => 'Retractable stand',
+		'deluxe-retractable-insert-stand' => 'Deluxe retractable stand',
 		'6ft-table-cover' => 'Printed table cover',
 	)),
 	array('occasion-events', 'Events &amp; Festivals', 'Shade, shelter and branding for markets, races, fairs and outdoor activations.', array(
@@ -184,6 +190,11 @@ $page_hero_image = get_the_post_thumbnail_url(get_the_ID(), 'large');
 $page_hero_image = $page_hero_image ? wholesale_webp_url(esc_url_raw($page_hero_image)) : '';
 $default_page_hero_image = wholesale_default_hero_url();
 $page_hero_background = wholesale_hero_background_style($page_hero_image, $default_page_hero_image);
+
+// Hero proof point: the Google rating, linked to the reviews page (this page has no reviews section).
+$google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
+$google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_reviews : null;
+$reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews_page_url() : home_url('/reviews/');
 ?>
 
 <main id="primary" class="sf-page bd-page">
@@ -194,6 +205,11 @@ $page_hero_background = wholesale_hero_background_style($page_hero_image, $defau
 				<div class="bd-hero-copy">
 					<p class="home-hero-eyebrow">Full color &middot; Printed to order &middot; Next-day options</p>
 					<h1 id="bd-title" class="bd-hero-title">Custom Banners &amp; Displays <span>That Get You Noticed</span></h1>
+					<?php if ($google_rating) : ?>
+						<p class="home-hero-proof">
+							<a class="home-hero-rating" href="<?php echo esc_url($reviews_url); ?>"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
+						</p>
+					<?php endif; ?>
 					<p class="home-hero-lead">Vinyl and fabric banners, retractable banner stands, feather flags and trade show displays. Pick a product, enter your size and see your price before you check out.</p>
 					<div class="home-hero-actions home-hero-actions--cl">
 						<a class="home-hero-shop-button" href="<?php echo esc_url($banners_url); ?>"><span class="home-hero-button-text">Shop Banners<?php if ($vinyl_price) : ?><small>From <?php echo wp_kses_post($vinyl_price); ?></small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
@@ -225,7 +241,7 @@ $page_hero_background = wholesale_hero_background_style($page_hero_image, $defau
 			</div>
 			<div class="home-hero-feature">
 				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('clock'); ?></span>
-				<span><strong>Next-Day Turnaround</strong><small>Available on many products.</small></span>
+				<span><strong>Ships to All 50 States</strong><small>Next-day turnaround on many products.</small></span>
 			</div>
 			<div class="home-hero-feature">
 				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('badge'); ?></span>
@@ -247,7 +263,7 @@ $page_hero_background = wholesale_hero_background_style($page_hero_image, $defau
 				<?php foreach ($lines as $line) : ?>
 					<?php
 					$line_url = wholesale_category_url($line[0]);
-					$line_price = wholesale_price_no_cents(wholesale_seo_product_starting_text($line[1]));
+					$line_price = $card_price(wholesale_seo_product_starting_text($line[1]));
 					$line_name = wp_strip_all_tags(html_entity_decode($line[2], ENT_QUOTES, 'UTF-8'));
 					?>
 					<article class="sf-type-card bd-card" id="<?php echo esc_attr($line[4]); ?>">
@@ -309,7 +325,7 @@ $page_hero_background = wholesale_hero_background_style($page_hero_image, $defau
 						continue;
 					}
 					$name = wp_strip_all_tags(get_the_title($product));
-					$price = wholesale_price_no_cents(wholesale_seo_product_starting_text($slug));
+					$price = $card_price(wholesale_seo_product_starting_text($slug));
 					?>
 					<a class="bd-product" href="<?php echo esc_url(get_permalink($product)); ?>">
 						<span class="bd-product-image"><?php echo $product_image($slug, $name, '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 25vw'); ?></span>
@@ -486,9 +502,9 @@ $page_hero_background = wholesale_hero_background_style($page_hero_image, $defau
 	</section>
 
 	<nav class="cl-mobile-bar" aria-label="Quick actions">
-		<a class="cl-mobile-bar-call" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> Call</a>
+		<button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo wholesale_home_icon('grid'); ?> All Products</button>
 		<a class="cl-mobile-bar-quote" href="#quote">Free Quote</a>
-		<a class="cl-mobile-bar-shop" href="#products">See Prices</a>
+		<a class="cl-mobile-bar-shop" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
 	</nav>
 </main>
 

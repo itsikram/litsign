@@ -20,6 +20,7 @@ $tracking_url = $tracking ? wholesale_tracking_url($carrier, $tracking) : '';
 $is_staff = current_user_can('edit_post', $post_id);
 $review_links = wholesale_order_unreviewed_products($post_id);
 $can_collect_reviews = 'completed' === $status && wholesale_setting_enabled('allow_verified_reviews');
+$google_review_url = wholesale_order_google_review_url($post_id);
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
 };
@@ -75,6 +76,16 @@ get_header();
                 <?php else : ?>
                     <?php echo esc_html($tracking); ?>
                 <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($google_review_url) : ?>
+            <div class="order-google-review checkout-card">
+                <div>
+                    <strong>How did your sign turn out?</strong>
+                    <p>A quick Google review helps other business owners find us.</p>
+                </div>
+                <a class="order-google-review-btn" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo wholesale_google_logo_svg(18); ?> Review us on Google</a>
             </div>
         <?php endif; ?>
 

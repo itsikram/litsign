@@ -235,6 +235,7 @@ function wholesale_ads_click_conversions()
 		'google_ads_email_tap_label' => array('event' => 'email_tap', 'label' => 'Email tap conversion label', 'help' => 'Sent when someone clicks an email address link.'),
 		'google_ads_builder_start_label' => array('event' => 'builder_start', 'label' => 'Builder start conversion label', 'help' => 'Sent once per page view, the first time someone types sign text in the channel letter builder or a product price calculator.'),
 		'google_ads_add_to_cart_label' => array('event' => 'add_to_cart', 'label' => 'Add to cart conversion label', 'help' => 'Sent with the item value when a product or builder design is added to the cart.'),
+		'google_ads_chat_start_label' => array('event' => 'chat_start', 'label' => 'Live chat conversation label', 'help' => 'Sent once per conversation when a visitor starts a live chat (first message or file). Chats opened to ask about an existing order are not counted.'),
 	);
 }
 
@@ -335,7 +336,9 @@ function wholesale_ads_click_tracking_script()
 				convert(key);
 			}
 			document.addEventListener('click', function (e) {
-				var link = e.target.closest ? e.target.closest('a[href]') : null;
+				// composedPath reaches links inside the chat widget's shadow root.
+				var target = e.composedPath ? e.composedPath()[0] : e.target;
+				var link = target && target.closest ? target.closest('a[href]') : null;
 				if (!link) return;
 				var href = link.getAttribute('href').trim().toLowerCase();
 				if (0 === href.indexOf('tel:')) tap('phone_tap');
@@ -350,6 +353,20 @@ function wholesale_ads_click_tracking_script()
 				started = true;
 				convert('builder_start');
 			}, true);
+
+			// The sfs-live-chat widget dispatches this when the server creates a
+			// conversation. Each conversation counts once, even across page loads.
+			document.addEventListener('sfs-chat:conversation-started', function (e) {
+				var chat = e.detail || {};
+				if (!chat.conversation_id || 'order' === chat.source) return;
+				var seen = [];
+				try { seen = JSON.parse(localStorage.getItem('wholesale_chat_conversions') || '[]'); } catch (err) {}
+				if (seen.indexOf(chat.conversation_id) > -1) return;
+				seen.push(chat.conversation_id);
+				try { localStorage.setItem('wholesale_chat_conversions', JSON.stringify(seen.slice(-20))); } catch (err) {}
+				convert('chat_start', { transaction_id: 'chat-' + chat.conversation_id });
+				if (ga4) gtag('event', 'generate_lead', { method: 'live_chat' });
+			});
 
 			// js/mini-cart.js dispatches this after the cart confirms the add.
 			document.addEventListener('wholesale:cart-added', function (e) {

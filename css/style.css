@@ -6446,8 +6446,7 @@ a.review-author-name:hover {
     bottom: 0;
     left: 0;
     z-index: 1030;
-    display: grid;
-    grid-template-columns: 0.85fr 1fr 1fr;
+    display: flex;
     gap: 8px;
     padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
     border-top: 1px solid #e2e8f0;
@@ -6455,20 +6454,81 @@ a.review-author-name:hover {
     box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.12);
   }
 
-  .cl-mobile-bar a {
+  .cl-mobile-bar a,
+  .cl-mobile-bar button {
+    /* Buttons share the leftover width, so each label stays on one line. */
+    flex: 1 1 auto;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
+    min-width: 0;
     min-height: 48px;
+    padding: 0 10px;
     border-radius: 6px;
+    font-family: inherit;
+    font-size: 14px;
     font-weight: 700;
+    line-height: 1.15;
+    white-space: nowrap;
+    text-align: center;
     text-decoration: none;
+  }
+
+  .cl-mobile-bar .cl-icon {
+    flex: none;
+    width: 17px;
+    height: 17px;
   }
 
   .cl-mobile-bar-call {
     border: 2px solid #1fa8de;
     color: #1287b5;
+  }
+
+  .cl-mobile-bar-products {
+    border: 2px solid #1fa8de;
+    background: #eaf6fc;
+    color: #0f6f96;
+    cursor: pointer;
+  }
+
+  .cl-mobile-bar-products:active {
+    background: #d6eef9;
+  }
+
+  @media (max-width: 370px) {
+    .cl-mobile-bar {
+      gap: 6px;
+      padding-right: 10px;
+      padding-left: 10px;
+    }
+
+    .cl-mobile-bar a,
+    .cl-mobile-bar button {
+      gap: 4px;
+      padding: 0 7px;
+      font-size: 13px;
+    }
+
+    .cl-mobile-bar .cl-icon {
+      width: 15px;
+      height: 15px;
+    }
+  }
+
+  /* The bottom bar carries All Products and Start Building, so the header row below the logo goes. */
+  body:has(.cl-mobile-bar) .site-header .header-bottom {
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  body:has(.cl-mobile-bar) .site-header .header-bottom-container .megamenu-container #allProductsBtn,
+  body:has(.cl-mobile-bar) .site-header .sh-categories,
+  body:has(.cl-mobile-bar) .site-header .header-builder-menu {
+    display: none;
   }
 
   .cl-mobile-bar-quote {

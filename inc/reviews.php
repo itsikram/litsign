@@ -206,8 +206,18 @@ function wholesale_review_slider_data()
 		'google_rating' => $google ? $google['rating'] : 0,
 		'google_count' => $google ? $google['count'] : 0,
 		'google_url' => $google ? $google['url'] : '',
-		'google_write_url' => $google ? 'https://search.google.com/local/writereview?placeid=' . rawurlencode(wholesale_get_setting('google_place_id')) : '',
+		'google_write_url' => $google ? wholesale_google_write_review_url() : '',
 	);
+}
+
+/**
+ * Google "write a review" link for the business, or '' when no Place ID is set.
+ * Needs only the Place ID (no API call), so it works in emails and order pages.
+ */
+function wholesale_google_write_review_url()
+{
+	$place_id = trim((string) wholesale_get_setting('google_place_id'));
+	return '' === $place_id ? '' : 'https://search.google.com/local/writereview?placeid=' . rawurlencode($place_id);
 }
 
 function wholesale_google_logo_svg($size = 20)

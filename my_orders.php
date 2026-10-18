@@ -76,6 +76,10 @@ get_header();
                             <?php if ($review_links) : ?>
                                 <a class="order-write-review" href="<?php echo esc_url(1 === count($review_links) ? reset($review_links) : get_permalink($order)); ?>">&#9733; Write a review</a>
                             <?php endif; ?>
+                            <?php $google_review_url = wholesale_order_google_review_url($order->ID); ?>
+                            <?php if ($google_review_url) : ?>
+                                <a class="order-google-review-link" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo wholesale_google_logo_svg(14); ?> Review us on Google</a>
+                            <?php endif; ?>
                         </div>
                     </li>
                 <?php endforeach; ?>

@@ -597,6 +597,86 @@
 .dt-container #clAddToCartBtn img { height: 18px; }
 .dt-container .cl-cart-status { flex-basis: 100%; margin: 0; color: #b02a37; font-size: 13px; text-align: right; }
 
+/* Desktop: one row — options on the left, price + actions on the right.
+   Add to cart is the only filled button; Save design is outlined and
+   Price details sits under the price as a link. */
+@media (min-width: 992px) {
+  .dt-container .editor-bottombar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px 20px;
+    padding: 12px 16px;
+  }
+  .dt-container .bottom-left { align-self: center; }
+  .dt-container .bottombar-left-item { min-height: 50px; padding: 6px 12px 6px 14px; }
+
+  .dt-container .bottom-right {
+    display: grid;
+    grid-template-columns: auto auto auto auto;
+    grid-template-areas:
+      "price   price   save cart"
+      "count   details save cart"
+      "status  status  status status";
+    align-items: center;
+    gap: 2px 12px;
+    margin: 0;
+    padding-left: 20px;
+    border-left: 1px solid var(--cl-line);
+  }
+  .dt-container .bottom-right:not(:has(#clAddToCartBtn)) {
+    grid-template-columns: auto auto auto;
+    grid-template-areas: "price price save" "count details save" "status status status";
+  }
+
+  .dt-container #totalCost { grid-area: price; padding-right: 4px; }
+  .dt-container #totalObject {
+    grid-area: count;
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .dt-container #totalObject > span:first-child { font-size: 11px; }
+  .dt-container #totalObject .value { font-size: 12px; font-weight: 700; color: var(--cl-ink) !important; }
+
+  .dt-container .bottom-right #detailBtn {
+    grid-area: details;
+    justify-self: end;
+    min-height: 0;
+    padding: 2px 4px 2px 0;
+    border: 0;
+    border-radius: 4px;
+    background: none;
+    color: var(--cl-accent-ink);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .dt-container .bottom-right #detailBtn::after { content: "\203A"; margin-left: 4px; font-size: 15px; line-height: 1; }
+  .dt-container .bottom-right #detailBtn:hover { background: none; color: var(--cl-ink); text-decoration: underline; }
+  .dt-container .bottom-right #detailBtn:focus-visible { outline: 2px solid var(--cl-accent); outline-offset: 2px; box-shadow: none; }
+
+  .dt-container .bottom-right #saveBtn,
+  .dt-container .bottom-right #clAddToCartBtn { grid-row: 1 / span 2; align-self: center; min-height: 48px; white-space: nowrap; }
+  .dt-container .bottom-right #saveBtn { grid-area: save; }
+  .dt-container .bottom-right #clAddToCartBtn { grid-area: cart; padding-left: 26px; padding-right: 26px; box-shadow: 0 6px 16px -8px rgba(220, 53, 69, 0.7); }
+
+  /* With a cart button, Save design steps back to an outlined secondary action. */
+  .dt-container .bottom-right:has(#clAddToCartBtn) #saveBtn { background: #fff; border-color: #cdd5de; color: var(--cl-ink); }
+  .dt-container .bottom-right:has(#clAddToCartBtn) #saveBtn:hover,
+  .dt-container .bottom-right:has(#clAddToCartBtn) #saveBtn:focus-visible { background: var(--cl-accent-soft); border-color: var(--cl-accent); color: var(--cl-accent-ink); }
+  .dt-container .bottom-right:has(#clAddToCartBtn) #saveBtn:disabled { background: #fff; border-color: var(--cl-line); color: var(--cl-muted); }
+
+  .dt-container .cl-cart-status { grid-area: status; margin-top: 6px; }
+}
+
+/* Narrow desktop: not enough room for one row, so options sit above the price row. */
+@media (min-width: 992px) and (max-width: 1365.98px) {
+  .dt-container .editor-bottombar { grid-template-columns: minmax(0, 1fr); }
+  .dt-container .bottom-right { justify-self: end; padding: 12px 0 0; border-left: 0; border-top: 1px solid var(--cl-line); width: 100%; justify-content: end; }
+}
+
 /* ------------------------------------------------------------------ */
 /* Custom shape modal                                                  */
 /* ------------------------------------------------------------------ */

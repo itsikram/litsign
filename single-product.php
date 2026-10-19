@@ -1076,7 +1076,7 @@ get_header();
                             <?php if ('channel-letters' === $product_category_slug) : ?>
                                 <li>UL listed, tested before shipping, 5-year LED warranty</li>
                             <?php endif; ?>
-                            <li>Questions? <a href="tel:+18664362101">866-436-2101</a> &middot; Mon&ndash;Fri 8am&ndash;5pm PST</li>
+                            <li>Questions? <a href="tel:+18664362101">866-436-2101</a> &middot; Mon&ndash;Fri 8am&ndash;5pm PT</li>
                         </ul>
                     </div>
                 </div>
@@ -1239,7 +1239,7 @@ get_header();
                 <?php endforeach; ?>
             </div>
             <?php if ($product_review_data['count'] > count($product_reviews)) : ?>
-                <p class="product-review-more"><a href="<?php echo esc_url(wholesale_reviews_page_url(array('product' => $product_id))); ?>">See all <?php echo esc_html(number_format_i18n($product_review_data['count'])); ?> reviews for this product &rarr;</a></p>
+                <p class="product-review-more"><a href="<?php echo esc_url(wholesale_reviews_page_url(array('review_product' => $product_id))); ?>">See all <?php echo esc_html(number_format_i18n($product_review_data['count'])); ?> reviews for this product &rarr;</a></p>
             <?php endif; ?>
         <?php else : ?>
             <p class="product-review-note">No reviews for this product yet.</p>

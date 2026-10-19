@@ -123,7 +123,7 @@ function wholesale_cache_excluded_request()
 		}
 	}
 
-	return is_page(array('cart', 'checkout', 'account', 'my-orders', 'my_orders', 'orders', 'track-order', 'login', 'signup', 'pay', 'payment', 'channel-letter-builder', 'b2-calculator', 'contact', 'banners-displays'))
+	return is_page(array('cart', 'checkout', 'account', 'my-orders', 'my_orders', 'orders', 'track-order', 'login', 'signup', 'pay', 'payment', 'channel-letter-builder', 'b2-calculator', 'contact', 'banners-displays', 'window-graphics'))
 		|| is_page_template(array('page-channel-letters.php', 'page-channel-letters-ads.php', 'landing-page.php', 'cl_builderr.php', 'b2calc.php', 'cart.php', 'checkout.php', 'account.php', 'my_orders.php', 'login.php', 'signup.php', 'payment.php', 'page-track-order.php'));
 }
 

@@ -1,0 +1,54 @@
+/**
+ * Window Graphics & Vinyl landing page (page-window-graphics.php).
+ * Builds on css/seo-pages.css and css/banners-displays.css; only this page's
+ * own pieces live here.
+ */
+
+/* Nine films: three per row on wide screens so no card is left alone. */
+@media (min-width: 992px) {
+  .wg-page #films .sf-type-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.wg-card {
+  scroll-margin-top: var(--scroll-offset, 80px);
+}
+
+.wg-card .sf-type-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.wg-card-tag {
+  align-self: flex-start;
+  margin-bottom: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #e8f6fc;
+  color: #127ea8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.wg-card-link {
+  margin-top: auto;
+  padding-top: 10px;
+  color: #127ea8;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.wg-card-link:hover,
+.wg-card-link:focus-visible {
+  color: #031835;
+  text-decoration: underline;
+}
+
+/* The film the ad was about (?type=) */
+.wg-card.is-highlighted {
+  border-color: #1fa8de;
+  box-shadow: 0 0 0 2px #1fa8de, 0 18px 36px rgba(15, 23, 42, 0.1);
+}

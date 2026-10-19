@@ -351,7 +351,7 @@ function wholesale_mini_cart_markup()
 	?>
 	<div class="mc-root" id="miniCart" data-mini-cart hidden>
 		<div class="mc-backdrop" data-mc-close></div>
-		<aside class="mc-panel" role="dialog" aria-modal="true" aria-labelledby="miniCartTitle" tabindex="-1">
+		<div class="mc-panel" role="dialog" aria-modal="true" aria-labelledby="miniCartTitle" tabindex="-1">
 			<header class="mc-head">
 				<h2 class="mc-title" id="miniCartTitle">Your Cart <span class="mc-title__count" data-mc-count></span></h2>
 				<button type="button" class="mc-close" data-mc-close aria-label="Close cart">
@@ -370,7 +370,7 @@ function wholesale_mini_cart_markup()
 			<footer class="mc-foot" data-mc-foot></footer>
 			<div class="mc-toast" data-mc-toast hidden></div>
 			<p class="screen-reader-text" aria-live="polite" data-mc-live></p>
-		</aside>
+		</div>
 	</div>
 	<?php
 }

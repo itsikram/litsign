@@ -106,7 +106,7 @@ function wholesale_render_product_sitemap()
 
 		echo "\t<url>\n";
 		echo "\t\t<loc>" . esc_xml(esc_url_raw($url)) . "</loc>\n";
-		echo "\t\t<lastmod>" . esc_xml(get_post_modified_time('c', true, $product)) . "</lastmod>\n";
+		echo "\t\t<lastmod>" . esc_xml(wholesale_product_content_modified($product)) . "</lastmod>\n";
 		foreach (wholesale_product_sitemap_images($product->ID) as $image) {
 			echo "\t\t<image:image>\n\t\t\t<image:loc>" . esc_xml($image) . "</image:loc>\n\t\t</image:image>\n";
 		}

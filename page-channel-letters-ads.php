@@ -266,7 +266,7 @@ if (!function_exists('wholesale_cla_icon')) {
 				?>
 			</a>
 			<div class="cla-topbar-contact">
-				<span class="cla-topbar-hours"><?php echo wholesale_cla_icon('clock'); ?> Mon&ndash;Fri 8am&ndash;5pm PST</span>
+				<span class="cla-topbar-hours"><?php echo wholesale_cla_icon('clock'); ?> Mon&ndash;Fri 8am&ndash;5pm PT</span>
 				<a class="cla-topbar-phone" href="<?php echo esc_attr($phone_link); ?>"><?php echo wholesale_cla_icon('phone'); ?><span><small>Talk to a sign specialist</small><?php echo esc_html($phone_display); ?></span></a>
 			</div>
 		</div>
@@ -470,7 +470,7 @@ if (!function_exists('wholesale_cla_icon')) {
 				<header class="cla-heading cla-heading--left">
 					<p class="cla-kicker">Before you order</p>
 					<h2 id="cla-faq-title">Frequently Asked Questions</h2>
-					<p>Still have a question? Call <a href="<?php echo esc_attr($phone_link); ?>"><?php echo esc_html($phone_display); ?></a>, Mon&ndash;Fri 8am&ndash;5pm PST.</p>
+					<p>Still have a question? Call <a href="<?php echo esc_attr($phone_link); ?>"><?php echo esc_html($phone_display); ?></a>, Mon&ndash;Fri 8am&ndash;5pm PT.</p>
 				</header>
 				<div class="cla-faq">
 					<details open>

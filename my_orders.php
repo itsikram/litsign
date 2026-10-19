@@ -86,7 +86,7 @@ get_header();
             </ul>
         <?php endif; ?>
 
-        <p class="account-help">Questions about an order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST).</p>
+        <p class="account-help">Questions about an order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT).</p>
     </div>
 </main>
 

@@ -371,9 +371,23 @@ function wholesale_checkout_build($post, $cart)
 	}
 
 	$shipping_options = wholesale_cart_shipping_options($cart);
-	$requested_shipping = isset($post['shipping_method']) ? (float) wp_unslash($post['shipping_method']) : -1;
-	if (!in_array($requested_shipping, $shipping_options, true)) {
-		return new WP_Error('shipping_method', 'Please choose a shipping method.');
+	$shipping_choice = isset($post['shipping_method']) ? sanitize_text_field(wp_unslash($post['shipping_method'])) : '';
+	if ('free' === $shipping_choice) {
+		// Free shipping travels like Standard: same transit, delivery and ship date.
+		if (!wholesale_cart_qualifies_free_shipping($cart)) {
+			return new WP_Error('shipping_method', 'Your order no longer qualifies for free shipping. Please choose a shipping method.');
+		}
+		$requested_shipping = 0.0;
+		$shipping_index = 0;
+		$shipping_label = wholesale_free_shipping_label();
+	} else {
+		$requested_shipping = is_numeric($shipping_choice) ? (float) $shipping_choice : -1;
+		$shipping_index = array_search($requested_shipping, $shipping_options, true);
+		// Standard isn't offered once Free Shipping applies.
+		if (false === $shipping_index || (0 === $shipping_index && wholesale_cart_qualifies_free_shipping($cart))) {
+			return new WP_Error('shipping_method', 'Please choose a shipping method.');
+		}
+		$shipping_label = wholesale_shipping_label($shipping_index);
 	}
 
 	$sub_total = round((float) $cart->sub_total, 2);
@@ -388,11 +402,11 @@ function wholesale_checkout_build($post, $cart)
 		'items' => $items,
 		'sub_total' => $sub_total,
 		'shipping_cost' => $requested_shipping,
-		'shipping_label' => wholesale_shipping_label(array_search($requested_shipping, $shipping_options, true)),
+		'shipping_label' => $shipping_label,
 		'tax' => $tax,
 		'grand_total' => $grand_total,
 		'comment' => isset($post['comment']) ? sanitize_textarea_field(wp_unslash($post['comment'])) : '',
-		'estimate_delivery_time' => wholesale_estimated_ship_date($cart, array_search($requested_shipping, $shipping_options, true)),
+		'estimate_delivery_time' => wholesale_estimated_ship_date($cart, $shipping_index),
 		'create_account' => !is_user_logged_in() && '1' === $field('create_account'),
 	);
 }
@@ -414,6 +428,31 @@ function wholesale_cart_shipping_options($cart)
 {
 	$setting = wholesale_cart_has_channel_letters($cart) ? 'channel_shipping_options' : 'standard_shipping_options';
 	return array_values(array_map('floatval', array_filter(explode(',', (string) wholesale_get_setting($setting)), 'is_numeric')));
+}
+
+/**
+ * Subtotal at which the Free Shipping option appears for this cart, or 0 when
+ * the offer is off. Carts with channel letters have their own, higher minimum.
+ */
+function wholesale_free_shipping_threshold($cart)
+{
+	$setting = wholesale_cart_has_channel_letters($cart) ? 'free_shipping_channel_min' : 'free_shipping_min';
+	return max(0.0, (float) wholesale_get_setting($setting));
+}
+
+/**
+ * Whether checkout offers Free Shipping, listed above the paid options and
+ * delivered on Standard's schedule.
+ */
+function wholesale_cart_qualifies_free_shipping($cart)
+{
+	$threshold = wholesale_free_shipping_threshold($cart);
+	return $threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold;
+}
+
+function wholesale_free_shipping_label()
+{
+	return 'Free Shipping (3–6 business days)';
 }
 
 function wholesale_shipping_label($index)

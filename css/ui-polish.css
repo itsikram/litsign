@@ -836,3 +836,21 @@
     background: none;
   }
 }
+
+/* Text contrast (WCAG AA, 4.5:1), from PageSpeed's accessibility audit.
+   The brand blue #1fa8de is 2.72:1 against white, so text and the white
+   text on the main hero button use a darker shade of the same blue. */
+.home-hero-shop-button {
+	background-color: #0b74a3;
+	border-color: #0b74a3;
+}
+.cl-kicker,
+.cl-shop-header-help a,
+.skip-link,
+.product-box-container .product-box .pb-price span {
+	color: #0b74a3 !important;
+}
+.pb-title-short,
+.pb-price del {
+	color: #666;
+}

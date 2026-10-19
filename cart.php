@@ -32,10 +32,11 @@ if (!empty($_SESSION['wholesale_cart_notice'])) {
 
 $items = $cart->get_items();
 $shipping_options = wholesale_cart_shipping_options($cart);
-$lowest_shipping = $shipping_options ? min($shipping_options) : 0;
+$lowest_shipping = $shipping_options && !wholesale_cart_qualifies_free_shipping($cart) ? min($shipping_options) : 0;
 $tax_rate = (float) wholesale_get_setting('tax_rate');
 $sub_total = round((float) $cart->sub_total, 2);
 $tax = round($sub_total * $tax_rate / 100, 2);
+$free_shipping_min = wholesale_free_shipping_threshold($cart);
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
 };
@@ -66,7 +67,7 @@ get_header();
                     <a class="checkout-pay" href="<?php echo esc_url(home_url('/#product-box-container')); ?>">Shop Channel Letters</a>
                     <a class="cart-secondary" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Design Your Sign Online</a>
                 </div>
-                <p class="cart-help">Need help? Call <a href="tel:+18664362101">866-436-2101</a>, Mon&ndash;Fri 8am&ndash;5pm PST.</p>
+                <p class="cart-help">Need help? Call <a href="tel:+18664362101">866-436-2101</a>, Mon&ndash;Fri 8am&ndash;5pm PT.</p>
             </section>
         <?php else : ?>
             <div class="checkout-layout">
@@ -141,10 +142,15 @@ get_header();
                         <h2 id="cart-summary-title">Order summary</h2>
                         <dl class="checkout-totals">
                             <div><dt>Subtotal (<?php echo esc_html(count($items)); ?> <?php echo esc_html(_n('item', 'items', count($items), 'litsign')); ?>)</dt><dd><?php echo esc_html($money($sub_total)); ?></dd></div>
-                            <div><dt>Shipping</dt><dd>from <?php echo esc_html($money($lowest_shipping)); ?></dd></div>
+                            <div><dt>Shipping</dt><dd><?php echo $lowest_shipping > 0 ? 'from ' . esc_html($money($lowest_shipping)) : 'FREE'; ?></dd></div>
                             <div><dt>Estimated tax</dt><dd><?php echo esc_html($money($tax)); ?></dd></div>
                             <div class="checkout-grand"><dt>Estimated total</dt><dd><?php echo esc_html($money($sub_total + $lowest_shipping + $tax)); ?></dd></div>
                         </dl>
+                        <?php if ($free_shipping_min > 0) : ?>
+                            <p class="cart-free-shipping"><?php echo $sub_total >= $free_shipping_min
+                                ? 'Your order qualifies for free shipping (3–6 business days).'
+                                : esc_html(sprintf('Add %s more to get free shipping.', $money($free_shipping_min - $sub_total))); ?></p>
+                        <?php endif; ?>
                         <a class="checkout-pay" href="<?php echo esc_url(home_url('/checkout/')); ?>">Proceed to Checkout</a>
                         <ul class="checkout-assurance">
                             <li>Choose your shipping speed at checkout</li>

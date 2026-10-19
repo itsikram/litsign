@@ -123,6 +123,18 @@ $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $builder_url = home_url('/channel-letter-builder/');
 $GLOBALS['wholesale_channel_letter_landing'] = $is_channel_letters;
+// The front page is the brand and catalog hub; /custom-channel-letters/ is the
+// in-depth channel letters page. The front page summarizes and links to it
+// instead of repeating its comparison table and FAQ, so Google doesn't see two
+// near-identical pages competing for the same searches.
+$is_front_home = $is_channel_letters && is_front_page();
+$cl_landing_id = function_exists('wholesale_channel_letters_landing_id') ? wholesale_channel_letters_landing_id() : 0;
+$cl_landing_url = $cl_landing_id ? get_permalink($cl_landing_id) : home_url('/custom-channel-letters/');
+$home_page_url = function ($slug) {
+    $page = get_page_by_path($slug);
+
+    return $page && 'publish' === $page->post_status ? get_permalink($page) : '';
+};
 
 $current_term_id = $current_term ?  $current_term->term_id : 0;
 $current_term_image = $current_term_id ? get_term_meta($current_term_id, 'taxonomy-image', true) : '';
@@ -249,7 +261,52 @@ $more_products = array(
     array('event-tent-full-canopy-graphic-frame', wholesale_category_url('custom-event-tents'), 'Event Tents', 'Printed 10x10 canopy tents with walls and flags for outdoor events.'),
 );
 
-if ($is_channel_letters) {
+if ($is_front_home) {
+    // Company and catalog questions. Channel letter details (styles, heights,
+    // raceways, warranty) are answered on /custom-channel-letters/.
+    $home_cost_url = $home_page_url('channel-letter-cost');
+    $home_install_url = $home_page_url('how-to-install-channel-letters');
+    $home_permits_url = $home_page_url('sign-permits');
+    $home_industries_url = $home_page_url('industries');
+    $home_locations_url = $home_page_url('locations');
+    $home_link = function ($url, $text) {
+        return $url ? '<a href="' . esc_url($url) . '">' . $text . '</a>' : $text;
+    };
+    wholesale_seo_set_page_faq(array_values(array_filter(array(
+        array(
+            'q' => 'What does Storefront Sign Online make?',
+            'a' => 'Custom business signs, built to order: LED ' . $home_link($cl_landing_url, 'channel letters') . ' in seven lighting styles, plus ' . $home_link(wholesale_category_url('banners'), 'banners') . ', ' . $home_link(wholesale_category_url('adhesive-products'), 'window graphics') . ', sidewalk ' . $home_link(wholesale_category_url('signicade-a-frames'), 'A-frame signs') . ', ' . $home_link(wholesale_category_url('advertising-flags'), 'advertising flags') . ', banner stands, trade show displays, rigid signs and event tents. ' . $home_link(wholesale_shop_url(), 'Browse every product') . '.',
+        ),
+        array(
+            'q' => 'Where are your signs made, and where do you ship?',
+            'a' => 'Channel letters are built in Washington and California; banners, window graphics and our other printed products are made in Renton, WA. Everything ships to all 50 states, with standard, 3-day, 2-day or overnight delivery. Pickup isn&rsquo;t available.',
+        ),
+        array(
+            'q' => 'Do you install signs?',
+            'a' => 'No. We manufacture and ship. Every lit sign is tested before it leaves and comes with a wiring diagram and install pattern, so your licensed electrician or sign installer can mount it.' . ($home_install_url ? ' Our ' . $home_link($home_install_url, 'channel letter installation guide') . ' explains what they will do.' : ''),
+        ),
+        array(
+            'q' => 'How do I find out what my sign will cost?',
+            'a' => 'Every product page shows your price as you choose a size and options, before checkout. Channel letters are priced per letter by height' . ($home_cost_url ? '; the ' . $home_link($home_cost_url, 'channel letter cost guide') . ' shows real examples' : '') . '. For a logo or a large project, ' . $home_link($contact_url, 'request a free quote') . '.',
+        ),
+        array(
+            'q' => 'Can you work from my logo?',
+            'a' => 'Yes. Upload it with a ' . $home_link($contact_url, 'quote request') . ' or text it to <a href="sms:+12066186543">206-618-6543</a>, and a sign specialist will reply within one business day. You can also ' . $home_link($builder_url, 'design your channel letters online') . '.',
+        ),
+        $home_permits_url ? array(
+            'q' => 'Do I need a permit for an outdoor sign?',
+            'a' => 'Usually. Most cities require a permit for exterior signs, and many leases have their own sign rules. Our ' . $home_link($home_permits_url, 'sign permit guide') . ' explains the process and who applies; we don&rsquo;t pull permits.',
+        ) : null,
+        ($home_industries_url || $home_locations_url) ? array(
+            'q' => 'Do you make signs for my type of business?',
+            'a' => 'We make signs for retail stores, restaurants, salons, medical offices, franchises and trade show exhibitors across the country.' . ($home_industries_url ? ' Our ' . $home_link($home_industries_url, 'industry guides') . ' suggest the right signs for your business' : '') . ($home_locations_url ? ($home_industries_url ? ', and our ' : ' Our ') . $home_link($home_locations_url, 'location guides') . ' cover local sign rules' : '') . '.',
+        ) : null,
+        array(
+            'q' => 'Where can I compare channel letter styles?',
+            'a' => 'On our ' . $home_link($cl_landing_url, 'custom channel letters page') . ', which sets all seven lighting styles side by side and answers questions about letter heights, raceways, materials and the five-year warranty.',
+        ),
+    ))));
+} elseif ($is_channel_letters) {
     // Shown in the FAQ section below and described as FAQPage structured data in the head.
     wholesale_seo_set_page_faq(array(
         array(
@@ -325,21 +382,32 @@ if ('' === $category_description_text && '' === $category_intro) {
 
 ?>
 
+<main id="primary" class="site-main">
+
 <section class="home-hero<?php echo $is_channel_letters ? ' home-hero--cl' : ' home-hero--category'; ?>" aria-labelledby="home-hero-title">
     <div class="home-hero-content" style="<?php echo esc_attr($category_hero_background); ?>">
         <div class="container home-hero-inner">
             <div class="home-hero-copy">
                 <?php if ($is_channel_letters) : ?>
                     <p class="home-hero-eyebrow">Made in USA &middot; UL listed &middot; 5-year LED warranty</p>
+                    <?php if ($is_front_home) : ?>
+                    <h1 id="home-hero-title" class="home-hero-title">Storefront Signs &amp; LED Channel Letters, <span>Built to Order</span></h1>
+                    <?php else : ?>
                     <h1 id="home-hero-title" class="home-hero-title">Custom LED Channel Letter Signs <span>for Your Storefront</span></h1>
+                    <?php endif; ?>
                     <p class="home-hero-proof">
                         <?php if ($google_rating) : ?>
                             <a class="home-hero-rating" href="#customer-reviews"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
                         <?php endif; ?>
                         <span><?php echo wholesale_home_icon('flag'); ?> Made in Washington &amp; California &middot; ships to all 50 states</span>
                     </p>
+                    <?php if ($is_front_home) : ?>
+                    <p class="home-hero-lead">Storefront Sign Online builds UL listed LED channel letters in Washington and California, and prints banners, window graphics, A-frames and flags in Renton, WA. Every product shows its price online, or send your logo and a sign specialist will quote it within one business day.</p>
+                    <p class="home-hero-install">We don&rsquo;t install. Each lit sign ships tested, with a wiring diagram and install pattern for your licensed electrician or sign installer.</p>
+                    <?php else : ?>
                     <p class="home-hero-lead">UL listed LED channel letters, built to order in Washington and California. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
                     <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
+                    <?php endif; ?>
                     <div class="home-hero-actions home-hero-actions--cl">
                         <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per letter</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
                         <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
@@ -349,7 +417,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                     <p class="home-hero-help">
                         <?php echo wholesale_home_icon('phone'); ?>
                         Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
-                        <span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PST &middot; or <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a></span>
+                        <span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT &middot; or <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a></span>
                     </p>
                 <?php else : ?>
                     <nav class="home-hero-breadcrumb" aria-label="<?php esc_attr_e('Breadcrumb', 'litsign'); ?>">
@@ -660,14 +728,14 @@ if ('' === $category_description_text && '' === $category_intro) {
                                                     ?>
 
                                                         <tr>
-                                                            <th><a href="<?php echo get_permalink(get_the_ID()) . '?' . $starting_at_options . '=' . $value; ?>">
+                                                            <th><a href="<?php echo esc_url(add_query_arg($starting_at_options, $value, get_permalink(get_the_ID()))); ?>" rel="nofollow">
                                                                     <?php
-                                                                    echo $name;
+                                                                    echo esc_html($name);
 
                                                                     ?>
                                                                 </a></th>
                                                             <td>
-                                                                <a href="<?php echo get_permalink(get_the_ID()) . '?' . $starting_at_options . '=' . $value; ?>">
+                                                                <a href="<?php echo esc_url(add_query_arg($starting_at_options, $value, get_permalink(get_the_ID()))); ?>" rel="nofollow">
                                                                     <?php echo esc_html(wholesale_whole_dollars(get_variant_cost($price_per_sqft, str_contains($value, '/') ? explode('/', $value)[0] : $value))); ?>
                                                                 </a>
                                                             </td>
@@ -814,7 +882,7 @@ if ('' === $category_description_text && '' === $category_intro) {
         );
     }
     ?>
-    <?php if ($cl_compare_rows) : ?>
+    <?php if ($cl_compare_rows && !$is_front_home) : ?>
     <section class="cl-compare" aria-labelledby="cl-compare-title">
         <div class="container">
             <p class="cl-kicker">Compare lighting styles</p>
@@ -861,13 +929,17 @@ if ('' === $category_description_text && '' === $category_intro) {
             </ul>
 
             <h3>Choosing your letter height</h3>
-            <p>Start with how far away your customers are. A common sign industry rule of thumb is about 1 inch of letter height for every 10 feet of viewing distance, so letters seen from 120 feet away work best at about 12 inches or taller. Our letters start at <?php echo esc_html($cl_min_height); ?> inches<?php if ($cl_max_height) : ?> and go up to <?php echo esc_html($cl_max_height); ?> inches for front lit letters<?php endif; ?>. Measure the space on your fascia, and check any sign criteria in your lease before you choose.</p>
+            <p>Start with how far away your customers are. Sign makers often size letters at roughly 1 inch of height per 10 feet of viewing distance: if drivers see your storefront from 120 feet away, plan on letters about 12 inches tall or more. Our letters start at <?php echo esc_html($cl_min_height); ?> inches<?php if ($cl_max_height) : ?> and go up to <?php echo esc_html($cl_max_height); ?> inches for front lit letters<?php endif; ?>. Measure the space on your fascia, and check any sign criteria in your lease before you choose.</p>
 
             <h3>Mounting and installation</h3>
             <p>Letters mount directly to the wall or on a raceway, a metal box that holds the wiring and mounts the sign as one unit so fewer holes go into your building. Every sign is tested before it ships and arrives with an installation pattern and a wiring diagram for your installer. In most areas the electrical connection must be made by a licensed electrician or sign contractor.</p>
 
             <h3>How channel letter pricing works</h3>
-            <p>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, and you see it before checkout. The table above shows where each style starts; <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+            <p>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, and you see it before checkout. <?php if ($is_front_home) : ?>Each style above lists its starting price; <?php else : ?>The table above shows where each style starts; <?php endif; ?><a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+            <?php if ($is_front_home) : ?>
+            <h3>Compare every lighting style</h3>
+            <p>Front lit, back lit, dual lit, halo lit, reverse lit, trimless and borderless letters each suit a different storefront. Our <a href="<?php echo esc_url($cl_landing_url); ?>">custom channel letters page</a> compares all seven side by side, with how each one lights, what it is best for and where its price starts.</p>
+            <?php endif; ?>
         </div>
     </section>
 
@@ -976,10 +1048,13 @@ if ('' === $category_description_text && '' === $category_intro) {
     <section class="cl-faq" aria-labelledby="cl-faq-title">
         <div class="container">
             <p class="cl-kicker">Before you order</p>
-            <h2 id="cl-faq-title" class="cl-section-title">Frequently Asked Questions</h2>
+            <h2 id="cl-faq-title" class="cl-section-title"><?php echo $is_front_home ? 'Questions About Storefront Sign Online' : 'Frequently Asked Questions'; ?></h2>
             <div class="cl-faq-list">
                 <?php wholesale_seo_render_faq(); ?>
             </div>
+            <?php if ($is_front_home) : ?>
+                <p class="cl-section-lead cl-faq-note">Questions about channel letter styles, heights or raceways? See the <a href="<?php echo esc_url($cl_landing_url); ?>#cl-faq-title">channel letter FAQ</a>.</p>
+            <?php endif; ?>
         </div>
     </section>
 
@@ -989,6 +1064,8 @@ if ('' === $category_description_text && '' === $category_intro) {
         <a class="cl-mobile-bar-shop" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
     </nav>
 <?php endif; ?>
+
+</main>
 
 <?php
 

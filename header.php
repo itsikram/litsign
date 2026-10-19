@@ -211,7 +211,7 @@ $logo_id = get_theme_mod('custom_logo');
 								<span class="sh-phone-option__number"><?php echo esc_html($text_display); ?></span>
 							</a>
 						</div>
-						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PST</p>
+						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PT</p>
 					</nav>
 
 					<div class="sh-actions">
@@ -283,7 +283,7 @@ $logo_id = get_theme_mod('custom_logo');
 								<span class="sh-phone-option__number"><?php echo esc_html($text_display); ?></span>
 							</a>
 						</div>
-						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PST</p>
+						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PT</p>
 					</div>
 				</div>
 
@@ -1698,7 +1698,7 @@ $logo_id = get_theme_mod('custom_logo');
 					<div class="ssx-topbar__right">
 						<span class="ssx-tb ssx-tb--muted">
 							<?php echo $ssx_icon('clock', 16); // Static SVG. ?>
-							Mon&ndash;Fri 8am&ndash;5pm PST
+							Mon&ndash;Fri 8am&ndash;5pm PT
 						</span>
 					</div>
 				</div>
@@ -2533,7 +2533,7 @@ $logo_id = get_theme_mod('custom_logo');
 					<span>Text:</span>
 					<strong><?php echo esc_html($text_display); ?></strong>
 				</a>
-				<p class="ssxm__hours"><?php echo $ssx_icon('clock', 14); // Static SVG. ?> Mon&ndash;Fri 8am&ndash;5pm PST</p>
+				<p class="ssxm__hours"><?php echo $ssx_icon('clock', 14); // Static SVG. ?> Mon&ndash;Fri 8am&ndash;5pm PT</p>
 			</div>
 		</div>
 

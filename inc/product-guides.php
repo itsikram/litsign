@@ -19,6 +19,8 @@
  * - 'related' Product slugs to link to; missing or unpublished ones are skipped.
  */
 
+require_once __DIR__ . '/product-guides-catalog.php';
+
 /**
  * @return array
  */
@@ -27,7 +29,8 @@ function wholesale_product_guides()
 	$flag_bases = 'Use the ground stake for grass, sand or soil. For concrete, asphalt, tile or carpet, choose the cross base (add the water bag for extra weight outdoors) or the 21.83 lb steel square base.';
 	$print_thru = 'Single sided flags are dye sublimated so the print shows through: full color on the front, mirrored and lighter but readable from the back. Double sided flags are two prints sewn back to back with a silver block out layer, so both sides read correctly.';
 
-	return array(
+	// The rest of the catalog (inc/product-guides-catalog.php); entries here win.
+	return array_merge(wholesale_product_guides_catalog(), array(
 		'reflective-aluminum-sign' => array(
 			'intro' => array(
 				'A reflective aluminum sign does the job of a regular aluminum sign during the day and keeps working after dark. The graphic is UV printed onto engineer grade reflective vinyl and mounted on a .040 aluminum sheet, so headlights and flashlights bounce your message back to the viewer.',
@@ -646,7 +649,7 @@ function wholesale_product_guides()
 			),
 			'related' => array('real-estate-frame-sign', 'real-estate-post-sign', 'yard-sign-and-h-stake', 'coroplast'),
 		),
-	);
+	));
 }
 
 /**
@@ -663,6 +666,29 @@ function wholesale_product_guide($product_id)
 	}
 
 	return isset($guides[$slug]) ? $guides[$slug] : array();
+}
+
+/**
+ * When guide copy last changed. Guides are theme code, so editing one does not
+ * touch the product's modified date; bump this by hand when guide text changes
+ * so sitemap <lastmod> tells Google the page is new. (A file time would change
+ * on every upload and make lastmod meaningless.)
+ */
+define('WHOLESALE_PRODUCT_GUIDES_REVISED', '2026-10-19T00:00:00+00:00');
+
+/**
+ * Sitemap lastmod for a product: its own modified time, or the guide revision
+ * date when the product shows a guide that changed more recently.
+ */
+function wholesale_product_content_modified($product)
+{
+	$modified = get_post_modified_time('c', true, $product);
+	$product = get_post($product);
+	if ($product && wholesale_product_guide($product->ID) && strtotime(WHOLESALE_PRODUCT_GUIDES_REVISED) > strtotime($modified)) {
+		return WHOLESALE_PRODUCT_GUIDES_REVISED;
+	}
+
+	return $modified;
 }
 
 /**

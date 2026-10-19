@@ -42,7 +42,7 @@ get_header();
                     <li><strong>We build and test your sign.</strong> Every sign is made to order and tested before it ships.</li>
                     <li><strong>Your sign ships.</strong><?php echo $ship_by ? ' Estimated to ship by <strong>' . esc_html($ship_by) . '</strong>.' : ''; ?> You'll get tracking details by email.</li>
                 </ol>
-                <p class="confirmation-help">Questions about your order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a><?php echo $order ? ' with order #' . esc_html($order_number) : ''; ?>.</p>
+                <p class="confirmation-help">Questions about your order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT) or email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a><?php echo $order ? ' with order #' . esc_html($order_number) : ''; ?>.</p>
                 <div class="confirmation-actions">
                     <?php if (is_user_logged_in()) : ?>
                         <a class="checkout-pay" href="<?php echo esc_url(home_url('/my-orders/')); ?>">View my orders</a>

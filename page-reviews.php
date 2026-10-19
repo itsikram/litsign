@@ -9,7 +9,9 @@
  */
 
 $summary = wholesale_reviews_page_summary();
-$filter_product = isset($_GET['product']) ? absint($_GET['product']) : 0;
+// Not "product": that is WordPress's product post type query var, and
+// /reviews/?product=123 made WordPress look up a product named "123" (404).
+$filter_product = isset($_GET['review_product']) ? absint($_GET['review_product']) : 0;
 $filter_product = isset($summary['products'][$filter_product]) ? $filter_product : 0;
 $filter_rating = isset($_GET['rating']) ? absint($_GET['rating']) : 0;
 $filter_rating = $filter_rating >= 1 && $filter_rating <= 5 ? $filter_rating : 0;
@@ -17,7 +19,7 @@ $current_page = isset($_GET['pg']) ? max(1, absint($_GET['pg'])) : 1;
 $results = wholesale_reviews_page_query($filter_product, $filter_rating, $current_page);
 $google = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
 $filter_url = static function ($args) use ($filter_product, $filter_rating) {
-    $args = array_merge(array('product' => $filter_product, 'rating' => $filter_rating), $args);
+    $args = array_merge(array('review_product' => $filter_product, 'rating' => $filter_rating), $args);
     return wholesale_reviews_page_url(array_filter($args));
 };
 
@@ -73,7 +75,7 @@ get_header();
                     <?php if ($summary['products']) : ?>
                         <form method="get" action="<?php echo esc_url(wholesale_reviews_page_url()); ?>" class="reviews-page-product">
                             <label for="reviews-product">Product</label>
-                            <select id="reviews-product" name="product" onchange="this.form.submit()">
+                            <select id="reviews-product" name="review_product" onchange="this.form.submit()">
                                 <option value="">All products</option>
                                 <?php foreach ($summary['products'] as $product_id => $title) : ?>
                                     <option value="<?php echo esc_attr($product_id); ?>" <?php selected($filter_product, $product_id); ?>><?php echo esc_html(html_entity_decode($title, ENT_QUOTES) . ' (' . $summary['product_counts'][$product_id] . ')'); ?></option>

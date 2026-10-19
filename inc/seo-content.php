@@ -170,7 +170,7 @@ function wholesale_seo_category_faq($slug)
 	);
 	$help = array(
 		'q' => 'Can someone help me choose?',
-		'a' => 'Yes. Call a sign specialist at <a href="tel:+18664362101">866-436-2101</a>, Monday to Friday, 8am&ndash;5pm PST, or <a href="' . esc_url(home_url('/contact/')) . '">send us your question</a>.',
+		'a' => 'Yes. Call a sign specialist at <a href="tel:+18664362101">866-436-2101</a>, Monday to Friday, 8am&ndash;5pm PT, or <a href="' . esc_url(home_url('/contact/')) . '">send us your question</a>.',
 	);
 	$per_sqft = array(
 		'q' => 'How is the price calculated?',
@@ -492,6 +492,9 @@ function wholesale_seo_product_duplicate_of($product_id)
 	// Unlisted copies with the same name and price as a listed product.
 	$copies = array(
 		'straight-velcro-fabric-pop-up-display-graphic-frame-only' => 'straight-velcro-fabric-pop-up-display-graphic-frame',
+		// Grouped as "Frame Only" but sells only the 24" x 36" replacement graphic,
+		// with the kit's name and description.
+		'standard-signicade-white-frame-only' => 'standard-signicade-white-frame-graphic',
 	);
 
 	if (isset($copies[$slug])) {

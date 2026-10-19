@@ -12,7 +12,9 @@ $shipping_options = wholesale_cart_shipping_options($cart);
 $sub_total = round((float) $cart->sub_total, 2);
 $tax_rate = (float) wholesale_get_setting('tax_rate');
 $tax = round($sub_total * $tax_rate / 100, 2);
-$first_shipping = $shipping_options ? $shipping_options[0] : 0;
+$free_shipping_min = wholesale_free_shipping_threshold($cart);
+$free_shipping = wholesale_cart_qualifies_free_shipping($cart);
+$first_shipping = $free_shipping || !$shipping_options ? 0 : $shipping_options[0];
 $card_enabled = !wholesale_setting_enabled('payment_disabled');
 $direct_card = $card_enabled && 'direct' === wholesale_payment_method();
 $message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
@@ -226,9 +228,26 @@ get_header();
                     <h2 id="checkout-shipping"><span class="checkout-step-number">2</span> Shipping Options</h2>
                     <p class="checkout-muted">Every sign is made to order and ships by <?php echo esc_html(wholesale_estimated_ship_date($cart)); ?>. Delivery dates include production time.</p>
                     <div class="checkout-options" role="radiogroup" aria-labelledby="checkout-shipping">
+                        <?php if ($free_shipping_min > 0) : ?>
+                            <label class="checkout-option<?php echo $free_shipping ? '' : ' is-disabled'; ?>">
+                                <input type="radio" name="shipping_method" value="free" <?php checked($free_shipping); ?> <?php disabled(!$free_shipping); ?> required data-shipping-amount="0">
+                                <span class="checkout-option-body">
+                                    <strong><?php echo esc_html(wholesale_free_shipping_label()); ?></strong>
+                                    <?php if ($free_shipping) : ?>
+                                        <small>Est. delivery <?php echo esc_html(wholesale_estimated_delivery_date($cart, 0)); ?></small>
+                                    <?php else : ?>
+                                        <small><?php echo esc_html(sprintf('Free on orders of %s or more. Add %s more to unlock it.', $money($free_shipping_min), $money($free_shipping_min - $sub_total))); ?></small>
+                                    <?php endif; ?>
+                                </span>
+                                <span class="checkout-option-price">FREE</span>
+                            </label>
+                        <?php endif; ?>
                         <?php foreach ($shipping_options as $index => $amount) : ?>
+                            <?php if ($free_shipping && 0 === $index) {
+                                continue; // Free Shipping replaces Standard.
+                            } ?>
                             <label class="checkout-option">
-                                <input type="radio" name="shipping_method" value="<?php echo esc_attr($amount); ?>" <?php checked(0, $index); ?> required data-shipping-amount="<?php echo esc_attr($amount); ?>">
+                                <input type="radio" name="shipping_method" value="<?php echo esc_attr($amount); ?>" <?php checked(!$free_shipping && 0 === $index); ?> required data-shipping-amount="<?php echo esc_attr($amount); ?>">
                                 <span class="checkout-option-body">
                                     <strong><?php echo esc_html(wholesale_shipping_label($index)); ?></strong>
                                     <small>Est. delivery <?php echo esc_html(wholesale_estimated_delivery_date($cart, $index)); ?></small>
@@ -330,7 +349,7 @@ get_header();
 
                     <dl class="checkout-totals" data-subtotal="<?php echo esc_attr($sub_total); ?>" data-tax="<?php echo esc_attr($tax); ?>">
                         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($sub_total)); ?></dd></div>
-                        <div><dt>Shipping</dt><dd data-shipping-total><?php echo esc_html($money($first_shipping)); ?></dd></div>
+                        <div><dt>Shipping</dt><dd data-shipping-total><?php echo esc_html($first_shipping > 0 ? $money($first_shipping) : 'FREE'); ?></dd></div>
                         <div><dt>Tax (<?php echo esc_html(rtrim(rtrim(number_format($tax_rate, 2), '0'), '.')); ?>%)</dt><dd><?php echo esc_html($money($tax)); ?></dd></div>
                         <div class="checkout-grand"><dt>Total</dt><dd data-grand-total><?php echo esc_html($money($grand_total)); ?></dd></div>
                     </dl>
@@ -349,7 +368,7 @@ get_header();
                     <ul class="checkout-assurance">
                         <?php if ($card_enabled) : ?><li>Secure card processing by Elavon Converge</li><?php endif; ?>
                         <li>UL listed signs, tested before shipping</li>
-                        <li>Questions? <a href="tel:+18664362101">866-436-2101</a> &middot; Mon&ndash;Fri 8am&ndash;5pm PST</li>
+                        <li>Questions? <a href="tel:+18664362101">866-436-2101</a> &middot; Mon&ndash;Fri 8am&ndash;5pm PT</li>
                     </ul>
                     <p class="checkout-terms">By placing your order you agree to our <a href="<?php echo esc_url(home_url('/terms-conditions/')); ?>">Terms &amp; Conditions</a>.</p>
                 </div>

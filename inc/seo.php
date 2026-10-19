@@ -479,6 +479,7 @@ function wholesale_seo_migrations()
 		'2026-10-product-typos' => 'wholesale_seo_migrate_product_typos',
 		'2026-10-short-descriptions' => 'wholesale_seo_migrate_short_descriptions',
 		'2026-10-13oz-banner-description' => 'wholesale_seo_migrate_13oz_banner_description',
+		'2026-10-window-graphics-page' => 'wholesale_seo_migrate_window_graphics_page',
 		// Not SEO, but it rides the same once-per-site runner (functions.php).
 		'2026-10-places-key-cleanup' => 'wholesale_migrate_places_key_cleanup',
 	);
@@ -949,3 +950,52 @@ function wholesale_seo_migrate_design_templates_page()
 
 	return !is_wp_error($page_id);
 }
+
+/**
+ * Create the Window Graphics & Vinyl landing page (Google Ads campaign
+ * "SSO - Window Graphics & Vinyl - USA"). Its content comes from
+ * page-window-graphics.php, so the page itself stays empty.
+ */
+function wholesale_seo_migrate_window_graphics_page()
+{
+	if (get_page_by_path('window-graphics', OBJECT, 'page')) {
+		return true;
+	}
+
+	$page_id = wp_insert_post(array(
+		'post_type' => 'page',
+		'post_status' => 'publish',
+		'post_title' => 'Window Graphics & Vinyl',
+		'post_name' => 'window-graphics',
+		'post_content' => '',
+		'comment_status' => 'closed',
+		'ping_status' => 'closed',
+	), true);
+
+	return !is_wp_error($page_id);
+}
+
+/**
+ * Keep crawlers out of internal site search. Every sort and filter link on the
+ * results page makes a new ?s= URL; they are all noindexed, but Google still
+ * spent crawls on dozens of them, so block the crawl itself. Cart and checkout
+ * are private and noindexed too.
+ */
+add_filter('robots_txt', function ($output, $public) {
+	if (!$public) {
+		return $output;
+	}
+
+	$path = (string) wp_parse_url(home_url('/'), PHP_URL_PATH);
+	$rules = array('/?s=', '/*?s=', '/*&s=', '/search/', '/cart/', '/checkout/');
+	$lines = '';
+	foreach ($rules as $rule) {
+		$rule = rtrim($path, '/') . $rule;
+		if (false === strpos($output, 'Disallow: ' . $rule . "\n")) {
+			$lines .= 'Disallow: ' . $rule . "\n";
+		}
+	}
+
+	// Add to the "User-agent: *" group core prints, ahead of the Sitemap lines.
+	return $lines ? preg_replace('/(User-agent: \*\n(?:(?:Dis)?[Aa]llow: [^\n]*\n)*)/', '$1' . $lines, $output, 1) : $output;
+}, 15, 2);

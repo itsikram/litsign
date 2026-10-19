@@ -217,7 +217,7 @@ get_header();
         <aside class="track-help">
             <div>
                 <h2>Need help with your order?</h2>
-                <p>Our team is available Monday&ndash;Friday, 8am&ndash;5pm PST. Have your order number ready.</p>
+                <p>Our team is available Monday&ndash;Friday, 8am&ndash;5pm PT. Have your order number ready.</p>
             </div>
             <div class="track-help-actions">
                 <a class="checkout-pay" href="tel:+18664362101">Call 866-436-2101</a>

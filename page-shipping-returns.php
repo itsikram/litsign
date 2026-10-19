@@ -22,6 +22,20 @@ $rate_list = static function ($setting) {
 };
 $standard_rates = $rate_list('standard_shipping_options');
 $channel_rates = $rate_list('channel_shipping_options');
+$free_min = (float) wholesale_get_setting('free_shipping_min');
+$free_channel_min = (float) wholesale_get_setting('free_shipping_channel_min');
+$whole = static function ($amount) {
+	return '$' . number_format($amount, floor($amount) == $amount ? 0 : 2);
+};
+// One line per offer that's switched on, e.g. "Free on orders of $100 or more (channel letters: $1,000 or more)".
+$free_note = '';
+if ($free_min > 0 && $free_channel_min > 0) {
+	$free_note = sprintf('Free Standard shipping on orders of %s or more (orders with channel letters: %s or more)', $whole($free_min), $whole($free_channel_min));
+} elseif ($free_min > 0) {
+	$free_note = sprintf('Free Standard shipping on orders of %s or more (channel letters excluded)', $whole($free_min));
+} elseif ($free_channel_min > 0) {
+	$free_note = sprintf('Free Standard shipping on channel letter orders of %s or more', $whole($free_channel_min));
+}
 $money = static function ($rates, $index) {
 	return isset($rates[$index]) ? '$' . number_format($rates[$index], 2) : '&ndash;';
 };
@@ -30,6 +44,10 @@ wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'Do you ship to all 50 states?',
 		'a' => 'Yes. Every order is made to order and shipped from Washington or California to your address anywhere in the United States. Pickup isn&rsquo;t available.',
+	),
+	array(
+		'q' => 'Do you offer free shipping?',
+		'a' => $free_note ? $free_note . '. Free Shipping delivers in 3&ndash;6 business days after production, the same as Standard, and appears at checkout once your order qualifies.' : 'Not at the moment. Shipping is one flat price per order, chosen at checkout.',
 	),
 	array(
 		'q' => 'When will my sign ship?',
@@ -62,6 +80,9 @@ get_header();
 			<ul class="gd-facts">
 				<li><strong>Ships to</strong><span>All 50 states, to your address (no pickup)</span></li>
 				<li><strong>Speeds</strong><span>Standard (3&ndash;6 business days), 3-day, 2-day, overnight</span></li>
+				<?php if ($free_note) : ?>
+					<li><strong>Free shipping</strong><span><?php echo esc_html($free_note); ?></span></li>
+				<?php endif; ?>
 				<li><strong>Adhesive products</strong><span>Ordered by 4pm PST ship the next business day</span></li>
 				<li><strong>Problems</strong><span>Report within 5 business days of delivery</span></li>
 			</ul>
@@ -73,6 +94,9 @@ get_header();
 			<p class="cl-kicker">Shipping options</p>
 			<h2 id="gd-options-title" class="cl-section-title">Shipping Speeds and Prices</h2>
 			<p>Shipping is one flat price per order, chosen at checkout. Channel letters have their own rates.</p>
+			<?php if ($free_note) : ?>
+				<p id="free-shipping"><strong><?php echo esc_html($free_note); ?>.</strong> Free Shipping replaces the Standard option at checkout once your subtotal qualifies and delivers on the same 3&ndash;6 business day schedule. Faster speeds keep the prices below.</p>
+			<?php endif; ?>
 			<table class="gd-table">
 				<thead>
 					<tr><th scope="col">Speed (after production)</th><th scope="col">Banners, displays, vinyl &amp; prints</th><th scope="col">Channel letters</th></tr>

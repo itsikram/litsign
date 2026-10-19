@@ -859,7 +859,7 @@ function wholesale_render_sale_badge($product_id, $percent = null)
 		return;
 	}
 	?>
-	<span class="sale-badge" aria-label="<?php echo esc_attr(sprintf(__('On sale: save %1$d%% through %2$s', 'litsign'), $percent, wholesale_promotion_end_text($promotion))); ?>">
+	<span class="sale-badge" role="img" aria-label="<?php echo esc_attr(sprintf(__('On sale: save %1$d%% through %2$s', 'litsign'), $percent, wholesale_promotion_end_text($promotion))); ?>">
 		<span class="sale-badge__label" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor"/></svg><?php esc_html_e('Sale', 'litsign'); ?></span>
 		<span class="sale-badge__value" aria-hidden="true"><?php echo esc_html(sprintf(__('%d%% off', 'litsign'), $percent)); ?></span>
 	</span>

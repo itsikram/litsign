@@ -218,7 +218,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					<p class="home-hero-help">
 						<?php echo wholesale_home_icon('phone'); ?>
 						Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
-						<span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PST</span>
+						<span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT</span>
 					</p>
 				</div>
 				<div class="bd-hero-media" aria-hidden="true">

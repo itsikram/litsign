@@ -240,6 +240,17 @@
   box-shadow: 0 0 0 1px var(--shop-brand);
 }
 
+.checkout-option.is-disabled {
+  background: #f6f8fa;
+  border-style: dashed;
+  color: var(--shop-muted);
+  cursor: not-allowed;
+}
+
+.checkout-option.is-disabled:hover {
+  border-color: #cfd8e1;
+}
+
 .checkout-option input {
   width: 18px;
   height: 18px;
@@ -410,6 +421,13 @@
 .checkout-pay:disabled {
   background: #8ccde8;
   cursor: progress;
+}
+
+.cart-free-shipping {
+  margin: 0 0 12px;
+  color: var(--shop-success);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .checkout-assurance {

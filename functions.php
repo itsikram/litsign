@@ -432,6 +432,9 @@ function wholesale_setting_defaults()
 		'tax_rate' => '10.3',
 		'standard_shipping_options' => '12.5,50,62.5,75',
 		'channel_shipping_options' => '50,200,250,300',
+		// Standard shipping is free once the cart subtotal reaches these (0 = off).
+		'free_shipping_min' => '100',
+		'free_shipping_channel_min' => '1000',
 		'google_places_api_key' => defined('WHOLESALE_GOOGLE_PLACES_API_KEY') ? WHOLESALE_GOOGLE_PLACES_API_KEY : '',
 		'google_place_id' => '',
 		// Google reviews below this many stars are hidden on the site.
@@ -516,6 +519,8 @@ function wholesale_setting_sanitizer($key)
 		'tax_rate' => 'wholesale_sanitize_decimal',
 		'standard_shipping_options' => 'wholesale_sanitize_decimal_list',
 		'channel_shipping_options' => 'wholesale_sanitize_decimal_list',
+		'free_shipping_min' => 'wholesale_sanitize_decimal',
+		'free_shipping_channel_min' => 'wholesale_sanitize_decimal',
 		'ticket_business_email' => 'sanitize_email',
 		'ticket_default_message' => 'sanitize_textarea_field',
 		'quote_autoreply_message' => 'sanitize_textarea_field',
@@ -1864,7 +1869,8 @@ function wholesale_render_sitemap()
 
 		$url = get_permalink($post);
 		if ($url) {
-			$add_url($url, get_post_modified_time('c', true, $post), 'weekly', '0.8');
+			// Products count their buying guide copy (inc/product-guides.php) as content.
+			$add_url($url, 'product' === $post->post_type ? wholesale_product_content_modified($post) : get_post_modified_time('c', true, $post), 'weekly', '0.8');
 		}
 	}
 
@@ -2456,17 +2462,21 @@ function litsign_scripts()
 	}
 	// The quote form styles are shared by both Google Ads landing pages. The
 	// home page reuses the channel letters hero and trust strip.
-	if (is_page_template('page-channel-letters.php') || is_page('banners-displays') || is_front_page()) {
+	if (is_page_template('page-channel-letters.php') || is_page(array('banners-displays', 'window-graphics')) || is_front_page()) {
 		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
 		if (is_page_template('page-channel-letters.php') || is_front_page()) {
 			wp_enqueue_style('cl-landing', $theme_uri . '/css/cl-landing.css', array('cl-quote'), $asset_version('/css/cl-landing.css'));
 		}
 	}
-	if (is_page(array('storefront-signs', 'about', 'banners-displays', 'channel-letter-cost', 'design-templates')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
+	if (is_page(array('storefront-signs', 'about', 'banners-displays', 'window-graphics', 'channel-letter-cost', 'design-templates')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
 		wp_enqueue_style('wholesale-seo-pages', $theme_uri . '/css/seo-pages.css', array('custom-style'), $asset_version('/css/seo-pages.css'));
 	}
-	if (is_page('banners-displays')) {
+	// The window graphics page reuses the banners & displays layout.
+	if (is_page(array('banners-displays', 'window-graphics'))) {
 		wp_enqueue_style('wholesale-banners-displays', $theme_uri . '/css/banners-displays.css', array('wholesale-seo-pages'), $asset_version('/css/banners-displays.css'));
+	}
+	if (is_page('window-graphics')) {
+		wp_enqueue_style('wholesale-window-graphics', $theme_uri . '/css/window-graphics.css', array('wholesale-banners-displays'), $asset_version('/css/window-graphics.css'));
 	}
 	//wp_enqueue_style('zebra_dialog', get_template_directory_uri() . '/css/zebra_dialog.css', array(), _S_VERSION);
 
@@ -2805,7 +2815,7 @@ function wholesale_seo_area_served_schema()
  */
 function wholesale_seo_is_sales_page()
 {
-	return is_front_page() || wholesale_is_channel_letters_page() || is_singular('product') || (bool) get_query_var('category_slug') || is_page(array('storefront-signs', 'banners-displays'));
+	return is_front_page() || wholesale_is_channel_letters_page() || is_singular('product') || (bool) get_query_var('category_slug') || is_page(array('storefront-signs', 'banners-displays', 'window-graphics'));
 }
 
 /**
@@ -2925,7 +2935,7 @@ function wholesale_seo_page_defaults()
 		),
 		'contact' => array(
 			'title' => __('Contact Us | Free Channel Letter & Sign Quote', 'litsign'),
-			'description' => __('Request a free quote for channel letters or storefront signs. Call 866-436-2101, text or email your logo. Mon-Fri 8am-5pm PST.', 'litsign'),
+			'description' => __('Request a free quote for channel letters or storefront signs. Call 866-436-2101, text or email your logo. Mon-Fri 8am-5pm PT.', 'litsign'),
 		),
 		// Ads-only pages (noindexed): the title still shows in the browser tab.
 		'chennel-letter-ads' => array(
@@ -2952,6 +2962,10 @@ function wholesale_seo_page_defaults()
 		'banners-displays' => array(
 			'title' => __('Custom Banners & Display Stands | Printed Banners, Flags & Booths', 'litsign'),
 			'description' => __('Custom vinyl and fabric banners, retractable banner stands, feather flags and trade show displays. See your price online.', 'litsign'),
+		),
+		'window-graphics' => array(
+			'title' => __('Custom Window Graphics & Decals | Perf, Frosted & Window Clings', 'litsign'),
+			'description' => __('Custom window graphics for business: window perf, frosted privacy film, clear decals, clings, wall and floor graphics. UV printed in WA. See your price online.', 'litsign'),
 		),
 		'reviews' => array(
 			'title' => __('Customer Reviews | Storefront Sign Online', 'litsign'),
@@ -3065,7 +3079,15 @@ function wholesale_seo_channel_letter_product($product_id)
 function wholesale_seo_keyword_meta()
 {
 	// The landing page targets "custom channel letters" and "channel letter
-	// signs"; the home page keeps the broader "channel letters" title below.
+	// signs"; the home page is the brand and catalog hub (see home.php), and the
+	// old /channel-letters/ category view keeps the broader title below.
+	if (is_front_page() && wholesale_is_channel_letters_page()) {
+		return array(
+			'title' => __('Storefront Sign Online | LED Channel Letters & Business Signs', 'litsign'),
+			'description' => __('Custom LED channel letters built in WA and CA, plus banners, window graphics, A-frames and flags. Every price is shown online. Ships to all 50 states.', 'litsign'),
+		);
+	}
+
 	if (wholesale_is_channel_letters_landing()) {
 		return array(
 			'title' => __('Custom Channel Letter Signs | UL Listed LED, Made in USA', 'litsign'),

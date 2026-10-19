@@ -99,6 +99,7 @@ get_header();
 
 ?>
 
+<main id="primary" class="site-main">
 <input type="hidden" id="faceColorPicker" value="#ffffff">
 <input type="hidden" id="productPermalink" value="<?php echo esc_url($ticket_builder ? $ticket_builder['save_url'] : get_permalink($product_id)); ?>">
 <input type="hidden" id="isTicketBuilder" value="<?php echo $ticket_builder ? '1' : '0'; ?>">
@@ -644,7 +645,8 @@ get_header();
                             $is_current_product = ((int) $change_product_id === (int) $product_id);
                             $change_product_image = get_post_thumbnail_id($change_product_id);
                             $change_product_price = get_post_meta($change_product_id, '_starting_at_text', true);
-                            $change_product_url = trailingslashit(get_permalink($change_product_id)) . 'channel-letter-builder/?product_id=' . $change_product_id;
+                            // Straight to the builder; /product/{slug}/channel-letter-builder/ only 301s here.
+                            $change_product_url = add_query_arg('product_id', $change_product_id, home_url('/channel-letter-builder/'));
                             if ($ticket_builder) {
                                 $change_product_url = add_query_arg($ticket_builder['switch_query'], $change_product_url);
                             }
@@ -687,5 +689,7 @@ get_header();
 </form>
 
 
+
+</main>
 
 <?php get_footer(); ?>

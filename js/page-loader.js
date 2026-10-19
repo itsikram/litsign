@@ -252,7 +252,10 @@
 		onWindowLoad();
 	}
 
-	document.addEventListener( 'click', function( event ) {
+	// Listen on window so handlers on document (such as the header cart, which
+	// opens the drawer instead of going to /cart/) run first; a click they
+	// handle in place is defaultPrevented and does not show the loader.
+	window.addEventListener( 'click', function( event ) {
 		if ( event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey ) {
 			return;
 		}

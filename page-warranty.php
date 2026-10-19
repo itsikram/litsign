@@ -90,7 +90,7 @@ get_header();
 			<ol class="gd-steps">
 				<li>
 					<h3>Stop and contact us first</h3>
-					<p>Don&rsquo;t open, rewire or repair the sign yet. Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a>.</p>
+					<p>Don&rsquo;t open, rewire or repair the sign yet. Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT) or email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a>.</p>
 				</li>
 				<li>
 					<h3>Send your order number and photos</h3>

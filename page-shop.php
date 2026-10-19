@@ -81,7 +81,7 @@ wholesale_seo_set_page_faq(array(
 	),
 	array(
 		'q' => 'I can&rsquo;t find the sign I need. Can you make it?',
-		'a' => 'Very likely. Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or <a href="' . esc_url($contact_url) . '">request a free quote</a> with your size and a photo or logo, and a sign specialist will price it for you.',
+		'a' => 'Very likely. Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT) or <a href="' . esc_url($contact_url) . '">request a free quote</a> with your size and a photo or logo, and a sign specialist will price it for you.',
 	),
 ));
 

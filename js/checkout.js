@@ -312,7 +312,7 @@
       const chosen = form.querySelector('input[name="shipping_method"]:checked');
       const shipping = chosen ? parseFloat(chosen.dataset.shippingAmount) : 0;
       const grand = parseFloat(totals.dataset.subtotal) + shipping + parseFloat(totals.dataset.tax);
-      form.querySelector('[data-shipping-total]').textContent = money(shipping);
+      form.querySelector('[data-shipping-total]').textContent = shipping > 0 ? money(shipping) : 'FREE';
       form.querySelectorAll('[data-grand-total]').forEach((el) => { el.textContent = money(grand); });
     };
     form.querySelectorAll('input[name="shipping_method"]').forEach((radio) => radio.addEventListener('change', updateTotals));

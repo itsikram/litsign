@@ -157,7 +157,7 @@
           '<h2 class="sso-es__title" tabindex="-1">Thank you for your feedback</h2>' +
           '<p class="sso-es__lead" data-es-reply></p>' +
           '<div class="sso-es__contact">' +
-            '<a class="sso-es__contact-link" href="' + escapeHtml(phoneHref) + '">' + icon('phone') + '<span><strong>Call ' + escapeHtml(config.phone) + '</strong><small>Mon–Fri, 8 am–5 pm PST</small></span></a>' +
+            '<a class="sso-es__contact-link" href="' + escapeHtml(phoneHref) + '">' + icon('phone') + '<span><strong>Call ' + escapeHtml(config.phone) + '</strong><small>Mon–Fri, 8 am–5 pm PT</small></span></a>' +
             '<a class="sso-es__contact-link" href="' + escapeHtml(textHref) + '">' + icon('message') + '<span><strong>Text ' + escapeHtml(config.text) + '</strong><small>Send a photo of your storefront</small></span></a>' +
           '</div>' +
           '<button type="button" class="sso-es__submit sso-es__continue" data-es-close>Continue browsing</button>' +

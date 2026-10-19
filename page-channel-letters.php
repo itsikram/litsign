@@ -460,7 +460,9 @@ get_header();
 
 ?>
 
-<section class="home-hero<?php echo $is_channel_letters ? ' home-hero--cl' : ''; ?>" aria-labelledby="home-hero-title">
+<main id="primary" class="site-main">
+
+<section class="home-hero<?php echo $is_channel_letters ? ' home-hero--cl home-hero--cl-page' : ''; ?>" aria-labelledby="home-hero-title">
     <div class="home-hero-content" style="<?php echo esc_attr($page_hero_background); ?>">
         <div class="container home-hero-inner">
             <div class="home-hero-copy">
@@ -488,7 +490,7 @@ get_header();
                     <p class="home-hero-help">
                         <?php echo wholesale_home_icon('phone'); ?>
                         Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
-                        <span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PST &middot; or <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a></span>
+                        <span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT &middot; or <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a></span>
                     </p>
                 <?php else : ?>
                     <p class="home-hero-eyebrow">Premium quality signs &amp; letters</p>
@@ -1288,6 +1290,8 @@ foreach (array(12, 18, 24) as $example_inches) {
         <a class="cl-mobile-bar-shop" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
     </nav>
 <?php endif; ?>
+
+</main>
 
 <?php
 

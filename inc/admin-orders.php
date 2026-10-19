@@ -666,7 +666,7 @@ function wholesale_send_order_email($post_id, $subject, $body_html)
 		. '<p style="margin:0 0 12px;">Hi' . (!empty($billing['billing_fname']) ? ' ' . esc_html($billing['billing_fname']) : '') . ',</p>'
 		. $body_html
 		. '<p style="margin:20px 0 0;"><a href="' . esc_url(get_permalink($post_id)) . '" style="display:inline-block;padding:12px 20px;background:#1fa8de;color:#fff;border-radius:6px;text-decoration:none;font-weight:700;">View order #' . esc_html(wholesale_order_number($post_id)) . '</a></p>'
-		. '<p style="margin:20px 0 0;color:#5b6b7b;font-size:14px;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST).</p>'
+		. '<p style="margin:20px 0 0;color:#5b6b7b;font-size:14px;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT).</p>'
 		. '</td></tr></table></td></tr></table></body></html>';
 
 	return wp_mail($email, $subject, $html, array(

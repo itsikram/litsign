@@ -210,7 +210,7 @@ function wholesale_async_upload_script()
 	wp_register_script('wholesale-async-upload', get_template_directory_uri() . '/js/async-upload.js', array(), (string) filemtime($theme_dir . '/js/async-upload.js'), true);
 	wp_script_add_data('wholesale-async-upload', 'strategy', 'defer');
 	wp_localize_script('wholesale-async-upload', 'wholesaleAsyncUpload', array('ajaxUrl' => wp_make_link_relative(admin_url('admin-ajax.php'))));
-	if (is_singular('product') || is_page(array('contact', 'banners-displays')) || is_page_template(array('page-channel-letters.php', 'page-channel-letters-ads.php'))) {
+	if (is_singular('product') || is_page(array('contact', 'banners-displays', 'window-graphics')) || is_page_template(array('page-channel-letters.php', 'page-channel-letters-ads.php'))) {
 		wp_enqueue_script('wholesale-async-upload');
 	}
 }

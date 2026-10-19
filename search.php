@@ -1051,7 +1051,7 @@ $icon = static function ($name, $size = 20) {
 			<aside class="srp-help" aria-label="<?php esc_attr_e('Need help', 'litsign'); ?>">
 				<div>
 					<h2>Can&rsquo;t find the right sign?</h2>
-					<p>Our team is happy to help with sizes, materials and quotes. Mon&ndash;Fri 8am&ndash;5pm PST.</p>
+					<p>Our team is happy to help with sizes, materials and quotes. Mon&ndash;Fri 8am&ndash;5pm PT.</p>
 				</div>
 				<div class="srp-help__actions">
 					<a class="srp-btn srp-btn--solid" href="<?php echo esc_url($phone_href); ?>"><?php echo $icon('phone', 18); // Static SVG. ?> Call <?php echo esc_html($phone_display); ?></a>

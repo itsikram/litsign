@@ -6595,6 +6595,14 @@ a.review-author-name:hover {
   font-weight: 700;
 }
 
+.product-pricing-box .product-assurance .product-assurance__ship {
+  color: #17222e;
+}
+
+.product-pricing-box .product-assurance .product-assurance__ship a {
+  color: #0e7aa6;
+}
+
 /*# sourceMappingURL=style.css.map */
 
 /* Contact page: quote file uploads */

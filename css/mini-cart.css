@@ -531,6 +531,36 @@ html.mc-locked #tidio-chat-iframe {
   font-variant-numeric: tabular-nums;
 }
 
+.mc-ship {
+  margin: 4px 0 6px;
+  font-size: 13.5px;
+}
+
+.mc-ship.is-unlocked {
+  color: #117a4c;
+}
+
+.mc-ship__track {
+  display: block;
+  height: 6px;
+  margin-top: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e2e8ee;
+}
+
+.mc-ship__track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #1fa8de;
+  transition: width 0.3s ease;
+}
+
+.mc-ship.is-unlocked .mc-ship__track span {
+  background: #117a4c;
+}
+
 .mc-note {
   margin: 2px 0 14px;
   color: var(--mc-muted);

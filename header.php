@@ -147,6 +147,93 @@ $logo_id = get_theme_mod('custom_logo');
 	<div id="page" class="site">
 		<a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e('Skip to content', 'litsign'); ?></a>
 
+		<?php
+		// Free shipping bar, above both headers. Amounts come from Settings > Checkout defaults.
+		$ship_min = wholesale_free_shipping_amount();
+		$ship_cl_min = wholesale_free_shipping_amount(true);
+		if ($ship_min || $ship_cl_min) :
+			?>
+			<style>
+				.sso-ship-bar {
+					background: #e6f6fc;
+					border-bottom: 1px solid #c9eaf7;
+					color: #0d2236;
+					font-size: 14px;
+					line-height: 1.35;
+				}
+
+				.sso-ship-bar__in {
+					display: flex;
+					align-items: center;
+					justify-content: center;
+					flex-wrap: wrap;
+					gap: 4px 10px;
+					max-width: 1320px;
+					margin: 0 auto;
+					padding: 8px 16px;
+					text-align: center;
+				}
+
+				.sso-ship-bar svg {
+					flex: none;
+					color: #0e7aa6;
+				}
+
+				.sso-ship-bar strong {
+					font-weight: 800;
+				}
+
+				.sso-ship-bar__sep {
+					color: #7fb9d2;
+				}
+
+				.sso-ship-bar a {
+					color: #0e7aa6;
+					font-weight: 700;
+					text-decoration: underline;
+					text-underline-offset: 2px;
+				}
+
+				.sso-ship-bar a:hover {
+					color: #0d2236;
+				}
+
+				@media (max-width: 575px) {
+					.sso-ship-bar {
+						font-size: 12.5px;
+					}
+
+					.sso-ship-bar__in {
+						gap: 2px 8px;
+						padding: 6px 12px;
+					}
+
+					.sso-ship-bar svg,
+					.sso-ship-bar__long {
+						display: none;
+					}
+				}
+			</style>
+			<div class="sso-ship-bar" role="note" aria-label="<?php esc_attr_e('Free shipping offer', 'litsign'); ?>">
+				<div class="sso-ship-bar__in">
+					<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1.05a2.5 2.5 0 0 0 4.9 0h6.1a2.5 2.5 0 0 0 4.9 0H21a1 1 0 0 0 1-1v-4.38a1 1 0 0 0-.1-.45l-2-4A1 1 0 0 0 19 6.6h-3V6a1 1 0 0 0-1-1H3Zm13 3.6h2.38L19.9 11.6H16V8.6ZM6.5 15.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm11 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
+					<span>
+						<?php if ($ship_min) : ?>
+							<strong>Free shipping</strong> <span class="sso-ship-bar__long">on orders of </span><?php echo esc_html($ship_min); ?>+
+						<?php else : ?>
+							<strong>Free shipping</strong> on channel letter orders of <?php echo esc_html($ship_cl_min); ?>+
+						<?php endif; ?>
+					</span>
+					<?php if ($ship_min && $ship_cl_min) : ?>
+						<span class="sso-ship-bar__sep" aria-hidden="true">&middot;</span>
+						<span>Channel letters <?php echo esc_html($ship_cl_min); ?>+</span>
+					<?php endif; ?>
+					<span class="sso-ship-bar__sep" aria-hidden="true">&middot;</span>
+					<a href="<?php echo esc_url(home_url('/shipping-returns/#free-shipping')); ?>">Details</a>
+				</div>
+			</div>
+		<?php endif; ?>
+
 
 		<?php
 		// Account links differ for signed-in customers. The cart count badge is filled in by

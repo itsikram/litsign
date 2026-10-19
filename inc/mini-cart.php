@@ -147,7 +147,21 @@ function wholesale_mini_cart_html($cart)
 			<dd><?php echo esc_html(wholesale_mini_cart_money($cart->sub_total)); ?></dd>
 		</div>
 	</dl>
-	<p class="mc-note">Shipping and tax are calculated at checkout.</p>
+	<?php
+	$mc_ship_min = wholesale_free_shipping_threshold($cart);
+	if ($mc_ship_min > 0) :
+		$mc_ship_left = $mc_ship_min - round((float) $cart->sub_total, 2);
+		?>
+		<p class="mc-ship<?php echo $mc_ship_left <= 0 ? ' is-unlocked' : ''; ?>">
+			<?php if ($mc_ship_left <= 0) : ?>
+				<strong>You&rsquo;ve unlocked free shipping.</strong>
+			<?php else : ?>
+				Add <strong><?php echo esc_html(wholesale_mini_cart_money($mc_ship_left)); ?></strong> more for free shipping.
+			<?php endif; ?>
+			<span class="mc-ship__track" aria-hidden="true"><span style="width: <?php echo esc_attr(min(100, max(4, round(100 - 100 * max(0, $mc_ship_left) / $mc_ship_min)))); ?>%"></span></span>
+		</p>
+	<?php endif; ?>
+	<p class="mc-note"><?php echo $mc_ship_min > 0 ? 'Tax is calculated at checkout.' : 'Shipping and tax are calculated at checkout.'; ?></p>
 	<a class="mc-btn mc-btn--primary mc-btn--lg" href="<?php echo esc_url(home_url('/checkout/')); ?>">
 		Checkout
 		<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>

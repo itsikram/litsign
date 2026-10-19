@@ -22,19 +22,16 @@ $rate_list = static function ($setting) {
 };
 $standard_rates = $rate_list('standard_shipping_options');
 $channel_rates = $rate_list('channel_shipping_options');
-$free_min = (float) wholesale_get_setting('free_shipping_min');
-$free_channel_min = (float) wholesale_get_setting('free_shipping_channel_min');
-$whole = static function ($amount) {
-	return '$' . number_format($amount, floor($amount) == $amount ? 0 : 2);
-};
-// One line per offer that's switched on, e.g. "Free on orders of $100 or more (channel letters: $1,000 or more)".
+$free_min = wholesale_free_shipping_amount();
+$free_channel_min = wholesale_free_shipping_amount(true);
+// One line for the offers that are switched on, e.g. "... $100 or more (orders with channel letters: $1,000 or more)".
 $free_note = '';
-if ($free_min > 0 && $free_channel_min > 0) {
-	$free_note = sprintf('Free Standard shipping on orders of %s or more (orders with channel letters: %s or more)', $whole($free_min), $whole($free_channel_min));
-} elseif ($free_min > 0) {
-	$free_note = sprintf('Free Standard shipping on orders of %s or more (channel letters excluded)', $whole($free_min));
-} elseif ($free_channel_min > 0) {
-	$free_note = sprintf('Free Standard shipping on channel letter orders of %s or more', $whole($free_channel_min));
+if ($free_min && $free_channel_min) {
+	$free_note = sprintf('Free Standard shipping on orders of %s or more (orders with channel letters: %s or more)', $free_min, $free_channel_min);
+} elseif ($free_min) {
+	$free_note = sprintf('Free Standard shipping on orders of %s or more (channel letters excluded)', $free_min);
+} elseif ($free_channel_min) {
+	$free_note = sprintf('Free Standard shipping on channel letter orders of %s or more', $free_channel_min);
 }
 $money = static function ($rates, $index) {
 	return isset($rates[$index]) ? '$' . number_format($rates[$index], 2) : '&ndash;';

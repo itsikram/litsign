@@ -450,6 +450,16 @@ function wholesale_cart_qualifies_free_shipping($cart)
 	return $threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold;
 }
 
+/**
+ * A free shipping minimum for display ("$100", "$1,000"; cents only when
+ * set), or '' when that offer is off.
+ */
+function wholesale_free_shipping_amount($channel_letters = false)
+{
+	$amount = max(0.0, (float) wholesale_get_setting($channel_letters ? 'free_shipping_channel_min' : 'free_shipping_min'));
+	return $amount > 0 ? '$' . number_format($amount, floor($amount) == $amount ? 0 : 2) : '';
+}
+
 function wholesale_free_shipping_label()
 {
 	return 'Free Shipping (3–6 business days)';

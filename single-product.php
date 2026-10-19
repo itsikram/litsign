@@ -1071,6 +1071,10 @@ get_header();
                         } ?>
 
                         <ul class="product-assurance">
+                            <?php $product_ship_min = wholesale_free_shipping_amount('channel-letters' === $product_category_slug); ?>
+                            <?php if ($product_ship_min) : ?>
+                                <li class="product-assurance__ship"><strong>Free shipping</strong> on orders of <?php echo esc_html($product_ship_min); ?> or more &middot; <a href="<?php echo esc_url(home_url('/shipping-returns/#free-shipping')); ?>">details</a></li>
+                            <?php endif; ?>
                             <li>Price shown is the price you pay &mdash; no surprises at checkout</li>
                             <li>Secure checkout<?php echo wholesale_setting_enabled('payment_disabled') ? '' : ' by Elavon Converge'; ?></li>
                             <?php if ('channel-letters' === $product_category_slug) : ?>

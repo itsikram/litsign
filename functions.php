@@ -87,6 +87,7 @@ require_once(dirname(__FILE__) . '/inc/guide-pages.php');
 require_once(dirname(__FILE__) . '/inc/developer-page.php');
 require_once(dirname(__FILE__) . '/inc/seo-admin/loader.php');
 require_once(dirname(__FILE__) . '/inc/admin-product-editor.php');
+require_once(dirname(__FILE__) . '/inc/admin-edit-links.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 require_once(dirname(__FILE__) . '/ssx-live-search.php');
 

@@ -854,6 +854,7 @@ foreach (array(12, 18, 24) as $example_inches) {
                                 $is_first_product ? 'eager' : 'lazy'
                             ); ?>
                             <?php $is_first_product = false; ?>
+                            <?php echo wholesale_admin_edit_product_link(get_the_ID()); // Escaped in helper. ?>
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-details">
                                     <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
@@ -1040,7 +1041,8 @@ foreach (array(12, 18, 24) as $example_inches) {
                     </tbody>
                 </table>
             </div>
-            <p class="cl-compare-note">Your exact price depends on letter height, number of letters and options such as a raceway. You&rsquo;ll see it before checkout.</p>
+            <?php $cl_price_note = function_exists('wholesale_cl_starting_price_note') ? wholesale_cl_starting_price_note() : ''; ?>
+            <p class="cl-compare-note"><?php if ($cl_price_note) : ?><?php echo wp_kses_post($cl_price_note); ?> You&rsquo;ll see your exact price before checkout.<?php else : ?>Your exact price depends on letter height, number of letters and options such as a raceway. You&rsquo;ll see it before checkout.<?php endif; ?></p>
         </div>
     </section>
     <?php endif; ?>

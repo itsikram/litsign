@@ -154,6 +154,7 @@ get_header();
     <?php endif; ?>
     <h1 class="fs-2 product-title my-3">
         <?php echo esc_html(!empty($product_seo['heading']) ? $product_seo['heading'] : get_the_title()); ?>
+        <?php echo wholesale_admin_edit_product_link(get_the_ID(), 'page'); // Escaped in helper. ?>
     </h1>
     <?php if (!empty($product_seo['intro'])) : ?>
         <p class="product-seo-intro"><?php echo esc_html($product_seo['intro']); ?></p>

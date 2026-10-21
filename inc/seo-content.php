@@ -1469,6 +1469,7 @@ function wholesale_seo_render_related_products($product_id)
 				$price = wholesale_seo_product_lowest_price($item->ID);
 				?>
 				<li class="related-product">
+					<?php echo wholesale_admin_edit_product_link($item->ID); // Escaped in helper. ?>
 					<a href="<?php echo esc_url(get_permalink($item)); ?>">
 						<span class="related-product-image">
 							<?php

@@ -704,6 +704,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                                 $is_first_product ? 'eager' : 'lazy'
                             ); ?>
                             <?php $is_first_product = false; ?>
+                            <?php echo wholesale_admin_edit_product_link(get_the_ID()); // Escaped in helper. ?>
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-details">
                                     <h2 class="pb-title fs-6<?php echo $is_channel_letters ? ' text-truncate' : ''; ?>" title="<?php echo esc_attr(get_the_title()); ?>">
@@ -946,7 +947,8 @@ if ('' === $category_description_text && '' === $category_intro) {
             <p>Letters mount directly to the wall or on a raceway, a metal box that holds the wiring and mounts the sign as one unit so fewer holes go into your building. Every sign is tested before it ships and arrives with an installation pattern and a wiring diagram for your installer. In most areas the electrical connection must be made by a licensed electrician or sign contractor.</p>
 
             <h3>How channel letter pricing works</h3>
-            <p>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, and you see it before checkout. <?php if ($is_front_home) : ?>Each style above lists its starting price; <?php else : ?>The table above shows where each style starts; <?php endif; ?><a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+            <?php $cl_price_note = function_exists('wholesale_cl_starting_price_note') ? wholesale_cl_starting_price_note() : ''; ?>
+            <p><?php if ($cl_price_note) : ?><?php echo wp_kses_post($cl_price_note); ?> You see your total before checkout. <?php else : ?>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, and you see it before checkout. <?php endif; ?><?php if ($is_front_home) : ?>Each style above lists its starting price; <?php else : ?>The table above shows where each style starts; <?php endif; ?><a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
             <?php if ($is_front_home) : ?>
             <h3>Compare every lighting style</h3>
             <p>Front lit, back lit, dual lit, halo lit, reverse lit, trimless and borderless letters each suit a different storefront. Our <a href="<?php echo esc_url($cl_landing_url); ?>">custom channel letters page</a> compares all seven side by side, with how each one lights, what it is best for and where its price starts.</p>

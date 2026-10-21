@@ -967,6 +967,7 @@ $icon = static function ($name, $size = 20) {
 					?>
 						<li>
 							<article <?php post_class('srp-card'); ?>>
+								<?php if ('product' === get_post_type()) { echo wholesale_admin_edit_product_link($post_id); /* Escaped in helper. */ } ?>
 								<div class="srp-card__media">
 									<?php if ('product' === get_post_type()) { wholesale_render_sale_badge($post_id); } ?>
 									<?php

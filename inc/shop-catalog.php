@@ -405,6 +405,7 @@ function wholesale_shop_render_card($product, $index)
 				?>
 				<?php wholesale_render_sale_badge($product['id']); ?>
 			</div>
+			<?php echo wholesale_admin_edit_product_link($product['id']); // Escaped in helper. ?>
 			<div class="sc-card-body">
 				<?php if ($product['cat_name']) : ?>
 					<p class="sc-card-cat"><?php echo esc_html($product['cat_name']); ?></p>

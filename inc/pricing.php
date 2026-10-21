@@ -863,6 +863,37 @@ function wholesale_cl_worked_example_text()
 }
 
 /**
+ * What a channel letter "starting at" price covers, read from the front lit product's
+ * real settings: the smallest letter height, whether any face color adds a per-inch
+ * charge, and the dated sale behind a struck-through price. Sentences only, no markup.
+ */
+function wholesale_cl_starting_price_note()
+{
+	$product = get_page_by_path('standard-channel-letter-front-lit', OBJECT, 'product');
+	$from = $product ? wholesale_cl_from_price($product->ID) : null;
+	if (!$from) {
+		return '';
+	}
+
+	$note = sprintf('Starting prices are for one %d&Prime; letter, the smallest height, before options. Channel letters are priced per letter, not per inch: each letter height has its own price, and your total is that price times the number of letters, plus options such as a raceway or power supply.', $from['height']);
+
+	$cl_data = json_decode((string) get_post_meta($product->ID, 'product_cl_data', true), true);
+	foreach (is_array($cl_data) ? $cl_data : array() as $group) {
+		if (isset($group['id']) && 0 === strpos((string) $group['id'], 'color-') && (float) ($group['cost'] ?? 0) > 0) {
+			$note .= ' On some styles, vinyl face colors add a small charge per inch of letter height, included in the builder price.';
+			break;
+		}
+	}
+
+	$promotion = wholesale_product_promotion($product->ID);
+	if ($promotion && $from['price'] < $from['everyday']) {
+		$note .= sprintf(' Struck-through prices are everyday prices; the lower price is our current sale, which ends %s.', wholesale_promotion_end_text($promotion));
+	}
+
+	return $note;
+}
+
+/**
  * A stored "starting at" text as shoppers see it. Any struck-through <del> price is
  * dropped, because product prices are everyday prices, not sales. During a dated sale
  * the price is struck through and the sale price follows it.

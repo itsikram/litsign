@@ -214,7 +214,21 @@
                                 $sf_now = new DateTime('now', new DateTimeZone('America/Los_Angeles'));
                                 $sf_open = $sf_now->format('N') < 6 && (int) $sf_now->format('Gi') >= 800 && (int) $sf_now->format('Gi') < 1700;
                                 ?>
-                                <span class="sf-contact__note"><?php if ($sf_open) : ?><span class="sf-live-dot" aria-hidden="true"></span>Live chat online<?php else : ?>Leave a chat message anytime<?php endif; ?></span>
+                                <span class="sf-contact__note" id="sf-chat-status"><?php if ($sf_open) : ?><span class="sf-live-dot" aria-hidden="true"></span>Live chat online<?php else : ?>Leave a chat message anytime<?php endif; ?></span>
+                                <script>
+                                    // Pages can come from the page cache, so check the hours again in the browser.
+                                    (function () {
+                                        var note = document.getElementById('sf-chat-status');
+                                        try {
+                                            var parts = {};
+                                            new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' })
+                                                .formatToParts(new Date()).forEach(function (p) { parts[p.type] = p.value; });
+                                            var time = parseInt(parts.hour, 10) * 100 + parseInt(parts.minute, 10);
+                                            var open = ['Sat', 'Sun'].indexOf(parts.weekday) < 0 && time >= 800 && time < 1700;
+                                            note.innerHTML = open ? '<span class="sf-live-dot" aria-hidden="true"></span>Live chat online' : 'Leave a chat message anytime';
+                                        } catch (e) {}
+                                    })();
+                                </script>
                             </span>
                         </li>
                         <li>

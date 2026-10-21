@@ -80,6 +80,22 @@ function wholesale_merchant_description($product_id)
 	return mb_substr($text, 0, 4900);
 }
 
+/**
+ * Feed item ID: the product slug, which Merchant Center limits to 50
+ * characters. Longer slugs are cut and end in the post ID so they stay unique.
+ */
+function wholesale_merchant_item_id($product)
+{
+	$id = (string) $product->post_name;
+	if (strlen($id) <= 50) {
+		return $id;
+	}
+
+	$suffix = '-' . $product->ID;
+
+	return rtrim(substr($id, 0, 50 - strlen($suffix)), '-') . $suffix;
+}
+
 function wholesale_render_merchant_feed()
 {
 	if ('1' !== get_query_var('wholesale_merchant_feed')) {
@@ -142,7 +158,7 @@ function wholesale_render_merchant_feed()
 		$shipping = wholesale_seo_offer_shipping_details($product->ID);
 
 		echo "<item>\n";
-		echo '<g:id>' . $x($product->post_name) . "</g:id>\n";
+		echo '<g:id>' . $x(wholesale_merchant_item_id($product)) . "</g:id>\n";
 		echo '<g:title>' . $x(mb_substr($title, 0, 150)) . "</g:title>\n";
 		echo '<g:description>' . $x($description) . "</g:description>\n";
 		echo '<g:link>' . esc_url(get_permalink($product)) . "</g:link>\n";
@@ -150,7 +166,12 @@ function wholesale_render_merchant_feed()
 		foreach (array_slice($images, 1) as $gallery_url) {
 			echo '<g:additional_image_link>' . esc_url($gallery_url) . "</g:additional_image_link>\n";
 		}
-		echo "<g:availability>in_stock</g:availability>\n";
+		$stock = wholesale_product_stock_status($product->ID);
+		echo '<g:availability>' . ('instock' === $stock ? 'in_stock' : ('backorder' === $stock ? 'backorder' : 'out_of_stock')) . "</g:availability>\n";
+		if ('backorder' === $stock) {
+			// Merchant Center requires the date a backordered item ships.
+			echo '<g:availability_date>' . (new DateTimeImmutable(wholesale_product_backorder_date($product->ID), wp_timezone()))->format('c') . "</g:availability_date>\n";
+		}
 		echo '<g:price>' . number_format($price, 2, '.', '') . " USD</g:price>\n";
 		echo "<g:condition>new</g:condition>\n";
 		echo '<g:brand>' . $x(get_bloginfo('name')) . "</g:brand>\n";

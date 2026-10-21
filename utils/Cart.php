@@ -88,6 +88,9 @@ class Cart
         if (!$product_id || 'product' !== get_post_type($product_id) || 'publish' !== get_post_status($product_id)) {
             $this->redirect_with_error(0, 'This product is no longer available.');
         }
+        if ('outofstock' === wholesale_product_stock_status($product_id)) {
+            $this->redirect_with_error($product_id, sprintf('%s is out of stock right now.', get_the_title($product_id)));
+        }
 
         $design_id = isset($request['design_id']) && self::is_session_design($request['design_id']) ? absint($request['design_id']) : '';
         $product_title = get_the_title($product_id);
@@ -408,13 +411,49 @@ class Cart
                 'Flag Holder' => $this->getTitleByValue($product_id,$flag_holder),
                 'Design Url' => $design_url,
                 'My Artwork' => $attachment_src,
-                
+
             )
         ));
 
+        // Options the list above doesn't name (e.g. "size-and-print-sides", "h-stake") are
+        // recorded too, so every choice that sets the price reaches the order. A fixed
+        // single-choice option isn't posted by the form, so its only label is used.
+        $cart_item = json_decode($cart_items_json, true);
+        foreach (wholesale_product_price_attrs($product_id) as $attr) {
+            $label = ucwords(str_replace('-', ' ', (string) ($attr['name'] ?? '')));
+            if ('' === $label || array_key_exists($label, $cart_item['product_details'])) {
+                continue;
+            }
+            $options = wholesale_attr_options($attr);
+            $submitted = wholesale_request_attr_value($request, $attr['name']);
+            if (null !== $submitted && '' !== $submitted) {
+                $cart_item['product_details'][$label] = $this->getTitleByValue($product_id, $submitted);
+            } elseif (1 === count($options)) {
+                $cart_item['product_details'][$label] = $options[0]['label'];
+            }
+        }
+        // Custom hole punch / grommet layout (the panel under Holes Punch on the product page).
+        $holes_choice = (string) ($cart_item['product_details']['Holes Punch'] ?? '');
+        if (preg_match('/^Custom (Hole|Grommet)/i', $holes_choice, $custom) && isset($request['custom-holes-top'])) {
+            $noun = 0 === strcasecmp($custom[1], 'Grommet') ? 'grommet' : 'hole';
+            $edge_text = function ($edge) use ($request, $noun) {
+                $choice = sanitize_key($request['custom-holes-' . $edge] ?? 'none');
+                $margin = max(0.25, (float) ($request['custom-holes-' . $edge . '-margin'] ?? 1));
+                $parts = array('same' === $choice ? 'same as top' : ('corner' === $choice ? sprintf('corner %ss %s in from edge', $noun, $margin + 0) : "no corner {$noun}s"));
+                if (!empty($request['custom-holes-' . $edge . '-center']) && 'same' !== $choice) {
+                    $parts[] = "center $noun";
+                }
+                return implode(', ', $parts);
+            };
+            $cart_item['product_details']['Custom ' . ucfirst($noun) . ' Layout'] = 'Top: ' . $edge_text('top') . '; Bottom: ' . $edge_text('bottom');
+        }
+        // Unescaped: the stored cart is later read through stripslashes(), which turns an
+        // escaped non-ASCII label character (×, ″) into text like "u00d7".
+        $cart_items_json = json_encode($cart_item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
         $cart_items = $this->get_items();
         array_push($cart_items, json_decode($cart_items_json));
-        $_SESSION['cart_items'] = json_encode($cart_items);
+        $_SESSION['cart_items'] = json_encode($cart_items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         if (wp_doing_ajax()) {
             // The header cart drawer (inc/mini-cart.php) sends its own response.
             return;
@@ -444,7 +483,7 @@ class Cart
             }
         }
 
-        $_SESSION['cart_items'] = json_encode($updated_cart_items);
+        $_SESSION['cart_items'] = json_encode($updated_cart_items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
 
@@ -465,7 +504,7 @@ class Cart
             }
         }
 
-        $_SESSION['cart_items'] = json_encode($update_cart_items);
+        $_SESSION['cart_items'] = json_encode($update_cart_items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     public function empty() {

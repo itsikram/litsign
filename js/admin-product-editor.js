@@ -1085,12 +1085,12 @@
 	/* =============================================================== SECTIONS */
 
 	const SECTIONS = [
-		{ id: 'pricing', label: 'Pricing and size', fields: ['_hide_calculator', '_size_presets', '_price_per_sqft', '_discount_percent', '_min_order_price', '_min_sqft', '_min_height', '_max_height', '_min_width', '_max_width', '_starting_at_text', '_starting_at_options'] },
+		{ id: 'pricing', label: 'Pricing and size', fields: ['_hide_calculator', '_size_presets', '_price_per_sqft', '_discount_percent', '_min_order_price', '_min_order_per_side', '_promo_percent', '_promo_start', '_promo_end', '_min_sqft', '_min_height', '_max_height', '_min_width', '_max_width', '_max_size', '_starting_at_text', '_starting_at_options'] },
 		{ id: 'options', label: 'Options', boxes: ['product_attr'] },
 		{ id: 'cl', label: 'Channel letters', boxes: ['product_cl_data', 'product_extra_options'], fields: ['_trimcap_color', '_return_color', '_info_content_face_text', '_info_content_face_image', '_info_content_return_text', '_info_content_return_image', '_info_content_trimcap_text', '_info_content_trimcap_image'] },
 		{ id: 'descriptions', label: 'Descriptions and FAQ', boxes: ['product_additional_info'], fields: ['_product_short_desc', '_product_list_desc', '_product_review_text'] },
 		{ id: 'images', label: 'Images', fields: ['_product_gallery'], boxes: ['wholesale-product-image-alt', 'product-image-alt', 'postimagediv'] },
-		{ id: 'settings', label: 'Visibility and settings', fields: ['_show_in_list', '_has_upload_artwork', '_product_turnaround', '_order_by_index', '_product_group_data'] },
+		{ id: 'settings', label: 'Visibility and settings', fields: ['_show_in_list', '_stock_status', '_backorder_date', '_has_upload_artwork', '_product_turnaround', '_order_by_index', '_product_group_data'] },
 		{ id: 'seo', label: 'SEO', boxes: ['wholesale-seo'] },
 		{ id: 'all', label: 'All fields' },
 	];
@@ -1102,6 +1102,7 @@
 		_min_width: () => Product.hasCalculator() && !Product.isChannelLetter(),
 		_max_width: () => Product.hasCalculator() && !Product.isChannelLetter(),
 		_standard_ps_cost: () => fieldVal('_is_ps_option') === 'on',
+		_backorder_date: () => fieldVal('_stock_status') === 'backorder',
 		_backlit_cost: () => fieldVal('_is_lit_option') === 'on',
 		_eight_ft_cable_cost: () => fieldVal('_is_cable_option') === 'on',
 	};
@@ -1110,6 +1111,7 @@
 		_standard_ps_cost: '"Offer a power supply" is off',
 		_backlit_cost: '"Offer back lighting" is off',
 		_eight_ft_cable_cost: '"Offer an 8 ft cable" is off',
+		_backorder_date: 'Stock status is not Backorder',
 	};
 
 	const Sections = {
@@ -1739,7 +1741,7 @@
 		});
 
 		// Fields that change what is shown.
-		$(document).on('change', '#_hide_calculator, #_is_ps_option, #_is_lit_option, #_is_cable_option, #product_categorychecklist input', refreshAll);
+		$(document).on('change', '#_hide_calculator, #_is_ps_option, #_is_lit_option, #_is_cable_option, #_stock_status, #product_categorychecklist input', refreshAll);
 		$(document).on('input change', '.postbox :input', (e) => {
 			if ($(e.target).closest('.sso-pe-editor, .sso-pe-bar').length) return;
 			scheduleCheck();

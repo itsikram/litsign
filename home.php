@@ -128,6 +128,17 @@ $GLOBALS['wholesale_channel_letter_landing'] = $is_channel_letters;
 // instead of repeating its comparison table and FAQ, so Google doesn't see two
 // near-identical pages competing for the same searches.
 $is_front_home = $is_channel_letters && is_front_page();
+if ($is_channel_letters) {
+    // These pages end with the phone quick-action bar (.cl-mobile-bar), which
+    // replaces the header's second row on phones. The body class applies that
+    // from the first paint; body:has(.cl-mobile-bar) only matched once the bar,
+    // at the very end of the HTML, had arrived, so the header shrank 67px
+    // mid-load and PageSpeed counted a layout shift.
+    add_filter('body_class', static function ($classes) {
+        $classes[] = 'has-cl-mobile-bar';
+        return $classes;
+    });
+}
 $cl_landing_id = function_exists('wholesale_channel_letters_landing_id') ? wholesale_channel_letters_landing_id() : 0;
 $cl_landing_url = $cl_landing_id ? get_permalink($cl_landing_id) : home_url('/custom-channel-letters/');
 $home_page_url = function ($slug) {

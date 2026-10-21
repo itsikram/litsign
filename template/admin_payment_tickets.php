@@ -1642,6 +1642,8 @@ function wholesale_ticket_finalize($ticket_id, $billing, $paid_by_card, $payment
     if ($order) {
         update_post_meta($ticket_id, '_ticket_order_id', $order);
         wholesale_send_new_order_admin_email($order);
+        // Like checkout orders: ties the order to the visit (Visitor Insights) and the ad click.
+        do_action('wholesale_order_created', $order);
     }
     wholesale_send_ticket_receipt($ticket_id, $order, $paid_by_card, $payment_meta);
     return $order;

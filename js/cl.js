@@ -518,9 +518,11 @@ function updateSaveButtonState() {
   saveBtn.disabled = !hasElements;
   saveBtn.setAttribute("aria-disabled", String(!hasElements));
   updateSelectAllButton();
+  // data-out-of-stock: the product's stock status is Out of stock (inc/stock-status.php).
   if (addToCartBtn && !addToCartBtn.hasAttribute("aria-busy")) {
-    addToCartBtn.disabled = !hasElements;
-    addToCartBtn.setAttribute("aria-disabled", String(!hasElements));
+    const canAdd = hasElements && !addToCartBtn.hasAttribute("data-out-of-stock");
+    addToCartBtn.disabled = !canAdd;
+    addToCartBtn.setAttribute("aria-disabled", String(!canAdd));
   }
 }
 

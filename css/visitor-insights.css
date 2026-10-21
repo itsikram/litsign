@@ -256,6 +256,12 @@ i.is-conv { background: var(--wvi-green); }
 .wvi-person.is-linked .dashicons { color: #8c8f94 !important; }
 .wvi-person.is-buyer .dashicons { color: var(--wvi-green) !important; }
 
+/* Orders: list column and the Source & keyword box on the order screen */
+.column-vi_source { width: 17%; }
+.column-vi_source .wvi-sub, .wvi-orders .wvi-sub { max-width: 300px; white-space: normal; }
+.wvi-order-source .wvi-facts { grid-template-columns: 74px minmax(0, 1fr); gap: 8px 10px; font-size: 12.5px; }
+.wvi-order-source p { margin: 12px 0 0; }
+
 /* Export bar */
 .wvi-export { display: flex; align-items: center; gap: 14px; padding: 12px 16px; margin-bottom: 18px; flex-wrap: wrap; border-left: 3px solid #d97757; }
 .wvi-export-icon { width: 36px; height: 36px; border-radius: 8px; background: #fbeee8; color: #c15f3c; font-size: 20px; line-height: 36px; text-align: center; flex: none; }

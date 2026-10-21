@@ -271,7 +271,7 @@ function wholesale_ajax_mini_cart_restore()
 		}
 		if (!$already_there) {
 			array_splice($items, min(count($items), max(0, (int) $removed->position)), 0, array($removed->item));
-			$_SESSION['cart_items'] = wp_json_encode(array_values($items));
+			$_SESSION['cart_items'] = wp_json_encode(array_values($items), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		}
 	}
 	wholesale_mini_cart_send();

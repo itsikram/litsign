@@ -854,3 +854,15 @@
 .pb-price del {
 	color: #666;
 }
+
+/* Stock status notice under the product price (inc/stock-status.php). */
+.product-stock {
+	margin: 0 0 8px;
+	font-weight: 700;
+}
+.product-stock--out {
+	color: #b32d2e;
+}
+.product-stock--backorder {
+	color: #9a6700;
+}

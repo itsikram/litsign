@@ -33,13 +33,17 @@
   };
 
   const params = new URLSearchParams(location.search);
-  const campaignKeys = ['gclid', 'gbraid', 'wbraid', 'msclkid', 'fbclid', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content'];
+  const clickKeys = ['gclid', 'gbraid', 'wbraid', 'msclkid', 'fbclid'];
+  const campaignKeys = clickKeys.concat(['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gad_campaignid']);
   const campaign = {};
   campaignKeys.forEach((key) => {
     const value = params.get(key);
     if (value) campaign[key] = value.slice(0, 190);
   });
-  const campaignSig = Object.keys(campaign).length ? hash(campaignKeys.map((key) => campaign[key] || '').join('|')) : '';
+  // An ad click is identified by its click ID alone: quote forms reload the
+  // page with just ?gclid=, and that is the same click, not a new visit.
+  const clickKey = clickKeys.find((key) => campaign[key]);
+  const campaignSig = clickKey ? hash(campaign[clickKey]) : (Object.keys(campaign).length ? hash(campaignKeys.map((key) => campaign[key] || '').join('|')) : '');
 
   let visitor = readCookie('sso_vid');
   if (!/^[a-f0-9]{32}$/.test(visitor)) visitor = randomKey(32);

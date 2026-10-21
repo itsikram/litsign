@@ -935,7 +935,9 @@ function wholesale_purchase_conversion()
 	$user_data = wholesale_ads_order_user_data($order);
 	?>
 	<script>
-		window.addEventListener('load', function () {
+		// Sent right away (the tag config above is already queued), so a customer
+		// who closes the page early is still counted.
+		(function () {
 			window.dataLayer = window.dataLayer || [];
 			window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
 			<?php if ($user_data) : ?>
@@ -957,7 +959,7 @@ function wholesale_purchase_conversion()
 				currency: 'USD',
 				items: <?php echo wp_json_encode(wholesale_ads_order_items($order)); ?>
 			});
-		});
+		})();
 	</script>
 	<?php
 }

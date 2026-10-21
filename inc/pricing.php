@@ -60,7 +60,7 @@ function wholesale_product_min_area($product_id)
 
 /**
  * Size calculator products (like B2Sign): a smallest width and height, from the
- * product's _min_width / _min_height in inches (6" when empty). Any size from there up
+ * product's _min_width / _min_height in inches (6" when empty, none when "0"). Any size from there up
  * can be ordered; one that costs less than the minimum order price pays that minimum.
  * array(width_in, height_in), or null for products without the size calculator.
  */
@@ -69,9 +69,54 @@ function wholesale_product_min_sides($product_id)
 	if (get_post_meta($product_id, '_hide_calculator', true) || wholesale_product_is_channel_letter($product_id)) {
 		return null;
 	}
-	$width = (float) get_post_meta($product_id, '_min_width', true);
-	$height = (float) get_post_meta($product_id, '_min_height', true);
-	return array($width > 0 ? $width : 6.0, $height > 0 ? $height : 6.0);
+	// "0" means any size (like B2Sign's vinyl, which only bills its minimum charge).
+	$side = static function ($key) use ($product_id) {
+		$value = trim((string) get_post_meta($product_id, $key, true));
+		return '0' === $value || (float) $value > 0 ? (float) $value : 6.0;
+	};
+	return array($side('_min_width'), $side('_min_height'));
+}
+
+/**
+ * Largest size a calculator product can be made (like B2Sign's "48" x 1200" or
+ * 1200" x 48""): the product's _max_size, "short x long" in inches, which the size may
+ * fit either way round. array(short_in, long_in), or null when the product has none
+ * (the legacy _max_width / _max_height are not enforced).
+ */
+function wholesale_product_max_sides($product_id)
+{
+	if (!wholesale_product_min_sides($product_id)) {
+		return null;
+	}
+	if (!preg_match('/(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)/', (string) get_post_meta($product_id, '_max_size', true), $m)) {
+		return null;
+	}
+	$sides = array((float) $m[1], (float) $m[2]);
+	sort($sides);
+	return $sides[0] > 0 ? $sides : null;
+}
+
+/**
+ * Size the calculator opens with: the largest square, in whole inches, that still
+ * costs the product's minimum charge (e.g. 15" x 15" at $9.90/ft2 with a $16 minimum),
+ * kept within the product's min/max sides. array(width_in, height_in), or null for
+ * products without the size calculator.
+ */
+function wholesale_product_default_size($product_id)
+{
+	$min_sides = wholesale_product_min_sides($product_id);
+	if (!$min_sides) {
+		return null;
+	}
+	$rate = max(0, (float) get_post_meta($product_id, '_price_per_sqft', true));
+	$keep = (100 - min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)))) / 100;
+	$min_price = wholesale_product_min_order($product_id);
+	$side = $rate > 0 && $keep > 0 && $min_price > 0 ? floor(round(sqrt($min_price / ($rate * $keep)) * 12, 6)) : 0;
+	$max_sides = wholesale_product_max_sides($product_id);
+	if ($max_sides) {
+		$side = min($side, $max_sides[0]);
+	}
+	return array(max($side, $min_sides[0]), max($side, $min_sides[1]));
 }
 
 /**
@@ -115,6 +160,8 @@ function wholesale_attr_options($attr)
 
 /**
  * "10/%/red" => 10 percent, "3/sqft/..." => 3 per sq ft, "25/Single" or "25" => +25.
+ * "73.3/%total/2 Sides" => 73.3 percent of the item after every other option (B2Sign's
+ * double-sided upcharge, which also covers its holes).
  * A value that doesn't start with a number (a color name, "3-Inch") carries no price.
  */
 function wholesale_parse_option_price($value)
@@ -126,7 +173,7 @@ function wholesale_parse_option_price($value)
 	$type = isset($parts[1]) ? strtolower(trim($parts[1])) : '';
 	return array(
 		'amount' => (float) $parts[0],
-		'type' => in_array($type, array('%', 'sqft', 'lft'), true) ? $type : 'fixed',
+		'type' => in_array($type, array('%', '%total', 'sqft', 'lft'), true) ? $type : 'fixed',
 	);
 }
 
@@ -310,6 +357,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	$letter_count = 0;
 	$letter_height = 0;
 	$is_sqft_calc = false;
+	$size_error = '';
 
 	if ($is_cl && is_array($design)) {
 		$design_total = wholesale_cl_design_quote($product_id, $design);
@@ -373,8 +421,14 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			$is_sqft_calc = true;
 			$sqft = $height_ft * $width_ft;
 			$min_sides = wholesale_product_min_sides($product_id);
+			// Like B2Sign, a size outside the limits is still priced (the page shows it) but
+			// the quote is not ok, so it can't reach the cart.
 			if ($min_sides && ($width_ft * 12 < $min_sides[0] - 0.000001 || $height_ft * 12 < $min_sides[1] - 0.000001)) {
-				return $fail(sprintf('The smallest size for this product is %s" x %s" (width x height). Please enter a larger size.', $min_sides[0] + 0, $min_sides[1] + 0));
+				$size_error = sprintf('The smallest size for this product is %s" x %s" (width x height). Please enter a larger size.', $min_sides[0] + 0, $min_sides[1] + 0);
+			}
+			$max_sides = wholesale_product_max_sides($product_id);
+			if ($max_sides && (min($width_ft, $height_ft) * 12 > $max_sides[0] + 0.000001 || max($width_ft, $height_ft) * 12 > $max_sides[1] + 0.000001)) {
+				$size_error = sprintf('The largest size for this product is %1$s" x %2$s" or %2$s" x %1$s". Please enter a smaller size.', $max_sides[0] + 0, $max_sides[1] + 0);
 			}
 			$min_area = wholesale_product_min_area($product_id);
 			if ($sqft < $min_area - 0.000001) {
@@ -386,11 +440,15 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		$lines[] = array('label' => $has_calculator || null !== $width_attr_value ? sprintf('%s sq ft', number_format($sqft, 2)) : 'Base price', 'amount' => $running);
 	}
 
+	$sides = 1;
+	$percent_total = array();
 	foreach ($attrs as $attr) {
 		$options = wholesale_attr_options($attr);
 		$css = (string) ($attr['cssClass'] ?? '');
-		// Single-option attributes are shown as fixed text, and avoid-price ones are handled above.
-		if (count($options) < 2 || false !== strpos($css, 'avoid-price') || 'height' === ($attr['name'] ?? '') && $is_cl) {
+		// Single-option attributes are shown as fixed text (charged only when they carry a
+		// price, e.g. an included H-stake), and avoid-price ones are handled above.
+		$fixed = 1 === count($options) && 0.0 !== round(wholesale_parse_option_price($options[0]['value'])['amount'], 2);
+		if (count($options) < 2 && !$fixed || false !== strpos($css, 'avoid-price') || 'height' === ($attr['name'] ?? '') && $is_cl) {
 			continue;
 		}
 		// The calculator's typed size replaces a preset size dropdown.
@@ -399,8 +457,8 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		}
 
 		$submitted = wholesale_request_attr_value($request, $attr['name']);
-		$chosen = null;
-		foreach ($options as $option) {
+		$chosen = $fixed ? $options[0] : null;
+		foreach ($fixed ? array() : $options as $option) {
 			if (null !== $submitted && (trim($option['value']) === trim($submitted) || sanitize_text_field($option['value']) === trim($submitted))) {
 				$chosen = $option;
 				break;
@@ -409,9 +467,16 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		if (null === $chosen) {
 			return $fail(sprintf('Please choose a valid %s.', str_replace('-', ' ', strtolower($attr['name']))));
 		}
+		if (in_array(strtolower((string) $attr['name']), array('of-sides', 'sides'), true) && (int) $chosen['label'] > 1) {
+			$sides = (int) $chosen['label'];
+		}
 
 		$price = wholesale_parse_option_price($chosen['value']);
 		switch ($price['type']) {
+			case '%total':
+				// Applied after the loop, to the item with every other option.
+				$percent_total[] = array('attr' => $attr, 'chosen' => $chosen, 'percent' => $price['amount']);
+				continue 2;
 			case '%':
 				$amount = $running * $price['amount'] / 100;
 				break;
@@ -430,6 +495,14 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		}
 		$running += $amount;
 	}
+	$base_running = $running;
+	foreach ($percent_total as $item) {
+		$amount = $base_running * $item['percent'] / 100;
+		if (0.0 !== round($amount, 2)) {
+			$lines[] = array('label' => ucwords(str_replace('-', ' ', $item['attr']['name'])) . ': ' . $item['chosen']['label'], 'amount' => $amount);
+		}
+		$running += $amount;
+	}
 
 	if ($running <= 0) {
 		return $fail('Please choose your product options so we can calculate a price.');
@@ -441,6 +514,10 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	$discount_percent = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
 	$minimum_order = 0;
 	$min_price = $is_sqft_calc && $discount_percent < 100 ? wholesale_product_min_order($product_id) : 0;
+	// _min_order_per_side: the minimum is per printed side (B2Sign: $8 one side, $16 two).
+	if (get_post_meta($product_id, '_min_order_per_side', true)) {
+		$min_price *= $sides;
+	}
 	if ($min_price > 0 && $running * (100 - $discount_percent) / 100 < $min_price) {
 		$raised = $min_price * 100 / (100 - $discount_percent);
 		$lines[] = array('label' => sprintf('Minimum order ($%s)', number_format($min_price, 2)), 'amount' => $raised - $running);
@@ -467,8 +544,10 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	}
 
 	return array(
-		'ok' => true,
-		'error' => '',
+		'ok' => '' === $size_error,
+		'error' => $size_error,
+		// True when only the size is outside the product's limits (the prices are still filled in).
+		'size_error' => '' !== $size_error,
 		'unit_price' => round($running, 2),
 		'quantity' => $quantity,
 		'subtotal' => round($subtotal, 2),
@@ -628,6 +707,12 @@ function wholesale_product_default_total($slug)
  */
 function wholesale_product_promotion($product_id)
 {
+	// A product's own dated sale (_promo_percent/_promo_start/_promo_end) replaces the
+	// site-wide one while it runs.
+	$own = wholesale_dated_sale_window(get_post_meta($product_id, '_promo_percent', true), get_post_meta($product_id, '_promo_start', true), get_post_meta($product_id, '_promo_end', true));
+	if ($own) {
+		return $own;
+	}
 	$window = wholesale_promotion_window();
 	if (!$window) {
 		return null;
@@ -649,20 +734,31 @@ function wholesale_promotion_window()
 {
 	static $window = false;
 	if (false === $window) {
-		$window = null;
-		$percent = min(90, max(0, (float) wholesale_get_setting('promo_percent')));
-		$zone = new DateTimeZone('America/Los_Angeles');
-		$start = DateTime::createFromFormat('!Y-m-d', (string) wholesale_get_setting('promo_start'), $zone);
-		$end = DateTime::createFromFormat('!Y-m-d', (string) wholesale_get_setting('promo_end'), $zone);
-		if ($percent > 0 && $start && $end) {
-			$ends = $end->modify('+1 day')->getTimestamp() - 1;
-			if (time() >= $start->getTimestamp() && time() <= $ends) {
-				$window = array('percent' => $percent, 'ends' => $ends, 'scope' => (string) wholesale_get_setting('promo_scope'));
-			}
+		$window = wholesale_dated_sale_window(wholesale_get_setting('promo_percent'), wholesale_get_setting('promo_start'), wholesale_get_setting('promo_end'));
+		if ($window) {
+			$window['scope'] = (string) wholesale_get_setting('promo_scope');
 		}
 	}
 
 	return $window;
+}
+
+/**
+ * A sale percent with Y-m-d start and end dates (Pacific): array('percent', 'ends')
+ * when today is within them, else null.
+ */
+function wholesale_dated_sale_window($percent, $start, $end)
+{
+	$percent = min(90, max(0, (float) $percent));
+	$zone = new DateTimeZone('America/Los_Angeles');
+	$start = DateTime::createFromFormat('!Y-m-d', trim((string) $start), $zone);
+	$end = DateTime::createFromFormat('!Y-m-d', trim((string) $end), $zone);
+	if ($percent <= 0 || !$start || !$end) {
+		return null;
+	}
+	$ends = $end->modify('+1 day')->getTimestamp() - 1;
+
+	return time() >= $start->getTimestamp() && time() <= $ends ? array('percent' => $percent, 'ends' => $ends) : null;
 }
 
 function wholesale_product_promotion_percent($product_id)
@@ -849,10 +945,15 @@ function wholesale_price_with_sale($product_id, $regular_price)
 }
 
 /**
- * Sale badge for a product image; prints nothing unless a dated sale applies to it.
+ * Product image badge. Out of stock takes priority over any dated sale.
  */
 function wholesale_render_sale_badge($product_id, $percent = null)
 {
+	if ('outofstock' === wholesale_product_stock_status($product_id)) {
+		echo '<span class="sale-badge sale-badge--out-of-stock"><span class="sale-badge__label">' . esc_html__('Out of stock', 'litsign') . '</span></span>';
+		return;
+	}
+
 	$percent = null === $percent ? wholesale_product_sale_percent($product_id) : (int) $percent;
 	$promotion = wholesale_product_promotion($product_id);
 	if ($percent < 1 || !$promotion) {

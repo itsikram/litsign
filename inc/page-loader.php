@@ -61,6 +61,12 @@ function wholesale_page_loader_head()
 			visibility: hidden;
 			pointer-events: none;
 		}
+		/* The first page a visitor lands on shows straight away; the loader only
+		   covers the wait after a link click (page-loader.js removes the class).
+		   display:none also keeps its animations from running. */
+		html.wholesale-page-loader-landing .wholesale-page-loader {
+			display: none;
+		}
 		.wholesale-page-loader .screen-reader-text {
 			position: absolute;
 			width: 1px;
@@ -321,6 +327,11 @@ function wholesale_page_loader_head()
 			} catch (error) {
 				console.warn('Page loader hand-off storage is unavailable.', error);
 			}
+			// No hand-off means the visitor arrived from outside (search, an ad,
+			// a typed URL) or reloaded: show the page itself, not the loader.
+			if (!root.classList.contains('wholesale-page-loader-handoff')) {
+				root.classList.add('wholesale-page-loader-landing');
+			}
 			// Fallback only for when js/page-loader.js never runs (blocked or
 			// failed to download). The timer starts once the whole HTML has
 			// arrived, not at this point in the head: on a slow connection the
@@ -488,6 +499,12 @@ function wholesale_page_loader_skips_body()
 /**
  * Print the theme's stylesheets after the loader instead of in the head.
  *
+ * Not used since 2026-10-21: the loader no longer shows on the page a visitor
+ * lands on, and after a link click the stylesheets are already in the
+ * browser cache, so they stay in the head. In the body they held back the
+ * first paint of the page content (Speed Index 5.7s on PageSpeed).
+ *
+ * Original reason:
  * A browser paints nothing until the <body> arrives and every stylesheet in
  * the head has downloaded. The head carries about 60 KB of inline CSS, so on a
  * slow connection visitors saw a blank white page for many seconds and the
@@ -507,7 +524,6 @@ function wholesale_page_loader_defer_styles()
 		$GLOBALS['wholesale_page_loader_styles_moved'] = true;
 	}
 }
-add_action('wp_head', 'wholesale_page_loader_defer_styles', 7);
 
 /**
  * Print the moved styles: right after the loader, or at the latest in the

@@ -328,7 +328,8 @@
       let totalPrice = pricePerSqft * totalSqft;
       // B2Sign-style size box (every size calculator product) reads width x height.
       let widthFirst = $(".product-attibute-box .total-size-sqft").attr("data-order") === "wh";
-      let dimentionText = `${widthFirst ? totalWidthIn : totalHeightIn}" x ${widthFirst ? totalHeightIn : totalWidthIn}" = ${totalSqft.toFixed(
+      // B2Sign style: "6 ft2", "16.67 ft2" (no trailing zeros).
+      let dimentionText = `${widthFirst ? totalWidthIn : totalHeightIn}" x ${widthFirst ? totalHeightIn : totalWidthIn}" = ${+totalSqft.toFixed(
         2
       )} ft<sup>2</sup> `;
       // display dimention
@@ -410,7 +411,8 @@
 
         }
 
-        if (costType == "%") {
+        // "%total" (percent of the whole item) is close enough here; the server quote corrects it.
+        if (costType == "%" || costType == "%total") {
           priceAfterChange =
             priceBeforeChange + ((priceBeforeChange / 100) * selectedAttrVal);
 
@@ -508,6 +510,65 @@
         sizePreset.value = match ? match.value : (width || height ? 'custom' : '');
       });
     }
+
+    // Size limits (B2Sign style): nothing shows until a typed size breaks one, then a
+    // red "Maximum width is 1200"" under the boxes and the "Max Size" line. The server
+    // quote rejects the same sizes (wholesale_product_min_sides / _max_sides).
+    const sizeLimits = document.querySelector('.pb-size-summary[data-max-long]');
+    if (sizeLimits) {
+      const box = sizeLimits.closest('form') || document;
+      const dimError = box.querySelector('.pb-dim-error');
+      const maxLine = box.querySelector('.pb-max-size');
+      const minLine = box.querySelector('.pb-min-size');
+      const limit = (key) => parseFloat(sizeLimits.dataset[key]) || 0;
+      const checkSize = () => {
+        const width = parseFloat(box.querySelector('input[name="width-in"]')?.value) || 0;
+        const height = parseFloat(box.querySelector('input[name="height-in"]')?.value) || 0;
+        const short = limit('maxShort');
+        const long = limit('maxLong');
+        let error = '';
+        let tooBig = false;
+        if (long && (width > long || height > long)) {
+          tooBig = true;
+          error = width > long ? `Maximum width is ${long}"` : `Maximum height is ${long}"`;
+        } else if (short && width > short && height > short) {
+          tooBig = true;
+          error = width < height ? `Maximum width is ${short}"` : `Maximum height is ${short}"`;
+        } else if (width > 0 && width < limit('minWidth')) {
+          error = `Minimum width is ${limit('minWidth')}"`;
+        } else if (height > 0 && height < limit('minHeight')) {
+          error = `Minimum height is ${limit('minHeight')}"`;
+        }
+        if (dimError) {
+          dimError.textContent = error;
+          dimError.hidden = !error;
+        }
+        if (maxLine) maxLine.hidden = !tooBig;
+        if (minLine) minLine.hidden = !error || tooBig;
+      };
+      box.addEventListener('input', (e) => { if (e.target.matches('.dim-input')) checkSize(); });
+      box.addEventListener('change', (e) => { if (e.target.matches('.dim-input, .pb-size-preset')) checkSize(); });
+      // The boxes open on a default size (wholesale_product_default_size()): run the size
+      // handlers once, after the dimension handler below is bound, so every total matches it.
+      const defaultWidth = box.querySelector('input[name="width-in"]');
+      if (defaultWidth && parseFloat(defaultWidth.value) > 0) {
+        setTimeout(() => defaultWidth.dispatchEvent(new Event('change', { bubbles: true })));
+      }
+    }
+
+    // Custom hole punch panel (single-product.php): shown, and sent, only while
+    // "Custom Hole Punch" or "Custom Grommets" is the chosen Holes Punch option.
+    document.querySelectorAll('.pb-custom-holes').forEach((panel) => {
+      const select = document.getElementById(panel.dataset.for);
+      if (!select) return;
+      const sync = () => {
+        const on = /^Custom (Hole|Grommet)/i.test(select.selectedOptions[0]?.text || '');
+        panel.hidden = !on;
+        panel.querySelectorAll('fieldset').forEach((fieldset) => { fieldset.disabled = !on; });
+      };
+      select.addEventListener('change', sync);
+      sync();
+    });
 
     // change dimension inputs
     $(document).on("change", ".product-attibute-box .dimenstion-calculator input", (e) => {
@@ -821,12 +882,12 @@
 
     // product thumbnail on click gallery click
 
+    // The frame keeps its size (css/style.css, .product-image-zoom), so a photo of
+    // another shape is fitted inside it rather than spilling over the page.
     $(".gallery-image-item").click((e) => {
-      let containerHeight = $(".thumbnail-container").innerHeight();
       let imageSrc = $(e.currentTarget).attr("data-image");
       $(".thumbnail-container .single-product-thumbnail").removeAttr('srcset')
       $(".thumbnail-container .single-product-thumbnail").attr("src", imageSrc);
-      $(".thumbnail-container").css("height", containerHeight);
       $(".product-image-zoom").attr("data-zoom-src", imageSrc);
     });
 
@@ -1325,17 +1386,37 @@
       pricingBox.querySelector('.total-container')?.after(message);
     }
 
-    // The calculator keeps the size exactly as typed. Below the minimum order
-    // price the server charges the minimum instead; say so under the size.
-    const sizeDisplay = form.querySelector('.total-size-sqft');
-    const dimensionInputs = [...form.querySelectorAll('.dimenstion-calculator input')];
-    let sizeNote = null;
-    if (sizeDisplay && dimensionInputs.length) {
-      sizeNote = document.createElement('p');
-      sizeNote.className = 'price-quote-message is-hint pb-size-note';
-      sizeNote.setAttribute('role', 'status');
-      sizeNote.hidden = true;
-      (sizeDisplay.closest('.pb-size-summary') || sizeDisplay).after(sizeNote);
+    // B2Sign-style size box: "min charge $X" shows only while that minimum is what the
+    // customer pays, and before a size is typed the price is that minimum charge.
+    const sizeSummary = form.querySelector('.pb-size-summary');
+    const minChargeText = sizeSummary && sizeSummary.querySelector('.pb-min-charge');
+    const sizeIsEmpty = () => !!sizeSummary && ['width-in', 'height-in'].some((name) => !(parseFloat(form.querySelector(`input[name="${name}"]`)?.value) > 0));
+    const showPrices = (everyday, saving, total) => {
+      pricingBox.querySelectorAll('.price-subtotal').forEach((el) => { el.textContent = money(everyday); });
+      pricingBox.querySelectorAll('.price-saving').forEach((el) => { el.textContent = money(saving); });
+      pricingBox.querySelectorAll('.price-total').forEach((el) => { el.textContent = money(total); });
+    };
+
+    // Size guard: Add To Cart with no size, or a size outside the limits, goes back to the
+    // size box with a red note under it instead of adding anything (runs before the cart
+    // handlers, in the capture phase).
+    if (sizeSummary) {
+      form.addEventListener('click', (event) => {
+        if (!event.target.closest('.add-to-cart-btn')) return;
+        const empty = sizeIsEmpty();
+        if (!empty && !form.dataset.sizeError) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const dimError = form.querySelector('.pb-dim-error');
+        const blank = ['width-in', 'height-in'].map((name) => form.querySelector(`input[name="${name}"]`)).find((input) => input && !(parseFloat(input.value) > 0));
+        if (dimError && (empty || !dimError.textContent)) {
+          dimError.textContent = empty ? `Please enter the ${blank && blank.name === 'height-in' ? 'height' : 'width'} of your sign.` : form.dataset.sizeError;
+          dimError.hidden = false;
+        }
+        const target = blank || form.querySelector('input[name="width-in"]');
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target?.focus({ preventScroll: true });
+      }, true);
     }
 
     let turnaroundRow = pricingBox.querySelector('.price-turnaround-row');
@@ -1363,6 +1444,31 @@
           const quote = await response.json();
           if (thisRequest !== requestId) return;
 
+          if (!quote.ok && sizeIsEmpty()) {
+            // No size yet: show the minimum charge, as B2Sign does, until one is typed.
+            const minEveryday = parseFloat(sizeSummary.dataset.minEveryday) || 0;
+            const minTotal = parseFloat(sizeSummary.dataset.minTotal) || 0;
+            showPrices(minEveryday, minEveryday - minTotal, minTotal);
+            if (minChargeText) minChargeText.hidden = false;
+            message.hidden = true;
+            turnaroundRow.hidden = true;
+            // Add To Cart stays clickable; the size guard below sends the visitor to the size box.
+            addButtons.forEach((button) => { button.disabled = false; });
+            return;
+          }
+
+          // Only the size is outside the product's limits: like B2Sign, show its price and
+          // keep Add To Cart clickable (the size guard and the cart still refuse it).
+          form.dataset.sizeError = quote.size_error ? quote.error : '';
+          if (!quote.ok && quote.size_error) {
+            if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
+            message.hidden = true;
+            showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
+            turnaroundRow.hidden = !(quote.turnaround > 0);
+            addButtons.forEach((button) => { button.disabled = false; });
+            return;
+          }
+
           if (!quote.ok) {
             // No sign text yet (every channel letter page opens this way):
             // a prompt rather than an error, and Add To Cart stays enabled so
@@ -1372,22 +1478,16 @@
             message.textContent = needsText ? 'Type your sign text above to see your exact price.' : quote.error;
             message.classList.toggle('is-hint', !!needsText);
             message.hidden = false;
-            if (sizeNote) sizeNote.hidden = true;
             addButtons.forEach((button) => { button.disabled = !needsText; });
             return;
           }
 
-          if (sizeNote) {
-            sizeNote.hidden = !(quote.minimum_order > 0);
-            sizeNote.textContent = quote.minimum_order > 0 ? 'Your size is below our minimum order, so the minimum price applies.' : '';
-          }
+          if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
 
           message.hidden = true;
           message.classList.remove('is-hint');
           // Shown only during a dated sale: the everyday price and what the sale takes off it.
-          pricingBox.querySelectorAll('.price-subtotal').forEach((el) => { el.textContent = money('everyday' in quote ? quote.everyday : quote.subtotal); });
-          pricingBox.querySelectorAll('.price-saving').forEach((el) => { el.textContent = money('promo_discount' in quote ? quote.promo_discount : quote.discount); });
-          pricingBox.querySelectorAll('.price-total').forEach((el) => { el.textContent = money(quote.total); });
+          showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
           turnaroundRow.hidden = !(quote.turnaround > 0);
           turnaroundRow.querySelector('.price-turnaround').textContent = money(quote.turnaround);
           // The add-to-cart handler applies the discount to this value before submitting.

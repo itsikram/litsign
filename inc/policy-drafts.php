@@ -17,7 +17,7 @@ function wholesale_policy_privacy_draft()
 <p>Last updated: [PLACEHOLDER: date]</p>
 
 <h2>Who we are</h2>
-<p>This website, storefrontsignonline.com, is operated by Storefront Sign Online LLC, also doing business as Lit Sign Manufacturing ("we", "us"). You can reach us at <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a>, by phone at 866-436-2101, or by mail at 707 S. Grady Way, Suite 600, Renton, WA 98057.</p>
+<p>This website, storefrontsignonline.com, is operated by Storefront Sign Online LLC, also doing business as Lit Sign Manufacturing ("we", "us"). You can reach us at <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a>, by phone at <a href="tel:+12066186543">+1 206-618-6543</a>, or by mail at 707 S. Grady Way, Suite 600, Renton, WA 98057.</p>
 
 <h2>Information we collect</h2>
 <ul>

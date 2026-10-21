@@ -43,6 +43,7 @@ if (file_exists(dirname(__FILE__) . '/cmb2/init.php')) {
 if (file_exists(dirname(__FILE__) . '/template/display_admin_orders.php')) {
 	require_once(dirname(__FILE__) . '/template/display_admin_orders.php');
 }
+require_once(dirname(__FILE__) . '/inc/site-timezone.php');
 require_once(dirname(__FILE__) . '/inc/orders.php');
 require_once(dirname(__FILE__) . '/inc/reviews.php');
 require_once(dirname(__FILE__) . '/inc/review-manager.php');
@@ -52,6 +53,7 @@ require_once(dirname(__FILE__) . '/inc/review-manager.php');
 // original prices stay in post meta (_wholesale_review_pricing_snapshot).
 require_once(dirname(__FILE__) . '/inc/order-reviews.php');
 require_once(dirname(__FILE__) . '/inc/pricing.php');
+require_once(dirname(__FILE__) . '/inc/stock-status.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');
 require_once(dirname(__FILE__) . '/inc/mini-cart.php');
 require_once(dirname(__FILE__) . '/inc/admin-orders.php');
@@ -796,8 +798,8 @@ function wholesale_handle_newsletter_subscribe()
 	if (empty($existing)) {
 		$inserted = $wpdb->insert(
 			$table_name,
-			array('email' => $email),
-			array('%s')
+			array('email' => $email, 'created_at' => current_time('mysql')),
+			array('%s', '%s')
 		);
 
 		if ($inserted === false) {
@@ -885,6 +887,11 @@ function wholesale_hero_background_style($image_url = '', $fallback_image_url = 
 	$avif = wholesale_hero_avif_url($bg_image);
 	if ($avif) {
 		$style .= " --hero-image-set: image-set(url('" . esc_url($avif) . "') type('image/avif'), {$image} type('image/webp'));";
+		// Phones get a crop of the visible part (style.css, AVIF browsers only).
+		$phone = wholesale_hero_phone_avif_url($bg_image);
+		if ($phone) {
+			$style .= " --hero-image-phone: url('" . esc_url($phone) . "');";
+		}
 	}
 
 	return $style;
@@ -957,10 +964,104 @@ function wholesale_make_hero_avif($file)
 	$compare = file_exists($file . '.webp') ? $file . '.webp' : $file;
 	if ($saved && file_exists($tmp_file) && filesize($tmp_file) > 0 && filesize($tmp_file) < filesize($compare) && @rename($tmp_file, $avif_file)) {
 		update_option('wholesale_avif_skipped', array_values(array_diff((array) get_option('wholesale_avif_skipped', array()), array($file))), false);
+		// Cached pages were saved without the AVIF copy.
+		if (function_exists('sfs_page_cache_purge')) {
+			sfs_page_cache_purge();
+		}
 	}
 	@unlink($tmp_file);
 }
 add_action('wholesale_make_hero_avif', 'wholesale_make_hero_avif');
+
+/**
+ * Phone copy of a wide hero photo, or '' until it exists. On phones the hero
+ * box is tall and narrow, so background-size: cover shows only a slice of
+ * the photo's full height; this AVIF holds just that part (at the same
+ * resolution), so phones download a fraction of the file. Made by a
+ * background job like the full AVIF copy.
+ */
+function wholesale_hero_phone_avif_url($image_url)
+{
+	$uploads = wp_get_upload_dir();
+	$base_path = wp_parse_url($uploads['baseurl'], PHP_URL_PATH);
+	$url_path = (string) wp_parse_url($image_url, PHP_URL_PATH);
+	if (!$base_path || 0 !== strpos($url_path, $base_path . '/') || !preg_match('/\.(png|jpe?g)(\.webp)?$/i', $url_path)) {
+		return '';
+	}
+
+	$relative = substr(preg_replace('/\.webp$/i', '', $url_path), strlen($base_path));
+	$file = $uploads['basedir'] . $relative;
+	$phone_file = $file . '.phone.avif';
+	if (file_exists($phone_file) && file_exists($file) && filesize($phone_file) > 0 && filemtime($phone_file) >= filemtime($file)) {
+		return $uploads['baseurl'] . $relative . '.phone.avif';
+	}
+
+	$skipped = (array) get_option('wholesale_avif_phone_skipped', array());
+	if (function_exists('imageavif') && file_exists($file) && !in_array($file, $skipped, true)
+		&& !wp_next_scheduled('wholesale_make_hero_phone_avif', array($file))) {
+		wp_schedule_single_event(time(), 'wholesale_make_hero_phone_avif', array($file));
+	}
+
+	return '';
+}
+
+function wholesale_make_hero_phone_avif($file)
+{
+	$uploads = wp_get_upload_dir();
+	if (!function_exists('imageavif') || !is_string($file) || 0 !== strpos(wp_normalize_path($file), wp_normalize_path($uploads['basedir']) . '/')
+		|| !preg_match('/\.(png|jpe?g)$/i', $file) || !file_exists($file) || filesize($file) > 8 * MB_IN_BYTES) {
+		return;
+	}
+
+	// Recorded before encoding so a run that dies is never retried (as above).
+	$skipped = (array) get_option('wholesale_avif_phone_skipped', array());
+	$skipped[] = $file;
+	update_option('wholesale_avif_phone_skipped', array_slice(array_unique($skipped), -50), false);
+
+	$size = @getimagesize($file);
+	if (!$size || $size[0] < $size[1] * 1.2) {
+		return; // Not a wide photo: a crop would save little.
+	}
+	list($width, $height) = $size;
+
+	// css/style.css shows phones the photo at background-position 70% with
+	// cover; on a typical phone hero (about 0.47 wide per 1 tall) that slice is
+	// centred here. Keep 0.7 of the height in width so wider phones are covered
+	// too (wider boxes zoom in slightly), and show the copy centred.
+	$slice = $height * 0.47;
+	$center = 0.7 * ($width - $slice) + $slice / 2;
+	$crop = (int) min($width, round($height * 0.7));
+	$x = (int) max(0, min($width - $crop, round($center - $crop / 2)));
+
+	$image = preg_match('/\.png$/i', $file) ? @imagecreatefrompng($file) : @imagecreatefromjpeg($file);
+	if (!$image) {
+		return;
+	}
+	if (function_exists('set_time_limit')) {
+		@set_time_limit(120);
+	}
+	imagepalettetotruecolor($image);
+	$cropped = imagecrop($image, array('x' => $x, 'y' => 0, 'width' => $crop, 'height' => $height));
+	imagedestroy($image);
+	if (!$cropped) {
+		return;
+	}
+
+	$phone_file = $file . '.phone.avif';
+	$tmp_file = $phone_file . '.tmp';
+	// Phones see it under a 60-94% navy overlay, so stronger compression is invisible.
+	$saved = @imageavif($cropped, $tmp_file, 40, 6);
+	imagedestroy($cropped);
+	if ($saved && file_exists($tmp_file) && filesize($tmp_file) > 0 && @rename($tmp_file, $phone_file)) {
+		update_option('wholesale_avif_phone_skipped', array_values(array_diff((array) get_option('wholesale_avif_phone_skipped', array()), array($file))), false);
+		// Cached pages were saved without the phone copy.
+		if (function_exists('sfs_page_cache_purge')) {
+			sfs_page_cache_purge();
+		}
+	}
+	@unlink($tmp_file);
+}
+add_action('wholesale_make_hero_phone_avif', 'wholesale_make_hero_phone_avif');
 
 /**
  * Hero photo for pages without their own image: the one chosen under
@@ -1314,6 +1415,22 @@ function wholesale_contact_submission_register_meta_box()
 add_action('add_meta_boxes_contact_submission', 'wholesale_contact_submission_register_meta_box');
 
 /**
+ * Pages that send a conversion as soon as they open: the order confirmation
+ * page and the "quote sent" page (see wholesale_quote_lead_args()).
+ */
+function wholesale_ads_is_conversion_page()
+{
+	if (get_query_var('wholesale_thank_you')) {
+		return true;
+	}
+	$lead_id = isset($_GET['lead']) ? absint($_GET['lead']) : 0;
+	$lead_key = isset($_GET['lk']) ? sanitize_text_field(wp_unslash($_GET['lk'])) : '';
+	$status = isset($_GET['quote_status']) ? sanitize_key(wp_unslash($_GET['quote_status'])) : '';
+
+	return 'sent' === $status && $lead_id && hash_equals(wp_hash('cla_lead_' . $lead_id), $lead_key);
+}
+
+/**
  * Keep conversion tracking, but wait until the page has loaded before fetching it.
  */
 function wholesale_deferred_conversion_tracking()
@@ -1339,11 +1456,23 @@ function wholesale_deferred_conversion_tracking()
 					'phone_conversion_number': '866-436-2101'
 				});
 			};
-			<?php if (wholesale_ads_is_ad_landing()) : ?>
-			// Arrived from an ad: record the click right away, before the visitor moves on.
+			<?php if (wholesale_ads_is_ad_landing() || wholesale_ads_is_conversion_page()) : ?>
+			// Arrived from an ad, or this page sends a conversion: start right away,
+			// before the visitor moves on or closes the page.
 			start();
 			<?php else : ?>
-			window.addEventListener('load', start);
+			// Everyone else: on the first scroll, tap, key or mouse move, or 10s
+			// after load. Google's scripts are about 370 KB of JavaScript; loading
+			// them during the first view made the page slower to respond.
+			var started = false, events = ['scroll', 'pointerdown', 'keydown', 'touchstart', 'mousemove'];
+			var once = function () {
+				if (started) return;
+				started = true;
+				events.forEach(function (name) { window.removeEventListener(name, once, { passive: true }); });
+				start();
+			};
+			events.forEach(function (name) { window.addEventListener(name, once, { passive: true }); });
+			window.addEventListener('load', function () { setTimeout(once, 10000); });
 			<?php endif; ?>
 		})();
 	</script>
@@ -1386,7 +1515,9 @@ function wholesale_track_quote_lead($source)
 		$phone = 10 === strlen($digits) ? '+1' . $digits : (11 === strlen($digits) && '1' === $digits[0] ? '+' . $digits : '');
 		?>
 		<script>
-			window.addEventListener('load', function () {
+			// Sent right away (the tag config above is already queued), so a visitor
+			// who closes the page early is still counted.
+			(function () {
 				window.dataLayer = window.dataLayer || [];
 				window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
 				window.gtag('set', 'user_data', <?php echo wp_json_encode(array_filter(array('email' => $email, 'phone_number' => $phone))); ?>);
@@ -1395,7 +1526,7 @@ function wholesale_track_quote_lead($source)
 					transaction_id: <?php echo wp_json_encode('lead-' . $lead_id); ?>
 				});
 				window.gtag('event', 'generate_lead', { lead_source: <?php echo wp_json_encode($source); ?> });
-			});
+			})();
 		</script>
 		<?php
 	}, 21);
@@ -1467,6 +1598,13 @@ function wholesale_preload_front_page_hero()
 	$avif = $image ? wholesale_hero_avif_url($image) : wholesale_default_hero_avif_url();
 	if ($avif) {
 		// Browsers without AVIF support skip this preload and use the WebP fallback.
+		$phone = $image ? wholesale_hero_phone_avif_url($image) : '';
+		if ($phone) {
+			// Same 767px breakpoint as the phone rule in css/style.css.
+			printf('<link rel="preload" as="image" href="%s" type="image/avif" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($phone));
+			printf('<link rel="preload" as="image" href="%s" type="image/avif" media="(min-width: 768px)" fetchpriority="high">' . "\n", esc_url($avif));
+			return;
+		}
 		printf('<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n", esc_url($avif));
 		return;
 	}
@@ -1842,7 +1980,8 @@ function wholesale_render_sitemap()
 	};
 
 	$last_modified = get_lastpostmodified('gmt');
-	$last_modified = $last_modified ? mysql2date('c', $last_modified, true) : '';
+	// A GMT time: mysql2date() would read it as site time (Los Angeles) and date it 7 hours ahead.
+	$last_modified = $last_modified ? gmdate('c', strtotime($last_modified . ' UTC')) : '';
 	$add_url(home_url('/'), $last_modified, 'daily', '1.0');
 
 	$private_pages = wholesale_seo_noindex_page_slugs();
@@ -3415,7 +3554,7 @@ function wholesale_product_schema($product_id, $url, $image = '')
 
 	$terms = get_the_terms($product_id, 'product_category');
 	if ($terms && !is_wp_error($terms)) {
-		$product['category'] = implode(', ', wp_list_pluck($terms, 'name'));
+		$product['category'] = wholesale_schema_text(implode(', ', wp_list_pluck($terms, 'name')));
 	}
 
 	// The same price the page and cart charge for the smallest configuration.
@@ -3427,12 +3566,15 @@ function wholesale_product_schema($product_id, $url, $image = '')
 			'@type' => 'Offer',
 			'price' => number_format($price, 2, '.', ''),
 			'priceCurrency' => 'USD',
-			'availability' => 'https://schema.org/InStock',
+			'availability' => array('instock' => 'https://schema.org/InStock', 'outofstock' => 'https://schema.org/OutOfStock', 'backorder' => 'https://schema.org/BackOrder')[wholesale_product_stock_status($product_id)],
 			'itemCondition' => 'https://schema.org/NewCondition',
 			'url' => $url,
 			'shippingDetails' => wholesale_seo_offer_shipping_details($product_id),
 			'hasMerchantReturnPolicy' => wholesale_merchant_return_policy(),
 		);
+		if ('backorder' === wholesale_product_stock_status($product_id)) {
+			$product['offers']['availabilityStarts'] = wholesale_product_backorder_date($product_id);
+		}
 	}
 
 	// Gallery photos after the featured image, so Google can pick the best one.
@@ -3590,9 +3732,9 @@ function wholesale_seo_head()
 	$page = array(
 		'@type' => $page_type,
 		'@id' => $page_id,
-		'name' => $title,
+		'name' => wholesale_schema_text($title),
 		'url' => $url,
-		'description' => $description,
+		'description' => wholesale_schema_text($description),
 		'isPartOf' => array('@id' => $site_id),
 		'publisher' => array('@id' => $organization_id),
 		'inLanguage' => get_bloginfo('language'),
@@ -3623,7 +3765,7 @@ function wholesale_seo_head()
 			$breadcrumb_items[] = array(
 				'@type' => 'ListItem',
 				'position' => 2,
-				'name' => $terms[0]->name,
+				'name' => wholesale_schema_text($terms[0]->name),
 				'item' => wholesale_category_url($terms[0]->slug),
 			);
 		}
@@ -3676,7 +3818,7 @@ function wholesale_seo_head()
 			$breadcrumb_items[] = array(
 				'@type' => 'ListItem',
 				'position' => 2,
-				'name' => $term->name,
+				'name' => wholesale_schema_text($term->name),
 				'item' => $url,
 			);
 		} elseif (wholesale_is_channel_letters_landing()) {
@@ -4298,6 +4440,32 @@ add_action('cmb2_admin_init', function () {
 			'id' => '_min_order_price',
 		)
 	);
+	// See wholesale_price_quote(): the minimum is multiplied by the printed sides.
+	$product->add_field(
+		array(
+			'name' => __('Minimum Per Side', 'tm'),
+			'type' => 'checkbox',
+			'id' => '_min_order_per_side',
+		)
+	);
+	// See wholesale_product_max_sides().
+	$product->add_field(
+		array(
+			'name' => __('Maximum Size', 'tm'),
+			'type' => 'text',
+			'id' => '_max_size',
+		)
+	);
+	// This product's own dated sale; see wholesale_product_promotion().
+	foreach (array('_promo_percent' => 'Product Sale Percent', '_promo_start' => 'Product Sale Start', '_promo_end' => 'Product Sale End') as $promo_id => $promo_name) {
+		$product->add_field(
+			array(
+				'name' => __($promo_name, 'tm'),
+				'type' => 'text',
+				'id' => $promo_id,
+			)
+		);
+	}
 
 
 	$product->add_field(
@@ -4404,6 +4572,22 @@ add_action('cmb2_admin_init', function () {
 			'id' => '_product_turnaround',
 			'type' => 'text',
 			'default' => '1'
+		)
+	);
+	// Empty means In stock; see inc/stock-status.php.
+	$product->add_field(
+		array(
+			'name' => __('Stock Status', 'tm'),
+			'id' => '_stock_status',
+			'type' => 'select',
+			'options' => wholesale_stock_status_options(),
+		)
+	);
+	$product->add_field(
+		array(
+			'name' => __('Backorder Ship Date', 'tm'),
+			'id' => '_backorder_date',
+			'type' => 'text',
 		)
 	);
 

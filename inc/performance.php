@@ -123,8 +123,16 @@ function wholesale_cache_excluded_request()
 		}
 	}
 
-	return is_page(array('cart', 'checkout', 'account', 'my-orders', 'my_orders', 'orders', 'track-order', 'login', 'signup', 'pay', 'payment', 'channel-letter-builder', 'b2-calculator', 'contact', 'banners-displays', 'window-graphics'))
-		|| is_page_template(array('page-channel-letters.php', 'page-channel-letters-ads.php', 'landing-page.php', 'cl_builderr.php', 'b2calc.php', 'cart.php', 'checkout.php', 'account.php', 'my_orders.php', 'login.php', 'signup.php', 'payment.php', 'page-track-order.php'));
+	// Quote-form pages are fine in a cache that drops pages well before their
+	// nonce expires (logged-out nonces last at least 12 hours), such as the
+	// SFS Page Cache plugin's 8 hours.
+	$short_cache = defined('SFS_PAGE_CACHE_MAX_AGE') && SFS_PAGE_CACHE_MAX_AGE <= 10 * HOUR_IN_SECONDS;
+	if (!$short_cache && (is_page(array('contact', 'banners-displays', 'window-graphics')) || is_page_template('page-channel-letters.php'))) {
+		return true;
+	}
+
+	return is_page(array('cart', 'checkout', 'account', 'my-orders', 'my_orders', 'orders', 'track-order', 'login', 'signup', 'pay', 'payment', 'channel-letter-builder', 'b2-calculator'))
+		|| is_page_template(array('page-channel-letters-ads.php', 'landing-page.php', 'cl_builderr.php', 'b2calc.php', 'cart.php', 'checkout.php', 'account.php', 'my_orders.php', 'login.php', 'signup.php', 'payment.php', 'page-track-order.php'));
 }
 
 function wholesale_cache_exclusions()
@@ -347,6 +355,11 @@ function wholesale_critical_bootstrap_tag($tag, $handle, $href)
 		full.rel = 'stylesheet';
 		full.id = 'bootsrap-css';
 		full.href = <?php echo wp_json_encode($href); ?>;
+		// media="print" until it has loaded: a stylesheet added before the first
+		// paint otherwise holds the paint back (the page stayed blank until it
+		// arrived, PageSpeed Speed Index 5.7s).
+		full.media = 'print';
+		full.onload = function () { this.media = 'all'; };
 		critical.parentNode.insertBefore(full, critical.nextSibling);
 	});
 </script>

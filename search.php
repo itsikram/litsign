@@ -968,6 +968,7 @@ $icon = static function ($name, $size = 20) {
 						<li>
 							<article <?php post_class('srp-card'); ?>>
 								<div class="srp-card__media">
+									<?php if ('product' === get_post_type()) { wholesale_render_sale_badge($post_id); } ?>
 									<?php
 									if (has_post_thumbnail()) {
 										echo get_the_post_thumbnail($post_id, 'medium_large', array(
@@ -980,7 +981,7 @@ $icon = static function ($name, $size = 20) {
 										echo $icon('image', 44); // Static SVG.
 									}
 									?>
-									<?php if ($type_name) : ?>
+									<?php if ($type_name && 'product' !== get_post_type()) : ?>
 										<span class="srp-badge"><?php echo esc_html($type_name); ?></span>
 									<?php endif; ?>
 								</div>

@@ -147,6 +147,7 @@ get_header();
 					<article class="product-box landing-solution-card">
 						<a href="<?php the_permalink(); ?>">
 							<div class="pb-image-top">
+								<?php wholesale_render_sale_badge(get_the_ID()); ?>
 								<?php if (has_post_thumbnail()) : ?>
 									<?php the_post_thumbnail('medium_large', array('loading' => $index === 0 ? 'eager' : 'lazy', 'fetchpriority' => $index === 0 ? 'high' : 'auto', 'decoding' => 'async')); ?>
 								<?php endif; ?>

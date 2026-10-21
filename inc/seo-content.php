@@ -1226,6 +1226,10 @@ function wholesale_seo_render_channel_letter_guide($product_id)
  * Add alt text to <img> tags that have none (or an empty one) in stored HTML,
  * such as the supplier product descriptions on channel letter pages.
  * Images are numbered so each alt is distinct.
+ *
+ * This HTML skips the_content, so it also gets core's srcset/sizes and lazy
+ * loading here: the stored tags point at full-size uploads (a 3449px, 1.7 MB
+ * PNG shown at 443px on the channel letter pages).
  */
 function wholesale_seo_fill_missing_alt($html, $label)
 {
@@ -1234,6 +1238,7 @@ function wholesale_seo_fill_missing_alt($html, $label)
 		return $html;
 	}
 
+	$html = wp_filter_content_tags($html, 'the_content');
 	$count = 0;
 
 	return preg_replace_callback('/<img\b[^>]*>/i', static function ($match) use ($label, &$count) {

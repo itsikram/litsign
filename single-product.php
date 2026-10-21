@@ -30,6 +30,7 @@ $product_discount_percent = (float) get_post_meta(get_the_ID(), '_discount_perce
 // (wholesale_product_promotion()) is shown as a discount.
 $product_promotion = wholesale_product_promotion(get_the_ID());
 $product_promo_percent = $product_promotion ? (float) $product_promotion['percent'] : 0;
+$product_stock_status = wholesale_product_stock_status(get_the_ID());
 
 $product_group_json = get_post_meta(get_the_ID(), '_product_group_data', true);
 $product_group_array = json_decode($product_group_json, true);
@@ -174,7 +175,13 @@ get_header();
             <div class="col-md-4">
                 <div class="thumbnail-container">
                     <?php wholesale_render_sale_badge(get_the_ID()); ?>
-                    <div class="product-image-zoom" data-zoom-src="<?php echo esc_url(get_the_post_thumbnail_url(get_the_ID(), 'full')); ?>">
+                    <?php
+                    // The photo frame keeps the main photo's shape, so gallery photos of a
+                    // different shape fit inside it (css: object-fit) instead of resizing it.
+                    $main_image = wp_get_attachment_image_src(get_post_thumbnail_id(), 'full');
+                    $main_image_ratio = ($main_image && $main_image[1] && $main_image[2]) ? sprintf(' style="aspect-ratio: %d / %d"', $main_image[1], $main_image[2]) : '';
+                    ?>
+                    <div class="product-image-zoom"<?php echo $main_image_ratio; ?> data-zoom-src="<?php echo esc_url(get_the_post_thumbnail_url(get_the_ID(), 'full')); ?>">
                         <?php
                         the_post_thumbnail('', array(
                             'class' => 'single-product-thumbnail',
@@ -190,11 +197,17 @@ get_header();
                 <?php if ($product_gallery_images) : ?>
                     <div class="product-gallery-container my-3">
 
-                        <?php foreach ($product_gallery_images as $image) {
+                        <?php
+                        // Thumbnails are at most 120px wide, so they load a small size;
+                        // data-image keeps the full photo for the main image swap.
+                        $gallery_ids = function_exists('wholesale_product_image_alt_attachment_ids_by_url') ? wholesale_product_image_alt_attachment_ids_by_url($product_gallery_images) : array();
+                        foreach ($product_gallery_images as $image) {
+                            $thumb = !empty($gallery_ids[$image]) ? wp_get_attachment_image_src($gallery_ids[$image], 'medium') : false;
+                            $thumb_srcset = $thumb ? wp_get_attachment_image_srcset($gallery_ids[$image], 'medium') : '';
                         ?>
                             <div data-image="<?php echo $image; ?>" class="gallery-image-item">
 
-                                <img src="<?php echo esc_url($image); ?>" alt="<?php echo esc_attr($product_category_slug === 'channel-letters' ? 'Channel letter sign detail: ' . get_the_title() : get_the_title()); ?>" loading="lazy" decoding="async">
+                                <img src="<?php echo esc_url($thumb ? $thumb[0] : $image); ?>"<?php if ($thumb) : ?> width="<?php echo (int) $thumb[1]; ?>" height="<?php echo (int) $thumb[2]; ?>"<?php endif; ?><?php if ($thumb_srcset) : ?> srcset="<?php echo esc_attr($thumb_srcset); ?>" sizes="120px"<?php endif; ?> alt="<?php echo esc_attr($product_category_slug === 'channel-letters' ? 'Channel letter sign detail: ' . get_the_title() : get_the_title()); ?>" loading="lazy" decoding="async">
                             </div>
 
                         <?php
@@ -230,6 +243,11 @@ get_header();
                         <?php endif; ?>
                     </div>
                 <?php }; ?>
+                <?php if ('outofstock' === $product_stock_status) : ?>
+                    <p class="product-stock product-stock--out text-end">Out of stock</p>
+                <?php elseif ('backorder' === $product_stock_status) : ?>
+                    <p class="product-stock product-stock--backorder text-end">Backordered: ships around <?php echo esc_html((new DateTimeImmutable(wholesale_product_backorder_date(get_the_ID()), wp_timezone()))->format('F j')); ?></p>
+                <?php endif; ?>
             </div>
             <div class="col-md-8">
 
@@ -602,6 +620,15 @@ get_header();
                                 }
                                 $rate_shown = $price_per_sqft * (100 - min(100, max(0, $product_discount_percent))) / 100;
                                 $min_charge = wholesale_product_min_order(get_the_ID());
+                                // Like B2Sign, the size box shows what the customer pays (after any
+                                // dated sale), and the page opens on the minimum charge.
+                                $rate_pay = wholesale_promotion_price(get_the_ID(), round($rate_shown, 2));
+                                $min_charge_pay = wholesale_promotion_price(get_the_ID(), $min_charge);
+                                $min_sides = wholesale_product_min_sides(get_the_ID());
+                                $max_sides = wholesale_product_max_sides(get_the_ID());
+                                // The boxes open on the largest size that still costs the minimum charge.
+                                $default_size = wholesale_product_default_size(get_the_ID()) ?: array(0, 0);
+                                $default_sizes = array('width' => $default_size[0] + 0, 'height' => $default_size[1] + 0);
                             ?>
                                 <div class="row d-fex align-items-center mt-2 dimenstion-calculator dim-row pb-size-b2">
                                     <div class="col-md-3 col-4">
@@ -622,25 +649,27 @@ get_header();
                                             <?php foreach (array('width' => 'Width', 'height' => 'Height') as $dim => $dim_label) : ?>
                                                 <div class="input-group dim-group">
                                                     <span class="input-group-text" aria-hidden="true"><?php echo esc_html($dim_label); ?></span>
-                                                    <input type="number" inputmode="decimal" step="any" min="0" name="<?php echo esc_attr($dim); ?>-in" id="input-<?php echo esc_attr($dim); ?>-in" value="0" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_label . ' in inches'); ?>">
-                                                    <span class="input-group-text" aria-hidden="true">in</span>
+                                                    <input type="number" inputmode="decimal" step="any" min="0" name="<?php echo esc_attr($dim); ?>-in" id="input-<?php echo esc_attr($dim); ?>-in" value="<?php echo esc_attr($default_sizes[$dim]); ?>" class="form-control dim-input" aria-label="<?php echo esc_attr($dim_label . ' in inches'); ?>">
+                                                    <span class="input-group-text" aria-hidden="true">inch</span>
                                                 </div>
                                             <?php endforeach; ?>
                                         </div>
+                                        <small class="pb-dim-error" role="alert" hidden></small>
                                     </div>
                                 </div>
 
                                 <div class="row mt-2 mb-3">
                                     <div class="col-8 col-md-9 offset-4 offset-md-3">
-                                        <div class="pb-size-summary">
-                                            <span class="total-size-sqft" data-order="wh" aria-live="polite">0" x 0" = 0 ft<sup>2</sup></span>
-                                            <small class="d-block">$<?php echo esc_html(number_format($rate_shown, 2)); ?>/ft<sup>2</sup><?php if ($min_charge > 0) : ?> <span aria-hidden="true">|</span> min charge $<?php echo esc_html(number_format($min_charge, 2)); ?><?php endif; ?></small>
-                                            <?php $min_sides = wholesale_product_min_sides(get_the_ID());
-                                            if ($min_sides) : ?>
-                                                <small class="d-block pb-min-size">Minimum size: <?php echo esc_html(sprintf('%s" x %s"', $min_sides[0] + 0, $min_sides[1] + 0)); ?></small>
-                                            <?php elseif ($min_area > 0) : ?>
-                                                <small class="d-block pb-min-size">Minimum size: <?php echo esc_html(number_format($min_area, 2)); ?> ft<sup>2</sup> (e.g. <?php echo esc_html(wholesale_min_area_example($min_area)); ?>)</small>
-                                            <?php endif; ?>
+                                        <?php // Size limits stay hidden until a typed size breaks one (B2Sign style); js/main.js. ?>
+                                        <?php if ($max_sides) : ?>
+                                            <small class="pb-size-limit pb-max-size" hidden>Max Size: <?php echo esc_html(sprintf('%2$s" x %1$s" or %1$s" x %2$s"', $max_sides[0] + 0, $max_sides[1] + 0)); ?></small>
+                                        <?php endif; ?>
+                                        <?php if ($min_sides && $min_sides[0] + $min_sides[1] > 0) : ?>
+                                            <small class="pb-size-limit pb-min-size" hidden>Min Size: <?php echo esc_html(sprintf('%s" x %s"', $min_sides[0] + 0, $min_sides[1] + 0)); ?></small>
+                                        <?php endif; ?>
+                                        <div class="pb-size-summary" data-min-width="<?php echo esc_attr($min_sides ? $min_sides[0] : 0); ?>" data-min-height="<?php echo esc_attr($min_sides ? $min_sides[1] : 0); ?>" data-max-short="<?php echo esc_attr($max_sides ? $max_sides[0] : 0); ?>" data-max-long="<?php echo esc_attr($max_sides ? $max_sides[1] : 0); ?>" data-min-everyday="<?php echo esc_attr(round($min_charge, 2)); ?>" data-min-total="<?php echo esc_attr(round($min_charge_pay, 2)); ?>">
+                                            <span class="total-size-sqft" data-order="wh" aria-live="polite"><?php echo esc_html(sprintf('%s" x %s" = %s', $default_sizes['width'], $default_sizes['height'], round($default_sizes['width'] * $default_sizes['height'] / 144, 2) + 0)); ?> ft<sup>2</sup></span>
+                                            <small class="d-block">$<?php echo esc_html(number_format($rate_pay, 2)); ?>/ft<sup>2</sup><?php if ($min_charge > 0) : ?><span class="pb-min-charge"> <span aria-hidden="true">|</span> min charge $<?php echo esc_html(number_format($min_charge_pay, 2)); ?></span><?php endif; ?></small>
                                         </div>
                                     </div>
                                 </div>
@@ -814,6 +843,31 @@ get_header();
                                         </div>
                                     </div>
                                 </div>
+
+                                <?php
+                                // B2Sign-style custom hole punch: shown when "Custom Hole Punch" or "Custom Grommets" is picked
+                                // (js/main.js); Cart.php records the layout. Disabled while hidden.
+                                $has_custom_holes = 'holes-punch' === $attr_name && array_filter($single_attr->options, static function ($option) {
+                                    return (bool) preg_match('/^Custom (Hole|Grommet)/i', (string) key((array) $option));
+                                });
+                                if ($has_custom_holes) : ?>
+                                    <div class="row mt-2 pb-custom-holes" data-for="select-<?php echo esc_attr($attr_name); ?>" hidden>
+                                        <div class="col-8 col-md-9 offset-4 offset-md-3">
+                                            <?php foreach (array('top' => 'Top', 'bottom' => 'Bottom') as $edge => $edge_label) : ?>
+                                                <fieldset class="pb-custom-holes-edge" disabled>
+                                                    <legend><?php echo esc_html($edge_label); ?></legend>
+                                                    <?php if ('bottom' === $edge) : ?>
+                                                        <label><input type="radio" name="custom-holes-bottom" value="same"> Same as top</label>
+                                                    <?php endif; ?>
+                                                    <label><input type="radio" name="custom-holes-<?php echo esc_attr($edge); ?>" value="corner"> Corner holes &ndash; edge margin</label>
+                                                    <label class="pb-custom-holes-margin"><input type="number" name="custom-holes-<?php echo esc_attr($edge); ?>-margin" value="1" min="0.25" step="0.25" inputmode="decimal" aria-label="<?php echo esc_attr($edge_label . ' edge margin in inches'); ?>"> inches</label>
+                                                    <label><input type="radio" name="custom-holes-<?php echo esc_attr($edge); ?>" value="none" checked> No corner holes</label>
+                                                    <label><input type="checkbox" name="custom-holes-<?php echo esc_attr($edge); ?>-center" value="1"> Center hole</label>
+                                                </fieldset>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
 
                         <?php
                             }
@@ -1005,7 +1059,7 @@ get_header();
                                     <span class="fs-6"><?php echo esc_html(sprintf('Sale: %s%% off, ends %s', rtrim(rtrim(number_format($product_promo_percent, 2, '.', ''), '0'), '.'), wholesale_promotion_end_text($product_promotion))); ?></span>
                                 </div>
                                 <div class="col-6 price-subtotal-container">
-                                    <span class="fs-6 d-block "><span>-$</span><span class="price-saving"><?php echo format_price(get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>
+                                    <span class="fs-6 d-block "><span>You save $</span><span class="price-saving"><?php echo format_price(get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>
                                 </div>
                             </div>
                         <?php } ?>
@@ -1042,7 +1096,11 @@ get_header();
                                 </div>
                                 <div class="col-8 col-md-10 text-center">
                                     <!-- <a href="#" id="payNowBtn" class="btn btn-success">Order Now</a> -->
-                                    <button id="addToCartBtn" type="submit" class="add-to-cart-btn btn btn-danger d-block w-100 fw-bold"<?php echo $initial_product_cost <= 0 ? ' disabled' : ''; ?>>Add To Cart</button>
+                                    <?php if ('outofstock' === $product_stock_status) : ?>
+                                        <button id="addToCartBtn" type="button" class="btn btn-secondary d-block w-100 fw-bold" disabled>Out of stock</button>
+                                    <?php else : ?>
+                                        <button id="addToCartBtn" type="submit" class="add-to-cart-btn btn btn-danger d-block w-100 fw-bold"<?php echo $initial_product_cost <= 0 ? ' disabled' : ''; ?>>Add To Cart</button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 
@@ -1062,7 +1120,11 @@ get_header();
                                 </div>
                                 <div class="col-8 col-md-10 text-center">
                                     <!-- <a href="#" id="payNowBtn" class="btn btn-success">Order Now</a> -->
-                                    <button id="addToCartBtn" type="submit" class="add-to-cart-btn btn btn-danger d-block w-100 fw-bold"<?php echo $initial_product_cost <= 0 ? ' disabled' : ''; ?>>Add To Cart</button>
+                                    <?php if ('outofstock' === $product_stock_status) : ?>
+                                        <button id="addToCartBtn" type="button" class="btn btn-secondary d-block w-100 fw-bold" disabled>Out of stock</button>
+                                    <?php else : ?>
+                                        <button id="addToCartBtn" type="submit" class="add-to-cart-btn btn btn-danger d-block w-100 fw-bold"<?php echo $initial_product_cost <= 0 ? ' disabled' : ''; ?>>Add To Cart</button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 

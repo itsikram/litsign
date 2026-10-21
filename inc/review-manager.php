@@ -203,8 +203,16 @@ function wholesale_review_manager_fields($source)
 		'title' => sanitize_text_field(wp_unslash($source['title'] ?? '')),
 		'company' => sanitize_text_field(wp_unslash($source['company'] ?? '')),
 		'location' => sanitize_text_field(wp_unslash($source['location'] ?? '')),
-		'date' => $date ? $date->format('Y-m-d 12:00:00') : '',
+		'date' => $date ? wholesale_review_random_datetime($date->format('Y-m-d')) : '',
 	);
+}
+
+// A random daytime on the given day, so reviews don't all share one timestamp. Never in the future.
+function wholesale_review_random_datetime($day)
+{
+	$datetime = sprintf('%s %02d:%02d:%02d', $day, wp_rand(7, 21), wp_rand(0, 59), wp_rand(0, 59));
+	$now = current_time('mysql');
+	return $datetime > $now ? $now : $datetime;
 }
 
 function wholesale_review_manager_post_args($fields)
@@ -258,7 +266,11 @@ function wholesale_review_manager_handle()
 				break;
 			}
 			$old_product_id = absint(get_post_meta($review_id, '_review_product_id', true));
-			$args = wholesale_review_manager_post_args($fields) + array('ID' => $review_id, 'edit_date' => true);
+			// Same day as before: keep the stored time instead of picking a new one.
+			if ($fields['date'] && substr($fields['date'], 0, 10) === substr(get_post_field('post_date', $review_id), 0, 10)) {
+				$fields['date'] = '';
+			}
+			$args =wholesale_review_manager_post_args($fields) + array('ID' => $review_id, 'edit_date' => true);
 			if ('approve' === $task) {
 				if (wholesale_review_is_sample($review_id)) {
 					wholesale_review_manager_flash('error', 'Sample reviews are placeholder text and can’t be published.');

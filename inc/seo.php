@@ -97,6 +97,40 @@ function wholesale_seo_redirect_extra_domains()
 add_action('init', 'wholesale_seo_redirect_extra_domains', 1);
 
 /**
+ * Plain-http requests for the main domain go to https. WordPress only does this
+ * for the home page: every other page (e.g. http://storefrontsignonline.com/product/magnets/)
+ * answered 200 over http, a second copy of the site. Like the extra domains, this
+ * belongs at the server (root .htaccess); it runs here until it is there.
+ */
+function wholesale_seo_redirect_to_https()
+{
+	if (is_ssl() || is_admin() || wp_doing_cron() || (defined('WP_CLI') && WP_CLI) || empty($_SERVER['HTTP_HOST'])) {
+		return;
+	}
+	if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && 'https' === strtolower((string) $_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+		return;
+	}
+
+	// Only the live domain (localhost and staging copies never match), and only
+	// GET/HEAD: a redirected POST loses its body.
+	$host = strtolower(preg_replace('/^www\.|:\d+$/', '', (string) wp_unslash($_SERVER['HTTP_HOST'])));
+	$method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper((string) $_SERVER['REQUEST_METHOD']) : 'GET';
+	if ('storefrontsignonline.com' !== $host || !in_array($method, array('GET', 'HEAD'), true)) {
+		return;
+	}
+
+	// Certificate validation must keep working over http.
+	$uri = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '/';
+	if (preg_match('#/(?:wp-cron\.php|\.well-known/)#', (string) wp_parse_url($uri, PHP_URL_PATH))) {
+		return;
+	}
+
+	wp_redirect('https://storefrontsignonline.com' . ('/' === substr($uri, 0, 1) ? $uri : '/'), 301);
+	exit;
+}
+add_action('init', 'wholesale_seo_redirect_to_https', 1);
+
+/**
  * WordPress's old-slug redirect (a renamed product, e.g. /product/pole-banner-set/,
  * a Google Ads sitelink) rebuilds the URL without the query string, which drops
  * ?gclid and UTM tags and breaks ad attribution. Carry them over.
@@ -480,9 +514,43 @@ function wholesale_seo_migrations()
 		'2026-10-short-descriptions' => 'wholesale_seo_migrate_short_descriptions',
 		'2026-10-13oz-banner-description' => 'wholesale_seo_migrate_13oz_banner_description',
 		'2026-10-window-graphics-page' => 'wholesale_seo_migrate_window_graphics_page',
+		'2026-10-old-dev-gallery-urls' => 'wholesale_seo_migrate_old_dev_gallery_urls',
 		// Not SEO, but it rides the same once-per-site runner (functions.php).
 		'2026-10-places-key-cleanup' => 'wholesale_migrate_places_key_cleanup',
 	);
+}
+
+/**
+ * Product galleries saved on the old dev copy kept its URLs
+ * (http://localhost/wholesale/wp-content/uploads/...), which the site
+ * migration's search-replace never matched: the Acrylic Prints photos were
+ * broken on live. Point them at this site's uploads when the file is there.
+ */
+function wholesale_seo_migrate_old_dev_gallery_urls()
+{
+	global $wpdb;
+
+	$uploads = wp_get_upload_dir();
+	$ids = $wpdb->get_col("SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = '_product_gallery' AND meta_value LIKE '%localhost/wholesale/wp-content/uploads/%'");
+	foreach ($ids as $id) {
+		$gallery = get_post_meta($id, '_product_gallery', true);
+		if (!is_array($gallery)) {
+			continue;
+		}
+		$fixed = array();
+		foreach ($gallery as $key => $url) {
+			if (is_string($url) && preg_match('#^https?://localhost/wholesale/wp-content/uploads/(.+)$#', $url, $match)
+				&& file_exists(trailingslashit($uploads['basedir']) . $match[1])) {
+				$url = trailingslashit($uploads['baseurl']) . $match[1];
+			}
+			$fixed[$key] = $url;
+		}
+		if ($fixed !== $gallery) {
+			update_post_meta($id, '_product_gallery', $fixed);
+		}
+	}
+
+	return true;
 }
 
 /**

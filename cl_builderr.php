@@ -516,9 +516,9 @@ get_header();
                     class="btn cl-btn-secondary">Price details</button>
                 <button type="button" class="btn btn-primary" id="saveBtn"><?php echo $ticket_builder ? 'Save design to ticket' : 'Save design'; ?></button>
                 <?php if (!$ticket_builder) : ?>
-                    <button type="button" class="btn" id="clAddToCartBtn" data-product-id="<?php echo esc_attr($product_id); ?>" data-cart-url="<?php echo esc_url(home_url('/cart/')); ?>" disabled aria-disabled="true">
+                    <button type="button" class="btn" id="clAddToCartBtn" data-product-id="<?php echo esc_attr($product_id); ?>" data-cart-url="<?php echo esc_url(home_url('/cart/')); ?>"<?php echo 'outofstock' === wholesale_product_stock_status($product_id) ? ' data-out-of-stock' : ''; ?> disabled aria-disabled="true">
                         <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-                        <span>Add to cart</span>
+                        <span><?php echo 'outofstock' === wholesale_product_stock_status($product_id) ? 'Out of stock' : 'Add to cart'; ?></span>
                     </button>
                 <?php endif; ?>
                 <p class="cl-cart-status" id="clCartStatus" role="alert" hidden></p>

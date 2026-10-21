@@ -1370,6 +1370,7 @@ a.link-primary:focus,
 }
 .product-gallery-container .gallery-image-item img {
   width: 100%;
+  height: auto;
 }
 
 .category-selecteor-container .category-selector {
@@ -1495,7 +1496,8 @@ a.link-primary:focus,
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
   color: #168dbb;
   display: flex;
-  height: 34px;
+  font-size: 17px;
+  height: 44px;
   justify-content: center;
   opacity: 0;
   padding: 0;
@@ -1506,7 +1508,7 @@ a.link-primary:focus,
     opacity 180ms ease,
     background-color 180ms ease,
     color 180ms ease;
-  width: 34px;
+  width: 44px;
   z-index: 2;
 }
 .product-box-container .product-box .pb-gallery-prev {
@@ -4947,6 +4949,12 @@ a.review-author-name:hover {
 .product-details .product-image-zoom .single-product-thumbnail {
   display: block;
 }
+/* single-product.php sets the frame's aspect-ratio from the main photo; any
+   gallery photo shown in it is fitted whole, never cropped or overflowing. */
+.product-details .product-image-zoom[style*="aspect-ratio"] .single-product-thumbnail {
+  height: 100%;
+  object-fit: contain;
+}
 .product-details .product-image-zoom__lens {
   position: absolute;
   inset: 0;
@@ -4981,6 +4989,13 @@ a.review-author-name:hover {
   transition:
     border-color 160ms ease,
     transform 160ms ease;
+}
+.product-details .product-gallery-container .gallery-image-item img {
+  display: block;
+  aspect-ratio: 1 / 1;
+  height: auto;
+  object-fit: cover;
+  border-radius: 5px;
 }
 .product-details .product-gallery-container .gallery-image-item:hover {
   border-color: #1fa8de;
@@ -6523,17 +6538,18 @@ a.review-author-name:hover {
     }
   }
 
-  /* The bottom bar carries All Products and Start Building, so the header row below the logo goes. */
-  body:has(.cl-mobile-bar) .site-header .header-bottom {
+  /* The bottom bar carries All Products and Start Building, so the header row below the logo goes.
+     home.php adds the body class (body:has() only matched once the bar at the end of the HTML arrived). */
+  body.has-cl-mobile-bar .site-header .header-bottom {
     height: 0;
     margin: 0;
     padding: 0;
     border: 0;
   }
 
-  body:has(.cl-mobile-bar) .site-header .header-bottom-container .megamenu-container #allProductsBtn,
-  body:has(.cl-mobile-bar) .site-header .sh-categories,
-  body:has(.cl-mobile-bar) .site-header .header-builder-menu {
+  body.has-cl-mobile-bar .site-header .header-bottom-container .megamenu-container #allProductsBtn,
+  body.has-cl-mobile-bar .site-header .sh-categories,
+  body.has-cl-mobile-bar .site-header .header-builder-menu {
     display: none;
   }
 
@@ -6547,7 +6563,7 @@ a.review-author-name:hover {
     color: #fff;
   }
 
-  body:has(.cl-mobile-bar) {
+  body.has-cl-mobile-bar {
     padding-bottom: 72px;
   }
 }
@@ -6938,9 +6954,56 @@ a.review-author-name:hover {
   margin-bottom: 2px;
   font-weight: 600;
 }
-.product-details .product-attibute-box .pb-size-summary .pb-min-size {
+/* Size limits, shown only once a typed size breaks one (B2Sign style). */
+.product-details .product-attibute-box .pb-dim-error {
+  display: block;
   margin-top: 4px;
-  color: #64748b;
+  color: #dc2626;
+  font-size: 12px;
+}
+.product-details .product-attibute-box .pb-size-limit {
+  display: block;
+  margin-bottom: 8px;
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+}
+/* Custom hole punch panel (shown when "Custom Hole Punch" is picked). */
+.product-details .product-attibute-box .pb-custom-holes-edge {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  align-items: center;
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  font-size: 13px;
+}
+.product-details .product-attibute-box .pb-custom-holes-edge legend {
+  float: left;
+  width: 100%;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.product-details .product-attibute-box .pb-custom-holes-edge label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+}
+.product-details .product-attibute-box .pb-custom-holes-margin input {
+  width: 64px;
+  padding: 2px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+.product-details .product-attibute-box .pb-custom-holes[hidden],
+.product-details .product-attibute-box .pb-dim-error[hidden],
+.product-details .product-attibute-box .pb-size-limit[hidden],
+.product-details .product-attibute-box .pb-min-charge[hidden] {
+  display: none;
 }
 
 /* Related products under a product page (wholesale_seo_render_related_products). */
@@ -7193,6 +7256,16 @@ a.review-author-name:hover {
   background: #fff;
   color: #b91c1c;
 }
+.sale-badge--out-of-stock {
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+}
+.sale-badge--out-of-stock .sale-badge__label {
+  background: #334155;
+  color: #fff;
+}
+.landing-solution-card .pb-image-top {
+  position: relative;
+}
 .sale-badge svg {
   flex: none;
 }
@@ -7312,5 +7385,26 @@ a.review-author-name:hover {
   .bd-hero,
   .sf-hero {
     --hero-image-best: var(--hero-image-set);
+  }
+}
+
+/* Phones: a crop of just the part of a wide hero photo they show
+   (wholesale_hero_phone_avif_url()), centred, so they download a fraction of
+   the file. Same overlay as the phone rule above. */
+@supports (background-image: image-set(url("a.avif") type("image/avif"))) {
+  @media only screen and (max-width: 767px) {
+    .home-hero-content[style*="--hero-image-phone"],
+    .bd-hero[style*="--hero-image-phone"],
+    .sf-hero[style*="--hero-image-phone"] {
+      background-image:
+        linear-gradient(
+          180deg,
+          rgba(3, 24, 53, 0.94) 0%,
+          rgba(3, 24, 53, 0.8) 55%,
+          rgba(3, 24, 53, 0.6) 100%
+        ),
+        var(--hero-image-phone);
+      background-position: center center;
+    }
   }
 }

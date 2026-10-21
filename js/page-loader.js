@@ -13,6 +13,9 @@
 	const shownAt = Number( window.wholesalePageLoaderShownAt ) || Number( window.wholesalePageLoaderStartedAt ) || Date.now();
 	const reducedMotion = window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
 	const isHandoff = root.classList.contains( 'wholesale-page-loader-handoff' );
+	// First page of a visit: the head script hid the loader (display:none), so
+	// it is only shown again for a link click.
+	const isLanding = root.classList.contains( 'wholesale-page-loader-landing' );
 	const introDuration = reducedMotion || isHandoff ? 0 : 1700;
 	// Hard cap, counted from now: this deferred script runs once the whole HTML
 	// has arrived, so a slow connection no longer eats into it. Normally the
@@ -78,7 +81,7 @@
 		clearTimer( navigationTimer );
 		navigating = true;
 		window.wholesalePageLoaderNavigating = true;
-		root.classList.remove( 'wholesale-page-loader-failsafe' );
+		root.classList.remove( 'wholesale-page-loader-failsafe', 'wholesale-page-loader-landing' );
 		loader.classList.remove( 'is-hidden', 'is-intro', 'is-idle', 'is-exiting' );
 		loader.classList.add( 'is-idle' );
 		setHidden( false );
@@ -241,15 +244,21 @@
 	}
 	root.classList.remove( 'wholesale-page-loader-handoff' );
 
-	maximumTimer = window.setTimeout( function() {
-		hideInitialLoader();
-	}, maximumAfterReady );
-	// Leave as soon as the visible page is ready, or at the load event,
-	// whichever comes first.
-	firstViewReady().then( onWindowLoad, onWindowLoad );
-	window.addEventListener( 'load', onWindowLoad, { once: true } );
-	if ( 'complete' === document.readyState ) {
-		onWindowLoad();
+	if ( isLanding ) {
+		initialHidden = true;
+		loader.classList.remove( 'is-intro', 'is-idle' );
+		setHidden( true );
+	} else {
+		maximumTimer = window.setTimeout( function() {
+			hideInitialLoader();
+		}, maximumAfterReady );
+		// Leave as soon as the visible page is ready, or at the load event,
+		// whichever comes first.
+		firstViewReady().then( onWindowLoad, onWindowLoad );
+		window.addEventListener( 'load', onWindowLoad, { once: true } );
+		if ( 'complete' === document.readyState ) {
+			onWindowLoad();
+		}
 	}
 
 	// Listen on window so handlers on document (such as the header cart, which

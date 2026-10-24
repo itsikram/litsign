@@ -319,6 +319,39 @@
 
 <?php wp_footer(); ?>
 
+<script>
+    // Sending a review takes a few seconds; lock the button so repeat taps
+    // don't post the same review again.
+    (function () {
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (e.defaultPrevented || !form.querySelector('input[name="action"][value="submit_review"]')) return;
+            if (form.dataset.reviewSending) {
+                e.preventDefault();
+                return;
+            }
+            form.dataset.reviewSending = '1';
+            form.querySelectorAll('button[type="submit"]').forEach(function (button) {
+                button.disabled = true;
+                button.setAttribute('aria-busy', 'true');
+                button.dataset.label = button.textContent;
+                button.textContent = 'Sending…';
+            });
+        });
+        // Back button restores the page from cache with the button still locked.
+        window.addEventListener('pageshow', function () {
+            document.querySelectorAll('form[data-review-sending]').forEach(function (form) {
+                delete form.dataset.reviewSending;
+                form.querySelectorAll('button[type="submit"][data-label]').forEach(function (button) {
+                    button.disabled = false;
+                    button.removeAttribute('aria-busy');
+                    button.textContent = button.dataset.label;
+                });
+            });
+        });
+    })();
+</script>
+
 <?php if (isset($_GET['review_status']) && in_array(sanitize_key(wp_unslash($_GET['review_status'])), array('sent', 'error'), true)) : ?>
     <script>
         jQuery(function ($) {

@@ -1153,6 +1153,23 @@ function wholesale_handle_review_submission()
 		$review_order_id = $eligibility['order'];
 	}
 
+	// The request takes a few seconds (the admin email is sent before the redirect), so
+	// customers tap Submit again and each tap used to save another copy. add_option() is an
+	// atomic insert, so only one of several parallel requests gets the lock.
+	$lock = '_wholesale_review_lock_' . md5(strtolower($email) . '|' . $product_id . '|' . $review);
+	if (!add_option($lock, time(), '', 'no')) {
+		if (time() - (int) get_option($lock) < 120) {
+			wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . $review_anchor);
+			exit;
+		}
+		update_option($lock, time(), false); // Left behind by a request that died.
+	}
+	if (wholesale_find_duplicate_review($email, $product_id, $review)) {
+		delete_option($lock);
+		wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . $review_anchor);
+		exit;
+	}
+
 	$submission_id = wp_insert_post(array(
 		'post_type' => 'review_submission',
 		'post_status' => wholesale_setting_enabled('auto_publish_reviews') ? 'publish' : 'pending',
@@ -1168,6 +1185,7 @@ function wholesale_handle_review_submission()
 	), true);
 
 	if (is_wp_error($submission_id)) {
+		delete_option($lock);
 		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . $review_anchor);
 		exit;
 	}
@@ -1190,12 +1208,69 @@ function wholesale_handle_review_submission()
 		'Reply-To: ' . $name . ' <' . $email . '>',
 	);
 	wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers);
+	delete_option($lock); // The saved review now catches any later repeat.
 
 	wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . $review_anchor);
 	exit;
 }
 add_action('admin_post_nopriv_submit_review', 'wholesale_handle_review_submission');
 add_action('admin_post_submit_review', 'wholesale_handle_review_submission');
+
+/**
+ * ID of an earlier copy of the same review (same email, product and text, not trashed), or 0.
+ */
+function wholesale_find_duplicate_review($email, $product_id, $review, $exclude_id = 0)
+{
+	global $wpdb;
+
+	return (int) $wpdb->get_var($wpdb->prepare(
+		"SELECT p.ID FROM {$wpdb->posts} p
+		JOIN {$wpdb->postmeta} e ON e.post_id = p.ID AND e.meta_key = '_review_email'
+		LEFT JOIN {$wpdb->postmeta} r ON r.post_id = p.ID AND r.meta_key = '_review_product_id'
+		WHERE p.post_type = 'review_submission' AND p.post_status <> 'trash'
+		AND p.post_content IN (%s, %s) AND LOWER(e.meta_value) = %s AND COALESCE(r.meta_value, '0') = %s AND p.ID <> %d
+		ORDER BY p.ID ASC LIMIT 1",
+		$review,
+		wp_kses_post($review), // Saved text can come back HTML-filtered (& -> &amp;).
+		strtolower($email),
+		(string) absint($product_id),
+		absint($exclude_id)
+	));
+}
+
+/**
+ * One-time cleanup: move the extra copies that repeated Submit taps created to the trash
+ * (the oldest copy is kept; trashed copies can be restored from Reviews > Trash).
+ */
+add_action('admin_init', function () {
+	if (get_option('wholesale_review_dedupe_done') || !current_user_can('edit_others_posts')) {
+		return;
+	}
+	update_option('wholesale_review_dedupe_done', time(), false);
+
+	$ids = get_posts(array(
+		'post_type' => 'review_submission',
+		'post_status' => array('publish', 'pending', 'draft', 'private'),
+		'posts_per_page' => -1,
+		'orderby' => 'ID',
+		'order' => 'ASC',
+		'fields' => 'ids',
+		'meta_key' => '_review_email',
+	));
+	foreach ($ids as $id) {
+		$keep = wholesale_find_duplicate_review(
+			get_post_meta($id, '_review_email', true),
+			get_post_meta($id, '_review_product_id', true),
+			get_post_field('post_content', $id, 'raw'),
+			$id
+		);
+		if ($keep && $keep < $id) {
+			// Keep whichever copy is already published.
+			$publish_this = 'publish' === get_post_status($id) && 'publish' !== get_post_status($keep);
+			wp_trash_post($publish_this ? $keep : $id);
+		}
+	}
+});
 
 function wholesale_user_can_review_product($user_id, $product_id)
 {

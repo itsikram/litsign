@@ -521,7 +521,9 @@
       const maxLine = box.querySelector('.pb-max-size');
       const minLine = box.querySelector('.pb-min-size');
       const limit = (key) => parseFloat(sizeLimits.dataset[key]) || 0;
-      const checkSize = () => {
+      // While typing, "24" passes through "2": the too-small notes wait for the change
+      // (leaving the box), so they don't flash red after the first digit.
+      const checkSize = (typing) => {
         const width = parseFloat(box.querySelector('input[name="width-in"]')?.value) || 0;
         const height = parseFloat(box.querySelector('input[name="height-in"]')?.value) || 0;
         const short = limit('maxShort');
@@ -534,6 +536,8 @@
         } else if (short && width > short && height > short) {
           tooBig = true;
           error = width < height ? `Maximum width is ${short}"` : `Maximum height is ${short}"`;
+        } else if (typing) {
+          // Too small or fine: no note until the change.
         } else if (width > 0 && width < limit('minWidth')) {
           error = `Minimum width is ${limit('minWidth')}"`;
         } else if (height > 0 && height < limit('minHeight')) {
@@ -546,8 +550,8 @@
         if (maxLine) maxLine.hidden = !tooBig;
         if (minLine) minLine.hidden = !error || tooBig;
       };
-      box.addEventListener('input', (e) => { if (e.target.matches('.dim-input')) checkSize(); });
-      box.addEventListener('change', (e) => { if (e.target.matches('.dim-input, .pb-size-preset')) checkSize(); });
+      box.addEventListener('input', (e) => { if (e.target.matches('.dim-input')) checkSize(true); });
+      box.addEventListener('change', (e) => { if (e.target.matches('.dim-input, .pb-size-preset')) checkSize(false); });
       // The boxes open on a default size (wholesale_product_default_size()): run the size
       // handlers once, after the dimension handler below is bound, so every total matches it.
       const defaultWidth = box.querySelector('input[name="width-in"]');
@@ -1062,6 +1066,12 @@
     $("#select-trimcap").parents(".select-row").hide();
     $("#select-return").parents(".select-row").hide();
 
+    // The big "Enter Your Text" preview looks like the place to type; visitors
+    // tapped it repeatedly. Send them to the real text box.
+    $('#letter-output').css('cursor', 'text').on('click', () => {
+      $('#letterInput').trigger('focus');
+    });
+
     $('.option-info-button').click(e => {
       $(e.currentTarget).siblings('.option-info-content').toggle();
     })
@@ -1410,7 +1420,7 @@
         const dimError = form.querySelector('.pb-dim-error');
         const blank = ['width-in', 'height-in'].map((name) => form.querySelector(`input[name="${name}"]`)).find((input) => input && !(parseFloat(input.value) > 0));
         if (dimError && (empty || !dimError.textContent)) {
-          dimError.textContent = empty ? `Please enter the ${blank && blank.name === 'height-in' ? 'height' : 'width'} of your sign.` : form.dataset.sizeError;
+          dimError.textContent = empty ? `Please enter the ${blank && blank.name === 'height-in' ? 'height' : 'width'} of your ${form.dataset.noun || 'product'}.` : form.dataset.sizeError;
           dimError.hidden = false;
         }
         const target = blank || form.querySelector('input[name="width-in"]');
@@ -1431,31 +1441,32 @@
 
     let timer;
     let requestId = 0;
-    const refresh = () => {
+    const refresh = (delay = 250) => {
       clearTimeout(timer);
       timer = setTimeout(async () => {
+        const thisRequest = ++requestId;
+        if (sizeIsEmpty()) {
+          // No size yet (or a box cleared while typing a new one): show the minimum charge,
+          // as B2Sign does, without asking the server for a quote that can only fail.
+          const minEveryday = parseFloat(sizeSummary.dataset.minEveryday) || 0;
+          const minTotal = parseFloat(sizeSummary.dataset.minTotal) || 0;
+          showPrices(minEveryday, minEveryday - minTotal, minTotal);
+          if (minChargeText) minChargeText.hidden = false;
+          message.hidden = true;
+          turnaroundRow.hidden = true;
+          pricingBox.classList.remove('is-updating');
+          // Add To Cart stays clickable; the size guard below sends the visitor to the size box.
+          addButtons.forEach((button) => { button.disabled = false; });
+          return;
+        }
         const data = new FormData(form);
         data.delete('custom-artwork');
         data.append('action', 'wholesale_price_quote');
-        const thisRequest = ++requestId;
         pricingBox.classList.add('is-updating');
         try {
           const response = await fetch(window.wholesaleShop.ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' });
           const quote = await response.json();
           if (thisRequest !== requestId) return;
-
-          if (!quote.ok && sizeIsEmpty()) {
-            // No size yet: show the minimum charge, as B2Sign does, until one is typed.
-            const minEveryday = parseFloat(sizeSummary.dataset.minEveryday) || 0;
-            const minTotal = parseFloat(sizeSummary.dataset.minTotal) || 0;
-            showPrices(minEveryday, minEveryday - minTotal, minTotal);
-            if (minChargeText) minChargeText.hidden = false;
-            message.hidden = true;
-            turnaroundRow.hidden = true;
-            // Add To Cart stays clickable; the size guard below sends the visitor to the size box.
-            addButtons.forEach((button) => { button.disabled = false; });
-            return;
-          }
 
           // Only the size is outside the product's limits: like B2Sign, show its price and
           // keep Add To Cart clickable (the size guard and the cart still refuse it).
@@ -1498,12 +1509,15 @@
         } finally {
           if (thisRequest === requestId) pricingBox.classList.remove('is-updating');
         }
-      }, 250);
+      }, delay);
     };
 
-    form.addEventListener('change', refresh);
+    form.addEventListener('change', () => refresh());
     form.addEventListener('input', (event) => {
-      if (event.target.matches('#letterInput, input[type="number"]')) refresh(event);
+      // A number box waits for a typing pause, so "24" isn't first priced (and
+      // rejected as too small) at "2" on a phone keyboard; leaving the box prices it at once.
+      if (event.target.matches('input[type="number"]')) refresh(700);
+      else if (event.target.matches('#letterInput')) refresh();
     });
     // Custom color pickers update hidden selects without bubbling a native change event.
     document.addEventListener('click', (event) => {

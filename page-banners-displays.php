@@ -136,11 +136,13 @@ wholesale_seo_prime_products(array_merge(
 
 $vinyl_price = wholesale_seo_product_starting_text('13oz-vinyl-banner');
 
+// Product slug, alt text, and the category each photo opens: ad visitors searching for
+// trade show or tension fabric displays tapped the booth photo, which went nowhere.
 $hero_photos = array(
-	array('13oz-vinyl-banner', 'Custom printed 13oz vinyl banner'),
-	array('standard-retractable-insert-stand', 'Retractable banner stand with printed graphic'),
-	array('feather-angled-flag-pole', 'Custom feather flag on a pole'),
-	array('10ft-seg-fabric-display-graphic-frame', '10ft SEG fabric trade show display'),
+	array('13oz-vinyl-banner', 'Custom printed 13oz vinyl banner', 'banners', 'Shop banners'),
+	array('standard-retractable-insert-stand', 'Retractable banner stand with printed graphic', 'banner-stands', 'Shop banner stands'),
+	array('feather-angled-flag-pole', 'Custom feather flag on a pole', 'advertising-flags', 'Shop flags'),
+	array('10ft-seg-fabric-display-graphic-frame', '10ft SEG fabric trade show display', 'trade-show-products', 'Shop trade show displays'),
 );
 
 // The best sellers are this page's item list in structured data.
@@ -225,7 +227,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					<?php foreach ($hero_photos as $index => $photo) : ?>
 						<?php $image = $product_image($photo[0], $photo[1], '(max-width: 575px) 45vw, (max-width: 991px) 22vw, 260px', 0 === $index ? 'high' : true); ?>
 						<?php if ($image) : ?>
-							<div class="bd-hero-tile bd-hero-tile--<?php echo (int) $index + 1; ?>"><?php echo $image; ?></div>
+							<a class="bd-hero-tile bd-hero-tile--<?php echo (int) $index + 1; ?>" href="<?php echo esc_url(wholesale_category_url($photo[2])); ?>" aria-label="<?php echo esc_attr($photo[3]); ?>"><?php echo $image; ?></a>
 						<?php endif; ?>
 					<?php endforeach; ?>
 				</div>
@@ -439,6 +441,9 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 
 			<h3>5. Plan for reuse</h3>
 			<p>If you run promotions often, invest in hardware once and swap the print. <a href="<?php echo esc_url(wholesale_category_url('banner-stands')); ?>">Banner stands</a>, <a href="<?php echo esc_url(wholesale_category_url('advertising-flags')); ?>">flags</a> and <a href="<?php echo esc_url(wholesale_category_url('a-frame-and-sign-holders')); ?>">A-frames</a> are available as graphic-only refills, and you&rsquo;ll find replacement parts in <a href="<?php echo esc_url(wholesale_category_url('hardware-only')); ?>">hardware only</a>.</p>
+			<?php if ($locations_guide_url = wholesale_guide_url('locations', true)) : ?>
+				<p>Some cities require a permit for a banner on a building and limit how long it can stay up. We ship banners to every state, and our <a href="<?php echo esc_url($locations_guide_url); ?>">sign permit guides by state and city</a> link to the local rules.</p>
+			<?php endif; ?>
 		</div>
 	</section>
 
@@ -504,7 +509,8 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 	<nav class="cl-mobile-bar" aria-label="Quick actions">
 		<button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo wholesale_home_icon('grid'); ?> All Products</button>
 		<a class="cl-mobile-bar-quote" href="#quote">Free Quote</a>
-		<a class="cl-mobile-bar-shop" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
+		<?php // Banner shoppers go to the product cards with prices, not the channel letter builder. ?>
+		<a class="cl-mobile-bar-shop" href="#products">See Prices</a>
 	</nav>
 </main>
 

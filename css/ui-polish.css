@@ -866,3 +866,496 @@
 .product-stock--backorder {
 	color: #9a6700;
 }
+
+/* Price line under the product title (single-product.php). On phones the price
+   box is under the photo, a full screen down; this shows the price right away.
+   Desktop shows it too (2026-10-26): there the price box sat under the photo
+   and thumbnails, below the first screen, so the first screen had no price. */
+.product-mobile-price {
+	display: none;
+}
+@media (min-width: 768px) {
+	.product-details .product-mobile-price {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: baseline;
+		gap: 4px 20px;
+		width: fit-content;
+		max-width: 100%;
+		margin: -6px 0 24px;
+		padding: 10px 18px;
+		border: 1px solid #d3ecf7;
+		border-radius: 12px;
+		background: #f3fafd;
+		color: #475569;
+		font-size: 1rem;
+	}
+	.product-details .product-mobile-price .product-price-label {
+		margin-right: 4px;
+	}
+	.product-details .product-mobile-price strong {
+		color: #172027;
+		font-size: 1.35rem;
+	}
+	.product-details .product-mobile-price a {
+		font-weight: 700;
+		white-space: nowrap;
+	}
+}
+@media (max-width: 767.98px) {
+	.product-details .product-mobile-price {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 6px 12px;
+		margin: -6px 0 16px;
+		padding: 10px 14px;
+		border: 1px solid #d3ecf7;
+		border-radius: 12px;
+		background: #f3fafd;
+		color: #475569;
+		font-size: 0.95rem;
+	}
+	.product-details .product-mobile-price .product-price-label {
+		margin-right: 2px;
+		font-size: 0.72rem;
+	}
+	.product-details .product-mobile-price strong {
+		color: #172027;
+		font-size: 1.15rem;
+	}
+	.product-details .product-mobile-price a {
+		font-weight: 700;
+		white-space: nowrap;
+	}
+	/* Clears the sticky phone header when the link above jumps here. */
+	.product-details #product-options {
+		scroll-margin-top: 90px;
+	}
+}
+
+/* ---------- 8. UI/UX pass (2026-10-26) ---------- */
+
+/* 8a. Product page photo column (desktop). style.css made only the photo sticky
+   (top: 24px), so on scroll it slid over its own thumbnails and price box, and
+   its top went under the sticky header. js/ui-polish.js sticks the whole column
+   below the header instead, and only when the column fits in the window. */
+@media (min-width: 768px) {
+  .product-details .thumbnail-container {
+    position: relative;
+    top: auto;
+  }
+
+  .product-details form > .row > .col-md-4.pd-col-sticky {
+    position: sticky;
+    top: var(--pd-sticky-top, 160px);
+  }
+}
+
+/* 8b. Product page buy bar (phones, js/ui-polish.js): live Grand Total and
+   Add To Cart while the pricing box is off screen. */
+.pd-buy-bar {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .pd-buy-bar:not([hidden]) {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1030;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
+    box-shadow: 0 -6px 20px rgba(15, 23, 42, 0.1);
+    animation: pd-bar-in 0.2s ease-out;
+  }
+
+  .pd-buy-bar__price {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    margin: 0;
+    line-height: 1.25;
+  }
+
+  .pd-buy-bar__label {
+    color: #5b6b7b;
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .pd-buy-bar__total {
+    overflow: hidden;
+    color: #172027;
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: opacity 0.15s ease;
+  }
+
+  .pd-buy-bar.is-updating .pd-buy-bar__total {
+    opacity: 0.45;
+  }
+
+  .pd-buy-bar__button {
+    flex: 0 0 auto;
+    min-height: 48px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 10px;
+    background: #0b74a3;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .pd-buy-bar__button:active {
+    background: #095f86;
+  }
+
+  .pd-buy-bar__button:disabled {
+    background: #94a3b8;
+  }
+
+  body.has-pd-buy-bar {
+    padding-bottom: 72px;
+  }
+}
+
+@keyframes pd-bar-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pd-buy-bar:not([hidden]) {
+    animation: none;
+  }
+}
+
+/* 8c. Channel letter style cards: the price is the card's anchor (it was the
+   same grey regular text as "Starting at"), and on a row of cards the price and
+   button line up even when one card has a longer feature list (phones too, since
+   9b puts them two to a row). */
+.product-listing-container--cl .product-box .start-at-pricing .pb-price {
+  color: #172027;
+  font-weight: 700;
+}
+
+.product-listing-container--cl .product-box-container .product-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.product-listing-container--cl .product-box > a:not(.pb-image-top) {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.product-listing-container--cl .product-box > a:not(.pb-image-top) > .pb-details {
+  flex: 1 1 auto;
+}
+
+.product-listing-container--cl .product-box .pb-details .start-at-pricing {
+  margin-top: auto;
+}
+
+/* 8d. "Browse categories" toggle on category pages (phones). style.css gave the
+   chevron a 30px bordered box meant for an old design; the .home routes already
+   override it, other category routes did not. */
+@media (max-width: 991.98px) {
+  .category-filter-menu-wrapper .category-filter-toggler i {
+    padding: 0;
+    border: 0;
+    color: #1fa8de;
+    font-size: 13px;
+  }
+
+  .category-filter-menu-wrapper .category-filter-toggler-label {
+    color: #0b74a3;
+  }
+}
+
+/* 8e. Phones: room under the legal line so the chat button doesn't cover it. */
+@media (max-width: 767.98px) {
+  .footer .sf-bottom {
+    padding-bottom: 92px;
+  }
+}
+
+/* ---------- 9. Shorter phone pages (2026-10-26) ---------- */
+
+/* 9a. Phone/tablet header (.ssx-legacy, < 992px) slides away while the visitor
+   scrolls down and comes back on scroll up (js/ui-polish.js part 1). It was a
+   sticky 123px block on every page but home. A transform, so nothing below moves. */
+@media (max-width: 991.98px) {
+  .main-header.ssx-legacy {
+    transition:
+      transform 0.25s ease,
+      padding 180ms ease,
+      box-shadow 180ms ease,
+      background-color 180ms ease;
+  }
+
+  .main-header.ssx-legacy.is-tucked {
+    box-shadow: none;
+    transform: translateY(calc(-100% - 24px));
+  }
+
+  /* Bars that sit under the header follow it up. */
+  .sc-page .sc-toolbar {
+    transition: top 0.25s ease;
+  }
+
+  html.sh-tucked .sc-page .sc-toolbar {
+    top: 0;
+  }
+
+  html.sh-tucked .product-details form > .row > .col-md-4.pd-col-sticky {
+    top: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-header.ssx-legacy,
+  .sc-page .sc-toolbar {
+    transition: none;
+  }
+}
+
+/* 9b. Channel letter style cards two to a row on phones (each card was a full
+   screen tall: 7 cards came to about 5,600px). The feature list is on the
+   product page; the card keeps the photo, name, rating, price and button. */
+@media (max-width: 767.98px) {
+  .product-listing-container--cl .product-box-container {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .product-listing-container--cl .product-box-container .product-box,
+  .product-listing-container--cl .product-box-container .product-box:last-child {
+    width: auto;
+    margin: 0;
+    float: none;
+  }
+
+  .product-listing-container--cl .product-box-container .cl-help-card {
+    grid-column: 1 / -1;
+    margin-bottom: 0;
+  }
+
+  .product-listing-container--cl .product-box .pb-details,
+  .home .product-listing-container--cl .product-box .pb-details {
+    padding: 12px 12px 14px;
+  }
+
+  .product-listing-container--cl .product-box .pb-details .pb-title,
+  .home .product-listing-container--cl .product-box .pb-details .pb-title {
+    min-height: 3.9em;
+    margin-bottom: 6px;
+    font-size: 15px !important;
+    line-height: 1.3;
+    -webkit-line-clamp: 3;
+  }
+
+  .product-listing-container--cl .product-box .product-rating-word,
+  .product-listing-container--cl .product-box .pb-description-list {
+    display: none;
+  }
+
+  .product-listing-container--cl .product-box .pb-details .start-at-pricing {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding-top: 10px;
+  }
+
+  .product-listing-container--cl .product-box .start-at-pricing .pb-title-short {
+    font-size: 12px !important;
+  }
+
+  .product-listing-container--cl .product-box .start-at-pricing .pb-price {
+    font-size: 15px;
+  }
+
+  .product-listing-container--cl .product-box .pb-cta {
+    gap: 4px;
+    margin-top: 10px;
+    padding: 9px 6px;
+    font-size: 13.5px;
+  }
+
+  /* Half-width photos: swipe them (js/main.js); the counter shows there are more. */
+  .product-listing-container--cl .product-box .pb-image-top.has-gallery .pb-gallery-arrow {
+    display: none;
+  }
+
+  .product-listing-container--cl .product-box .pb-gallery-count {
+    bottom: 8px;
+    padding: 2px 8px;
+    font-size: 10.5px;
+  }
+}
+
+/* 9c. Home page guide ("What Are Channel Letters?", about 2,200px on a phone):
+   the first part shows, the rest opens with a button (js/ui-polish.js part 2).
+   The text stays in the page. */
+.cl-guide-toggle {
+  display: none;
+}
+
+@media (max-width: 767.98px) {
+  .cl-guide .sf-prose.is-collapsible:not(.is-expanded) {
+    position: relative;
+    max-height: 560px;
+    overflow: hidden;
+  }
+
+  .cl-guide .sf-prose.is-collapsible:not(.is-expanded)::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    height: 140px;
+    background: linear-gradient(rgba(255, 255, 255, 0), var(--cl-guide-bg, #fff) 85%);
+    pointer-events: none;
+  }
+
+  .cl-guide-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: calc(100% - 32px);
+    min-height: 48px;
+    margin: 4px auto 0;
+    border: 1px solid #0b74a3;
+    border-radius: 10px;
+    background: #fff;
+    color: #0b74a3;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .cl-guide-toggle::after {
+    content: "";
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .cl-guide-toggle[aria-expanded="true"]::after {
+    margin-top: 4px;
+    transform: rotate(225deg);
+  }
+}
+
+/* 9d. "How ordering works" steps on phones: the number beside the step
+   instead of above it. */
+@media (max-width: 767.98px) {
+  .cl-steps-list {
+    gap: 10px;
+    margin-top: 22px;
+  }
+
+  .cl-steps-list li {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    column-gap: 14px;
+    padding: 16px;
+  }
+
+  .cl-steps-list .cl-step-number {
+    grid-row: 1 / span 2;
+    margin: 0;
+  }
+
+  .cl-steps-list h3 {
+    align-self: center;
+    margin: 0 0 4px;
+  }
+
+  .cl-steps-list p {
+    grid-column: 2;
+  }
+}
+
+/* 9e. Home page "More for your storefront": two tiles to a row on phones
+   (eight full-width rows were 1,300px). The same list, with descriptions, is
+   on each product's own page; "Shop by sign type" at the top covers it too. */
+@media (max-width: 575.98px) {
+  .home .sf-type-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .home .sf-type-card {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .home .sf-type-image {
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+
+  .home .sf-type-body {
+    padding: 10px 12px 12px;
+  }
+
+  .home .sf-type-body h3 {
+    font-size: 0.95rem;
+  }
+
+  .home .sf-type-body p:not(.sf-type-price) {
+    display: none;
+  }
+
+  .home .sf-type-body .sf-type-price {
+    padding-top: 6px;
+  }
+}
+
+/* 9f. Channel letter Grand Total before the sign text is typed: the starting
+   price (single-product.php .price-total-from) instead of $0.00.
+   js/ui-polish.js keeps .pd-total-empty in step with the price. */
+.product-pricing-box .price-total-from {
+  display: none;
+}
+
+.product-pricing-box.pd-total-empty .price-total-container > .fs-4 {
+  display: none !important;
+}
+
+.product-pricing-box.pd-total-empty .price-total-from {
+  display: block;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  text-align: right;
+}
+
+.product-pricing-box .price-total-from strong {
+  color: #172027;
+  font-size: 1.35rem;
+  font-weight: 800;
+  white-space: nowrap;
+}

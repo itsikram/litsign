@@ -5,8 +5,9 @@
  * Every page here is described in code and data files, not in the editor:
  * - the help hubs (/sign-permits/, /how-to-install-channel-letters/,
  *   /warranty/, /shipping-returns/),
- * - /locations/ with one page per state and a few city pages, fed by
- *   data/locations/{state}.php,
+ * - /locations/ with one page per state and city pages, fed by
+ *   data/locations/{state}.php plus one file per city in
+ *   data/locations/{state}/{city}.php,
  * - /industries/ with one page per industry, fed by data/industries.php.
  *
  * The WordPress page for each entry is created (or re-parented) on the next
@@ -38,6 +39,11 @@ function wholesale_guide_data_file($relative)
  * Every state file in data/locations/, keyed by state slug, in the order the
  * hub lists them (alphabetical by state name).
  *
+ * City guides live either inline in the state file ('cities') or in their own
+ * file, data/locations/{state}/{city}.php, which returns one city array (same
+ * keys as an inline city). A city file wins over an inline city with the same
+ * slug; its slug is the file name unless the array sets 'slug'.
+ *
  * @return array
  */
 function wholesale_guide_states()
@@ -46,11 +52,26 @@ function wholesale_guide_states()
 
 	if (null === $states) {
 		$states = array();
-		foreach ((array) glob(get_template_directory() . '/data/locations/*.php') as $file) {
+		$dir = get_template_directory() . '/data/locations/';
+		foreach ((array) glob($dir . '*.php') as $file) {
 			$state = wholesale_guide_data_file('locations/' . basename($file));
-			if (!empty($state['slug'])) {
-				$states[$state['slug']] = $state;
+			if (empty($state['slug'])) {
+				continue;
 			}
+
+			$state['cities'] = isset($state['cities']) ? (array) $state['cities'] : array();
+			foreach ((array) glob($dir . $state['slug'] . '/*.php') as $city_file) {
+				$city = wholesale_guide_data_file('locations/' . $state['slug'] . '/' . basename($city_file));
+				if (empty($city['name'])) {
+					continue;
+				}
+				$city_slug = !empty($city['slug']) ? $city['slug'] : basename($city_file, '.php');
+				$city['file'] = $city_file;
+				$state['cities'][$city_slug] = $city;
+			}
+			$state['file'] = $file;
+
+			$states[$state['slug']] = $state;
 		}
 		uasort($states, static function ($a, $b) {
 			return strcmp($a['name'], $b['name']);
@@ -395,7 +416,7 @@ function wholesale_guide_organization_ref()
  * Add a Service entity to the page's structured data (state, city and
  * industry pages). areaServed is where we ship, never where we are.
  */
-function wholesale_guide_add_service_schema($name, $description, $area_served = null)
+function wholesale_guide_add_service_schema($name, $description, $area_served = null, $extra = array())
 {
 	$service = array(
 		'@type' => 'Service',
@@ -408,13 +429,183 @@ function wholesale_guide_add_service_schema($name, $description, $area_served = 
 		'areaServed' => $area_served ? $area_served : array('@type' => 'Country', 'name' => 'United States'),
 	);
 
-	$GLOBALS['wholesale_page_entities'][] = $service;
+	$GLOBALS['wholesale_page_entities'][] = array_merge($service, (array) $extra);
+}
+
+/**
+ * Schema.org State or City for a location page, with its Wikipedia page as
+ * sameAs so Portland, OR and Portland, ME can't be confused. A city sits in
+ * its county (when the data names one), and the county in the state.
+ *
+ * @param array      $state State data.
+ * @param array|null $city  City data, or null for the state itself.
+ * @return array
+ */
+function wholesale_guide_place_entity($state, $city = null)
+{
+	$state_entity = array(
+		'@type' => 'State',
+		'name' => wholesale_schema_text($state['name']),
+		'containedInPlace' => array('@type' => 'Country', 'name' => 'United States'),
+	);
+	if (!empty($state['wikipedia'])) {
+		$state_entity['sameAs'] = $state['wikipedia'];
+	}
+	if (!$city) {
+		return $state_entity;
+	}
+
+	$parent = $state_entity;
+	if (!empty($city['county'])) {
+		$parent = array(
+			'@type' => 'AdministrativeArea',
+			'name' => wholesale_schema_text($city['county'] . ', ' . $state['name']),
+			'containedInPlace' => $state_entity,
+		);
+	}
+
+	$city_entity = array(
+		'@type' => 'City',
+		'name' => wholesale_schema_text($city['name']),
+		'containedInPlace' => $parent,
+	);
+	if (!empty($city['wikipedia'])) {
+		$city_entity['sameAs'] = $city['wikipedia'];
+	}
+
+	return $city_entity;
+}
+
+/**
+ * When a location entry's facts were last checked: its 'updated' date
+ * (YYYY-MM-DD), else the data file's modification time.
+ *
+ * @param array $place      State or city data.
+ * @param bool  $date_only  True to return '' when there is no 'updated' date.
+ * @return string Y-m-d, or ''.
+ */
+function wholesale_guide_updated($place, $date_only = false)
+{
+	if (!empty($place['updated']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $place['updated'])) {
+		return $place['updated'];
+	}
+	if ($date_only || empty($place['file']) || !file_exists($place['file'])) {
+		return '';
+	}
+
+	return gmdate('Y-m-d', (int) filemtime($place['file']));
+}
+
+/**
+ * Product families on location pages, in display order: the page each links
+ * to, where it is made and the product whose card price is quoted. Only
+ * channel letters are called signs.
+ *
+ * @return array
+ */
+function wholesale_guide_product_families()
+{
+	return array(
+		'channel-letters' => array(
+			'label' => 'Lit channel letters',
+			'url' => home_url('/custom-channel-letters/'),
+			'made' => 'Built in Washington and California',
+			'price' => 'standard-channel-letter-front-lit',
+		),
+		'banners' => array(
+			'label' => 'Banners and banner stands',
+			'url' => wholesale_category_url('banners'),
+			'made' => 'Made in Renton, WA',
+			'price' => '13oz-vinyl-banner',
+			'more' => array(wholesale_category_url('banner-stands') => 'Banner stands'),
+		),
+		'window-graphics' => array(
+			'label' => 'Window graphics and vinyl',
+			'url' => home_url('/window-graphics/'),
+			'made' => 'Made in Renton, WA',
+			'price' => 'adhesive-window-perf',
+		),
+		'flags-aframes' => array(
+			'label' => 'Flags and A-frames',
+			'url' => wholesale_category_url('advertising-flags'),
+			'made' => 'Made in Renton, WA',
+			'price' => 'feather-angled-flag-pole',
+			'more' => array(wholesale_category_url('signicade-a-frames') => 'A-frames'),
+		),
+		'displays' => array(
+			'label' => 'Trade show displays',
+			'url' => wholesale_category_url('trade-show-products'),
+			'made' => 'Made in Renton, WA',
+			'price' => 'curved-tension-fabric-display-graphic-frame',
+		),
+	);
+}
+
+/**
+ * The product family cards for a place. A card carries the place's own
+ * 'categories' note when it has one; there is no generic fallback text, so
+ * the same sentences don't repeat across hundreds of location pages.
+ */
+function wholesale_guide_render_families($place)
+{
+	$notes = isset($place['categories']) ? (array) $place['categories'] : array();
+	$families = wholesale_guide_product_families();
+	wholesale_seo_prime_products(wp_list_pluck($families, 'price'));
+	?>
+	<div class="gd-family-grid">
+		<?php foreach ($families as $key => $family) : ?>
+			<?php $price = wholesale_price_no_cents(wholesale_seo_product_starting_text($family['price'])); ?>
+			<article class="gd-family">
+				<h3><a href="<?php echo esc_url($family['url']); ?>"><?php echo esc_html($family['label']); ?></a></h3>
+				<p class="gd-family-made"><?php echo esc_html($family['made']); ?></p>
+				<?php if (!empty($notes[$key])) : ?>
+					<p><?php echo wp_kses_post($notes[$key]); ?></p>
+				<?php endif; ?>
+				<?php if ($price) : ?>
+					<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($price); ?></p>
+				<?php endif; ?>
+				<?php if (!empty($family['more'])) : ?>
+					<p class="gd-family-more">
+						<?php foreach ($family['more'] as $url => $label) : ?>
+							<a href="<?php echo esc_url($url); ?>"><?php echo esc_html($label); ?></a>
+						<?php endforeach; ?>
+					</p>
+				<?php endif; ?>
+			</article>
+		<?php endforeach; ?>
+	</div>
+	<?php
+}
+
+/**
+ * OfferCatalog of the product families a location page shows, for its
+ * Service entity. No prices: they change and live on the product pages.
+ */
+function wholesale_guide_offer_catalog($place_name)
+{
+	$items = array();
+	foreach (wholesale_guide_product_families() as $family) {
+		$items[] = array(
+			'@type' => 'Offer',
+			'itemOffered' => array(
+				'@type' => 'Service',
+				'name' => $family['label'],
+				'url' => $family['url'],
+			),
+		);
+	}
+
+	return array(
+		'@type' => 'OfferCatalog',
+		'name' => wholesale_schema_text(sprintf('Signs and graphics shipped to %s', $place_name)),
+		'itemListElement' => $items,
+	);
 }
 
 /**
  * Sources list: array of array(label, url). Only http(s) links are printed.
  */
-function wholesale_guide_render_sources($sources, $heading = 'Official sources')
+function wholesale_guide_render_sources($sources, $heading = 'Official sources', $note = true)
 {
 	$sources = array_filter((array) $sources, static function ($source) {
 		return !empty($source[1]) && preg_match('#^https?://#', $source[1]);
@@ -430,7 +621,9 @@ function wholesale_guide_render_sources($sources, $heading = 'Official sources')
 				<li><a href="<?php echo esc_url($source[1]); ?>" target="_blank" rel="noopener"><?php echo esc_html($source[0]); ?></a></li>
 			<?php endforeach; ?>
 		</ul>
-		<p class="gd-sources-note">Rules change. Always confirm with the office that issues your permit before you order.</p>
+		<?php if ($note) : ?>
+			<p class="gd-sources-note">Rules change. Always confirm with the office that issues your permit before you order.</p>
+		<?php endif; ?>
 	</div>
 	<?php
 }

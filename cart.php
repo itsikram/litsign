@@ -108,7 +108,7 @@ get_header();
 
                                 <?php if ($specs) : ?>
                                     <details class="cart-line-specs">
-                                        <summary>Sign details</summary>
+                                        <summary><?php echo esc_html(ucfirst(wholesale_product_noun((int) $item->product_id))); ?> details</summary>
                                         <dl>
                                             <?php foreach ($specs as $label => $value) : ?>
                                                 <div><dt><?php echo esc_html($label); ?></dt><dd><?php echo $value; // Escaped in wholesale_item_specs(). ?></dd></div>
@@ -154,7 +154,7 @@ get_header();
                         <a class="checkout-pay" href="<?php echo esc_url(home_url('/checkout/')); ?>">Proceed to Checkout</a>
                         <ul class="checkout-assurance">
                             <li>Choose your shipping speed at checkout</li>
-                            <li>UL listed signs, tested before shipping</li>
+                            <li><?php echo 'sign' === wholesale_items_noun($items) ? 'UL listed signs, tested before shipping' : 'Made to order and checked before shipping'; ?></li>
                             <li>Questions? <a href="tel:+18664362101">866-436-2101</a></li>
                         </ul>
                     </div>

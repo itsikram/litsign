@@ -835,6 +835,13 @@ function wholesale_seo_product_title_suffix($product_id)
  */
 function wholesale_seo_product_meta($product_id)
 {
+	// Hand-written title and description (data/product-pages/), when there are any.
+	$page_title = function_exists('wholesale_product_page_title') ? wholesale_product_page_title($product_id) : '';
+	$page_description = function_exists('wholesale_product_page_description') ? wholesale_product_page_description($product_id) : '';
+	if ($page_title && $page_description) {
+		return array('title' => $page_title, 'description' => $page_description);
+	}
+
 	$name = wholesale_seo_product_search_name($product_id);
 	$variant = wholesale_seo_product_variant_label($product_id);
 	$label = $variant ? sprintf('%s (%s)', $name, $variant) : $name;
@@ -865,8 +872,8 @@ function wholesale_seo_product_meta($product_id)
 	$description = wholesale_seo_trim_description($source, 155 - mb_strlen($prefix));
 
 	return array(
-		'title' => $title,
-		'description' => $description ? $prefix . $description : '',
+		'title' => $page_title ? $page_title : $title,
+		'description' => $page_description ? $page_description : ($description ? $prefix . $description : ''),
 	);
 }
 
@@ -986,6 +993,11 @@ function wholesale_seo_product_lowest_price($product_id)
 	$request['width-ft'] = $min_sqft > 0 ? $min_sqft / $side_ft : $side_ft;
 	// Rigid Signs and Magnets: the smallest width and height (the minimum charge applies).
 	$min_sides = wholesale_product_min_sides($product_id);
+	// A side minimum of 0 means "no minimum": a 0" side can't be quoted, so use the
+	// size the calculator opens with, which costs the minimum charge.
+	if ($min_sides && min($min_sides) <= 0) {
+		$min_sides = wholesale_product_default_size($product_id);
+	}
 	if ($min_sides) {
 		$request['width-ft'] = $min_sides[0] / 12;
 		$request['height-ft'] = $min_sides[1] / 12;
@@ -993,6 +1005,7 @@ function wholesale_seo_product_lowest_price($product_id)
 
 	$quote = wholesale_price_quote($product_id, $request);
 	if (!empty($quote['ok']) && $quote['total'] > 0) {
+		$GLOBALS['wholesale_seo_lowest_quote'][$product_id] = $quote + array('request' => $request);
 		return $cache[$product_id] = (float) $quote['total'];
 	}
 
@@ -1003,6 +1016,7 @@ function wholesale_seo_product_lowest_price($product_id)
 		$request['width-ft'] = max((float) get_post_meta($product_id, '_min_width', true), $min_sqft / $min_height);
 		$quote = wholesale_price_quote($product_id, $request);
 		if (!empty($quote['ok']) && $quote['total'] > 0) {
+			$GLOBALS['wholesale_seo_lowest_quote'][$product_id] = $quote + array('request' => $request);
 			return $cache[$product_id] = (float) $quote['total'];
 		}
 	}
@@ -1013,12 +1027,42 @@ function wholesale_seo_product_lowest_price($product_id)
 		foreach (array_slice($values, 1) as $value) {
 			$quote = wholesale_price_quote($product_id, array_merge($request, array($name => $value)));
 			if (!empty($quote['ok']) && $quote['total'] > 0 && (!$cache[$product_id] || $quote['total'] < $cache[$product_id])) {
+				$GLOBALS['wholesale_seo_lowest_quote'][$product_id] = $quote + array('request' => array_merge($request, array($name => $value)));
 				$cache[$product_id] = (float) $quote['total'];
 			}
 		}
 	}
 
 	return $cache[$product_id];
+}
+
+/**
+ * Price parts of the lowest-price configuration for feeds and structured data:
+ * array('price' => what checkout charges now, 'regular' => the everyday price
+ * before a dated sale, 'sale_ends' => timestamp or null, 'sale_starts' => Y-m-d or ''). Empty when the
+ * product has no online price.
+ */
+function wholesale_seo_product_lowest_offer($product_id)
+{
+	$product_id = (int) $product_id;
+	$price = wholesale_seo_product_lowest_price($product_id);
+	if ($price <= 0) {
+		return array();
+	}
+	$quote = isset($GLOBALS['wholesale_seo_lowest_quote'][$product_id]) ? $GLOBALS['wholesale_seo_lowest_quote'][$product_id] : array();
+	$promo = !empty($quote['promo_discount']) && $quote['promo_discount'] > 0 ? wholesale_product_promotion($product_id) : null;
+
+	return array(
+		'price' => $price,
+		'regular' => $promo ? round($price + (float) $quote['promo_discount'], 2) : $price,
+		'sale_ends' => $promo && !empty($promo['ends']) ? (int) $promo['ends'] : null,
+		// The configuration priced: the submitted form fields (width-ft, height-ft, options).
+		'request' => isset($quote['request']) ? $quote['request'] : array(),
+		// Start date (Y-m-d, Pacific) of whichever dated sale applies: the product's own, else the site-wide one.
+		'sale_starts' => $promo ? (string) (wholesale_dated_sale_window(get_post_meta($product_id, '_promo_percent', true), get_post_meta($product_id, '_promo_start', true), get_post_meta($product_id, '_promo_end', true))
+			? get_post_meta($product_id, '_promo_start', true)
+			: wholesale_get_setting('promo_start')) : '',
+	);
 }
 
 /**
@@ -1216,7 +1260,7 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 			<?php endforeach; ?>
 		</ul>
 		<p>
-			See all styles side by side on the <a href="<?php echo esc_url(home_url('/#cl-compare-title')); ?>">channel letters page</a><?php if ($storefront_url) : ?>, or compare every sign type in our <a href="<?php echo esc_url($storefront_url); ?>">storefront signs guide</a><?php endif; ?>.
+			See all styles side by side on the <a href="<?php echo esc_url((wholesale_channel_letters_landing_id() ? get_permalink(wholesale_channel_letters_landing_id()) : home_url('/custom-channel-letters/')) . '#cl-compare-title'); ?>">custom channel letters page</a><?php if ($storefront_url) : ?>, or compare every sign type in our <a href="<?php echo esc_url($storefront_url); ?>">storefront signs guide</a><?php endif; ?>.
 		</p>
 	</section>
 	<?php

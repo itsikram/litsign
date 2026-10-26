@@ -148,12 +148,18 @@ get_header();
     <main id="primary">
     <article <?php post_class('product-article'); ?>>
     <?php $product_seo = wholesale_seo_channel_letter_product(get_the_ID()); ?>
-    <?php $product_image_label = !empty($product_seo['heading']) ? $product_seo['heading'] : wp_strip_all_tags(get_the_title()); ?>
-    <?php if (!empty($product_seo['heading'])) : ?>
-        <p class="product-title-type"><?php echo esc_html(get_the_title()); ?></p>
+    <?php
+    // The H1 is the name shoppers search for ("Window Perf Vinyl"); a catalog code
+    // ("AV 6 – Adhesive Window Perf", "Type 1 – ...") shows above it for repeat buyers.
+    $product_heading = !empty($product_seo['heading']) ? $product_seo['heading'] : wholesale_seo_product_search_name(get_the_ID());
+    $product_image_label = $product_heading;
+    $product_catalog_name = wholesale_seo_product_name(get_the_ID());
+    ?>
+    <?php if (!empty($product_seo['heading']) || preg_match('/^AV\s*\d+\s/u', $product_catalog_name)) : ?>
+        <p class="product-title-type"><?php echo esc_html($product_catalog_name); ?></p>
     <?php endif; ?>
     <h1 class="fs-2 product-title my-3">
-        <?php echo esc_html(!empty($product_seo['heading']) ? $product_seo['heading'] : get_the_title()); ?>
+        <?php echo esc_html($product_heading); ?>
         <?php echo wholesale_admin_edit_product_link(get_the_ID(), 'page'); // Escaped in helper. ?>
     </h1>
     <?php if (!empty($product_seo['intro'])) : ?>
@@ -170,7 +176,14 @@ get_header();
     ?>
         <div class="product-intro mb-4"><?php echo wp_kses_post($product_intro); ?></div>
     <?php endif; ?>
-    <form action="<?php echo site_url() . '/cart'; ?>" method="POST" enctype="multipart/form-data" class="needs-validation">
+    <?php // Phones only: on a phone the price box sits under the photo, a full screen down, so ad visitors left before seeing a price. ?>
+    <?php if (trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
+        <p class="product-mobile-price">
+            <span><span class="product-price-label">Starting at</span> <?php echo wholesale_emphasize_price($starting_at_text); ?></span>
+            <a href="#product-options"><?php echo $product_category_slug === 'channel-letters' ? 'Get your price' : 'Choose size &amp; price'; ?> <span aria-hidden="true">&darr;</span></a>
+        </p>
+    <?php endif; ?>
+    <form action="<?php echo site_url() . '/cart'; ?>" method="POST" enctype="multipart/form-data" class="needs-validation" data-noun="<?php echo esc_attr(wholesale_product_noun($product_id)); ?>">
         <input type="hidden" name="product_id" value="<?php echo get_the_ID(); ?>">
         <div class="row">
             <div class="col-md-4">
@@ -229,6 +242,23 @@ get_header();
                             <span class="product-price-label">Starting at</span>
                         <?php endif; ?>
                         <span class="product-price-value"><?php echo wholesale_emphasize_price($starting_at_text); ?></span>
+                        <?php
+                        // Size calculator products: the smallest order the cart accepts, the
+                        // configuration the structured data and Merchant feed advertise.
+                        $smallest = $price_per_sqft > 0 && !$is_hide_calculator ? wholesale_seo_product_lowest_offer(get_the_ID()) : array();
+                        if (!empty($smallest['request']['width-ft']) && !empty($smallest['request']['height-ft'])) :
+                            $inches = static function ($feet) {
+                                return rtrim(rtrim(number_format($feet * 12, 1, '.', ''), '0'), '.');
+                            };
+                            ?>
+                            <small class="d-block product-smallest-order"><?php
+                                echo esc_html(sprintf('Smallest order: one %s" x %s" item, ', $inches($smallest['request']['width-ft']), $inches($smallest['request']['height-ft'])));
+                                if ($smallest['regular'] > $smallest['price']) {
+                                    echo '<del>$' . esc_html(number_format($smallest['regular'], 2)) . '</del> ';
+                                }
+                                echo '$' . esc_html(number_format($smallest['price'], 2));
+                            ?></small>
+                        <?php endif; ?>
                     </div>
 
                 <?php } elseif (trim(wp_strip_all_tags((string) $starting_at_text)) !== '') {
@@ -250,7 +280,7 @@ get_header();
                     <p class="product-stock product-stock--backorder text-end">Backordered: ships around <?php echo esc_html((new DateTimeImmutable(wholesale_product_backorder_date(get_the_ID()), wp_timezone()))->format('F j')); ?></p>
                 <?php endif; ?>
             </div>
-            <div class="col-md-8">
+            <div class="col-md-8" id="product-options">
 
                 <?php if ($product_category_slug == 'channel-letters') {
                 ?>
@@ -901,13 +931,15 @@ get_header();
 
                         <div class="row d-fex align-items-center  mt-2">
                             <div class="col-md-3 col-4">
-                                <label for="select-font" class="text-capitalize">Upload Artwork</label>
+                                <label for="artwork" class="text-capitalize">Upload Artwork</label>
 
                             </div>
                             <div class="col-8 col-md-9">
                                 <div class="row">
                                     <div class="col">
-                                        <input class="form-control" name="custom-artwork" type="file" id="artwork" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/jpeg,image/png,image/gif,image/webp,application/pdf" data-async-upload="artwork" data-async-field="custom-artwork-token">
+                                        <input class="form-control" name="custom-artwork" type="file" id="artwork" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/jpeg,image/png,image/gif,image/webp,application/pdf" data-async-upload="artwork" data-async-field="custom-artwork-token" aria-describedby="artworkHint">
+                                        <?php // Not required by the form or utils/Cart.php; visitors without a print file thought it was. ?>
+                                        <small id="artworkHint" class="d-block text-muted mt-1">Optional. JPG, PNG, GIF, WebP or PDF, up to 25 MB.</small>
                                     </div>
                                 </div>
 
@@ -1029,7 +1061,12 @@ get_header();
                 </div>
 
 
-                <div class="product-pricing-box">
+                <?php
+                // Channel letters have no price until the sign text is typed; the Grand Total
+                // row shows the starting price instead of $0.00 (js/ui-polish.js keeps the class in step).
+                $total_from_text = ($product_category_slug == 'channel-letters' && trim(wp_strip_all_tags((string) $starting_at_text)) !== '') ? $starting_at_text : '';
+                ?>
+                <div class="product-pricing-box<?php echo $total_from_text && !$has_cl_design ? ' pd-total-empty' : ''; ?>">
                     <div class="container">
                         <?php // The everyday price only shows (as "Regular price") during a dated sale. ?>
                         <div class="row subtotal-container"<?php echo $product_promo_percent > 0 ? '' : ' hidden'; ?>>
@@ -1084,6 +1121,9 @@ get_header();
 
                                                                                                     ?>
                                     </span></span>
+                                <?php if ($total_from_text) : ?>
+                                    <span class="price-total-from">Starting at <?php echo wholesale_emphasize_price($total_from_text); ?></span>
+                                <?php endif; ?>
                             </div>
                         </div>
 
@@ -1153,6 +1193,14 @@ get_header();
         <?php wholesale_seo_render_channel_letter_guide(get_the_ID()); ?>
         <?php wholesale_render_product_guide(get_the_ID()); ?>
 
+        <?php
+        // Our own specifications, shipping, artwork and FAQ sections replace the
+        // supplier's stored description (inc/product-page-content.php).
+        $product_details_shown = 'channel-letters' === $product_category_slug
+            ? wholesale_render_channel_letter_details(get_the_ID())
+            : wholesale_render_product_details(get_the_ID());
+        ?>
+        <?php if (!$product_details_shown) : ?>
         <!-- product description -->
         <div class="row mt-4 overflow-hidden">
             <div class="col">
@@ -1224,6 +1272,7 @@ get_header();
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     </form>
     <?php wholesale_seo_render_related_products($product_id); ?>
     <?php
@@ -1261,7 +1310,7 @@ get_header();
         <div class="product-reviews-heading">
             <div>
                 <p class="product-section-eyebrow">Customer feedback</p>
-                <h2 id="product-reviews-title">Reviews for <?php echo esc_html(get_the_title()); ?></h2>
+                <h2 id="product-reviews-title">Reviews for <?php echo esc_html($product_heading); ?></h2>
             </div>
             <?php wholesale_render_product_rating($product_id, 'product-reviews-summary'); ?>
         </div>
@@ -1314,7 +1363,7 @@ get_header();
         <?php if ($can_review_product) : ?>
             <div class="product-review-form-card" id="write-review">
                 <h3>Share your experience</h3>
-                <p>Thanks for your order #<?php echo esc_html(wholesale_order_number($review_eligibility['order'])); ?>. Tell other customers how your sign turned out. Reviews appear after a quick check by our team.</p>
+                <p>Thanks for your order #<?php echo esc_html(wholesale_order_number($review_eligibility['order'])); ?>. Tell other customers how your <?php echo esc_html(wholesale_product_noun($product_id)); ?> turned out. Reviews appear after a quick check by our team.</p>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="submit_review">
                     <input type="hidden" name="review_product_id" value="<?php echo esc_attr($product_id); ?>">
@@ -1334,7 +1383,7 @@ get_header();
                         <label>Name<input type="text" name="review_name" required autocomplete="name" value="<?php echo esc_attr($review_defaults['name']); ?>"></label>
                         <label><span>Email <small>(not published)</small></span><input type="email" name="review_email" required autocomplete="email" value="<?php echo esc_attr($review_defaults['email']); ?>"></label>
                     </div>
-                    <label>Your review<textarea name="review_message" rows="4" required placeholder="How did the sign look once it was installed? How was the ordering process?"></textarea></label>
+                    <label>Your review<textarea name="review_message" rows="4" required placeholder="<?php echo esc_attr(wholesale_product_is_channel_letter($product_id) ? "How did the sign look once it was installed? How was the ordering process?" : "How did the " . wholesale_product_noun($product_id) . " look when it arrived? How was the ordering process?"); ?>"></textarea></label>
                     <button type="submit" class="btn btn-primary">Submit review</button>
                 </form>
             </div>
@@ -1372,7 +1421,7 @@ get_header();
         <?php elseif ('reviewed' === $review_eligibility['reason'] && 'sent' !== $review_status && 'already_reviewed' !== $review_status) : ?>
             <p class="product-review-note">Thanks, you have already reviewed this product. It appears here once approved.</p>
         <?php elseif (!is_user_logged_in()) : ?>
-            <p class="product-review-note">Bought this sign? Use the review link in your shipping email, or <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink() . '#product-reviews'), home_url('/login/'))); ?>">sign in</a> with the account used for your order.</p>
+            <p class="product-review-note">Bought this <?php echo esc_html(wholesale_product_noun($product_id)); ?>? Use the review link in your shipping email, or <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink() . '#product-reviews'), home_url('/login/'))); ?>">sign in</a> with the account used for your order.</p>
         <?php endif; ?>
     </section>
     <?php endif; ?>

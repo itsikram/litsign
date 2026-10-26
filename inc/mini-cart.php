@@ -53,7 +53,7 @@ function wholesale_mini_cart_html($cart)
 				<svg viewBox="0 0 24 24" width="34" height="34"><path fill="currentColor" d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM1 2v2h2l3.6 7.6-1.35 2.4A2 2 0 0 0 7 17h12v-2H7.4a.25.25 0 0 1-.22-.37l.9-1.63h7.45a2 2 0 0 0 1.75-1.03l3.58-6.5A1 1 0 0 0 20 4H5.2l-.94-2H1zm16 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
 			</div>
 			<h3 class="mc-empty__title">Your cart is empty</h3>
-			<p class="mc-empty__text">Choose a sign to see your price instantly, or design your channel letters online.</p>
+			<p class="mc-empty__text">Choose a product to see your price instantly, or design your channel letters online.</p>
 			<a class="mc-btn mc-btn--primary" href="<?php echo esc_url($shop_url); ?>" data-mc-close-link>Shop Channel Letters</a>
 			<a class="mc-btn mc-btn--ghost" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Design Your Sign Online</a>
 		</div>

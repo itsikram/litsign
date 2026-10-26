@@ -162,7 +162,7 @@ function wholesale_product_guides()
 				'The X-stand is our most affordable banner stand. Its aluminum and fiberglass frame forms an X behind the graphic, and the banner hooks on by its grommets. That makes it the easiest stand for swapping graphics: unhook one banner and hook on the next.',
 				'Choose a 24" x 63" or 32" x 71" graphic, printed on 13 oz matte vinyl or 14 mil double white popup material. Double white popup has a brighter white and stays flat at the edges. A nylon carry bag is included.',
 			),
-			'uses' => array('Trade show booths on a budget', 'Lobby, reception and in-store promotions', 'Seasonal signs you change often', 'Church, school and community events'),
+			'uses' => array('Trade show booths on a budget', 'Lobby, reception and in-store promotions', 'Seasonal graphics you change often', 'Church, school and community events'),
 			'faq' => array(
 				array('q' => 'Which material should I choose?', 'a' => 'We recommend 14 mil double white popup: brighter colors and edges that won&rsquo;t curl. 13 oz matte vinyl is the lower-cost, more flexible option.'),
 				array('q' => 'Can I buy replacement graphics?', 'a' => 'Yes. Graphics attach with grommets, so a new print hooks onto the same stand in seconds. Order the graphic only option.'),
@@ -176,7 +176,7 @@ function wholesale_product_guides()
 				'The SD retractable is our top of the line roll-up banner stand. Its wide, low-profile base is very stable, finished in brushed aluminum with chrome end caps. The support pole adjusts, so you can run a shorter or taller graphic in the same stand.',
 				'Graphics are UV printed on 8.85 oz coated polyester fabric with a blockout backing (no curl, no show-through), or on 13 oz matte vinyl. The banner rolls into the base when you pack up, and the whole stand fits in its hard-sided travel case.',
 			),
-			'uses' => array('Trade shows and conferences', 'Corporate lobbies and reception areas', 'Retail and bank promotions', 'Sponsor and step-in signs at events'),
+			'uses' => array('Trade shows and conferences', 'Corporate lobbies and reception areas', 'Retail and bank promotions', 'Sponsor and step-in displays at events'),
 			'faq' => array(
 				array('q' => 'What safety margins should my artwork have?', 'a' => 'Keep important text and logos 1" from the top and 3" from the bottom, where the graphic meets the rail and the base.'),
 				array('q' => 'Fabric or vinyl?', 'a' => 'Fabric has a premium look, no glare and edges that won&rsquo;t curl. Vinyl costs less. Both are UV printed.'),
@@ -459,7 +459,7 @@ function wholesale_product_guides()
 				'The X-stand is the most budget-friendly banner stand. Its aluminum and graphite frame hooks into the four corner grommets of a banner and pulls it flat, and it is light enough to carry with one hand. A nylon carry bag is included.',
 				'Choose 24" x 63" or 32" x 71" to match your banner. This listing is hardware only; to order a printed banner with the stand, choose the X-stand graphic and stand set.',
 			),
-			'uses' => array('Trade show and lobby displays on a budget', 'Temporary signs for events and pop-ups', 'Replacing a broken X-stand', 'Reusing grommeted banners you already own'),
+			'uses' => array('Trade show and lobby displays on a budget', 'Temporary displays for events and pop-ups', 'Replacing a broken X-stand', 'Reusing grommeted banners you already own'),
 			'faq' => array(
 				array('q' => 'Is a banner included?', 'a' => 'No. For a printed banner with the stand, order the <a href="/product/x-stand-graphic-stand/">X-stand banner and stand</a>.'),
 				array('q' => 'What kind of banner does it hold?', 'a' => 'A banner with a grommet in each corner, in the size that matches the stand: 24" x 63" or 32" x 71".'),
@@ -685,7 +685,11 @@ function wholesale_product_content_modified($product)
 	$modified = get_post_modified_time('c', true, $product);
 	$product = get_post($product);
 	if ($product && wholesale_product_guide($product->ID) && strtotime(WHOLESALE_PRODUCT_GUIDES_REVISED) > strtotime($modified)) {
-		return WHOLESALE_PRODUCT_GUIDES_REVISED;
+		$modified = WHOLESALE_PRODUCT_GUIDES_REVISED;
+	}
+	// Copy in data/product-pages/ (inc/product-page-content.php) changes the page too.
+	if ($product && defined('WHOLESALE_PRODUCT_PAGES_REVISED') && wholesale_product_page($product->ID) && strtotime(WHOLESALE_PRODUCT_PAGES_REVISED) > strtotime($modified)) {
+		$modified = WHOLESALE_PRODUCT_PAGES_REVISED;
 	}
 
 	return $modified;
@@ -700,9 +704,16 @@ function wholesale_product_guide_register_faq()
 		return;
 	}
 
-	$guide = wholesale_product_guide(get_queried_object_id());
-	if (!empty($guide['faq'])) {
-		wholesale_seo_set_page_faq($guide['faq']);
+	// Pages with an entry in data/product-pages/ show a longer FAQ (inc/product-page-content.php).
+	$faq = function_exists('wholesale_product_page_faq') && wholesale_product_page(get_queried_object_id())
+		? wholesale_product_page_faq(get_queried_object_id())
+		: array();
+	if (!$faq) {
+		$guide = wholesale_product_guide(get_queried_object_id());
+		$faq = !empty($guide['faq']) ? $guide['faq'] : array();
+	}
+	if ($faq) {
+		wholesale_seo_set_page_faq($faq);
 	}
 }
 add_action('wp', 'wholesale_product_guide_register_faq');
@@ -717,7 +728,9 @@ function wholesale_render_product_guide($product_id)
 		return;
 	}
 
-	$name = wholesale_seo_product_name($product_id);
+	$name = wholesale_seo_product_search_name($product_id);
+	// With an entry in data/product-pages/, the FAQ prints in the details section below.
+	$faq_here = !(function_exists('wholesale_product_page') && wholesale_product_page($product_id));
 	$related = array();
 	foreach (isset($guide['related']) ? $guide['related'] : array() as $slug) {
 		$related_product = get_page_by_path($slug, OBJECT, 'product');
@@ -741,7 +754,7 @@ function wholesale_render_product_guide($product_id)
 			</ul>
 		<?php endif; ?>
 
-		<?php if (!empty($GLOBALS['wholesale_page_faq'])) : ?>
+		<?php if ($faq_here && !empty($GLOBALS['wholesale_page_faq'])) : ?>
 			<h3>Questions &amp; answers</h3>
 			<div class="cl-faq-list">
 				<?php wholesale_seo_render_faq(); ?>
@@ -752,7 +765,7 @@ function wholesale_render_product_guide($product_id)
 			<h3>Often compared with</h3>
 			<ul>
 				<?php foreach ($related as $related_product) : ?>
-					<li><a href="<?php echo esc_url(get_permalink($related_product)); ?>"><?php echo esc_html(wholesale_seo_product_name($related_product->ID)); ?></a></li>
+					<li><a href="<?php echo esc_url(get_permalink($related_product)); ?>"><?php echo esc_html(wholesale_seo_product_search_name($related_product->ID)); ?></a></li>
 				<?php endforeach; ?>
 			</ul>
 		<?php endif; ?>

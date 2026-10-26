@@ -13,12 +13,14 @@ return array(
 	'name' => 'Michigan',
 	'abbr' => 'MI',
 	'status' => 'review',
+	'updated' => '2026-10-22',
+	'wikipedia' => 'https://en.wikipedia.org/wiki/Michigan',
 	'neighbors' => array('ohio', 'indiana', 'wisconsin'),
 	'seo_title' => 'Storefront Signs Shipped to Michigan | Sign Specialist Guide',
 	'seo_description' => 'Channel letters shipped to Michigan, plus who can install them (LARA sign specialists and electricians) and how Detroit sign permits and sign licenses work.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to Michigan',
 	'intro' => array(
-		'Michigan businesses can price custom LED channel letters online, have them built in Washington and California, and receive them ready for a licensed Michigan sign installer.',
+		'Michigan businesses can price custom LED channel letters online, have them built in Washington and California, and receive them ready for a licensed Michigan sign installer. Banners and window graphics are made in Renton, WA.',
 		'Michigan has a state license just for sign electrical work. Under the Skilled Trades Regulation Act, the Department of Licensing and Regulatory Affairs (LARA) issues a <strong>sign specialist</strong> license to people with at least 4,000 hours, over at least two years, of experience making, installing, maintaining, connecting or repairing electric signs and their wiring. Licensed master, journeyman and apprentice electricians can do the same work without it.',
 		'Some cities add their own layer. In Detroit, only sign professionals holding a current City of Detroit Sign License can apply for a sign permit.',
 	),
@@ -27,6 +29,10 @@ return array(
 		'Sign license' => 'Sign specialist (MCL 339.5729)',
 		'Also qualified' => 'Licensed master, journeyman or apprentice electrician',
 		'Detroit' => 'City of Detroit Sign License required to apply for a permit',
+	),
+	'categories' => array(
+		'channel-letters' => 'Michigan is one of the few states with a license just for sign electrical work, the LARA sign specialist license, so ask your installer for that license or an electrician&rsquo;s license.',
+		'banners' => 'Detroit&rsquo;s sign ordinance exempts some signs by size and type (Sec. 4-4-48), so check whether a banner needs its own permit before you hang it.',
 	),
 	'licensing' => array(
 		'heading' => 'Who Can Install a Lit Sign in Michigan',
@@ -49,12 +55,14 @@ return array(
 		'heading' => 'Sign Permits in Michigan',
 		'body' => array(
 			'Michigan cities and townships issue sign permits under their own zoning ordinances, and some, like Detroit, also license sign companies themselves.',
-			'In <strong>Detroit</strong>, the Buildings, Safety Engineering and Environmental Department (BSEED) accepts sign permit applications only from sign professionals with a current City of Detroit Sign License, through the city&rsquo;s online Accela portal, with a separate application for each sign. Electric sign companies licensed by the city must be located in Detroit and hold, or employ full time, a valid sign specialist&rsquo;s license.',
+			'In <strong>Detroit</strong>, the Buildings, Safety Engineering and Environmental Department (BSEED) accepts sign permit applications only from sign professionals with a current City of Detroit Sign License, and only online: the application and fee go through the Accela eLaps portal, the drawings are uploaded as PDFs to ePlans, and nothing is accepted in person. Each proposed sign needs its own application, with the documents listed in Section 4-4-19 of the sign ordinance. Electric sign companies licensed by the city must be located in Detroit and hold, or employ full time, a valid sign specialist&rsquo;s license.',
+			'Location matters in Detroit too. BSEED publishes a sign district map, an entertainment district map and a list of sign rules for the Traditional Main Street Overlay, and zoning questions go to the Zoning/Special Land Use Division. BSEED also publishes its current lists of licensed sign contractors and licensed and registered sign professionals, which is a good place to find an installer.',
 		),
 		'table' => array(
 			'Sign permit' => 'Your city or township',
 			'Detroit' => 'BSEED, online through Accela; one application per sign',
 			'Detroit applicants' => 'Holders of a City of Detroit Sign License',
+			'Detroit filing' => 'Online only: Accela eLaps application, drawings to ePlans',
 		),
 		'sources' => array(
 			array('City of Detroit: Advertising and business sign permits', 'https://detroitmi.gov/departments/buildings-safety-engineering-and-environmental-department/bseed-divisions/plan-review/sign-permits'),
@@ -79,7 +87,7 @@ return array(
 	'faq' => array(
 		array(
 			'q' => 'Is there a channel letter company near me in Michigan?',
-			'a' => 'We ship custom channel letters anywhere in Michigan from our shops in Washington and California. We don&rsquo;t install, so you&rsquo;ll hire a Michigan sign specialist or electrician to mount and connect it.',
+			'a' => 'We ship custom channel letters anywhere in Michigan, built in Washington and California and tested before they ship. We don&rsquo;t install, so you&rsquo;ll hire a Michigan sign specialist or electrician to mount and connect them.',
 		),
 		array(
 			'q' => 'Does Michigan have a sign electrician license?',
@@ -87,7 +95,7 @@ return array(
 		),
 		array(
 			'q' => 'Who can apply for a sign permit in Detroit?',
-			'a' => 'Only sign professionals holding a current City of Detroit Sign License, through the city&rsquo;s Accela portal.',
+			'a' => 'Only sign professionals holding a current City of Detroit Sign License. They file online through the Accela eLaps portal, one application per sign, and upload drawings to ePlans; BSEED doesn&rsquo;t accept sign permit applications in person. BSEED&rsquo;s published list of licensed sign contractors is a good starting point.',
 		),
 		array(
 			'q' => 'How long does shipping to Michigan take?',
@@ -95,7 +103,6 @@ return array(
 		),
 	),
 	'review_notes' => array(
-		'Detroit details come partly from 2019-2021 city forms; re-check the current BSEED pages.',
 		'Transit days to Michigan not shown until verified.',
 	),
 );

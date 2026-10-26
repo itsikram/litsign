@@ -25,13 +25,15 @@ return array(
 	'name' => 'Washington',
 	'abbr' => 'WA',
 	'status' => 'live',
+	'updated' => '2026-10-22',
+	'wikipedia' => 'https://en.wikipedia.org/wiki/Washington_(state)',
 	'neighbors' => array('oregon', 'idaho'),
 	'seo_title' => 'Storefront Signs in Washington | Made in Renton, WA',
 	'seo_description' => 'Channel letters and storefront signs made in Washington and shipped across Washington, with L&I licensing and city sign permit guides for your installer.',
 	'h1' => 'Storefront Signs and Channel Letters in Washington',
 	'local_note' => 'Our team is based in Renton, but we don&rsquo;t send installation crews anywhere, including in Washington.',
 	'intro' => array(
-		'Washington businesses can order custom LED channel letters, window graphics, banners and sidewalk signs made right here in Washington, see the price online, and have the finished sign shipped to their door, ready for a licensed local installer.',
+		'Washington businesses can order custom LED channel letters, built in Washington and California, plus window graphics, banners and sidewalk A-frames made in Renton, see the price online, and have everything shipped to their door, ready for a licensed local installer.',
 		'Because we manufacture in the state, Washington orders have the shortest trip of anywhere we ship. What takes the most planning is usually local: your landlord&rsquo;s sign criteria, your city&rsquo;s sign code, and an electrician with the right Washington license to connect a lit sign. This guide covers each, with links to the official sources, plus guides to the rules in several Washington cities.',
 		'Talk to us before you order if your sign has a logo, a custom shape or strict landlord criteria. Send a storefront photo and we&rsquo;ll help you pick a letter height and style that fits.',
 	),
@@ -40,6 +42,11 @@ return array(
 		'Electrical license' => 'L&amp;I electrical contractor; Signs (04) specialty electricians',
 		'Electrical permit' => 'From L&amp;I, or from the city in 25 cities that inspect their own',
 		'Sign permit' => 'From your city or county',
+	),
+	'categories' => array(
+		'channel-letters' => 'In Washington, mounting a listed electric sign is itself licensed electrical work under WAC 296-46B-920, not just the wiring, so hire an L&amp;I-licensed installer for the whole job.',
+		'banners' => 'Banner rules are set by each city: Renton issues 30-day temporary sign permits, and Everett allows one building banner of up to 32 square feet for 30 days a year.',
+		'window-graphics' => 'Some cities cap window coverage: Everett limits permanent and temporary window signs to 25 percent of the window area.',
 	),
 	'licensing' => array(
 		'heading' => 'Who Can Connect a Lit Sign in Washington',
@@ -113,12 +120,20 @@ return array(
 	'cities' => array(
 		'seattle' => array(
 			'name' => 'Seattle',
+			'updated' => '2026-10-22',
+			'county' => 'King County',
+			'wikipedia' => 'https://en.wikipedia.org/wiki/Seattle',
+			'nearby' => array('bellevue', 'renton', 'kent', 'tacoma', 'everett'),
+			'categories' => array(
+				'channel-letters' => 'Every lit sign in Seattle needs an SDCI sign permit, and for electric signs SDCI combines the electrical and sign permit into one review.',
+				'flags-aframes' => 'Blade signs and awning graphics over the sidewalk follow SMC 15.12 and SDOT Director&rsquo;s Rule 05-2023 and still need the SDCI sign permit.',
+			),
 			'card' => 'SDCI sign permits; city electrical permits',
 			'seo_title' => 'Storefront Signs in Seattle: Sign Permits & Lit Letters',
 			'seo_description' => 'Ordering channel letters for a Seattle storefront? How SDCI sign permits work, signs over the sidewalk, Seattle electrical permits, and pricing.',
 			'h1' => 'Storefront Signs and Channel Letters for Seattle Businesses',
 			'intro' => array(
-				'Seattle storefronts can order lit channel letters and window graphics from our Renton shop, see the price online, and have the sign shipped ready for a licensed Seattle installer.',
+				'Seattle storefronts can price lit channel letters online, have them built in Washington or California, and get them shipped ready for a licensed Seattle installer. Window graphics and banners come from our Renton shop, 12 miles south.',
 				'Seattle is one of the more involved places in Washington to put up a sign: the city runs its own sign permits through the Seattle Department of Construction and Inspections (SDCI), handles its own electrical permits, and has special review districts and landmarks where signs get an extra design review. Knowing which rules apply to your block before you order saves a redesign later.',
 			),
 			'facts' => array(
@@ -193,12 +208,20 @@ return array(
 		),
 		'tacoma' => array(
 			'name' => 'Tacoma',
+			'updated' => '2026-10-22',
+			'county' => 'Pierce County',
+			'wikipedia' => 'https://en.wikipedia.org/wiki/Tacoma,_Washington',
+			'nearby' => array('kent', 'renton', 'seattle', 'bellevue'),
+			'categories' => array(
+				'channel-letters' => 'If Tacoma Power serves your building, it issues the electrical permit and inspects the connection, instead of L&amp;I.',
+				'flags-aframes' => 'Work done in, on, over or from the City right-of-way, such as a projecting sign installed from the sidewalk, needs a right-of-way bond.',
+			),
 			'card' => 'City sign permit; Tacoma Power electrical',
 			'seo_title' => 'Storefront Signs in Tacoma, WA: Permits & Channel Letters',
 			'seo_description' => 'Channel letters for Tacoma businesses, made in Washington. How Tacoma sign permits work, Tacoma Power electrical permits, and what your installer needs.',
 			'h1' => 'Storefront Signs and Channel Letters for Tacoma Businesses',
 			'intro' => array(
-				'Tacoma businesses can order custom channel letters and storefront graphics from our Renton shop, about 25 miles up I-5, and have them shipped ready for a licensed Tacoma installer.',
+				'Tacoma businesses can order custom channel letters, built in Washington or California, and storefront graphics from our Renton shop about 25 miles up I-5, and have them shipped ready for a licensed Tacoma installer.',
 				'Two things are specific to Tacoma. Sign permits go through the City&rsquo;s Planning &amp; Development Services under the Tacoma Municipal Code, and for properties served by Tacoma Power, the electrical permit and inspection come from Tacoma Power rather than from L&amp;I.',
 			),
 			'facts' => array(
@@ -271,12 +294,20 @@ return array(
 		'bellevue' => array(
 			'status' => 'live', // Owner approved 2026-10-11; rewrite before Feb. 1, 2027 (see review_notes).
 			'name' => 'Bellevue',
+			'updated' => '2026-10-22',
+			'county' => 'King County',
+			'wikipedia' => 'https://en.wikipedia.org/wiki/Bellevue,_Washington',
+			'nearby' => array('renton', 'seattle', 'kent', 'everett'),
+			'categories' => array(
+				'channel-letters' => 'In Downtown, BelRed and several other districts, Bellevue sends sign permits through design review, so the letter style, color and lighting are judged against the building.',
+				'window-graphics' => 'Bellevue&rsquo;s current code exempts signs of 6 square feet or less from a sign permit, which covers most door and hours graphics.',
+			),
 			'card' => 'Sign code 22B.10; design review zones',
 			'seo_title' => 'Storefront Signs in Bellevue, WA: Sign Code & Permits',
 			'seo_description' => 'Channel letters for Bellevue storefronts. What the Bellevue sign code (BCC 22B.10) requires, design review districts, and city electrical permits.',
 			'h1' => 'Storefront Signs and Channel Letters for Bellevue Businesses',
 			'intro' => array(
-				'Bellevue retailers, restaurants and offices can order channel letters and window graphics from our Renton shop next door and have them shipped ready for a licensed installer.',
+				'Bellevue retailers, restaurants and offices can order channel letters, built in Washington or California, and window graphics from our shop in neighboring Renton, and have them shipped ready for a licensed installer.',
 				'Bellevue&rsquo;s sign code puts more weight on design than most: in Downtown and several other districts, sign permits go through design review to check that the sign fits the building and its surroundings. Plan your letter style, color and lighting with that review in mind.',
 			),
 			'facts' => array(
@@ -353,6 +384,14 @@ return array(
 		'renton' => array(
 			'name' => 'Renton',
 			'card' => 'Our home town; RMC 4-4-100',
+			'updated' => '2026-10-22',
+			'county' => 'King County',
+			'wikipedia' => 'https://en.wikipedia.org/wiki/Renton,_Washington',
+			'nearby' => array('kent', 'bellevue', 'seattle', 'tacoma'),
+			'categories' => array(
+				'banners' => 'Renton issues 30-day temporary sign permits: event permits up to four times a year with a 15-day break between them, plus one grand opening sign per business.',
+				'channel-letters' => 'Renton runs its own electrical permits, separate from the sign permit, and doubles permit fees when work starts before a permit is issued.',
+			),
 			'seo_title' => 'Storefront Signs in Renton, WA: Made Here, Permit Guide',
 			'seo_description' => 'Channel letters made in Washington for Renton businesses. How Renton sign permits work (RMC 4-4-100), temporary sign rules and city electrical permits.',
 			'h1' => 'Storefront Signs Made in Renton for Renton Businesses',
@@ -432,12 +471,19 @@ return array(
 		),
 		'kent' => array(
 			'name' => 'Kent',
+			'updated' => '2026-10-22',
+			'county' => 'King County',
+			'wikipedia' => 'https://en.wikipedia.org/wiki/Kent,_Washington',
+			'nearby' => array('renton', 'tacoma', 'seattle', 'bellevue'),
+			'categories' => array(
+				'channel-letters' => 'Kent reviews every sign on the site with a new permit, and a wall sign of 300 pounds or more needs engineer-stamped anchoring drawings and a final building inspection.',
+			),
 			'card' => 'Sign code KCC 15.06; L&I electrical',
 			'seo_title' => 'Storefront Signs in Kent, WA: Sign Permits & Channel Letters',
 			'seo_description' => 'Channel letters shipped to Kent businesses from Washington and California. How Kent sign permits work under KCC 15.06, nonconforming sign rules and L&I electrical permits.',
 			'h1' => 'Storefront Signs and Channel Letters for Kent Businesses',
 			'intro' => array(
-				'Kent&rsquo;s warehouses, strip centers and restaurants are a short drive from our Renton shop. Order channel letters or window graphics online and we&rsquo;ll ship them ready for your licensed installer.',
+				'Kent&rsquo;s warehouses, strip centers and restaurants are a short drive from our Renton shop, where we make window graphics and banners; channel letters are built in Washington and California. Order online and we&rsquo;ll ship everything ready for your licensed installer.',
 				'Kent&rsquo;s permit process looks at your whole site, not just the new sign: if the property has an illegal or nonconforming sign, it must be brought into conformance before a new sign permit is issued. Check what&rsquo;s already on your building before you design the new one.',
 			),
 			'facts' => array(
@@ -463,16 +509,17 @@ return array(
 				'heading' => 'Kent Sign Permits',
 				'body' => array(
 					'Kent requires a permit for all signs installed or altered in city limits, except signs exempted by KCC 15.06.080(A)(2). Under KCC 15.08.100(F)(2)(b), no sign permit is issued for a property with an illegal or nonconforming sign until that sign is brought into conformance, so a complete application covers all existing and proposed signs on the site.',
-					'Any number of wall signs for one tenant space can go on a single application. Wall signs weighing 300 pounds or more need a final building inspection, and a wall sign that is part of an awning needs a separate building permit for the awning.',
+					'Any number of wall signs for one tenant space can go on a single application. The application needs a site plan showing the sign&rsquo;s position and the length of street frontage, facade drawings at 1 inch = 20 feet or larger showing every existing and proposed sign with dimensions (scaled photos are accepted), and a detail of how each sign attaches to the wall and is lit. Wall signs weighing 300 pounds or more need engineer-stamped anchoring drawings and a final building inspection, and a wall sign that is part of an awning needs a separate building permit for the awning.',
 				),
 				'table' => array(
 					'Sign code' => 'KCC Chapter 15.06',
 					'Permit Center' => '253-856-5300',
 					'Whole site' => 'Existing nonconforming signs fixed before a new permit',
-					'Inspection' => 'Final building inspection for wall signs of 300 lb or more',
+					'Drawings' => 'Site plan with frontage, facade drawings at 1&rdquo; = 20&rsquo; or larger, attachment detail',
+					'Heavy wall signs' => '300 lb or more: stamped anchoring drawings and a final building inspection',
 				),
 				'sources' => array(
-					array('City of Kent: Sign permit application instructions', 'https://kentwa.gov/home/showpublisheddocument/22220/638665054597870000'),
+					array('City of Kent: Sign permit application instructions (Oct. 2024)', 'https://www.kentwa.gov/home/showpublisheddocument/22220/638665054597870000'),
 				),
 			),
 			'climate' => array(
@@ -500,8 +547,12 @@ return array(
 					'a' => 'Washington L&amp;I. Kent doesn&rsquo;t run its own electrical permit program.',
 				),
 				array(
+					'q' => 'What drawings does Kent want with a wall sign permit?',
+					'a' => 'A site plan showing where the sign goes and how long your street frontage is, facade drawings at 1 inch = 20 feet or larger with every existing and proposed sign, and a detail of how each sign attaches to the wall and is lit. Signs of 300 pounds or more need engineer-stamped anchoring drawings.',
+				),
+				array(
 					'q' => 'Is there a storefront sign company near me in Kent?',
-					'a' => 'We&rsquo;re in neighboring Renton. We make your sign and ship it to your Kent address; a licensed local installer mounts and connects it.',
+					'a' => 'Our team is in neighboring Renton. Channel letters are built in Washington and California, graphics and banners in Renton, and everything ships to your Kent address for a licensed local installer to mount and connect.',
 				),
 			),
 			'review_notes' => array(),
@@ -509,12 +560,21 @@ return array(
 		'everett' => array(
 			'status' => 'live', // Owner approved 2026-10-11; review_notes still open.
 			'name' => 'Everett',
+			'updated' => '2026-10-22',
+			'county' => 'Snohomish County',
+			'wikipedia' => 'https://en.wikipedia.org/wiki/Everett,_Washington',
+			'nearby' => array('seattle', 'bellevue', 'renton', 'kent'),
+			'categories' => array(
+				'banners' => 'Everett allows one temporary banner per tenant space on the building, up to 32 square feet, for no more than 30 days in any 365-day period.',
+				'window-graphics' => 'Window graphics may cover up to 25 percent of the window area, and they don&rsquo;t count toward your wall sign area. Cut vinyl and etched glass are named as allowed materials.',
+				'flags-aframes' => 'One A-frame per business: up to 8 square feet per side and 42 inches tall, unlit, out only during business hours, with a 6-foot clear path if it stands on the sidewalk.',
+			),
 			'card' => 'Sign code EMC 19.36; city electrical',
 			'seo_title' => 'Storefront Signs in Everett, WA: Sign Code & Permits',
 			'seo_description' => 'Channel letters for Everett businesses, made in Washington. Everett sign permits under EMC 19.36, window sign limits, nonconforming signs and city electrical permits.',
 			'h1' => 'Storefront Signs and Channel Letters for Everett Businesses',
 			'intro' => array(
-				'Everett businesses can order custom channel letters, window graphics and banners from our Renton shop and have them shipped ready for a licensed local installer.',
+				'Everett businesses can order custom channel letters, built in Washington or California, plus window graphics and banners from our Renton shop, and have them shipped ready for a licensed local installer.',
 				'Everett&rsquo;s sign chapter has two rules worth knowing before you design: window signs are capped at 25% of the window area, and each new permitted sign on a property with nonconforming signs requires one nonconforming sign to be removed or brought into conformance.',
 			),
 			'facts' => array(
@@ -541,6 +601,7 @@ return array(
 				'body' => array(
 					'Everett&rsquo;s sign rules are in EMC Chapter 19.36. Sign permit applications go to the building official and need Planning approval, and the city engineer reviews signs for hazards to drivers and pedestrians.',
 					'When a new sign that needs a permit goes on a property with nonconforming signs, one nonconforming sign must be removed or brought into conformance for each new sign installed for that business. Permanent and temporary window signs for commercial uses are limited to 25% of the window area.',
+					'Portable signs such as A-frames are allowed in sign categories A and B: one per business, no larger than 8 square feet per side or 42 inches tall, unlit, and out only during business hours, directly in front of the business. On a public sidewalk the sign must leave a 6-foot clear path, and the owner gives the City a hold-harmless document.',
 				),
 				'table' => array(
 					'Sign code' => 'EMC Chapter 19.36',
@@ -550,6 +611,16 @@ return array(
 				),
 				'sources' => array(
 					array('Everett Municipal Code 19.36: Signs', 'https://everett.municipal.codes/EMC/19.36.010'),
+					array('City of Everett: Chapter 19.36 Signs as amended by City Council action, Nov. 4, 2020', 'https://www.everettwa.gov/DocumentCenter/View/26689/Ch-1936-Signs_Amending-11-4-20'),
+				),
+			),
+			'temporary_signs' => array(
+				'heading' => 'Banners and Event Displays in Everett',
+				'body' => array(
+					'Each tenant space may have one temporary banner on the building, up to 32 square feet, for no more than 30 days in any 365-day period. Other temporary displays on commercial property are limited to one per tenant space visible from the street, up to 6 square feet and 6 feet tall, and every temporary display comes down within seven days after the event it promotes. Anything larger is treated as a permanent sign.',
+				),
+				'sources' => array(
+					array('City of Everett: Chapter 19.36 Signs as amended Nov. 4, 2020 (Sec. 19.36.060)', 'https://www.everettwa.gov/DocumentCenter/View/26689/Ch-1936-Signs_Amending-11-4-20'),
 				),
 			),
 			'climate' => array(
@@ -582,7 +653,7 @@ return array(
 				),
 			),
 			'review_notes' => array(
-				'Confirm EMC 19.36 numbering and the 25% window rule against the current code on everett.municipal.codes (sources mixed versions).',
+				'everett.municipal.codes is behind bot verification; window, portable and banner rules were read from the City&rsquo;s 2020 amending document (Council action 11/04/2020, Internet Archive copy). Confirm against the current EMC 19.36 before the next upload.',
 			),
 		),
 	),

@@ -200,8 +200,8 @@ add_filter('robots_txt', function ($output, $public) {
 	}
 
 	// Core adds its own wp-sitemap.xml line first, which stops
-	// wholesale_robots_txt() from listing /sitemap.xml; list all three here.
-	foreach (array('/sitemap.xml', '/product-sitemap.xml', '/category-sitemap.xml') as $path) {
+	// wholesale_robots_txt() from listing /sitemap.xml; list all the theme's sitemaps here.
+	foreach (array('/sitemap.xml', '/product-sitemap.xml', '/category-sitemap.xml', '/location-sitemap.xml') as $path) {
 		$url = esc_url(home_url($path));
 		if (false === strpos($output, $url)) {
 			$output = rtrim($output) . "\nSitemap: " . $url . "\n";

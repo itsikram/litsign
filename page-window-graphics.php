@@ -382,6 +382,9 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 
 			<h3>5. Applying your graphics</h3>
 			<p>We print and ship; we don&rsquo;t install. Clean the glass, peel a few inches of backing, and work from the center out with a squeegee. Clings and air release vinyl make bubble free installs easy for one or two people, and large storefronts can be handed to a local sign installer.</p>
+			<?php if ($locations_guide_url = wholesale_guide_url('locations', true)) : ?>
+				<p>Some cities limit how much of a storefront window may carry advertising. We ship to every state, and our <a href="<?php echo esc_url($locations_guide_url); ?>">state and city sign permit guides</a> link to the official rules for your area.</p>
+			<?php endif; ?>
 		</div>
 	</section>
 

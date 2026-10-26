@@ -17,6 +17,7 @@ $free_shipping = wholesale_cart_qualifies_free_shipping($cart);
 $first_shipping = $free_shipping || !$shipping_options ? 0 : $shipping_options[0];
 $card_enabled = !wholesale_setting_enabled('payment_disabled');
 $direct_card = $card_enabled && 'direct' === wholesale_payment_method();
+$noun = wholesale_items_noun($cart->get_items());
 $message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
 
 // Prefill for signed-in customers.
@@ -172,7 +173,7 @@ get_header();
 
                     <label class="checkout-check">
                         <input type="checkbox" name="same_shipping_address" id="sameShippingAddress">
-                        Ship my sign to this address
+                        Ship my <?php echo esc_html($noun); ?> to this address
                     </label>
 
                     <div class="checkout-shipping-address" id="shippingAddressFields" hidden>
@@ -226,7 +227,7 @@ get_header();
 
                 <section class="checkout-card" aria-labelledby="checkout-shipping">
                     <h2 id="checkout-shipping"><span class="checkout-step-number">2</span> Shipping Options</h2>
-                    <p class="checkout-muted">Every sign is made to order and ships by <?php echo esc_html(wholesale_estimated_ship_date($cart)); ?>. Delivery dates include production time.</p>
+                    <p class="checkout-muted">Every <?php echo esc_html('order' === $noun ? 'item' : $noun); ?> is made to order and ships by <?php echo esc_html(wholesale_estimated_ship_date($cart)); ?>. Delivery dates include production time.</p>
                     <div class="checkout-options" role="radiogroup" aria-labelledby="checkout-shipping">
                         <?php if ($free_shipping_min > 0) : ?>
                             <label class="checkout-option<?php echo $free_shipping ? '' : ' is-disabled'; ?>">
@@ -308,7 +309,7 @@ get_header();
                         <summary>Add a note to your order <span class="checkout-optional">(optional)</span></summary>
                         <p class="checkout-field">
                             <label for="orderComment" class="screen-reader-text">Order notes</label>
-                            <textarea name="comment" id="orderComment" rows="3" placeholder="Anything we should know about your sign, installation or delivery?"></textarea>
+                            <textarea name="comment" id="orderComment" rows="3" placeholder="<?php echo esc_attr('sign' === $noun ? 'Anything we should know about your sign, installation or delivery?' : "Anything we should know about your {$noun} or delivery?"); ?>"></textarea>
                         </p>
                     </details>
 
@@ -367,7 +368,7 @@ get_header();
 
                     <ul class="checkout-assurance">
                         <?php if ($card_enabled) : ?><li>Secure card processing by Elavon Converge</li><?php endif; ?>
-                        <li>UL listed signs, tested before shipping</li>
+                        <li><?php echo 'sign' === $noun ? 'UL listed signs, tested before shipping' : 'Made to order and checked before shipping'; ?></li>
                         <li>Questions? <a href="tel:+18664362101">866-436-2101</a> &middot; Mon&ndash;Fri 8am&ndash;5pm PT</li>
                     </ul>
                     <p class="checkout-terms">By placing your order you agree to our <a href="<?php echo esc_url(home_url('/terms-conditions/')); ?>">Terms &amp; Conditions</a>.</p>

@@ -36,7 +36,7 @@ if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? '') && isset($_POST['track_order_n
 
 if ($order_post_id) {
     $status = get_post_status($order_post_id);
-    $status_info = wholesale_order_status_info();
+    $status_info = wholesale_order_status_info($order_post_id);
     $current = $status_info[$status] ?? array('label' => ucwords(str_replace(array('-', '_'), ' ', (string) $status)), 'tone' => 'muted', 'step' => 1, 'note' => '');
     $step = (int) $current['step'];
     $timeline = wholesale_order_timeline($order_post_id);

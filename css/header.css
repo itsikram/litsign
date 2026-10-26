@@ -573,6 +573,11 @@ html.sh-lock body {
 @media (max-width: 767.98px) {
   .site-header {
     padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .site-header.is-scrolled {
+    padding-bottom: 6px;
   }
 
   .page-id-439 .site-header:not(.is-scrolled) {

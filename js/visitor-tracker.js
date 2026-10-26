@@ -179,11 +179,21 @@
   document.addEventListener('click', (event) => {
     const now = Date.now();
 
-    recentClicks = recentClicks.filter((click) => now - click.at < 800 && Math.abs(click.x - event.clientX) < 40 && Math.abs(click.y - event.clientY) < 40);
-    recentClicks.push({ at: now, x: event.clientX, y: event.clientY });
-    if (recentClicks.length === 3) {
-      const target = event.target.closest('a, button, input, select, label, img, [role="button"]') || event.target;
-      push('rage_click', { label: elementLabel(target) });
+    // Rage clicks count only the visitor's own clicks: the page's code clicks too
+    // (channel letter pages pick each color's first swatch on load, which showed up
+    // as rage clicks on "Gloss Black"). Several clicks in a text or number box are
+    // selecting text or using the spinner arrows. Inside the chat widget's shadow
+    // DOM the document only sees the host element, so name the inner one.
+    const inner = (event.composedPath && event.composedPath()[0]) || event.target;
+    const typingBox = inner.matches && inner.matches('input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]), textarea, select');
+    if (event.isTrusted && !typingBox) {
+      recentClicks = recentClicks.filter((click) => now - click.at < 800 && Math.abs(click.x - event.clientX) < 40 && Math.abs(click.y - event.clientY) < 40);
+      recentClicks.push({ at: now, x: event.clientX, y: event.clientY });
+      if (recentClicks.length === 3) {
+        const origin = inner.closest ? inner : event.target;
+        const target = origin.closest('a, button, input, select, label, img, [role="button"]') || origin;
+        push('rage_click', { label: elementLabel(target) });
+      }
     }
 
     const el = event.target.closest('a, button, input[type="submit"], input[type="button"], [role="button"], .btn');
@@ -270,6 +280,9 @@
     }
 
     if (!events[1]) return;
+    // Same for errors: the page load quote (e.g. a channel letter page before any text
+    // is typed) fails quietly and the visitor never sees it.
+    if (events[1] === 'price_error' && !configured) return;
     const data = json && json.data;
     const message = (json && (json.error || json.message)) || (data && (typeof data === 'string' ? data : data.message || data.error)) || 'The request failed';
     const key = events[1] + message;
@@ -286,10 +299,16 @@
         const body = init && init.body;
         const action = body && typeof body.get === 'function' ? body.get('action') : '';
         if (action && ajaxEvents[action]) {
+          // The HTTP status says whether a non-JSON answer was a PHP error (500), the
+          // host's firewall/challenge page (403/429/503) or a too-large upload (413).
+          let status = 0;
           request
-            .then((response) => response.clone().json())
+            .then((response) => {
+              status = response.status;
+              return response.clone().json();
+            })
             .then((json) => recordAjax(action, json))
-            .catch(() => recordAjax(action, { ok: false, error: 'No valid response from the server' }));
+            .catch(() => recordAjax(action, { ok: false, error: 'No valid response from the server (HTTP ' + (status || 'none') + ')' }));
         }
       } catch (error) {
         // Never get in the way of the page's own request.

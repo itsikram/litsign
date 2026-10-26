@@ -189,6 +189,8 @@ function wholesale_customer_order_email_html($post_id)
         return '$' . number_format((float) $value, 2);
     };
     $font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
+    $noun = wholesale_items_noun($items);
+    $build_line = 'sign' === $noun ? 'We build your sign and test it before it ships.' : "We make your {$noun} and check it before it ships.";
 
     $rows = '';
     foreach ($items as $item) {
@@ -230,7 +232,7 @@ function wholesale_customer_order_email_html($post_id)
         . '<h2 style="margin:28px 0 10px;font-size:16px;">What happens next</h2>'
         . '<ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:#34506a;">'
         . '<li>We review your order and contact you if anything needs a closer look.</li>'
-        . '<li>We build your sign and test it before it ships.</li>'
+        . '<li>' . esc_html($build_line) . '</li>'
         . '<li>You receive tracking details by email when it ships.</li>'
         . '</ol>'
         . '<p style="margin:20px 0 0;"><a href="' . esc_url(wholesale_track_order_url($post_id)) . '" style="display:inline-block;padding:12px 22px;background:#1fa8de;border-radius:8px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Track your order</a></p>'
@@ -243,16 +245,19 @@ function wholesale_customer_order_email_html($post_id)
 /**
  * Order statuses as customers and staff see them.
  *
+ * @param int $order_post_id Optional order, so notes can name what was ordered.
  * @return array<string,array{label:string,tone:string,step:int,note:string}>
  */
-function wholesale_order_status_info()
+function wholesale_order_status_info($order_post_id = 0)
 {
+    // Notes name what was ordered ("Your banner is being made."); without an order it is just "order".
+    $noun = $order_post_id ? wholesale_order_noun($order_post_id) : 'order';
     return array(
         'pending' => array('label' => 'Pending review', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are reviewing the details.'),
-        'processing' => array('label' => 'In production', 'tone' => 'info', 'step' => 2, 'note' => 'Your sign is being made.'),
+        'processing' => array('label' => 'In production', 'tone' => 'info', 'step' => 2, 'note' => "Your {$noun} is being made."),
         'on-hold' => array('label' => 'On hold', 'tone' => 'warn', 'step' => 1, 'note' => 'We need something from you. Our team will contact you, or call 866-436-2101.'),
         'on_hold' => array('label' => 'On hold', 'tone' => 'warn', 'step' => 1, 'note' => 'We need something from you. Our team will contact you, or call 866-436-2101.'),
-        'completed' => array('label' => 'Shipped', 'tone' => 'success', 'step' => 3, 'note' => 'Your sign is on its way.'),
+        'completed' => array('label' => 'Shipped', 'tone' => 'success', 'step' => 3, 'note' => "Your {$noun} is on its way."),
         'cancelled' => array('label' => 'Cancelled', 'tone' => 'muted', 'step' => 0, 'note' => 'This order was cancelled.'),
         'refunded' => array('label' => 'Refunded', 'tone' => 'muted', 'step' => 0, 'note' => 'This order was refunded.'),
         'failed' => array('label' => 'Payment failed', 'tone' => 'danger', 'step' => 0, 'note' => 'Payment did not go through. Please contact us.'),
@@ -371,7 +376,7 @@ function wholesale_find_order_for_tracking($number, $email)
  */
 function wholesale_order_timeline($order_post_id)
 {
-    $info = wholesale_order_status_info();
+    $info = wholesale_order_status_info($order_post_id);
     $events = array(array(
         'time' => (int) get_post_time('U', true, $order_post_id),
         'status' => 'placed',

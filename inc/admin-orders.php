@@ -914,6 +914,11 @@ add_action('admin_head', function () {
 		.wo-specs div { min-width: 0; }
 		.wo-specs dt { color: #646970; font-size: 12px; }
 		.wo-specs dd { margin: 0; overflow-wrap: anywhere; }
+		.wo-specs .artwork-links { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+		.wo-specs .artwork-links__sep { display: none; }
+		.wo-specs .artwork-download { display: inline-flex; align-items: center; gap: 3px; padding: 1px 8px; border: 1px solid #2271b1; border-radius: 3px; font-size: 12px; text-decoration: none; }
+		.wo-specs .artwork-download::before { content: "\f316"; font: 14px/1 dashicons; }
+		.wo-specs .artwork-download:hover { background: #f0f6fc; }
 		.wo-cl { margin-top: 12px; }
 		.wo-cl summary { cursor: pointer; color: #2271b1; font-weight: 600; }
 		.wo-table-scroll { margin-top: 8px; overflow-x: auto; }

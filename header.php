@@ -608,13 +608,24 @@ $logo_id = get_theme_mod('custom_logo');
 								'menu_class' => 'header-menu',
 							)); ?>
 						</nav>
+						<?php
+						// Main call-to-action (this header and the desktop one below). "Start Building"
+						// opens the channel letter builder, so banner, flag, vinyl and display shoppers
+						// get a free quote instead; so does the builder itself, rather than a reload.
+						$cta_quote = is_page('channel-letter-builder');
+						$cta_on_page_quote = is_page(array('banners-displays', 'window-graphics')); // Both have a #quote form.
+						if (is_singular('product')) {
+							$cta_quote = 'sign' !== wholesale_product_noun(get_queried_object_id());
+						} elseif (get_query_var('category_slug')) {
+							$cta_quote = !wholesale_is_channel_letters_page();
+						} elseif ($cta_on_page_quote) {
+							$cta_quote = true;
+						}
+						$cta_url   = $cta_quote ? ($cta_on_page_quote ? '#quote' : home_url('/contact/')) : home_url('/channel-letter-builder/');
+						$cta_label = $cta_quote ? 'Free Quote' : 'Start Building';
+						?>
 						<div class="header-builder-menu">
-							<?php if (is_page('channel-letter-builder')) : ?>
-								<?php // Already in the builder: offer help instead of reloading the page. ?>
-								<a class="header-builder-cta" href="<?php echo esc_url(home_url('/contact/')); ?>">Free Quote</a>
-							<?php else : ?>
-								<a class="header-builder-cta" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
-							<?php endif; ?>
+							<a class="header-builder-cta" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($cta_label); ?></a>
 						</div>
 
 					</div>
@@ -635,10 +646,7 @@ $logo_id = get_theme_mod('custom_logo');
 		$search_post_type = 'product';
 		$popular_searches = array('Channel letters', '13oz vinyl banner', 'Flags', 'Adhesive vinyl', 'Trade show');
 
-		// Main call-to-action. Already in the builder: offer help instead of reloading the page.
-		$on_builder = is_page('channel-letter-builder');
-		$cta_url    = $on_builder ? home_url('/contact/') : home_url('/channel-letter-builder/');
-		$cta_label  = $on_builder ? 'Free Quote' : 'Start Building';
+		// Main call-to-action: $cta_url / $cta_label are set above the phone header's button.
 
 		// Inline icons (the theme's icon font is a small subset without these glyphs).
 		$ssx_icon = static function ($name, $size = 20) {
@@ -2045,7 +2053,7 @@ $logo_id = get_theme_mod('custom_logo');
 		 * NEW MOBILE MENU (opened by the existing hamburger button).
 		 * The original top bar is unchanged; only the slide-out menu is new.
 		 * =================================================================== */
-		$ssxm_cta_label = $on_builder ? 'Get a free quote' : 'Design your sign online';
+		$ssxm_cta_label = $cta_quote ? 'Get a free quote' : 'Design your sign online';
 		?>
 
 		<style>

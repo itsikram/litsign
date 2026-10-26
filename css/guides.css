@@ -277,3 +277,206 @@
   height: 16px;
   vertical-align: -3px;
 }
+
+/* ---------- Location pages: hero call link, review date, product families ---------- */
+.gd-hero-call {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 48px;
+  padding: 12px 6px;
+  color: #0b74a3;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.gd-hero-call svg {
+  width: 18px;
+  height: 18px;
+}
+
+.gd-hero-call:hover,
+.gd-hero-call:focus-visible {
+  text-decoration: underline;
+}
+
+.gd-reviewed {
+  margin: 18px 0 0;
+  color: #52616f;
+  font-size: 0.9rem;
+}
+
+.gd-lead {
+  margin-top: 8px;
+}
+
+.gd-family-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.gd-family {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  border: 1px solid #e6ebf1;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.gd-family:hover,
+.gd-family:focus-within {
+  border-color: rgba(31, 168, 222, 0.4);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.1);
+}
+
+.gd-family h3 {
+  margin: 0 0 4px;
+  font-size: 1.08rem;
+  line-height: 1.3;
+}
+
+.gd-family h3 a {
+  color: #172027;
+  text-decoration: none;
+}
+
+/* The whole card opens the family page; extra links sit above the overlay. */
+.gd-family h3 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.gd-family h3 a:hover,
+.gd-family h3 a:focus-visible {
+  color: #0b74a3;
+}
+
+.gd-family p {
+  margin: 0 0 10px;
+  color: #52616f;
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.gd-family .gd-family-made {
+  color: #127ea8;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gd-family .sf-type-price {
+  margin: auto 0 0;
+  padding-top: 8px;
+  color: #172027;
+  font-weight: 700;
+}
+
+.gd-family .gd-family-more {
+  position: relative;
+  z-index: 2;
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+}
+
+.gd-family-more a {
+  color: #0b74a3;
+  font-weight: 600;
+}
+
+/* Sub-blocks inside a permit section and the district list. */
+.gd-block-title {
+  margin: 28px 0 8px;
+  font-size: 1.15rem;
+}
+
+.gd-districts {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-districts li {
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e6ebf1;
+  border-radius: 12px;
+  background: #ffffff;
+  line-height: 1.6;
+}
+
+.gd-districts strong {
+  display: block;
+  margin-bottom: 2px;
+  color: #172027;
+}
+
+@media (max-width: 575.98px) {
+  .gd-family-grid {
+    gap: 12px;
+    margin-top: 22px;
+  }
+
+  .gd-family {
+    padding: 16px;
+  }
+
+  .gd-hero-call {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Locations hub: approved city guides grouped by state. */
+.gd-city-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.gd-city-group {
+  padding: 16px 18px;
+  border: 1px solid #e6ebf1;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.gd-city-group h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.gd-city-group h3 a {
+  color: #172027;
+  text-decoration: none;
+}
+
+.gd-city-group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gd-city-group li + li {
+  margin-top: 4px;
+}
+
+.gd-city-group a {
+  color: #0b74a3;
+  font-weight: 600;
+}
+
+.gd-city-group h3 a:hover,
+.gd-city-group h3 a:focus-visible {
+  color: #0b74a3;
+}

@@ -214,6 +214,9 @@ get_header();
 			<p>A raceway is a metal box behind the letters that holds the wiring and mounts the whole sign as one unit, so fewer holes go into your building and the sign is easier to remove when you move. Direct (flush) mounting attaches each letter to the wall for the cleanest look. Letters ship with an installation pattern to mark the holes and a wiring diagram for your installer.</p>
 			<h3>Who installs it</h3>
 			<p>Your sign arrives tested and ready to install. Mounting is straightforward for a local sign installer, and in most areas the electrical connection must be made by a licensed electrician or sign contractor.</p>
+			<?php if ($locations_guide_url = wholesale_guide_url('locations', true)) : ?>
+				<p>We ship to every state. Who may connect a lit sign, and who issues the permit, depends on where you are: find your state&rsquo;s rules in our <a href="<?php echo esc_url($locations_guide_url); ?>">state-by-state sign permit and licensing guides</a>.</p>
+			<?php endif; ?>
 		</div>
 	</section>
 

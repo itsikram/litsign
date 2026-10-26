@@ -23,7 +23,7 @@ get_header();
         <header class="acct-head">
             <div>
                 <h1>My orders</h1>
-                <p>Track your signs and review past orders.</p>
+                <p>Track your orders and review past purchases.</p>
             </div>
             <a class="cart-secondary" href="<?php echo esc_url(home_url('/account/')); ?>">Account details</a>
         </header>

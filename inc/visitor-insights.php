@@ -1488,8 +1488,12 @@ function wholesale_vi_findings($m, $context)
 	}
 
 	if (!empty($context['foreign']) && $pct($context['foreign'], $sessions) >= 10) {
+		// Across all traffic these are mostly not ad clicks (e.g. Asia time zones landing on a
+		// product page for 0 seconds), so only the Google Ads view points at ad locations.
 		$findings[] = array('warning', sprintf('%d%% of %s are in time zones outside the US', $pct($context['foreign'], $sessions), $who),
-			'Your ads may be shown abroad. In Google Ads → Locations, set "Presence: people in or regularly in your targeted locations" instead of "Presence or interest".');
+			!empty($context['ads'])
+				? 'Your ads may be shown abroad. In Google Ads → Locations, set "Presence: people in or regularly in your targeted locations" instead of "Presence or interest".'
+				: 'If the Google Ads view does not show this warning too, these visits are not from your ads: foreign visits that open one page and leave in 0 seconds are usually bots or link checkers, and they inflate the bounce rate. Judge ad locations from the Google Ads view.');
 	}
 
 	if (!empty($context['not_found'])) {

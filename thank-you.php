@@ -15,6 +15,7 @@ $ship_by = $order ? get_post_meta($order, 'estimate_delivery_time', true) : '';
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
 };
+$noun = $items ? wholesale_items_noun($items) : 'order';
 $ship_prefix = isset($shipping['shipping_fname']) ? 'shipping_' : 'billing_';
 
 get_header();
@@ -38,9 +39,13 @@ get_header();
             <section class="checkout-card" aria-labelledby="next-steps">
                 <h2 id="next-steps">What happens next</h2>
                 <ol class="confirmation-steps">
-                    <li><strong>We review your order.</strong> Our team checks your sign details and contacts you if anything needs a closer look.</li>
-                    <li><strong>We build and test your sign.</strong> Every sign is made to order and tested before it ships.</li>
-                    <li><strong>Your sign ships.</strong><?php echo $ship_by ? ' Estimated to ship by <strong>' . esc_html($ship_by) . '</strong>.' : ''; ?> You'll get tracking details by email.</li>
+                    <li><strong>We review your order.</strong> Our team checks your <?php echo esc_html($noun); ?> details and contacts you if anything needs a closer look.</li>
+                    <?php if ('sign' === $noun) : ?>
+                        <li><strong>We build and test your sign.</strong> Every sign is made to order and tested before it ships.</li>
+                    <?php else : ?>
+                        <li><strong>We make your <?php echo esc_html($noun); ?>.</strong> Everything is made to order and checked before it ships.</li>
+                    <?php endif; ?>
+                    <li><strong>Your <?php echo esc_html($noun); ?> ships.</strong><?php echo $ship_by ? ' Estimated to ship by <strong>' . esc_html($ship_by) . '</strong>.' : ''; ?> You'll get tracking details by email.</li>
                 </ol>
                 <p class="confirmation-help">Questions about your order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT) or email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a><?php echo $order ? ' with order #' . esc_html($order_number) : ''; ?>.</p>
                 <div class="confirmation-actions">

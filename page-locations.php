@@ -13,10 +13,22 @@ $permits_url = wholesale_guide_url('sign-permits');
 $install_url = wholesale_guide_url('how-to-install-channel-letters');
 $shipping_url = wholesale_guide_url('shipping-returns');
 
+// Approved state guides, and approved city guides grouped by state. The
+// state pages also feed the CollectionPage's ItemList in the page schema.
 $state_links = array();
+$city_groups = array();
+$GLOBALS['wholesale_page_items'] = array();
 foreach (wholesale_guide_states() as $slug => $state) {
 	$url = wholesale_guide_url('locations/' . $slug);
+	foreach ($url ? $state['cities'] : array() as $city_slug => $city) {
+		$city_url = wholesale_guide_url('locations/' . $slug . '/' . $city_slug);
+		if ($city_url) {
+			$city_groups[$slug]['state'] = array($url, $state['name']);
+			$city_groups[$slug]['cities'][$city_url] = $city['name'] . ', ' . $state['abbr'];
+		}
+	}
 	if ($url) {
+		$GLOBALS['wholesale_page_items'][] = get_page_by_path('locations/' . $slug);
 		$state_links[] = array($url, $state['name'], isset($state['facts']['Sign license']) ? $state['facts']['Sign license'] : (isset($state['facts']['Electrician licensing']) ? $state['facts']['Electrician licensing'] : ''));
 	}
 }
@@ -75,7 +87,29 @@ get_header();
 		</div>
 	</section>
 
-	<section class="sf-section sf-section--tint" aria-labelledby="gd-works-title">
+	<?php if ($city_groups) : ?>
+		<section class="sf-section sf-section--tint" aria-labelledby="gd-major-cities-title">
+			<div class="container">
+				<p class="cl-kicker">City guides</p>
+				<h2 id="gd-major-cities-title" class="cl-section-title">Sign Permit Guides for Major Cities</h2>
+				<p class="cl-section-lead">Large cities run their own sign codes and permit offices. Each city guide covers who issues the permit, the local limits on banners and window graphics, and who may install a lit sign there.</p>
+				<div class="gd-city-groups">
+					<?php foreach ($city_groups as $group) : ?>
+						<div class="gd-city-group">
+							<h3><a href="<?php echo esc_url($group['state'][0]); ?>"><?php echo esc_html($group['state'][1]); ?></a></h3>
+							<ul>
+								<?php foreach ($group['cities'] as $city_url => $city_name) : ?>
+									<li><a href="<?php echo esc_url($city_url); ?>"><?php echo esc_html($city_name); ?></a></li>
+								<?php endforeach; ?>
+							</ul>
+						</div>
+					<?php endforeach; ?>
+				</div>
+			</div>
+		</section>
+	<?php endif; ?>
+
+	<section class="sf-section<?php echo $city_groups ? '' : ' sf-section--tint'; ?>" aria-labelledby="gd-works-title">
 		<div class="container sf-prose">
 			<p class="cl-kicker">How it works anywhere</p>
 			<h2 id="gd-works-title" class="cl-section-title">Ordering a Sign From Out of State</h2>

@@ -25,7 +25,7 @@ function wholesale_product_guides_catalog()
 
 		'13oz-vinyl-banner' => array(
 			'intro' => array(
-				'A 13oz vinyl banner is the everyday workhorse of signage: strong, affordable and ready for indoor or outdoor use. It is printed with UV inks on matte scrim vinyl, which has woven fibers inside that resist tearing, and the matte surface keeps sun glare off your message so it reads clearly from the street.',
+				'A 13oz vinyl banner is the everyday workhorse of business advertising: strong, affordable and ready for indoor or outdoor use. It is printed with UV inks on matte scrim vinyl, which has woven fibers inside that resist tearing, and the matte surface keeps sun glare off your message so it reads clearly from the street.',
 				'Every banner is cut to the size you enter. ' . $banner_finishing . ' Single piece banners go up to 10\' x 145\' (9.5\' x 145\' with pole pockets); larger banners are welded together. Banners 89" or larger on their shortest side ship folded, smaller ones ship rolled.',
 			),
 			'uses' => array('Grand opening, sale and now hiring banners', 'Storefront, fence and building banners', 'Event, festival and sponsor banners', 'Indoor banners for stores, gyms and schools'),
@@ -68,11 +68,11 @@ function wholesale_product_guides_catalog()
 		'backlit-banner' => array(
 			'intro' => array(
 				'A backlit banner is made for light boxes. It is UV printed on 15oz backlit vinyl, a translucent banner material that lets light pass through the print, so your graphic glows when the box is lit instead of looking flat.',
-				'Choose a day time or night time color profile for when the sign is seen most, and enter any size up to 120" x 150\'. It is single sided, with free hemming and grommets and optional pole pockets or webbing with D-rings for mounting in large frames.',
+				'Choose a day time or night time color profile for when the banner is seen most, and enter any size up to 120" x 150\'. It is single sided, with free hemming and grommets and optional pole pockets or webbing with D-rings for mounting in large frames.',
 			),
-			'uses' => array('Large light boxes and illuminated sign cabinets', 'Backlit storefront and mall displays', 'Lit menu and promotional displays', 'Replacement graphics for existing light boxes'),
+			'uses' => array('Large light boxes and illuminated display cabinets', 'Backlit storefront and mall displays', 'Lit menu and promotional displays', 'Replacement graphics for existing light boxes'),
 			'faq' => array(
-				array('q' => 'Which color profile should I pick?', 'a' => 'Pick the profile for when the sign is seen most: the night time profile is set up to look right with the light box on, the day time profile for viewing in daylight.'),
+				array('q' => 'Which color profile should I pick?', 'a' => 'Pick the profile for when the banner is seen most: the night time profile is set up to look right with the light box on, the day time profile for viewing in daylight.'),
 				array('q' => 'What is the difference between a backlit banner and backlit film?', 'a' => 'The backlit banner is flexible 15oz vinyl for large light boxes, up to 120" x 150\'. Backlit film is a 10 mil translucent film for smaller lit displays such as menu boards and poster light boxes, up to 59" high.'),
 				array('q' => 'Can it be double sided?', 'a' => 'No, backlit banners are single sided.'),
 			),
@@ -112,7 +112,7 @@ function wholesale_product_guides_catalog()
 				'The super smooth indoor banner is UV printed on 14 mil Double White Popup, a smooth PVC sheet with white faces, so photos and fine text look sharp even when people stand right next to it. The material has low memory, so it hangs flat without creases after being rolled.',
 				'Edges are flush cut with no hems for a clean finish, and grommets are free if you want them. It is single sided, up to 52" x 100\'. It is made for close-up indoor viewing and also holds up outdoors.',
 			),
-			'uses' => array('Retail and point of purchase banners', 'Lobby, office and school signs', 'Trade show and conference banners', 'Hanging signs seen up close'),
+			'uses' => array('Retail and point of purchase banners', 'Lobby, office and school banners', 'Trade show and conference banners', 'Hanging banners seen up close'),
 			'faq' => array(
 				array('q' => 'How is it different from a 13oz vinyl banner?', 'a' => 'It has a smoother surface for close viewing and flush cut edges. Choose 13oz vinyl for everyday outdoor banners that need hems, pole pockets or heavier finishing.'),
 				array('q' => 'Does it have hems?', 'a' => 'No. It is flush cut for a clean edge; grommets are optional and free.'),
@@ -184,7 +184,7 @@ function wholesale_product_guides_catalog()
 				'The 3ft SEG fabric stand is a 33.45" wide by 78.75" tall freestanding display with a seamless, UV printed fabric graphic. A silicone edge sewn to the print presses into the aluminum frame, so the graphic stays tight and smooth all day.',
 				'At 13 lbs, with a travel bag included, it is easy to carry to events. Use one as a premium banner stand, or line several up to divide space and build your own booth layout. Choose single or double sided; it packs down to 43" x 8.25" x 2.75".',
 			),
-			'uses' => array('Lobby and entrance signs', 'Trade show booth accents', 'Space dividers at events', 'Retail promotions'),
+			'uses' => array('Lobby and entrance displays', 'Trade show booth accents', 'Space dividers at events', 'Retail promotions'),
 			'faq' => array(
 				array('q' => 'How is it different from a retractable banner stand?', 'a' => 'A retractable banner rolls into its base. The SEG stand holds a tensioned fabric graphic in a frame for a smoother, more premium face, and the graphic is easy to replace.'),
 				array('q' => 'Can both sides be printed?', 'a' => 'Yes, choose single or double sided.'),
@@ -426,9 +426,9 @@ function wholesale_product_guides_catalog()
 		'adhesive-products' => array(
 			'intro' => array(
 				'AV 1 adhesive vinyl is our standard printed decal material: a 4 mil white PVC calendered film with a clear permanent adhesive. It is UV printed in a matte finish with no lamination, holds up to water and scratches, and works indoors or out on flat surfaces.',
-				'Use it for custom stickers, decals, wall and door signs, and for prints you want to mount on your own boards. It is single sided and comes in sizes up to 52" high by 159\' wide.',
+				'Use it for custom stickers, decals, wall and door graphics, and for prints you want to mount on your own boards. It is single sided and comes in sizes up to 52" high by 159\' wide.',
 			),
-			'uses' => array('Custom decals and stickers', 'Door, wall and equipment signs', 'Prints mounted to boards or panels', 'Indoor and outdoor labels'),
+			'uses' => array('Custom decals and stickers', 'Door, wall and equipment graphics', 'Prints mounted to boards or panels', 'Indoor and outdoor labels'),
 			'faq' => array(
 				array('q' => 'Can I remove it later?', 'a' => 'AV 1 has a permanent adhesive. For a decal that can be removed, choose AV 2 high performance adhesive vinyl or a window cling.'),
 				array('q' => 'Does it work on windows?', 'a' => 'It is opaque white. For windows, see clear vinyl, window perf, frosted vinyl or window cling.'),
@@ -442,7 +442,7 @@ function wholesale_product_guides_catalog()
 				'AV 2 high performance adhesive vinyl is a 3 mil calendered PVC film with a pressure sensitive, removable adhesive. Its gray backing has air egress channels, so air escapes as you press it down for a bubble free install, and the decal can be lifted and repositioned while you line it up.',
 				'It is made for long term flat applications indoors and out. Prints are UV printed in a matte finish, single sided, up to 52" high by 159\' wide.',
 			),
-			'uses' => array('Large wall graphics and decals', 'Signs on flat panels, doors and equipment', 'Promotional graphics that will be removed later', 'Installs where bubbles must be avoided'),
+			'uses' => array('Large wall graphics and decals', 'Labels and graphics on flat panels, doors and equipment', 'Promotional graphics that will be removed later', 'Installs where bubbles must be avoided'),
 			'faq' => array(
 				array('q' => 'How is it different from AV 1?', 'a' => 'AV 2 has a removable adhesive and an air egress backing for easier, bubble free installs. AV 1 has a permanent adhesive.'),
 				array('q' => 'Can it go outside?', 'a' => 'Yes, it is waterproof and UV safe for indoor or outdoor use.'),
@@ -453,10 +453,10 @@ function wholesale_product_guides_catalog()
 
 		'adhesive-translucent-vinyl' => array(
 			'intro' => array(
-				'AV 3 adhesive translucent vinyl is a 3 mil printed vinyl made for lit signs. Its permanent adhesive sticks best to flat plexi, acrylic, lexan, glass and other clear or translucent plastics, so it is used for light boxes, channel letter faces, window displays and point of purchase signs.',
-				'Choose single layer printing for signs seen mostly in daylight (colors lighten when lit at night), or double layer printing for signs seen at night in a light box (colors look darker unlit). It is indoor and outdoor safe, up to 52" high by 159\' wide.',
+				'AV 3 adhesive translucent vinyl is a 3 mil printed vinyl made for lit displays. Its permanent adhesive sticks best to flat plexi, acrylic, lexan, glass and other clear or translucent plastics, so it is used for light boxes, channel letter faces, window displays and point of purchase displays.',
+				'Choose single layer printing for graphics seen mostly in daylight (colors lighten when lit at night), or double layer printing for graphics seen at night in a light box (colors look darker unlit). It is indoor and outdoor safe, up to 52" high by 159\' wide.',
 			),
-			'uses' => array('Light box and sign cabinet faces', 'Channel letter and lit sign faces', 'Backlit window displays', 'Illuminated point of purchase signs'),
+			'uses' => array('Light box and display cabinet faces', 'Channel letter and lit display faces', 'Backlit window displays', 'Illuminated point of purchase displays'),
 			'faq' => array(
 				array('q' => 'Single or double layer?', 'a' => 'Single layer for daytime viewing; double layer for night viewing with a light box behind it.'),
 				array('q' => 'Why does the print look dark?', 'a' => 'Translucent vinyl is printed with heavy ink so it glows correctly when lit. Without backlighting, it looks darker than your artwork.'),
@@ -512,7 +512,7 @@ function wholesale_product_guides_catalog()
 				'AV 7 premium window cling is an 8 mil film with a low tack mini-dot adhesive. It holds firmly to glass and other smooth, clean surfaces, then peels off without residue, so you can reposition and reuse it time and again. The air egress adhesive makes bubble free installs easy.',
 				'The cling holds on the back of the print only, so the printed side faces you after install. Wetting the glass first makes positioning easier. It is UV printed for outdoor durability, single sided, up to 52" high by 159\' wide.',
 			),
-			'uses' => array('Seasonal and sale window promotions', 'Point of purchase signs on glass and coolers', 'Temporary hours and event notices', 'Graphics for rented or leased storefronts'),
+			'uses' => array('Seasonal and sale window promotions', 'Point of purchase graphics on glass and coolers', 'Temporary hours and event notices', 'Graphics for rented or leased storefronts'),
 			'faq' => array(
 				array('q' => 'Can I reuse it?', 'a' => 'Yes. It removes without residue and can be repositioned and reapplied.'),
 				array('q' => 'Which side sticks?', 'a' => 'The cling holds on the back of the print, so apply it to the side of the glass you are viewing from.'),
@@ -538,13 +538,13 @@ function wholesale_product_guides_catalog()
 		'av9-reflective-adhesive-vinyl' => array(
 			'intro' => array(
 				'AV 9 reflective adhesive vinyl is an engineer grade, 4 mil prismatic reflective film with a permanent adhesive backing. It is UV printed in full color, so your graphic shines back when headlights or flashlights hit it.',
-				'As part of our AV roll media line, it is cut to the size you need, up to 48" high by 100\' wide, for decals and graphics you apply yourself to signs, panels and vehicles. It is waterproof and UV safe for years of outdoor use.',
+				'As part of our AV roll media line, it is cut to the size you need, up to 48" high by 100\' wide, for decals and graphics you apply yourself to panels, boards and vehicles. It is waterproof and UV safe for years of outdoor use.',
 			),
-			'uses' => array('High visibility vehicle decals', 'Safety, parking and directional sign faces', 'Graphics for your own sign blanks', 'Equipment and trailer markings'),
+			'uses' => array('High visibility vehicle decals', 'Safety, parking and directional graphics', 'Graphics for your own blank panels', 'Equipment and trailer markings'),
 			'faq' => array(
-				array('q' => 'What is engineer grade?', 'a' => 'It is a standard grade of reflective sheeting for signs that need to be seen at night.'),
-				array('q' => 'Can I apply it to my own sign blanks?', 'a' => 'Yes. It is a permanent adhesive vinyl for flat surfaces, sold by size.'),
-				array('q' => 'Do you sell ready-made reflective signs?', 'a' => 'Yes, see reflective aluminum signs, reflective coroplast and the reflective PVC board.'),
+				array('q' => 'What is engineer grade?', 'a' => 'It is a standard grade of reflective sheeting for graphics that need to be seen at night.'),
+				array('q' => 'Can I apply it to my own blank panels?', 'a' => 'Yes. It is a permanent adhesive vinyl for flat surfaces, sold by size.'),
+				array('q' => 'Do you sell ready-made reflective boards?', 'a' => 'Yes, see our reflective aluminum, reflective coroplast and reflective PVC board products.'),
 			),
 			'related' => array('reflective-aluminum-sign', 'reflective-pvc-board', 'adhesive-products', 'reflective-car-magnet'),
 		),
@@ -596,7 +596,7 @@ function wholesale_product_guides_catalog()
 		'backlit-film' => array(
 			'intro' => array(
 				'Backlit film is a heavy duty 10 mil translucent film for light boxes. The printable side has a bright white point for vivid color, and the matte finish cuts glare, so images stay sharp and even when lit. It is double layer UV printed for long lasting color.',
-				'It is non-adhesive, made for light boxes and lit frames that hold the print behind a clear or translucent face. Sizes go up to 59" high by 100\' wide. For a print that sticks to the sign face, choose AV 3 adhesive translucent vinyl.',
+				'It is non-adhesive, made for light boxes and lit frames that hold the print behind a clear or translucent face. Sizes go up to 59" high by 100\' wide. For a print that sticks to the light box face, choose AV 3 adhesive translucent vinyl.',
 			),
 			'uses' => array('Menu boards and drive-thru displays', 'Movie theater and poster light boxes', 'Airport, mall and bus stop displays', 'Backlit trade show and window displays'),
 			'faq' => array(
@@ -612,7 +612,7 @@ function wholesale_product_guides_catalog()
 				'Popup is our 14 mil Double White Popup PVC material: white on the front and back with a blockout layer inside, and a smooth surface for sharp UV printed color. It is scratch resistant, won\'t tear like paper stock and lays flat after being rolled.',
 				'It is the material behind many of our inserts and posters. Order any size up to 52" high by 159\' wide, single sided, with grommets in all four corners, in the top two corners or none.',
 			),
-			'uses' => array('Inserts for sign frames and poster holders', 'Hanging graphics with grommets', 'Mounted prints and displays', 'Retail and window posters'),
+			'uses' => array('Inserts for display frames and poster holders', 'Hanging graphics with grommets', 'Mounted prints and displays', 'Retail and window posters'),
 			'faq' => array(
 				array('q' => 'Does it need lamination?', 'a' => 'No, the UV prints are scratch resistant on their own.'),
 				array('q' => 'Can I hang it?', 'a' => 'Yes, choose grommets in all four corners or the top two.'),
@@ -670,7 +670,7 @@ function wholesale_product_guides_catalog()
 				'A tension fabric stand is a premium, banner stand sized display. The interlocking aluminum tube frame sets up in seconds with no tools, then a stretch fabric "pillowcase" graphic slips over it and zips closed at the bottom, leaving a smooth, wrinkle free print.',
 				'Graphics are full color dye sublimated on 8.8oz tension fabric, single or double sided, and can be replaced to reuse the frame year after year. A heavy duty steel base plate keeps it steady, a carry case is included, and LED lights are optional.',
 			),
-			'uses' => array('Lobby and entrance signs', 'Trade show booth accents', 'Retail and event displays', 'Double sided signs in walkways'),
+			'uses' => array('Lobby and entrance displays', 'Trade show booth accents', 'Retail and event displays', 'Double sided displays in walkways'),
 			'faq' => array(
 				array('q' => 'How does it set up?', 'a' => 'Click the tubes together, slip the fabric over the frame and zip it closed.'),
 				array('q' => 'Can it be double sided?', 'a' => 'Yes, choose single or double sided pillowcase graphics.'),
@@ -686,7 +686,7 @@ function wholesale_product_guides_catalog()
 				'The Deluxe retractable banner stand is a step up from our Standard model, with a sleek wide base and chrome end caps. An adjustable telescopic pole lets you set the display height, and when you are done the banner rolls back into the aluminum base and goes in the included carry bag.',
 				'Choose a UV printed fabric insert with blockout backing and curl free edges, or 13oz matte vinyl. Keep important text 1" from the top and 3" from the bottom so it stays visible. LED lights are optional.',
 			),
-			'uses' => array('Trade shows and conferences', 'Lobby, reception and storefront signs', 'Retail promotions and product launches', 'Events, seminars and presentations'),
+			'uses' => array('Trade shows and conferences', 'Lobby, reception and storefront displays', 'Retail promotions and product launches', 'Events, seminars and presentations'),
 			'faq' => array(
 				array('q' => 'Fabric or vinyl insert?', 'a' => 'Fabric has blockout backing and curl free edges for a premium look. 13oz matte vinyl is the classic option.'),
 				array('q' => 'How much margin should my design have?', 'a' => 'Keep important elements at least 1" from the top and 3" from the bottom.'),
@@ -700,7 +700,7 @@ function wholesale_product_guides_catalog()
 				'The Standard retractable banner stand is our lightweight, economical banner stand. Two feet rotate out from the compact aluminum base for stability and fold back in for storage, and the banner rolls into the base in seconds when the show is over.',
 				'Choose a UV printed fabric insert with curl free edges and gray blockout backing, or 13oz matte vinyl. Keep important elements 1" from the top and 3" from the bottom. A carry bag is included and LED lights are optional.',
 			),
-			'uses' => array('Trade shows on a budget', 'Traveling sales and event teams', 'Lobby and point of sale signs', 'Schools, churches and nonprofits'),
+			'uses' => array('Trade shows on a budget', 'Traveling sales and event teams', 'Lobby and point of sale displays', 'Schools, churches and nonprofits'),
 			'faq' => array(
 				array('q' => 'How long does setup take?', 'a' => 'Seconds: rotate out the feet, pull up the banner and attach it to the pole.'),
 				array('q' => 'Is a bag included?', 'a' => 'Yes, a carrying bag is included.'),
@@ -728,7 +728,7 @@ function wholesale_product_guides_catalog()
 				'The table top banner stand is a mini retractable banner, a small version of our Deluxe stand, for counters, tables and point of sale. It shows an 11.5" x 17.5" graphic on 14 mil Double White Popup that rolls into the silver aluminum base with chrome end caps for storage or travel.',
 				'It sets up in two steps and is compact enough for carry on luggage. The bottom 1.5" of the graphic may stay inside the base, so keep important elements above it.',
 			),
-			'uses' => array('Counter and register signs', 'Trade show table signs', 'Reception desk and lobby signs', 'Promotions on restaurant and retail tables'),
+			'uses' => array('Counter and register displays', 'Trade show table displays', 'Reception desk and lobby displays', 'Promotions on restaurant and retail tables'),
 			'faq' => array(
 				array('q' => 'What size is the graphic?', 'a' => '11.5" x 17.5". The bottom 1.5" counts as bleed and may stay inside the base.'),
 				array('q' => 'Is it portable?', 'a' => 'Yes, it is small enough to fit in carry on luggage.'),
@@ -826,17 +826,19 @@ function wholesale_product_guides_catalog()
 		/* Flags */
 
 		'custom-pole-flag-pole' => array(
+			// A traditional flag made to size for a house or wall pole (product options:
+			// grommet strip left/top or hem only; no pole, pole, or pole with bracket).
 			'intro' => array(
-				'A custom pole flag is a big rectangle of full color branding on a tall pole set. Choose Small (8.5 ft assembled, 31" x 90.5" graphic), Medium (11.8 ft, 31" x 114") or Large (15 ft, 31" x 151.5"). The rectangle shape is the easiest flag to design for, so logos and text stay readable.',
-				$flag_print . ' The brushed aluminum and graphite poles interlock with no tools. ' . $flag_bases,
+				'A custom pole flag is a traditional rectangular flag made to the size you enter, for flying from a porch, wall or storefront flag pole. It is priced per square foot, so a small porch flag and a large storefront flag are both easy to order.',
+				'Your design is dye sublimated: a single sided flag is printed through, so the back shows a lighter, mirrored but readable image, and a double sided flag is two prints sewn back to back so both sides read correctly. Choose how it hangs: a hem with a grommet strip on the left side for a vertical pole, a grommet strip along the top, or a plain hem with no grommets. Add our 74.5" aluminum pole, or the pole with a white wall bracket; the pole is recommended for 2\' x 3\' and 3\' x 5\' flags.',
 			),
-			'uses' => array('Storefront and roadside flags', 'Car lots and grand openings', 'Trade shows and indoor events', 'Festivals, sports and outdoor markets'),
+			'uses' => array('Storefront and porch flags', 'Business, school and team flags', 'Open, sale and seasonal flags', 'Flags for events and celebrations'),
 			'faq' => array(
-				array('q' => 'Which size should I choose?', 'a' => 'Small (8.5 ft) suits indoor and tight spaces, Medium (11.8 ft) is the all-round size, and Large (15 ft) gives the most visibility from the road.'),
-				array('q' => 'Is the flag washable?', 'a' => 'Yes, the 4 oz polyester mesh is washable.'),
-				array('q' => 'Which base do I need?', 'a' => 'Ground stake for soft ground; cross base (with optional water bag) or steel square base for hard surfaces and indoors.'),
+				array('q' => 'Which edge finishing should I choose?', 'a' => 'A grommet strip on the left side clips to a standard flag pole. Put it along the top to hang the flag from a rod or wall, or choose a plain hem if you will attach it your own way.'),
+				array('q' => 'Does it come with a pole?', 'a' => 'Only if you add one: choose Pole Only for the 74.5" two-piece aluminum pole with a tangle-free spinning top, or Pole w/ Bracket to add the white wall bracket. The <a href="/product/flag-pole-and-bracket/">pole and bracket</a> are also sold on their own.'),
+				array('q' => 'Can both sides show my design?', 'a' => 'Yes. Choose double sided for two prints sewn back to back, so the design reads correctly from both sides.'),
 			),
-			'related' => array('feather-angled-flag-pole', 'teardrop-flag-pole', 'feather-convex-flag-pole', 'cross-base'),
+			'related' => array('flag-pole-and-bracket', 'rectangle-flag-pole', 'feather-angled-flag-pole', 'teardrop-flag-pole'),
 		),
 
 		'econo-feather-flag-pole' => array(

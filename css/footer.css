@@ -552,3 +552,79 @@
     transform: none;
   }
 }
+
+/* ---------- Lead-in band (2026-10-26) ----------
+   footer.php: the channel letters link and the adhesive
+   shipping cut-off as one compact band, instead of a lone button and a
+   heading-size paragraph on every page. */
+.footer-prelude {
+  padding: 28px 0;
+  border-top: 1px solid #e2e8f0;
+  background: #f6f9fc;
+}
+
+.footer-prelude__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 28px;
+}
+
+.footer-prelude__ship {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin: 0;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.footer-prelude__ship strong {
+  display: block;
+  color: #172027;
+  font-size: 1.05rem;
+}
+
+.footer-prelude__icon {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #e3f4fb;
+  color: #0b74a3;
+}
+
+.footer-prelude__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 0 20px;
+  border: 1px solid #0b74a3;
+  border-radius: 10px;
+  color: #0b74a3;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.footer-prelude__link:hover,
+.footer-prelude__link:focus-visible {
+  background: #0b74a3;
+  color: #fff;
+}
+
+.footer-prelude--link-only .footer-prelude__inner {
+  justify-content: center;
+}
+
+@media (max-width: 575.98px) {
+  .footer-prelude__link {
+    justify-content: center;
+    width: 100%;
+  }
+}

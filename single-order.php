@@ -11,7 +11,8 @@ $cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost'
 $billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
 $shipping = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
 $status = get_post_status($post_id);
-$status_info = wholesale_order_status_info();
+$status_info = wholesale_order_status_info($post_id);
+$noun = wholesale_items_noun($items);
 $step = isset($status_info[$status]) ? $status_info[$status]['step'] : 1;
 $note = isset($status_info[$status]) ? $status_info[$status]['note'] : '';
 $tracking = get_post_meta($post_id, '_tracking_number', true);
@@ -82,7 +83,7 @@ get_header();
         <?php if ($google_review_url) : ?>
             <div class="order-google-review checkout-card">
                 <div>
-                    <strong>How did your sign turn out?</strong>
+                    <strong>How did your <?php echo esc_html($noun); ?> turn out?</strong>
                     <p>A quick Google review helps other business owners find us.</p>
                 </div>
                 <a class="order-google-review-btn" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo wholesale_google_logo_svg(18); ?> Review us on Google</a>
@@ -146,7 +147,7 @@ get_header();
 
                             <?php if ($specs) : ?>
                                 <details class="cart-line-specs"<?php echo $is_staff ? ' open' : ''; ?>>
-                                    <summary>Sign details</summary>
+                                    <summary><?php echo esc_html(ucfirst(wholesale_product_noun((int) ($item['product_id'] ?? 0)))); ?> details</summary>
                                     <dl>
                                         <?php foreach ($specs as $label => $value) : ?>
                                             <div><dt><?php echo esc_html($label); ?></dt><dd><?php echo $value; // Escaped in wholesale_item_specs(). ?></dd></div>

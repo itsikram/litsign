@@ -63,8 +63,10 @@ require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
 require_once(dirname(__FILE__) . '/inc/product-guides.php');
+require_once(dirname(__FILE__) . '/inc/product-page-content.php');
 require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
 require_once(dirname(__FILE__) . '/inc/product-sitemap.php');
+require_once(dirname(__FILE__) . '/inc/location-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
 require_once(dirname(__FILE__) . '/inc/ads-page-conversions.php');
 require_once(dirname(__FILE__) . '/inc/quote-form.php');
@@ -427,6 +429,7 @@ function wholesale_setting_defaults()
 		'show_product_reviews' => 1,
 		'allow_verified_reviews' => 1,
 		'auto_publish_reviews' => 0,
+		'schema_imported_reviews' => 0,
 		'payment_disabled' => defined('WHOLESALE_PAYMENT_DISABLED') && WHOLESALE_PAYMENT_DISABLED ? 1 : 0,
 		'payment_test_mode' => defined('WHOLESALE_CONVERGE_TEST_MODE') && WHOLESALE_CONVERGE_TEST_MODE ? 1 : 0,
 		'merchant_id' => defined('WHOLESALE_CONVERGE_MERCHANT_ID') ? WHOLESALE_CONVERGE_MERCHANT_ID : '',
@@ -2290,12 +2293,80 @@ function wholesale_format_order_detail_value($name, $value)
 		}
 
 		if ($url) {
-			return '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">Open</a>';
+			// The separator is for the order email; the site hides it and shows Download as a button.
+			return '<span class="artwork-links">'
+				. '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">Open</a>'
+				. '<span class="artwork-links__sep" aria-hidden="true"> | </span>'
+				. '<a class="artwork-download" href="' . esc_url(wholesale_artwork_download_url($url)) . '" download>Download</a>'
+				. '</span>';
 		}
 	}
 
 	return esc_html($value);
 }
+
+/**
+ * Artwork and design files a Download link may send (the types customers can upload).
+ */
+function wholesale_artwork_download_types()
+{
+	return array(
+		'jpg|jpeg|jpe' => 'image/jpeg',
+		'png' => 'image/png',
+		'gif' => 'image/gif',
+		'webp' => 'image/webp',
+		'pdf' => 'application/pdf',
+	);
+}
+
+/**
+ * Download link for an order's artwork or design file. Browsers ignore the
+ * download attribute on other hosts and open PDFs inline, so files in uploads
+ * go through wholesale_serve_artwork_download(). Orders keep the host they were
+ * placed on (localhost, a LAN IP, the live domain), so only the uploads path is kept.
+ */
+function wholesale_artwork_download_url($url)
+{
+	$path = rawurldecode((string) wp_parse_url($url, PHP_URL_PATH));
+	if (!preg_match('#/uploads/(\d{4}/\d{2}/[^/\\\\]+)$#', $path, $matches)) {
+		return $url;
+	}
+
+	return add_query_arg('artwork_download', rawurlencode($matches[1]), home_url('/'));
+}
+
+/**
+ * Sends ?artwork_download=2026/10/custom-artwork-932-6ad7.pdf as a file to save.
+ * Only artwork file types inside the dated uploads folders, which are public anyway.
+ */
+function wholesale_serve_artwork_download()
+{
+	if (!isset($_GET['artwork_download'])) {
+		return;
+	}
+
+	$relative = wp_unslash((string) $_GET['artwork_download']);
+	$uploads = wp_upload_dir(null, false);
+	$base = empty($uploads['error']) ? realpath($uploads['basedir']) : false;
+	$file = ($base && preg_match('#^\d{4}/\d{2}/[^/\\\\]+$#', $relative)) ? realpath($base . '/' . $relative) : false;
+	$type = $file ? wp_check_filetype($file, wholesale_artwork_download_types()) : array('type' => false);
+
+	if (!$file || !$type['type'] || !is_file($file) || 0 !== strpos(wp_normalize_path($file), trailingslashit(wp_normalize_path($base)))) {
+		wp_die(esc_html__('This artwork file is no longer available.', 'litsign'), esc_html__('File not found', 'litsign'), array('response' => 404));
+	}
+
+	nocache_headers();
+	header('Content-Type: ' . $type['type']);
+	header('Content-Disposition: attachment; filename="' . sanitize_file_name(wp_basename($file)) . '"');
+	header('Content-Length: ' . filesize($file));
+	header('X-Content-Type-Options: nosniff');
+	while (ob_get_level()) {
+		ob_end_clean();
+	}
+	readfile($file);
+	exit;
+}
+add_action('init', 'wholesale_serve_artwork_download', 1);
 
 function wholesale_send_new_order_admin_email($post_id)
 {
@@ -2757,6 +2828,10 @@ function wholesale_ui_polish_assets()
 	}
 	$path = '/css/ui-polish.css';
 	wp_enqueue_style('wholesale-ui-polish', get_template_directory_uri() . $path, array('wholesale-typography'), (string) filemtime(get_template_directory() . $path));
+	// Phone header that hides on scroll down, the home page guide toggle, and the
+	// product page sticky photo column (desktop) and buy bar (phones).
+	$script = '/js/ui-polish.js';
+	wp_enqueue_script('wholesale-ui-polish', get_template_directory_uri() . $script, array(), (string) filemtime(get_template_directory() . $script), array('in_footer' => true, 'strategy' => 'defer'));
 }
 add_action('wp_enqueue_scripts', 'wholesale_ui_polish_assets', 100);
 
@@ -3320,6 +3395,13 @@ function wholesale_seo_keyword_meta()
 	if (is_singular('product')) {
 		$product_id = get_queried_object_id();
 		$channel_letter = wholesale_seo_channel_letter_product($product_id);
+		// Titles and descriptions in data/product-pages/channel-letters.php win.
+		if ($channel_letter && function_exists('wholesale_product_page_title')) {
+			$page_title = wholesale_product_page_title($product_id);
+			$page_description = wholesale_product_page_description($product_id);
+			$channel_letter['title'] = $page_title ? $page_title : $channel_letter['title'];
+			$channel_letter['description'] = $page_description ? $page_description : $channel_letter['description'];
+		}
 
 		return $channel_letter ? $channel_letter : wholesale_seo_product_meta($product_id);
 	}
@@ -3579,11 +3661,20 @@ function wholesale_add_return_policy_to_product($product)
  *
  * @return array
  */
-function wholesale_seo_offer_shipping_details($product_id)
+function wholesale_seo_offer_shipping_details($product_id, $price = null)
 {
-	$setting = has_term('channel-letters', 'product_category', $product_id) ? 'channel_shipping_options' : 'standard_shipping_options';
-	$rates = array_values(array_filter(explode(',', (string) wholesale_get_setting($setting)), 'is_numeric'));
+	$channel = has_term('channel-letters', 'product_category', $product_id);
+	$rates = array_values(array_filter(explode(',', (string) wholesale_get_setting($channel ? 'channel_shipping_options' : 'standard_shipping_options')), 'is_numeric'));
 	$turnaround = max(1, (int) get_post_meta($product_id, '_product_turnaround', true));
+	// Checkout ships an order free once its subtotal reaches the free shipping
+	// minimum, so an advertised price at or above it ships free.
+	$free_min = max(0.0, (float) wholesale_get_setting($channel ? 'free_shipping_channel_min' : 'free_shipping_min'));
+	if (null === $price) {
+		$price = wholesale_seo_product_lowest_price($product_id);
+	}
+	if ($free_min > 0 && round((float) $price, 2) >= $free_min) {
+		$rates = array(0);
+	}
 
 	return array(
 		'@type' => 'OfferShippingDetails',
@@ -3622,10 +3713,9 @@ function wholesale_product_schema($product_id, $url, $image = '')
 			'@type' => 'Brand',
 			'name' => get_bloginfo('name'),
 		),
+		// Made-to-order products have no GTIN or manufacturer part number
+		// (Merchant Center: identifier_exists = no); the SKU is the store's own.
 		'sku' => (string) get_post_field('post_name', $product_id),
-		// Made-to-order products have no GTIN; the store's own part number
-		// identifies them (Merchant Center: identifier_exists = no).
-		'mpn' => (string) get_post_field('post_name', $product_id),
 	);
 
 	$terms = get_the_terms($product_id, 'product_category');
@@ -3648,6 +3738,11 @@ function wholesale_product_schema($product_id, $url, $image = '')
 			'shippingDetails' => wholesale_seo_offer_shipping_details($product_id),
 			'hasMerchantReturnPolicy' => wholesale_merchant_return_policy(),
 		);
+		// A dated sale price is only valid until the sale's last day.
+		$offer = wholesale_seo_product_lowest_offer($product_id);
+		if (!empty($offer['sale_ends'])) {
+			$product['offers']['priceValidUntil'] = wp_date('Y-m-d', $offer['sale_ends'], new DateTimeZone('America/Los_Angeles'));
+		}
 		if ('backorder' === wholesale_product_stock_status($product_id)) {
 			$product['offers']['availabilityStarts'] = wholesale_product_backorder_date($product_id);
 		}
@@ -3662,9 +3757,13 @@ function wholesale_product_schema($product_id, $url, $image = '')
 	}
 
 	// Ratings only when the page shows the reviews they come from (approved,
-	// never samples), as Google requires for review markup.
+	// never samples), as Google requires for review markup. Reviews loaded from an
+	// import file count only once the owner confirms they are genuine customer
+	// reviews (Settings > Reviews); until then a product that shows any gets no
+	// rating markup, so the markup never disagrees with the stars on the page.
 	$stats = function_exists('wholesale_product_review_stats') ? wholesale_product_review_stats($product_id) : array();
-	if (!empty($stats['published']) && wholesale_setting_enabled('show_product_reviews')) {
+	$imported_ok = empty($stats['imported']) || wholesale_setting_enabled('schema_imported_reviews');
+	if (!empty($stats['published']) && $imported_ok && wholesale_setting_enabled('show_product_reviews')) {
 		$product['aggregateRating'] = array(
 			'@type' => 'AggregateRating',
 			'ratingValue' => number_format((float) $stats['average'], 1, '.', ''),
@@ -3963,6 +4062,9 @@ function wholesale_seo_head()
 			'itemListElement' => $breadcrumb_items,
 		);
 	}
+
+	// Templates may add WebPage properties (e.g. dateModified, about on location guides).
+	$page = (array) apply_filters('wholesale_seo_webpage_schema', $page);
 
 	$graph = array(
 		'@context' => 'https://schema.org',

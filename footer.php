@@ -23,11 +23,6 @@
     // as this shop's work, and the banner listed CA, TX and PA facilities the
     // business does not have.
     ?>
-    <div class="container my-3 text-center">
-        <a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="btn btn-primary mt-3">Shop All Channel Letters</a>
-
-    </div>
-
     <?php
     // The adhesive shipping note stays off channel letter pages: home.php sets the
     // global for the channel letter landing page, and made-to-order letters ship later.
@@ -35,18 +30,18 @@
         || is_page(array('channel-letter-builder', 'storefront-signs'))
         || (is_singular('product') && has_term('channel-letters', 'product_category', get_queried_object_id()));
     ?>
-    <?php if (!$is_channel_letter_page) : ?>
-    <div class="container py-5">
-        <div class="row">
-            <div class="col">
-                <p class="text-center fs-3 fw-bold mb-0">
-                    Adhesive products: orders placed by 4pm PST ship the next business day
+    <?php // One compact band (css/footer.css, lead-in band): the shipping cut-off and the channel letters link. ?>
+    <div class="footer-prelude<?php echo $is_channel_letter_page ? ' footer-prelude--link-only' : ''; ?>">
+        <div class="container footer-prelude__inner">
+            <?php if (!$is_channel_letter_page) : ?>
+                <p class="footer-prelude__ship">
+                    <span class="footer-prelude__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" focusable="false"><path fill="currentColor" d="M3 5h11a1 1 0 0 1 1 1v2h3.4a1 1 0 0 1 .8.4l2.6 3.5a1 1 0 0 1 .2.6V16a1 1 0 0 1-1 1h-1.2a2.8 2.8 0 0 1-5.6 0H9.8a2.8 2.8 0 0 1-5.6 0H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm12 5v3h4.5L17.9 10H15zM7 15.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm10.4 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg></span>
+                    <span><strong>Adhesive products: orders placed by 4pm PST ship the next business day</strong> Same-day service is also available if ordered by 12pm PST</span>
                 </p>
-                <p class="text-center fs-5 mt-4">Same-day service is also available if ordered by 12pm PST</p>
-            </div>
+            <?php endif; ?>
+            <a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="footer-prelude__link">Shop All Channel Letters <span aria-hidden="true">&rarr;</span></a>
         </div>
     </div>
-    <?php endif; ?>
 
     <?php wholesale_render_review_slider(); ?>
 

@@ -127,7 +127,8 @@ function wholesale_render_merchant_feed()
 	echo '<description>' . $x(get_bloginfo('name') . ' products') . "</description>\n";
 
 	foreach ($products as $product) {
-		$price = wholesale_seo_product_lowest_price($product->ID);
+		$offer = wholesale_seo_product_lowest_offer($product->ID);
+		$price = $offer ? $offer['price'] : 0;
 		$images = wholesale_product_sitemap_images($product->ID);
 		$image = $images ? $images[0] : '';
 		$description = wholesale_merchant_description($product->ID);
@@ -140,6 +141,12 @@ function wholesale_render_merchant_feed()
 		$title = $channel_letter
 			? $channel_letter['heading']
 			: wholesale_seo_product_search_name($product->ID) . ($variant ? ' (' . $variant . ')' : '');
+		// Channel letters are priced per letter: name the configuration the price buys,
+		// as the product page's "One N inch letter" note does.
+		$cl_from = $channel_letter && function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price($product->ID) : null;
+		if (!empty($cl_from['height'])) {
+			$title .= sprintf(' - Single %d" Letter', $cl_from['height']);
+		}
 
 		$terms = get_the_terms($product->ID, 'product_category');
 		$terms = $terms && !is_wp_error($terms) ? $terms : array();
@@ -155,7 +162,7 @@ function wholesale_render_merchant_feed()
 			$product_type = ($parent && !is_wp_error($parent) ? $parent->name . ' > ' : '') . $term->name;
 		}
 
-		$shipping = wholesale_seo_offer_shipping_details($product->ID);
+		$shipping = wholesale_seo_offer_shipping_details($product->ID, $price);
 
 		echo "<item>\n";
 		echo '<g:id>' . $x(wholesale_merchant_item_id($product)) . "</g:id>\n";
@@ -172,7 +179,17 @@ function wholesale_render_merchant_feed()
 			// Merchant Center requires the date a backordered item ships.
 			echo '<g:availability_date>' . (new DateTimeImmutable(wholesale_product_backorder_date($product->ID), wp_timezone()))->format('c') . "</g:availability_date>\n";
 		}
-		echo '<g:price>' . number_format($price, 2, '.', '') . " USD</g:price>\n";
+		// The everyday price, plus the dated sale price checkout charges while a sale runs.
+		echo '<g:price>' . number_format($offer['regular'], 2, '.', '') . " USD</g:price>\n";
+		if ($offer['regular'] > $price && $offer['sale_ends'] && $offer['sale_starts']) {
+			$zone = new DateTimeZone('America/Los_Angeles');
+			$starts = DateTimeImmutable::createFromFormat('!Y-m-d', $offer['sale_starts'], $zone);
+			$ends = (new DateTimeImmutable('@' . $offer['sale_ends']))->setTimezone($zone);
+			echo '<g:sale_price>' . number_format($price, 2, '.', '') . " USD</g:sale_price>\n";
+			if ($starts) {
+				echo '<g:sale_price_effective_date>' . $starts->format('Y-m-d\TH:iO') . '/' . $ends->format('Y-m-d\TH:iO') . "</g:sale_price_effective_date>\n";
+			}
+		}
 		echo "<g:condition>new</g:condition>\n";
 		echo '<g:brand>' . $x(get_bloginfo('name')) . "</g:brand>\n";
 		// Made to order: no GTIN or manufacturer part number exists.

@@ -116,6 +116,24 @@ function wholesale_product_default_size($product_id)
 	if ($max_sides) {
 		$side = min($side, $max_sides[0]);
 	}
+	// Options the page opens on can carry a price of their own (e.g. an included
+	// H-stake), so shrink the square until that quote still lands on the minimum charge.
+	if ($side > 0 && $min_price > 0) {
+		$request = array('product_quantity' => 1);
+		foreach (wholesale_product_price_attrs($product_id) as $attr) {
+			$options = wholesale_attr_options($attr);
+			if ($options && !empty($attr['name'])) {
+				$request[$attr['name']] = $options[0]['value'];
+			}
+		}
+		while ($side > max($min_sides[0], $min_sides[1], 1)) {
+			$quote = wholesale_price_quote($product_id, array('width-in' => $side, 'height-in' => $side) + $request);
+			if (!$quote['ok'] || !empty($quote['minimum_order'])) {
+				break;
+			}
+			$side--;
+		}
+	}
 	return array(max($side, $min_sides[0]), max($side, $min_sides[1]));
 }
 
@@ -133,6 +151,68 @@ function wholesale_product_is_channel_letter($product_id)
 {
 	$terms = get_the_terms($product_id, 'product_category');
 	return is_array($terms) && isset($terms[0]) && 'channel-letters' === $terms[0]->slug;
+}
+
+/**
+ * What shopper-facing copy calls one of this product ("Bought this banner?",
+ * "the width of your flag"). Only channel letters are a "sign"; everything
+ * else uses its own word, and hardware or anything unmapped is a "product".
+ */
+function wholesale_product_noun($product_id)
+{
+	$nouns = array(
+		'channel-letters' => 'sign',
+		'signs-letters' => 'sign',
+		'banners' => 'banner',
+		'advertising-flags' => 'flag',
+		'custom-event-tents' => 'tent',
+		'table-throws' => 'table cover',
+		'banner-stands' => 'display',
+		'seg-products' => 'display',
+		'trade-show-products' => 'display',
+		'indoor-outdoor-displays' => 'display',
+		'real-estate-products' => 'display',
+		'a-frame-and-sign-holders' => 'display',
+		'signicade-a-frames' => 'display',
+		'adhesive-products' => 'graphic',
+		'wall-art' => 'print',
+		'rigid-signs-and-magnets' => 'print',
+		'reflective-products' => 'print',
+		'dry-erase-products' => 'print',
+		'large-format' => 'print',
+	);
+	$terms = get_the_terms($product_id, 'product_category');
+	$slugs = is_array($terms) ? wp_list_pluck($terms, 'slug') : array();
+	foreach ($nouns as $slug => $noun) {
+		if (in_array($slug, $slugs, true)) {
+			return $noun;
+		}
+	}
+	return 'product';
+}
+
+/**
+ * One word for a whole cart or order ("Ship my banner", "Your sign is on its way").
+ * Takes cart item objects or order product_json rows. Items that disagree make it an "order".
+ */
+function wholesale_items_noun($items)
+{
+	$nouns = array();
+	foreach ((array) $items as $item) {
+		$product_id = is_object($item) ? ($item->product_id ?? 0) : ($item['product_id'] ?? 0);
+		if ($product_id) {
+			$nouns[wholesale_product_noun((int) $product_id)] = true;
+		}
+	}
+	return 1 === count($nouns) ? (string) key($nouns) : 'order';
+}
+
+/**
+ * The noun for an order post, from its saved items.
+ */
+function wholesale_order_noun($order_post_id)
+{
+	return wholesale_items_noun(wholesale_decode_order_meta_array(get_post_meta($order_post_id, 'product_json', true)));
 }
 
 function wholesale_product_price_attrs($product_id)
@@ -415,7 +495,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			// area that reaches the minimum order price (wholesale_product_min_area()).
 			foreach (array('height' => $height_ft, 'width' => $width_ft) as $label => $value) {
 				if ($value <= 0) {
-					return $fail(sprintf('Please enter the %s of your sign.', $label));
+					return $fail(sprintf('Please enter the %s of your %s.', $label, wholesale_product_noun($product_id)));
 				}
 			}
 			$is_sqft_calc = true;
@@ -532,7 +612,9 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	// product's own price adjustment above. Zero outside the sale's dates.
 	$everyday = $subtotal - $discount;
 	$promo_percent = wholesale_product_promotion_percent($product_id);
-	$promo_discount = $promo_percent > 0 ? $everyday * $promo_percent / 100 : 0.0;
+	// Rounded the way the shown sale price is (wholesale_promotion_price()), so a
+	// half cent can't make checkout differ from the advertised price.
+	$promo_discount = $promo_percent > 0 ? round($everyday, 2) - wholesale_promotion_price($product_id, round($everyday, 2)) : 0.0;
 	$discount += $promo_discount;
 
 	$turnaround = 0.0;

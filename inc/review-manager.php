@@ -55,13 +55,17 @@ function wholesale_review_stats_by_product()
 	foreach ($reviews as $review) {
 		$product_id = absint(get_post_meta($review->ID, '_review_product_id', true));
 		if (!isset($stats[$product_id])) {
-			$stats[$product_id] = array('published' => 0, 'pending' => 0, 'samples' => 0, 'sum' => 0, 'average' => 0.0);
+			$stats[$product_id] = array('published' => 0, 'pending' => 0, 'samples' => 0, 'sum' => 0, 'average' => 0.0, 'imported' => 0);
 		}
 		if (wholesale_review_is_sample($review->ID)) {
 			$stats[$product_id]['samples']++;
 		} elseif ('publish' === $review->post_status) {
 			$stats[$product_id]['published']++;
 			$stats[$product_id]['sum'] += min(5, max(1, absint(get_post_meta($review->ID, '_review_rating', true))));
+			// Approved reviews that came from an import file (see wholesale_product_schema()).
+			if ('import' === get_post_meta($review->ID, '_review_source', true)) {
+				$stats[$product_id]['imported']++;
+			}
 		} else {
 			$stats[$product_id]['pending']++;
 		}
@@ -77,7 +81,7 @@ function wholesale_review_stats_by_product()
 function wholesale_product_review_stats($product_id)
 {
 	$stats = wholesale_review_stats_by_product();
-	return isset($stats[$product_id]) ? $stats[$product_id] : array('published' => 0, 'pending' => 0, 'samples' => 0, 'sum' => 0, 'average' => 0.0);
+	return isset($stats[$product_id]) ? $stats[$product_id] : array('published' => 0, 'pending' => 0, 'samples' => 0, 'sum' => 0, 'average' => 0.0, 'imported' => 0);
 }
 
 // Any review change clears the cached stats, so product cards update right away.

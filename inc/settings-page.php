@@ -278,6 +278,7 @@ function wholesale_settings_page()
 								'show_product_reviews' => 'Show reviews on product pages',
 								'allow_verified_reviews' => 'Allow reviews from customers with completed orders',
 								'auto_publish_reviews' => 'Publish customer reviews automatically',
+								'schema_imported_reviews' => 'Send imported reviews to Google as star ratings (only if they are genuine customer reviews)',
 							) as $key => $label) : ?>
 								<tr><th><?php echo esc_html($label); ?></th><td><input type="hidden" name="wholesale_<?php echo esc_attr($key); ?>" value="0"><label class="wss-toggle"><input type="checkbox" name="wholesale_<?php echo esc_attr($key); ?>" value="1" <?php checked(wholesale_setting_enabled($key)); ?>> Enabled</label></td></tr>
 							<?php endforeach; ?>

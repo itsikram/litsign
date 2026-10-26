@@ -204,9 +204,12 @@ function wholesale_order_review_email_html($order_id)
 		return '';
 	}
 
+	$noun = wholesale_order_noun($order_id);
+	$heading = 'sign' === $noun ? 'Once your sign is up, tell us how it turned out' : "Once your {$noun} arrives, tell us how it turned out";
+	$choose = 'order' === $noun ? 'what to order' : "the right {$noun}";
 	$html = '<div style="margin:20px 0 0;padding:16px 18px;border:1px solid #e3e9ef;border-radius:8px;background:#fbfdff;">'
-		. '<p style="margin:0 0 8px;font-weight:700;color:#0d2e4d;">Once your sign is up, tell us how it turned out</p>'
-		. '<p style="margin:0 0 10px;color:#5b6b7b;font-size:14px;">Your review helps other business owners choose the right sign. It only takes a minute.</p>';
+		. '<p style="margin:0 0 8px;font-weight:700;color:#0d2e4d;">' . esc_html($heading) . '</p>'
+		. '<p style="margin:0 0 10px;color:#5b6b7b;font-size:14px;">Your review helps other business owners choose ' . esc_html($choose) . '. It only takes a minute.</p>';
 	foreach ($links as $product_id => $url) {
 		$html .= '<p style="margin:6px 0 0;"><a href="' . esc_url($url) . '" style="color:#1287b5;font-weight:700;">&#9733; Review ' . esc_html(get_the_title($product_id)) . '</a></p>';
 	}

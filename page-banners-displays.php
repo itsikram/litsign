@@ -136,14 +136,45 @@ wholesale_seo_prime_products(array_merge(
 
 $vinyl_price = wholesale_seo_product_starting_text('13oz-vinyl-banner');
 
-// Product slug, alt text, and the category each photo opens: ad visitors searching for
-// trade show or tension fabric displays tapped the booth photo, which went nowhere.
-$hero_photos = array(
-	array('13oz-vinyl-banner', 'Custom printed 13oz vinyl banner', 'banners', 'Shop banners'),
-	array('standard-retractable-insert-stand', 'Retractable banner stand with printed graphic', 'banner-stands', 'Shop banner stands'),
-	array('feather-angled-flag-pole', 'Custom feather flag on a pole', 'advertising-flags', 'Shop flags'),
-	array('10ft-seg-fabric-display-graphic-frame', '10ft SEG fabric trade show display', 'trade-show-products', 'Shop trade show displays'),
+// Ad group headlines (?type=key): headline, lead, the product the hero button opens,
+// and the product line card (anchor id) shown first. Anything else shows the default
+// hero. The canonical URL stays /banners-displays/.
+$types = array(
+	'vinyl' => array('Custom Vinyl Banners', 'Full color 13oz vinyl banners, hemmed and finished the way you hang them.', '13oz-vinyl-banner', 'banners'),
+	'stands' => array('Retractable Banner Stands', 'Roll-up stands with your printed graphic that set up in about a minute and travel in a bag.', 'standard-retractable-insert-stand', 'stands'),
+	'flags' => array('Custom Feather Flags', 'Feather and teardrop flags from 9 to 18 feet tall that move in the wind and catch drivers&rsquo; eyes from the road.', 'feather-angled-flag-pole', 'flags'),
+	'trade-show' => array('Trade Show Displays', 'Straight and curved tension fabric walls and pop up displays for a booth that looks finished.', 'straight-tension-fabric-displays-graphic-frame', 'trade-show'),
+	'tents' => array('Custom Event Tents', 'Full color canopy tents for festivals, markets and outdoor events.', 'event-tent-full-canopy-graphic-frame', 'tents'),
+	'mesh' => array('Custom Mesh Banners', 'Mesh vinyl banners for fences, scaffolding and windy locations.', 'mesh-banner', 'banners'),
+	'pole' => array('Light Pole Banners', 'Pole banner sets for street and parking lot light poles.', 'pole-banner-set-banner-hardware', 'banners'),
 );
+$type = isset($_GET['type']) ? sanitize_key(wp_unslash($_GET['type'])) : '';
+$type = isset($types[$type]) ? $type : '';
+
+// The ad's product line comes first.
+if ($type) {
+	usort($lines, static function ($a, $b) use ($types, $type) {
+		return (int) ($b[4] === $types[$type][3]) - (int) ($a[4] === $types[$type][3]);
+	});
+}
+
+// Product slug, label. Each photo opens its product with the price, so a phone
+// visitor can reach a price from the second screen; ad visitors who only saw
+// unlabeled photos there mostly left without opening a product.
+$hero_photos = array(
+	array('13oz-vinyl-banner', 'Vinyl Banners'),
+	array('standard-retractable-insert-stand', 'Banner Stands'),
+	array('feather-angled-flag-pole', 'Feather Flags'),
+	array('10ft-seg-fabric-display-graphic-frame', 'Trade Show Displays'),
+);
+if ($type) {
+	$type_slug = $types[$type][2];
+	$hero_photos = array_values(array_filter($hero_photos, static function ($photo) use ($type_slug) {
+		return $photo[0] !== $type_slug;
+	}));
+	array_unshift($hero_photos, array($type_slug, wp_strip_all_tags(html_entity_decode($types[$type][0], ENT_QUOTES, 'UTF-8'))));
+	$hero_photos = array_slice($hero_photos, 0, 4);
+}
 
 // The best sellers are this page's item list in structured data.
 $GLOBALS['wholesale_page_items'] = array_values(array_filter(array_map(static function ($slug) {
@@ -206,15 +237,26 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 			<div class="bd-hero-grid">
 				<div class="bd-hero-copy">
 					<p class="home-hero-eyebrow">Full color &middot; Printed to order &middot; Next-day options</p>
-					<h1 id="bd-title" class="bd-hero-title">Custom Banners &amp; Displays <span>That Get You Noticed</span></h1>
+					<?php if ($type) : ?>
+						<h1 id="bd-title" class="bd-hero-title"><?php echo wp_kses_post($types[$type][0]); ?> <span>for Your Business</span></h1>
+					<?php else : ?>
+						<h1 id="bd-title" class="bd-hero-title">Custom Banners &amp; Displays <span>That Get You Noticed</span></h1>
+					<?php endif; ?>
 					<?php if ($google_rating) : ?>
 						<p class="home-hero-proof">
 							<a class="home-hero-rating" href="<?php echo esc_url($reviews_url); ?>"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
 						</p>
 					<?php endif; ?>
-					<p class="home-hero-lead">Vinyl and fabric banners, retractable banner stands, feather flags and trade show displays. Pick a product, enter your size and see your price before you check out.</p>
-					<div class="home-hero-actions home-hero-actions--cl">
-						<a class="home-hero-shop-button" href="<?php echo esc_url($banners_url); ?>"><span class="home-hero-button-text">Shop Banners<?php if ($vinyl_price) : ?><small>From <?php echo wp_kses_post($vinyl_price); ?></small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
+					<?php if ($type) : ?>
+						<?php $type_price = $card_price(wholesale_seo_product_starting_text($types[$type][2])); ?>
+						<p class="home-hero-lead"><?php echo wp_kses_post($types[$type][1]); ?> Enter your size and see your price before you check out.</p>
+						<div class="home-hero-actions home-hero-actions--cl">
+							<a class="home-hero-shop-button" href="<?php echo esc_url($product_url($types[$type][2], '#products')); ?>"><span class="home-hero-button-text">See Sizes &amp; Prices<?php if ($type_price) : ?><small>From <?php echo wp_kses_post($type_price); ?></small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
+					<?php else : ?>
+						<p class="home-hero-lead">Vinyl and fabric banners, retractable banner stands, feather flags and trade show displays. Pick a product, enter your size and see your price before you check out.</p>
+						<div class="home-hero-actions home-hero-actions--cl">
+							<a class="home-hero-shop-button" href="<?php echo esc_url($banners_url); ?>"><span class="home-hero-button-text">Shop Banners<?php if ($vinyl_price) : ?><small>From <?php echo wp_kses_post($vinyl_price); ?></small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
+					<?php endif; ?>
 						<a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
 					</div>
 					<p class="home-hero-help">
@@ -223,12 +265,20 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 						<span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT</span>
 					</p>
 				</div>
-				<div class="bd-hero-media" aria-hidden="true">
+				<div class="bd-hero-media">
 					<?php foreach ($hero_photos as $index => $photo) : ?>
-						<?php $image = $product_image($photo[0], $photo[1], '(max-width: 575px) 45vw, (max-width: 991px) 22vw, 260px', 0 === $index ? 'high' : true); ?>
-						<?php if ($image) : ?>
-							<a class="bd-hero-tile bd-hero-tile--<?php echo (int) $index + 1; ?>" href="<?php echo esc_url(wholesale_category_url($photo[2])); ?>" aria-label="<?php echo esc_attr($photo[3]); ?>"><?php echo $image; ?></a>
-						<?php endif; ?>
+						<?php
+						$image = $product_image($photo[0], '', '(max-width: 575px) 45vw, (max-width: 991px) 22vw, 260px', 0 === $index ? 'high' : true);
+						$url = $product_url($photo[0]);
+						if (!$image || !$url) {
+							continue;
+						}
+						$price = $card_price(wholesale_seo_product_starting_text($photo[0]));
+						?>
+						<a class="bd-hero-tile bd-hero-tile--<?php echo (int) $index + 1; ?>" href="<?php echo esc_url($url); ?>">
+							<span class="bd-hero-tile-image"><?php echo $image; ?></span>
+							<span class="bd-hero-tile-label"><?php echo esc_html($photo[1]); ?><?php if ($price) : ?><small>From <?php echo wp_kses_post($price); ?></small><?php endif; ?></span>
+						</a>
 					<?php endforeach; ?>
 				</div>
 			</div>
@@ -268,7 +318,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					$line_price = $card_price(wholesale_seo_product_starting_text($line[1]));
 					$line_name = wp_strip_all_tags(html_entity_decode($line[2], ENT_QUOTES, 'UTF-8'));
 					?>
-					<article class="sf-type-card bd-card" id="<?php echo esc_attr($line[4]); ?>">
+					<article class="sf-type-card bd-card<?php echo $type && $types[$type][3] === $line[4] ? ' is-highlighted' : ''; ?>" id="<?php echo esc_attr($line[4]); ?>">
 						<a class="sf-type-image" href="<?php echo esc_url($line_url); ?>" tabindex="-1" aria-hidden="true">
 							<?php echo $product_image($line[1], $line_name, '(max-width: 575px) 112px, (max-width: 991px) 50vw, 25vw'); ?>
 						</a>

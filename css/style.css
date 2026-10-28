@@ -6559,7 +6559,7 @@ a.review-author-name:hover {
   }
 
   .cl-mobile-bar-shop {
-    background: #1fa8de;
+    background: #0b74a3; /* 5.2:1 behind white text; #1fa8de was 2.7:1 */
     color: #fff;
   }
 
@@ -6961,6 +6961,25 @@ a.review-author-name:hover {
   color: #dc2626;
   font-size: 12px;
 }
+/* One-tap fix in that note when the typed number looks like feet ("Use 36" (3 ft)"). */
+.product-details .product-attibute-box .pb-dim-fix {
+  display: inline-block;
+  min-height: 32px;
+  margin-top: 6px;
+  padding: 4px 12px;
+  border: 1px solid #0a6f9a;
+  border-radius: 999px;
+  background: #fff;
+  color: #0a6f9a;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.product-details .product-attibute-box .pb-dim-fix:hover,
+.product-details .product-attibute-box .pb-dim-fix:focus-visible {
+  background: #0a6f9a;
+  color: #fff;
+}
 .product-details .product-attibute-box .pb-size-limit {
   display: block;
   margin-bottom: 8px;
@@ -7350,6 +7369,111 @@ a.review-author-name:hover {
 .product-info .cl-faq-list {
   max-width: none;
   margin: 4px 0 0;
+}
+
+/* Category pages: lead above the products and buying guide below them
+   (inc/category-page-content.php). */
+.category-listing-header {
+  width: 100%;
+  margin: 0 0 18px;
+}
+
+.category-listing-title {
+  margin: 0 0 6px;
+  color: #172027;
+  font-size: clamp(1.2rem, 2vw, 1.45rem);
+  font-weight: 700;
+}
+
+.category-listing-lead {
+  max-width: 780px;
+  margin: 0;
+  color: #475569;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.category-guide {
+  padding: 56px 0 8px;
+  border-top: 1px solid #e6ebf1;
+}
+
+.category-guide > .container > .cl-kicker,
+.category-guide > .container > .cl-section-title {
+  text-align: center;
+}
+
+.category-guide-body {
+  max-width: 860px;
+  margin: 24px auto 0;
+}
+
+.category-guide-block {
+  padding: 18px 0 4px;
+}
+
+.category-guide-block h3 {
+  margin: 0 0 10px;
+  color: #172027;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.category-guide-block p,
+.category-guide-block li {
+  color: #334155;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.category-guide-block ul {
+  margin: 0 0 14px;
+  padding-left: 20px;
+}
+
+.category-guide-table {
+  overflow-x: auto;
+  margin: 6px 0 16px;
+}
+
+.category-guide-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.category-guide-table th,
+.category-guide-table td {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  text-align: left;
+  vertical-align: top;
+}
+
+.category-guide-table thead th,
+.category-guide-table tbody th {
+  color: #172027;
+  font-weight: 700;
+}
+
+.category-guide-table thead th {
+  background: #f7f8fc;
+}
+
+@media (max-width: 575px) {
+  .category-guide {
+    padding-top: 40px;
+  }
+
+  .category-guide-table table {
+    font-size: 0.875rem;
+  }
+
+  .category-guide-table th,
+  .category-guide-table td {
+    padding: 6px 7px;
+  }
 }
 
 /* Sale badge on discounted product images (wholesale_render_sale_badge). */

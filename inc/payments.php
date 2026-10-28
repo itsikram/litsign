@@ -460,6 +460,20 @@ function wholesale_free_shipping_amount($channel_letters = false)
 	return $amount > 0 ? '$' . number_format($amount, floor($amount) == $amount ? 0 : 2) : '';
 }
 
+/**
+ * The cheapest paid shipping rate for display ("$18", "$50"), or '' when none
+ * is set, so pages can say what shipping costs below the free shipping minimum.
+ */
+function wholesale_shipping_from_amount($channel_letters = false)
+{
+	$rates = array_filter(array_map('floatval', explode(',', (string) wholesale_get_setting($channel_letters ? 'channel_shipping_options' : 'standard_shipping_options'))));
+	if (!$rates) {
+		return '';
+	}
+	$amount = min($rates);
+	return '$' . number_format($amount, floor($amount) == $amount ? 0 : 2);
+}
+
 function wholesale_free_shipping_label()
 {
 	return 'Free Shipping (3–6 business days)';
@@ -933,6 +947,15 @@ function wholesale_purchase_conversion()
 	$value = isset($cost['grand_total']) ? (float) $cost['grand_total'] : 0;
 	$transaction_id = (string) get_post_meta($order, 'order_id', true);
 	$user_data = wholesale_ads_order_user_data($order);
+	$items = wholesale_ads_order_items($order);
+	// Google Ads cart data: the products sold, by feed item ID.
+	$cart_items = array_map(static function ($item) {
+		return array(
+			'id' => $item['item_id'] ?? '',
+			'quantity' => $item['quantity'],
+			'price' => $item['price'],
+		);
+	}, $items);
 	?>
 	<script>
 		// Sent right away (the tag config above is already queued), so a customer
@@ -948,7 +971,12 @@ function wholesale_purchase_conversion()
 				send_to: <?php echo wp_json_encode('AW-18454059893/' . WHOLESALE_ADS_PURCHASE_LABEL); ?>,
 				value: <?php echo wp_json_encode(round($value, 2)); ?>,
 				currency: 'USD',
-				transaction_id: <?php echo wp_json_encode($transaction_id); ?>
+				transaction_id: <?php echo wp_json_encode($transaction_id); ?><?php if (defined('WHOLESALE_MERCHANT_CENTER_ID')) : ?>,
+				aw_merchant_id: <?php echo (int) WHOLESALE_MERCHANT_CENTER_ID; ?>,
+				aw_feed_country: 'US',
+				aw_feed_language: 'EN',
+				items: <?php echo wp_json_encode($cart_items); ?>
+				<?php endif; ?>
 			});
 			// GA4 ecommerce purchase (Site Kit's Google tag picks this up).
 			window.gtag('event', 'purchase', {
@@ -957,7 +985,7 @@ function wholesale_purchase_conversion()
 				tax: <?php echo wp_json_encode(round((float) ($cost['tax'] ?? 0), 2)); ?>,
 				shipping: <?php echo wp_json_encode(round((float) ($cost['shipping_cost'] ?? 0), 2)); ?>,
 				currency: 'USD',
-				items: <?php echo wp_json_encode(wholesale_ads_order_items($order)); ?>
+				items: <?php echo wp_json_encode($items); ?>
 			});
 		})();
 	</script>

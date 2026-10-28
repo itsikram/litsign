@@ -20,7 +20,7 @@ return array(
 
 	'6ft-table-cover' => array(
 		'title' => array('6ft Table Cover', 'Custom Printed'),
-		'description' => 'Custom 6ft table covers for 72" x 30" tables, dye sublimated on washable 8.8oz polyester, open or closed back. The trade show standard. Ships nationwide.',
+		'description' => 'Custom 6ft table covers for 72" x 30" tables, dye sublimated on washable 8.8oz polyester, open or closed back. Ships nationwide. Order online.',
 		'file_notes' => array($template_size),
 		'faq' => array($fold),
 		'care' => 'fabric',
@@ -44,14 +44,14 @@ return array(
 
 	'solid-color-table-throws' => array(
 		'title' => array('Solid Color Table Throws', '6 ft & 8 ft'),
-		'description' => 'Solid color table throws in washable 7 oz polyester for 6 ft or 8 ft tables, in black, blue, red and more. An easy base for runners. Ships nationwide.',
+		'description' => 'Solid color table throws in washable 7 oz polyester for 6 ft or 8 ft tables, in black, blue, red and more. A base for runners. Ships nationwide. Order now.',
 		'printed' => false,
 		'care' => 'fabric',
 	),
 
 	'stretch-table-cover' => array(
 		'title' => array('Stretch Table Cover', 'Fitted'),
-		'description' => 'Stretch table covers: a fitted 8.8oz polyester cover printed all over for 6 ft or 8 ft folding tables, with leg loops to stay tight. Ships nationwide.',
+		'description' => 'Stretch table covers: a fitted 8.8oz polyester cover printed all over for 6 ft or 8 ft folding tables, with leg loops. Ships nationwide. Order now.',
 		'faq' => array(
 			array('q' => 'How do I put it on?', 'a' => 'Pull the cover down over the table top like a fitted sheet, then fasten the canvas loop on each leg so the fabric stays tight.'),
 		),

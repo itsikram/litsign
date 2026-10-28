@@ -156,6 +156,15 @@ function wholesale_ads_order_user_data($order_id)
 }
 
 /**
+ * Product ID for GA4 items: the Merchant Center feed item ID
+ * (inc/merchant-feed.php), so sales match the Shopping products.
+ */
+function wholesale_ads_item_id($product_id)
+{
+	return function_exists('wholesale_merchant_feed_id') ? wholesale_merchant_feed_id($product_id) : (string) $product_id;
+}
+
+/**
  * Items of an order in the GA4 ecommerce format.
  *
  * @return array
@@ -168,7 +177,7 @@ function wholesale_ads_order_items($order_id)
 		$quantity = max(1, (int) ($item['product_quantity'] ?? 1));
 		$subtotal = (float) ($item['product_subtotal'] ?? 0);
 		$items[] = array_filter(array(
-			'item_id' => isset($item['product_id']) ? (string) $item['product_id'] : '',
+			'item_id' => isset($item['product_id']) ? wholesale_ads_item_id($item['product_id']) : '',
 			'item_name' => html_entity_decode(wp_strip_all_tags((string) ($item['product_title'] ?? '')), ENT_QUOTES, 'UTF-8'),
 			'quantity' => $quantity,
 			'price' => round($subtotal / $quantity, 2),
@@ -196,7 +205,7 @@ function wholesale_ads_begin_checkout_event()
 		$item = (array) $item;
 		$quantity = max(1, (int) ($item['product_quantity'] ?? 1));
 		$items[] = array(
-			'item_id' => (string) ($item['product_id'] ?? ''),
+			'item_id' => isset($item['product_id']) ? wholesale_ads_item_id($item['product_id']) : '',
 			'item_name' => html_entity_decode(wp_strip_all_tags((string) ($item['product_title'] ?? '')), ENT_QUOTES, 'UTF-8'),
 			'quantity' => $quantity,
 			'price' => round((float) ($item['product_subtotal'] ?? 0) / $quantity, 2),
@@ -318,6 +327,8 @@ function wholesale_ads_click_tracking_script()
 		(function () {
 			var labels = <?php echo wp_json_encode((object) $labels); ?>;
 			var ga4 = <?php echo $ga4 ? 'true' : 'false'; ?>;
+			// This product page's feed item ID, so add_to_cart names it as the feed does.
+			var feedIds = <?php echo wp_json_encode(is_singular('product') ? array((string) get_queried_object_id() => wholesale_ads_item_id(get_queried_object_id())) : (object) array()); ?>;
 			window.dataLayer = window.dataLayer || [];
 			function gtag() { window.dataLayer.push(arguments); }
 			function convert(key, params) {
@@ -378,7 +389,7 @@ function wholesale_ads_click_tracking_script()
 					gtag('event', 'add_to_cart', {
 						currency: 'USD',
 						value: value,
-						items: [{ item_id: String(item.product_id || ''), item_name: item.title || '', quantity: quantity, price: Math.round(value / quantity * 100) / 100 }]
+						items: [{ item_id: feedIds[String(item.product_id)] || String(item.product_id || ''), item_name: item.title || '', quantity: quantity, price: Math.round(value / quantity * 100) / 100 }]
 					});
 				}
 			});

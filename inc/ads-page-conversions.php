@@ -83,25 +83,39 @@ add_action('save_post', function ($post_id, $post) {
 }, 10, 2);
 
 /**
- * Send this page's conversion. The event queues in dataLayer, so it goes out
- * once the deferred Google tag (wholesale_deferred_conversion_tracking) loads.
+ * The conversion label this page view sends, or '' when it sends none.
  */
-function wholesale_page_conversion_script()
+function wholesale_page_conversion_label()
 {
 	if (!is_singular() || is_preview()) {
-		return;
+		return '';
 	}
 
 	$label = wholesale_page_conversion_clean_label(get_post_meta(get_queried_object_id(), WHOLESALE_PAGE_CONVERSION_META, true));
 	if ('' === $label) {
-		return;
+		return '';
 	}
 	// The view a quote form returns to already sends the quote conversion.
 	if (isset($_GET['quote_status']) && 'sent' === sanitize_key(wp_unslash($_GET['quote_status']))) {
-		return;
+		return '';
 	}
 	// Purchase, quote, call and click labels are sent by their own triggers.
 	if (in_array($label, wholesale_ads_sitewide_labels(), true)) {
+		return '';
+	}
+
+	return $label;
+}
+
+/**
+ * Send this page's conversion. The event queues in dataLayer, so it goes out
+ * once the deferred Google tag (wholesale_deferred_conversion_tracking) loads;
+ * on these pages the tag starts right away (wholesale_ads_is_conversion_page()).
+ */
+function wholesale_page_conversion_script()
+{
+	$label = wholesale_page_conversion_label();
+	if ('' === $label) {
 		return;
 	}
 	?>

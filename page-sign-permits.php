@@ -61,6 +61,7 @@ get_header();
 			<p class="cl-kicker">Before you order</p>
 			<h1 id="gd-title" class="sf-hero-title">Sign Permits for Lit Storefront Signs</h1>
 			<p class="sf-hero-lead">Nearly every city asks for a permit before a lit business sign goes up. Here&rsquo;s how the process usually works, what the permit office and your electrician will ask for, and what comes in the box with every sign we ship.</p>
+			<?php wholesale_guide_byline(); ?>
 			<ul class="gd-facts">
 				<li><strong>Usually needed</strong><span>A sign permit, plus an electrical permit for the power connection</span></li>
 				<li><strong>Who applies</strong><span>Often your licensed sign installer or electrician</span></li>

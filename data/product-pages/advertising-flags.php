@@ -21,7 +21,7 @@ return array(
 			'Pole (optional)' => '74.5" two-piece aluminum pole with a chrome ball and a tangle-free spinning top, recommended for 2\' x 3\' and 3\' x 5\' flags',
 			'Bracket (optional)' => 'White powder coated wall bracket with two pole angles',
 		),
-		'description' => 'Custom pole flags made to your size for porch, wall and storefront poles, with grommet strip or hem finishing and an optional pole. Ships nationwide.',
+		'description' => 'Custom pole flags in your size for porch, wall and storefront poles, with grommet strip or hem finish and an optional pole. Ships nationwide. Order online.',
 		'faq' => array(
 			array('q' => 'How do I hang it?', 'a' => 'With the optional pole and bracket, screw the bracket to the wall or post, set the pole in it at either of its two angles, and clip the flag&rsquo;s grommets to the pole. A plastic ring is included for flags with grommets.'),
 		),
@@ -58,17 +58,17 @@ return array(
 		'care' => 'flag',
 	),
 	'feather-angled-flag-only' => array(
-		'description' => 'Replacement angled feather flag, dye sublimated on 4 oz polyester mesh in sizes from 9 to 18 ft. Flag only, pole not included. Ships nationwide.',
+		'description' => 'Replacement angled feather flag, dye sublimated on 4 oz polyester mesh in sizes from 9 to 18 ft. Pole not included. Ships nationwide. Order now.',
 	),
 
 	'feather-convex-flag-pole' => array(
 		'title' => array('Convex Feather Flags', '9–18 ft Tall'),
-		'description' => 'Custom convex feather flags with a curved edge, 9 to 18 ft tall, printed single or double sided, with indoor or outdoor bases. Ships nationwide.',
+		'description' => 'Custom convex feather flags with a curved edge, 9 to 18 ft tall, printed single or double sided, with indoor or outdoor bases. Ships nationwide. Order now.',
 		'faq' => array($setup, $bag),
 		'care' => 'flag',
 	),
 	'feather-convex-flag-only' => array(
-		'description' => 'Replacement convex feather flag, dye sublimated on 4 oz polyester mesh in sizes from 9 to 18 ft. Flag only, pole not included. Ships nationwide.',
+		'description' => 'Replacement convex feather flag, dye sublimated on 4 oz polyester mesh in sizes from 9 to 18 ft. Pole not included. Ships nationwide. Order now.',
 	),
 
 	'rectangle-flag-pole' => array(

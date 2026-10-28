@@ -119,6 +119,12 @@
   };
 
   const formName = (form) => {
+    // A product's order form holds its buying guide and option headings ("Top"), so
+    // its first heading named it "13oz Vinyl Banner: Buying Guide" in the reports.
+    if (config.ptype === 'product' && form.querySelector('.add-to-cart-btn')) {
+      const title = document.querySelector('h1');
+      return text(title ? title.textContent : 'Product', 44) + ': order options';
+    }
     const heading = form.querySelector('h1, h2, h3, h4, legend');
     const name = form.getAttribute('aria-label') || form.id || form.getAttribute('name') || (heading && heading.textContent) || '';
     if (name) return text(name, 60);
@@ -229,8 +235,9 @@
 
   // Errors from scripts that in-app browsers inject into every page (the
   // Facebook and Instagram apps on iPhone call window.webkit.messageHandlers),
-  // not from the site itself.
-  const injectedError = /webkit\.messageHandlers|__gCrWeb|instantSearchSDKJSBridgeClearHighlight/;
+  // not from the site itself. "ResizeObserver loop ..." is the browser noting a
+  // layout pass it postponed; nothing breaks and the visitor sees nothing.
+  const injectedError = /webkit\.messageHandlers|__gCrWeb|instantSearchSDKJSBridgeClearHighlight|^ResizeObserver loop/;
 
   let errorCount = 0;
   const logError = (message, where) => {
@@ -261,7 +268,7 @@
   };
   const seenOnce = new Set();
 
-  const recordAjax = (action, json) => {
+  const recordAjax = (action, json, body) => {
     const events = ajaxEvents[action];
     const ok = !!json && (json.ok === true || json.success === true || (json.ok === undefined && json.success === undefined && !json.error));
     if (action === 'wholesale_payment_start') push('payment_start');
@@ -283,14 +290,31 @@
     // Same for errors: the page load quote (e.g. a channel letter page before any text
     // is typed) fails quietly and the visitor never sees it.
     if (events[1] === 'price_error' && !configured) return;
+    // A size outside the limits: the page shows no quote error, only its own size note
+    // once the box is left ("wholesale:size-note" below). The quote answers 700 ms into
+    // typing, so "36" was logged as a "6 x 6 minimum" error at "3".
+    if (events[1] === 'price_error' && json && json.size_error) return;
     const data = json && json.data;
     const message = (json && (json.error || json.message)) || (data && (typeof data === 'string' ? data : data.message || data.error)) || 'The request failed';
     const key = events[1] + message;
     if (seenOnce.has(key) && events[1] === 'price_error') return;
     seenOnce.add(key);
-    push(events[1], { label: text(message, 200) });
+    // The size behind a pricing error ("3" x 6"" says the visitor typed feet).
+    const width = body && typeof body.get === 'function' ? body.get('width-in') : '';
+    const size = events[1] === 'price_error' && width ? `${text(width, 10)}" x ${text(body.get('height-in'), 10)}"` : '';
+    push(events[1], { label: text(message, 200), value: size });
     send();
   };
+
+  // The size note under a product's size box (js/main.js), with the size typed.
+  document.addEventListener('wholesale:size-note', (event) => {
+    const detail = event.detail || {};
+    const key = 'price_error' + detail.message;
+    if (!detail.message || seenOnce.has(key)) return;
+    seenOnce.add(key);
+    push('price_error', { label: text(detail.message, 200), value: text(detail.size || '', 40) });
+    send();
+  });
 
   if (originalFetch) {
     window.fetch = function (input, init) {
@@ -307,8 +331,8 @@
               status = response.status;
               return response.clone().json();
             })
-            .then((json) => recordAjax(action, json))
-            .catch(() => recordAjax(action, { ok: false, error: 'No valid response from the server (HTTP ' + (status || 'none') + ')' }));
+            .then((json) => recordAjax(action, json, body))
+            .catch(() => recordAjax(action, { ok: false, error: 'No valid response from the server (HTTP ' + (status || 'none') + ')' }, body));
         }
       } catch (error) {
         // Never get in the way of the page's own request.

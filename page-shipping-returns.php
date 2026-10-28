@@ -52,11 +52,11 @@ wholesale_seo_set_page_faq(array(
 	),
 	array(
 		'q' => 'Can I cancel my order?',
-		'a' => 'Orders can&rsquo;t be stopped or cancelled once they are approved for production, and approved orders are not refundable, because each sign is made for your business.',
+		'a' => 'Orders can&rsquo;t be stopped or cancelled once they are approved for production, because each sign is made for your business. If an approved order arrives defective or incorrect, we still reprint it or refund it.',
 	),
 	array(
 		'q' => 'What if something is wrong with my order?',
-		'a' => 'Report it within five business days of receiving your order by email or phone. We&rsquo;ll open a claim, ask for photos, and work out a reprint or repair.',
+		'a' => 'Report it within five business days of receiving your order by email or phone. We&rsquo;ll open a claim and ask for photos, then reprint or replace the item at no charge. If we can&rsquo;t reprint it, we refund the full price you paid for that item.',
 	),
 	array(
 		'q' => 'My sign arrived damaged. What do I do?',
@@ -136,14 +136,14 @@ get_header();
 		<div class="container sf-prose">
 			<p class="cl-kicker">Returns, reprints &amp; cancellations</p>
 			<h2 id="gd-returns-title" class="cl-section-title">Made-to-Order Returns Policy</h2>
-			<p>Because every sign is made for your business, we can&rsquo;t take returns of correctly made products. If something is wrong, we&rsquo;ll make it right.</p>
+			<p>Because every sign is made for your business, we can&rsquo;t take returns of correctly made products. If your order arrives defective, damaged, or different from the proof you approved, <strong>we reprint or replace it at no charge</strong>. If we can&rsquo;t reprint it, <strong>we refund the full price you paid for that item</strong>.</p>
 			<h3>Cancellations</h3>
-			<p>Orders can&rsquo;t be stopped or cancelled once they&rsquo;re in Approved status, and there are no refunds after an order is approved.</p>
+			<p>Orders can&rsquo;t be stopped or cancelled once they&rsquo;re in Approved status, and an approved order can&rsquo;t be cancelled for a refund. This doesn&rsquo;t limit the reprint or refund you get when an order arrives defective or incorrect.</p>
 			<h3>Problems with your order</h3>
 			<ul class="gd-checklist">
 				<li>Report any problem within <strong>five business days</strong> of receiving your order: email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a> or call <a href="tel:+18664362101">866-436-2101</a>.</li>
 				<li>We document your claim and may ask for photos of the defect.</li>
-				<li>In some cases we&rsquo;ll ask you to ship the product back; if a defect is confirmed, we may reimburse that shipping.</li>
+				<li>In some cases we&rsquo;ll ask you to ship the product back; once the defect is confirmed, we reimburse that shipping.</li>
 				<li>Rush production and expedited shipping charges aren&rsquo;t refundable for defective products, unless the carrier delivers a damaged order or fails to deliver it.</li>
 				<li>Turnaround and shipping for reprints depend on production capacity.</li>
 			</ul>

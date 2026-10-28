@@ -50,6 +50,7 @@ get_header();
 			<p class="cl-kicker">Installation overview</p>
 			<h1 id="gd-title" class="sf-hero-title">How to Install Channel Letters</h1>
 			<p class="sf-hero-lead">An overview for you and your licensed installer: how raceway and direct-mount letters go up, how the install pattern is used, and how power is connected and inspected. Always follow the wiring diagram and install pattern that ship with your sign.</p>
+			<?php wholesale_guide_byline(); ?>
 			<div class="gd-note">
 				<p><strong>Who installs it?</strong> We build, test and ship your sign. A licensed sign installer or electrician in your area mounts it and makes the electrical connection. We don&rsquo;t install signs.</p>
 			</div>

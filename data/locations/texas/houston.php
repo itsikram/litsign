@@ -20,13 +20,13 @@ $sign_code = $hpc . '/media/5591/download?inline=';
 
 return array(
 	'name' => 'Houston',
-	'status' => 'review',
-	'updated' => '2026-10-22',
+	'status' => 'live',
+	'updated' => '2026-10-27',
 	'county' => 'Harris County',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Houston',
 	'card' => 'Sign Administration permits; licensed sign contractors install',
 	'seo_title' => 'Channel Letters in Houston, TX: Sign Permits & Prices',
-	'seo_description' => 'Channel letters, banners and window graphics for Houston, shipped from WA & CA. Houston sign permit steps, banner and window limits, and who installs.',
+	'seo_description' => 'Channel letters and window graphics for Houston, shipped from WA & CA: Houston sign permit steps, banner limits and who installs. See prices online.',
 	'h1' => 'Channel Letters and Storefront Signs for Houston Businesses',
 	'intro' => array(
 		'Houston businesses can price custom LED channel letters online, have them built in Washington or California, and get them shipped to the storefront, ready for a licensed Houston sign contractor to permit and install. Banners, window graphics and flags are made in Renton, WA and ship the same way.',
@@ -156,8 +156,8 @@ return array(
 	),
 	'review_notes' => array(
 		'houstonpermittingcenter.org blocks the research PC; all Houston Permitting Center facts were read from Internet Archive copies (2024-12 to 2026-06). Open each source link once from another network before going live.',
-		'Processing time (4-11 business days) and the $25,000 bond: re-check before going live and every year.',
-		'Owner: confirm each channel letter and power supply ships with its own UL label (Houston skips the shop inspection only then).',
+		'Processing time (4-11 business days) re-checked 2026-10-27 on the City permit page (Internet Archive copy of 2026-06-10). The $25,000 bond is from the 2020 Sign Code, Sec. 4606. Re-check both every year.',
+		'The page states Houston&rsquo;s rule (shop inspection unless UL labels are on each letter and power supply); it makes no claim about our labels. Owner: confirm per-letter UL labels before saying so anywhere.',
 		'Owner: confirm every order gets a proof to approve before production ("How ordering works", step 2, shared by all location pages).',
 		'Transit days to Houston not shown until verified.',
 	),

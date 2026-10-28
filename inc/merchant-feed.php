@@ -10,6 +10,10 @@
  * @package litsign
  */
 
+// Merchant Center account the feed is in; Google Ads purchase conversions name
+// it so sales can be matched to the products in the feed (cart data).
+define('WHOLESALE_MERCHANT_CENTER_ID', 5877365740);
+
 function wholesale_merchant_feed_rewrite()
 {
 	add_rewrite_rule('^merchant-feed\.xml$', 'index.php?wholesale_merchant_feed=1', 'top');
@@ -81,6 +85,52 @@ function wholesale_merchant_description($product_id)
 }
 
 /**
+ * Shopping title for a printed product: "Custom" in front and "Full Color
+ * Printed" after, the words shoppers search with ("custom vinyl banner"), which
+ * the plain product names ("13oz Vinyl Banner") lack. Feed only; the product
+ * pages keep their names. Hardware, blank items and channel letters (whose
+ * titles already name the letter) are left as they are.
+ *
+ * @param string $title         Product name with its variant label.
+ * @param string $category_name The product's category (custom_label_0).
+ */
+function wholesale_merchant_title($title, $category_name)
+{
+	$printed = array(
+		'Custom Printed Banners',
+		'Custom Banner Stands',
+		'Custom Advertising Flags',
+		'Trade Show Displays',
+		'SEG Fabric Displays',
+		'Custom Table Throws & Covers',
+		'Custom Event Tents',
+		'A-Frame Signs & Sign Holders',
+		'Signicade A-Frame Sidewalk Signs',
+		'Real Estate Signs',
+		'Rigid Signs & Magnets',
+		'Reflective Signs',
+		'Dry Erase Signs',
+		'Printed Adhesive Vinyl & Window Graphics',
+		'Custom Wall Art Prints',
+		'Large Format Printing',
+	);
+	// Term names store "&" as "&amp;".
+	$category_name = html_entity_decode($category_name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+	if (!in_array($category_name, $printed, true) || preg_match('/hardware only|solid color|wood frame hanger/i', $title)) {
+		return $title;
+	}
+
+	if (0 !== stripos($title, 'custom ')) {
+		$title = 'Custom ' . $title;
+	}
+	if (!preg_match('/full color|print/i', $title)) {
+		$title .= ' - Full Color Printed';
+	}
+
+	return $title;
+}
+
+/**
  * Feed item ID: the product slug, which Merchant Center limits to 50
  * characters. Longer slugs are cut and end in the post ID so they stay unique.
  */
@@ -94,6 +144,18 @@ function wholesale_merchant_item_id($product)
 	$suffix = '-' . $product->ID;
 
 	return rtrim(substr($id, 0, 50 - strlen($suffix)), '-') . $suffix;
+}
+
+/**
+ * Feed item ID for a product post ID. Tracking events (GA4 items, Google Ads
+ * cart data) must name products the way the feed does, or Google can't tie a
+ * sale to the Shopping product that brought it.
+ */
+function wholesale_merchant_feed_id($product_id)
+{
+	$product = get_post((int) $product_id);
+
+	return $product && 'product' === $product->post_type ? wholesale_merchant_item_id($product) : (string) $product_id;
 }
 
 function wholesale_render_merchant_feed()
@@ -160,6 +222,10 @@ function wholesale_render_merchant_feed()
 		if ($term) {
 			$parent = $term->parent ? get_term($term->parent, 'product_category') : null;
 			$product_type = ($parent && !is_wp_error($parent) ? $parent->name . ' > ' : '') . $term->name;
+		}
+
+		if (!$channel_letter && $term) {
+			$title = wholesale_merchant_title($title, $term->name);
 		}
 
 		$shipping = wholesale_seo_offer_shipping_details($product->ID, $price);

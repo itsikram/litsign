@@ -14,7 +14,7 @@ $fabric_care = 'The tension fabric graphic can be machine washed in cold water o
 return array(
 	'curved-tension-fabric-display-graphic-frame' => array(
 		'title' => array('Curved Tension Fabric Display', ''),
-		'description' => 'Curved tension fabric displays: a tool-free tube frame with a zip-on fabric print in 6 ft tabletop, 8 ft or 10 ft sizes, with carry bag. Ships nationwide.',
+		'description' => 'Curved tension fabric displays: a tool-free tube frame with a zip-on fabric print in 6 ft tabletop, 8 ft or 10 ft sizes. Ships nationwide. Order online.',
 		'faq' => array($tension_setup),
 		'care' => $fabric_care,
 	),
@@ -29,26 +29,26 @@ return array(
 		'care' => $fabric_care,
 	),
 	'curved-velcro-fabric-pop-up-display-graphic-only' => array(
-		'description' => 'Replacement Velcro fabric graphic for the curved pop up display, dye sublimated with printed end caps, 8 ft or 10 ft. Frame not included. Ships nationwide.',
+		'description' => 'Replacement Velcro graphic for the curved pop up display, dye sublimated with printed end caps, 8 ft or 10 ft. No frame. Ships nationwide. Order now.',
 	),
 
 	'straight-tension-fabric-displays-graphic-frame' => array(
 		'title' => array('Straight Tension Fabric Display', ''),
-		'description' => 'Straight tension fabric displays: a flat zip-on fabric backwall on tool-free tubes with stabilizing feet, in 8, 10 or 20 ft sizes. Ships nationwide.',
+		'description' => 'Straight tension fabric displays: a flat zip-on fabric backwall on tool-free tubes with feet, in 8, 10 or 20 ft sizes. Ships nationwide. Order now.',
 		'faq' => array($tension_setup),
 		'care' => $fabric_care,
 	),
 	'straight-tension-fabric-displays-graphic-only' => array(
-		'description' => 'Replacement zip-on graphic for the straight tension fabric display in 8, 10 or 20 ft sizes, single or double sided. Frame not included. Ships nationwide.',
+		'description' => 'Replacement zip-on graphic for the straight tension fabric display in 8, 10 or 20 ft sizes, single or double sided. No frame. Ships nationwide. Order now.',
 	),
 
 	'straight-velcro-fabric-pop-up-display-graphic-frame' => array(
 		'title' => array('Straight Pop Up Display', 'Velcro Fabric'),
-		'description' => 'Straight Velcro pop up displays: an accordion frame that opens in minutes with a fabric print that wraps the ends, 8 ft or 10 ft. Ships nationwide.',
+		'description' => 'Straight Velcro pop up displays: an accordion frame that opens in minutes with a print that wraps the ends, 8 ft or 10 ft. Ships nationwide. Order now.',
 		'faq' => array($popup_setup, $case),
 		'care' => $fabric_care,
 	),
 	'straight-velcro-fabric-pop-up-display-graphic-only' => array(
-		'description' => 'Replacement Velcro fabric graphic for the straight pop up display, dye sublimated with printed end caps, 8 or 10 ft. Frame not included. Ships nationwide.',
+		'description' => 'Replacement Velcro graphic for the straight pop up display, dye sublimated with printed end caps, 8 or 10 ft. No frame. Ships nationwide. Order now.',
 	),
 );

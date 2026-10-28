@@ -21,8 +21,8 @@ return array(
 	'updated' => '2026-10-22',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Illinois',
 	'neighbors' => array('wisconsin', 'indiana', 'iowa', 'missouri', 'kentucky'),
-	'seo_title' => 'Storefront Signs Shipped to Illinois | Chicago Sign Permits',
-	'seo_description' => 'Channel letters shipped to Illinois businesses, with how local electrician licensing works and Chicago Department of Buildings sign permit rules.',
+	'seo_title' => 'Channel Letters Shipped to Illinois | Chicago Sign Permits',
+	'seo_description' => 'Channel letters shipped to Illinois businesses: how local electrician licensing works and Chicago Department of Buildings sign permits. See prices online.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to Illinois',
 	'intro' => array(
 		'Illinois businesses can price custom LED channel letters online, then have them built in Washington and California and shipped ready for a licensed local installer. Banners and window graphics are printed in Renton, WA and ship alongside.',

@@ -44,7 +44,7 @@ function wholesale_pe_field_copy()
 			'_min_sqft' => array('Minimum square feet', 'Used for the "starting at" price and for per-sq-ft options. When the calculator is hidden, the base price is minimum sq ft × price per sq ft. Example: 2', '1', 'decimal'),
 			'_price_per_sqft' => array('Price per square foot ($)', 'Base price for one square foot, before options and discount. When the calculator is hidden this works as the item price (with minimum sq ft 1). Example: 2.25', '2.25', 'decimal'),
 			'_discount_percent' => array('Everyday price adjustment (%)', 'Taken off every price this product shows and the whole cart line, after quantity. Shoppers only see the result, never a sale. 0 to 100. Example: 10. Run sales from Settings &gt; Storefront Sign &gt; Sale promotion.', '0', 'decimal'),
-			'_min_order_price' => array('Minimum order price ($)', 'Size calculator products only. The lowest price one item can cost, after the everyday price adjustment. Smaller sizes (down to the minimum width and height) can still be ordered and pay this price. Leave empty for the standard $15. Enter 0 for no minimum. Example: 25', '15', 'decimal'),
+			'_min_order_price' => array('Minimum order price ($)', 'Size calculator products only. The lowest price one item can cost, after the everyday price adjustment. Smaller sizes (down to the minimum width and height) can still be ordered and pay this price. Leave empty for the standard $16.50. Enter 0 for no minimum. Example: 25', '16.50', 'decimal'),
 			'_min_order_per_side' => array('Minimum order price per side', 'Ticked: the minimum order price is charged once per printed side, so 2 Sides has double the minimum (like B2Sign: $8 one side, $16 two sides).'),
 			'_max_size' => array('Maximum size (inches)', 'Size calculator products only. Largest size, short side x long side, accepted either way round. Example: 48x1200. Leave empty for no limit.', '48x1200', 'text'),
 			'_promo_percent' => array('Product sale (%)', 'This product\'s own dated sale, taken off the everyday price between the start and end dates below (shown crossed out with "Sale"). Replaces the site-wide sale for this product while it runs. Leave empty for none. Example: 10', '0', 'decimal'),
@@ -84,9 +84,9 @@ function wholesale_pe_field_copy()
 			'_is_ps_option' => array('Offer a power supply', 'Channel letter builder: shows the power supply choice.'),
 			'_is_lit_option' => array('Offer back lighting', 'Channel letter builder: shows the back-lit choice.'),
 			'_is_cable_option' => array('Offer an 8 ft cable', 'Channel letter builder: shows the cable choice.'),
-			'_standard_ps_cost' => array('Power supply price ($)', 'Flat amount added once when the customer picks a standard power supply. Example: 90', '90', 'decimal'),
+			'_standard_ps_cost' => array('Power supply price ($)', 'Flat amount added once when the customer picks a standard power supply. Example: 99', '99', 'decimal'),
 			'_backlit_cost' => array('Back-lit upcharge (% of letter price)', 'A percentage, not dollars: 20 adds 20% of the letters price when back lighting is picked. Example: 20', '20', 'decimal'),
-			'_eight_ft_cable_cost' => array('8 ft cable price ($)', 'Flat amount added once when the customer picks the cable. Example: 70', '70', 'decimal'),
+			'_eight_ft_cable_cost' => array('8 ft cable price ($)', 'Flat amount added once when the customer picks the cable. Example: 77', '77', 'decimal'),
 			'_has_trimcap' => array('Has a trimcap choice', 'Channel letters: shows the trimcap section on the product page.'),
 			'_has_return' => array('Has a return choice', 'Channel letters: shows the return section on the product page.'),
 			'_has_face' => array('Has a face choice', 'Channel letters: shows the face section on the product page.'),
@@ -366,7 +366,7 @@ add_action('admin_enqueue_scripts', function ($hook) {
 		'products' => array_map(static function ($product) {
 			return array('slug' => $product->post_name, 'title' => html_entity_decode(get_the_title($product), ENT_QUOTES, 'UTF-8'), 'status' => $product->post_status);
 		}, $products),
-		'sqftMinPrice' => defined('WHOLESALE_SQFT_MIN_PRICE') ? WHOLESALE_SQFT_MIN_PRICE : 15,
-		'racewayPerFoot' => defined('WHOLESALE_RACEWAY_COST_PER_FOOT') ? WHOLESALE_RACEWAY_COST_PER_FOOT : 50,
+		'sqftMinPrice' => defined('WHOLESALE_SQFT_MIN_PRICE') ? WHOLESALE_SQFT_MIN_PRICE : 16.5,
+		'racewayPerFoot' => defined('WHOLESALE_RACEWAY_COST_PER_FOOT') ? WHOLESALE_RACEWAY_COST_PER_FOOT : 55,
 	));
 });

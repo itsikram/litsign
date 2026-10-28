@@ -312,9 +312,9 @@ get_header();
 				<div class="contact-info-list">
 					<a href="tel:+18664362101"><span class="contact-info-icon" aria-hidden="true">&#9742;</span><span><small>Call us</small><strong>866-436-2101</strong></span></a>
 					<a href="mailto:TR@StorefrontSignOnline.com"><span class="contact-info-icon" aria-hidden="true">&#9993;</span><span><small>Email us</small><strong>TR@StorefrontSignOnline.com</strong></span></a>
-					<div><span class="contact-info-icon" aria-hidden="true">&#9673;</span><span><small>Visit our office</small><strong>707 S. Grady Way, Suite 600<br>Renton, WA 98057</strong></span></div>
+					<div><span class="contact-info-icon" aria-hidden="true">&#9673;</span><span><small>Office address</small><strong>707 S. Grady Way, Suite 600<br>Renton, WA 98057</strong></span></div>
 				</div>
-				<div class="contact-info-footer">Serving retail storefront businesses with custom sign solutions.</div>
+				<div class="contact-info-footer">Storefront Sign Online LLC, also doing business as Lit Sign Manufacturing. Mon–Fri, 8am–5pm Pacific. Every order ships to you; we don’t offer walk-ins or pickup.</div>
 			</aside>
 		</div>
 

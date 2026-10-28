@@ -16,8 +16,8 @@ return array(
 	'updated' => '2026-10-22',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/New_York_(state)',
 	'neighbors' => array('new-jersey', 'pennsylvania', 'connecticut', 'massachusetts', 'vermont'),
-	'seo_title' => 'Storefront Signs Shipped to New York | NYC Sign Permit Guide',
-	'seo_description' => 'Channel letters shipped to New York businesses, with how electrician licensing works locally and NYC DOB sign permits, sign hangers and lit-sign rules.',
+	'seo_title' => 'Channel Letters Shipped to New York | NYC Sign Permit Guide',
+	'seo_description' => 'Channel letters shipped to New York: local electrician licensing, NYC DOB sign permits, sign hangers and lit-sign rules. See prices online or get a quote.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to New York',
 	'intro' => array(
 		'New York businesses can price custom LED channel letters online and have them built in Washington and California and shipped ready for a licensed local installer, whether the storefront is in Manhattan or upstate. Window graphics, banners and flags are made in Renton, WA.',

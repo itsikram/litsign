@@ -199,7 +199,7 @@ get_header();
                         <?php
                         the_post_thumbnail('', array(
                             'class' => 'single-product-thumbnail',
-                            'alt' => esc_attr(get_the_title()),
+                            'alt' => wholesale_product_photo_alt(get_the_post_thumbnail_url(get_the_ID(), 'full'), $product_heading),
                             'loading' => 'eager',
                             'fetchpriority' => 'high',
                             'decoding' => 'async',
@@ -215,13 +215,17 @@ get_header();
                         // Thumbnails are at most 120px wide, so they load a small size;
                         // data-image keeps the full photo for the main image swap.
                         $gallery_ids = function_exists('wholesale_product_image_alt_attachment_ids_by_url') ? wholesale_product_image_alt_attachment_ids_by_url($product_gallery_images) : array();
+                        $gallery_number = 0;
                         foreach ($product_gallery_images as $image) {
                             $thumb = !empty($gallery_ids[$image]) ? wp_get_attachment_image_src($gallery_ids[$image], 'medium') : false;
                             $thumb_srcset = $thumb ? wp_get_attachment_image_srcset($gallery_ids[$image], 'medium') : '';
+                            $gallery_number++;
+                            // Each photo's own description (data/image-alts.php), else "Name, photo 2".
+                            $thumb_alt = wholesale_product_photo_alt($image, sprintf('%s, photo %d', $product_heading, $gallery_number));
                         ?>
                             <div data-image="<?php echo $image; ?>" class="gallery-image-item">
 
-                                <img src="<?php echo esc_url($thumb ? $thumb[0] : $image); ?>"<?php if ($thumb) : ?> width="<?php echo (int) $thumb[1]; ?>" height="<?php echo (int) $thumb[2]; ?>"<?php endif; ?><?php if ($thumb_srcset) : ?> srcset="<?php echo esc_attr($thumb_srcset); ?>" sizes="120px"<?php endif; ?> alt="<?php echo esc_attr($product_category_slug === 'channel-letters' ? 'Channel letter sign detail: ' . get_the_title() : get_the_title()); ?>" loading="lazy" decoding="async">
+                                <img src="<?php echo esc_url($thumb ? $thumb[0] : $image); ?>"<?php if ($thumb) : ?> width="<?php echo (int) $thumb[1]; ?>" height="<?php echo (int) $thumb[2]; ?>"<?php endif; ?><?php if ($thumb_srcset) : ?> srcset="<?php echo esc_attr($thumb_srcset); ?>" sizes="120px"<?php endif; ?> alt="<?php echo esc_attr($thumb_alt); ?>" loading="lazy" decoding="async">
                             </div>
 
                         <?php
@@ -1175,10 +1179,14 @@ get_header();
 
                         <ul class="product-assurance">
                             <?php $product_ship_min = wholesale_free_shipping_amount('channel-letters' === $product_category_slug); ?>
+                            <?php $product_ship_from = wholesale_shipping_from_amount('channel-letters' === $product_category_slug); ?>
+                            <?php // Say what shipping costs below the free minimum: checkout adds it, and a $15 banner reaching checkout as $34.55 was read as a hidden fee. ?>
                             <?php if ($product_ship_min) : ?>
-                                <li class="product-assurance__ship"><strong>Free shipping</strong> on orders of <?php echo esc_html($product_ship_min); ?> or more &middot; <a href="<?php echo esc_url(home_url('/shipping-returns/#free-shipping')); ?>">details</a></li>
+                                <li class="product-assurance__ship"><strong>Free shipping</strong> on orders of <?php echo esc_html($product_ship_min); ?> or more<?php echo $product_ship_from ? esc_html(', ' . $product_ship_from . ' standard shipping below that') : ''; ?> &middot; <a href="<?php echo esc_url(home_url('/shipping-returns/#free-shipping')); ?>">details</a></li>
+                            <?php elseif ($product_ship_from) : ?>
+                                <li>Standard shipping from <?php echo esc_html($product_ship_from); ?></li>
                             <?php endif; ?>
-                            <li>Price shown is the price you pay &mdash; no surprises at checkout</li>
+                            <li>Checkout adds only shipping<?php echo (float) wholesale_get_setting('tax_rate') > 0 ? ' and sales tax' : ''; ?> &mdash; no other fees</li>
                             <li>Secure checkout<?php echo wholesale_setting_enabled('payment_disabled') ? '' : ' by Elavon Converge'; ?></li>
                             <?php if ('channel-letters' === $product_category_slug) : ?>
                                 <li>UL listed, tested before shipping, 5-year LED warranty</li>
@@ -1421,7 +1429,7 @@ get_header();
         <?php elseif ('reviewed' === $review_eligibility['reason'] && 'sent' !== $review_status && 'already_reviewed' !== $review_status) : ?>
             <p class="product-review-note">Thanks, you have already reviewed this product. It appears here once approved.</p>
         <?php elseif (!is_user_logged_in()) : ?>
-            <p class="product-review-note">Bought this <?php echo esc_html(wholesale_product_noun($product_id)); ?>? Use the review link in your shipping email, or <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink() . '#product-reviews'), home_url('/login/'))); ?>">sign in</a> with the account used for your order.</p>
+            <p class="product-review-note">Bought this <?php echo esc_html(wholesale_product_noun($product_id)); ?>? Use the review link in your shipping email, or <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink() . '#product-reviews'), home_url('/login/'))); ?>" rel="nofollow">sign in</a> with the account used for your order.</p>
         <?php endif; ?>
     </section>
     <?php endif; ?>

@@ -64,6 +64,7 @@ require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
 require_once(dirname(__FILE__) . '/inc/product-guides.php');
 require_once(dirname(__FILE__) . '/inc/product-page-content.php');
+require_once(dirname(__FILE__) . '/inc/category-page-content.php');
 require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
 require_once(dirname(__FILE__) . '/inc/product-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/location-sitemap.php');
@@ -1495,11 +1496,15 @@ add_action('add_meta_boxes_contact_submission', 'wholesale_contact_submission_re
 
 /**
  * Pages that send a conversion as soon as they open: the order confirmation
- * page and the "quote sent" page (see wholesale_quote_lead_args()).
+ * page, the "quote sent" page (see wholesale_quote_lead_args()) and pages with
+ * their own conversion label (inc/ads-page-conversions.php).
  */
 function wholesale_ads_is_conversion_page()
 {
 	if (get_query_var('wholesale_thank_you')) {
+		return true;
+	}
+	if (function_exists('wholesale_page_conversion_label') && '' !== wholesale_page_conversion_label()) {
 		return true;
 	}
 	$lead_id = isset($_GET['lead']) ? absint($_GET['lead']) : 0;
@@ -1540,9 +1545,13 @@ function wholesale_deferred_conversion_tracking()
 			// before the visitor moves on or closes the page.
 			start();
 			<?php else : ?>
-			// Everyone else: on the first scroll, tap, key or mouse move, or 10s
+			// Everyone else: on the first scroll, tap, key or mouse move, or 40s
 			// after load. Google's scripts are about 370 KB of JavaScript; loading
-			// them during the first view made the page slower to respond.
+			// them during the first view made the page slower to respond. The
+			// fallback used to be 10s, but PageSpeed keeps recording until 35s
+			// (the host's injected monitoring script leaves a request open), so
+			// the tag ran inside the test and made up nearly all of its 220ms
+			// Total Blocking Time. Real visitors almost always scroll or tap first.
 			var started = false, events = ['scroll', 'pointerdown', 'keydown', 'touchstart', 'mousemove'];
 			var once = function () {
 				if (started) return;
@@ -1551,7 +1560,7 @@ function wholesale_deferred_conversion_tracking()
 				start();
 			};
 			events.forEach(function (name) { window.addEventListener(name, once, { passive: true }); });
-			window.addEventListener('load', function () { setTimeout(once, 10000); });
+			window.addEventListener('load', function () { setTimeout(once, 40000); });
 			<?php endif; ?>
 		})();
 	</script>
@@ -1778,6 +1787,8 @@ function wholesale_inline_small_styles($tag, $handle)
 		'wholesale-header' => '/css/header.css',
 		'cl-quote' => '/css/cl-quote.css',
 		'cl-landing' => '/css/cl-landing.css',
+		'wholesale-home-catalog' => '/css/home-catalog.css',
+		'wholesale-banners-displays' => '/css/banners-displays.css',
 		'wholesale-typography' => '/css/typography.css',
 	);
 
@@ -2016,32 +2027,85 @@ add_action('template_redirect', 'wholesale_category_redirect', 1);
 add_filter('the_generator', '__return_empty_string');
 
 /**
- * Register the public XML sitemap endpoint.
+ * Register the public XML sitemap endpoints: /sitemap.xml is the index of
+ * the theme's sitemaps and /page-sitemap.xml lists the home page and pages.
  */
 function wholesale_sitemap_rewrite()
 {
 	add_rewrite_rule('^sitemap\.xml$', 'index.php?wholesale_sitemap=1', 'top');
+	add_rewrite_rule('^page-sitemap\.xml$', 'index.php?wholesale_sitemap=pages', 'top');
 }
 add_action('init', 'wholesale_sitemap_rewrite', 20);
 add_action('init', function () {
-	if ('2' !== get_option('wholesale_sitemap_rewrite_version')) {
+	if ('3' !== get_option('wholesale_sitemap_rewrite_version')) {
 		flush_rewrite_rules(false);
-		update_option('wholesale_sitemap_rewrite_version', '2');
+		update_option('wholesale_sitemap_rewrite_version', '3');
 	}
 }, 99);
+
+/**
+ * The theme's sitemaps, each URL in exactly one of them.
+ *
+ * @return string[] Absolute sitemap URLs.
+ */
+function wholesale_sitemap_index_urls()
+{
+	return array_map('home_url', array('/page-sitemap.xml', '/product-sitemap.xml', '/category-sitemap.xml', '/location-sitemap.xml'));
+}
+
+/**
+ * Core's /wp-sitemap.xml listed every page a second time, so it is off and
+ * its URLs point at the theme's index.
+ */
+add_filter('wp_sitemaps_enabled', '__return_false');
+add_action('template_redirect', function () {
+	$path = (string) wp_parse_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '', PHP_URL_PATH);
+	if (preg_match('#/wp-sitemap(?:-[a-z0-9_-]+)?\.(?:xml|xsl)$#i', $path)) {
+		wp_safe_redirect(home_url('/sitemap.xml'), 301);
+		exit;
+	}
+}, -1);
 add_filter('query_vars', function ($vars) {
 	$vars[] = 'wholesale_sitemap';
 	return $vars;
 });
 
 /**
- * Render a dynamic sitemap containing only public, indexable URLs.
+ * When the home page's copy (template-parts/home-catalog.php) last changed: its
+ * sitemap lastmod and its dateModified in structured data. Bump it by hand when
+ * that template's copy or product lists change.
+ */
+define('WHOLESALE_HOME_PAGE_REVISED', '2026-10-27T08:20:00+00:00');
+
+/**
+ * Render /sitemap.xml (the index) and /page-sitemap.xml: the home page, pages
+ * and posts that are public and indexable. Products, categories and location
+ * guides have their own sitemaps (inc/product-sitemap.php,
+ * inc/location-sitemap.php).
  */
 function wholesale_render_sitemap()
 {
-	if ('1' !== get_query_var('wholesale_sitemap')) {
+	$which = (string) get_query_var('wholesale_sitemap');
+	if ('1' !== $which && 'pages' !== $which) {
 		return;
 	}
+
+	if ('1' === $which) {
+		nocache_headers();
+		header('Content-Type: application/xml; charset=UTF-8');
+		header('X-Robots-Tag: noindex, follow');
+		status_header(200);
+		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+		echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+		foreach (wholesale_sitemap_index_urls() as $sitemap_url) {
+			echo "\t<sitemap>\n\t\t<loc>" . esc_xml(esc_url_raw($sitemap_url)) . "</loc>\n\t</sitemap>\n";
+		}
+		echo '</sitemapindex>';
+		exit;
+	}
+
+	// Location guides are listed, with their review dates, in /location-sitemap.xml.
+	$location_urls = function_exists('wholesale_location_sitemap_entries') ? wp_list_pluck(wholesale_location_sitemap_entries(), 'loc') : array();
 
 	$urls = array();
 	$add_url = function ($url, $lastmod = '', $changefreq = '', $priority = '') use (&$urls) {
@@ -2061,11 +2125,12 @@ function wholesale_render_sitemap()
 	$last_modified = get_lastpostmodified('gmt');
 	// A GMT time: mysql2date() would read it as site time (Los Angeles) and date it 7 hours ahead.
 	$last_modified = $last_modified ? gmdate('c', strtotime($last_modified . ' UTC')) : '';
-	$add_url(home_url('/'), $last_modified, 'daily', '1.0');
+	// The home page's content lives in its template, so its revision date is kept by hand.
+	$add_url(home_url('/'), max($last_modified, WHOLESALE_HOME_PAGE_REVISED), 'daily', '1.0');
 
 	$private_pages = wholesale_seo_noindex_page_slugs();
 	$page_query = new WP_Query(array(
-		'post_type' => array('page', 'post', 'product'),
+		'post_type' => array('page', 'post'),
 		'post_status' => 'publish',
 		'posts_per_page' => -1,
 		'orderby' => 'modified',
@@ -2086,28 +2151,17 @@ function wholesale_render_sitemap()
 		}
 
 		$url = get_permalink($post);
-		if ($url) {
-			// Products count their buying guide copy (inc/product-guides.php) as content.
-			$add_url($url, 'product' === $post->post_type ? wholesale_product_content_modified($post) : get_post_modified_time('c', true, $post), 'weekly', '0.8');
-		}
-	}
-
-	$terms = wholesale_seo_sitemap_categories();
-
-	if ($terms) {
-		foreach ($terms as $term) {
-			// The channel-letter route canonicalizes to the home page.
-			if (in_array($term->slug, wholesale_seo_sitemap_excluded_categories(), true)) {
-				continue;
-			}
-
-			$term_url = wholesale_category_url($term->slug);
-			$add_url($term_url, '', 'weekly', '0.7');
+		if ($url && !in_array($url, $location_urls, true)) {
+			// A guide's hand-kept revision date beats the page row's, which its template never touches.
+			$revisions = 'page' === $post->post_type && function_exists('wholesale_guide_page_revisions') ? wholesale_guide_page_revisions() : array();
+			$lastmod = isset($revisions[$post->post_name]) ? max($revisions[$post->post_name] . 'T12:00:00+00:00', get_post_modified_time('c', true, $post)) : get_post_modified_time('c', true, $post);
+			$add_url($url, $lastmod, 'weekly', '0.8');
 		}
 	}
 
 	nocache_headers();
 	header('Content-Type: application/xml; charset=UTF-8');
+	header('X-Robots-Tag: noindex, follow');
 	status_header(200);
 
 	echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
@@ -2293,9 +2347,9 @@ function wholesale_format_order_detail_value($name, $value)
 		}
 
 		if ($url) {
-			// The separator is for the order email; the site hides it and shows Download as a button.
+			// The separator is for the order email; the site hides it and shows both links as buttons.
 			return '<span class="artwork-links">'
-				. '<a href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">Open</a>'
+				. '<a class="artwork-open" href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">Open</a>'
 				. '<span class="artwork-links__sep" aria-hidden="true"> | </span>'
 				. '<a class="artwork-download" href="' . esc_url(wholesale_artwork_download_url($url)) . '" download>Download</a>'
 				. '</span>';
@@ -2414,7 +2468,7 @@ function wholesale_send_new_order_admin_email($post_id)
 		}
 
 		if (!empty($product['product_details']) && is_array($product['product_details'])) {
-			foreach ($product['product_details'] as $name => $value) {
+			foreach (wholesale_width_first($product['product_details']) as $name => $value) {
 				if ($value !== null && $value !== '') {
 					$details[] = '<strong>' . esc_html($name) . ':</strong> ' . wholesale_format_order_detail_value($name, $value);
 				}
@@ -2747,10 +2801,10 @@ function litsign_scripts()
 		wp_enqueue_style('landing-page', $theme_uri . '/css/landing-page.css', array('litsign-style', 'custom-style'), $asset_version('/css/landing-page.css'));
 	}
 	// The quote form styles are shared by both Google Ads landing pages. The
-	// home page reuses the channel letters hero and trust strip.
+	// home page reuses their help band and hero proof line.
 	if (is_page_template('page-channel-letters.php') || is_page(array('banners-displays', 'window-graphics')) || is_front_page()) {
 		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
-		if (is_page_template('page-channel-letters.php') || is_front_page()) {
+		if (is_page_template('page-channel-letters.php')) {
 			wp_enqueue_style('cl-landing', $theme_uri . '/css/cl-landing.css', array('cl-quote'), $asset_version('/css/cl-landing.css'));
 		}
 	}
@@ -2763,6 +2817,12 @@ function litsign_scripts()
 	}
 	if (is_page('window-graphics')) {
 		wp_enqueue_style('wholesale-window-graphics', $theme_uri . '/css/window-graphics.css', array('wholesale-banners-displays'), $asset_version('/css/window-graphics.css'));
+	}
+	// The home page (template-parts/home-catalog.php) uses the banners & displays
+	// hero, cards and product grid, plus its own catalog sections.
+	if (is_front_page()) {
+		wp_enqueue_style('wholesale-banners-displays', $theme_uri . '/css/banners-displays.css', array('custom-style'), $asset_version('/css/banners-displays.css'));
+		wp_enqueue_style('wholesale-home-catalog', $theme_uri . '/css/home-catalog.css', array('wholesale-banners-displays'), $asset_version('/css/home-catalog.css'));
 	}
 	//wp_enqueue_style('zebra_dialog', get_template_directory_uri() . '/css/zebra_dialog.css', array(), _S_VERSION);
 
@@ -3034,7 +3094,7 @@ function wholesale_seo_description()
 				? sprintf(__('Shop custom %s from Storefront Sign Online. Signs and print products for retail storefronts and businesses.', 'litsign'), strtolower($term->name))
 				: __('Custom signage for retail storefronts, shipped to businesses across the USA.', 'litsign'));
 	} elseif (is_front_page() || is_page_template('home.php') || (is_home() && !is_front_page())) {
-		$description = __('Storefront Sign Online makes custom LED channel letters in Washington and California and storefront signs, priced online and shipped to all 50 states.', 'litsign');
+		$description = __('Storefront Sign Online prints custom banners, banner stands, flags and trade show displays and builds business signs, priced online and shipped to all 50 states.', 'litsign');
 	} elseif (is_singular()) {
 		$description = get_post_meta(get_queried_object_id(), '_seo_description', true);
 
@@ -3203,7 +3263,7 @@ function wholesale_seo_page_defaults()
 	return array(
 		'about' => array(
 			'title' => __('About Us | Custom Sign Company in Renton, WA Since 2002', 'litsign'),
-			'description' => __('Renton, WA sign company since 2002. Custom LED channel letters made in Washington and California, plus storefront signs and prints, shipped USA-wide.', 'litsign'),
+			'description' => __('Renton, WA sign company since 2002. Channel letters made in Washington and California, plus banners, displays and prints. Ships nationwide; get a quote.', 'litsign'),
 		),
 		// The WordPress pages are titled "cart" and "checkout" (lowercase), which
 		// showed in the browser tab. Both pages are noindex.
@@ -3217,7 +3277,7 @@ function wholesale_seo_page_defaults()
 		),
 		'privacy-policy' => array(
 			'title' => __('Privacy Policy | Storefront Sign Online', 'litsign'),
-			'description' => __('How Storefront Sign Online collects, uses and protects your information when you order signs, request a quote or contact us.', 'litsign'),
+			'description' => __('How Storefront Sign Online collects, uses and protects your information when you order signs, request a quote or contact us. Questions? Call 866-436-2101.', 'litsign'),
 		),
 		'shipping-returns' => array(
 			'title' => __('Shipping & Returns | Storefront Sign Online', 'litsign'),
@@ -3225,7 +3285,7 @@ function wholesale_seo_page_defaults()
 		),
 		'contact' => array(
 			'title' => __('Contact Us | Free Channel Letter & Sign Quote', 'litsign'),
-			'description' => __('Request a free quote for channel letters or storefront signs. Call 866-436-2101, text or email your logo. Mon-Fri 8am-5pm PT.', 'litsign'),
+			'description' => __('Request a free quote for channel letters, banners or displays. Call 866-436-2101, text or email your logo, Mon-Fri 8am-5pm PT. We ship nationwide.', 'litsign'),
 		),
 		// Ads-only pages (noindexed): the title still shows in the browser tab.
 		'chennel-letter-ads' => array(
@@ -3250,16 +3310,16 @@ function wholesale_seo_page_defaults()
 			'description' => __('Custom storefront signs: LED channel letters, window graphics, A-frames, banners and flags. Compare types, sizes and prices, then order online.', 'litsign'),
 		),
 		'banners-displays' => array(
-			'title' => __('Custom Banners & Display Stands | Printed Banners, Flags & Booths', 'litsign'),
-			'description' => __('Custom vinyl and fabric banners, retractable banner stands, feather flags and trade show displays. See your price online.', 'litsign'),
+			'title' => __('Custom Banners & Display Stands | Flags & Trade Show Booths', 'litsign'),
+			'description' => __('Custom vinyl and fabric banners, retractable banner stands, feather flags and trade show displays, made to order. See your price online; ships nationwide.', 'litsign'),
 		),
 		'window-graphics' => array(
-			'title' => __('Custom Window Graphics & Decals | Perf, Frosted & Window Clings', 'litsign'),
-			'description' => __('Custom window graphics for business: window perf, frosted privacy film, clear decals, clings, wall and floor graphics. UV printed in WA. See your price online.', 'litsign'),
+			'title' => __('Custom Window Graphics & Decals | Perf, Frosted & Clings', 'litsign'),
+			'description' => __('Window graphics for business: window perf, frosted privacy film, clear decals, clings, wall and floor graphics, UV printed in WA. See your price online.', 'litsign'),
 		),
 		'reviews' => array(
 			'title' => __('Customer Reviews | Storefront Sign Online', 'litsign'),
-			'description' => __('Read reviews from businesses that ordered channel letters, banners and signs from Storefront Sign Online, or share your own experience.', 'litsign'),
+			'description' => __('Read reviews from businesses that ordered channel letters, banners and displays from Storefront Sign Online, then share your own or shop online.', 'litsign'),
 		),
 		'design-templates' => array(
 			'title' => __('Free Sign Design Templates (PDF, PSD, CDR) & Artwork Guide', 'litsign'),
@@ -3267,7 +3327,7 @@ function wholesale_seo_page_defaults()
 		),
 		'terms-conditions' => array(
 			'title' => __('Terms & Conditions | Storefront Sign Online', 'litsign'),
-			'description' => __('Ordering, artwork approval, cancellation, returns, reprints and shipping terms for custom signs and prints from Storefront Sign Online.', 'litsign'),
+			'description' => __('Ordering, artwork approval, cancellation, returns, reprints and shipping terms for signs and prints from Storefront Sign Online. Read before ordering.', 'litsign'),
 		),
 		'brands' => array(
 			'title' => __('Sign Brands and Products | Storefront Sign Online', 'litsign'),
@@ -3373,15 +3433,18 @@ function wholesale_seo_keyword_meta()
 	// old /channel-letters/ category view keeps the broader title below.
 	if (is_front_page() && wholesale_is_channel_letters_page()) {
 		return array(
-			'title' => __('Storefront Sign Online | LED Channel Letters & Business Signs', 'litsign'),
-			'description' => __('Custom LED channel letters built in WA and CA, plus banners, window graphics, A-frames and flags. Every price is shown online. Ships to all 50 states.', 'litsign'),
+			// Catalog-wide and led by banners & displays (template-parts/home-catalog.php),
+			// so "channel letters" and "storefront signs" stay with /custom-channel-letters/
+			// and /storefront-signs/.
+			'title' => __('Custom Banners, Displays & Signs | Storefront Sign Online', 'litsign'),
+			'description' => __('Custom vinyl banners, banner stands, flags, trade show displays and business signs, printed to order. See your price online; ships to all 50 states.', 'litsign'),
 		);
 	}
 
 	if (wholesale_is_channel_letters_landing()) {
 		return array(
 			'title' => __('Custom Channel Letter Signs | UL Listed LED, Made in USA', 'litsign'),
-			'description' => __('Custom LED channel letter signs, built to order and UL listed. See your exact price online or get a free quote.', 'litsign'),
+			'description' => __('Custom LED channel letter signs in 7 lighting styles, UL listed and built to order in WA and CA. See your exact price online; ships nationwide.', 'litsign'),
 		);
 	}
 
@@ -3827,6 +3890,11 @@ function wholesale_seo_head()
 	$title = wp_get_document_title();
 	$description = wholesale_seo_description();
 	$image = is_singular() ? get_the_post_thumbnail_url(get_queried_object_id(), 'large') : '';
+	// The home page shares its banners & displays hero photo (template-parts/home-catalog.php),
+	// not the Home page's featured image.
+	if (is_front_page() && !empty($GLOBALS['wholesale_page_image'])) {
+		$image = $GLOBALS['wholesale_page_image'];
+	}
 
 	// Share previews for the channel letters landing page show a lit letter, not the logo.
 	if (!$image && wholesale_is_channel_letters_landing()) {
@@ -3953,28 +4021,34 @@ function wholesale_seo_head()
 	} elseif ($is_collection) {
 		$term_slug = get_query_var('category_slug');
 		$term_slug = $term_slug ? sanitize_title($term_slug) : (isset($_GET['category_slug']) ? sanitize_title(wp_unslash($_GET['category_slug'])) : 'channel-letters');
-		$query = new WP_Query(array(
-			'post_type' => 'product',
-			'post_status' => 'publish',
-			'posts_per_page' => 99,
-			'no_found_rows' => true,
-			'fields' => 'ids',
-			'tax_query' => array(
-				array(
-					'taxonomy' => 'product_category',
-					'field' => 'slug',
-					'terms' => $term_slug,
+		if (is_front_page() && $page_items) {
+			// The home page lists the products it features (template-parts/home-catalog.php).
+			$item_products = array_values($page_items);
+		} else {
+			$query = new WP_Query(array(
+				'post_type' => 'product',
+				'post_status' => 'publish',
+				'posts_per_page' => 99,
+				'no_found_rows' => true,
+				'fields' => 'ids',
+				'tax_query' => array(
+					array(
+						'taxonomy' => 'product_category',
+						'field' => 'slug',
+						'terms' => $term_slug,
+					),
 				),
-			),
-			'meta_query' => array(
-				array(
-					'key' => '_show_in_list',
-					'value' => 'on',
+				'meta_query' => array(
+					array(
+						'key' => '_show_in_list',
+						'value' => 'on',
+					),
 				),
-			),
-		));
+			));
+			$item_products = $query->posts;
+		}
 		$items = array();
-		foreach ($query->posts as $position => $product_id) {
+		foreach ($item_products as $position => $product_id) {
 			$items[] = array(
 				'@type' => 'ListItem',
 				'position' => $position + 1,

@@ -32,6 +32,9 @@ const backLitCost = parseFloat(document.getElementById("backLitCost").value);
 const eightFtcableCost = parseFloat(
   document.getElementById("eightFtcableCost").value,
 );
+// Same rate the cart charges (WHOLESALE_RACEWAY_COST_PER_FOOT in inc/pricing.php).
+const racewayPerFoot =
+  parseFloat(document.getElementById("racewayPerFoot")?.value) || 55;
 // The product's own discount gives its everyday price: the cart takes it off the whole
 // design total, but it is never shown as a sale.
 const everydayPercent = Math.min(
@@ -1168,7 +1171,7 @@ function getNodeDesignBounds(node) {
 
 function getTextDimensions(node) {
   const bounds = getNodeDesignBounds(node);
-  return `H:${pxToIn(bounds.height)} x W:${pxToIn(bounds.width)}`;
+  return `W:${pxToIn(bounds.width)} x H:${pxToIn(bounds.height)}`;
 }
 
 function maintainAspectRatio(newWidth = null, newHeight = null) {
@@ -3273,7 +3276,7 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     row.appendChild(typeCell);
 
     row.appendChild(
-      createCell(`${elementHeight.toFixed(1)}″ × ${elementWidth.toFixed(1)}″`, "cost-size"),
+      createCell(`${elementWidth.toFixed(1)}″ × ${elementHeight.toFixed(1)}″`, "cost-size"),
     );
     row.appendChild(createCell(formatMoney(everydayPrice(elementCost)), "num"));
     row.appendChild(createCell(formatMoney(everydayPrice(elementColorCost)), "num"));
@@ -4452,7 +4455,7 @@ window.addEventListener("load", function (e) {
           type: "Raceway",
           cost: (
             (pxToIn(raceway.width() * raceway.scaleX()) / 12) *
-            50
+            racewayPerFoot
           ).toFixed(2),
           width: pxToIn(raceway.width() * raceway.scaleX()),
           height: pxToIn(raceway.height() * raceway.scaleY()),
@@ -4532,9 +4535,10 @@ window.addEventListener("load", function (e) {
         id: raceway._id,
         text,
         type: "Raceway",
-        cost: ((pxToIn(raceway.width() * raceway.scaleX()) / 12) * 50).toFixed(
-          2,
-        ),
+        cost: (
+          (pxToIn(raceway.width() * raceway.scaleX()) / 12) *
+          racewayPerFoot
+        ).toFixed(2),
         width: pxToIn(raceway.width() * raceway.scaleX()),
         height: pxToIn(raceway.height() * raceway.scaleY()),
         colorCost: 0,

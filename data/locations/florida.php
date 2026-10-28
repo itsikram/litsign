@@ -21,8 +21,8 @@ return array(
 	'updated' => '2026-10-22',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Florida',
 	'neighbors' => array('georgia', 'alabama'),
-	'seo_title' => 'Storefront Signs Shipped to Florida | Sign License & Permits',
-	'seo_description' => 'Channel letters shipped to Florida businesses: who can install them (Sign Specialty electrical contractors), Florida Building Code permits and Miami-Dade rules.',
+	'seo_title' => 'Channel Letters Shipped to Florida | Sign License & Permits',
+	'seo_description' => 'Channel letters shipped to Florida: who installs them (Sign Specialty contractors), Florida Building Code permits and Miami-Dade rules. See prices online.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to Florida',
 	'intro' => array(
 		'Florida businesses can design and price custom LED channel letters online, then have them made in Washington and California and shipped ready for a licensed Florida sign contractor to install. Banners, window graphics and flags come from our Renton, WA shop on the same delivery terms.',

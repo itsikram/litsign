@@ -19,12 +19,12 @@ return array(
 		'care' => $tent_care,
 	),
 	'event-tent-full-canopy-graphic-only' => array(
-		'description' => 'Replacement full color 10x10 event tent canopy, dye sublimated seam to seam on 6 oz waterproof coated polyester. Frame not included. Ships nationwide.',
+		'description' => 'Replacement full color 10x10 event tent canopy, dye sublimated seam to seam on 6 oz waterproof coated polyester. No frame. Ships nationwide. Order now.',
 	),
 
 	'tent-flag' => array(
 		'title' => array('Event Tent Flags', 'Clamp-On'),
-		'description' => 'Tent flags: a feather or teardrop flag on a hex clamp that mounts to your event tent leg, printed single or double sided on polyester. Ships nationwide.',
+		'description' => 'Tent flags: a feather or teardrop flag on a hex clamp that mounts to your event tent leg, printed single or double sided. Ships nationwide. Order now.',
 		'faq' => array(
 			array('q' => 'How do I put the flag up?', 'a' => 'Clamp the connector to a tent leg, connect the pole sections, slide the flag sleeve onto the pole and secure the flag down the pole.'),
 		),
@@ -45,7 +45,7 @@ return array(
 
 	'carrying-bag-w-wheels' => array(
 		'title' => array('Event Tent Bag with Wheels', ''),
-		'description' => 'Wheeled event tent bag with rubber casters, several handles and a second compartment for the canopy and walls. Roll it to your spot. Ships nationwide.',
+		'description' => 'Wheeled event tent bag with rubber casters, several handles and a second compartment for the canopy and walls. Ships nationwide. Order online.',
 		'faq' => array(
 			array('q' => 'How many graphics fit in the second compartment?', 'a' => 'Either one canopy top, or one full wall and two half walls.'),
 		),
@@ -53,7 +53,7 @@ return array(
 
 	'event-tent-frame-only' => array(
 		'title' => array('Event Tent Frame', '10x10 Hex Aluminum'),
-		'description' => '10x10 event tent frame only: heavy duty 40 mm hex aluminum legs, adjustable height, foot plates, ropes, stakes and bag. No canopy. Ships nationwide.',
+		'description' => '10x10 event tent frame only: 40 mm hex aluminum legs, adjustable height, foot plates, ropes, stakes and bag. No canopy. Ships nationwide. Order now.',
 		'care' => $tent_care,
 	),
 
@@ -69,6 +69,6 @@ return array(
 
 	'sandbag-4pc-set' => array(
 		'title' => array('Event Tent Sandbags', '4 Piece Set'),
-		'description' => 'Event tent sandbags: 4 nylon bags that strap to each leg with velcro and hold up to 19 lb of sand each, for wind and pavement. Ships nationwide.',
+		'description' => 'Event tent sandbags: 4 nylon bags that strap to each leg with velcro and hold up to 19 lb of sand each, for wind and pavement. Ships nationwide. Order now.',
 	),
 );

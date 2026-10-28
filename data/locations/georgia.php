@@ -12,12 +12,12 @@ return array(
 	'slug' => 'georgia',
 	'name' => 'Georgia',
 	'abbr' => 'GA',
-	'status' => 'review',
-	'updated' => '2026-10-22',
+	'status' => 'live',
+	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Georgia_(U.S._state)',
 	'neighbors' => array('tennessee', 'north-carolina', 'south-carolina', 'florida', 'alabama'),
-	'seo_title' => 'Storefront Signs Shipped to Georgia | Class II License Guide',
-	'seo_description' => 'Channel letters shipped to Georgia, plus who can wire them (Class I and Class II electrical contractors) and how Atlanta sign permits and lighting rules work.',
+	'seo_title' => 'Channel Letters Shipped to Georgia | Class II License Guide',
+	'seo_description' => 'Channel letters shipped to Georgia: who can wire them (Class I/II electrical contractors) and Atlanta sign permits and lighting rules. See prices online.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to Georgia',
 	'intro' => array(
 		'Georgia businesses can price custom LED channel letters online, have them built in Washington and California, and receive them ready for a licensed Georgia electrical contractor. Banners, flags and window graphics are made in Renton, WA.',
@@ -108,7 +108,7 @@ return array(
 		),
 	),
 	'review_notes' => array(
-		'Atlanta paragraph relies on the Office of Buildings sign permit form (Rev. 01/15), which blocks the research PC; open it from your network or confirm with the Office of Buildings (404-330-6150) before approval.',
+		'Atlanta paragraph checked 2026-10-27 against the Office of Buildings sign permit form (Form Z.SAP, Rev. 01/15) from its Internet Archive copy of 2024-07-17 (same file as the 2022 copy); atlantaga.gov blocks the research PC, so open the link once from another network.',
 		'Transit days to Georgia not shown until verified.',
 	),
 );

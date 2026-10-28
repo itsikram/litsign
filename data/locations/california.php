@@ -23,8 +23,8 @@ return array(
 	'updated' => '2026-10-22',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/California',
 	'neighbors' => array('oregon', 'nevada', 'arizona'),
-	'seo_title' => 'Storefront Signs Shipped to California | C-45 & Permit Guide',
-	'seo_description' => 'Channel letters shipped to California businesses, with who can install them (CSLB C-45 and C-10 contractors), how city sign permits work, and LA rules.',
+	'seo_title' => 'Channel Letters Shipped to California | C-45 & Permit Guide',
+	'seo_description' => 'Channel letters shipped to California: who can install them (CSLB C-45 and C-10 contractors), how city sign permits work and LA rules. See prices online.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to California',
 	'intro' => array(
 		'California businesses can design and price custom LED channel letters online, have them built in Washington and California, and get them shipped to the storefront, ready for a licensed California installer. Our banners, window graphics and flags are printed in Renton, WA and travel the same way.',

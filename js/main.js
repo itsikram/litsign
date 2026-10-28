@@ -521,15 +521,33 @@
       const maxLine = box.querySelector('.pb-max-size');
       const minLine = box.querySelector('.pb-min-size');
       const limit = (key) => parseFloat(sizeLimits.dataset[key]) || 0;
+      const dimInput = (name) => box.querySelector(`input[name="${name}-in"]`);
+      const fitsMax = (width, height) => {
+        const short = limit('maxShort');
+        const long = limit('maxLong');
+        return !(long && (width > long || height > long)) && !(short && width > short && height > short);
+      };
+      // Banner buyers think in feet: a "3" in an inch box is likely 3 ft (Ads visitors left
+      // on "3 x 33" and "14 x 3"). The too-small note offers that size in inches as a
+      // one-tap fix: the small side x 12, or both sides when both look like feet.
+      const feetFix = (width, height) => {
+        const small = (value, key) => value > 0 && value < limit(key);
+        const both = width <= 20 && height <= 20;
+        const fixed = [both || small(width, 'minWidth') ? width * 12 : width, both || small(height, 'minHeight') ? height * 12 : height]
+          .map((value) => Math.round(value * 100) / 100);
+        return fixed[0] >= limit('minWidth') && fixed[1] >= limit('minHeight') && fitsMax(fixed[0], fixed[1]) ? { fixed, both } : null;
+      };
+      let lastNote = '';
       // While typing, "24" passes through "2": the too-small notes wait for the change
       // (leaving the box), so they don't flash red after the first digit.
       const checkSize = (typing) => {
-        const width = parseFloat(box.querySelector('input[name="width-in"]')?.value) || 0;
-        const height = parseFloat(box.querySelector('input[name="height-in"]')?.value) || 0;
+        const width = parseFloat(dimInput('width')?.value) || 0;
+        const height = parseFloat(dimInput('height')?.value) || 0;
         const short = limit('maxShort');
         const long = limit('maxLong');
         let error = '';
         let tooBig = false;
+        let fix = null;
         if (long && (width > long || height > long)) {
           tooBig = true;
           error = width > long ? `Maximum width is ${long}"` : `Maximum height is ${long}"`;
@@ -539,16 +557,44 @@
         } else if (typing) {
           // Too small or fine: no note until the change.
         } else if (width > 0 && width < limit('minWidth')) {
-          error = `Minimum width is ${limit('minWidth')}"`;
+          error = `Minimum width is ${limit('minWidth')}". Sizes are in inches.`;
+          fix = feetFix(width, height);
         } else if (height > 0 && height < limit('minHeight')) {
-          error = `Minimum height is ${limit('minHeight')}"`;
+          error = `Minimum height is ${limit('minHeight')}". Sizes are in inches.`;
+          fix = feetFix(width, height);
         }
         if (dimError) {
           dimError.textContent = error;
           dimError.hidden = !error;
+          if (fix) {
+            const [fixWidth, fixHeight] = fix.fixed;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'pb-dim-fix';
+            button.textContent = fix.both
+              ? `Use ${fixWidth}" x ${fixHeight}" (${width} ft x ${height} ft)`
+              : (fixWidth !== width ? `Use ${fixWidth}" (${width} ft)` : `Use ${fixHeight}" (${height} ft)`);
+            button.addEventListener('click', () => {
+              // Both values first, so the change handlers never see one side fixed alone.
+              const changed = [['width', fixWidth], ['height', fixHeight]]
+                .map(([name, value]) => [dimInput(name), value])
+                .filter(([input, value]) => input && parseFloat(input.value) !== value);
+              changed.forEach(([input, value]) => { input.value = value; });
+              changed.forEach(([input]) => {
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+              });
+            });
+            dimError.append(' ', button);
+          }
         }
         if (maxLine) maxLine.hidden = !tooBig;
         if (minLine) minLine.hidden = !error || tooBig;
+        // js/visitor-tracker.js logs the note the visitor saw, with the typed size.
+        if (error && error !== lastNote) {
+          document.dispatchEvent(new CustomEvent('wholesale:size-note', { detail: { message: error, size: `${width}" x ${height}"` } }));
+        }
+        lastNote = error;
       };
       box.addEventListener('input', (e) => { if (e.target.matches('.dim-input')) checkSize(true); });
       box.addEventListener('change', (e) => { if (e.target.matches('.dim-input, .pb-size-preset')) checkSize(false); });
@@ -892,6 +938,8 @@
       let imageSrc = $(e.currentTarget).attr("data-image");
       $(".thumbnail-container .single-product-thumbnail").removeAttr('srcset')
       $(".thumbnail-container .single-product-thumbnail").attr("src", imageSrc);
+      // The main photo takes the thumbnail's description (data/image-alts.php).
+      $(".thumbnail-container .single-product-thumbnail").attr("alt", $(e.currentTarget).find("img").attr("alt") || "");
       $(".product-image-zoom").attr("data-zoom-src", imageSrc);
     });
 
@@ -1407,6 +1455,34 @@
       pricingBox.querySelectorAll('.price-total').forEach((el) => { el.textContent = money(total); });
     };
 
+    // Add To Cart while a new price is on its way (a size typed a moment ago) waits for it,
+    // then adds. The cart checks the price sent against its own, and an early tap sent the
+    // old estimate: "The price ... was updated to $39.20" right after adding. Registered
+    // before the size guard, which needs that quote's answer too.
+    let addAfterQuote = null;
+    let quoteWaitTimer;
+    const settleQuote = () => {
+      delete form.dataset.quoting;
+      clearTimeout(quoteWaitTimer);
+      const button = addAfterQuote;
+      addAfterQuote = null;
+      if (button) {
+        button.classList.remove('is-adding');
+        button.click();
+      }
+    };
+    form.addEventListener('click', (event) => {
+      const button = event.target.closest('.add-to-cart-btn');
+      if (!button || !form.dataset.quoting) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (addAfterQuote) return;
+      addAfterQuote = button;
+      button.classList.add('is-adding');
+      // A slow server doesn't hold the add for long: the cart prices it either way.
+      quoteWaitTimer = setTimeout(settleQuote, 6000);
+    }, true);
+
     // Size guard: Add To Cart with no size, or a size outside the limits, goes back to the
     // size box with a red note under it instead of adding anything (runs before the cart
     // handlers, in the capture phase).
@@ -1422,6 +1498,8 @@
         if (dimError && (empty || !dimError.textContent)) {
           dimError.textContent = empty ? `Please enter the ${blank && blank.name === 'height-in' ? 'height' : 'width'} of your ${form.dataset.noun || 'product'}.` : form.dataset.sizeError;
           dimError.hidden = false;
+          const typed = ['width-in', 'height-in'].map((name) => parseFloat(form.querySelector(`input[name="${name}"]`)?.value) || 0);
+          document.dispatchEvent(new CustomEvent('wholesale:size-note', { detail: { message: dimError.textContent, size: `${typed[0]}" x ${typed[1]}"` } }));
         }
         const target = blank || form.querySelector('input[name="width-in"]');
         target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1443,6 +1521,7 @@
     let requestId = 0;
     const refresh = (delay = 250) => {
       clearTimeout(timer);
+      form.dataset.quoting = '1';
       timer = setTimeout(async () => {
         const thisRequest = ++requestId;
         if (sizeIsEmpty()) {
@@ -1457,6 +1536,20 @@
           pricingBox.classList.remove('is-updating');
           // Add To Cart stays clickable; the size guard below sends the visitor to the size box.
           addButtons.forEach((button) => { button.disabled = false; });
+          settleQuote();
+          return;
+        }
+        // Channel letters with no sign text yet: the quote can only fail ("Enter the text
+        // for your sign..."), which the report counted as a pricing error although the
+        // visitor sees this prompt. Show it without asking the server.
+        const letterInput = form.querySelector('#letterInput');
+        if (letterInput && !letterInput.value.trim()) {
+          message.textContent = 'Type your sign text above to see your exact price.';
+          message.classList.add('is-hint');
+          message.hidden = false;
+          pricingBox.classList.remove('is-updating');
+          addButtons.forEach((button) => { button.disabled = false; });
+          settleQuote();
           return;
         }
         const data = new FormData(form);
@@ -1507,7 +1600,10 @@
         } catch (error) {
           // Keep the browser-side estimate; the cart still prices the item on the server.
         } finally {
-          if (thisRequest === requestId) pricingBox.classList.remove('is-updating');
+          if (thisRequest === requestId) {
+            pricingBox.classList.remove('is-updating');
+            settleQuote();
+          }
         }
       }, delay);
     };

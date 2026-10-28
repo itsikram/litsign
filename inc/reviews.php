@@ -243,9 +243,17 @@ function wholesale_review_stars($rating, $class = 'review-stars')
 
 /**
  * Footer slider. Renders nothing when there are no reviews to show yet.
+ * Prints once per page: the home page shows it mid-page, so the footer's
+ * call is skipped there.
  */
 function wholesale_render_review_slider()
 {
+	static $rendered = false;
+	if ($rendered) {
+		return;
+	}
+	$rendered = true;
+
 	$data = wholesale_review_slider_data();
 	if (empty($data['reviews'])) {
 		return;
@@ -305,7 +313,7 @@ function wholesale_render_review_slider()
 									</small>
 								</span>
 								<?php if ($review['url']) : ?>
-									<a class="review-read-more" href="<?php echo esc_url($review['url']); ?>" target="_blank" rel="noopener" aria-label="<?php echo esc_attr(sprintf("Read %s's review on Google", $review['author'])); ?>">Read on Google</a>
+									<a class="review-read-more" href="<?php echo esc_url($review['url']); ?>" target="_blank" rel="noopener" aria-label="<?php echo esc_attr(sprintf("Read on Google: %s's review", $review['author'])); ?>">Read on Google</a>
 								<?php endif; ?>
 							</div>
 						</li>

@@ -11,14 +11,14 @@ $night = array('q' => 'How does reflective vinyl work?', 'a' => 'Engineer grade 
 return array(
 	'reflective-adhesive-vinyl' => array(
 		'title' => array('Reflective Adhesive Vinyl', ''),
-		'description' => 'Reflective adhesive vinyl: engineer grade prismatic film printed in full color that shines back in headlights, for gates and trucks. Ships nationwide.',
+		'description' => 'Reflective adhesive vinyl: engineer grade prismatic film printed in color that shines in headlights, for gates and trucks. Ships nationwide. Order now.',
 		'faq' => array($night),
 		'care' => 'adhesive',
 	),
 
 	'reflective-aluminum-sandwich-board' => array(
 		'title' => array('Reflective Aluminum Board', 'Custom Size'),
-		'description' => 'Reflective aluminum sandwich board: a 1/8" composite panel with reflective vinyl, cut to any size up to 48" x 96", for night visibility. Ships nationwide.',
+		'description' => 'Reflective aluminum sandwich board: a 1/8" composite panel with reflective vinyl, cut to any size up to 48" x 96". Ships nationwide. Order now.',
 		'notes' => array($big),
 		'faq' => array($night),
 		'care' => 'rigid',
@@ -26,7 +26,7 @@ return array(
 
 	'reflective-aluminum-sign' => array(
 		'title' => array('Reflective Aluminum Signs', 'Night Visible'),
-		'description' => 'Reflective aluminum signs: .040 aluminum faced with engineer grade reflective vinyl, in 3 sizes with optional holes, readable at night. Ships nationwide.',
+		'description' => 'Reflective aluminum signs: .040 aluminum faced with engineer grade reflective vinyl, in 3 sizes, readable at night. Ships nationwide. Order now.',
 		'faq' => array($night),
 		'care' => 'rigid',
 	),
@@ -43,7 +43,7 @@ return array(
 
 	'reflective-coroplast-sign-hstake' => array(
 		'title' => array('Reflective Coroplast Signs', 'With H-Stake'),
-		'description' => 'Reflective coroplast signs: 4mm corrugated plastic faced with reflective vinyl that catches headlights, with an optional H-stake. Ships nationwide.',
+		'description' => 'Reflective coroplast signs: corrugated plastic faced with reflective vinyl that catches headlights, with an optional H-stake. Ships nationwide. Order now.',
 		'notes' => array($big),
 		'faq' => array($night),
 		'care' => 'rigid',
@@ -54,7 +54,7 @@ return array(
 
 	'reflective-pvc-board' => array(
 		'title' => array('Reflective PVC Board', 'Night Visible'),
-		'description' => 'Reflective PVC board: 1/8" expanded PVC faced with printed reflective vinyl, frame-ready and visible at night. Single or double sided. Ships nationwide.',
+		'description' => 'Reflective PVC board: 1/8" expanded PVC faced with printed reflective vinyl, visible at night. Single or double sided. Ships nationwide. Order now.',
 		'notes' => array($big),
 		'faq' => array($night),
 		'care' => 'rigid',
@@ -62,7 +62,7 @@ return array(
 
 	'reflective-signicade-a-frame' => array(
 		'title' => array('Reflective Signicade A-Frame', ''),
-		'description' => 'Reflective Signicade A-frame: a Plasticade sidewalk frame with 24" x 36" reflective vinyl graphics that shine in headlights after dark. Ships nationwide.',
+		'description' => 'Reflective Signicade A-frame: a Plasticade sidewalk frame with 24" x 36" reflective vinyl graphics that shine in headlights. Ships nationwide. Order now.',
 		'faq' => array($night),
 		'care' => 'a-frame',
 	),

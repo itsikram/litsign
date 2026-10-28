@@ -38,7 +38,7 @@ function wholesale_render_cl_breakdown($design)
             <table class="widefat striped wo-cl-table">
                 <thead>
                     <tr>
-                        <th>#</th><th>Type</th><th>Text</th><th>H × W (in)</th><th>Font</th><th>Face</th><th>Return</th><th>Trimcap</th><th>Return size</th><th>Trimcap size</th><th>Radius</th><th class="num">Cost</th><th class="num">Face cost</th><th class="num">Price</th>
+                        <th>#</th><th>Type</th><th>Text</th><th>W × H (in)</th><th>Font</th><th>Face</th><th>Return</th><th>Trimcap</th><th>Return size</th><th>Trimcap size</th><th>Radius</th><th class="num">Cost</th><th class="num">Face cost</th><th class="num">Price</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -51,7 +51,7 @@ function wholesale_render_cl_breakdown($design)
                             <td><?php echo esc_html((string) ($i + 1)); ?></td>
                             <td><?php echo esc_html($types[$type] ?? $type); ?></td>
                             <td><?php echo esc_html(isset($element['text']) ? (string) $element['text'] : '—'); ?></td>
-                            <td><?php echo esc_html(round((float) ($element['height'] ?? 0), 2) . ' × ' . round((float) ($element['width'] ?? 0), 2)); ?></td>
+                            <td><?php echo esc_html(round((float) ($element['width'] ?? 0), 2) . ' × ' . round((float) ($element['height'] ?? 0), 2)); ?></td>
                             <td><?php echo esc_html($title($element, 'font')); ?></td>
                             <td><?php echo esc_html($title($element, 'faceColor')); ?></td>
                             <td><?php echo esc_html($title($element, 'returnColor')); ?></td>

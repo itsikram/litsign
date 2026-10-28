@@ -89,7 +89,7 @@ return array(
 
 	'adhesive-window-perf' => array(
 		'title' => array('Window Perf Vinyl', 'One-Way Vision'),
-		'description' => 'Window perf vinyl: 70/30 perforated film shows your graphic outside while you still see out from inside. For storefronts and vehicles. Ships nationwide.',
+		'description' => 'Window perf: 70/30 perforated film shows your graphic outside while you see out from inside. For storefronts and vehicles. Ships nationwide. Order online.',
 		'faq' => array(
 			array('q' => 'Does window perf work on car windows?', 'a' => 'Yes. It is the standard material for rear and side window ads on vehicles, as well as storefront windows.'),
 		),

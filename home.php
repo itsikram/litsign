@@ -47,7 +47,7 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
     $images = array();
 
     if ($thumbnail_id) {
-        $featured_image = wp_get_attachment_image_url($thumbnail_id, 'product-card');
+        $featured_image = wp_get_attachment_image_url($thumbnail_id, 'full');
         if ($featured_image) {
             $images[] = $featured_image;
         }
@@ -86,16 +86,23 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
     }
 
     $has_gallery = count($images) > 1;
+    // Card-sized copies instead of the 1000px originals; alt text per photo.
+    $card_images = wholesale_card_images($images);
     ?>
     <div class="pb-image-top<?php echo $has_gallery ? ' has-gallery' : ''; ?>" data-gallery>
         <?php wholesale_render_sale_badge($product_id); ?>
         <a class="pb-gallery-track" href="<?php echo esc_url(get_permalink($product_id)); ?>" tabindex="-1">
             <?php foreach ($images as $index => $image) : ?>
-                <?php $image = wholesale_webp_url($image); ?>
+                <?php
+                $image_alt = wholesale_product_photo_alt($image, $product_title);
+                $card_image = $card_images[$image];
+                $image = wholesale_webp_url($index === 0 ? $card_image['src'] : $card_image['large']);
+                ?>
                 <img class="pb-gallery-image<?php echo $index === 0 ? ' is-active' : ''; ?>"
                     <?php echo $index === 0 ? 'src="' . esc_url($image) . '"' : ''; ?>
+                    <?php echo $index === 0 && $card_image['srcset'] ? 'srcset="' . esc_attr($card_image['srcset']) . '" sizes="(max-width: 767px) 100vw, 300px" width="300" height="300"' : ''; ?>
                     data-gallery-src="<?php echo esc_url($image); ?>"
-                    alt="<?php echo esc_attr($product_title); ?>"
+                    alt="<?php echo esc_attr($image_alt); ?>"
                     loading="<?php echo $index === 0 ? esc_attr($loading) : 'lazy'; ?>"
                     decoding="async"
                     data-gallery-index="<?php echo esc_attr($index); ?>">
@@ -138,6 +145,12 @@ if ($is_channel_letters) {
         $classes[] = 'has-cl-mobile-bar';
         return $classes;
     });
+}
+// The front page is the catalog hub led by banners & displays
+// (template-parts/home-catalog.php); the listing below serves the category pages.
+if ($is_front_home) {
+    get_template_part('template-parts/home', 'catalog');
+    return;
 }
 $cl_landing_id = function_exists('wholesale_channel_letters_landing_id') ? wholesale_channel_letters_landing_id() : 0;
 $cl_landing_url = $cl_landing_id ? get_permalink($cl_landing_id) : home_url('/custom-channel-letters/');
@@ -402,7 +415,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                 <?php if ($is_channel_letters) : ?>
                     <p class="home-hero-eyebrow">Made in USA &middot; UL listed &middot; 5-year LED warranty</p>
                     <?php if ($is_front_home) : ?>
-                    <h1 id="home-hero-title" class="home-hero-title">Storefront Signs &amp; LED Channel Letters, <span>Built to Order</span></h1>
+                    <h1 id="home-hero-title" class="home-hero-title">Custom Business Signs, <span>Built to Order</span></h1>
                     <?php else : ?>
                     <h1 id="home-hero-title" class="home-hero-title">Custom LED Channel Letter Signs <span>for Your Storefront</span></h1>
                     <?php endif; ?>
@@ -655,6 +668,9 @@ if ('' === $category_description_text && '' === $category_intro) {
                 </div>
             </div> -->
 
+            <?php if (!$is_channel_letters && $current_term) {
+                wholesale_render_category_lead($current_term->slug, $shop_heading);
+            } ?>
             <div id="product-box-container" class="product-box-container d-flex flex-wrap">
 
                 <?php
@@ -707,9 +723,10 @@ if ('' === $category_description_text && '' === $category_intro) {
                             <?php echo wholesale_admin_edit_product_link(get_the_ID()); // Escaped in helper. ?>
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-details">
-                                    <h2 class="pb-title fs-6<?php echo $is_channel_letters ? ' text-truncate' : ''; ?>" title="<?php echo esc_attr(get_the_title()); ?>">
-                                        <?php echo esc_html(get_the_title()); ?>
-                                    </h2>
+                                    <?php $card_name = $is_channel_letters ? get_the_title() : wholesale_seo_product_search_name(get_the_ID()); ?>
+                                    <h3 class="pb-title fs-6<?php echo $is_channel_letters ? ' text-truncate' : ''; ?>" title="<?php echo esc_attr($card_name); ?>">
+                                        <?php echo esc_html($card_name); ?>
+                                    </h3>
                                     <?php wholesale_render_product_rating(get_the_ID()); ?>
                                     <div class="pb-description-list">
                                         <?php echo wp_kses_post($short_desc); ?>
@@ -827,8 +844,8 @@ if ('' === $category_description_text && '' === $category_intro) {
                                 ?>
                             </div>
                             <div class="pb-details">
-                                <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr($ref_term_title); ?>">
-                                    <?php echo esc_html($ref_term_title); ?></h2>
+                                <h3 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr($ref_term_title); ?>">
+                                    <?php echo esc_html($ref_term_title); ?></h3>
                                 <div class="pb-description-list">
                                     <?php echo wp_kses_post($ref_term_desc); ?>
 
@@ -855,6 +872,10 @@ if ('' === $category_description_text && '' === $category_intro) {
         </div>
     </div>
 </div>
+
+<?php if (!$is_channel_letters && $current_term) {
+    wholesale_render_category_guide($current_term->slug);
+} ?>
 
 <?php if (!$is_channel_letters && !empty($GLOBALS['wholesale_page_faq'])) : ?>
     <section class="cl-faq" aria-labelledby="category-faq-title">
@@ -927,6 +948,22 @@ if ('' === $category_description_text && '' === $category_intro) {
     </section>
     <?php endif; ?>
 
+    <?php if ($is_front_home) : ?>
+    <?php // A summary only: the full guide lives on /custom-channel-letters/, which owns these searches. ?>
+    <section class="sf-section cl-guide" aria-labelledby="cl-guide-title">
+        <div class="container sf-prose">
+            <p class="cl-kicker">Channel letter guide</p>
+            <h2 id="cl-guide-title" class="cl-section-title">Choosing Your Channel Letters</h2>
+            <p>Channel letters are individually built, lit letters mounted on your building. Each one is a metal &ldquo;channel&rdquo; with LEDs inside, cut to your wording, font and colors, and they are the most common lit sign on retail stores, restaurants, salons and offices. Ours start at <?php echo esc_html($cl_min_height); ?> inches tall, ship tested with a wiring diagram and install pattern, and carry a five-year warranty on all seven styles.</p>
+            <ul class="sf-facts">
+                <li><strong>Compare the styles</strong>Front lit, back lit, halo lit, reverse lit and trimless letters side by side on our <a href="<?php echo esc_url($cl_landing_url); ?>">custom channel letters page</a>.</li>
+                <?php if ($home_cost_url) : ?><li><strong>Plan your budget</strong>Real price examples by letter height and count in the <a href="<?php echo esc_url($home_cost_url); ?>">channel letter cost guide</a>.</li><?php endif; ?>
+                <?php if ($storefront_signs_url) : ?><li><strong>Weigh other options</strong>Lit and non-lit choices for every part of your storefront, compared in our <a href="<?php echo esc_url($storefront_signs_url); ?>">storefront signs guide</a>.</li><?php endif; ?>
+            </ul>
+            <p><a href="<?php echo esc_url($builder_url); ?>">Design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+        </div>
+    </section>
+    <?php else : ?>
     <section class="sf-section cl-guide" aria-labelledby="cl-guide-title">
         <div class="container sf-prose">
             <p class="cl-kicker">Channel letter guide</p>
@@ -955,6 +992,7 @@ if ('' === $category_description_text && '' === $category_intro) {
             <?php endif; ?>
         </div>
     </section>
+    <?php endif; ?>
 
     <section class="sf-section" aria-labelledby="home-more-title">
         <div class="container">

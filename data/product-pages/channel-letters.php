@@ -77,7 +77,7 @@ return array(
 
 	'hidden-back-halo-lit' => array(
 		'title' => array('Halo Lit Channel Letters', 'Steel'),
-		'description' => 'Halo lit channel letters with welded stainless steel faces and returns that throw a glowing halo on the wall. UL listed, made in USA. Ships nationwide.',
+		'description' => 'Halo lit channel letters with welded stainless steel faces and returns that throw a halo on the wall. UL listed, made in USA. Ships nationwide. Order now.',
 		'material' => 'stainless',
 		'parts' => array(
 			'Face' => '0.8mm or 1mm solid stainless steel, in 35+ colors',
@@ -107,7 +107,7 @@ return array(
 
 	'exposed-acrylic-face-lit-borderless-no-trimcap' => array(
 		'title' => array('Borderless Channel Letters', ''),
-		'description' => 'Borderless channel letters with a thick exposed acrylic face and no trimcap, on stainless steel returns, for a sleek lit look. Ships nationwide.',
+		'description' => 'Borderless channel letters with a thick exposed acrylic face and no trimcap, on stainless steel returns, for a sleek lit look. Ships nationwide. Order now.',
 		'material' => 'stainless',
 		'parts' => array(
 			'Face' => '15mm white polycarbonate acrylic, exposed, with no trimcap or border',

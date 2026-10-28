@@ -29,7 +29,7 @@ return array(
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Washington_(state)',
 	'neighbors' => array('oregon', 'idaho'),
 	'seo_title' => 'Storefront Signs in Washington | Made in Renton, WA',
-	'seo_description' => 'Channel letters and storefront signs made in Washington and shipped across Washington, with L&I licensing and city sign permit guides for your installer.',
+	'seo_description' => 'Channel letters and storefront signs made in Washington and shipped statewide, with L&I licensing and city sign permit guides. See your price online today.',
 	'h1' => 'Storefront Signs and Channel Letters in Washington',
 	'local_note' => 'Our team is based in Renton, but we don&rsquo;t send installation crews anywhere, including in Washington.',
 	'intro' => array(
@@ -130,7 +130,7 @@ return array(
 			),
 			'card' => 'SDCI sign permits; city electrical permits',
 			'seo_title' => 'Storefront Signs in Seattle: Sign Permits & Lit Letters',
-			'seo_description' => 'Ordering channel letters for a Seattle storefront? How SDCI sign permits work, signs over the sidewalk, Seattle electrical permits, and pricing.',
+			'seo_description' => 'Channel letters for a Seattle storefront: how SDCI sign permits work, signs over the sidewalk and Seattle electrical permits. See your price online today.',
 			'h1' => 'Storefront Signs and Channel Letters for Seattle Businesses',
 			'intro' => array(
 				'Seattle storefronts can price lit channel letters online, have them built in Washington or California, and get them shipped ready for a licensed Seattle installer. Window graphics and banners come from our Renton shop, 12 miles south.',
@@ -218,7 +218,7 @@ return array(
 			),
 			'card' => 'City sign permit; Tacoma Power electrical',
 			'seo_title' => 'Storefront Signs in Tacoma, WA: Permits & Channel Letters',
-			'seo_description' => 'Channel letters for Tacoma businesses, made in Washington. How Tacoma sign permits work, Tacoma Power electrical permits, and what your installer needs.',
+			'seo_description' => 'Channel letters for Tacoma businesses, made in Washington: Tacoma sign permits, Tacoma Power electrical permits and installer needs. See prices online.',
 			'h1' => 'Storefront Signs and Channel Letters for Tacoma Businesses',
 			'intro' => array(
 				'Tacoma businesses can order custom channel letters, built in Washington or California, and storefront graphics from our Renton shop about 25 miles up I-5, and have them shipped ready for a licensed Tacoma installer.',
@@ -393,7 +393,7 @@ return array(
 				'channel-letters' => 'Renton runs its own electrical permits, separate from the sign permit, and doubles permit fees when work starts before a permit is issued.',
 			),
 			'seo_title' => 'Storefront Signs in Renton, WA: Made Here, Permit Guide',
-			'seo_description' => 'Channel letters made in Washington for Renton businesses. How Renton sign permits work (RMC 4-4-100), temporary sign rules and city electrical permits.',
+			'seo_description' => 'Channel letters made in Washington for Renton businesses: sign permits (RMC 4-4-100), temporary sign rules and electrical permits. See prices online.',
 			'h1' => 'Storefront Signs Made in Renton for Renton Businesses',
 			'local_note' => 'Renton is our home: our team is based here. We still don&rsquo;t install signs or offer pickup; every order ships to you.',
 			'intro' => array(
@@ -480,7 +480,7 @@ return array(
 			),
 			'card' => 'Sign code KCC 15.06; L&I electrical',
 			'seo_title' => 'Storefront Signs in Kent, WA: Sign Permits & Channel Letters',
-			'seo_description' => 'Channel letters shipped to Kent businesses from Washington and California. How Kent sign permits work under KCC 15.06, nonconforming sign rules and L&I electrical permits.',
+			'seo_description' => 'Channel letters shipped to Kent from WA and CA: sign permits under KCC 15.06, nonconforming sign rules and L&I electrical permits. See prices online.',
 			'h1' => 'Storefront Signs and Channel Letters for Kent Businesses',
 			'intro' => array(
 				'Kent&rsquo;s warehouses, strip centers and restaurants are a short drive from our Renton shop, where we make window graphics and banners; channel letters are built in Washington and California. Order online and we&rsquo;ll ship everything ready for your licensed installer.',
@@ -571,7 +571,7 @@ return array(
 			),
 			'card' => 'Sign code EMC 19.36; city electrical',
 			'seo_title' => 'Storefront Signs in Everett, WA: Sign Code & Permits',
-			'seo_description' => 'Channel letters for Everett businesses, made in Washington. Everett sign permits under EMC 19.36, window sign limits, nonconforming signs and city electrical permits.',
+			'seo_description' => 'Channel letters for Everett, made in Washington: permits under EMC 19.36, window sign limits, nonconforming signs and electrical permits. Get a price.',
 			'h1' => 'Storefront Signs and Channel Letters for Everett Businesses',
 			'intro' => array(
 				'Everett businesses can order custom channel letters, built in Washington or California, plus window graphics and banners from our Renton shop, and have them shipped ready for a licensed local installer.',

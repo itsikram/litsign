@@ -18,7 +18,7 @@ return array(
 		'name' => 'Restaurants & Cafes',
 		'status' => 'live',
 		'seo_title' => 'Restaurant Signs: Lit Storefront Letters, Menus & Banners',
-		'seo_description' => 'Restaurant and cafe signs that work day and night: LED channel letters, window graphics, sidewalk menu boards and opening banners, priced online.',
+		'seo_description' => 'Restaurant and cafe signs that work day and night: LED channel letters, window graphics, sidewalk menu boards and opening banners. Order online.',
 		'h1' => 'Restaurant and Cafe Signs That Bring Diners In',
 		'intro' => array(
 			'A restaurant sign works two shifts. By day it tells passing drivers and walkers what you serve; after dark it&rsquo;s often the only thing that says you&rsquo;re open. Most restaurants pair a lit building sign with signs closer to the door for the menu, hours and today&rsquo;s specials.',
@@ -56,7 +56,7 @@ return array(
 		'name' => 'Salons & Barbers',
 		'status' => 'live',
 		'seo_title' => 'Salon & Barbershop Signs: Halo Letters, Window Graphics',
-		'seo_description' => 'Signs for hair salons, nail salons, spas and barbershops: halo lit and trimless letters, frosted window graphics and sidewalk signs, priced online.',
+		'seo_description' => 'Signs for hair and nail salons, spas and barbershops: halo lit and trimless letters, frosted window graphics and sidewalk signs. Order online.',
 		'h1' => 'Salon, Spa and Barbershop Signs',
 		'intro' => array(
 			'Salons, spas and barbershops sell an experience, and the sign is the first part of it. A polished lit sign, privacy for clients in the chair, and a sidewalk sign for walk-ins cover most of what a beauty business needs.',
@@ -92,8 +92,8 @@ return array(
 		'slug' => 'medical-office-signs',
 		'name' => 'Medical & Dental',
 		'status' => 'live',
-		'seo_title' => 'Medical & Dental Office Signs: Building Letters, Privacy Film',
-		'seo_description' => 'Signs for medical, dental and therapy offices: clean lit building letters, frosted privacy film, and aluminum signs for parking and wayfinding.',
+		'seo_title' => 'Medical & Dental Office Signs: Lit Letters & Privacy Film',
+		'seo_description' => 'Signs for medical, dental and therapy offices: lit building letters, frosted privacy film, and aluminum parking and wayfinding signs. See prices online.',
 		'h1' => 'Medical, Dental and Clinic Signs',
 		'intro' => array(
 			'Patients look for a clinic when they&rsquo;re in a hurry, unwell or nervous. The best medical signs are calm, clear and easy to find: a readable building sign, privacy on the windows, and simple signs that point to parking and the entrance.',
@@ -128,8 +128,8 @@ return array(
 		'slug' => 'retail-store-signs',
 		'name' => 'Retail Stores',
 		'status' => 'live',
-		'seo_title' => 'Retail Store Signs: Storefront Letters, Window & Floor Graphics',
-		'seo_description' => 'Retail store signs inside and out: lit storefront letters, window graphics, floor graphics, posters and sale banners, with prices online.',
+		'seo_title' => 'Retail Store Signs: Storefront Letters & Window Graphics',
+		'seo_description' => 'Retail store signs inside and out: lit storefront letters, window and floor graphics, posters and sale banners. See your prices online and order today.',
 		'h1' => 'Retail Store Signs, Inside and Out',
 		'intro' => array(
 			'Retail signs have to do three jobs: get shoppers to notice the store, give them a reason to walk in, and guide them once they&rsquo;re inside. That usually means a lit building sign, window graphics that change with the season, and in-store graphics and posters.',
@@ -166,7 +166,7 @@ return array(
 		'name' => 'Franchises & Multi-Location',
 		'status' => 'live',
 		'seo_title' => 'Franchise & Multi-Location Signs: Consistent Channel Letters',
-		'seo_description' => 'Signs for franchise and multi-location businesses: consistent channel letters and graphics for each new site, shipped to every state, priced per location.',
+		'seo_description' => 'Signs for franchise and multi-location businesses: consistent channel letters and graphics for each new site, shipped to every state. Request a free quote.',
 		'h1' => 'Signs for Franchises and Multi-Location Businesses',
 		'intro' => array(
 			'When you open more than one location, the sign has to match every time: same letter style, same colors, same lighting, adjusted only for each site&rsquo;s wall, landlord criteria and local permit limits. Ordering online, with every sign made in one shop and shipped to each location, makes that consistency easier.',
@@ -202,7 +202,7 @@ return array(
 		'name' => 'Events & Trade Shows',
 		'status' => 'live',
 		'seo_title' => 'Event & Trade Show Signs: Banners, Booth Displays, Flags',
-		'seo_description' => 'Signs for events, trade shows and pop-ups: banner stands, SEG booth displays, table covers, tents, flags and banners. No installer needed; prices online.',
+		'seo_description' => 'Signs for events, trade shows and pop-ups: banner stands, SEG booth displays, table covers, tents, flags and banners. No installer needed. Order online.',
 		'h1' => 'Signs for Events, Trade Shows and Pop-Ups',
 		'intro' => array(
 			'Event signs have different rules from storefront signs: they have to travel, set up fast, and look sharp under bright lights. Unlike lit building signs, banners, stands and booth displays need no electrician; you set them up yourself. (Large tents and outdoor banners can still fall under venue or local rules, so check first.)',

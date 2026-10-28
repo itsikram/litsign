@@ -122,14 +122,14 @@ function wholesale_guide_registry()
 			'template' => 'page-sign-permits.php',
 			'status' => 'live',
 			'seo_title' => 'Sign Permits for Lit Storefront Signs: What You Need',
-			'seo_description' => 'How sign permits work for channel letters: what the city asks for, sign drawings, UL labels, and the checklist your licensed electrician needs.',
+			'seo_description' => 'How sign permits work for channel letters: what the city asks for, sign drawings, UL labels and your electrician\'s checklist. Read it, then get a quote.',
 		),
 		'how-to-install-channel-letters' => array(
 			'title' => 'How to Install Channel Letters',
 			'template' => 'page-how-to-install-channel-letters.php',
 			'status' => 'live',
 			'seo_title' => 'How to Install Channel Letters: Raceway vs. Direct Mount',
-			'seo_description' => 'A step-by-step channel letter installation overview for your licensed installer: raceway or direct mount, the install pattern, power and inspection.',
+			'seo_description' => 'Channel letter installation for your licensed installer, step by step: raceway or direct mount, the install pattern, power and inspection. Read the guide.',
 		),
 		'warranty' => array(
 			'title' => 'Warranty',
@@ -137,7 +137,7 @@ function wholesale_guide_registry()
 			// Owner approved going live 2026-10-11; letter types and labor coverage still unconfirmed.
 			'status' => 'live',
 			'seo_title' => '5-Year Channel Letter Warranty | Storefront Sign Online',
-			'seo_description' => 'What our five-year channel letter warranty covers, what it excludes, and how to make a claim. Every sign is tested before it ships.',
+			'seo_description' => 'What our five-year channel letter warranty covers, what it excludes and how to make a claim. Every sign is tested before it ships. Questions? Call us.',
 		),
 		'shipping-returns' => array(
 			'title' => 'Shipping & Returns',
@@ -151,14 +151,14 @@ function wholesale_guide_registry()
 			'template' => 'page-locations.php',
 			'status' => 'live',
 			'seo_title' => 'Storefront Signs Shipped to Every State | Permit Guides',
-			'seo_description' => 'Channel letters and storefront signs shipped from Washington and California to all 50 states, with state guides to sign permits and licensed installers.',
+			'seo_description' => 'Channel letters and storefront signs shipped from Washington and California to all 50 states. Find your state\'s sign permit guide and see prices online.',
 		),
 		'industries' => array(
 			'title' => 'Industries',
 			'template' => 'page-industries.php',
 			'status' => 'live',
 			'seo_title' => 'Business Signs by Industry | Storefront Sign Online',
-			'seo_description' => 'Sign ideas and the right products for restaurants, salons, medical offices, retail stores, franchises and events, with prices shown online.',
+			'seo_description' => 'Sign ideas and the right products for restaurants, salons, medical offices, retail stores, franchises and events. Find your industry and see prices online.',
 		),
 	);
 

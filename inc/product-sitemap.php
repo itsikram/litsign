@@ -175,10 +175,17 @@ function wholesale_render_category_sitemap()
 			}
 		}
 
+		// The page changes with its products and with its own lead and buying
+		// guide (data/category-pages.php).
+		$lastmod = $products ? get_post_modified_time('c', true, $products[0]) : '';
+		if (defined('WHOLESALE_CATEGORY_PAGES_REVISED') && function_exists('wholesale_category_page') && wholesale_category_page($term->slug)) {
+			$lastmod = max($lastmod, WHOLESALE_CATEGORY_PAGES_REVISED);
+		}
+
 		echo "\t<url>\n";
 		echo "\t\t<loc>" . esc_xml($url) . "</loc>\n";
-		if ($products) {
-			echo "\t\t<lastmod>" . esc_xml(get_post_modified_time('c', true, $products[0])) . "</lastmod>\n";
+		if ($lastmod) {
+			echo "\t\t<lastmod>" . esc_xml($lastmod) . "</lastmod>\n";
 		}
 		foreach ($images as $image) {
 			echo "\t\t<image:image>\n\t\t\t<image:loc>" . esc_xml($image) . "</image:loc>\n\t\t</image:image>\n";
@@ -192,20 +199,17 @@ function wholesale_render_category_sitemap()
 add_action('template_redirect', 'wholesale_render_category_sitemap', 0);
 
 /**
- * Announce the theme sitemaps in robots.txt.
+ * Announce the theme's sitemap index in robots.txt. /sitemap.xml lists the
+ * page, product, category and location sitemaps, so one line covers them.
  */
 add_filter('robots_txt', function ($output, $public) {
 	if (!$public) {
 		return $output;
 	}
 
-	// Core adds its own wp-sitemap.xml line first, which stops
-	// wholesale_robots_txt() from listing /sitemap.xml; list all the theme's sitemaps here.
-	foreach (array('/sitemap.xml', '/product-sitemap.xml', '/category-sitemap.xml', '/location-sitemap.xml') as $path) {
-		$url = esc_url(home_url($path));
-		if (false === strpos($output, $url)) {
-			$output = rtrim($output) . "\nSitemap: " . $url . "\n";
-		}
+	$url = esc_url(home_url('/sitemap.xml'));
+	if (false === strpos($output, 'Sitemap: ' . $url . "\n")) {
+		$output = rtrim($output) . "\nSitemap: " . $url . "\n";
 	}
 
 	return $output;

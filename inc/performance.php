@@ -98,7 +98,8 @@ function wholesale_async_home_guide_styles($tag, $handle)
 
 	$async = str_replace("media='all'", "media='print' onload=\"this.media='all'\"", $tag);
 
-	return $async . '<noscript>' . $tag . '</noscript>';
+	// The fallback copy drops the id, which the async tag already uses.
+	return $async . '<noscript>' . preg_replace("/ id='[^']*'/", '', $tag, 1) . '</noscript>';
 }
 add_filter('style_loader_tag', 'wholesale_async_home_guide_styles', 10, 2);
 
@@ -239,7 +240,8 @@ function wholesale_async_offscreen_styles($tag, $handle)
 
 	$async = str_replace("media='all'", "media='print' onload=\"this.media='all'\"", $tag);
 
-	return $async . '<noscript>' . $tag . '</noscript>';
+	// The fallback copy drops the id, which the async tag already uses.
+	return $async . '<noscript>' . preg_replace("/ id='[^']*'/", '', $tag, 1) . '</noscript>';
 }
 add_filter('style_loader_tag', 'wholesale_async_offscreen_styles', 10, 2);
 
@@ -368,6 +370,55 @@ function wholesale_critical_bootstrap_tag($tag, $handle, $href)
 	return ob_get_clean();
 }
 add_filter('style_loader_tag', 'wholesale_critical_bootstrap_tag', 10, 3);
+
+/**
+ * The same split for css/style.css on the home page: it is 27 KB (gzipped) of
+ * render-blocking CSS, of which the home page uses about 7 KB. Block the first
+ * paint only on css/style-home-critical.css (every style.css rule that matches
+ * an element on the home page, plus their open/active states) and add the
+ * full file in the same cascade position once the page has loaded.
+ *
+ * Built with utils/critical-css (keep-style-home.txt). Any later edit to
+ * style.css makes the subset stale, and the home page then loads the full
+ * file as before until the subset is rebuilt.
+ */
+function wholesale_critical_home_style_tag($tag, $handle, $href)
+{
+	if ('custom-style' !== $handle || !is_front_page() || !wholesale_use_critical_bootstrap()) {
+		return $tag;
+	}
+
+	$dir = get_template_directory() . '/css/';
+	if (!file_exists($dir . 'style-home-critical.css') || filemtime($dir . 'style-home-critical.css') < filemtime($dir . 'style.css')) {
+		return $tag;
+	}
+
+	$critical = add_query_arg('ver', filemtime($dir . 'style-home-critical.css'), get_template_directory_uri() . '/css/style-home-critical.css');
+	if (function_exists('wholesale_cache_bust_asset_src')) {
+		$critical = wholesale_cache_bust_asset_src($critical);
+	}
+
+	ob_start();
+	?>
+<link rel="stylesheet" id="custom-style-critical-css" href="<?php echo esc_url($critical); ?>" media="all">
+<script>
+	window.addEventListener('load', function () {
+		var critical = document.getElementById('custom-style-critical-css');
+		var full = document.createElement('link');
+		full.rel = 'stylesheet';
+		full.id = 'custom-style-css';
+		full.href = <?php echo wp_json_encode($href); ?>;
+		// media="print" until it has loaded, so it never holds a paint back.
+		full.media = 'print';
+		full.onload = function () { this.media = 'all'; };
+		critical.parentNode.insertBefore(full, critical.nextSibling);
+	});
+</script>
+<noscript><?php echo trim($tag); ?></noscript>
+	<?php
+	return ob_get_clean();
+}
+add_filter('style_loader_tag', 'wholesale_critical_home_style_tag', 10, 3);
 
 /**
  * Offer AVIF copies of the header logo (about 40% smaller than its WebP; the

@@ -83,6 +83,7 @@ get_header();
 			<p class="cl-kicker">Free downloads</p>
 			<h1 id="dt-title" class="sf-hero-title">Sign Design Templates &amp; Artwork Guide</h1>
 			<p class="sf-hero-lead">Download a free print-ready template for your flag, banner stand, tent, table cover or fabric display, drop in your artwork and upload it with your order. Templates come in PDF, Photoshop (PSD) and CorelDRAW (CDR) formats.</p>
+			<?php wholesale_guide_byline(); ?>
 			<div class="sf-hero-actions">
 				<a class="cl-button" href="#templates">Browse Templates <?php echo wholesale_home_icon('arrow'); ?></a>
 				<a class="sf-button-outline" href="#template-guide">How to Use a Template</a>

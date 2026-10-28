@@ -356,6 +356,14 @@
   document.addEventListener("click", (e) => {
     const button = e.target.closest(".add-to-cart-btn");
     if (!button || !isCartForm(button.form)) return;
+    // An add is already on its way: extra taps (a slow phone, a double tap) used to
+    // add the same item again, five $650 banners in one Ads visit. Ignore them here,
+    // before main.js discounts #totalCost again.
+    if (button.form.dataset.adding) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return;
+    }
     const total = document.getElementById("totalCost");
     savedTotal = total ? total.value : null;
     submitted = false;
@@ -364,9 +372,12 @@
     }, 0);
   }, true);
 
-  const restoreTotal = () => {
+  // After an add, only while #totalCost still holds the value it sent: a price quote that
+  // landed meanwhile (js/main.js) is newer, and putting the old one back made the next add
+  // say "The price ... was updated".
+  const restoreTotal = (sent) => {
     const total = document.getElementById("totalCost");
-    if (total && savedTotal !== null) total.value = savedTotal;
+    if (total && savedTotal !== null && (sent === undefined || total.value === sent)) total.value = savedTotal;
     savedTotal = null;
   };
 
@@ -375,20 +386,24 @@
     const form = e.target;
     if (e.defaultPrevented || !isCartForm(form)) return;
     if (typeof form.checkValidity === "function" && !form.checkValidity()) return;
-    submitted = true;
     e.preventDefault();
+    if (form.dataset.adding) return;
+    submitted = true;
+    form.dataset.adding = "1";
 
     const buttons = form.querySelectorAll(".add-to-cart-btn");
     buttons.forEach((b) => {
       b.classList.add("is-adding");
       b.setAttribute("aria-busy", "true");
     });
+    const sentTotal = document.getElementById("totalCost")?.value;
     const done = () => {
+      delete form.dataset.adding;
       buttons.forEach((b) => {
         b.classList.remove("is-adding");
         b.removeAttribute("aria-busy");
       });
-      restoreTotal();
+      restoreTotal(sentTotal);
     };
 
     const data = new FormData(form);

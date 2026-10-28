@@ -9,14 +9,14 @@
 return array(
 	'real-estate-a-frame-sign' => array(
 		'title' => array('Real Estate A-Frame', 'Steel Frame'),
-		'description' => 'Real estate A-frames: a black steel frame that stands on lawns or walks with a double sided 24" x 18" coroplast print and rider clamp. Ships nationwide.',
+		'description' => 'Real estate A-frames: a black steel frame for lawns or walks with a double sided 24" x 18" coroplast print and rider clamp. Ships nationwide. Order now.',
 		'faq' => array(
 			array('q' => 'What is included with the frame?', 'a' => 'The steel A-frame and zip ties. The 24" x 6" rider and the red open house pennant flag with pole are optional extras.'),
 		),
 		'care' => 'rigid',
 	),
 	'real-estate-a-sign-only' => array(
-		'description' => 'Replacement 24" x 18" double sided coroplast print for the real estate A-frame, with optional 24" x 6" riders. Frame not included. Ships nationwide.',
+		'description' => 'Replacement 24" x 18" double sided coroplast print for the real estate A-frame, with optional 24" x 6" riders. No frame. Ships nationwide. Order now.',
 	),
 
 	'real-estate-frame-sign' => array(
@@ -29,12 +29,12 @@ return array(
 		'care' => 'rigid',
 	),
 	'real-estate-sign-only-2' => array(
-		'description' => 'Replacement 18" x 24" double sided coroplast print for the real estate frame, with an optional 6" x 24" rider. Frame not included. Ships nationwide.',
+		'description' => 'Replacement 18" x 24" double sided coroplast print for the real estate frame, with an optional 6" x 24" rider. No frame. Ships nationwide. Order now.',
 	),
 
 	'real-estate-post-sign' => array(
 		'title' => array('Real Estate Post', 'PVC Post Kit'),
-		'description' => 'Real estate post kits: a light PVC post with a hammer-in stake and double sided aluminum panels, ready to hang. Small or large post. Ships nationwide.',
+		'description' => 'Real estate post kits: a PVC post with a hammer-in stake and double sided aluminum panels, ready to hang. Small or large post. Ships nationwide. Order now.',
 		'faq' => array(
 			array('q' => 'How do I carry and store it?', 'a' => 'The arm, ground stake, caps and hanging hardware all fit inside the post, so the kit packs into one piece for the car.'),
 		),

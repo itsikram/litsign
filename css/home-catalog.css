@@ -1,0 +1,329 @@
+/*
+ * Home page catalog hub (template-parts/home-catalog.php).
+ *
+ * The hero, feature strip, product cards, "quick picks" grid, project cards
+ * and quote band come from banners-displays.css; the rail, steps, FAQ and
+ * help band from style.css; the .sf-* sections from seo-pages.css. Only the
+ * home page's own blocks and spacing are defined here.
+ */
+
+/* Hero: no breadcrumbs above the copy, so a little more room at the top. */
+.hc-hero {
+  padding-top: 28px;
+}
+
+.hc-hero .bd-hero-grid {
+  margin-top: 8px;
+}
+
+.hc-hero .home-hero-help-hours a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* "Shop all products" rail: sale prices show the current price only. */
+.hc-types .home-types-text small del {
+  display: none;
+}
+
+/* Wide screens show all 18 product lines as a two-row grid (style.css), so
+   longer prices wrap inside their card instead of widening the grid. */
+@media (min-width: 1200px) {
+  .hc-types .home-types-text small {
+    white-space: normal;
+  }
+}
+
+/* Link under a card grid */
+.hc-more-link {
+  margin: 28px 0 0;
+  text-align: center;
+}
+
+.hc-more-link a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #127ea8;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hc-more-link a:hover,
+.hc-more-link a:focus-visible {
+  text-decoration: underline;
+}
+
+.hc-more-link svg,
+.hc-hardware-all svg,
+.hc-cl-secondary svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+/* Hardware-only links under "More products" */
+.hc-hardware {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin-top: 28px;
+  padding: 16px 20px;
+  border: 1px solid #e6ebf1;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.hc-hardware-title {
+  margin: 0;
+  color: #172027;
+  font-weight: 700;
+}
+
+.hc-hardware ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hc-hardware li a {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid #d6e2ec;
+  border-radius: 999px;
+  color: #172027;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.hc-hardware li a:hover,
+.hc-hardware li a:focus-visible {
+  border-color: #1fa8de;
+  color: #127ea8;
+}
+
+.hc-hardware-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: #127ea8;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hc-hardware-all:hover,
+.hc-hardware-all:focus-visible {
+  text-decoration: underline;
+}
+
+/* Channel letters band */
+.hc-cl {
+  padding: 64px 0;
+}
+
+.hc-cl-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 48px;
+  align-items: center;
+}
+
+.hc-cl-image {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border: 1px solid #e6ebf1;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+}
+
+.hc-cl-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.hc-cl-copy p:not(.cl-kicker) {
+  max-width: 600px;
+  margin: 0;
+  color: #475569;
+  font-size: 1.05rem;
+  line-height: 1.65;
+}
+
+.hc-cl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  align-items: center;
+}
+
+.hc-cl-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+  color: #0b74a3;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.hc-cl-secondary:hover,
+.hc-cl-secondary:focus-visible {
+  text-decoration: underline;
+}
+
+/* Reviews sit between the tinted product sections here, so they go white. */
+.hc-page .customer-review-section {
+  background: #ffffff;
+}
+
+/* The quote band sits between the tinted channel letters band and the steps. */
+.hc-page .bd-cta {
+  padding: 40px 0;
+}
+
+/* The steps follow the quote band directly. */
+.hc-page .cl-steps {
+  margin-top: 0;
+}
+
+/* About us: short company copy between the steps and the FAQ. */
+.hc-about {
+  padding-bottom: 8px;
+}
+
+.hc-about .sf-prose a {
+  color: #0b74a3;
+  font-weight: 600;
+}
+
+/* Company facts under the About copy */
+.hc-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hc-facts li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 16px 18px;
+  border: 1px solid #e6ebf1;
+  border-radius: 12px;
+  background: #f7f8fc;
+}
+
+.hc-facts strong {
+  color: #0b74a3;
+  font-family: var(--font-display, inherit);
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.hc-facts span {
+  color: #475569;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 991px) {
+  .hc-cl-inner {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .hc-cl-image {
+    max-width: 520px;
+  }
+}
+
+@media (max-width: 767px) {
+  .hc-hero {
+    padding-top: 20px;
+  }
+
+  .hc-cl {
+    padding: 48px 0;
+  }
+
+  .hc-page .bd-cta {
+    padding: 28px 0;
+  }
+
+  /* A wrapped guide link keeps its arrow on the last line of text. */
+  .hc-more-link a {
+    display: inline;
+  }
+
+  .hc-more-link svg {
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: -3px;
+  }
+
+  .hc-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .hc-facts li {
+    padding: 14px;
+  }
+
+  .hc-facts strong {
+    font-size: 1.35rem;
+  }
+
+  .hc-hardware {
+    padding: 14px;
+  }
+
+  .hc-hardware li a {
+    padding: 5px 10px;
+    font-size: 0.85rem;
+  }
+
+  .hc-hardware-all {
+    margin-left: 0;
+  }
+}
+
+/* Phones: the project cards become a swipeable row (one card and the edge of
+   the next) instead of four full-height cards in a column. */
+@media (max-width: 575px) {
+  .hc-page .bd-occasion-grid {
+    display: flex;
+    gap: 12px;
+    margin: 22px calc(var(--bs-gutter-x, 1.5rem) * -0.5) 0;
+    padding: 0 calc(var(--bs-gutter-x, 1.5rem) * 0.5) 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: calc(var(--bs-gutter-x, 1.5rem) * 0.5);
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+
+  .hc-page .bd-occasion-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hc-page .bd-occasion {
+    flex: 0 0 84%;
+    scroll-snap-align: start;
+  }
+}

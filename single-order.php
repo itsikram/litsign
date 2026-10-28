@@ -118,14 +118,14 @@ get_header();
                                 <?php if ($is_staff) : ?>
                                     <div class="order-elements">
                                         <table>
-                                            <thead><tr><th>#</th><th>Type</th><th>Text</th><th>H &times; W (in)</th><th>Font</th><th>Face</th><th>Return</th><th>Trimcap</th><th>Return size</th><th>Trimcap size</th></tr></thead>
+                                            <thead><tr><th>#</th><th>Type</th><th>Text</th><th>W &times; H (in)</th><th>Font</th><th>Face</th><th>Return</th><th>Trimcap</th><th>Return size</th><th>Trimcap size</th></tr></thead>
                                             <tbody>
                                                 <?php foreach ($design['elements'] as $index => $element) : ?>
                                                     <tr>
                                                         <td><?php echo esc_html($index + 1); ?></td>
                                                         <td><?php echo esc_html($element_names[$element['type'] ?? ''] ?? ($element['type'] ?? '')); ?></td>
                                                         <td><?php echo esc_html($element['text'] ?? ''); ?></td>
-                                                        <td><?php echo esc_html(round((float) ($element['height'] ?? 0), 1) . ' × ' . round((float) ($element['width'] ?? 0), 1)); ?></td>
+                                                        <td><?php echo esc_html(round((float) ($element['width'] ?? 0), 1) . ' × ' . round((float) ($element['height'] ?? 0), 1)); ?></td>
                                                         <td><?php echo esc_html($element['font']['title'] ?? ''); ?></td>
                                                         <td><?php echo esc_html($element['faceColor']['title'] ?? ''); ?></td>
                                                         <td><?php echo esc_html($element['returnColor']['title'] ?? ''); ?></td>

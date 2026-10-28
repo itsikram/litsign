@@ -41,6 +41,6 @@ return array(
 		'care' => 'The hanger is made for indoor use. Wipe the bars and the poster with a soft, damp cloth.',
 	),
 	'snap-poster-graphic-only' => array(
-		'description' => 'Replacement poster for the snap poster hanger, UV printed on 14 mil double white popup that hangs flat. Hanger not included. Ships nationwide.',
+		'description' => 'Replacement poster for the snap poster hanger, UV printed on 14 mil double white popup that hangs flat. No hanger. Ships nationwide. Order now.',
 	),
 );

@@ -21,12 +21,13 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const WHOLESALE_RACEWAY_COST_PER_FOOT = 50;
+// Builder raceway price per foot; matches the product page raceway option ("55/lft").
+const WHOLESALE_RACEWAY_COST_PER_FOOT = 55;
 const WHOLESALE_CL_MIN_INCHES = 8;
 const WHOLESALE_CL_MAX_INCHES = 45;
 // Default lowest per-item price for products sized with the sq ft dimensions calculator.
 // A product can set its own with _min_order_price (see wholesale_product_min_order()).
-const WHOLESALE_SQFT_MIN_PRICE = 15;
+const WHOLESALE_SQFT_MIN_PRICE = 16.5;
 
 /**
  * Lowest price one item of a calculator product can cost, after the product's own
@@ -397,13 +398,13 @@ function wholesale_cl_design_quote($product_id, $design)
 	$extras_cost = 0.0;
 
 	if (isset($extras['powerSupply']['value']) && 'Standard' === $extras['powerSupply']['value'] && !empty($extras['powerSupply']['qty'])) {
-		$extras_cost += $meta_or('_standard_ps_cost', 90);
+		$extras_cost += $meta_or('_standard_ps_cost', 99);
 	}
 	if (isset($extras['lit']['value']) && 'Back Lit' === $extras['lit']['value'] && !empty($extras['lit']['qty']) && get_post_meta($product_id, '_is_lit_option', true)) {
 		$extras_cost += $letters_cost * $meta_or('_backlit_cost', 100) / 100;
 	}
 	if (isset($extras['cable']['value']) && '8ft Cable' === $extras['cable']['value'] && !empty($extras['cable']['qty'])) {
-		$extras_cost += $meta_or('_eight_ft_cable_cost', 70);
+		$extras_cost += $meta_or('_eight_ft_cable_cost', 77);
 	}
 
 	return round($letters_cost + $extras_cost, 2);

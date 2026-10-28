@@ -339,6 +339,30 @@ function wholesale_vi_is_bot($ua)
 }
 
 /**
+ * Whether an IP is in Google's own crawler and fetcher ranges. Google checks ad landing
+ * pages with a normal Chrome user agent and a gclid, so these looked like ad clicks:
+ * 64.233.172.x opened /, /signup/ and /about/ in the same second (Oct 27 report, flagged
+ * as a "repeat ad clicker"). People browse from their ISP, not from these ranges.
+ */
+function wholesale_vi_is_google_ip($ip)
+{
+	if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+		return false;
+	}
+
+	$long = ip2long($ip);
+	foreach (array('64.233.160.0/19', '66.102.0.0/20', '66.249.64.0/19', '72.14.192.0/18', '74.125.0.0/16', '209.85.128.0/17', '216.239.32.0/19') as $range) {
+		list($subnet, $bits) = explode('/', $range);
+		$mask = -1 << (32 - (int) $bits);
+		if ((ip2long($subnet) & $mask) === ($long & $mask)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Device, browser and operating system from the user agent.
  */
 function wholesale_vi_parse_ua($ua, $touch_points = 0)
@@ -613,7 +637,7 @@ function wholesale_vi_rest_collect(WP_REST_Request $request)
 	$done = new WP_REST_Response(null, 204);
 	$ua = isset($_SERVER['HTTP_USER_AGENT']) ? substr(wp_unslash($_SERVER['HTTP_USER_AGENT']), 0, 500) : '';
 
-	if (wholesale_vi_is_excluded() || wholesale_vi_is_bot($ua)) {
+	if (wholesale_vi_is_excluded() || wholesale_vi_is_bot($ua) || wholesale_vi_is_google_ip(wholesale_vi_client_ip(false))) {
 		return $done;
 	}
 
@@ -1410,7 +1434,7 @@ function wholesale_vi_repeat_ad_clickers($start_gmt, $end_gmt, $min = 3)
 {
 	global $wpdb;
 
-	return $wpdb->get_results($wpdb->prepare(
+	$rows = $wpdb->get_results($wpdb->prepare(
 		'SELECT ip, COUNT(*) AS clicks, COUNT(DISTINCT visitor_key) AS devices, SUM(order_id > 0) AS orders, SUM(is_lead) AS leads,
 			COALESCE(AVG(engaged_seconds), 0) AS avg_engaged, MAX(last_seen) AS last_seen, MAX(device) AS device, MAX(timezone) AS timezone
 		FROM ' . wholesale_vi_table('sessions') . " WHERE channel = 'google_ads' AND ip <> '' AND started_at >= %s AND started_at < %s
@@ -1419,6 +1443,12 @@ function wholesale_vi_repeat_ad_clickers($start_gmt, $end_gmt, $min = 3)
 		$end_gmt,
 		(int) $min
 	), ARRAY_A);
+
+	// Google's own landing page checks (recorded before they were filtered out) are not
+	// clicks to exclude in Google Ads.
+	return array_values(array_filter((array) $rows, static function ($row) {
+		return !wholesale_vi_is_google_ip($row['ip']);
+	}));
 }
 
 /**
@@ -2788,7 +2818,7 @@ function wholesale_vi_event_text($event)
 		case 'price_quote':
 			return array('tag', 'Got a price' . ($event->value ? ': ' . wholesale_vi_money($event->value) : ''), '');
 		case 'price_error':
-			return array('dismiss', 'Pricing error: ' . $label, 'bad');
+			return array('dismiss', 'Pricing error: ' . $label . ($event->value ? ' (entered ' . $event->value . ')' : ''), 'bad');
 		case 'design_upload':
 			return array('upload', 'Uploaded a design file', '');
 		case 'upload_error':

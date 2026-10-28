@@ -1326,7 +1326,7 @@
 			// wholesale_product_min_order(): empty uses the site default, 0 means none. The
 			// minimum is what one item costs after the everyday price adjustment.
 			const minField = fieldVal('_min_order_price').trim();
-			const floor = isNum(minField) ? Math.max(0, num(minField)) : (D.sqftMinPrice || 15);
+			const floor = isNum(minField) ? Math.max(0, num(minField)) : (D.sqftMinPrice || 16.5);
 			const keep = (100 - Math.min(100, Math.max(0, phpFloat(fieldVal('_discount_percent'))))) / 100;
 			if (isSqftCalc && keep > 0 && floor > 0 && running * keep < floor) {
 				lines.push(['Minimum order (' + money(floor) + ')', floor / keep - running]);

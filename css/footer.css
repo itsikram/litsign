@@ -136,7 +136,8 @@
   padding: 0 22px;
   border: 0;
   border-radius: 10px;
-  background: var(--sf-accent);
+  /* A deeper shade of the accent orange: white on #f47b2a is 2.7:1, on this 4.6:1. */
+  background: #c4520f;
   color: #fff;
   font-size: 0.95rem;
   font-weight: 700;
@@ -146,7 +147,7 @@
 
 .sf-newsletter__form button:hover,
 .sf-newsletter__form button:focus-visible {
-  background: #e06a1c;
+  background: #a8450c;
 }
 
 .sf-newsletter__form button:focus-visible {
@@ -386,13 +387,14 @@
 }
 
 .sf-footer .sf-btn--primary {
-  background: var(--sf-brand);
+  /* White on the brand blue #1fa8de is 2.7:1; this darker blue is 5.2:1. */
+  background: #0b74a3;
   color: #fff;
 }
 
 .sf-footer .sf-btn--primary:hover,
 .sf-footer .sf-btn--primary:focus-visible {
-  background: #1287b5;
+  background: #095f86;
   color: #fff;
 }
 

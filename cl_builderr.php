@@ -133,9 +133,10 @@ get_header();
 <input type="hidden" name="edit_design_data" value="<?php echo esc_attr((string) $edit_product_data); ?>" id="editDesignData">
 
 
-<input type="hidden" id="standarPsCost" value="<?php echo $standard_ps_cost ? $standard_ps_cost : 90; ?>">
+<input type="hidden" id="standarPsCost" value="<?php echo $standard_ps_cost ? $standard_ps_cost : 99; ?>">
 <input type="hidden" id="backLitCost" value="<?php echo $backlit_cost ? $backlit_cost : 100; ?>">
-<input type="hidden" id="eightFtcableCost" value="<?php echo $eight_ft_cable_cost ? $eight_ft_cable_cost : 70; ?>">
+<input type="hidden" id="eightFtcableCost" value="<?php echo $eight_ft_cable_cost ? $eight_ft_cable_cost : 77; ?>">
+<input type="hidden" id="racewayPerFoot" value="<?php echo esc_attr(WHOLESALE_RACEWAY_COST_PER_FOOT); ?>">
 <input type="hidden" id="clDiscountPercent" value="<?php echo esc_attr($discount_percent); ?>">
 <input type="hidden" id="clPromoPercent" value="<?php echo esc_attr($promo_percent ?? 0); ?>" data-ends="<?php echo esc_attr($promo_ends ?? ''); ?>">
 
@@ -247,13 +248,13 @@ get_header();
                 <li class="sidebar-item item-heightWidthInput">
                     <span class="cl-field-label">Size</span>
                     <div class="cl-size-grid">
-                        <label for="sizeHeightInput" class="cl-size-field">
-                            <span>Height</span>
-                            <span class="cl-unit-input"><input type="number" max="45" step="0.1" min="8" id="sizeHeightInput" placeholder="0" inputmode="decimal" class="form-control"><em>in</em></span>
-                        </label>
                         <label for="sizeWidthInput" class="cl-size-field">
                             <span>Width</span>
                             <span class="cl-unit-input"><input type="number" step="0.1" id="sizeWidthInput" placeholder="0" inputmode="decimal" class="form-control"><em>in</em></span>
+                        </label>
+                        <label for="sizeHeightInput" class="cl-size-field">
+                            <span>Height</span>
+                            <span class="cl-unit-input"><input type="number" max="45" step="0.1" min="8" id="sizeHeightInput" placeholder="0" inputmode="decimal" class="form-control"><em>in</em></span>
                         </label>
                     </div>
                 </li>
@@ -401,7 +402,7 @@ get_header();
                                         <span class="info-btn" role="button" tabindex="0" aria-label="About the standard power supply">i</span>
                                         <div class="info-btn-content top">
                                             <small class="text-muted">
-                                                Fang Hua HMA-60NU-RX 12V / 5A 60W, Class 2, constant voltage and current, IP67, 5-year warranty. Non-brand transformer boxes, for dry locations only. $90 each.
+                                                Fang Hua HMA-60NU-RX 12V / 5A 60W, Class 2, constant voltage and current, IP67, 5-year warranty. Non-brand transformer boxes, for dry locations only. <?php $ps_price = (float) ($standard_ps_cost ? $standard_ps_cost : 99); echo esc_html('$' . number_format($ps_price, floor($ps_price) == $ps_price ? 0 : 2)); ?> each.
                                             </small>
                                             <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/standard-ps-info.png'); ?>" alt="Standard power supply for channel letters">
                                         </div>
@@ -551,7 +552,7 @@ get_header();
                             <tr>
                                 <th scope="col">#</th>
                                 <th scope="col">Element</th>
-                                <th scope="col">Size (H × W)</th>
+                                <th scope="col">Size (W × H)</th>
                                 <th scope="col" class="num">Base price</th>
                                 <th scope="col" class="num">Face color</th>
                                 <th scope="col" class="num"><?php echo !empty($promo_percent) ? 'Regular' : 'Price'; ?></th>

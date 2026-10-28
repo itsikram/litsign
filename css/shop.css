@@ -706,6 +706,14 @@
     font-weight: 600;
   }
 
+  .checkout-mobile-summary__breakdown {
+    display: block;
+    margin-top: 2px;
+    color: var(--shop-muted);
+    font-size: 0.85rem;
+    font-weight: 400;
+  }
+
   .checkout-mobile-summary summary strong {
     font-size: 1.15rem;
   }
@@ -858,18 +866,19 @@
   color: var(--shop-ink);
 }
 
-/* Artwork / design file: "Open" link plus a Download button. */
+/* Artwork / design file: Open and Download buttons. */
 .artwork-links {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 12px;
+  gap: 6px 8px;
 }
 
 .artwork-links__sep {
   display: none;
 }
 
+.artwork-links .artwork-open,
 .artwork-links .artwork-download {
   display: inline-flex;
   align-items: center;
@@ -886,15 +895,26 @@
   text-decoration: none;
 }
 
+.artwork-links .artwork-open::before,
 .artwork-links .artwork-download::before {
   content: "";
   width: 14px;
   height: 14px;
   background: currentColor;
+}
+
+.artwork-links .artwork-open::before {
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.artwork-links .artwork-download::before {
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11M7 10l5 5 5-5M5 20h14'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 4v11M7 10l5 5 5-5M5 20h14'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
+.artwork-links .artwork-open:hover,
+.artwork-links .artwork-open:focus-visible,
 .artwork-links .artwork-download:hover,
 .artwork-links .artwork-download:focus-visible {
   border-color: var(--shop-brand-dark);

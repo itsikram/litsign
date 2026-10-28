@@ -24,7 +24,7 @@ return array(
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Texas',
 	'neighbors' => array('new-mexico', 'oklahoma', 'arkansas', 'louisiana'),
 	'seo_title' => 'Channel Letters Shipped to Texas | TDLR Sign License Guide',
-	'seo_description' => 'Channel letters, banners and window graphics shipped to Texas from WA & CA, with TDLR sign electrician licensing and how Texas city sign permits work.',
+	'seo_description' => 'Channel letters, banners and window graphics shipped to Texas from WA and CA, with TDLR sign electrician licensing and city permits. See prices online.',
 	'h1' => 'Channel Letters and Storefront Signs Shipped to Texas',
 	'intro' => array(
 		'Texas businesses can price custom LED channel letters online, have them built in Washington and California, and get them shipped to the storefront, ready for a licensed Texas sign installer. Banners, window graphics and flags are made in Renton, WA and ship the same way.',

@@ -95,7 +95,10 @@ get_header();
             <div class="checkout-main">
                 <details class="checkout-mobile-summary">
                     <summary>
-                        <span class="checkout-mobile-summary__label"><?php echo esc_html(sprintf(_n('%d item', '%d items', $item_count, 'litsign'), $item_count)); ?> &middot; <span data-show-label>Show summary</span></span>
+                        <span class="checkout-mobile-summary__label"><?php echo esc_html(sprintf(_n('%d item', '%d items', $item_count, 'litsign'), $item_count)); ?> &middot; <span data-show-label>Show summary</span>
+                            <?php // The total alone ($34.55 for a $15 banner) read as a hidden fee; show what it is made of. ?>
+                            <small class="checkout-mobile-summary__breakdown"><?php echo esc_html($money($sub_total)); ?> + <span data-shipping-total><?php echo esc_html($first_shipping > 0 ? $money($first_shipping) : 'FREE'); ?></span> shipping<?php echo $tax > 0 ? esc_html(' + ' . $money($tax) . ' tax') : ''; ?></small>
+                        </span>
                         <strong data-grand-total><?php echo esc_html($money($grand_total)); ?></strong>
                     </summary>
                     <ul class="checkout-items">

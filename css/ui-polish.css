@@ -775,6 +775,34 @@
   .home-hero--category .home-hero-content {
     min-height: 0;
   }
+
+  /* Phones (2026-10-27): the hero and the "Shop by sign type" rail filled the first
+     screen and pushed the first product to ~1,370px, and Ads visitors on category
+     pages left without opening one (/trade-show-products/: 57% bounce, 0 product
+     views). Keep the copy in the page, show the products. The header's All Products
+     menu and "Browse categories" still link every other type. */
+  .home-hero--category .home-hero-content {
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+
+  .home-hero--category .home-hero-lead p {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+
+  .home-hero--category .home-hero-lead p ~ p,
+  .home-hero--category ~ .home-types,
+  .home-hero--category:has(~ .product-listing-container .category-listing-header) .home-hero-lead {
+    display: none; /* the last one: "Shop {category}" right below says the same */
+  }
+
+  .home-hero--category .home-hero-actions {
+    margin-top: 16px;
+  }
 }
 
 /* ---------- 7. Image skeletons ----------
@@ -853,6 +881,37 @@
 .pb-title-short,
 .pb-price del {
 	color: #666;
+}
+/* Small text under the hero feature strip (#7a8797 was 3.4:1 on its tint) and
+   the product tags on the banners & displays and home pages (#1a8fbd, 3.7:1). */
+.home-hero-feature small {
+	color: #52616f;
+}
+.bd-product-tag {
+	color: #0b74a3;
+}
+/* Same darker blue for the other brand-blue buttons and links in page
+   sections (white on #1fa8de is 2.7:1), the review dates and struck prices. */
+.cl-button,
+.cl-help-action--primary {
+	border-color: #0b74a3;
+	background: #0b74a3;
+}
+.cl-button:hover,
+.cl-button:focus-visible,
+.cl-help-action--primary:hover,
+.cl-help-action--primary:focus-visible {
+	background: #095f86;
+}
+.cl-steps-list p a,
+.cl-faq-note a {
+	color: #0b74a3;
+}
+.review-author small {
+	color: #5b6878;
+}
+.sf-type-price del {
+	color: #64748b;
 }
 
 /* Stock status notice under the product price (inc/stock-status.php). */

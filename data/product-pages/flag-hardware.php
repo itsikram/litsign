@@ -33,7 +33,7 @@ return array(
 
 	'flag-pole-and-bracket' => array(
 		'title' => array('House Flag Pole & Bracket', 'Tangle Free'),
-		'description' => '74.5" aluminum house flag pole with a tangle-free spinning top and a 2-position white wall bracket, for 2\' x 3\' or 3\' x 5\' flags. Ships nationwide.',
+		'description' => '74.5" aluminum house flag pole with a tangle-free spinning top and a 2-position wall bracket, for 2\' x 3\' or 3\' x 5\' flags. Ships nationwide. Order now.',
 		'faq' => array(
 			array('q' => 'What comes with the pole?', 'a' => 'The two-piece aluminum pole with a chrome ball on top, clips to hold the flag in place, and a plastic ring for flags with grommets.'),
 		),
@@ -41,7 +41,7 @@ return array(
 
 	'ground-stake' => array(
 		'title' => array('Flag Ground Stake', 'Spins in Wind'),
-		'description' => 'Zinc coated steel flag ground stake with a bearing that lets feather, teardrop and rectangle flags turn in the wind. For soft ground. Ships nationwide.',
+		'description' => 'Zinc coated steel ground stake with a bearing that lets feather, teardrop and rectangle flags spin in wind. For soft ground. Ships nationwide. Order now.',
 		'faq' => array(
 			array('q' => 'How do I install it?', 'a' => 'Drive the stake straight down into soft ground, then slide the flag&rsquo;s bottom pole onto the connector at the top.'),
 		),
@@ -54,7 +54,7 @@ return array(
 
 	'rectangle-pole-set' => array(
 		'title' => array('Rectangle Flag Pole Set', 'Replacement'),
-		'description' => 'Replacement rectangle flag pole set, 24.5" wide in 3 heights, with a horizontal top pole that holds the flag straight. Fits our bases. Ships nationwide.',
+		'description' => 'Rectangle flag pole set, 24.5" wide in 3 heights, with a horizontal top pole that holds the flag straight. Fits our bases. Ships nationwide. Order now.',
 		'faq' => array(
 			array('q' => 'How many poles are in each size?', 'a' => 'Small has 3 poles, Medium 4 and Large 5: one horizontal top pole plus the vertical aluminum poles.'),
 		),
@@ -72,6 +72,6 @@ return array(
 
 	'water-bag' => array(
 		'title' => array('Flag Base Water Bag', 'Adds 23 lb'),
-		'description' => 'Reusable flag base water bag that adds about 23 lb over a cross or square base to keep flags upright in wind. Folds flat when empty. Ships nationwide.',
+		'description' => 'Flag base water bag that adds about 23 lb over a cross or square base to keep flags upright in wind. Folds flat when empty. Ships nationwide. Order now.',
 	),
 );

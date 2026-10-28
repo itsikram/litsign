@@ -33,6 +33,18 @@
   line-height: 1.65;
 }
 
+/* "Updated <date> · By the ... team" under a guide's lead (wholesale_guide_byline). */
+.sf-byline {
+  margin: 14px 0 0;
+  color: #52616f;
+  font-size: 0.9rem;
+}
+
+.sf-byline a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 .sf-hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -324,6 +336,7 @@
 }
 
 .sf-hero--photo .sf-hero-lead,
+.sf-hero--photo .sf-byline,
 .sf-hero--photo .sf-hero-points {
   color: rgba(255, 255, 255, 0.86);
 }

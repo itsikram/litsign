@@ -94,7 +94,7 @@ function wholesale_cl_design_total($design, $product_id)
 
 /**
  * Human-readable lines describing a builder design, e.g.
- * 'Letters "PHO" — 12" H × 30" W, Font: Arial, Face: Red'.
+ * 'Letters "PHO" — 30" W × 12" H, Font: Arial, Face: Red'.
  *
  * @return string[]
  */
@@ -117,7 +117,7 @@ function wholesale_cl_design_summary($design)
 
         $parts = array();
         if (!empty($element['height']) || !empty($element['width'])) {
-            $parts[] = round((float) ($element['height'] ?? 0), 1) . '" H × ' . round((float) ($element['width'] ?? 0), 1) . '" W';
+            $parts[] = round((float) ($element['width'] ?? 0), 1) . '" W × ' . round((float) ($element['height'] ?? 0), 1) . '" H';
         }
         foreach (array('font' => 'Font', 'faceColor' => 'Face', 'returnColor' => 'Return', 'trimcapColor' => 'Trimcap') as $key => $name) {
             if (!empty($element[$key]['title'])) {
@@ -137,6 +137,33 @@ function wholesale_cl_design_summary($design)
 }
 
 /**
+ * Order details with Width listed right before Height, so every size reads
+ * width × height like the product page size box (and B2Sign). Orders placed
+ * before 2026-10-29 stored Height first.
+ *
+ * @param array $details product_details of a cart/order line.
+ * @return array
+ */
+function wholesale_width_first($details)
+{
+    $details = (array) $details;
+    if (!array_key_exists('Width', $details) || !array_key_exists('Height', $details)) {
+        return $details;
+    }
+    $ordered = array();
+    foreach ($details as $label => $value) {
+        if ('Width' === $label) {
+            continue;
+        }
+        if ('Height' === $label) {
+            $ordered['Width'] = $details['Width'];
+        }
+        $ordered[$label] = $value;
+    }
+    return $ordered;
+}
+
+/**
  * Customer-facing specs for a cart/order line: label => escaped HTML value.
  * Internal fields are skipped; design and artwork files become links.
  *
@@ -146,7 +173,7 @@ function wholesale_cl_design_summary($design)
 function wholesale_item_specs($item)
 {
     $item = (array) $item;
-    $details = isset($item['product_details']) ? (array) $item['product_details'] : array();
+    $details = isset($item['product_details']) ? wholesale_width_first($item['product_details']) : array();
     $skip = array('Product Id', 'Shipping Type', 'Turnaround Option');
     $specs = array();
 

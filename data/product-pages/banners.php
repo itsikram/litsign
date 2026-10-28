@@ -98,7 +98,7 @@ return array(
 
 	'pole-banner-set-hardware-only' => array(
 		'title' => array('Pole Banner Hardware Kit', 'Brackets & Arms'),
-		'description' => 'Pole banner hardware kit: 2 fiberglass pole arms, 2 brackets and steel bands to hang a street pole banner. Banner not included. Ships nationwide.',
+		'description' => 'Pole banner hardware kit: 2 fiberglass pole arms, 2 brackets and steel bands to hang a street pole banner. No banner. Ships nationwide. Order now.',
 		'printed' => false,
 	),
 

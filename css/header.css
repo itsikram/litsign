@@ -10,6 +10,9 @@
 .site-header {
   --sh-brand: #1fa8de;
   --sh-brand-dark: #1287b5;
+  /* Buttons with white text: #1fa8de is only 2.7:1 behind white, these pass 4.5:1. */
+  --sh-brand-button: #0b74a3;
+  --sh-brand-button-hover: #095f86;
   --sh-ink: #172027;
   --sh-muted: #5b6b7b;
   --sh-line: #e3e9ef;
@@ -308,7 +311,7 @@
   gap: 8px;
   min-height: 40px;
   padding: 8px 14px;
-  color: var(--sh-brand-dark);
+  color: var(--sh-brand-button); /* #1287b5 was 4.07:1 on white */
   font-size: 15px;
   white-space: nowrap;
 }
@@ -349,9 +352,9 @@
   align-items: center;
   min-height: 40px;
   padding: 8px 16px;
-  border: 1px solid var(--sh-brand);
+  border: 1px solid var(--sh-brand-button);
   border-radius: 999px;
-  background: var(--sh-brand);
+  background: var(--sh-brand-button);
   color: #fff !important;
   font-size: 14px;
   font-weight: 700;
@@ -360,8 +363,8 @@
 
 .site-header .header-builder-menu .header-builder-cta:hover,
 .site-header .header-builder-menu .header-builder-cta:focus-visible {
-  border-color: var(--sh-brand-dark);
-  background: var(--sh-brand-dark);
+  border-color: var(--sh-brand-button-hover);
+  background: var(--sh-brand-button-hover);
   color: #fff !important;
 }
 
@@ -449,7 +452,7 @@ html.sh-lock body {
   margin: 18px 0 4px;
   padding: 14px 16px;
   border-radius: 12px;
-  background: var(--sh-brand);
+  background: var(--sh-brand-button);
   color: #fff;
   font-size: 16px;
   font-weight: 700;

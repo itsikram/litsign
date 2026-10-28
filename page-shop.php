@@ -131,7 +131,7 @@ get_header();
 			<ul class="sc-cats-list">
 				<?php foreach ($category_tiles as $tile) : ?>
 					<li>
-						<a class="sc-cat-tile<?php echo in_array($tile['term']->slug, $state['cat'], true) ? ' is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('cat', $tile['term']->slug, $shop_url) . '#sc-results'); ?>" data-cat-tile="<?php echo esc_attr($tile['term']->slug); ?>">
+						<a class="sc-cat-tile<?php echo in_array($tile['term']->slug, $state['cat'], true) ? ' is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg('cat', $tile['term']->slug, $shop_url) . '#sc-results'); ?>" rel="nofollow" data-cat-tile="<?php echo esc_attr($tile['term']->slug); ?>">
 							<span class="sc-cat-tile-img">
 								<?php
 								if ($tile['image']) {

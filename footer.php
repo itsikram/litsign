@@ -145,8 +145,8 @@
                     <p class="sf-brand__text">Custom LED channel letters and large format prints for storefronts across the USA, built and tested before shipping since 2002.</p>
                     <ul class="sf-badges">
                         <li><?php echo $footer_icon('check'); // Static SVG. ?>Made in USA</li>
-                        <li><?php echo $footer_icon('check'); // Static SVG. ?>UL Listed</li>
-                        <li><?php echo $footer_icon('check'); // Static SVG. ?>5-Year LED Warranty</li>
+                        <li><?php echo $footer_icon('check'); // Static SVG. ?>UL Listed Channel Letters</li>
+                        <li><?php echo $footer_icon('check'); // Static SVG. ?>5-Year Warranty on Lit Signs</li>
                     </ul>
                 </div>
 

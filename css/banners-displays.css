@@ -90,9 +90,12 @@
   transform: translateY(24px);
 }
 
-/* Each photo links to its category. */
+/* Each photo opens its product, labeled with the name and starting price. */
 a.bd-hero-tile {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  color: #031835;
+  text-decoration: none;
   transition: box-shadow 0.2s ease, outline-color 0.2s ease;
   outline: 3px solid transparent;
   outline-offset: 2px;
@@ -102,12 +105,47 @@ a.bd-hero-tile:hover,
 a.bd-hero-tile:focus-visible {
   outline-color: #2aa8df;
   box-shadow: 0 28px 56px rgba(0, 0, 0, 0.4);
+  color: #031835;
+}
+
+.bd-hero-tile-image {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .bd-hero-tile img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.bd-hero-tile-label {
+  padding: 8px 12px 10px;
+  border-top: 1px solid #e6ebf1;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.bd-hero-tile-label small {
+  display: block;
+  color: #127ea8;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.bd-hero-tile-label small del {
+  display: none;
+}
+
+/* The product line the ad was about (?type=) */
+.bd-card {
+  scroll-margin-top: var(--scroll-offset, 80px);
+}
+
+.bd-card.is-highlighted {
+  border-color: #1fa8de;
+  box-shadow: 0 0 0 2px #1fa8de, 0 18px 36px rgba(15, 23, 42, 0.1);
 }
 
 /* Feature strip under the hero (.home-hero-features) */
@@ -416,9 +454,30 @@ a.bd-hero-tile:focus-visible {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .bd-hero-tile--3,
-  .bd-hero-tile--4 {
+  /* Photo-only tiles (window graphics page): two are enough. */
+  div.bd-hero-tile--3,
+  div.bd-hero-tile--4 {
     display: none;
+  }
+
+  /* Labeled product tiles (this page): all four, shorter, so the names and
+     prices sit on the second screen. */
+  .bd-hero-media:has(a.bd-hero-tile) {
+    gap: 10px;
+  }
+
+  a.bd-hero-tile {
+    aspect-ratio: 5 / 4;
+    border-radius: 12px;
+  }
+
+  .bd-hero-tile-label {
+    padding: 6px 10px 8px;
+    font-size: 0.82rem;
+  }
+
+  .bd-hero-tile-label small {
+    font-size: 0.74rem;
   }
 
   .bd-occasion-grid {

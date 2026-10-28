@@ -148,6 +148,57 @@ function wholesale_product_reviews($product_id, $limit = 6)
 	return $reviews;
 }
 
+/**
+ * Merchant Center suspended the account for misrepresentation on 2026-10-27.
+ * Reviews with no order behind them are moved to drafts and tagged
+ * _review_hidden_unverified: everything imported from a file, plus three
+ * entered by hand on 2026-09-24 with earlier dates. Matched by email because
+ * post IDs differ between the local and live databases. A review already
+ * tagged is skipped, so one the owner publishes again on purpose stays live.
+ */
+function wholesale_migrate_hide_unverified_reviews()
+{
+	global $wpdb;
+
+	$untagged = array('key' => '_review_hidden_unverified', 'compare' => 'NOT EXISTS');
+	$query = array(
+		'post_type' => 'review_submission',
+		'post_status' => 'publish',
+		'posts_per_page' => -1,
+		'fields' => 'ids',
+	);
+	$imported = get_posts($query + array('meta_query' => array(
+		array('key' => '_review_source', 'value' => 'import'),
+		$untagged,
+	)));
+	$backdated = get_posts($query + array('meta_query' => array(
+		array('key' => '_review_email', 'value' => array('jamescharter20@gmail.com', 'EmilyJohnson121@gmail.com', 'RobertWilliams@gmail.com'), 'compare' => 'IN'),
+		array('key' => '_review_order_id', 'compare' => 'NOT EXISTS'),
+		$untagged,
+	)));
+
+	foreach (array_unique(array_merge($imported, $backdated)) as $review_id) {
+		update_post_meta($review_id, '_review_hidden_unverified', '2026-10-27');
+		// Direct update: no post_modified change and no review notification hooks.
+		$wpdb->update($wpdb->posts, array('post_status' => 'draft'), array('ID' => $review_id));
+		clean_post_cache($review_id);
+	}
+	wholesale_review_stats_flush();
+
+	return true;
+}
+
+// Not a once-only migration: a push keeps live's review posts but copies the
+// options table from local, so a "done" flag reached live while live's reviews
+// stayed published (2026-10-27). Re-check on admin visits instead.
+add_action('admin_init', function () {
+	if (!current_user_can('manage_options') || get_transient('wholesale_unverified_reviews_checked')) {
+		return;
+	}
+	set_transient('wholesale_unverified_reviews_checked', 1, 10 * MINUTE_IN_SECONDS);
+	wholesale_migrate_hide_unverified_reviews();
+});
+
 // ------------------------------------------------------------------
 // Admin page
 // ------------------------------------------------------------------

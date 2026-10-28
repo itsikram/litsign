@@ -12,7 +12,7 @@ $no_bleed = 'Use the template for your display size; the silicone edge is sewn a
 return array(
 	'10ft-seg-backlit-fabric-display-graphic-frame' => array(
 		'title' => array('10ft SEG Backlit Display', 'LED Lit Fabric'),
-		'description' => '10ft SEG backlit display: a 118" x 88" LED lit fabric wall with a seamless silicone edge print that glows across the show floor. Ships nationwide.',
+		'description' => '10ft SEG backlit display: a 118" x 88" LED lit fabric wall with a silicone edge print that glows across the show floor. Ships nationwide. Order online.',
 		'file_notes' => array($no_bleed),
 		'faq' => array($setup),
 		'care' => 'display',
@@ -29,12 +29,12 @@ return array(
 		'care' => 'display',
 	),
 	'10ft-seg-backlit-popup-display-graphic-only' => array(
-		'description' => 'Replacement backlit SEG graphic for the 10ft backlit popup display, UV printed on 6oz fabric with a silicone edge. Frame not included. Ships nationwide.',
+		'description' => 'Replacement backlit SEG graphic for the 10ft backlit popup display, UV printed on 6oz fabric with a silicone edge. No frame. Ships nationwide. Order now.',
 	),
 
 	'10ft-seg-fabric-display-graphic-frame' => array(
 		'title' => array('10ft SEG Fabric Display', 'Booth Backwall'),
-		'description' => '10ft SEG fabric display: a 118" x 89" trade show backwall with a seamless silicone edge print on a quick assembly aluminum frame. Ships nationwide.',
+		'description' => '10ft SEG fabric display: a 118" x 89" trade show backwall with a silicone edge print on a quick assembly aluminum frame. Ships nationwide. Order online.',
 		'file_notes' => array($no_bleed),
 		'faq' => array($setup),
 		'care' => 'display',
@@ -45,13 +45,13 @@ return array(
 
 	'20ft-seg-fabric-display-graphic-frame' => array(
 		'title' => array('20ft SEG Fabric Display', 'Island Booth'),
-		'description' => '20ft SEG fabric display: our largest seamless fabric wall, 236" x 89", for island booths and big venues. Single or double sided. Ships nationwide.',
+		'description' => '20ft SEG fabric display: our largest fabric wall, 236" x 89", for island booths and big venues. Single or double sided. Ships nationwide. Order online.',
 		'file_notes' => array($no_bleed),
 		'faq' => array($setup),
 		'care' => 'display',
 	),
 	'20ft-seg-fabric-display-graphic-only' => array(
-		'description' => 'Replacement SEG graphic for the 20ft SEG fabric display, printed edge to edge on 6oz fabric with a silicone edge. Reuse your frame. Ships nationwide.',
+		'description' => 'Replacement SEG graphic for the 20ft SEG fabric display, printed on 6oz fabric with a silicone edge. Reuse your frame. Ships nationwide. Order now.',
 	),
 
 	'3ft-seg-fabric-stand-graphic-frame' => array(
@@ -72,12 +72,12 @@ return array(
 		'care' => 'display',
 	),
 	'8ft-seg-backlit-popup-display-graphic-only' => array(
-		'description' => 'Replacement backlit SEG graphic for the 8ft backlit popup display, UV printed on 6oz fabric with a silicone edge. Frame not included. Ships nationwide.',
+		'description' => 'Replacement backlit SEG graphic for the 8ft backlit popup display, UV printed on 6oz fabric with a silicone edge. No frame. Ships nationwide. Order now.',
 	),
 
 	'custom-seg-fabric' => array(
 		'title' => array('Custom SEG Fabric', 'Fits Your Frame'),
-		'description' => 'Custom SEG fabric printed to fit your own frame: 6oz polyester, edge to edge print, sewn 3mm x 11mm silicone edge, up to 40\' x 10\'. Ships nationwide.',
+		'description' => 'Custom SEG fabric printed to fit your own frame: 6oz polyester, sewn 3mm x 11mm silicone edge, up to 40\' x 10\'. Ships nationwide. Order online.',
 		'file_notes' => array('Order the size of the visible graphic you need. Don&rsquo;t add extra bleed for the silicone edge.'),
 		'faq' => array(
 			array('q' => 'How do I check that it fits my frame?', 'a' => 'With the fabric, the silicone edge measures 0.44" x 0.135". Compare that with the channel in your extrusion before you order.'),

@@ -188,7 +188,7 @@ $logo_id = get_theme_mod('custom_logo');
 				}
 
 				.sso-ship-bar a {
-					color: #0e7aa6;
+					color: #0b6f9c; /* 5:1 on the bar; #0e7aa6 was 4.35:1 at phone size */
 					font-weight: 700;
 					text-decoration: underline;
 					text-underline-offset: 2px;
@@ -618,6 +618,8 @@ $logo_id = get_theme_mod('custom_logo');
 							$cta_quote = 'sign' !== wholesale_product_noun(get_queried_object_id());
 						} elseif (get_query_var('category_slug')) {
 							$cta_quote = !wholesale_is_channel_letters_page();
+						} elseif (is_front_page()) {
+							$cta_quote = true; // The home page leads with banners & displays.
 						} elseif ($cta_on_page_quote) {
 							$cta_quote = true;
 						}
@@ -737,6 +739,9 @@ $logo_id = get_theme_mod('custom_logo');
 			.ssx-header {
 				--ssx-blue: #1fa8de;
 				--ssx-blue-hover: #1790c0;
+				/* Buttons with white text: #1fa8de is only 2.7:1 behind white, this is 5.2:1. */
+				--ssx-blue-button: #0b74a3;
+				--ssx-blue-button-hover: #095f86;
 				--ssx-blue-text: #0e7aa6;
 				--ssx-blue-tint: #e6f6fc;
 				--ssx-navy: #0d2236;
@@ -1029,7 +1034,7 @@ $logo_id = get_theme_mod('custom_logo');
 				padding: 0 18px;
 				border: 0;
 				border-radius: 999px;
-				background: var(--ssx-blue);
+				background: var(--ssx-blue-button);
 				color: #fff;
 				font-weight: 700;
 				cursor: pointer;
@@ -1037,7 +1042,7 @@ $logo_id = get_theme_mod('custom_logo');
 			}
 
 			.ssx-search__submit:hover {
-				background: var(--ssx-blue-hover);
+				background: var(--ssx-blue-button-hover);
 			}
 
 			.ssx-suggest {
@@ -1118,7 +1123,7 @@ $logo_id = get_theme_mod('custom_logo');
 
 			.ssx-allbtn:hover,
 			.ssx-allbtn[aria-expanded="true"] {
-				background: var(--ssx-blue);
+				background: var(--ssx-blue-button);
 				color: #fff;
 			}
 
@@ -1193,7 +1198,7 @@ $logo_id = get_theme_mod('custom_logo');
 				min-height: 40px;
 				padding: 0 24px;
 				border-radius: 999px;
-				background: var(--ssx-blue);
+				background: var(--ssx-blue-button);
 				color: #fff !important;
 				font-weight: 700;
 				white-space: nowrap;
@@ -1201,7 +1206,7 @@ $logo_id = get_theme_mod('custom_logo');
 			}
 
 			.ssx-cta:hover {
-				background: var(--ssx-blue-hover);
+				background: var(--ssx-blue-button-hover);
 				box-shadow: 0 6px 16px rgba(31, 168, 222, .38);
 			}
 
@@ -3212,13 +3217,16 @@ $logo_id = get_theme_mod('custom_logo');
 			})();
 		</script>
 
-		<?php if (isset($_GET['type'])) {
+		<?php
+		// Notices from redirects (?type=success&message=...). Landing pages also use
+		// ?type= to match an ad (/banners-displays/?type=stands), so an empty message
+		// shows nothing instead of an empty alert bar.
+		$message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
+		if (isset($_GET['type']) && '' !== $message) {
 			$type = sanitize_key(wp_unslash($_GET['type']));
 			if (!in_array($type, array('success', 'danger', 'warning', 'info'), true)) {
 				$type = 'info';
 			}
-
-			$message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
 		?>
 			<div class="container mt-3 site-alert-container">
 				<div class="row">

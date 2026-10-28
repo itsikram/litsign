@@ -342,6 +342,15 @@ function wholesale_product_image_alt_attachment_attributes($attr, $attachment)
 		return $attr;
 	}
 
+	// Product photos described one by one in data/image-alts.php win over the
+	// product name the templates pass in.
+	$file = (string) get_post_meta($attachment_id, '_wp_attached_file', true);
+	$photo_alt = $file && function_exists('wholesale_product_photo_alt') ? wholesale_product_photo_alt($file) : '';
+	if ('' !== $photo_alt) {
+		$attr['alt'] = $photo_alt;
+		return $attr;
+	}
+
 	$alt = isset($attr['alt']) ? trim((string) $attr['alt']) : '';
 	if ('' !== $alt && !wholesale_product_image_alt_is_auto_generated($alt)) {
 		return $attr;

@@ -11,19 +11,19 @@ $fill = array('q' => 'How do I keep it from blowing over?', 'a' => 'Fill the hol
 return array(
 	'deluxe-signicade-graphic-frame' => array(
 		'title' => array('Deluxe Signicade A-Frame', 'Slide-In Inserts'),
-		'description' => 'Deluxe Signicade A-frame: a heavy duty Plasticade sidewalk board with slide-in 24" x 36" coroplast inserts you can swap in seconds. Ships nationwide.',
+		'description' => 'Deluxe Signicade A-frame: a Plasticade sidewalk board with slide-in 24" x 36" coroplast inserts you can swap in seconds. Ships nationwide. Order online.',
 		'faq' => array(
 			array('q' => 'Do I need one insert or two?', 'a' => 'Order one insert to show your message on the front only, or two so both sides of the A-frame carry a graphic.'),
 		),
 		'care' => 'a-frame',
 	),
 	'deluxe-signicade-graphic-only' => array(
-		'description' => 'Replacement 24" x 36" coroplast inserts for the Deluxe Signicade A-frame, UV printed in full color to slide into its recesses. Ships nationwide.',
+		'description' => 'Replacement 24" x 36" coroplast inserts for the Deluxe Signicade A-frame, UV printed to slide into its recesses. Ships nationwide. Order now.',
 	),
 
 	'simposign-ii-white-graphic-frame' => array(
 		'title' => array('SimpoSign II A-Frame', 'Lightweight'),
-		'description' => 'SimpoSign II A-frame: the 10 lb lightweight Signicade with 22" x 28" printed coroplast inserts and a fillable base for weight. Ships nationwide.',
+		'description' => 'SimpoSign II A-frame: the 10 lb lightweight Signicade with 22" x 28" printed coroplast inserts and a fillable base for weight. Ships nationwide. Order now.',
 		'faq' => array($fill),
 		'care' => 'a-frame',
 	),
@@ -33,7 +33,7 @@ return array(
 
 	'standard-signicade-white-frame-graphic' => array(
 		'title' => array('Signicade A-Frame', 'Standard White'),
-		'description' => 'Standard Signicade A-frame: the classic white Plasticade sidewalk board with 24" x 36" printed faces mounted before it ships. Ships nationwide.',
+		'description' => 'Standard Signicade A-frame: the classic white Plasticade sidewalk board with 24" x 36" printed faces mounted before it ships. Ships nationwide. Order now.',
 		'faq' => array($fill),
 		'care' => 'a-frame',
 	),

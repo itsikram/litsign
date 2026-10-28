@@ -18,7 +18,8 @@ function wholesale_is_removed_spam_path($path)
 		return false;
 	}
 
-	$known = array('article-jule-24000', 'hello-world', 'hello-world-2');
+	// category/bez-rubriki is the spam posts' "Uncategorized" (Russian) archive.
+	$known = array('article-jule-24000', 'hello-world', 'hello-world-2', 'category/bez-rubriki');
 	if (in_array($slug, $known, true)) {
 		return true;
 	}
@@ -190,6 +191,32 @@ function wholesale_seo_redirect_author_archives()
 }
 add_action('template_redirect', 'wholesale_seo_redirect_author_archives', 1);
 
+/**
+ * WordPress answers a 404 by guessing a post whose slug starts with the
+ * request, so /Banners/, /product_category/banners/ and /banners/page/2/ went
+ * to /banners-displays/. When the path names a product category (any case,
+ * under a taxonomy base, or with a page number) send it to that category.
+ */
+add_filter('pre_redirect_guess_404_permalink', function ($pre) {
+	$path = trim((string) wp_parse_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '', PHP_URL_PATH), '/');
+	$home_path = trim((string) wp_parse_url(home_url('/'), PHP_URL_PATH), '/');
+	if ('' !== $home_path && 0 === strpos($path, $home_path . '/')) {
+		$path = substr($path, strlen($home_path) + 1);
+	}
+	$path = preg_replace('#/page/\d+$#i', '', strtolower($path));
+	$path = preg_replace('#^(?:product[_-]category|category)/#', '', $path);
+	if ('' === $path || false !== strpos($path, '/')) {
+		return $pre;
+	}
+
+	$term = get_term_by('slug', sanitize_title($path), 'product_category');
+	if ($term && !is_wp_error($term) && wholesale_seo_category_has_products($term)) {
+		return wholesale_category_url($term->slug);
+	}
+
+	return $pre;
+});
+
 add_filter('wp_sitemaps_add_provider', function ($provider, $name) {
 	return 'users' === $name ? false : $provider;
 }, 10, 2);
@@ -337,6 +364,27 @@ function wholesale_seo_redirect_feeds()
 add_action('template_redirect', 'wholesale_seo_redirect_feeds', 1);
 remove_action('wp_head', 'feed_links', 2);
 remove_action('wp_head', 'feed_links_extra', 3);
+
+/**
+ * The reviews page used to filter by ?product=, which is also WordPress's
+ * product query var, so /reviews/?product=115 answers 404. The filter is
+ * ?review_product= now; send links Google still has to the working URL.
+ */
+function wholesale_seo_redirect_old_review_filter()
+{
+	if (!is_404() || !isset($_GET['product']) || !is_scalar($_GET['product']) || !absint($_GET['product'])) {
+		return;
+	}
+
+	$path = untrailingslashit((string) wp_parse_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '', PHP_URL_PATH));
+	if ($path !== untrailingslashit((string) wp_parse_url(wholesale_reviews_page_url(), PHP_URL_PATH))) {
+		return;
+	}
+
+	wp_safe_redirect(wholesale_reviews_page_url(array('review_product' => absint($_GET['product']))), 301);
+	exit;
+}
+add_action('template_redirect', 'wholesale_seo_redirect_old_review_filter', 1);
 
 function wholesale_seo_sitemap_taxonomy_args($args, $taxonomy)
 {
@@ -515,9 +563,210 @@ function wholesale_seo_migrations()
 		'2026-10-13oz-banner-description' => 'wholesale_seo_migrate_13oz_banner_description',
 		'2026-10-window-graphics-page' => 'wholesale_seo_migrate_window_graphics_page',
 		'2026-10-old-dev-gallery-urls' => 'wholesale_seo_migrate_old_dev_gallery_urls',
+		'2026-10-seo-phase-copy-overrides' => 'wholesale_seo_migrate_phase_copy_overrides',
 		// Not SEO, but it rides the same once-per-site runner (functions.php).
 		'2026-10-places-key-cleanup' => 'wholesale_migrate_places_key_cleanup',
+		'2026-10-terms-business-identity' => 'wholesale_seo_migrate_terms_business_identity',
 	);
+}
+
+/**
+ * Terms & Conditions (Merchant Center misrepresentation fix, 2026-10-27): name
+ * the business behind the site and state the remedy for defective orders
+ * (free reprint, or a full refund of the item when it can't be reprinted), the
+ * same as page-shipping-returns.php. Only text still as originally written is
+ * replaced.
+ */
+function wholesale_seo_migrate_terms_business_identity()
+{
+	$page = get_page_by_path('terms-conditions');
+	if (!$page) {
+		return true;
+	}
+
+	$content = str_replace(
+		array(
+			'Welcome to StorefrontSignOnline.com (SSO for short).',
+			'There will be no refunds of any kind after a job has been approved.',
+			'In some cases, customer will be required to ship defective product(s) back to SSO at their own expense and in an agreed upon reasonable time frame.',
+			'SSO may reimburse the customer for shipping if a defect is determined to exist.',
+			'unless FedEx delivers a defective product or fails to deliver an order.',
+		),
+		array(
+			'Welcome to StorefrontSignOnline.com (SSO for short), operated by Storefront Sign Online LLC, also doing business as Lit Sign Manufacturing, 707 S. Grady Way, Suite 600, Renton, WA 98057. Phone 866-436-2101, email TR@StorefrontSignOnline.com.',
+			'An approved job cannot be cancelled for a refund. This does not limit the reprint or refund described below when an order arrives defective or incorrect.',
+			'If an order is defective, damaged in transit, or different from the proof the customer approved, SSO will reprint or replace it at no charge. If SSO cannot reprint it, SSO will refund the full price paid for that item. In some cases, customer will be required to ship defective product(s) back to SSO in an agreed upon reasonable time frame.',
+			'SSO reimburses the customer for that shipping once a defect is confirmed.',
+			'unless the carrier delivers a damaged order or fails to deliver it.',
+		),
+		$page->post_content
+	);
+
+	if ($content !== $page->post_content) {
+		wp_update_post(array(
+			'ID' => $page->ID,
+			'post_content' => wp_slash($content),
+		));
+	}
+
+	return true;
+}
+
+/**
+ * Category and product titles and descriptions saved on the SEO screen
+ * (inc/seo-admin/) were copies of the theme's defaults at the time, so they
+ * hid the rewritten ones in wholesale_seo_category_meta() and
+ * data/product-pages/ (Oct 2026 SEO pass). Clear only the values still
+ * exactly as they were saved; anything edited since is kept.
+ */
+function wholesale_seo_migrate_phase_copy_overrides()
+{
+	$saved = array(
+		'term' => array(
+			'large-format' => array(
+				'title' => 'Large Format Printing | Adhesive Vinyl, Posters & Film',
+				'description' => 'Large format prints: adhesive vinyl, window perf and clings, floor graphics, vehicle wrap vinyl, backlit film, posters, canvas and acrylic prints.',
+			),
+			'adhesive-products' => array(
+				'title' => 'Printed Adhesive Vinyl | Window, Wall & Floor Graphics',
+				'description' => 'Custom printed adhesive vinyl: standard and high performance vinyl, window perf, clear and frosted film, clings, floor graphics and vehicle wrap.',
+			),
+			'wall-art' => array(
+				'title' => 'Custom Wall Art | Canvas, Acrylic & Framed Prints',
+				'description' => 'Turn photos and artwork into wall art: canvas wraps and rolls, framed canvas, acrylic prints, framed posters and prints, and magnetic wood hangers.',
+			),
+			'indoor-outdoor-displays' => array(
+				'title' => 'Indoor & Outdoor Displays | Flags, Stands & Booths',
+				'description' => 'Event and retail displays: advertising flags, banner stands, A-frames, SEG and trade show displays, event tents, table throws and real estate signs.',
+			),
+			'advertising-flags' => array(
+				'title' => 'Custom Feather Flags & Advertising Flags | Printed Flags',
+				'description' => 'Custom printed feather, teardrop, rectangle and pole flags for storefronts and events. Order the flag only or with a pole set and see your price online.',
+			),
+			'banner-stands' => array(
+				'title' => 'Retractable Banner Stands | Custom Printed Banner Stands',
+				'description' => 'Retractable banner stands, X-stands, tension fabric and table top stands, and step and repeat backdrops in full color. Graphic only or with hardware.',
+			),
+			'banners' => array(
+				'title' => 'Custom Vinyl Banners | 13oz, 18oz, Mesh & Fabric Banners',
+				'description' => 'Custom printed banners: 13oz and 18oz blockout vinyl, mesh, backlit, indoor and wrinkle-free fabric banners, plus pole banner sets. Priced per square foot.',
+			),
+			'real-estate-products' => array(
+				'title' => 'Real Estate Signs | Yard Signs, Frames & Post Signs',
+				'description' => 'Custom real estate signs: yard signs with H-stakes, real estate frames, post signs and A-frames. Reusable outdoor signage printed in full color.',
+			),
+			'a-frame-and-sign-holders' => array(
+				'title' => 'A-Frame Signs & Sign Holders | Poster Stands & Hangers',
+				'description' => 'Banner A-frames, poster stands, snap poster hangers and magnetic wood frame hangers with custom prints. Display systems for banners, signs and posters.',
+			),
+			'signicade-a-frames' => array(
+				'title' => 'Signicade A-Frame Signs | Custom Sidewalk Signs',
+				'description' => 'Plasticade Signicade, Deluxe Signicade and Simposign II sidewalk A-frames with full color UV printed graphics. Order the graphic only or with the frame.',
+			),
+			'seg-products' => array(
+				'title' => 'SEG Fabric Displays | Silicone Edge Graphic Frames',
+				'description' => 'SEG fabric displays and backlit SEG popups from 3ft to 20ft. Silicone edged fabric graphics slot into aluminum frames. Order graphic only or with frame.',
+			),
+			'trade-show-products' => array(
+				'title' => 'Trade Show Displays | Fabric Pop Up & Tension Displays',
+				'description' => 'Straight and curved tension fabric displays and Velcro fabric pop up displays for trade show booths and backdrops. Printed graphics, with or without frame.',
+			),
+			'custom-event-tents' => array(
+				'title' => 'Custom Event Tents | Printed 10x10 Canopy Tents & Walls',
+				'description' => 'Full color 10x10 custom event tents with heavy duty aluminum hex frames, plus printed full and half tent walls and tent flags for outdoor events.',
+			),
+			'table-throws' => array(
+				'title' => 'Custom Table Throws | Printed Table Covers & Runners',
+				'description' => 'Full color dye sublimated table covers for 4ft, 6ft and 8ft and round tables, plus stretch covers, solid color throws and table runners for events.',
+			),
+			'hardware-only' => array(
+				'title' => 'Banner Stand & Display Hardware | Replacement Stands',
+				'description' => 'Hardware only for retractable banner stands, X-stands, tension fabric stands and step and repeat backdrops. Graphics are not included.',
+			),
+			'rigid-signs-and-magnets' => array(
+				'title' => 'Rigid Signs & Magnets | Aluminum, Coroplast & PVC Signs',
+				'description' => 'Custom printed rigid signs: aluminum, Coroplast, foam board, GatorFoam, PVC, styrene and aluminum sandwich boards, plus custom magnets.',
+			),
+			'reflective-products' => array(
+				'title' => 'Reflective Signs | Reflective Vinyl, Aluminum & Magnets',
+				'description' => 'Reflective signs that stand out at night: reflective aluminum signs, Coroplast, PVC, sandwich boards, A-frames, adhesive vinyl and car magnets.',
+			),
+			'dry-erase-products' => array(
+				'title' => 'Dry Erase Signs | Printed Whiteboard Signs & Vinyl',
+				'description' => 'Printed dry erase signs: dry erase adhesive vinyl, Coroplast, foamcore, PVC, magnets, aluminum sandwich boards and Signicade A-frames.',
+			),
+			'banner-stand-hardware' => array(
+				'title' => 'Banner Stand Hardware | Retractable & Fabric Stands',
+				'description' => 'Replacement hardware for standard retractable banner stands and tension fabric stands. Graphic not included.',
+			),
+			'flag-hardware' => array(
+				'title' => 'Flag Poles & Bases | Feather Flag Hardware',
+				'description' => 'Feather and rectangle flag pole sets, cross and square bases, ground stakes, spikes, water bags and carrying bags. Graphic not included.',
+			),
+			'event-tent-hardware-only' => array(
+				'title' => 'Event Tent Frames & Hardware | Tent Accessories',
+				'description' => 'Event tent frames, half wall hardware, flag holders, sandbag sets and wheeled carrying bags for custom event tents. Graphics not included.',
+			),
+		),
+		'post' => array(
+			'acrylic-prints' => array(
+				'description' => 'Custom acrylic prints: full color graphics back-mounted on 1/4" acrylic sheet for a glossy gallery look. Choose 16x24, 20x30 or 24x36 inches.',
+			),
+			'adhesive-window-perf' => array(
+				'description' => 'Perforated window vinyl (70/30) shows your graphic outside while you still see out from inside. Black adhesive backing for one-way vision.',
+			),
+			'canvas-wrap' => array(
+				'description' => 'Canvas wrap prints: your photo or artwork printed on photo quality artist canvas and stretched, so it arrives ready to hang. Priced online.',
+			),
+			'mesh-banner' => array(
+				'description' => 'Custom mesh banners: 10oz vinyl with 70/30 perforation lets wind pass through on fences and buildings. Full color UV printed, indoor or outdoor.',
+			),
+			'tension-fabric' => array(
+				'description' => 'Tension fabric banners: 8.8oz 2-way stretch polyester, dye sublimated for vivid color, for trade show displays and fabric wraps. Priced online.',
+			),
+			'round-table-cover' => array(
+				'description' => 'Custom round table covers for bar and standard height tables, full color dye sublimated on 8.8oz tension fabric. See your price online.',
+			),
+			'tent-flag' => array(
+				'description' => 'Tent flag: add a printed flag to your custom event tent. A clamp connector attaches it to the hex frame leg, so no base is needed.',
+			),
+			'custom-seg-fabric' => array(
+				'description' => 'Custom SEG fabric graphics up to 40\' x 10\': 6oz UV printed polyester with a 3mm x 11mm silicone edge that fits SEG frames. Priced online.',
+			),
+			'spike-econo-flag' => array(
+				'description' => 'Econo flag ground spike: powder coated steel, 28.5" tall, for setting an Econo flag in grass, sand or soil. Fits the Econo pole set. Spike only.',
+			),
+		),
+	);
+
+	foreach ($saved as $type => $objects) {
+		foreach ($objects as $slug => $fields) {
+			$object = 'term' === $type ? get_term_by('slug', $slug, 'product_category') : get_page_by_path($slug, OBJECT, 'product');
+			if (!$object) {
+				continue;
+			}
+			$id = 'term' === $type ? (int) $object->term_id : (int) $object->ID;
+			$clear = array();
+			foreach ($fields as $key => $value) {
+				$stored = 'term' === $type ? get_term_meta($id, '_wholesale_seo_' . $key, true) : get_post_meta($id, '_wholesale_seo_' . $key, true);
+				if ('' !== (string) $stored && $value === html_entity_decode(trim((string) $stored), ENT_QUOTES, 'UTF-8')) {
+					$clear[$key] = '';
+				}
+			}
+			if (!$clear) {
+				continue;
+			}
+			if (function_exists('wholesale_seo_save_object_values')) {
+				wholesale_seo_save_object_values($type, $id, $clear);
+			} else {
+				foreach (array_keys($clear) as $key) {
+					'term' === $type ? delete_term_meta($id, '_wholesale_seo_' . $key) : delete_post_meta($id, '_wholesale_seo_' . $key);
+				}
+			}
+		}
+	}
+
+	return true;
 }
 
 /**

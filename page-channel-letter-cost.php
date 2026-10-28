@@ -141,6 +141,7 @@ get_header();
 			<p class="cl-kicker">Channel letter pricing</p>
 			<h1 id="clc-title" class="sf-hero-title">How Much Do Channel Letters Cost?</h1>
 			<p class="sf-hero-lead">Real prices, not estimates. Channel letters are priced per letter by height<?php if ($cheapest_8) : ?>, starting at <strong><?php echo esc_html($money($cheapest_8)); ?></strong> for one 8 inch front lit letter<?php endif; ?>. The tables below come straight from our online pricing, so they match what you pay at checkout.</p>
+			<?php wholesale_guide_byline(); ?>
 			<div class="sf-hero-actions">
 				<a class="cl-button" href="<?php echo esc_url($front_lit_url); ?>">Price Your Sign <?php echo wholesale_home_icon('arrow'); ?></a>
 				<a class="sf-button-outline" href="<?php echo esc_url($contact_url); ?>">Get a Free Quote</a>

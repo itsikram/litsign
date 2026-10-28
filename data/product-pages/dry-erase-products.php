@@ -11,7 +11,7 @@ $layout = array('q' => 'What should I print and what should I write?', 'a' => 'P
 return array(
 	'dry-erase-adhesive-vinyl' => array(
 		'title' => array('Dry Erase Adhesive Vinyl', 'Printed'),
-		'description' => 'Dry erase adhesive vinyl: full color printed film with a gloss dry erase coat for whiteboards, job boards and labels on any flat surface. Ships nationwide.',
+		'description' => 'Dry erase adhesive vinyl: printed film with a gloss dry erase coat for whiteboards, job boards and labels on flat surfaces. Ships nationwide. Order online.',
 		'faq' => array($layout),
 		'care' => 'dry-erase',
 	),
@@ -25,13 +25,13 @@ return array(
 
 	'dry-erase-coroplast-sign-hstake' => array(
 		'title' => array('Dry Erase Coroplast Signs', 'With H-Stake'),
-		'description' => 'Dry erase coroplast signs: printed 4mm corrugated plastic with a writable gloss coat for open house times and prices. Optional H-stake. Ships nationwide.',
+		'description' => 'Dry erase coroplast signs: printed 4mm corrugated plastic with a writable gloss coat for open house times and prices. Ships nationwide. Order online.',
 		'notes' => array($big),
 		'faq' => array($layout),
 		'care' => 'dry-erase',
 	),
 	'dry-erase-coroplast-sign-only' => array(
-		'description' => 'Dry erase coroplast board without a stake: printed corrugated plastic with a writable gloss coat for walls, fences and frames. Ships nationwide.',
+		'description' => 'Dry erase coroplast board without a stake: printed corrugated plastic with a writable gloss coat for walls, fences and frames. Ships nationwide. Order now.',
 	),
 
 	'dry-erase-foamcore' => array(
@@ -44,7 +44,7 @@ return array(
 
 	'dry-erase-magnet' => array(
 		'title' => array('Dry Erase Magnets', 'Printed'),
-		'description' => 'Dry erase magnets: 30 mil printed magnets with a writable gloss coat for fridges, cabinets, vehicles and job boards. Up to 24" x 60". Ships nationwide.',
+		'description' => 'Dry erase magnets: 30 mil printed magnets with a writable gloss coat for fridges, cabinets, vehicles and job boards. Ships nationwide. Order online.',
 		'faq' => array(
 			array('q' => 'Do rounded corners cost extra?', 'a' => 'No. Straight and rounded corners are the same price.'),
 		),

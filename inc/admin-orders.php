@@ -157,17 +157,13 @@ add_action('admin_footer-edit.php', function () {
 	<?php
 });
 
-// Friendlier order number and colored status badges in the existing columns.
+// Friendlier order number in the existing column (status badges are rendered with their colors).
 add_action('admin_footer-edit.php', function () {
 	if ('order' !== get_current_screen()->post_type) {
 		return;
 	}
 	?>
 	<script>
-		document.querySelectorAll('.column-order_status .wholesale-order-status').forEach(function (el) {
-			var tones = { pending: 'info', processing: 'info', 'on-hold': 'warn', on_hold: 'warn', completed: 'success', cancelled: 'muted', refunded: 'muted', failed: 'danger' };
-			el.classList.add('order-badge', 'order-badge--' + (tones[el.dataset.status] || 'muted'));
-		});
 		document.querySelectorAll('.column-order_number strong').forEach(function (el) {
 			el.textContent = el.textContent.replace(/^#order_/i, '#').toUpperCase();
 		});
@@ -220,7 +216,14 @@ function wholesale_status_email_hints()
 		'processing' => 'Customer is emailed that the order is in production.',
 		'on-hold' => 'Customer is emailed to call or reply with the missing detail.',
 		'on_hold' => 'Customer is emailed to call or reply with the missing detail.',
+		'finishing' => 'No email is sent.',
+		'ready-for-pickup' => 'No email is sent.',
 		'completed' => 'Customer is emailed a shipped notice with the tracking link.',
+		'in-transit' => 'No email is sent (the shipped notice goes out if it was never sent).',
+		'out-for-delivery' => 'No email is sent (the shipped notice goes out if it was never sent).',
+		'delivered' => 'No email is sent, unless no shipped notice was sent: then a delivered notice with the tracking link.',
+		'delivery-issue' => 'No email is sent (the shipped notice goes out if it was never sent).',
+		'returned' => 'No email is sent (the shipped notice goes out if it was never sent).',
 		'cancelled' => 'Customer is emailed that the order was cancelled.',
 		'refunded' => 'Customer is emailed that the refund was issued.',
 		'failed' => 'No email is sent.',
@@ -272,10 +275,15 @@ function wholesale_render_status_box($post)
 	$tracking = get_post_meta($post->ID, '_tracking_number', true);
 	$tracking_url = wholesale_tracking_url($carrier, $tracking);
 	// "on_hold" is a legacy duplicate of "on-hold"; only offer it on orders that already use it.
-	$options = array('pending', 'processing', 'on-hold', 'completed', 'cancelled', 'refunded', 'failed');
+	$groups = array(
+		'Before shipping' => array('pending', 'processing', 'finishing', 'ready-for-pickup', 'on-hold'),
+		'Shipping & delivery' => wholesale_order_shipped_statuses(),
+		'Closed' => array('cancelled', 'refunded', 'failed'),
+	);
 	if ('on_hold' === $status) {
-		$options[array_search('on-hold', $options, true)] = 'on_hold';
+		$groups['Before shipping'][array_search('on-hold', $groups['Before shipping'], true)] = 'on_hold';
 	}
+	$options = array_merge(...array_values($groups));
 	wp_nonce_field('wholesale_fulfillment', 'wholesale_fulfillment_nonce');
 	?>
 	<div class="wo-status" data-current="<?php echo esc_attr($status); ?>">
@@ -283,8 +291,12 @@ function wholesale_render_status_box($post)
 		<p class="wo-status__row">
 			<label for="wo_post_status"><strong>Status</strong></label>
 			<select name="post_status" id="wo_post_status">
-				<?php foreach ($options as $value) : ?>
-					<option value="<?php echo esc_attr($value); ?>" data-hint="<?php echo esc_attr($hints[$value] ?? ''); ?>" <?php selected($status, $value); ?>><?php echo esc_html($info[$value]['label'] ?? $value); ?></option>
+				<?php foreach ($groups as $group => $values) : ?>
+					<optgroup label="<?php echo esc_attr($group); ?>">
+						<?php foreach ($values as $value) : ?>
+							<option value="<?php echo esc_attr($value); ?>" data-hint="<?php echo esc_attr($hints[$value] ?? ''); ?>" <?php selected($status, $value); ?>><?php echo esc_html($info[$value]['label'] ?? $value); ?></option>
+						<?php endforeach; ?>
+					</optgroup>
 				<?php endforeach; ?>
 				<?php if (!in_array($status, $options, true)) : ?>
 					<option value="<?php echo esc_attr($status); ?>" selected><?php echo esc_html(ucwords(str_replace(array('-', '_'), ' ', $status))); ?></option>
@@ -524,7 +536,7 @@ add_action('admin_footer-post.php', function () {
 				var warning = box.querySelector('.wo-status__warning');
 				var sync = function () {
 					var changed = select.value !== box.dataset.current;
-					var shipped = select.value === 'completed';
+					var shipped = <?php echo wp_json_encode(wholesale_order_shipped_statuses()); ?>.indexOf(select.value) !== -1;
 					if (notify) {
 						notify.hidden = !changed;
 						hint.textContent = select.options[select.selectedIndex].dataset.hint || '';
@@ -610,8 +622,29 @@ add_action('shutdown', function () {
 	}
 });
 
+/**
+ * Whether the customer was already sent the shipped (or delivered) notice for this order.
+ */
+function wholesale_order_shipped_email_sent($post_id)
+{
+	foreach ((array) get_post_meta($post_id, '_status_email_log') as $entry) {
+		if (preg_match('/ (completed|delivered)\b/', (string) $entry)) {
+			return true;
+		}
+	}
+	return false;
+}
+
 function wholesale_send_status_email($post_id, $status)
 {
+	// Carrier stages after Shipped send no email of their own. An order that reached one without the shipped
+	// notice (tracking moved it straight past Shipped) gets that notice now, or a delivered notice.
+	if (wholesale_order_is_shipped($status) && 'completed' !== $status) {
+		if (wholesale_order_shipped_email_sent($post_id)) {
+			return;
+		}
+		$status = 'delivered' === $status ? 'delivered' : 'completed';
+	}
 	$billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
 	$email = $billing['billing_email'] ?? '';
 	if (!is_email($email)) {
@@ -624,6 +657,7 @@ function wholesale_send_status_email($post_id, $status)
 	$messages = array(
 		'processing' => array('Your order #%s is in production', 'Good news: your order is now in production. We will email you again when it ships.'),
 		'completed' => array('Your order #%s has shipped', 'Your order is on its way.'),
+		'delivered' => array('Your order #%s was delivered', 'Your order was delivered. Thank you for ordering with us.'),
 		'on-hold' => array('Action needed on order #%s', 'Your order is on hold while we confirm a detail with you. Please call us at 866-436-2101 or reply to this email.'),
 		'on_hold' => array('Action needed on order #%s', 'Your order is on hold while we confirm a detail with you. Please call us at 866-436-2101 or reply to this email.'),
 		'cancelled' => array('Order #%s has been cancelled', 'Your order has been cancelled. If you have questions, please call us at 866-436-2101.'),
@@ -635,7 +669,7 @@ function wholesale_send_status_email($post_id, $status)
 
 	list($subject, $body) = $messages[$status];
 	$tracking_html = '';
-	if ('completed' === $status && $tracking) {
+	if (wholesale_order_is_shipped($status) && $tracking) {
 		$tracking_html = '<p style="margin:16px 0 0;padding:14px 16px;background:#eef7fc;border-radius:8px;font-size:15px;color:#0d2e4d;"><strong>Tracking number:</strong> '
 			. ($tracking_url ? '<a href="' . esc_url($tracking_url) . '" style="color:#1287b5;">' . esc_html($tracking) . '</a>' : esc_html($tracking)) . '</p>';
 	}
@@ -643,7 +677,7 @@ function wholesale_send_status_email($post_id, $status)
 	$tracking_html = (string) apply_filters('wholesale_status_email_tracking_html', $tracking_html, $post_id, $status);
 
 	// Shipped email: invite a review of each item (signed links, so guests can review too).
-	$review_html = 'completed' === $status && function_exists('wholesale_order_review_email_html') ? wholesale_order_review_email_html($post_id) : '';
+	$review_html = wholesale_order_is_shipped($status) && function_exists('wholesale_order_review_email_html') ? wholesale_order_review_email_html($post_id) : '';
 
 	$sent = wholesale_send_order_email($post_id, sprintf($subject, $number), '<p style="margin:0;">' . esc_html($body) . '</p>' . $tracking_html . $review_html);
 	// A failed send is retried automatically from the email log (Emails menu).
@@ -712,7 +746,7 @@ add_action('wp_dashboard_setup', function () {
 
 function wholesale_render_sales_widget()
 {
-	$counted = array('pending', 'processing', 'on-hold', 'on_hold', 'completed');
+	$counted = array_merge(array('pending', 'processing', 'finishing', 'ready-for-pickup', 'on-hold', 'on_hold'), wholesale_order_shipped_statuses());
 	$recent = get_posts(array(
 		'post_type' => 'order',
 		'post_status' => $counted,
@@ -856,6 +890,19 @@ add_action('admin_head', function () {
 		.order-badge--muted { background: #eef1f4; color: #5b6b7b; }
 		.post-type-order .column-order_number { width: 130px; }
 		.post-type-order .column-payment, .post-type-order .column-order_status { width: 130px; }
+		/* Order list: fixed widths for the short columns, so Total, Delivery and Shipment never collapse to one letter. */
+		.post-type-order .fixed .column-order_number { width: 150px; }
+		.post-type-order .fixed .column-order_status { width: 160px; }
+		.post-type-order .fixed .column-products { width: 20%; }
+		.post-type-order .fixed .column-customer { width: 16%; }
+		.post-type-order .fixed .column-vi_source { width: 12%; }
+		.post-type-order .fixed .column-order_total { width: 84px; }
+		.post-type-order .fixed .column-delivery_date { width: 96px; }
+		.post-type-order .fixed .column-sfs_shipment { width: 150px; }
+		.post-type-order .fixed .column-date { width: 110px; }
+		.column-order_status .order-badge { white-space: normal; }
+		.wholesale-order-customer__name { display: block; }
+		.wholesale-order-customer__line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #50575e; }
 		.wholesale-fulfillment-warning { padding: 8px 10px; border-left: 4px solid #d63638; background: #fcf0f1; }
 		.wholesale-kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
 		.wholesale-kpis > div { padding: 10px 12px; border: 1px solid #e3e9ef; border-radius: 8px; background: #f8fafc; }

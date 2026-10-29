@@ -50,7 +50,7 @@ function wholesale_order_review_url($order_id, $product_id)
 function wholesale_order_can_be_reviewed($order_id, $product_id)
 {
 	return 'order' === get_post_type($order_id)
-		&& 'completed' === get_post_status($order_id)
+		&& wholesale_order_is_shipped(get_post_status($order_id))
 		&& 'publish' === get_post_status($product_id)
 		&& in_array(absint($product_id), wholesale_order_product_ids($order_id), true);
 }
@@ -86,7 +86,7 @@ function wholesale_user_completed_order_ids($user_id)
 
 	$ids = get_posts(array(
 		'post_type' => 'order',
-		'post_status' => 'completed',
+		'post_status' => wholesale_order_shipped_statuses(),
 		'posts_per_page' => -1,
 		'fields' => 'ids',
 		'meta_key' => 'user_id',
@@ -97,7 +97,7 @@ function wholesale_user_completed_order_ids($user_id)
 	if (is_email($email)) {
 		$guest_ids = get_posts(array(
 			'post_type' => 'order',
-			'post_status' => 'completed',
+			'post_status' => wholesale_order_shipped_statuses(),
 			'posts_per_page' => -1,
 			'fields' => 'ids',
 			'meta_query' => array(array('key' => 'billing_address', 'value' => $email, 'compare' => 'LIKE')),
@@ -169,7 +169,7 @@ function wholesale_review_eligibility_from_request($product_id)
  */
 function wholesale_order_unreviewed_products($order_id)
 {
-	if ('completed' !== get_post_status($order_id) || !wholesale_setting_enabled('allow_verified_reviews')) {
+	if (!wholesale_order_is_shipped(get_post_status($order_id)) || !wholesale_setting_enabled('allow_verified_reviews')) {
 		return array();
 	}
 	$links = array();
@@ -187,7 +187,7 @@ function wholesale_order_unreviewed_products($order_id)
  */
 function wholesale_order_google_review_url($order_id)
 {
-	if ('completed' !== get_post_status($order_id) || !function_exists('wholesale_google_write_review_url')) {
+	if (!wholesale_order_is_shipped(get_post_status($order_id)) || !function_exists('wholesale_google_write_review_url')) {
 		return '';
 	}
 	return wholesale_google_write_review_url();

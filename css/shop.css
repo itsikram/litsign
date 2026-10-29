@@ -1271,6 +1271,11 @@ a.checkout-pay:hover {
   counter-reset: progress;
 }
 
+/* Delivered orders show a 4th step. */
+.order-progress.order-progress--4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .order-progress li {
   position: relative;
   padding-top: 34px;

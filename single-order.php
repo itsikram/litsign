@@ -19,9 +19,11 @@ $tracking = get_post_meta($post_id, '_tracking_number', true);
 $carrier = get_post_meta($post_id, '_tracking_carrier', true);
 $tracking_url = $tracking ? wholesale_tracking_url($carrier, $tracking) : '';
 $is_staff = current_user_can('edit_post', $post_id);
-$review_links = wholesale_order_unreviewed_products($post_id);
-$can_collect_reviews = 'completed' === $status && wholesale_setting_enabled('allow_verified_reviews');
-$google_review_url = wholesale_order_google_review_url($post_id);
+// Review prompts wait until the package arrives.
+$on_the_way = wholesale_order_on_the_way($status);
+$review_links = $on_the_way ? array() : wholesale_order_unreviewed_products($post_id);
+$can_collect_reviews = !$on_the_way && wholesale_order_is_shipped($status) && wholesale_setting_enabled('allow_verified_reviews');
+$google_review_url = $on_the_way ? '' : wholesale_order_google_review_url($post_id);
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
 };
@@ -57,8 +59,8 @@ get_header();
         </header>
 
         <?php if ($step > 0) :
-            // The tracking sync plugin adds a display-only 4th step "Delivered" from carrier data.
-            $progress = apply_filters('wholesale_order_progress', array('steps' => array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped'), 'step' => $step, 'dates' => array(), 'notes' => array()), $post_id);
+            // A Delivered order has a 4th step; the tracking sync plugin also adds it (with an estimate) for shipped orders.
+            $progress = apply_filters('wholesale_order_progress', array('steps' => array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped') + ($step >= 4 ? array(4 => 'Delivered') : array()), 'step' => $step, 'dates' => array(), 'notes' => array()), $post_id);
             $last_step = max(array_keys($progress['steps']));
             ?>
             <ol class="order-progress<?php echo $last_step > 3 ? ' order-progress--' . (int) $last_step : ''; ?>" aria-label="Order progress">

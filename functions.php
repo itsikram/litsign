@@ -2229,6 +2229,14 @@ function register_order_post_statuses()
 		'refunded' => 'Refunded',
 		'failed' => 'Failed',
 		'on_hold' => 'On hold',
+		// Production and delivery stages (B2Sign and carrier tracking, see wholesale_order_status_info()).
+		'finishing' => 'Finishing',
+		'ready-for-pickup' => 'Ready for pickup',
+		'in-transit' => 'In transit',
+		'out-for-delivery' => 'Out for delivery',
+		'delivered' => 'Delivered',
+		'delivery-issue' => 'Delivery issue',
+		'returned' => 'Returned to sender',
 	);
 
 	foreach ($statuses as $status => $label) {
@@ -2548,8 +2556,7 @@ function wholesale_order_admin_columns($columns)
 		'order_number' => __('Order #', 'litsign'),
 		'order_status' => __('Status', 'litsign'),
 		'customer' => __('Customer', 'litsign'),
-		'contact' => __('Contact', 'litsign'),
-		'items' => __('Items', 'litsign'),
+		'products' => __('Products', 'litsign'),
 		'order_total' => __('Total', 'litsign'),
 		'delivery_date' => __('Delivery', 'litsign'),
 	);
@@ -2587,58 +2594,76 @@ function wholesale_order_admin_column_content($column, $post_id)
 
 		case 'order_status':
 			$status = get_post_status($post_id);
-			$status_info = wholesale_order_status_info();
-			$status_label = isset($status_info[$status]) ? $status_info[$status]['label'] : ucfirst(str_replace('_', ' ', $status));
 			printf(
 				'<span class="wholesale-order-status" data-status="%s">%s</span>',
 				esc_attr($status),
-				esc_html($status_label)
+				wholesale_order_status_badge($status, $post_id) // Escaped in the helper.
 			);
 			break;
 
 		case 'customer':
+			// Name, then email and phone on their own lines (one column, so nothing wraps letter by letter).
 			$name = trim(
 				(isset($billing_data['billing_fname']) ? $billing_data['billing_fname'] : '')
 				. ' '
 				. (isset($billing_data['billing_lname']) ? $billing_data['billing_lname'] : '')
 			);
-			echo esc_html($name ?: __('Guest', 'litsign'));
-			break;
-
-		case 'contact':
 			$email = isset($billing_data['billing_email']) ? sanitize_email($billing_data['billing_email']) : '';
 			$phone = isset($billing_data['billing_tel']) ? $billing_data['billing_tel'] : '';
-
+			printf('<strong class="wholesale-order-customer__name">%s</strong>', esc_html($name ?: __('Guest', 'litsign')));
 			if ($email) {
-				printf('<a href="mailto:%s">%s</a>', esc_attr($email), esc_html($email));
+				printf('<a class="wholesale-order-customer__line" href="mailto:%1$s" title="%1$s">%2$s</a>', esc_attr($email), esc_html($email));
 			}
 			if ($phone) {
-				printf('<br><span>%s</span>', esc_html($phone));
-			}
-			if (!$email && !$phone) {
-				echo '&mdash;';
+				printf('<a class="wholesale-order-customer__line" href="tel:%s">%s</a>', esc_attr(preg_replace('/[^0-9+]/', '', (string) $phone)), esc_html($phone));
 			}
 			break;
 
-		case 'items':
-			$item_count = 0;
-			$product_names = array();
-
-			foreach ($product_data as $product) {
-				$quantity = isset($product['product_quantity']) ? absint($product['product_quantity']) : 0;
-				$item_count += $quantity;
-
-				if (!empty($product['product_title'])) {
-					$product_names[] = $product['product_title'] . ' x ' . $quantity;
-				}
+		case 'products':
+			$products = array_values(array_filter((array) $product_data, 'is_array'));
+			if (!$products) {
+				echo '&mdash;';
+				break;
 			}
 
-			printf(
-				'<span title="%s">%s item%s</span>',
-				esc_attr(implode(', ', $product_names)),
-				esc_html($item_count),
-				1 === $item_count ? '' : 's'
-			);
+			// Show the first three products; the rest collapse into "+N more".
+			$shown = array_slice($products, 0, 3);
+			echo '<ul class="wholesale-order-products">';
+			foreach ($shown as $product) {
+				$product_id = isset($product['product_id']) ? absint($product['product_id']) : 0;
+				$title = !empty($product['product_title']) ? $product['product_title'] : ($product_id ? get_the_title($product_id) : __('Product', 'litsign'));
+				$quantity = isset($product['product_quantity']) ? absint($product['product_quantity']) : 0;
+
+				// Current featured image first; the URL saved with the order is the fallback.
+				$thumb = $product_id ? get_the_post_thumbnail_url($product_id, 'thumbnail') : '';
+				if (!$thumb && !empty($product['product_thumbnail'])) {
+					$thumb = $product['product_thumbnail'];
+				}
+
+				echo '<li>';
+				if ($thumb) {
+					printf('<img src="%s" alt="" width="36" height="36" loading="lazy">', esc_url($thumb));
+				} else {
+					echo '<span class="wholesale-order-products__noimg"></span>';
+				}
+				printf(
+					'<span class="wholesale-order-products__title">%s</span>%s',
+					esc_html($title),
+					$quantity ? ' <span class="wholesale-order-products__qty">&times; ' . esc_html($quantity) . '</span>' : ''
+				);
+				echo '</li>';
+			}
+			echo '</ul>';
+
+			$more = count($products) - count($shown);
+			if ($more > 0) {
+				printf(
+					'<a class="wholesale-order-products__more" href="%s">%s</a>',
+					esc_url(get_edit_post_link($post_id)),
+					/* translators: %d: number of hidden products */
+					esc_html(sprintf(_n('+%d more product', '+%d more products', $more, 'litsign'), $more))
+				);
+			}
 			break;
 
 		case 'order_total':
@@ -2653,6 +2678,27 @@ function wholesale_order_admin_column_content($column, $post_id)
 	}
 }
 add_action('manage_order_posts_custom_column', 'wholesale_order_admin_column_content', 10, 2);
+
+// Thumbnail + title rows in the order list Products column.
+add_action('admin_head-edit.php', function () {
+	$screen = get_current_screen();
+	if (!$screen || 'order' !== $screen->post_type) {
+		return;
+	}
+	?>
+	<style>
+		.fixed .column-products { width: 24%; }
+		.wholesale-order-products { margin: 0; }
+		.wholesale-order-products li { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; }
+		.wholesale-order-products li:last-child { margin-bottom: 0; }
+		.wholesale-order-products img,
+		.wholesale-order-products__noimg { flex: 0 0 36px; width: 36px; height: 36px; object-fit: cover; border: 1px solid #dcdcde; border-radius: 4px; background: #f6f7f7; }
+		.wholesale-order-products__title { line-height: 1.3; }
+		.wholesale-order-products__qty { color: #646970; white-space: nowrap; }
+		.wholesale-order-products__more { display: inline-block; margin-top: 4px; font-size: 12px; }
+	</style>
+	<?php
+});
 
 /**
  * Add all supported order statuses to the order list quick edit form.
@@ -2689,7 +2735,7 @@ function save_custom_post_status($post_id, $post)
 			? $_POST['order_status']
 			: (isset($_POST['hidden_post_status']) ? $_POST['hidden_post_status'] : $_POST['post_status']);
 		$new_status = sanitize_key(wp_unslash($posted_status));
-		$valid_statuses = array('pending', 'on-hold', 'processing', 'completed', 'cancelled', 'refunded', 'failed', 'on_hold');
+		$valid_statuses = array_keys(wholesale_order_status_info());
 
 		if (in_array($new_status, $valid_statuses, true)) {
 			remove_action('save_post', 'save_custom_post_status');
@@ -2722,7 +2768,7 @@ add_filter('bulk_actions-edit-order', 'register_custom_bulk_action'); // Replace
 function handle_custom_bulk_action($redirect_to, $doaction, $post_ids)
 {
 
-	$valid_statuses = array('pending', 'on-hold', 'processing', 'completed', 'cancelled', 'refunded', 'failed', 'on_hold');
+	$valid_statuses = array_keys(wholesale_order_status_info());
 	if (in_array($doaction, $valid_statuses, true)) {
 		foreach ($post_ids as $post_id) {
 			wp_update_post(array(

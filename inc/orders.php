@@ -282,9 +282,16 @@ function wholesale_order_status_info($order_post_id = 0)
     return array(
         'pending' => array('label' => 'Pending review', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are reviewing the details.'),
         'processing' => array('label' => 'In production', 'tone' => 'info', 'step' => 2, 'note' => "Your {$noun} is being made."),
+        'finishing' => array('label' => 'Finishing', 'tone' => 'info', 'step' => 2, 'note' => "Your {$noun} is printed and is being trimmed and packed for shipping."),
+        'ready-for-pickup' => array('label' => 'Ready for pickup', 'tone' => 'success', 'step' => 2, 'note' => "Your {$noun} is ready. Our team will contact you about pickup, or call 866-436-2101."),
         'on-hold' => array('label' => 'On hold', 'tone' => 'warn', 'step' => 1, 'note' => 'We need something from you. Our team will contact you, or call 866-436-2101.'),
         'on_hold' => array('label' => 'On hold', 'tone' => 'warn', 'step' => 1, 'note' => 'We need something from you. Our team will contact you, or call 866-436-2101.'),
-        'completed' => array('label' => 'Shipped', 'tone' => 'success', 'step' => 3, 'note' => "Your {$noun} is on its way."),
+        'completed' => array('label' => 'Shipped', 'tone' => 'success', 'step' => 3, 'note' => "Your {$noun} has shipped. The carrier has the package."),
+        'in-transit' => array('label' => 'In transit', 'tone' => 'info', 'step' => 3, 'note' => "Your {$noun} is on its way."),
+        'out-for-delivery' => array('label' => 'Out for delivery', 'tone' => 'info', 'step' => 3, 'note' => "Your {$noun} is out for delivery today."),
+        'delivered' => array('label' => 'Delivered', 'tone' => 'success', 'step' => 4, 'note' => "Your {$noun} was delivered."),
+        'delivery-issue' => array('label' => 'Delivery issue', 'tone' => 'warn', 'step' => 3, 'note' => 'The carrier reported a problem or delay. We are following up; call 866-436-2101 with questions.'),
+        'returned' => array('label' => 'Returned to sender', 'tone' => 'warn', 'step' => 3, 'note' => 'The carrier is returning the package. Our team will contact you, or call 866-436-2101.'),
         'cancelled' => array('label' => 'Cancelled', 'tone' => 'muted', 'step' => 0, 'note' => 'This order was cancelled.'),
         'refunded' => array('label' => 'Refunded', 'tone' => 'muted', 'step' => 0, 'note' => 'This order was refunded.'),
         'failed' => array('label' => 'Payment failed', 'tone' => 'danger', 'step' => 0, 'note' => 'Payment did not go through. Please contact us.'),
@@ -314,8 +321,31 @@ function wholesale_payment_customer_text($post_id, $unpaid = 'To be arranged wit
 }
 
 /**
- * Status pill. With an order id, the tracking sync plugin may show the delivery stage of a shipped order
- * (In transit, Out for delivery, Delivered); the stored status stays "completed".
+ * Statuses of an order that has left the printer: Shipped and the carrier stages after it. Reviews, the shipped
+ * email and tracking display treat all of them like "completed" (Shipped).
+ *
+ * @return string[]
+ */
+function wholesale_order_shipped_statuses()
+{
+    return array('completed', 'in-transit', 'out-for-delivery', 'delivered', 'delivery-issue', 'returned');
+}
+
+function wholesale_order_is_shipped($status)
+{
+    return in_array((string) $status, wholesale_order_shipped_statuses(), true);
+}
+
+/**
+ * Shipped but not delivered yet: customer pages lead with tracking and hold review prompts until it arrives.
+ */
+function wholesale_order_on_the_way($status)
+{
+    return in_array((string) $status, array('in-transit', 'out-for-delivery', 'delivery-issue', 'returned'), true);
+}
+
+/**
+ * Status pill. With an order id, the tracking sync plugin may add detail such as "1/2 delivered".
  */
 function wholesale_order_status_badge($status, $post_id = 0)
 {

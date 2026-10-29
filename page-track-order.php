@@ -74,6 +74,13 @@ if ($order_post_id) {
         'pending' => 'We\'re reviewing your order',
         'processing' => 'Your order is in production',
         'completed' => 'Your order has shipped',
+        'finishing' => 'Your order is being finished',
+        'ready-for-pickup' => 'Your order is ready for pickup',
+        'in-transit' => 'Your order is on its way',
+        'out-for-delivery' => 'Your order is out for delivery',
+        'delivered' => 'Your order was delivered',
+        'delivery-issue' => 'There is a delivery issue',
+        'returned' => 'Your package is being returned',
         'on-hold' => 'Your order is on hold',
         'on_hold' => 'Your order is on hold',
         'cancelled' => 'This order was cancelled',
@@ -124,8 +131,8 @@ get_header();
                     </div>
 
                     <?php if ($step > 0) :
-                        // The tracking sync plugin adds a display-only 4th step "Delivered" from carrier data.
-                        $progress = apply_filters('wholesale_order_progress', array('steps' => array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped'), 'step' => $step, 'dates' => $step_dates, 'notes' => array()), $order_post_id);
+                        // A Delivered order has a 4th step; the tracking sync plugin also adds it (with an estimate) for shipped orders.
+                        $progress = apply_filters('wholesale_order_progress', array('steps' => array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped') + ($step >= 4 ? array(4 => 'Delivered') : array()), 'step' => $step, 'dates' => $step_dates, 'notes' => array()), $order_post_id);
                         $last_step = max(array_keys($progress['steps']));
                         ?>
                         <ol class="order-progress track-progress<?php echo $last_step > 3 ? ' order-progress--' . (int) $last_step : ''; ?>" aria-label="Order progress">
@@ -204,13 +211,21 @@ get_header();
                     <section class="checkout-card" aria-labelledby="track-activity">
                         <h2 id="track-activity">Order activity</h2>
                         <ol class="track-timeline">
-                            <?php foreach (array_reverse($timeline) as $i => $event) :
+                            <?php
+                            // The tracking number goes with the first shipped event only, not every delivery stage after it.
+                            $first_shipped = null;
+                            foreach ($timeline as $index => $event) {
+                                if (null === $first_shipped && wholesale_order_is_shipped($event['status'])) {
+                                    $first_shipped = count($timeline) - 1 - $index;
+                                }
+                            }
+                            foreach (array_reverse($timeline) as $i => $event) :
                                 $tone = 'placed' === $event['status'] ? 'info' : ($status_info[$event['status']]['tone'] ?? 'muted');
                                 ?>
                                 <li class="track-event track-event--<?php echo esc_attr($tone); ?><?php echo 0 === $i ? ' is-latest' : ''; ?>">
                                     <strong><?php echo esc_html($event['label']); ?></strong>
                                     <time datetime="<?php echo esc_attr(gmdate('c', $event['time'])); ?>"><?php echo esc_html(wp_date('M j, Y · g:i a', $event['time'])); ?></time>
-                                    <?php if ('completed' === $event['status'] && $tracking) : ?>
+                                    <?php if ($i === $first_shipped && $tracking) : ?>
                                         <span><?php echo esc_html(($carrier_label ? $carrier_label . ' ' : '') . $tracking); ?></span>
                                     <?php elseif ($event['note']) : ?>
                                         <span><?php echo esc_html($event['note']); ?></span>

@@ -52,7 +52,7 @@ get_header();
                         <div class="order-row-main">
                             <div class="order-row-top">
                                 <a class="order-row-number" href="<?php echo esc_url(get_permalink($order)); ?>">Order #<?php echo esc_html(wholesale_order_number($order->ID)); ?></a>
-                                <?php echo wholesale_order_status_badge($order->post_status); // Escaped in the helper. ?>
+                                <?php echo wholesale_order_status_badge($order->post_status, $order->ID); // Escaped in the helper. ?>
                             </div>
                             <p class="order-row-items">
                                 <?php echo esc_html(implode(', ', array_map(static function ($item) {
@@ -64,7 +64,10 @@ get_header();
                                 <?php if ('completed' !== $order->post_status && get_post_meta($order->ID, 'estimate_delivery_time', true)) : ?>
                                     &middot; Estimated to ship by <?php echo esc_html(get_post_meta($order->ID, 'estimate_delivery_time', true)); ?>
                                 <?php endif; ?>
-                                <?php if ($tracking) : ?>
+                                <?php $shipment_summary = (string) apply_filters('wholesale_my_orders_shipment_summary', '', $order->ID); ?>
+                                <?php if ('' !== $shipment_summary) : ?>
+                                    &middot; <?php echo $shipment_summary; // Status badge and estimate, escaped by the tracking sync plugin. ?>
+                                <?php elseif ($tracking) : ?>
                                     &middot; Tracking <?php echo esc_html($tracking); ?>
                                 <?php endif; ?>
                             </p>

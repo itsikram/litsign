@@ -14,7 +14,7 @@ return array(
 	'slug' => 'kentucky',
 	'name' => 'Kentucky',
 	'abbr' => 'KY',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Kentucky',
 	'neighbors' => array('indiana', 'ohio', 'west-virginia', 'virginia', 'tennessee', 'missouri', 'illinois'),

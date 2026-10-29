@@ -120,16 +120,22 @@ get_header();
                                 <p class="track-note"><?php echo esc_html($current['note']); ?></p>
                             <?php endif; ?>
                         </div>
-                        <?php echo wholesale_order_status_badge($status); // Escaped in the helper. ?>
+                        <?php echo wholesale_order_status_badge($status, $order_post_id); // Escaped in the helper. ?>
                     </div>
 
-                    <?php if ($step > 0) : ?>
-                        <ol class="order-progress track-progress" aria-label="Order progress">
-                            <?php foreach (array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped') as $index => $label) : ?>
-                                <li class="<?php echo $index < $step || 3 === $step ? 'is-done' : ($index === $step ? 'is-current' : ''); ?>"<?php echo $index === $step ? ' aria-current="step"' : ''; ?>>
+                    <?php if ($step > 0) :
+                        // The tracking sync plugin adds a display-only 4th step "Delivered" from carrier data.
+                        $progress = apply_filters('wholesale_order_progress', array('steps' => array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped'), 'step' => $step, 'dates' => $step_dates, 'notes' => array()), $order_post_id);
+                        $last_step = max(array_keys($progress['steps']));
+                        ?>
+                        <ol class="order-progress track-progress<?php echo $last_step > 3 ? ' order-progress--' . (int) $last_step : ''; ?>" aria-label="Order progress">
+                            <?php foreach ($progress['steps'] as $index => $label) : ?>
+                                <li class="<?php echo $index < $progress['step'] || $last_step === $progress['step'] ? 'is-done' : ($index === $progress['step'] ? 'is-current' : ''); ?>"<?php echo $index === $progress['step'] ? ' aria-current="step"' : ''; ?>>
                                     <span><?php echo esc_html($label); ?></span>
-                                    <?php if ($index <= $step && isset($step_dates[$index])) : ?>
-                                        <small><?php echo esc_html(wp_date('M j', $step_dates[$index])); ?></small>
+                                    <?php if ($index <= $progress['step'] && isset($progress['dates'][$index])) : ?>
+                                        <small><?php echo esc_html(wp_date('M j', $progress['dates'][$index])); ?></small>
+                                    <?php elseif (!empty($progress['notes'][$index])) : ?>
+                                        <small><?php echo esc_html($progress['notes'][$index]); ?></small>
                                     <?php elseif (3 === $index && $ship_by) : ?>
                                         <small>Est. <?php echo esc_html($ship_by); ?></small>
                                     <?php endif; ?>
@@ -138,7 +144,10 @@ get_header();
                         </ol>
                     <?php endif; ?>
 
-                    <?php if ($tracking) : ?>
+                    <?php $shipments_html = (string) apply_filters('wholesale_order_shipments_html', '', $order_post_id, 'track'); ?>
+                    <?php if ('' !== $shipments_html) : ?>
+                        <?php echo $shipments_html; // Every package with live status, escaped by the tracking sync plugin. ?>
+                    <?php elseif ($tracking) : ?>
                         <div class="track-shipment">
                             <div>
                                 <span class="track-label"><?php echo esc_html($carrier_label ? $carrier_label . ' tracking number' : 'Tracking number'); ?></span>

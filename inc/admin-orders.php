@@ -240,7 +240,7 @@ add_action('edit_form_top', function ($post) {
 	<div class="wo-header">
 		<div class="wo-header__main">
 			<h2 class="wo-header__title">Order #<?php echo esc_html(wholesale_order_number($post->ID)); ?></h2>
-			<?php echo wholesale_order_status_badge($post->post_status); // Escaped in the helper. ?>
+			<?php echo wholesale_order_status_badge($post->post_status, $post->ID); // Escaped in the helper. ?>
 			<?php echo wholesale_payment_badge($post->ID); // Escaped in the helper. ?>
 		</div>
 		<p class="wo-header__meta">
@@ -406,6 +406,8 @@ function wholesale_render_activity_box($post)
 	foreach (wholesale_order_refund_log($post->ID) as $entry) {
 		$events[] = array('time' => (int) $entry['time'], 'text' => wholesale_refund_activity_text($entry));
 	}
+	// Staff-only notes from plugins, e.g. "Tracking synced from supplier" (each: time, text).
+	$events = (array) apply_filters('wholesale_order_activity_events', $events, $post);
 	usort($events, static function ($a, $b) {
 		return $b['time'] <=> $a['time'];
 	});
@@ -637,6 +639,8 @@ function wholesale_send_status_email($post_id, $status)
 		$tracking_html = '<p style="margin:16px 0 0;padding:14px 16px;background:#eef7fc;border-radius:8px;font-size:15px;color:#0d2e4d;"><strong>Tracking number:</strong> '
 			. ($tracking_url ? '<a href="' . esc_url($tracking_url) . '" style="color:#1287b5;">' . esc_html($tracking) . '</a>' : esc_html($tracking)) . '</p>';
 	}
+	// The tracking sync plugin lists every package here when an order ships in several.
+	$tracking_html = (string) apply_filters('wholesale_status_email_tracking_html', $tracking_html, $post_id, $status);
 
 	// Shipped email: invite a review of each item (signed links, so guests can review too).
 	$review_html = 'completed' === $status && function_exists('wholesale_order_review_email_html') ? wholesale_order_review_email_html($post_id) : '';
@@ -748,7 +752,7 @@ function wholesale_render_sales_widget()
 			<?php foreach (array_slice($attention, 0, 6) as $id) : ?>
 				<li>
 					<a href="<?php echo esc_url(get_edit_post_link($id)); ?>">#<?php echo esc_html(wholesale_order_number($id)); ?></a>
-					<?php echo wholesale_order_status_badge(get_post_status($id)); // Escaped in the helper. ?>
+					<?php echo wholesale_order_status_badge(get_post_status($id), $id); // Escaped in the helper. ?>
 					<?php echo wholesale_payment_badge($id); // Escaped in the helper. ?>
 					<span><?php echo esc_html($money(wholesale_order_total($id))); ?></span>
 				</li>
@@ -763,7 +767,7 @@ function wholesale_render_sales_widget()
 			<li>
 				<a href="<?php echo esc_url(get_edit_post_link($order->ID)); ?>">#<?php echo esc_html(wholesale_order_number($order->ID)); ?></a>
 				<span><?php echo esc_html(trim(($billing['billing_fname'] ?? '') . ' ' . ($billing['billing_lname'] ?? ''))); ?></span>
-				<?php echo wholesale_order_status_badge($order->post_status); // Escaped in the helper. ?>
+				<?php echo wholesale_order_status_badge($order->post_status, $order->ID); // Escaped in the helper. ?>
 				<span><?php echo esc_html($money(wholesale_order_total($order->ID))); ?></span>
 			</li>
 		<?php endforeach; ?>

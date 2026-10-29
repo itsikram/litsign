@@ -15,7 +15,7 @@ return array(
 	'slug' => 'tennessee',
 	'name' => 'Tennessee',
 	'abbr' => 'TN',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Tennessee',
 	'neighbors' => array('kentucky', 'virginia', 'north-carolina', 'georgia', 'alabama', 'mississippi', 'arkansas', 'missouri'),

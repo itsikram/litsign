@@ -15,7 +15,7 @@ return array(
 	'slug' => 'alabama',
 	'name' => 'Alabama',
 	'abbr' => 'AL',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Alabama',
 	'neighbors' => array('tennessee', 'georgia', 'florida', 'mississippi'),

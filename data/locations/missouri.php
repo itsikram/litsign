@@ -16,7 +16,7 @@ return array(
 	'slug' => 'missouri',
 	'name' => 'Missouri',
 	'abbr' => 'MO',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Missouri',
 	'neighbors' => array('iowa', 'illinois', 'kentucky', 'tennessee', 'arkansas', 'oklahoma', 'kansas', 'nebraska'),

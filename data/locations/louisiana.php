@@ -14,7 +14,7 @@ return array(
 	'slug' => 'louisiana',
 	'name' => 'Louisiana',
 	'abbr' => 'LA',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Louisiana',
 	'neighbors' => array('arkansas', 'mississippi', 'texas'),

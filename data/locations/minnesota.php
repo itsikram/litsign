@@ -15,7 +15,7 @@ return array(
 	'slug' => 'minnesota',
 	'name' => 'Minnesota',
 	'abbr' => 'MN',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Minnesota',
 	'neighbors' => array('wisconsin', 'iowa', 'south-dakota', 'north-dakota'),

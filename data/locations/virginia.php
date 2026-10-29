@@ -14,7 +14,7 @@ return array(
 	'slug' => 'virginia',
 	'name' => 'Virginia',
 	'abbr' => 'VA',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Virginia',
 	'neighbors' => array('maryland', 'west-virginia', 'kentucky', 'tennessee', 'north-carolina'),

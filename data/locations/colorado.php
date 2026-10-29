@@ -16,7 +16,7 @@ return array(
 	'slug' => 'colorado',
 	'name' => 'Colorado',
 	'abbr' => 'CO',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Colorado',
 	'neighbors' => array('wyoming', 'nebraska', 'kansas', 'oklahoma', 'new-mexico', 'utah'),

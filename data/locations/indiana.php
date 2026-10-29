@@ -15,7 +15,7 @@ return array(
 	'slug' => 'indiana',
 	'name' => 'Indiana',
 	'abbr' => 'IN',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Indiana',
 	'neighbors' => array('michigan', 'ohio', 'kentucky', 'illinois'),

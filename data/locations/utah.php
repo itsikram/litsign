@@ -15,7 +15,7 @@ return array(
 	'slug' => 'utah',
 	'name' => 'Utah',
 	'abbr' => 'UT',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Utah',
 	'neighbors' => array('idaho', 'wyoming', 'colorado', 'arizona', 'nevada'),

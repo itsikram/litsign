@@ -15,7 +15,7 @@ return array(
 	'slug' => 'oregon',
 	'name' => 'Oregon',
 	'abbr' => 'OR',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Oregon',
 	'neighbors' => array('washington', 'idaho', 'nevada', 'california'),

@@ -16,7 +16,7 @@ return array(
 	'slug' => 'maryland',
 	'name' => 'Maryland',
 	'abbr' => 'MD',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Maryland',
 	'neighbors' => array('pennsylvania', 'delaware', 'virginia', 'west-virginia'),

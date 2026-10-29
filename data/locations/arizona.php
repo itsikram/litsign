@@ -14,7 +14,7 @@ return array(
 	'slug' => 'arizona',
 	'name' => 'Arizona',
 	'abbr' => 'AZ',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Arizona',
 	'neighbors' => array('california', 'nevada', 'utah', 'new-mexico'),

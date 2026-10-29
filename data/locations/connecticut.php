@@ -15,7 +15,7 @@ return array(
 	'slug' => 'connecticut',
 	'name' => 'Connecticut',
 	'abbr' => 'CT',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Connecticut',
 	'neighbors' => array('new-york', 'massachusetts', 'rhode-island'),

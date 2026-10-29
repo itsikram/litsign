@@ -14,7 +14,7 @@ return array(
 	'slug' => 'south-carolina',
 	'name' => 'South Carolina',
 	'abbr' => 'SC',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/South_Carolina',
 	'neighbors' => array('north-carolina', 'georgia'),

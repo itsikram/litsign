@@ -48,7 +48,7 @@ get_header();
 
         <header class="acct-head">
             <div>
-                <h1>Order #<?php echo esc_html(wholesale_order_number($post_id)); ?> <?php echo wholesale_order_status_badge($status); // Escaped in the helper. ?></h1>
+                <h1>Order #<?php echo esc_html(wholesale_order_number($post_id)); ?> <?php echo wholesale_order_status_badge($status, $post_id); // Escaped in the helper. ?></h1>
                 <p>Placed <?php echo esc_html(get_the_date('F j, Y', $post_id)); ?><?php echo $note ? ' &middot; ' . esc_html($note) : ''; ?></p>
             </div>
             <?php if ($is_staff) : ?>
@@ -56,12 +56,18 @@ get_header();
             <?php endif; ?>
         </header>
 
-        <?php if ($step > 0) : ?>
-            <ol class="order-progress" aria-label="Order progress">
-                <?php foreach (array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped') as $index => $label) : ?>
-                    <li class="<?php echo $index < $step ? 'is-done' : ($index === $step ? 'is-current' : ''); ?>"<?php echo $index === $step ? ' aria-current="step"' : ''; ?>>
+        <?php if ($step > 0) :
+            // The tracking sync plugin adds a display-only 4th step "Delivered" from carrier data.
+            $progress = apply_filters('wholesale_order_progress', array('steps' => array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped'), 'step' => $step, 'dates' => array(), 'notes' => array()), $post_id);
+            $last_step = max(array_keys($progress['steps']));
+            ?>
+            <ol class="order-progress<?php echo $last_step > 3 ? ' order-progress--' . (int) $last_step : ''; ?>" aria-label="Order progress">
+                <?php foreach ($progress['steps'] as $index => $label) : ?>
+                    <li class="<?php echo $index < $progress['step'] ? 'is-done' : ($index === $progress['step'] ? 'is-current' : ''); ?>"<?php echo $index === $progress['step'] ? ' aria-current="step"' : ''; ?>>
                         <span><?php echo esc_html($label); ?></span>
-                        <?php if (3 === $index && get_post_meta($post_id, 'estimate_delivery_time', true) && $step < 3) : ?>
+                        <?php if (!empty($progress['notes'][$index])) : ?>
+                            <small><?php echo esc_html($progress['notes'][$index]); ?></small>
+                        <?php elseif (3 === $index && get_post_meta($post_id, 'estimate_delivery_time', true) && $step < 3) : ?>
                             <small>Est. <?php echo esc_html(get_post_meta($post_id, 'estimate_delivery_time', true)); ?></small>
                         <?php endif; ?>
                     </li>
@@ -69,7 +75,10 @@ get_header();
             </ol>
         <?php endif; ?>
 
-        <?php if ($tracking) : ?>
+        <?php $shipments_html = (string) apply_filters('wholesale_order_shipments_html', '', $post_id, 'order'); ?>
+        <?php if ('' !== $shipments_html) : ?>
+            <?php echo $shipments_html; // Every package with live status, escaped by the tracking sync plugin. ?>
+        <?php elseif ($tracking) : ?>
             <div class="order-tracking checkout-card">
                 <strong>Tracking number<?php echo $carrier ? ' (' . esc_html(strtoupper($carrier)) . ')' : ''; ?>:</strong>
                 <?php if ($tracking_url) : ?>
@@ -79,6 +88,13 @@ get_header();
                 <?php endif; ?>
             </div>
         <?php endif; ?>
+
+        <?php
+        if ($is_staff) {
+            // Staff-only B2Sign order number + tracking number box from the tracking sync plugin.
+            do_action('wholesale_order_staff_tools', $post_id);
+        }
+        ?>
 
         <?php if ($google_review_url) : ?>
             <div class="order-google-review checkout-card">

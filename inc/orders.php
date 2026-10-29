@@ -313,10 +313,17 @@ function wholesale_payment_customer_text($post_id, $unpaid = 'To be arranged wit
     return $unpaid;
 }
 
-function wholesale_order_status_badge($status)
+/**
+ * Status pill. With an order id, the tracking sync plugin may show the delivery stage of a shipped order
+ * (In transit, Out for delivery, Delivered); the stored status stays "completed".
+ */
+function wholesale_order_status_badge($status, $post_id = 0)
 {
     $info = wholesale_order_status_info();
     $item = isset($info[$status]) ? $info[$status] : array('label' => ucwords(str_replace(array('-', '_'), ' ', (string) $status)), 'tone' => 'muted');
+    if ($post_id) {
+        $item = apply_filters('wholesale_order_status_badge_item', $item, $status, (int) $post_id);
+    }
     return '<span class="order-badge order-badge--' . esc_attr($item['tone']) . '">' . esc_html($item['label']) . '</span>';
 }
 

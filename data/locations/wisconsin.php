@@ -15,7 +15,7 @@ return array(
 	'slug' => 'wisconsin',
 	'name' => 'Wisconsin',
 	'abbr' => 'WI',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Wisconsin',
 	'neighbors' => array('michigan', 'minnesota', 'iowa', 'illinois'),

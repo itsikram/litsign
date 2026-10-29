@@ -15,7 +15,7 @@ return array(
 	'slug' => 'nevada',
 	'name' => 'Nevada',
 	'abbr' => 'NV',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Nevada',
 	'neighbors' => array('california', 'oregon', 'idaho', 'utah', 'arizona'),

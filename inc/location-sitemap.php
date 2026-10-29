@@ -62,7 +62,8 @@ function wholesale_location_sitemap_listable($page)
 }
 
 /**
- * The URLs the location sitemap lists, hub first.
+ * The URLs the location sitemap lists: hub first, then states A-Z, each
+ * followed by its cities A-Z.
  *
  * @return array List of array('loc' => URL, 'lastmod' => Y-m-d).
  */
@@ -87,9 +88,15 @@ function wholesale_location_sitemap_entries()
 		// Inline cities live in the state file, so they share its date.
 		$lastmod = $lastmod ? $lastmod : wholesale_guide_updated($state);
 
-		$entries[] = array('loc' => get_permalink($page), 'lastmod' => $lastmod);
+		// Sort key: state name, then city name, so each state is followed by its cities A-Z.
+		$sort = $state['name'] . "\0" . ('city' === $entry['type'] ? $state['cities'][$entry['city']]['name'] : '');
+		$entries[] = array('loc' => get_permalink($page), 'lastmod' => $lastmod, 'sort' => $sort);
 		$newest = max($newest, $lastmod);
 	}
+
+	usort($entries, static function ($a, $b) {
+		return strcasecmp($a['sort'], $b['sort']);
+	});
 
 	$hub = get_page_by_path('locations');
 	if (wholesale_guide_is_live('locations') && wholesale_location_sitemap_listable($hub)) {

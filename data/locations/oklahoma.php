@@ -16,7 +16,7 @@ return array(
 	'slug' => 'oklahoma',
 	'name' => 'Oklahoma',
 	'abbr' => 'OK',
-	'status' => 'review',
+	'status' => 'live',
 	'updated' => '2026-10-27',
 	'wikipedia' => 'https://en.wikipedia.org/wiki/Oklahoma',
 	'neighbors' => array('kansas', 'missouri', 'arkansas', 'texas', 'new-mexico', 'colorado'),

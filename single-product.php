@@ -592,9 +592,10 @@ get_header();
                                         $group_item_title = $product_group['title'];
                                         if ($group_item_slug == true) {
                                             $group_product = get_page_by_path($group_item_slug, OBJECT, 'product');
-                                            if ($group_product) {
-                                                $group_product_id = $group_product->ID;
+                                            if (!$group_product) {
+                                                continue;
                                             }
+                                            $group_product_id = $group_product->ID;
                                         } else {
                                             $group_product_id = get_the_ID();
                                         }
@@ -607,7 +608,7 @@ get_header();
                                     ?>
 
                                         <div class="product-group-item <?php echo $is_current_product; ?>">
-                                            <a href="<?php echo $group_product_permalink; ?>" class="product-group-item-link"><?php echo $group_item_title; ?></a>
+                                            <a href="<?php echo $group_product_permalink; ?>" class="product-group-item-link"><?php echo esc_html($group_item_title); ?></a>
                                         </div>
 
 

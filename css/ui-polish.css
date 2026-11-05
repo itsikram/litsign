@@ -1418,3 +1418,8 @@
   font-weight: 800;
   white-space: nowrap;
 }
+
+.product-attibute-box .product-group-container .product-group-item.current .product-group-item-link {
+  border-color: #1fa8de;
+  background-color: #e0f4fc;
+}

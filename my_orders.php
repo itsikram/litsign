@@ -33,7 +33,7 @@ get_header();
                 <h2>No orders yet</h2>
                 <p>When you place an order it will appear here with its status and tracking.</p>
                 <div class="cart-empty-actions">
-                    <a class="checkout-pay" href="<?php echo esc_url(home_url('/#product-box-container')); ?>">Shop Channel Letters</a>
+                    <a class="checkout-pay" href="<?php echo esc_url(home_url('/')); ?>">Shop Products</a>
                 </div>
             </section>
         <?php else : ?>

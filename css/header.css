@@ -634,6 +634,18 @@ html.sh-lock body {
     margin-top: 6px;
   }
 
+  /* On phones the All Products button (inline display:none) and the category
+     links are hidden, so the row is empty unless it holds a builder button.
+     Collapse it: otherwise its top border and padding leave a blank strip
+     with a line under the logo. #megaMenu is position: fixed here, so it
+     still opens from the bottom bar. */
+  .site-header .header-bottom:not(:has(.header-builder-menu)) {
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
   .site-header .header-bottom-container {
     gap: 8px;
   }

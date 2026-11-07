@@ -376,7 +376,9 @@
           filled++;
         }
       });
-      if (same && saved.same_shipping_address === false) {
+      // The box used to start unticked, so most saved visits say false. Only a saved
+      // separate address means this customer really ships somewhere else.
+      if (same && saved.same_shipping_address === false && saved.shipping_address) {
         same.checked = false;
         syncShipping();
       }

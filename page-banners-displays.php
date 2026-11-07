@@ -46,7 +46,7 @@ $product_image = static function ($slug, $alt, $sizes, $eager = false) {
 	));
 };
 
-// Card prices are whole dollars, except per-ft² prices: rounding $3.30 up to $4 would
+// Card prices are whole dollars, except per-ftÂ² prices: rounding $3.30 up to $4 would
 // overstate the price the ads quote, so those keep their cents.
 $card_price = static function ($html) {
 	return preg_match('/per ft/i', wp_strip_all_tags((string) $html)) ? $html : wholesale_price_no_cents($html);
@@ -161,12 +161,7 @@ if ($type) {
 // Product slug, label. Each photo opens its product with the price, so a phone
 // visitor can reach a price from the second screen; ad visitors who only saw
 // unlabeled photos there mostly left without opening a product.
-$hero_photos = array(
-	array('13oz-vinyl-banner', 'Vinyl Banners'),
-	array('standard-retractable-insert-stand', 'Banner Stands'),
-	array('feather-angled-flag-pole', 'Feather Flags'),
-	array('10ft-seg-fabric-display-graphic-frame', 'Trade Show Displays'),
-);
+
 if ($type) {
 	$type_slug = $types[$type][2];
 	$hero_photos = array_values(array_filter($hero_photos, static function ($photo) use ($type_slug) {
@@ -217,12 +212,13 @@ wholesale_seo_set_page_faq(array(
 	),
 ));
 
-get_header();
+// Register the matching image before the header prints its preload links.
+list($page_hero_image, $page_hero_mobile) = wholesale_landing_page_hero_images('banners');
+$GLOBALS['wholesale_hero_image'] = $page_hero_image;
+$GLOBALS['wholesale_hero_mobile_image'] = $page_hero_mobile;
+$page_hero_background = "--lp-desktop: url('" . esc_url($page_hero_image) . "'); --lp-mobile: url('" . esc_url($page_hero_mobile) . "');";
 
-$page_hero_image = get_the_post_thumbnail_url(get_the_ID(), 'large');
-$page_hero_image = $page_hero_image ? wholesale_webp_url(esc_url_raw($page_hero_image)) : '';
-$default_page_hero_image = wholesale_default_hero_url();
-$page_hero_background = wholesale_hero_background_style($page_hero_image, $default_page_hero_image);
+get_header();
 
 // Hero proof point: the Google rating, linked to the reviews page (this page has no reviews section).
 $google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
@@ -265,25 +261,21 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 						<span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT</span>
 					</p>
 				</div>
-				<div class="bd-hero-media">
-					<?php foreach ($hero_photos as $index => $photo) : ?>
-						<?php
-						$image = $product_image($photo[0], '', '(max-width: 575px) 45vw, (max-width: 991px) 22vw, 260px', 0 === $index ? 'high' : true);
-						$url = $product_url($photo[0]);
-						if (!$image || !$url) {
-							continue;
-						}
-						$price = $card_price(wholesale_seo_product_starting_text($photo[0]));
-						?>
-						<a class="bd-hero-tile bd-hero-tile--<?php echo (int) $index + 1; ?>" href="<?php echo esc_url($url); ?>">
-							<span class="bd-hero-tile-image"><?php echo $image; ?></span>
-							<span class="bd-hero-tile-label"><?php echo esc_html($photo[1]); ?><?php if ($price) : ?><small>From <?php echo wp_kses_post($price); ?></small><?php endif; ?></span>
-						</a>
-					<?php endforeach; ?>
-				</div>
+
 			</div>
 		</div>
 	</section>
+
+	<nav class="lp-jump" aria-label="Browse display types">
+		<div class="container">
+			<p>Find your display</p>
+			<div class="lp-jump-links">
+				<?php foreach ($lines as $item) : ?>
+					<a href="#<?php echo esc_attr($item[4]); ?>"><?php echo wp_kses_post($item[2]); ?></a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</nav>
 
 	<div class="home-hero-features bd-features" aria-label="Why order from us">
 		<div class="container home-hero-feature-grid">
@@ -328,6 +320,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 							<?php if ($line_price) : ?>
 								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($line_price); ?></p>
 							<?php endif; ?>
+							<a class="lp-order" href="<?php echo esc_url($line_url); ?>">See Sizes &amp; Prices <?php echo wholesale_home_icon('arrow'); ?></a>
 						</div>
 					</article>
 				<?php endforeach; ?>
@@ -386,6 +379,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 						<?php if ($price) : ?>
 							<span class="bd-product-price"><small>From</small> <?php echo wp_kses_post($price); ?></span>
 						<?php endif; ?>
+						<span class="lp-order">Customize &amp; Order <?php echo wholesale_home_icon('arrow'); ?></span>
 					</a>
 				<?php endforeach; ?>
 			</div>

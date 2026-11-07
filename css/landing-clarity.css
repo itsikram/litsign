@@ -1,0 +1,323 @@
+/*
+ * Landing-page clarity layer (inc/landing-clarity.php): "the short version"
+ * box, the mid-page quote strip and related-guide links. Colors and type
+ * follow the .cl-* and .sf-* sections in style.css and seo-pages.css.
+ */
+
+/* Buttons shared by every block. */
+.lc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 11px 20px;
+  border: 2px solid #1fa8de;
+  border-radius: 999px;
+  background: #1fa8de;
+  color: #fff;
+  font-size: 0.98rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.lc-btn:hover,
+.lc-btn:focus-visible {
+  border-color: #1790c0;
+  background: #1790c0;
+  color: #fff;
+  text-decoration: none;
+}
+
+.lc-btn--outline {
+  background: #fff;
+  color: #127ea8;
+}
+
+.lc-btn--outline:hover,
+.lc-btn--outline:focus-visible {
+  background: #1fa8de;
+  color: #fff;
+}
+
+.lc-btn--call {
+  border-color: transparent;
+  background: transparent;
+  color: #172027;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.lc-btn--call:hover,
+.lc-btn--call:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  color: #127ea8;
+}
+
+.lc-btn .cl-icon,
+.lc-btn svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* The short version */
+.lc-wrap {
+  padding: 8px 0 40px;
+}
+
+.sf-hero + .lc-wrap,
+.bd-hero + .lc-wrap,
+.home-hero + .lc-wrap {
+  margin-top: -16px;
+}
+
+.lc-box {
+  padding: 28px 28px 24px;
+  border: 1px solid #d6ecf6;
+  border-left: 6px solid #1fa8de;
+  border-radius: 16px;
+  background: #f4fbff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.lc-kicker {
+  margin-bottom: 6px;
+}
+
+.lc-title {
+  margin: 0 0 18px;
+  color: #172027;
+  font-size: clamp(1.3rem, 2.2vw, 1.7rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.lc-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px 28px;
+  margin: 0;
+}
+
+.lc-row {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 12px 0;
+  border-top: 1px solid #dceaf2;
+}
+
+.lc-row dt {
+  margin: 0;
+  color: #127ea8;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lc-row dd {
+  margin: 0;
+  color: #1f2a33;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.lc-row dd a {
+  color: #0b6b94;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.lc-row dd strong {
+  color: #0b2b3b;
+}
+
+.lc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.lc-note {
+  margin: 16px 0 0;
+  color: #475569;
+  font-size: 0.93rem;
+  line-height: 1.55;
+}
+
+.lc-note a {
+  color: #0b6b94;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+/* Mid-page quote strip */
+.lc-strip {
+  padding: 36px 0;
+  background: #031835;
+  color: #fff;
+}
+
+.lc-strip-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 40px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.lc-strip-copy {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.lc-strip-title {
+  margin: 0 0 6px;
+  color: #fff;
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.lc-strip-copy p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.lc-strip-copy a {
+  color: #6fd0f5;
+}
+
+.lc-strip-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+}
+
+.lc-strip .lc-btn--outline {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: transparent;
+  color: #fff;
+}
+
+.lc-strip .lc-btn--outline:hover,
+.lc-strip .lc-btn--outline:focus-visible {
+  border-color: #fff;
+  background: #fff;
+  color: #031835;
+}
+
+.lc-strip .lc-btn--call {
+  color: #fff;
+}
+
+.lc-strip .lc-btn--call:hover,
+.lc-strip .lc-btn--call:focus-visible {
+  color: #6fd0f5;
+}
+
+/* Related guides */
+.lc-related {
+  padding: 48px 0;
+}
+
+.lc-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lc-links a {
+  display: block;
+  height: 100%;
+  padding: 14px 16px;
+  border: 1px solid #e6ebf1;
+  border-radius: 12px;
+  background: #fff;
+  color: #172027;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+
+.lc-links a:hover,
+.lc-links a:focus-visible {
+  border-color: #1fa8de;
+  color: #127ea8;
+}
+
+.lc-links small {
+  display: block;
+  margin-top: 4px;
+  color: #52616f;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* Package FAQ reuses the site FAQ styles; the packages page has no .cl-faq spacing of its own. */
+.pkg-page .cl-faq {
+  padding: 40px 0 8px;
+}
+
+@media (max-width: 767.98px) {
+  .lc-wrap {
+    padding: 4px 0 28px;
+  }
+
+  .lc-box {
+    padding: 20px 18px 18px;
+    border-radius: 12px;
+  }
+
+  .lc-rows {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .lc-row {
+    padding: 10px 0;
+  }
+
+  .lc-row dd {
+    font-size: 0.97rem;
+  }
+
+  .lc-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lc-actions .lc-btn--call {
+    align-self: center;
+  }
+
+  .lc-strip {
+    padding: 28px 0;
+  }
+
+  .lc-strip-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .lc-strip-actions .lc-btn--call {
+    align-self: center;
+  }
+}

@@ -58,17 +58,6 @@ if ($order_post_id) {
     $owner = absint(get_post_meta($order_post_id, 'user_id', true));
     $can_view_full = current_user_can('edit_post', $order_post_id) || ($owner && get_current_user_id() === $owner);
 
-    // Date each progress step was reached, from the status log.
-    $step_dates = array(1 => $timeline[0]['time']);
-    foreach ($timeline as $event) {
-        $event_step = $status_info[$event['status']]['step'] ?? 0;
-        if ($event_step > 1 && !isset($step_dates[$event_step])) {
-            $step_dates[$event_step] = $event['time'];
-        }
-    }
-    if ($step >= 2 && !isset($step_dates[2])) {
-        $step_dates[2] = $timeline[0]['time']; // Paid orders start in production.
-    }
 
     $headline = array(
         'pending' => 'We\'re reviewing your order',
@@ -130,26 +119,7 @@ get_header();
                         <?php echo wholesale_order_status_badge($status, $order_post_id); // Escaped in the helper. ?>
                     </div>
 
-                    <?php if ($step > 0) :
-                        // A Delivered order has a 4th step; the tracking sync plugin also adds it (with an estimate) for shipped orders.
-                        $progress = apply_filters('wholesale_order_progress', array('steps' => array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped') + ($step >= 4 ? array(4 => 'Delivered') : array()), 'step' => $step, 'dates' => $step_dates, 'notes' => array()), $order_post_id);
-                        $last_step = max(array_keys($progress['steps']));
-                        ?>
-                        <ol class="order-progress track-progress<?php echo $last_step > 3 ? ' order-progress--' . (int) $last_step : ''; ?>" aria-label="Order progress">
-                            <?php foreach ($progress['steps'] as $index => $label) : ?>
-                                <li class="<?php echo $index < $progress['step'] || $last_step === $progress['step'] ? 'is-done' : ($index === $progress['step'] ? 'is-current' : ''); ?>"<?php echo $index === $progress['step'] ? ' aria-current="step"' : ''; ?>>
-                                    <span><?php echo esc_html($label); ?></span>
-                                    <?php if ($index <= $progress['step'] && isset($progress['dates'][$index])) : ?>
-                                        <small><?php echo esc_html(wp_date('M j', $progress['dates'][$index])); ?></small>
-                                    <?php elseif (!empty($progress['notes'][$index])) : ?>
-                                        <small><?php echo esc_html($progress['notes'][$index]); ?></small>
-                                    <?php elseif (3 === $index && $ship_by) : ?>
-                                        <small>Est. <?php echo esc_html($ship_by); ?></small>
-                                    <?php endif; ?>
-                                </li>
-                            <?php endforeach; ?>
-                        </ol>
-                    <?php endif; ?>
+                    <?php echo wholesale_order_steps_html($order_post_id); // Every stage, step by step; escaped in the helper. ?>
 
                     <?php $shipments_html = (string) apply_filters('wholesale_order_shipments_html', '', $order_post_id, 'track'); ?>
                     <?php if ('' !== $shipments_html) : ?>

@@ -3,6 +3,24 @@
  * .sf-* sections in seo-pages.css and the .cl-* sections in style.css.
  */
 
+.gd-jump-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 20px;
+}
+
+.gd-jump-links a {
+  color: #075b7c;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.gd-page h2[id] {
+  scroll-margin-top: 96px;
+}
+
 /* Key facts box under a hero or section heading. */
 .gd-facts {
   display: grid;

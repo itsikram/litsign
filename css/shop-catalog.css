@@ -1434,8 +1434,10 @@
     display: inline-flex;
   }
 
-  /* Without the script the filters stay in the page flow. */
-  html:not(.sc-ready) .sc-filters {
+  /* Without the script the filters stay in the page flow. sc-js is set in the
+     head, so phones never lay the panel out in the flow and then jump when the
+     script finishes. */
+  html:not(.sc-js) .sc-filters {
     position: static;
     width: auto;
     margin-bottom: 20px;

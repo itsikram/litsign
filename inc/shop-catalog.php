@@ -62,6 +62,17 @@ add_action('wp_enqueue_scripts', function () {
 }, 20);
 
 /**
+ * Mark the page as scripted before anything paints. On phones the CSS then keeps
+ * the filter panel off-canvas from the start, instead of laying it out in the page
+ * and moving it away when the script finishes (a large layout shift).
+ */
+add_action('wp_head', function () {
+	if (wholesale_is_shop_page()) {
+		echo "<script>document.documentElement.classList.add('sc-js');</script>\n";
+	}
+}, 1);
+
+/**
  * Filtered views (?cat=, ?sort=, ...) canonicalize to /shop/ and stay out of
  * the index; their product links are still followed.
  */
@@ -308,6 +319,9 @@ function wholesale_shop_products()
 			),
 		);
 	}
+
+	// One query for every card photo, instead of two per card.
+	_prime_post_caches(array_values(array_unique(array_filter(wp_list_pluck($products, 'thumb')))), false, true);
 
 	usort($products, static function ($a, $b) {
 		return strcmp($a['order'], $b['order']);

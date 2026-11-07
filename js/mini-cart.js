@@ -4,6 +4,7 @@
  * The header cart icon opens the drawer instead of going to /cart/ (modifier-clicks still
  * open the cart page). The product page's Add To Cart posts over AJAX and opens the drawer
  * on success; if the request can't be made at all it falls back to the normal form post.
+ * Buy Now (also an .add-to-cart-btn) adds the same way, then opens checkout.
  */
 (function () {
   "use strict";
@@ -353,6 +354,8 @@
   // the price first so it can be put back and a second add isn't discounted twice.
   let savedTotal = null;
   let submitted = false;
+  // The button that started the add (Add To Cart or Buy Now), for browsers without SubmitEvent.submitter.
+  let lastButton = null;
   document.addEventListener("click", (e) => {
     const button = e.target.closest(".add-to-cart-btn");
     if (!button || !isCartForm(button.form)) return;
@@ -367,8 +370,12 @@
     const total = document.getElementById("totalCost");
     savedTotal = total ? total.value : null;
     submitted = false;
+    lastButton = button;
     window.setTimeout(() => {
-      if (!submitted) restoreTotal();
+      if (submitted) return;
+      // A check stopped this click (no size yet, waiting for a quote...).
+      restoreTotal();
+      lastButton = null;
     }, 0);
   }, true);
 
@@ -391,7 +398,13 @@
     submitted = true;
     form.dataset.adding = "1";
 
-    const buttons = form.querySelectorAll(".add-to-cart-btn");
+    // Buy Now (single-product.php): add, then go straight to checkout instead of the drawer.
+    const submitter = (e.submitter && e.submitter.classList.contains("add-to-cart-btn") ? e.submitter : null) || lastButton;
+    lastButton = null;
+    const buyNow = Boolean(submitter && submitter.classList.contains("buy-now-btn"));
+
+    // Only the pressed button spins; form.dataset.adding blocks the other one meanwhile.
+    const buttons = submitter ? [submitter] : form.querySelectorAll(".add-to-cart-btn");
     buttons.forEach((b) => {
       b.classList.add("is-adding");
       b.setAttribute("aria-busy", "true");
@@ -407,18 +420,26 @@
     };
 
     const data = new FormData(form);
+    if (buyNow) data.set("buy_now", "1");
     enqueue(async () => {
       let json;
       try {
         json = await post("wholesale_mini_cart_add", data);
       } catch (err) {
-        // Couldn't talk to the server the AJAX way: use the regular form post.
+        // Couldn't talk to the server the AJAX way: use the regular form post
+        // (utils/Cart.php sends Buy Now on to checkout).
         done();
+        if (buyNow && !form.querySelector('input[type="hidden"][name="buy_now"]')) {
+          const flag = document.createElement("input");
+          flag.type = "hidden";
+          flag.name = "buy_now";
+          flag.value = "1";
+          form.appendChild(flag);
+        }
         HTMLFormElement.prototype.submit.call(form);
         return;
       }
       done();
-      showAddResult(json);
 
       const fileInput = form.querySelector('input[type="file"][name="custom-artwork"], input[type="file"][data-async-upload]');
       if (fileInput && json.success) {
@@ -426,6 +447,48 @@
         // js/async-upload.js: drop the used upload token and restore the field name.
         fileInput.dispatchEvent(new Event("async-upload:reset"));
       }
+
+      // A price change notice or an error shows in the drawer as usual, so the
+      // customer sees it before paying.
+      if (buyNow && json.success && !json.data.notice && (json.data.added || json.data.existing)) {
+        goToCheckout(json, form, submitter);
+        return;
+      }
+      showAddResult(json);
+    });
+  });
+
+  function goToCheckout(json, form, button) {
+    render(json.data);
+    const added = json.data.added;
+    // inc/ads-tracking.php sends the add_to_cart conversion from this. Not for an item
+    // that was already in the cart (inc/mini-cart.php keeps one line).
+    if (added) document.dispatchEvent(new CustomEvent("wholesale:cart-added", { detail: added }));
+    form.dataset.adding = "1"; // No more adds while the checkout page loads.
+    if (button) {
+      button.classList.add("is-adding");
+      button.setAttribute("aria-busy", "true");
+    }
+    announce("Added to your cart. Opening secure checkout.");
+    const leave = () => window.location.assign(config.checkoutUrl || "/checkout/");
+    if (!added) return leave();
+    // The Google tag (started on the first scroll or tap) sends the event queued above;
+    // give it a moment, as leaving the page at once can drop it.
+    const started = Date.now();
+    (function wait() {
+      if (window.google_tag_manager || window.google_tag_data) return window.setTimeout(leave, 250);
+      if (Date.now() - started > 900) return leave();
+      window.setTimeout(wait, 100);
+    })();
+  }
+
+  // Back from checkout (page restored from the back/forward cache): buttons usable again.
+  window.addEventListener("pageshow", (e) => {
+    if (!e.persisted) return;
+    document.querySelectorAll("form[data-adding]").forEach((form) => { delete form.dataset.adding; });
+    document.querySelectorAll(".add-to-cart-btn.is-adding").forEach((b) => {
+      b.classList.remove("is-adding");
+      b.removeAttribute("aria-busy");
     });
   });
 

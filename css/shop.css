@@ -1262,49 +1262,28 @@ a.checkout-pay:hover {
   text-decoration: none;
 }
 
-.order-progress {
+/* Step-by-step order tracker (order and tracking pages): one row on wide screens, a list on phones. */
+.order-steps {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  margin: 0 0 20px;
+  grid-template-columns: repeat(var(--order-steps, 7), minmax(0, 1fr));
+  margin: 0 0 22px;
   padding: 0;
   list-style: none;
-  counter-reset: progress;
 }
 
-/* Delivered orders show a 4th step. */
-.order-progress.order-progress--4 {
-  grid-template-columns: repeat(4, 1fr);
-}
-
-.order-progress li {
+.order-steps__step {
   position: relative;
-  padding-top: 34px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
   color: var(--shop-muted);
-  font-size: 0.9rem;
   text-align: center;
-  counter-increment: progress;
 }
 
-.order-progress li::before {
-  content: counter(progress);
-  position: absolute;
-  top: 0;
-  left: 50%;
-  z-index: 1;
-  display: grid;
-  width: 26px;
-  height: 26px;
-  place-items: center;
-  border: 2px solid #cfd8e1;
-  border-radius: 50%;
-  background: #fff;
-  color: var(--shop-muted);
-  font-size: 0.8rem;
-  font-weight: 700;
-  transform: translateX(-50%);
-}
-
-.order-progress li + li::after {
+/* The line leading into each step: green once the step is reached. */
+.order-steps__step + .order-steps__step::before {
   content: "";
   position: absolute;
   top: 12px;
@@ -1314,34 +1293,140 @@ a.checkout-pay:hover {
   background: #cfd8e1;
 }
 
-.order-progress li.is-done,
-.order-progress li.is-current {
-  color: var(--shop-ink);
+.order-steps__step.is-done::before,
+.order-steps__step.is-current::before {
+  background: var(--shop-success);
+}
+
+.order-steps__dot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 2px solid #cfd8e1;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.is-done .order-steps__dot {
+  border-color: var(--shop-success);
+  background: var(--shop-success);
+}
+
+.is-done .order-steps__dot::after {
+  content: "\2713";
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.is-current .order-steps__dot {
+  border-color: var(--shop-brand);
+  box-shadow: 0 0 0 4px rgba(31, 168, 222, 0.18);
+}
+
+.is-current .order-steps__dot::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--shop-brand);
+}
+
+.order-steps__step.is-warn .order-steps__dot {
+  border-color: var(--shop-warn);
+  background: var(--shop-warn-soft);
+  box-shadow: none;
+}
+
+.order-steps__step.is-warn .order-steps__dot::after {
+  content: "!";
+  width: auto;
+  height: auto;
+  background: none;
+  color: var(--shop-warn);
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.order-steps__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.order-steps__text strong {
   font-weight: 600;
 }
 
-.order-progress li.is-done::before {
-  content: "\2713";
-  border-color: var(--shop-success);
-  background: var(--shop-success);
-  color: #fff;
+.is-done .order-steps__text strong,
+.is-current .order-steps__text strong {
+  color: var(--shop-ink);
 }
 
-.order-progress li.is-current::before {
-  border-color: var(--shop-brand);
-  background: var(--shop-brand);
-  color: #fff;
+.is-warn .order-steps__text strong {
+  color: var(--shop-warn);
 }
 
-.order-progress li.is-done::after,
-.order-progress li.is-current::after {
-  background: var(--shop-success);
-}
-
-.order-progress small {
-  display: block;
+.order-steps small {
   color: var(--shop-muted);
-  font-weight: 400;
+  font-size: 0.78rem;
+}
+
+.order-steps .screen-reader-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .order-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .order-steps__step {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 0 0 18px;
+    text-align: left;
+  }
+
+  .order-steps__step:last-child {
+    padding-bottom: 0;
+  }
+
+  /* Phones: the line runs down from each dot to the next step, green once that step is reached. */
+  .order-steps__step + .order-steps__step::before {
+    content: none;
+  }
+
+  .order-steps__step:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    top: 26px;
+    bottom: 0;
+    left: 12px;
+    width: 2px;
+    background: #cfd8e1;
+  }
+
+  .order-steps__step:has(+ .is-done)::after,
+  .order-steps__step:has(+ .is-current)::after {
+    background: var(--shop-success);
+  }
+
+  .order-steps__text {
+    padding-top: 3px;
+  }
 }
 
 .order-tracking {
@@ -1537,10 +1622,6 @@ a.checkout-pay:hover {
 
 .track-order-number {
   font-weight: 600;
-}
-
-.track-progress {
-  margin-bottom: 4px;
 }
 
 .track-shipment {

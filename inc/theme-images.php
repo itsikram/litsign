@@ -34,6 +34,18 @@ function wholesale_image_slots()
 			'legacy' => 'img/landing-hero-960.webp',
 			'size' => 'large',
 		),
+		'hero_fallback' => array(
+			'label' => 'Guide pages hero photo',
+			'help' => 'Optional. Background photo for the text-only guide pages (warranty, permits, shipping, industries, locations and similar) that have no photo of their own. Landscape, about 1920 &times; 800 px, quiet and dark on the left. Empty: those pages keep their light header. Pages and categories can set their own under Hero images.',
+			'legacy' => '',
+			'size' => '2048x2048',
+		),
+		'hero_fallback_mobile' => array(
+			'label' => 'Guide pages hero photo on phones',
+			'help' => 'Optional. Portrait or square, about 900 &times; 1200 px, for screens under 768 px. Empty: phones get a smaller copy of the photo above.',
+			'legacy' => '',
+			'size' => 'large',
+		),
 	);
 }
 
@@ -252,7 +264,7 @@ function wholesale_missing_image_slots()
 {
 	$missing = array();
 	foreach (wholesale_image_slots() as $key => $slot) {
-		if ('' === wholesale_image_slot_url($key) && 'landing_hero_mobile' !== $key) {
+		if ('' === wholesale_image_slot_url($key) && !in_array($key, array('landing_hero_mobile', 'hero_fallback', 'hero_fallback_mobile'), true)) {
 			$missing[$key] = $slot['label'];
 		}
 	}

@@ -30,7 +30,9 @@
         || is_page(array('channel-letter-builder', 'storefront-signs'))
         || (is_singular('product') && has_term('channel-letters', 'product_category', get_queried_object_id()));
     ?>
-    <?php // One compact band (css/footer.css, lead-in band): the shipping cut-off and the channel letters link. ?>
+    <?php // One compact band (css/footer.css, lead-in band): the shipping cut-off and the channel letters link.
+    // Left off the cart and checkout, where its link only led shoppers away from paying. ?>
+    <?php if (!is_page(array('cart', 'checkout'))) : ?>
     <div class="footer-prelude<?php echo $is_channel_letter_page ? ' footer-prelude--link-only' : ''; ?>">
         <div class="container footer-prelude__inner">
             <?php if (!$is_channel_letter_page) : ?>
@@ -42,6 +44,7 @@
             <a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="footer-prelude__link">Shop All Channel Letters <span aria-hidden="true">&rarr;</span></a>
         </div>
     </div>
+    <?php endif; ?>
 
     <?php wholesale_render_review_slider(); ?>
 
@@ -279,6 +282,10 @@
                     <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                         <input type="hidden" name="action" value="submit_review">
                         <?php wp_nonce_field('submit_review', 'review_nonce'); ?>
+                        <p class="contact-honeypot" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
+                            <label for="review-website">Website</label>
+                            <input type="text" id="review-website" name="review_website" tabindex="-1" autocomplete="off">
+                        </p>
                         <div class="form-group">
                             <label for="review-name">Your name</label>
                             <input class="form-control" id="review-name" name="review_name" type="text" required autocomplete="name">

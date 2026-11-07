@@ -42,7 +42,7 @@ function wholesale_mini_cart_money($value)
 function wholesale_mini_cart_html($cart)
 {
 	$items = $cart->get_items();
-	$shop_url = home_url('/#product-box-container');
+	$shop_url = home_url('/#banners-displays'); // The home page leads with banners & displays.
 
 	ob_start();
 
@@ -53,9 +53,9 @@ function wholesale_mini_cart_html($cart)
 				<svg viewBox="0 0 24 24" width="34" height="34"><path fill="currentColor" d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM1 2v2h2l3.6 7.6-1.35 2.4A2 2 0 0 0 7 17h12v-2H7.4a.25.25 0 0 1-.22-.37l.9-1.63h7.45a2 2 0 0 0 1.75-1.03l3.58-6.5A1 1 0 0 0 20 4H5.2l-.94-2H1zm16 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>
 			</div>
 			<h3 class="mc-empty__title">Your cart is empty</h3>
-			<p class="mc-empty__text">Choose a product to see your price instantly, or design your channel letters online.</p>
-			<a class="mc-btn mc-btn--primary" href="<?php echo esc_url($shop_url); ?>" data-mc-close-link>Shop Channel Letters</a>
-			<a class="mc-btn mc-btn--ghost" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Design Your Sign Online</a>
+			<p class="mc-empty__text">Pick a product and enter your size to see your price instantly.</p>
+			<a class="mc-btn mc-btn--primary" href="<?php echo esc_url($shop_url); ?>" data-mc-close-link>Shop Banners &amp; Displays</a>
+			<a class="mc-btn mc-btn--ghost" href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>">Shop Channel Letters</a>
 		</div>
 		<?php
 		return array('body' => ob_get_clean(), 'footer' => '');
@@ -293,11 +293,24 @@ add_action('wp_ajax_nopriv_wholesale_mini_cart_restore', 'wholesale_ajax_mini_ca
  */
 function wholesale_ajax_mini_cart_add()
 {
-	$before = count(wholesale_mini_cart_fresh()->get_items());
+	$before_items = wholesale_mini_cart_fresh()->get_items();
+	$before = count($before_items);
 	wholesale_mini_cart_fresh()->add_item();
 	$items = wholesale_mini_cart_fresh()->get_items();
 	$added = count($items) > $before ? end($items) : null;
+	// Buy Now (js/mini-cart.js) for an item already in the cart exactly as configured, e.g.
+	// back from checkout and Buy Now again: keep one line and go to checkout. Lines with
+	// uploaded artwork are always kept (each upload is its own file).
+	$existing = null;
+	if ($added && !empty($_POST['buy_now']) && empty($added->artwork_id)) {
+		$existing = wholesale_cart_same_item($before_items, $added);
+		if ($existing) {
+			wholesale_mini_cart_fresh()->remove_item($added->cart_id);
+			$added = null;
+		}
+	}
 	wholesale_mini_cart_send(array(
+		'existing' => $existing ? (string) $existing->cart_id : '',
 		'added' => $added ? array(
 			'cart_id' => (string) $added->cart_id,
 			// get_the_title() is HTML-encoded; the script shows this as plain text.
@@ -358,6 +371,7 @@ function wholesale_mini_cart_assets()
 	wp_localize_script('wholesale-mini-cart', 'wholesaleMiniCart', array(
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'cartUrl' => home_url('/cart/'),
+		'checkoutUrl' => home_url('/checkout/'), // Buy Now.
 	));
 }
 add_action('wp_enqueue_scripts', 'wholesale_mini_cart_assets', 20);

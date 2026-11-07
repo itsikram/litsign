@@ -6423,7 +6423,7 @@ window.addEventListener("load", function (e) {
       addToCartBtn.innerHTML =
         '<span>Adding to cart...</span><img alt="" src="' +
         siteUrl +
-        '/wp-content/themes/wholesale/img/ajax_loader.gif">';
+        '/wp-content/themes/tr-retails/img/ajax_loader.gif">';
 
       try {
         const snapshot = await uploadDesignSnapshot();
@@ -6481,7 +6481,7 @@ window.addEventListener("load", function (e) {
     loadingImage.height = 20;
     loadingImage.style.marginLeft = "5px";
     loadingImage.src =
-      siteUrl + "/wp-content/themes/wholesale/img/ajax_loader.gif";
+      siteUrl + "/wp-content/themes/tr-retails/img/ajax_loader.gif";
 
     saveBtn.disabled = true;
     saveBtn.setAttribute("aria-busy", "true");

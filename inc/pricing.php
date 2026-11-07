@@ -243,6 +243,8 @@ function wholesale_attr_options($attr)
  * "10/%/red" => 10 percent, "3/sqft/..." => 3 per sq ft, "25/Single" or "25" => +25.
  * "73.3/%total/2 Sides" => 73.3 percent of the item after every other option (B2Sign's
  * double-sided upcharge, which also covers its holes).
+ * Per linear foot of the typed size, for B2Sign-style finishing (SFS B2Sign Sync mirrors these):
+ * "2.5/perim/..." all four edges, "1.2/wlft/..." the width, "1.2/hlft/..." the height.
  * A value that doesn't start with a number (a color name, "3-Inch") carries no price.
  */
 function wholesale_parse_option_price($value)
@@ -254,7 +256,7 @@ function wholesale_parse_option_price($value)
 	$type = isset($parts[1]) ? strtolower(trim($parts[1])) : '';
 	return array(
 		'amount' => (float) $parts[0],
-		'type' => in_array($type, array('%', '%total', 'sqft', 'lft'), true) ? $type : 'fixed',
+		'type' => in_array($type, array('%', '%total', 'sqft', 'lft', 'perim', 'wlft', 'hlft'), true) ? $type : 'fixed',
 	);
 }
 
@@ -280,6 +282,115 @@ function wholesale_attr_is_preset_size($attr)
 {
 	$css = (string) ($attr['cssClass'] ?? '');
 	return 'size' === strtolower(trim((string) ($attr['name'] ?? ''))) && false === strpos($css, 'size-width-inch') && false === strpos($css, 'size-height-inch');
+}
+
+/**
+ * B2Sign quantity pricing for a product (meta _qty_pricing, written by SFS B2Sign Sync), or null.
+ * {"min":[[from qty, lowest shown price per item], ...], "sheet":{"w":48,"h":96,"price":stored price per sheet}}
+ */
+function wholesale_product_qty_pricing($product_id)
+{
+	$data = json_decode((string) get_post_meta($product_id, '_qty_pricing', true), true);
+	if (!is_array($data) || ((!isset($data['min']) || !is_array($data['min'])) && (!isset($data['unit']) || !is_array($data['unit'])))) {
+		return null;
+	}
+	$data += array('min' => array());
+	$min = array();
+	foreach ($data['min'] as $tier) {
+		if (is_array($tier) && isset($tier[0], $tier[1]) && is_numeric($tier[0]) && is_numeric($tier[1])) {
+			$min[] = array(max(1, (int) $tier[0]), max(0, (float) $tier[1]));
+		}
+	}
+	usort($min, static function ($a, $b) { return $a[0] <=> $b[0]; });
+	// Fixed-price products: "unit" = [[from qty, shown price per item with the default options]] (B2Sign's own
+	// table, e.g. a yard sign $9.04, $7.02 each for 2+). "sheet.extra_side" = stored price added to the sheet for
+	// each extra printed side (B2Sign coroplast: $33.99 two-sided against $29.99).
+	$unit = array();
+	foreach (isset($data['unit']) && is_array($data['unit']) ? $data['unit'] : array() as $tier) {
+		if (is_array($tier) && isset($tier[0], $tier[1]) && is_numeric($tier[0]) && is_numeric($tier[1])) {
+			$unit[] = array(max(1, (int) $tier[0]), max(0, (float) $tier[1]));
+		}
+	}
+	usort($unit, static function ($a, $b) { return $a[0] <=> $b[0]; });
+	$sheet = isset($data['sheet']['w'], $data['sheet']['h'], $data['sheet']['price']) && $data['sheet']['price'] > 0 ? array('w' => (float) $data['sheet']['w'], 'h' => (float) $data['sheet']['h'], 'price' => (float) $data['sheet']['price'], 'extra_side' => max(0, (float) ($data['sheet']['extra_side'] ?? 0))) : null;
+	return $min || $sheet || $unit ? array('min' => $min, 'sheet' => $sheet, 'unit' => $unit) : null;
+}
+
+/** Pieces of w x h inches that fit on a W x H inch sheet, either way round. */
+function wholesale_pieces_per_sheet($w, $h, $sheet_w, $sheet_h)
+{
+	if ($w <= 0 || $h <= 0) {
+		return 0;
+	}
+	return (int) max(floor($sheet_w / $w) * floor($sheet_h / $h), floor($sheet_w / $h) * floor($sheet_h / $w));
+}
+
+/**
+ * A product's own production-time choices (meta _turnaround_spec, written by SFS B2Sign Sync), or array().
+ * Each: value, label, min_qty, max_qty (null = no limit), cutoff ("16:00" Pacific), days, percent, automatic.
+ */
+function wholesale_product_turnaround_spec($product_id)
+{
+	$data = json_decode((string) get_post_meta($product_id, '_turnaround_spec', true), true);
+	$out = array();
+	foreach (is_array($data) ? $data : array() as $o) {
+		if (!is_array($o) || empty($o['value']) || !preg_match('/^[a-z0-9_]+$/', (string) $o['value'])) {
+			continue;
+		}
+		$out[] = array(
+			'value' => (string) $o['value'],
+			'label' => sanitize_text_field((string) ($o['label'] ?? $o['value'])),
+			'min_qty' => max(1, (int) ($o['min_qty'] ?? 1)),
+			'max_qty' => isset($o['max_qty']) && null !== $o['max_qty'] ? (int) $o['max_qty'] : null,
+			'cutoff' => preg_match('/^\d\d:\d\d$/', (string) ($o['cutoff'] ?? '')) ? (string) $o['cutoff'] : '',
+			'days' => max(0, (int) ($o['days'] ?? 1)),
+			'percent' => max(0, (float) ($o['percent'] ?? 0)),
+			'automatic' => !empty($o['automatic']),
+		);
+	}
+	return $out;
+}
+
+/** True on a weekday before the Pacific time "HH:MM". */
+function wholesale_before_pacific_time($cutoff)
+{
+	$now = new DateTime('now', new DateTimeZone('America/Los_Angeles'));
+	return (int) $now->format('N') < 6 && $now->format('H:i') < $cutoff;
+}
+
+/**
+ * The chosen production time for a quantity, or an error message. No choice sent: the fastest one
+ * the quantity allows that is still open today.
+ */
+function wholesale_turnaround_choice($spec, $value, $quantity)
+{
+	$open = array();
+	foreach ($spec as $o) {
+		if ($o['automatic'] || $quantity < $o['min_qty'] || (null !== $o['max_qty'] && $quantity > $o['max_qty'])) {
+			continue;
+		}
+		$open[$o['value']] = $o;
+	}
+	if (!$open) {
+		return 'No production time is available for this quantity. Please contact us.';
+	}
+	$labels = implode(' or ', wp_list_pluck(array_values($open), 'label'));
+	if ('' === $value) {
+		foreach ($open as $o) {
+			if (0 !== $o['days'] || '' === $o['cutoff'] || wholesale_before_pacific_time($o['cutoff'])) {
+				return $o;
+			}
+		}
+		return reset($open);
+	}
+	if (!isset($open[$value])) {
+		return sprintf('That production time is not available for %d items. Please choose %s.', $quantity, $labels);
+	}
+	$o = $open[$value];
+	if (0 === $o['days'] && '' !== $o['cutoff'] && !wholesale_before_pacific_time($o['cutoff'])) {
+		return sprintf('%s is only available on weekdays before %s PST. Please choose another production time.', $o['label'], date('g:ia', strtotime($o['cutoff'])));
+	}
+	return $o;
 }
 
 function wholesale_same_day_available()
@@ -418,6 +529,16 @@ function wholesale_cl_design_quote($product_id, $design)
  * @param array|null $design   Channel letter builder design, when the customer used the builder.
  * @return array{ok:bool,error:string,unit_price:float,quantity:int,subtotal:float,discount_percent:float,discount:float,turnaround:float,total:float,lines:array}
  */
+/**
+ * Whether flat-priced options (grommets, holes, H-stake) are charged on top of the
+ * minimum charge and the full sheet price, as on B2Sign's rigid signs (checked against
+ * B2Sign coroplast quotes 2026-11-05). Other products keep them inside the minimum.
+ */
+function wholesale_product_flat_options_on_top($product_id)
+{
+	return has_term('rigid-signs-and-magnets', 'product_category', $product_id);
+}
+
 function wholesale_price_quote($product_id, $request, $design = null)
 {
 	$fail = static function ($message) {
@@ -439,6 +560,9 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	$letter_height = 0;
 	$is_sqft_calc = false;
 	$size_error = '';
+	// The typed size in feet, for the per linear foot option types (perim / wlft / hlft).
+	$width_ft = 0.0;
+	$height_ft = 0.0;
 
 	if ($is_cl && is_array($design)) {
 		$design_total = wholesale_cl_design_quote($product_id, $design);
@@ -489,6 +613,8 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		if (null !== $width_attr_value && null !== $height_attr_value) {
 			// Products sized with width/height dropdowns in inches (e.g. table runners).
 			$sqft = ((float) $width_attr_value / 12) * ((float) $height_attr_value / 12);
+			$width_ft = (float) $width_attr_value / 12;
+			$height_ft = (float) $height_attr_value / 12;
 		} elseif ($has_calculator) {
 			$height_ft = (float) ($request['height-ft'] ?? 0) + (float) ($request['height-in'] ?? 0) / 12;
 			$width_ft = (float) ($request['width-ft'] ?? 0) + (float) ($request['width-in'] ?? 0) / 12;
@@ -523,6 +649,10 @@ function wholesale_price_quote($product_id, $request, $design = null)
 
 	$sides = 1;
 	$percent_total = array();
+	// Flat-priced options (grommets, H-stake) on a rigid size calculator product: added on
+	// top of the minimum charge and the full sheet price below, as B2Sign does.
+	$flat_total = 0.0;
+	$flat_on_top = $is_sqft_calc && wholesale_product_flat_options_on_top($product_id);
 	foreach ($attrs as $attr) {
 		$options = wholesale_attr_options($attr);
 		$css = (string) ($attr['cssClass'] ?? '');
@@ -546,7 +676,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			}
 		}
 		if (null === $chosen) {
-			return $fail(sprintf('Please choose a valid %s.', str_replace('-', ' ', strtolower($attr['name']))));
+			return $fail(sprintf('Please choose a valid %s.', strtolower(wholesale_attr_label($attr['name']))));
 		}
 		if (in_array(strtolower((string) $attr['name']), array('of-sides', 'sides'), true) && (int) $chosen['label'] > 1) {
 			$sides = (int) $chosen['label'];
@@ -567,12 +697,24 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			case 'lft':
 				$amount = $price['amount'] * ($letter_height * $letter_count / 12);
 				break;
+			case 'perim':
+				$amount = $price['amount'] * 2 * ($width_ft + $height_ft);
+				break;
+			case 'wlft':
+				$amount = $price['amount'] * $width_ft;
+				break;
+			case 'hlft':
+				$amount = $price['amount'] * $height_ft;
+				break;
 			default:
 				$amount = $price['amount'];
+				if ($flat_on_top) {
+					$flat_total += $amount;
+				}
 		}
 
 		if (0.0 !== round($amount, 2)) {
-			$lines[] = array('label' => ucwords(str_replace('-', ' ', $attr['name'])) . ': ' . $chosen['label'], 'amount' => $amount);
+			$lines[] = array('label' => wholesale_attr_label($attr['name']) . ': ' . $chosen['label'], 'amount' => $amount);
 		}
 		$running += $amount;
 	}
@@ -580,7 +722,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	foreach ($percent_total as $item) {
 		$amount = $base_running * $item['percent'] / 100;
 		if (0.0 !== round($amount, 2)) {
-			$lines[] = array('label' => ucwords(str_replace('-', ' ', $item['attr']['name'])) . ': ' . $item['chosen']['label'], 'amount' => $amount);
+			$lines[] = array('label' => wholesale_attr_label($item['attr']['name']) . ': ' . $item['chosen']['label'], 'amount' => $amount);
 		}
 		$running += $amount;
 	}
@@ -589,24 +731,96 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		return $fail('Please choose your product options so we can calculate a price.');
 	}
 
-	// The size stays exactly as entered. When one item would cost less than the
-	// product's minimum after its own price adjustment, the item price is raised so
-	// that it comes to exactly the minimum after the adjustment.
+	// The size stays exactly as entered. Like B2Sign, the printed size (size x rate plus
+	// per sq ft and % options such as 2 Sides) costs at least the minimum charge and at
+	// most the full sheet price, both after the product's own price adjustment; flat
+	// options (grommets, H-stake) are then added on top, so they always change the price.
 	$discount_percent = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
+	$keep = (100 - $discount_percent) / 100;
 	$minimum_order = 0;
-	$min_price = $is_sqft_calc && $discount_percent < 100 ? wholesale_product_min_order($product_id) : 0;
-	// _min_order_per_side: the minimum is per printed side (B2Sign: $8 one side, $16 two).
+	$extra_sides = max(0, $sides - 1);
+	$printed = $running - $flat_total;
+	$min_price = $is_sqft_calc && $keep > 0 ? wholesale_product_min_order($product_id) : 0;
+	// _min_order_per_side: the minimum is per printed side (B2Sign banners: $8 one side, $16 two).
 	if (get_post_meta($product_id, '_min_order_per_side', true)) {
 		$min_price *= $sides;
 	}
-	if ($min_price > 0 && $running * (100 - $discount_percent) / 100 < $min_price) {
-		$raised = $min_price * 100 / (100 - $discount_percent);
-		$lines[] = array('label' => sprintf('Minimum order ($%s)', number_format($min_price, 2)), 'amount' => $raised - $running);
-		$running = $raised;
+	// _min_order_extra_side: added to the minimum for each extra side (B2Sign coroplast: $6.99 one side, $7.99 two).
+	if ($min_price > 0) {
+		$min_price += $extra_sides * max(0, (float) get_post_meta($product_id, '_min_order_extra_side', true));
+	}
+	$max_price = $is_sqft_calc && $keep > 0 ? max(0, (float) get_post_meta($product_id, '_max_print_price', true)) : 0;
+	if ($max_price > 0) {
+		$max_price += $extra_sides * max(0, (float) get_post_meta($product_id, '_max_print_extra_side', true));
+	}
+	if ($min_price > 0 && $printed * $keep < $min_price) {
+		$raised = $min_price / $keep;
+		$lines[] = array('label' => sprintf('Minimum order ($%s)', number_format($min_price, 2)), 'amount' => $raised - $printed);
+		$running += $raised - $printed;
 		$minimum_order = $min_price;
+	} elseif ($max_price > 0 && $max_price >= $min_price && $printed * $keep > $max_price) {
+		// A full sheet costs the same however much of it the size uses (B2Sign: 4 x 8 ft coroplast $29.99).
+		$capped = $max_price / $keep;
+		$lines[] = array('label' => sprintf('Full sheet price ($%s)', number_format($max_price, 2)), 'amount' => $capped - $printed);
+		$running += $capped - $printed;
 	}
 
 	$quantity = min(1000, max(1, absint($request['product_quantity'] ?? 1)));
+	// B2Sign's quantity pricing, mirrored by SFS B2Sign Sync (meta _qty_pricing): the lowest price per
+	// item depends on the quantity, and rigid boards never cost more than the full sheets they need.
+	$qty_pricing = $is_cl ? null : wholesale_product_qty_pricing($product_id);
+	if ($qty_pricing && $keep > 0) {
+		$printed_now = $running - $flat_total;
+		$tier_min = 0.0;
+		foreach ($qty_pricing['min'] as $tier) {
+			if ($quantity >= $tier[0]) {
+				$tier_min = (float) $tier[1];
+			}
+		}
+		// Like B2Sign: the sheet share caps the price first, then the quantity's minimum per piece applies
+		// (128 Coroplast pieces of 6" x 6" fill one sheet but still cost the minimum per piece).
+		$unit_printed = $printed;
+		if ($max_price > 0) {
+			$unit_printed = min($unit_printed, $max_price / $keep);
+		}
+		if (!empty($qty_pricing['sheet']) && $is_sqft_calc) {
+			$per_sheet = wholesale_pieces_per_sheet($width_ft * 12, $height_ft * 12, $qty_pricing['sheet']['w'], $qty_pricing['sheet']['h']);
+			if ($per_sheet > 0) {
+				// A two-sided sheet costs more (B2Sign coroplast $33.99 against $29.99).
+				$sheet_price = $qty_pricing['sheet']['price'] + $extra_sides * $qty_pricing['sheet']['extra_side'];
+				$unit_printed = min($unit_printed, ceil($quantity / $per_sheet) * $sheet_price / $quantity);
+			}
+		}
+		// Fixed-price products (a yard sign with its stake): B2Sign's price per item for the quantity, with
+		// the chosen options' difference from the one-piece price on top.
+		if (!empty($qty_pricing['unit']) && !$is_sqft_calc) {
+			$tier_unit = $first_unit = (float) $qty_pricing['unit'][0][1];
+			foreach ($qty_pricing['unit'] as $tier) {
+				if ($quantity >= $tier[0]) {
+					$tier_unit = (float) $tier[1];
+				}
+			}
+			$unit_printed = $printed_now + ($tier_unit - $first_unit) / $keep;
+		}
+		$minimum_order = $tier_min > 0 && $unit_printed * $keep < $tier_min ? $tier_min : 0;
+		$unit_printed = max($unit_printed, $tier_min / $keep);
+		if (abs($unit_printed - $printed_now) > 0.000001) {
+			$lines[] = array('label' => sprintf('Price for %d', $quantity), 'amount' => $unit_printed - $printed_now);
+			$running += $unit_printed - $printed_now;
+		}
+	}
+	// Minimum dollar margin per order line (SFS B2Sign Sync markup rule, meta _margin_floor): the line costs at
+	// least B2Sign's cost (the price ÷ the markup factor) plus the margin, after the product's own discount.
+	$margin_floor = $is_cl ? null : json_decode((string) get_post_meta($product_id, '_margin_floor', true), true);
+	if (is_array($margin_floor) && isset($margin_floor['factor'], $margin_floor['dollars']) && $margin_floor['factor'] > 0 && $keep > 0) {
+		$line_shown = $running * $quantity * $keep;
+		$floor_total = $line_shown / (float) $margin_floor['factor'] + (float) $margin_floor['dollars'];
+		if ($floor_total > $line_shown + 0.000001) {
+			$raise = ($floor_total - $line_shown) / $keep / $quantity;
+			$lines[] = array('label' => 'Minimum order', 'amount' => $raise);
+			$running += $raise;
+		}
+	}
 	$subtotal = $running * $quantity;
 	$discount = $subtotal * $discount_percent / 100;
 	// A dated sale (Settings > Storefront Sign) comes off the everyday price, after the
@@ -619,7 +833,18 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	$discount += $promo_discount;
 
 	$turnaround = 0.0;
-	if (!$is_cl && isset($request['turnaround_option']) && 'same_day' === $request['turnaround_option']) {
+	$turnaround_label = '';
+	// Per-product production times mirrored from B2Sign (meta _turnaround_spec): which choices a quantity
+	// allows, their Pacific cut-off and their surcharge. Products without it keep Next Day / Same Day +100%.
+	$turnaround_spec = $is_cl ? array() : wholesale_product_turnaround_spec($product_id);
+	if ($turnaround_spec) {
+		$chosen = wholesale_turnaround_choice($turnaround_spec, (string) ($request['turnaround_option'] ?? ''), $quantity);
+		if (is_string($chosen)) {
+			return $fail($chosen);
+		}
+		$turnaround = $subtotal * $chosen['percent'] / 100;
+		$turnaround_label = $chosen['label'];
+	} elseif (!$is_cl && isset($request['turnaround_option']) && 'same_day' === $request['turnaround_option']) {
 		if (!wholesale_same_day_available()) {
 			return $fail('Same-day production is only available for orders placed before 12pm PST. Please choose Next Day.');
 		}
@@ -641,6 +866,8 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		'promo_percent' => $promo_percent,
 		'promo_discount' => round($promo_discount, 2),
 		'turnaround' => round($turnaround, 2),
+		// The production time's name when the product has its own choices (cart and order show it).
+		'turnaround_label' => $turnaround_label,
 		'total' => round($subtotal - $discount + $turnaround, 2),
 		// The minimum order price when it replaced the calculator price, else 0.
 		'minimum_order' => $minimum_order,
@@ -929,8 +1156,8 @@ function wholesale_cl_starting_text($product_id)
 
 /**
  * One worked example under the "from" price: 6 front lit letters at 12 inches with
- * the standard power supply (wholesale_cl_example_price()), plus the cheapest
- * channel letter shipping rate the checkout charges. Empty when it can't be priced.
+ * the standard power supply (wholesale_cl_example_price()), plus shipping as the
+ * checkout charges it (free at or above the channel letter minimum). Empty when it can't be priced.
  */
 function wholesale_cl_worked_example_text()
 {
@@ -938,11 +1165,10 @@ function wholesale_cl_worked_example_text()
 	if (!$example) {
 		return '';
 	}
-	$rates = array_values(array_filter(explode(',', (string) wholesale_get_setting('channel_shipping_options')), 'is_numeric'));
-	$shipping = $rates ? (float) min($rates) : 0;
-
+	// Shipping follows the checkout rule: free at or above the channel letter minimum
+	// (wholesale_cart_qualifies_free_shipping()), else the cheapest channel rate.
 	return sprintf('Example: 6 front lit letters, 12&Prime; tall, with power supply: $%s', number_format($example['total'], 2))
-		. ($shipping > 0 ? sprintf(' + $%s shipping', floor($shipping) == $shipping ? number_format($shipping) : number_format($shipping, 2)) : '');
+		. wholesale_cl_example_shipping_text($example['total']);
 }
 
 /**

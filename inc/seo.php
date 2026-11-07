@@ -205,6 +205,10 @@ add_filter('pre_redirect_guess_404_permalink', function ($pre) {
 	}
 	$path = preg_replace('#/page/\d+$#i', '', strtolower($path));
 	$path = preg_replace('#^(?:product[_-]category|category)/#', '', $path);
+	$original = wholesale_seo_merge_copy_target($path);
+	if ($original) {
+		return $original;
+	}
 	if ('' === $path || false !== strpos($path, '/')) {
 		return $pre;
 	}
@@ -216,6 +220,37 @@ add_filter('pre_redirect_guess_404_permalink', function ($pre) {
 
 	return $pre;
 });
+
+/**
+ * The 2026-10-27 merge pull gave every page, product and category a "-2" copy
+ * (/shop-2/, /contact-2/, /product/magnets-2/). The copies were live for a day,
+ * so links and crawlers still ask for them; they are deleted now and 404ed.
+ * Point each one at the original it copied.
+ *
+ * @param string $path Request path without slashes at either end, lower case.
+ * @return string Original URL, or '' when the path is not a copy of a live item.
+ */
+function wholesale_seo_merge_copy_target($path)
+{
+	if (!preg_match('#^(?:(product)/)?([a-z0-9-]+)-2$#', (string) $path, $m)) {
+		return '';
+	}
+
+	$slug = $m[2];
+	$post = get_page_by_path($slug, OBJECT, '' !== $m[1] ? 'product' : 'page');
+	if ($post && 'publish' === $post->post_status) {
+		return get_permalink($post);
+	}
+
+	if ('' === $m[1]) {
+		$term = get_term_by('slug', $slug, 'product_category');
+		if ($term && !is_wp_error($term) && wholesale_seo_category_has_products($term)) {
+			return wholesale_category_url($term->slug);
+		}
+	}
+
+	return '';
+}
 
 add_filter('wp_sitemaps_add_provider', function ($provider, $name) {
 	return 'users' === $name ? false : $provider;
@@ -1177,7 +1212,7 @@ Choose a standard size or enter your own, print one or both sides, and add an H-
  	<li>Accepted File Formats: JPEG or PDF (single page only)</li>
  	<li>Color Space: CMYK</li>
  	<li>Resolution: 150dpi for raster images (More than enough for large format)</li>
- 	<li>Max File Upload Size: 300MB</li>
+ 	<li>Max File Upload Size: 25MB</li>
  	<li>Submit artwork built to ordered size - Scaled artwork is automatically detected and fit to order</li>
  	<li>Do not include crop marks or bleeds</li>
 </ul>

@@ -13,7 +13,7 @@
  * The WordPress page for each entry is created (or re-parented) on the next
  * admin page load after the registry changes. Each entry has a status:
  * 'review' pages render normally but are noindexed and left out of the
- * sitemaps and footer; 'live' pages are indexed. Switch an entry (or a whole
+ * sitemaps and footer; 'live' pages are eligible for indexing. Switch an entry (or a whole
  * state file) to 'live' only after the content has been checked.
  *
  * @package litsign
@@ -150,8 +150,8 @@ function wholesale_guide_registry()
 			'title' => 'Locations',
 			'template' => 'page-locations.php',
 			'status' => 'live',
-			'seo_title' => 'Storefront Signs Shipped to Every State | Permit Guides',
-			'seo_description' => 'Channel letters and storefront signs shipped from Washington and California to all 50 states. Find your state\'s sign permit guide and see prices online.',
+			'seo_title' => 'State & City Sign Permit Guides | Storefront Signs',
+			'seo_description' => 'Find sign permit offices and installer licensing rules in our state and city guides. Get custom LED channel letters shipped to any of the 50 states.',
 		),
 		'industries' => array(
 			'title' => 'Industries',
@@ -246,7 +246,7 @@ function wholesale_guide_url($path, $live_only = false)
 	}
 
 	$page = get_page_by_path($path);
-	return $page && 'publish' === $page->post_status ? get_permalink($page) : '';
+	return $page && 'publish' === $page->post_status && '' === $page->post_password ? get_permalink($page) : '';
 }
 
 /**
@@ -497,6 +497,15 @@ function wholesale_guide_updated($place, $date_only = false)
 }
 
 /**
+ * Significant content, link or schema changes, independent of upload times.
+ * Keep the source review date separate for the note shown to readers.
+ */
+function wholesale_location_modified($place = array())
+{
+	return max('2026-11-05', wholesale_guide_updated($place, true));
+}
+
+/**
  * Product families on location pages, in display order: the page each links
  * to, where it is made and the product whose card price is quoted. Only
  * channel letters are called signs.
@@ -725,7 +734,7 @@ function wholesale_guide_footer_links()
 {
 	$links = array();
 	foreach (array(
-		'locations' => 'Shipping by State',
+		'locations' => 'State & City Sign Permit Guides',
 		'industries' => 'Signs by Industry',
 		'sign-permits' => 'Sign Permit Help',
 		'how-to-install-channel-letters' => 'Installation Guide',

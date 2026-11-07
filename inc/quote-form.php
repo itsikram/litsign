@@ -248,3 +248,37 @@ function wholesale_quote_form_render(array $args)
 	</div>
 	<?php
 }
+
+/**
+ * The Google Ads channel letter landing page (/channel-letter-quote/, template
+ * page-channel-letters-ads.php). Created on a wp-admin visit when no page uses the
+ * template yet, so it appears on live after the theme upload without copying the
+ * database. Checked every time instead of once behind a flag: the owner's push
+ * copies the options table, so a "done" flag can reach live before the page does.
+ */
+function wholesale_ensure_channel_letter_quote_page()
+{
+	if (wp_doing_ajax() || !current_user_can('edit_pages')) {
+		return;
+	}
+	$existing = get_posts(array(
+		'post_type' => 'page',
+		'post_status' => array('publish', 'draft', 'pending', 'private', 'future'),
+		'posts_per_page' => 1,
+		'fields' => 'ids',
+		'meta_key' => '_wp_page_template',
+		'meta_value' => 'page-channel-letters-ads.php',
+	));
+	if ($existing || get_page_by_path('channel-letter-quote')) {
+		return;
+	}
+	wp_insert_post(array(
+		'post_type' => 'page',
+		'post_status' => 'publish',
+		'post_title' => 'Channel Letter Quote',
+		'post_name' => 'channel-letter-quote',
+		'post_content' => '',
+		'page_template' => 'page-channel-letters-ads.php',
+	));
+}
+add_action('admin_init', 'wholesale_ensure_channel_letter_quote_page');

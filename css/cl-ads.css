@@ -1105,3 +1105,83 @@
     transition: none !important;
   }
 }
+
+/* ---------- /channel-letter-quote/ additions (2026-11-02) ----------
+   Reply promise, call/text buttons, worked prices, sign-shop line. On phones the
+   hero keeps only the headline, promise and lead so the form starts on the first screen. */
+.cla-promise {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.cla-promise .cla-icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+}
+
+.cla-contact-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cla-contact-buttons .cla-button {
+  flex: 1 1 200px;
+  justify-content: center;
+}
+
+.cla-example-list {
+  display: grid;
+  gap: 10px;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+.cla-example-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.cla-example-list strong {
+  white-space: nowrap;
+}
+
+.cla-trade-line {
+  max-width: 720px;
+  margin: 24px auto 0;
+  font-weight: 700;
+  text-align: center;
+}
+
+@media (max-width: 767px) {
+  .cla-hero-inner {
+    padding-top: 28px;
+    padding-bottom: 100px;
+  }
+
+  .cla-hero-points,
+  .cla-hero-actions,
+  .cla-hero-rating,
+  .cla-hero .cla-lead,
+  .cla-quote-intro > p:not(.cla-kicker),
+  .cla-quote-promise {
+    display: none;
+  }
+
+  .cla-hero h1 {
+    margin-bottom: 10px;
+  }
+}

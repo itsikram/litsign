@@ -631,7 +631,7 @@ function wholesale_render_product_details($product_id)
 							<li><?php echo wp_kses_post($rule); ?></li>
 						<?php endforeach; ?>
 					<?php else : ?>
-					<li>Upload a JPEG or a single-page PDF, up to 300 MB, built at the exact size you order. Artwork at a different size is scaled to fit.</li>
+					<li>Upload a JPEG or a single-page PDF, up to <?php echo esc_html(wholesale_artwork_max_text()); ?> (larger files: email us a download link), built at the exact size you order. Artwork at a different size is scaled to fit.</li>
 					<li>Use CMYK color, convert Pantone and spot colors to CMYK, and outline your fonts. Raster images need 150 dpi at full size.</li>
 					<li>Leave off crop marks and bleed. Double sided items take one file per side unless the template says otherwise.</li>
 					<?php endif; ?>

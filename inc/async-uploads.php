@@ -47,7 +47,7 @@ function wholesale_async_upload_contexts()
 				'webp' => 'image/webp',
 				'pdf' => 'application/pdf',
 			),
-			'max' => 25 * MB_IN_BYTES,
+			'max' => wholesale_artwork_max_bytes(), // inc/buying-journey.php
 		),
 	);
 }
@@ -209,7 +209,11 @@ function wholesale_async_upload_script()
 	$theme_dir = get_template_directory();
 	wp_register_script('wholesale-async-upload', get_template_directory_uri() . '/js/async-upload.js', array(), (string) filemtime($theme_dir . '/js/async-upload.js'), true);
 	wp_script_add_data('wholesale-async-upload', 'strategy', 'defer');
-	wp_localize_script('wholesale-async-upload', 'wholesaleAsyncUpload', array('ajaxUrl' => wp_make_link_relative(admin_url('admin-ajax.php'))));
+	wp_localize_script('wholesale-async-upload', 'wholesaleAsyncUpload', array(
+		'ajaxUrl' => wp_make_link_relative(admin_url('admin-ajax.php')),
+		// Byte limits per context, so a file that is too large is turned away before it uploads.
+		'max' => wp_list_pluck(wholesale_async_upload_contexts(), 'max'),
+	));
 	if (is_singular('product') || is_page(array('contact', 'banners-displays', 'window-graphics')) || is_page_template(array('page-channel-letters.php', 'page-channel-letters-ads.php'))) {
 		wp_enqueue_script('wholesale-async-upload');
 	}

@@ -158,6 +158,50 @@ function wholesale_merchant_feed_id($product_id)
 	return $product && 'product' === $product->post_type ? wholesale_merchant_item_id($product) : (string) $product_id;
 }
 
+/**
+ * Feed items for a product's popular sizes (inc/size-chips.php): one per size,
+ * ID "<base id>-<w>x<h>", the size in the title's first 40 characters, the price
+ * wholesale_price_quote() gives that size with the page's default options (the
+ * price /product/<slug>/?size=<w>x<h> shows in its HTML), linking to that page.
+ * Products with preset sizes only get chips on the page, not feed items.
+ *
+ * @return array list of variant arrays for wholesale_render_merchant_feed().
+ */
+function wholesale_merchant_size_items($product, $title)
+{
+	$map = wholesale_size_chip_map();
+	if (!isset($map[$product->post_name])) {
+		return array();
+	}
+	$items = array();
+	foreach (wholesale_size_chips($product->ID) as $chip) {
+		$quote = wholesale_price_quote($product->ID, wholesale_size_chip_request($product->ID, $chip['width'], $chip['height']));
+		if (empty($quote['ok']) || $quote['total'] <= 0) {
+			continue;
+		}
+		$price = (float) $quote['total'];
+		$promo = !empty($quote['promo_discount']) && $quote['promo_discount'] > 0 ? wholesale_product_promotion($product->ID) : null;
+		$base_offer = wholesale_seo_product_lowest_offer($product->ID);
+		$size = $chip['width'] . 'x' . $chip['height'];
+		$items[] = array(
+			'id' => wholesale_merchant_item_id($product) . '-' . $size,
+			'title' => sprintf('%s %s – Custom Full Color Printed', wholesale_seo_product_search_name($product->ID), str_replace('×', 'x', $chip['label'])),
+			'link' => add_query_arg('size', $size, get_permalink($product)),
+			'offer' => array(
+				'price' => $price,
+				'regular' => $promo ? round($price + (float) $quote['promo_discount'], 2) : $price,
+				'sale_ends' => $promo && !empty($promo['ends']) ? (int) $promo['ends'] : null,
+				'sale_starts' => $promo && !empty($base_offer['sale_starts']) ? $base_offer['sale_starts'] : '',
+			),
+			'price' => $price,
+			'shipping' => wholesale_seo_offer_shipping_details($product->ID, $price),
+			'size' => sprintf('%s x %s in', $chip['width'], $chip['height']),
+		);
+	}
+
+	return $items;
+}
+
 function wholesale_render_merchant_feed()
 {
 	if ('1' !== get_query_var('wholesale_merchant_feed')) {
@@ -227,14 +271,42 @@ function wholesale_render_merchant_feed()
 		if (!$channel_letter && $term) {
 			$title = wholesale_merchant_title($title, $term->name);
 		}
+		// Graphic-only, flag-only and hardware-only items say so in their first 40 characters.
+		$kit_info = $channel_letter ? null : wholesale_product_kit_info($product->ID);
+		if ($kit_info) {
+			$title = $kit_info['feed_title'];
+		}
 
 		$shipping = wholesale_seo_offer_shipping_details($product->ID, $price);
 
+		// The product, then its popular sizes as their own items (inc/size-chips.php):
+		// "13oz Vinyl Banner 3 x 6 ft" at that size's price, linking to the page opened
+		// on that size. The base item is unchanged.
+		$variants = array(array(
+			'id' => wholesale_merchant_item_id($product),
+			'title' => $title,
+			'link' => get_permalink($product),
+			'offer' => $offer,
+			'price' => $price,
+			'shipping' => $shipping,
+			'size' => '',
+		));
+		foreach (wholesale_merchant_size_items($product, $title) as $sized) {
+			$variants[] = $sized;
+		}
+
+		foreach ($variants as $variant_item) :
+		$offer = $variant_item['offer'];
+		$price = $variant_item['price'];
+		$shipping = $variant_item['shipping'];
 		echo "<item>\n";
-		echo '<g:id>' . $x(wholesale_merchant_item_id($product)) . "</g:id>\n";
-		echo '<g:title>' . $x(mb_substr($title, 0, 150)) . "</g:title>\n";
+		echo '<g:id>' . $x($variant_item['id']) . "</g:id>\n";
+		if ($variant_item['size']) {
+			echo '<g:item_group_id>' . $x($variants[0]['id']) . "</g:item_group_id>\n";
+		}
+		echo '<g:title>' . $x(mb_substr($variant_item['title'], 0, 150)) . "</g:title>\n";
 		echo '<g:description>' . $x($description) . "</g:description>\n";
-		echo '<g:link>' . esc_url(get_permalink($product)) . "</g:link>\n";
+		echo '<g:link>' . esc_url($variant_item['link']) . "</g:link>\n";
 		echo '<g:image_link>' . esc_url($image) . "</g:image_link>\n";
 		foreach (array_slice($images, 1) as $gallery_url) {
 			echo '<g:additional_image_link>' . esc_url($gallery_url) . "</g:additional_image_link>\n";
@@ -256,6 +328,9 @@ function wholesale_render_merchant_feed()
 				echo '<g:sale_price_effective_date>' . $starts->format('Y-m-d\TH:iO') . '/' . $ends->format('Y-m-d\TH:iO') . "</g:sale_price_effective_date>\n";
 			}
 		}
+		if ($variant_item['size']) {
+			echo '<g:size>' . $x($variant_item['size']) . "</g:size>\n";
+		}
 		echo "<g:condition>new</g:condition>\n";
 		echo '<g:brand>' . $x(get_bloginfo('name')) . "</g:brand>\n";
 		// Made to order: no GTIN or manufacturer part number exists.
@@ -274,6 +349,7 @@ function wholesale_render_merchant_feed()
 		echo '<g:max_transit_time>' . (int) $shipping['deliveryTime']['transitTime']['maxValue'] . "</g:max_transit_time>\n";
 		echo "</g:shipping>\n";
 		echo "</item>\n";
+		endforeach;
 	}
 
 	echo "</channel>\n</rss>\n";

@@ -9,12 +9,16 @@
  *    - Desktop: the photo column (photo, thumbnails, price box) sticks below the
  *      sticky header while the options scroll, only when the whole column fits in
  *      the window, so its price box is never cut off.
- *    - Phones: a bar fixed to the bottom of the screen shows the live Grand Total and
- *      an Add To Cart button while the real pricing box is off screen. Its button
- *      clicks the real one, so the form's own checks (sign text, size, required
+ *    - Phones: a bar fixed to the bottom of the screen shows the live Grand Total, a
+ *      cart button and Buy Now while the real pricing box is off screen. Its buttons
+ *      click the real ones, so the form's own checks (sign text, size, required
  *      fields) run.
  *    - Channel letters: before the sign text is typed, the Grand Total shows the
  *      starting price instead of $0.00.
+ * 4. Delivered price. 5. One-tap size chips.
+ * 6. "Order within ... and it ships ..." delivery estimate, and the Same Day option
+ *    shown only while it can still be ordered (inc/product-buy-box.php).
+ * 7. Quantity - / + buttons.
  */
 
 // ---- 1. Header hides on scroll down (< 992px, the .ssx-legacy header) ----
@@ -94,6 +98,8 @@
 (function () {
   const form = document.querySelector('.product-details form[data-noun]');
   const addButton = document.getElementById('addToCartBtn');
+  // Buy Now (inc/product-buy-box.php); missing when the product is out of stock.
+  const buyButton = document.getElementById('buyNowBtn');
   if (!form || !addButton) return;
 
   // Sticky photo column (768px and up).
@@ -139,10 +145,18 @@
   bar.setAttribute('aria-label', 'Order total');
   bar.innerHTML =
     '<p class="pd-buy-bar__price"><span class="pd-buy-bar__label"></span><strong class="pd-buy-bar__total"></strong></p>' +
-    '<button type="button" class="pd-buy-bar__button"></button>';
+    '<div class="pd-buy-bar__actions">' +
+    (buyButton
+      ? '<button type="button" class="pd-buy-bar__cart" aria-label="Add to cart"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.76L20 8H6.2M9.5 19.5a1 1 0 1 0 0-.01M17 19.5a1 1 0 1 0 0-.01M15 4v4M13 6h4"/></svg></button>'
+      : '') +
+    '<button type="button" class="pd-buy-bar__button"></button></div>';
   const barLabel = bar.querySelector('.pd-buy-bar__label');
   const barTotal = bar.querySelector('.pd-buy-bar__total');
   const barButton = bar.querySelector('.pd-buy-bar__button');
+  const barCart = bar.querySelector('.pd-buy-bar__cart');
+  // The bar's main button is Buy Now when there is one, else Add To Cart.
+  const mainButton = buyButton || addButton;
+  if (buyButton) bar.classList.add('pd-buy-bar--buy');
   document.body.appendChild(bar);
 
   const render = () => {
@@ -153,29 +167,37 @@
     // old total behind). The Grand Total row shows the starting price instead.
     const noPrice = total <= 0 || Boolean(pricingBox.querySelector('.price-quote-message.is-hint:not([hidden])'));
     if (totalFrom) pricingBox.classList.toggle('pd-total-empty', noPrice);
-    if (!noPrice || !fromText) {
+    const priced = !noPrice || !fromText;
+    if (priced) {
       barLabel.textContent = 'Grand Total';
       barTotal.textContent = '$' + totalEl.textContent.trim();
-      barButton.textContent = addButton.textContent.trim();
+      barButton.textContent = mainButton.textContent.trim();
     } else {
       // The bar button takes the visitor to the text box (the real button's own handler).
       barLabel.textContent = 'Starting at';
       barTotal.textContent = fromText;
       barButton.textContent = 'Get your price';
     }
-    // The real button runs the mini cart request (js: .is-adding while it runs).
-    const adding = addButton.classList.contains('is-adding');
-    if (adding) barButton.textContent = 'Adding…';
-    barButton.disabled = outOfStock || adding || addButton.disabled;
+    // The real buttons run the mini cart request (js: .is-adding while it runs).
+    const buying = Boolean(buyButton && buyButton.classList.contains('is-adding'));
+    const adding = buying || addButton.classList.contains('is-adding');
+    if (adding) barButton.textContent = buying ? 'One moment…' : 'Adding…';
+    barButton.disabled = outOfStock || adding || mainButton.disabled;
+    if (barCart) {
+      barCart.hidden = !priced;
+      barCart.disabled = outOfStock || adding || addButton.disabled;
+    }
     bar.classList.toggle('is-updating', pricingBox.classList.contains('is-updating'));
   };
   render();
   new MutationObserver(render).observe(totalEl, { childList: true, characterData: true, subtree: true });
   new MutationObserver(render).observe(addButton, { attributes: true, attributeFilter: ['disabled', 'class'] });
+  if (buyButton) new MutationObserver(render).observe(buyButton, { attributes: true, attributeFilter: ['disabled', 'class'] });
   // The box's own class (.is-updating) and the hint message inside it (hidden / .is-hint).
   new MutationObserver(render).observe(pricingBox, { attributes: true, attributeFilter: ['class', 'hidden'], subtree: true });
 
-  barButton.addEventListener('click', () => addButton.click());
+  barButton.addEventListener('click', () => mainButton.click());
+  if (barCart) barCart.addEventListener('click', () => addButton.click());
 
   // The chat launcher (sfs-live-chat, Shadow DOM) is placed by its --y offset;
   // lift it above the bar while the bar shows.
@@ -207,4 +229,295 @@
   if (pill) observer.observe(pill);
   window.addEventListener('scroll', update, { passive: true });
   phone.addEventListener('change', update);
+})();
+
+// ---- 4. Delivered price under the Grand Total and in the phone buy bar ----
+// Price plus standard shipping below the free shipping minimum, so the price an
+// ad visitor sees is the price they pay before tax (single-product.php .pd-delivered).
+(function () {
+  const line = document.querySelector('.product-pricing-box .pd-delivered');
+  const totalEl = document.querySelector('.product-pricing-box .price-total');
+  if (!line || !totalEl) return;
+  const freeMin = parseFloat(line.dataset.freeMin) || 0;
+  const ship = parseFloat(line.dataset.ship) || 0;
+  const money = (n) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const render = () => {
+    const box = totalEl.closest('.product-pricing-box');
+    const total = parseFloat(totalEl.textContent.replace(/[^0-9.]/g, '')) || 0;
+    const noPrice = total <= 0 || (box && box.classList.contains('pd-total-empty'));
+    let text = '';
+    if (!noPrice && freeMin > 0 && total >= freeMin) {
+      text = 'Free shipping. Delivered: $' + money(total) + ', plus sales tax';
+    } else if (!noPrice && ship > 0) {
+      text = 'Delivered: $' + money(total + ship) + ' (includes $' + (ship % 1 ? money(ship) : ship) + ' shipping), plus sales tax';
+    }
+    line.textContent = text;
+    line.hidden = !text;
+
+    const bar = document.querySelector('.pd-buy-bar .pd-buy-bar__price');
+    if (bar) {
+      let small = bar.querySelector('.pd-buy-bar__delivered');
+      if (!small) {
+        small = document.createElement('small');
+        small.className = 'pd-buy-bar__delivered';
+        bar.appendChild(small);
+      }
+      small.textContent = text;
+      small.hidden = !text;
+    }
+  };
+  render();
+  new MutationObserver(render).observe(totalEl, { childList: true, characterData: true, subtree: true });
+  const box = totalEl.closest('.product-pricing-box');
+  if (box) new MutationObserver(render).observe(box, { attributes: true, attributeFilter: ['class'] });
+  // The buy bar is built by section 3 after this script's first run on some pages.
+  window.addEventListener('load', render);
+})();
+
+// ---- 5. One-tap size chips (inc/size-chips.php) ----
+// A size chip fills width and height and prices them (js/main.js prices on the boxes'
+// input/change events); typing a size selects the matching chip, or none. Banner
+// stands: phones tap a size chip instead of opening the size dropdown, which stays
+// in the form. Visitor Insights logs chip taps as clicks with the chip's text.
+(function () {
+  const mark = (group, chip) => {
+    group.querySelectorAll('.pb-size-chip').forEach((el) => {
+      const on = el === chip;
+      el.classList.toggle('is-selected', on);
+      el.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  };
+
+  document.querySelectorAll('.pb-size-chips').forEach((group) => {
+    const form = group.closest('form');
+    const box = (dim) => form && form.querySelector('input[name="' + dim + '-in"]');
+    if (!box('width') || !box('height')) return;
+    const fill = (dim, value) => {
+      const input = box(dim);
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+    group.addEventListener('click', (e) => {
+      const chip = e.target.closest('.pb-size-chip');
+      if (!chip) return;
+      if (chip.dataset.custom) {
+        mark(group, null);
+        box('width').focus();
+        box('width').select();
+        return;
+      }
+      mark(group, chip);
+      fill('width', chip.dataset.width);
+      fill('height', chip.dataset.height);
+    });
+    const sync = () => {
+      const width = parseFloat(box('width').value) || 0;
+      const height = parseFloat(box('height').value) || 0;
+      const match = [...group.querySelectorAll('.pb-size-chip[data-width]')].find(
+        (el) => parseFloat(el.dataset.width) === width && parseFloat(el.dataset.height) === height
+      );
+      mark(group, match || null);
+    };
+    form.addEventListener('input', (e) => { if (e.target === box('width') || e.target === box('height')) sync(); });
+  });
+
+  document.querySelectorAll('.pb-option-chips').forEach((group) => {
+    const select = document.getElementById(group.dataset.for);
+    if (!select) return;
+    group.addEventListener('click', (e) => {
+      const chip = e.target.closest('.pb-size-chip');
+      if (!chip) return;
+      mark(group, chip);
+      select.value = chip.dataset.value;
+      // js/main.js prices options on the select's change (jQuery handlers).
+      if (window.jQuery) window.jQuery(select).trigger('change');
+      else select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const sync = () => mark(group, group.querySelector('.pb-size-chip[data-value="' + CSS.escape(select.value) + '"]'));
+    select.addEventListener('change', sync);
+    sync();
+  });
+})();
+
+// ---- 6. Delivery estimate and Same Day option (inc/product-buy-box.php) ----
+// The same rules as checkout (inc/payments.php wholesale_estimated_ship_datetime()):
+// Pacific time, weekdays only, orders after the 4pm cut-off (or on a weekend) count from
+// the next business day, then the product's production days. Same Day ships today when
+// ordered by 12pm on a weekday. Worked out here because the page may come from the page
+// cache, hours old. Holidays aren't known to checkout either.
+(function () {
+  const box = document.querySelector('.product-pricing-box .pd-eta');
+  const sameDay = document.querySelector('[data-same-day-option]');
+  if (!box && !sameDay) return;
+
+  let clock;
+  try {
+    clock = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Los_Angeles', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' });
+  } catch (e) {
+    return; // No time zone support: show nothing rather than a wrong date.
+  }
+  const DAY = 86400000;
+  const short = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' });
+  const monthDay = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' });
+  const dayOnly = new Intl.DateTimeFormat('en-US', { timeZone: 'UTC', day: 'numeric' });
+
+  // Pacific wall clock; dates are UTC midnights so day math ignores the visitor's zone.
+  const now = () => {
+    const p = {};
+    clock.formatToParts(new Date()).forEach((part) => { p[part.type] = part.value; });
+    const date = Date.UTC(+p.year, +p.month - 1, +p.day);
+    return { date, minutes: (+p.hour % 24) * 60 + +p.minute, weekday: new Date(date).getUTCDay() };
+  };
+  const isWeekend = (date) => [0, 6].includes(new Date(date).getUTCDay());
+  const addBusinessDays = (date, days) => {
+    let d = date;
+    while (days > 0) {
+      d += DAY;
+      if (!isWeekend(d)) days--;
+    }
+    return d;
+  };
+  const left = (minutes) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return h ? h + ' hr' + (m ? ' ' + m + ' min' : '') : m + ' min';
+  };
+  const strong = (text) => {
+    const el = document.createElement('strong');
+    el.textContent = text;
+    return el;
+  };
+  const range = (from, to) => {
+    if (from === to) return short.format(from);
+    const sameMonth = new Date(from).getUTCMonth() === new Date(to).getUTCMonth();
+    return monthDay.format(from) + ' – ' + (sameMonth ? dayOnly.format(to) : monthDay.format(to));
+  };
+
+  const form = box ? box.closest('form') : null;
+  const noun = form && form.dataset.noun && form.dataset.noun !== 'product' ? 'your ' + form.dataset.noun : 'it';
+  const nextDayRadio = document.getElementById('turnaroundNextDay');
+  const sameDayRadio = sameDay ? sameDay.querySelector('input[type="radio"]') : null;
+
+  const update = () => {
+    const t = now();
+    const weekday = t.weekday > 0 && t.weekday < 6;
+
+    // Same Day: only until 12pm on a weekday (the cart refuses it after noon too).
+    // Products with their own production times (B2Sign Sync) carry their Same Day cut-off, e.g. "12:00".
+    const sameDayCut = sameDay && /^\d\d:\d\d$/.test(sameDay.dataset.cutoff || '') ? +sameDay.dataset.cutoff.slice(0, 2) * 60 + +sameDay.dataset.cutoff.slice(3) : 12 * 60;
+    const sameDayOpen = weekday && t.minutes < sameDayCut;
+    if (sameDay) {
+      sameDay.hidden = !sameDayOpen || sameDay.dataset.qtyHidden === '1';
+      if (!sameDayOpen && sameDayRadio && sameDayRadio.checked && nextDayRadio) {
+        nextDayRadio.checked = true;
+        // js/main.js takes the same day charge off on this change (jQuery handler).
+        nextDayRadio.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+    if (!box) return;
+
+    const cutoff = (parseInt(box.dataset.cutoff, 10) || 16) * 60;
+    const sameDayCutoff = (parseInt(box.dataset.sameDayCutoff, 10) || 12) * 60;
+    const production = Math.max(1, parseInt(box.dataset.productionDays, 10) || 1);
+    const fastestDays = parseInt(box.dataset.fastestDays, 10) || 0;
+    const rush = Boolean(sameDayRadio && sameDayRadio.checked && sameDayOpen);
+
+    let ship;
+    let minutesLeft = 0;
+    if (rush) {
+      ship = t.date;
+      minutesLeft = sameDayCutoff - t.minutes;
+    } else {
+      let orderDay = t.date;
+      if (!weekday || t.minutes >= cutoff) orderDay = addBusinessDays(orderDay, 1);
+      else minutesLeft = cutoff - t.minutes;
+      ship = addBusinessDays(orderDay, production);
+    }
+    const shipText = ship === t.date ? 'today' : ship === t.date + DAY ? 'tomorrow, ' + short.format(ship) : short.format(ship);
+
+    const shipLine = box.querySelector('.pd-eta__ship');
+    shipLine.textContent = '';
+    if (minutesLeft > 0) {
+      shipLine.append('Order within ', strong(left(minutesLeft)), ' and ' + noun + ' ships ', strong(shipText));
+    } else {
+      shipLine.append('Order now and ' + noun + ' ships ', strong(shipText));
+    }
+
+    // Standard shipping is 3-6 business days (checkout quotes the slow end).
+    const arriveLine = box.querySelector('.pd-eta__arrive');
+    arriveLine.textContent = '';
+    arriveLine.append('Arrives ', strong(range(addBusinessDays(ship, 3), addBusinessDays(ship, 6))), ' with standard shipping');
+    if (fastestDays > 0 && fastestDays < 3) {
+      arriveLine.append(', or ', strong(short.format(addBusinessDays(ship, fastestDays))), ' with ' + (box.dataset.fastestName || 'faster') + ' shipping');
+    }
+    arriveLine.append('.');
+    box.hidden = false;
+  };
+
+  update();
+  window.setInterval(update, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) update(); });
+  document.addEventListener('change', (e) => { if (e.target && e.target.name === 'turnaround_option') update(); });
+})();
+
+// ---- 6b. Production times that depend on the quantity (inc/product-buy-box.php, B2Sign Sync) ----
+// B2Sign allows Same Day up to 10 items, Next Day up to 100, then 3 or 5 business days. Choices the
+// quantity rules out are hidden; when the chosen one goes, the first allowed one is chosen instead.
+(function () {
+  const options = Array.from(document.querySelectorAll('[data-turnaround-option]'));
+  const qty = document.getElementById('productQuantity');
+  if (!options.length || !qty) return;
+  const apply = () => {
+    const n = Math.max(1, parseInt(qty.value, 10) || 1);
+    options.forEach((el) => {
+      const min = parseInt(el.dataset.minQty, 10) || 1;
+      const max = el.dataset.maxQty === '' ? Infinity : parseInt(el.dataset.maxQty, 10);
+      const out = n < min || n > max;
+      el.dataset.qtyHidden = out ? '1' : '';
+      // Same Day also closes at its cut-off; section 6 above keeps that part up to date.
+      if (!el.hasAttribute('data-same-day-option')) el.hidden = out;
+      else if (out) el.hidden = true;
+    });
+    const checked = options.find((el) => el.querySelector('input:checked'));
+    if (!checked || checked.hidden) {
+      const first = options.find((el) => !el.hidden);
+      const radio = first && first.querySelector('input');
+      if (radio && !radio.checked) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  };
+  qty.addEventListener('input', apply);
+  qty.addEventListener('change', apply);
+  apply();
+})();
+
+// ---- 7. Quantity - / + buttons (inc/product-buy-box.php) ----
+// They change the number box and send it a change event, which js/main.js prices
+// (its jQuery handler and the server quote both listen for it).
+(function () {
+  const input = document.getElementById('productQuantity');
+  const box = input && input.closest('.pd-qty__box');
+  if (!box) return;
+  const steps = box.querySelectorAll('[data-qty-step]');
+  const clamp = (value) => Math.min(1000, Math.max(1, parseInt(value, 10) || 1));
+  const sync = () => {
+    const value = clamp(input.value);
+    steps.forEach((button) => {
+      const step = parseInt(button.dataset.qtyStep, 10);
+      button.disabled = (step < 0 && value <= 1) || (step > 0 && value >= 1000);
+    });
+  };
+  box.addEventListener('click', (e) => {
+    const button = e.target.closest('[data-qty-step]');
+    if (!button || button.disabled) return;
+    input.value = clamp(clamp(input.value) + parseInt(button.dataset.qtyStep, 10));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+  input.addEventListener('input', sync);
+  input.addEventListener('change', sync);
+  sync();
 })();

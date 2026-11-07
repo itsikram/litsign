@@ -197,8 +197,8 @@ class Cart
             if (empty($checked_type['ext']) || empty($checked_type['type'])) {
                 $this->redirect_with_error($product_id, 'Artwork must be a JPG, PNG, GIF, WebP or PDF file.');
             }
-            if (filesize($file['tmp_name']) > 25 * 1024 * 1024) {
-                $this->redirect_with_error($product_id, 'Artwork files must be under 25MB.');
+            if (filesize($file['tmp_name']) > wholesale_artwork_max_bytes()) {
+                $this->redirect_with_error($product_id, 'Artwork files must be under ' . wholesale_artwork_max_text() . '. ' . wholesale_large_file_help());
             }
 
             $file_ext = $checked_type['ext'];
@@ -320,7 +320,10 @@ class Cart
 		}
 
 
-		if($turnaround_option == 'same_day') {
+		if (!empty($quote['turnaround_label'])) {
+			// The product's own production time (mirrored from B2Sign), e.g. "3 Business Days".
+			$turnaround_option = $quote['turnaround_label'];
+		} elseif($turnaround_option == 'same_day') {
 			$turnaround_option = 'Same Day';
 		}elseif($turnaround_option == 'next_day') {
 			$turnaround_option = 'Next Day';
@@ -458,7 +461,8 @@ class Cart
             // The header cart drawer (inc/mini-cart.php) sends its own response.
             return;
         }
-        wp_safe_redirect(get_permalink());
+        // Buy Now without JavaScript (single-product.php): straight to checkout.
+        wp_safe_redirect(!empty($request['buy_now']) ? home_url('/checkout/') : get_permalink());
         exit;
     }
 

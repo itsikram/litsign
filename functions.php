@@ -52,6 +52,7 @@ require_once(dirname(__FILE__) . '/inc/review-manager.php');
 // the dated promotion under Settings > Storefront Sign. Its per-product snapshots of the
 // original prices stay in post meta (_wholesale_review_pricing_snapshot).
 require_once(dirname(__FILE__) . '/inc/order-reviews.php');
+require_once(dirname(__FILE__) . '/inc/review-requests.php');
 require_once(dirname(__FILE__) . '/inc/pricing.php');
 require_once(dirname(__FILE__) . '/inc/stock-status.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');
@@ -62,6 +63,11 @@ require_once(dirname(__FILE__) . '/inc/email-log.php');
 require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
+require_once(dirname(__FILE__) . '/inc/product-kit.php');
+require_once(dirname(__FILE__) . '/inc/size-chips.php');
+require_once(dirname(__FILE__) . '/inc/product-buy-box.php');
+require_once(dirname(__FILE__) . '/inc/product-hero.php');
+require_once(dirname(__FILE__) . '/inc/hero-images.php');
 require_once(dirname(__FILE__) . '/inc/product-guides.php');
 require_once(dirname(__FILE__) . '/inc/product-page-content.php');
 require_once(dirname(__FILE__) . '/inc/category-page-content.php');
@@ -71,6 +77,7 @@ require_once(dirname(__FILE__) . '/inc/location-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
 require_once(dirname(__FILE__) . '/inc/ads-page-conversions.php');
 require_once(dirname(__FILE__) . '/inc/quote-form.php');
+require_once(dirname(__FILE__) . '/inc/buying-journey.php');
 require_once(dirname(__FILE__) . '/inc/async-uploads.php');
 require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
 require_once(dirname(__FILE__) . '/inc/exit-survey.php');
@@ -79,6 +86,7 @@ require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
 require_once(dirname(__FILE__) . '/inc/storefront-media.php');
 require_once(dirname(__FILE__) . '/inc/product-image-alt.php');
 require_once(dirname(__FILE__) . '/inc/shop-catalog.php');
+require_once(dirname(__FILE__) . '/inc/home-catalog-directory.php');
 require_once(dirname(__FILE__) . '/inc/theme-images.php');
 require_once(dirname(__FILE__) . '/inc/settings-page.php');
 require_once(dirname(__FILE__) . '/inc/media-sync.php');
@@ -431,6 +439,9 @@ function wholesale_setting_defaults()
 		'allow_verified_reviews' => 1,
 		'auto_publish_reviews' => 0,
 		'schema_imported_reviews' => 0,
+		// Review request email a few days after an order arrives (inc/review-requests.php).
+		'review_request_email' => 1,
+		'review_request_days' => 5,
 		'payment_disabled' => defined('WHOLESALE_PAYMENT_DISABLED') && WHOLESALE_PAYMENT_DISABLED ? 1 : 0,
 		'payment_test_mode' => defined('WHOLESALE_CONVERGE_TEST_MODE') && WHOLESALE_CONVERGE_TEST_MODE ? 1 : 0,
 		'merchant_id' => defined('WHOLESALE_CONVERGE_MERCHANT_ID') ? WHOLESALE_CONVERGE_MERCHANT_ID : '',
@@ -532,6 +543,7 @@ function wholesale_setting_sanitizer($key)
 		'ticket_default_message' => 'sanitize_textarea_field',
 		'quote_autoreply_message' => 'sanitize_textarea_field',
 		'ticket_due_days' => 'wholesale_sanitize_days',
+		'review_request_days' => 'wholesale_sanitize_review_request_days',
 		'default_hero_image' => 'wholesale_sanitize_image_id',
 		'page_loader_enabled' => 'wholesale_sanitize_page_loader_enabled',
 		'promo_percent' => 'wholesale_sanitize_promo_percent',
@@ -1134,6 +1146,12 @@ function wholesale_handle_review_submission()
 	$product_id = isset($_POST['review_product_id']) ? absint($_POST['review_product_id']) : 0;
 	$review_anchor = $product_id ? '#product-reviews' : '#feedbackModal';
 
+	// Bots fill every field, including the hidden one people never see. Act as if it was sent.
+	if (!empty($_POST['review_website'])) {
+		wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . $review_anchor);
+		exit;
+	}
+
 	if (!$name || !is_email($email) || $rating < 1 || $rating > 5 || !$review) {
 		wp_safe_redirect(add_query_arg('review_status', 'error', $redirect_url) . $review_anchor);
 		exit;
@@ -1174,9 +1192,14 @@ function wholesale_handle_review_submission()
 		exit;
 	}
 
+	// Sales pitches sent through the review form carry a link to the sender's site
+	// (2026-11-01: a lead-gen ad went live as a 5-star review), so those always wait for approval.
+	$has_link = wholesale_review_has_link($review);
+	$auto_publish = wholesale_setting_enabled('auto_publish_reviews') && !$has_link;
+
 	$submission_id = wp_insert_post(array(
 		'post_type' => 'review_submission',
-		'post_status' => wholesale_setting_enabled('auto_publish_reviews') ? 'publish' : 'pending',
+		'post_status' => $auto_publish ? 'publish' : 'pending',
 		'post_title' => sprintf('%d-star review from %s', $rating, $name),
 		'post_content' => $review,
 		'meta_input' => array(
@@ -1203,7 +1226,10 @@ function wholesale_handle_review_submission()
 		$body .= 'Order: #' . wholesale_order_number($review_order_id) . "\n";
 	}
 	$body .= "\nReview:\n{$review}\n\n";
-	$body .= wholesale_setting_enabled('auto_publish_reviews')
+	if ($has_link && wholesale_setting_enabled('auto_publish_reviews')) {
+		$body .= "Not published automatically: the review contains a link or email address.\n";
+	}
+	$body .= $auto_publish
 		? "This review was published automatically.\n"
 		: 'Approve or edit it here: ' . admin_url('edit.php?post_status=pending&post_type=review_submission') . "\n";
 	list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
@@ -1219,6 +1245,14 @@ function wholesale_handle_review_submission()
 }
 add_action('admin_post_nopriv_submit_review', 'wholesale_handle_review_submission');
 add_action('admin_post_submit_review', 'wholesale_handle_review_submission');
+
+/**
+ * True when review text holds a web address or email address, which is how spam pitches arrive.
+ */
+function wholesale_review_has_link($text)
+{
+	return (bool) preg_match('~https?://|www\.|\b[a-z0-9-]+\.(?:com|net|org|io|co|ai|biz|info|app|us|xyz|site|online)\b|[^\s@]+@[^\s@]+\.[a-z]{2,}~i', (string) $text);
+}
 
 /**
  * ID of an earlier copy of the same review (same email, product and text, not trashed), or 0.
@@ -1673,13 +1707,29 @@ add_action('wp_enqueue_scripts', 'wholesale_dequeue_dashicons', 100);
  * Make the hero background image discoverable while the stylesheets load. It
  * is the largest paint on the home page and the channel letter page.
  *
- * Templates that build their hero before get_header() go through
- * wholesale_hero_background_style(), which records the exact file used.
+ * Hero templates record the exact image URLs before calling get_header().
  */
 function wholesale_preload_front_page_hero()
 {
+	// A per-page hero photo (inc/hero-images.php) prints its own preload.
+	if (!empty($GLOBALS['wholesale_hero_custom'])) {
+		return;
+	}
 	$image = isset($GLOBALS['wholesale_hero_image']) ? $GLOBALS['wholesale_hero_image'] : '';
 	if (!$image && !is_front_page()) {
+		return;
+	}
+
+	$mobile = $GLOBALS['wholesale_hero_mobile_image'] ?? '';
+	if ($mobile) {
+		// Match the viewport rule in css/home-catalog.css.
+		if (!empty($GLOBALS['wholesale_hero_image_avif']) && !empty($GLOBALS['wholesale_hero_mobile_avif'])) {
+			printf('<link rel="preload" as="image" href="%s" type="image/avif" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($GLOBALS['wholesale_hero_mobile_avif']));
+			printf('<link rel="preload" as="image" href="%s" type="image/avif" media="not all and (max-width: 767px)" fetchpriority="high">' . "\n", esc_url($GLOBALS['wholesale_hero_image_avif']));
+			return;
+		}
+		printf('<link rel="preload" as="image" href="%s" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($mobile));
+		printf('<link rel="preload" as="image" href="%s" media="not all and (max-width: 767px)" fetchpriority="high">' . "\n", esc_url($image));
 		return;
 	}
 
@@ -2075,7 +2125,7 @@ add_filter('query_vars', function ($vars) {
  * sitemap lastmod and its dateModified in structured data. Bump it by hand when
  * that template's copy or product lists change.
  */
-define('WHOLESALE_HOME_PAGE_REVISED', '2026-10-27T08:20:00+00:00');
+define('WHOLESALE_HOME_PAGE_REVISED', '2026-11-05T17:30:00+00:00');
 
 /**
  * Render /sitemap.xml (the index) and /page-sitemap.xml: the home page, pages
@@ -2253,8 +2303,11 @@ function register_order_post_statuses()
 add_action('init', 'register_order_post_statuses');
 
 /**
- * Orders hold customer names, emails, phones and addresses. Only the customer who placed an
- * order (or staff who can edit it) may view it on the front end.
+ * Orders hold customer names, emails, phones and addresses. Anyone with the order's link may
+ * view it without logging in: the slug carries the order's random 10-character code
+ * (wholesale_generate_order_id()), so the link works like a private key. Reaching an order any
+ * other way (?post_type=order&p=ID, which would redirect to the full link) is left to the
+ * customer who placed it and staff, so nobody can walk the post IDs.
  */
 function wholesale_protect_order_pages()
 {
@@ -2271,9 +2324,10 @@ function wholesale_protect_order_pages()
 		return;
 	}
 
-	if (!is_user_logged_in()) {
-		wp_safe_redirect(add_query_arg('redirect_ulr', rawurlencode(get_permalink($order_post_id)), home_url('/login/')));
-		exit;
+	$order_slug = (string) get_post_field('post_name', $order_post_id);
+	$requested_slug = (string) (get_query_var('store_order') ?: get_query_var('name'));
+	if ('' !== $order_slug && $requested_slug === $order_slug) {
+		return;
 	}
 
 	$order_owner = absint(get_post_meta($order_post_id, 'user_id', true));
@@ -2284,6 +2338,14 @@ function wholesale_protect_order_pages()
 	wholesale_render_404();
 }
 add_action('template_redirect', 'wholesale_protect_order_pages', 5);
+
+/**
+ * A 404 under /order/ must not be "guessed" into the order whose slug starts with it:
+ * /order/order-jane-doe/ would otherwise redirect to that customer's full order link.
+ */
+add_filter('do_redirect_guess_404_permalink', function ($do_redirect) {
+	return 'order' === get_query_var('post_type') ? false : $do_redirect;
+});
 
 function wholesale_render_404()
 {
@@ -2846,6 +2908,10 @@ function litsign_scripts()
 	if (is_page_template('landing-page.php')) {
 		wp_enqueue_style('landing-page', $theme_uri . '/css/landing-page.css', array('litsign-style', 'custom-style'), $asset_version('/css/landing-page.css'));
 	}
+	// /channel-letter-quote/ (Google Ads channel letter landing, page-channel-letters-ads.php).
+	if (is_page_template('page-channel-letters-ads.php')) {
+		wp_enqueue_style('cl-ads', $theme_uri . '/css/cl-ads.css', array('custom-style'), $asset_version('/css/cl-ads.css'));
+	}
 	// The quote form styles are shared by both Google Ads landing pages. The
 	// home page reuses their help band and hero proof line.
 	if (is_page_template('page-channel-letters.php') || is_page(array('banners-displays', 'window-graphics')) || is_front_page()) {
@@ -3330,8 +3396,12 @@ function wholesale_seo_page_defaults()
 			'description' => __('Shipping options, delivery times and the return and reprint policy for custom made-to-order signs and prints from Storefront Sign Online.', 'litsign'),
 		),
 		'contact' => array(
-			'title' => __('Contact Us | Free Channel Letter & Sign Quote', 'litsign'),
-			'description' => __('Request a free quote for channel letters, banners or displays. Call 866-436-2101, text or email your logo, Mon-Fri 8am-5pm PT. We ship nationwide.', 'litsign'),
+			'title' => __('Contact Us | Free Sign, Banner & Display Quote', 'litsign'),
+			'description' => __('Request a free quote for channel letters, banners, flags, trade show displays or window graphics. Call 866-436-2101, text or email your logo, Mon-Fri 8am-5pm PT.', 'litsign'),
+		),
+		'sign-packages' => array(
+			'title' => __('Sign Packages: Grand Opening, Trade Show & New Storefront', 'litsign'),
+			'description' => __('Quote a grand opening, trade show or new storefront sign package in one request. Each item priced at its normal price; you approve before anything is made.', 'litsign'),
 		),
 		// Ads-only pages (noindexed): the title still shows in the browser tab.
 		'chennel-letter-ads' => array(
@@ -3836,6 +3906,11 @@ function wholesale_product_schema($product_id, $url, $image = '')
 	// Products without an online price get no Offer, since Google rejects an
 	// Offer without a price.
 	$price = wholesale_seo_product_lowest_price($product_id);
+	// A size link (?size=36x72, the Shopping item for that size) offers that size's price.
+	$size_link = function_exists('wholesale_size_link') ? wholesale_size_link($product_id) : null;
+	if ($size_link) {
+		$price = $size_link['price'];
+	}
 	if ($price > 0) {
 		$product['offers'] = array(
 			'@type' => 'Offer',
@@ -4746,6 +4821,16 @@ add_action('cmb2_admin_init', function () {
 			'id' => '_min_order_per_side',
 		)
 	);
+	// B2Sign-style price limits on the printed size (wholesale_price_quote()).
+	foreach (array('_min_order_extra_side' => 'Minimum Extra Per Side', '_max_print_price' => 'Full Sheet Price', '_max_print_extra_side' => 'Full Sheet Extra Per Side') as $limit_id => $limit_name) {
+		$product->add_field(
+			array(
+				'name' => __($limit_name, 'tm'),
+				'type' => 'text',
+				'id' => $limit_id,
+			)
+		);
+	}
 	// See wholesale_product_max_sides().
 	$product->add_field(
 		array(
@@ -4843,6 +4928,21 @@ add_action('cmb2_admin_init', function () {
 			'name' => __('Show Size Presets', 'tm'),
 			'id' => '_size_presets',
 			'type' => 'checkbox',
+		)
+	);
+	// The Size selector's sizes and notes (inc/size-chips.php wholesale_size_presets()).
+	$product->add_field(
+		array(
+			'name' => __('Preset Sizes', 'tm'),
+			'id' => '_size_preset_list',
+			'type' => 'textarea_small',
+		)
+	);
+	$product->add_field(
+		array(
+			'name' => __('Custom Size Note', 'tm'),
+			'id' => '_custom_size_note',
+			'type' => 'text',
 		)
 	);
 

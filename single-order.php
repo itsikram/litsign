@@ -1,6 +1,6 @@
 <?php
 /**
- * Order detail for the customer who placed it (and staff; see wholesale_protect_order_pages()).
+ * Order detail for anyone with the order's link, no login needed (see wholesale_protect_order_pages()).
  *
  * @package litsign
  */
@@ -46,7 +46,11 @@ get_header();
 
 <main id="primary" class="account-page-v2">
     <div class="container account-container">
-        <p class="order-back"><a href="<?php echo esc_url($is_staff ? admin_url('edit.php?post_type=order') : home_url('/my-orders/')); ?>">&larr; <?php echo $is_staff ? 'All orders' : 'My orders'; ?></a></p>
+        <?php if ($is_staff || is_user_logged_in()) : ?>
+            <p class="order-back"><a href="<?php echo esc_url($is_staff ? admin_url('edit.php?post_type=order') : home_url('/my-orders/')); ?>">&larr; <?php echo $is_staff ? 'All orders' : 'My orders'; ?></a></p>
+        <?php else : ?>
+            <p class="order-back"><a href="<?php echo esc_url(home_url('/')); ?>">&larr; Continue shopping</a></p>
+        <?php endif; ?>
 
         <header class="acct-head">
             <div>
@@ -58,24 +62,7 @@ get_header();
             <?php endif; ?>
         </header>
 
-        <?php if ($step > 0) :
-            // A Delivered order has a 4th step; the tracking sync plugin also adds it (with an estimate) for shipped orders.
-            $progress = apply_filters('wholesale_order_progress', array('steps' => array(1 => 'Order received', 2 => 'In production', 3 => 'Shipped') + ($step >= 4 ? array(4 => 'Delivered') : array()), 'step' => $step, 'dates' => array(), 'notes' => array()), $post_id);
-            $last_step = max(array_keys($progress['steps']));
-            ?>
-            <ol class="order-progress<?php echo $last_step > 3 ? ' order-progress--' . (int) $last_step : ''; ?>" aria-label="Order progress">
-                <?php foreach ($progress['steps'] as $index => $label) : ?>
-                    <li class="<?php echo $index < $progress['step'] ? 'is-done' : ($index === $progress['step'] ? 'is-current' : ''); ?>"<?php echo $index === $progress['step'] ? ' aria-current="step"' : ''; ?>>
-                        <span><?php echo esc_html($label); ?></span>
-                        <?php if (!empty($progress['notes'][$index])) : ?>
-                            <small><?php echo esc_html($progress['notes'][$index]); ?></small>
-                        <?php elseif (3 === $index && get_post_meta($post_id, 'estimate_delivery_time', true) && $step < 3) : ?>
-                            <small>Est. <?php echo esc_html(get_post_meta($post_id, 'estimate_delivery_time', true)); ?></small>
-                        <?php endif; ?>
-                    </li>
-                <?php endforeach; ?>
-            </ol>
-        <?php endif; ?>
+        <?php echo wholesale_order_steps_html($post_id); // Every stage, step by step; escaped in the helper. ?>
 
         <?php $shipments_html = (string) apply_filters('wholesale_order_shipments_html', '', $post_id, 'order'); ?>
         <?php if ('' !== $shipments_html) : ?>
@@ -176,7 +163,8 @@ get_header();
 
                             <?php if ($product_url) : ?>
                                 <div class="cart-line-actions">
-                                    <a class="order-view-product" href="<?php echo esc_url($product_url); ?>">View product</a>
+                                    <a class="order-view-product" href="<?php echo esc_url($product_url); ?>" aria-describedby="order-again-note-<?php echo esc_attr($product_id); ?>">Order again</a>
+                                    <small class="order-again-note" style="flex-basis:100%;order:9;color:#55606b;font-size:.8rem" id="order-again-note-<?php echo esc_attr($product_id); ?>">Opens the product at today&rsquo;s price. Choose your size and options and upload or confirm your artwork before adding it to the cart.</small>
                                     <?php if (isset($review_links[$product_id])) : ?>
                                         <a class="order-write-review" href="<?php echo esc_url($review_links[$product_id]); ?>">&#9733; Write a review</a>
                                     <?php elseif ($can_collect_reviews && wholesale_order_review_id($post_id, $product_id)) : ?>

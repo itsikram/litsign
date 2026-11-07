@@ -487,29 +487,126 @@
       if (e.target === document.activeElement && e.target.matches && e.target.matches('.dimenstion-calculator input[type="number"]')) e.target.blur();
     }, { passive: true });
 
-    // Preset size dropdown (_size_presets products): a preset fills in the width and
-    // height; typing a size picks the matching preset, or Custom size.
-    const sizePreset = document.getElementById('pbSizePreset');
-    if (sizePreset && sizePreset.form) {
-      const dimBox = (dim) => sizePreset.form.querySelector('input[name="' + dim + '-in"]');
-      sizePreset.addEventListener('change', () => {
-        const option = sizePreset.selectedOptions[0];
-        if (!option || !option.dataset.width) return;
-        [['width', option.dataset.width], ['height', option.dataset.height]].forEach(([dim, value]) => {
-          const box = dimBox(dim);
-          if (!box) return;
-          box.value = value;
+    // B2Sign-style Size selector (_size_presets products, single-product.php): a preset
+    // fills in the width and height, whose boxes stay hidden; "Custom Sizes" shows the
+    // boxes. The boxes are what the form posts and the price uses.
+    const sizeSelect = document.querySelector('.pb-size-select');
+    const sizeForm = sizeSelect && sizeSelect.closest('form');
+    if (sizeForm) {
+      const sizeRow = sizeSelect.closest('.pb-size-b2');
+      const button = sizeSelect.querySelector('.pb-size-select__button');
+      const value = sizeSelect.querySelector('.pb-size-select__value');
+      const list = sizeSelect.querySelector('.pb-size-select__list');
+      const options = [...list.querySelectorAll('[role="option"]')];
+      const dimBox = (dim) => sizeForm.querySelector('input[name="' + dim + '-in"]');
+      let active = null;
+      const isOpen = () => !list.hidden;
+      const setActive = (option) => {
+        options.forEach((o) => o.classList.toggle('is-active', o === option));
+        active = option;
+        if (option) {
+          list.setAttribute('aria-activedescendant', option.id);
+          // Scroll the list only, never the page.
+          const top = option.offsetTop;
+          const bottom = top + option.offsetHeight;
+          if (top < list.scrollTop) list.scrollTop = top;
+          else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+        }
+      };
+      const open = () => {
+        list.hidden = false;
+        button.setAttribute('aria-expanded', 'true');
+        sizeSelect.classList.add('is-open');
+        setActive(options.find((o) => o.getAttribute('aria-selected') === 'true') || options[0]);
+        list.focus({ preventScroll: true });
+      };
+      const close = (focusButton) => {
+        if (!isOpen()) return;
+        list.hidden = true;
+        button.setAttribute('aria-expanded', 'false');
+        sizeSelect.classList.remove('is-open');
+        if (focusButton) button.focus();
+      };
+      const choose = (option) => {
+        options.forEach((o) => o.setAttribute('aria-selected', o === option ? 'true' : 'false'));
+        value.replaceChildren(...[...option.childNodes].map((node) => node.cloneNode(true)));
+        const custom = !!option.dataset.custom;
+        sizeRow.classList.toggle('is-preset', !custom);
+        close(!custom);
+        if (custom) {
+          const width = dimBox('width');
+          if (width) { width.focus(); width.select(); }
+          return;
+        }
+        // Both values first, so the price handlers never see one side changed alone.
+        const boxes = [[dimBox('width'), option.dataset.width], [dimBox('height'), option.dataset.height]].filter(([box]) => box);
+        boxes.forEach(([box, size]) => { box.value = size; });
+        boxes.forEach(([box]) => {
+          box.dispatchEvent(new Event('input', { bubbles: true }));
           box.dispatchEvent(new Event('change', { bubbles: true }));
         });
+      };
+      button.addEventListener('click', () => (isOpen() ? close(true) : open()));
+      button.addEventListener('keydown', (e) => {
+        if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
+          e.preventDefault();
+          open();
+        }
       });
-      sizePreset.form.addEventListener('change', (e) => {
-        if (e.target !== dimBox('width') && e.target !== dimBox('height')) return;
-        const width = parseFloat(dimBox('width').value) || 0;
-        const height = parseFloat(dimBox('height').value) || 0;
-        const match = [...sizePreset.options].find((o) => o.dataset.width && parseFloat(o.dataset.width) === width && parseFloat(o.dataset.height) === height);
-        sizePreset.value = match ? match.value : (width || height ? 'custom' : '');
+      list.addEventListener('keydown', (e) => {
+        const at = options.indexOf(active);
+        if (e.key === 'ArrowDown') setActive(options[Math.min(options.length - 1, at + 1)]);
+        else if (e.key === 'ArrowUp') setActive(options[Math.max(0, at - 1)]);
+        else if (e.key === 'Home') setActive(options[0]);
+        else if (e.key === 'End') setActive(options[options.length - 1]);
+        else if ((e.key === 'Enter' || e.key === ' ') && active) choose(active);
+        else if (e.key === 'Escape') close(true);
+        else if (e.key === 'Tab') { close(false); return; }
+        else return;
+        e.preventDefault();
       });
+      list.addEventListener('click', (e) => {
+        const option = e.target.closest('[role="option"]');
+        if (option) choose(option);
+      });
+      list.addEventListener('mousemove', (e) => {
+        const option = e.target.closest('[role="option"]');
+        if (option && option !== active) setActive(option);
+      });
+      document.addEventListener('click', (e) => { if (!sizeSelect.contains(e.target)) close(false); });
     }
+
+    // Size box in feet and inches (meta _size_unit = ftin, like B2Sign's banner page): the visible
+    // ft / in parts feed the hidden width-in / height-in input (total inches), which the price,
+    // the limits, the chips and the cart read as before. A preset or chip sets the hidden total,
+    // and the parts follow it.
+    document.querySelectorAll('.dim-group--ftin').forEach((group) => {
+      const total = group.querySelector('input.dim-input');
+      const parts = { ft: group.querySelector('input[data-part="ft"]'), in: group.querySelector('input[data-part="in"]') };
+      if (!total || !parts.ft || !parts.in) return;
+      let own = false;
+      const push = (type) => {
+        const inches = Math.round(((parseFloat(parts.ft.value) || 0) * 12 + (parseFloat(parts.in.value) || 0)) * 100) / 100;
+        own = true;
+        total.value = inches > 0 ? inches : '';
+        total.dispatchEvent(new Event(type, { bubbles: true }));
+        own = false;
+      };
+      const pull = () => {
+        if (own) return;
+        const inches = parseFloat(total.value) || 0;
+        const feet = Math.floor(inches / 12);
+        parts.ft.value = inches > 0 ? feet : '';
+        parts.in.value = inches > 0 ? Math.round((inches - feet * 12) * 100) / 100 : '';
+      };
+      ['ft', 'in'].forEach((key) => {
+        parts[key].addEventListener('input', () => push('input'));
+        parts[key].addEventListener('change', () => push('change'));
+      });
+      total.addEventListener('input', pull);
+      total.addEventListener('change', pull);
+      pull();
+    });
 
     // Size limits (B2Sign style): nothing shows until a typed size breaks one, then a
     // red "Maximum width is 1200"" under the boxes and the "Max Size" line. The server
@@ -597,7 +694,7 @@
         lastNote = error;
       };
       box.addEventListener('input', (e) => { if (e.target.matches('.dim-input')) checkSize(true); });
-      box.addEventListener('change', (e) => { if (e.target.matches('.dim-input, .pb-size-preset')) checkSize(false); });
+      box.addEventListener('change', (e) => { if (e.target.matches('.dim-input')) checkSize(false); });
       // The boxes open on a default size (wholesale_product_default_size()): run the size
       // handlers once, after the dimension handler below is bound, so every total matches it.
       const defaultWidth = box.querySelector('input[name="width-in"]');
@@ -963,6 +1060,32 @@
           $(this).removeClass("is-zooming");
         });
     }
+
+    // Click or tap the main photo to see it full size. Visitors clicked it again and
+    // again (rage clicks in Visitor Insights): the hover zoom does nothing on a click
+    // and phones had no way to enlarge it at all. Styles: css/ui-polish.css 9h.
+    $(".product-image-zoom")
+      .attr({ role: "button", tabindex: "0", "aria-label": "View larger photo" })
+      .on("click keydown", function (e) {
+        if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return;
+        let src = $(this).attr("data-zoom-src") || $(this).find("img").attr("src");
+        if (!src) return;
+        e.preventDefault();
+        let opener = this;
+        let $box = $('<div class="pd-lightbox" role="dialog" aria-modal="true" aria-label="Product photo"><button type="button" class="pd-lightbox__close" aria-label="Close">&times;</button><img alt=""></div>');
+        $box.find("img").attr({ src: src, alt: $(this).find("img").attr("alt") || "" });
+        let close = () => {
+          $box.remove();
+          $(document).off("keydown.pdLightbox");
+          document.documentElement.classList.remove("pd-lightbox-open");
+          opener.focus();
+        };
+        $box.on("click", close);
+        $(document).on("keydown.pdLightbox", (ev) => { if (ev.key === "Escape") close(); });
+        $("body").append($box);
+        document.documentElement.classList.add("pd-lightbox-open");
+        $box.find(".pd-lightbox__close").trigger("focus");
+      });
 
     // handle product categories click
 
@@ -1333,6 +1456,8 @@
     // Use URLSearchParams to get query string parameters
     const params = new URLSearchParams(windowUrl.search);
     for (const [key, value] of params) {
+      // ?size=36x72 is a size link (width x height, single-product.php), not a select value.
+      if (key === 'size' && /^\d+(\.\d+)?x\d+(\.\d+)?$/.test(value)) continue;
       let querySelector = (`#select-${(key)}`)
       let currentAttr = $(querySelector);
       if (currentAttr) {
@@ -1501,7 +1626,9 @@
           const typed = ['width-in', 'height-in'].map((name) => parseFloat(form.querySelector(`input[name="${name}"]`)?.value) || 0);
           document.dispatchEvent(new CustomEvent('wholesale:size-note', { detail: { message: dimError.textContent, size: `${typed[0]}" x ${typed[1]}"` } }));
         }
-        const target = blank || form.querySelector('input[name="width-in"]');
+        let target = blank || form.querySelector('input[name="width-in"]');
+        // Feet-and-inches boxes: the total is hidden, so the feet part takes the focus.
+        if (target && target.type === 'hidden') target = target.closest('.dim-group')?.querySelector('input[data-part="ft"]') || target;
         target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         target?.focus({ preventScroll: true });
       }, true);

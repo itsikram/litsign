@@ -176,6 +176,9 @@
   let clickCount = 0;
   let lastClick = { label: '', at: 0 };
   let recentClicks = [];
+  // When the visitor last followed a link: the browser then cancels requests still
+  // running, e.g. the quote for a size box left by tapping another product's link.
+  let leavingAt = 0;
 
   const elementLabel = (el) => text(
     el.getAttribute('aria-label') || el.innerText || el.value || el.getAttribute('title') || el.getAttribute('alt') ||
@@ -210,6 +213,7 @@
 
     const href = el.tagName === 'A' ? (el.getAttribute('href') || '') : '';
     const label = elementLabel(el);
+    if (href && !/^(#|javascript:|tel:|mailto:)/i.test(href) && el.target !== '_blank') leavingAt = now;
 
     if (/^tel:/i.test(href)) {
       push('call_click', { label: href.slice(4).trim() });
@@ -332,7 +336,11 @@
               return response.clone().json();
             })
             .then((json) => recordAjax(action, json, body))
-            .catch(() => recordAjax(action, { ok: false, error: 'No valid response from the server (HTTP ' + (status || 'none') + ')' }, body));
+            .catch(() => {
+              // No answer at all because the page was leaving is not an error the visitor saw.
+              if (!status && Date.now() - leavingAt < 5000) return;
+              recordAjax(action, { ok: false, error: 'No valid response from the server (HTTP ' + (status || 'none') + ')' }, body);
+            });
         }
       } catch (error) {
         // Never get in the way of the page's own request.
@@ -407,5 +415,5 @@
 
   setInterval(() => { if (!document.hidden) send(); }, 15000);
   document.addEventListener('visibilitychange', () => { if (document.hidden) send(true); });
-  window.addEventListener('pagehide', () => send(true));
+  window.addEventListener('pagehide', () => { leavingAt = Date.now(); send(true); });
 })();

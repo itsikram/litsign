@@ -3376,7 +3376,7 @@ function wholesale_vi_export_markdown($period, $filters)
 	$md .= "## Instructions for Claude\n\n";
 	$md .= "This report shows how visitors use {$site}, a WordPress store for custom signs (channel letters, storefront signs). Most paid traffic comes from Google Ads, and many ad visitors leave without buying. Please:\n\n";
 	$md .= "1. Read the findings, funnel, problems, form abandonment and sample journeys below, and work out the most likely reasons visitors are not buying.\n";
-	$md .= "2. Check each likely cause against the site's code before changing anything. All site code lives in the custom theme at `wp-content/themes/wholesale/` (see the page map below). The theme, not plugins, also owns SEO (titles, meta, schema).\n";
+	$md .= "2. Check each likely cause against the site's code before changing anything. All site code lives in the custom theme at `wp-content/themes/tr-retails/` (see the page map below). The theme, not plugins, also owns SEO (titles, meta, schema).\n";
 	$md .= "3. Fix what can be fixed in the theme: errors visitors hit, confusing or slow landing pages, missing prices or calls to action, mobile layout problems, form friction, broken links. Make the smallest changes that address the cause, and explain each one.\n";
 	$md .= "4. List separately what has to be changed outside the website (Google Ads keywords, negative keywords, locations, bids, ad schedule, IP exclusions), since those cannot be changed in code.\n";
 	$md .= "5. Say how to confirm each change worked in the next report (which number should move).\n\n";
@@ -3387,7 +3387,7 @@ function wholesale_vi_export_markdown($period, $filters)
 	foreach (wholesale_vi_page_type_files() as $type => $files) {
 		$rows[] = array($type, '`' . implode('`, `', $files) . '`');
 	}
-	$md .= wholesale_vi_md_table(array('Page type', 'Files (in wp-content/themes/wholesale/)'), $rows) . "\n";
+	$md .= wholesale_vi_md_table(array('Page type', 'Files (in wp-content/themes/tr-retails/)'), $rows) . "\n";
 
 	$conv = static function ($s) {
 		return wholesale_vi_pct(($s['orders'] ?? 0) + ($s['leads'] ?? 0), $s['sessions'] ?? 0, 1);

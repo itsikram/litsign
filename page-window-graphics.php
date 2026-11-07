@@ -125,12 +125,7 @@ wholesale_seo_prime_products(array_merge(
 $perf_price = wholesale_seo_product_starting_text('adhesive-window-perf');
 $decal_price = wholesale_seo_product_starting_text('adhesive-products');
 
-$hero_photos = array(
-	array('adhesive-window-perf', 'Printed window perf graphic on a storefront window'),
-	array('frosted-vinyl-etched', 'Frosted window film with a printed logo on office glass'),
-	array('adhesive-clear-vinyl', 'Clear vinyl window decal on a cafe window'),
-	array('premium-window-cling', 'Printed window cling menu on a restaurant door'),
-);
+
 
 // The films are this page's item list in structured data.
 $GLOBALS['wholesale_page_items'] = array_values(array_filter(array_map(static function ($film) {
@@ -177,12 +172,13 @@ wholesale_seo_set_page_faq(array(
 	),
 ));
 
-get_header();
+// Register the matching image before the header prints its preload links.
+list($page_hero_image, $page_hero_mobile) = wholesale_landing_page_hero_images('windows');
+$GLOBALS['wholesale_hero_image'] = $page_hero_image;
+$GLOBALS['wholesale_hero_mobile_image'] = $page_hero_mobile;
+$page_hero_background = "--lp-desktop: url('" . esc_url($page_hero_image) . "'); --lp-mobile: url('" . esc_url($page_hero_mobile) . "');";
 
-$page_hero_image = get_the_post_thumbnail_url(get_the_ID(), 'large');
-$page_hero_image = $page_hero_image ? wholesale_webp_url(esc_url_raw($page_hero_image)) : '';
-$default_page_hero_image = wholesale_default_hero_url();
-$page_hero_background = wholesale_hero_background_style($page_hero_image, $default_page_hero_image);
+get_header();
 
 // Hero proof point: the Google rating, linked to the reviews page.
 $google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
@@ -207,7 +203,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 							<a class="home-hero-rating" href="<?php echo esc_url($reviews_url); ?>"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
 						</p>
 					<?php endif; ?>
-					<p class="home-hero-lead"><?php echo $type ? wp_kses_post($types[$type][1]) . ' ' : ''; ?>Window perf, frosted and clear films, window clings, decals, wall and floor graphics. Pick a film, enter your size and see your price before you check out.</p>
+					<p class="home-hero-lead"><?php echo $type ? wp_kses_post($types[$type][1]) : 'Turn your windows into a display for your business. Choose see-through, privacy or removable graphics, printed to your size.'; ?> See your price before checkout.</p>
 					<div class="home-hero-actions home-hero-actions--cl">
 						<a class="home-hero-shop-button" href="<?php echo esc_url($type ? '#' . $type : '#films'); ?>"><span class="home-hero-button-text">See Films &amp; Prices<?php if ($decal_price) : ?><small>From <?php echo wp_kses_post($decal_price); ?></small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
 						<a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
@@ -218,17 +214,21 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 						<span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT</span>
 					</p>
 				</div>
-				<div class="bd-hero-media" aria-hidden="true">
-					<?php foreach ($hero_photos as $index => $photo) : ?>
-						<?php $image = $product_image($photo[0], $photo[1], '(max-width: 575px) 45vw, (max-width: 991px) 22vw, 260px', 0 === $index ? 'high' : true); ?>
-						<?php if ($image) : ?>
-							<div class="bd-hero-tile bd-hero-tile--<?php echo (int) $index + 1; ?>"><?php echo $image; ?></div>
-						<?php endif; ?>
-					<?php endforeach; ?>
-				</div>
+
 			</div>
 		</div>
 	</section>
+
+	<nav class="lp-jump" aria-label="Browse window films">
+		<div class="container">
+			<p>Find your film</p>
+			<div class="lp-jump-links">
+				<?php foreach ($films as $item) : ?>
+					<a href="#<?php echo esc_attr($item[0]); ?>"><?php echo wp_kses_post($item[2]); ?></a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</nav>
 
 	<div class="home-hero-features bd-features" aria-label="Why order from us">
 		<div class="container home-hero-feature-grid">
@@ -268,7 +268,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					?>
 					<article class="sf-type-card bd-card wg-card<?php echo $type === $film[0] ? ' is-highlighted' : ''; ?>" id="<?php echo esc_attr($film[0]); ?>">
 						<a class="sf-type-image" href="<?php echo esc_url($url); ?>" tabindex="-1" aria-hidden="true">
-							<?php echo $product_image($film[1], $name, '(max-width: 575px) 112px, (max-width: 991px) 50vw, 25vw'); ?>
+							<?php echo $product_image($film[1], $name, '(max-width: 575px) 100px, (max-width: 991px) 50vw, 33vw'); ?>
 						</a>
 						<div class="sf-type-body">
 							<span class="wg-card-tag"><?php echo wp_kses_post($film[4]); ?></span>
@@ -277,7 +277,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 							<?php if ($price) : ?>
 								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($price); ?></p>
 							<?php endif; ?>
-							<a class="wg-card-link" href="<?php echo esc_url($url); ?>">Size &amp; price it <span aria-hidden="true">&rarr;</span></a>
+							<a class="wg-card-link lp-order" href="<?php echo esc_url($url); ?>">Customize &amp; Order <span aria-hidden="true">&rarr;</span></a>
 						</div>
 					</article>
 				<?php endforeach; ?>
@@ -400,7 +400,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 				</li>
 				<li>
 					<span class="cl-step-number" aria-hidden="true">2</span>
-					<h3>Size &amp; price it</h3>
+					<h3>Customize &amp; Order</h3>
 					<p>Enter your width and height; your price updates instantly.</p>
 				</li>
 				<li>

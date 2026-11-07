@@ -1085,7 +1085,7 @@
 	/* =============================================================== SECTIONS */
 
 	const SECTIONS = [
-		{ id: 'pricing', label: 'Pricing and size', fields: ['_hide_calculator', '_size_presets', '_price_per_sqft', '_discount_percent', '_min_order_price', '_min_order_per_side', '_promo_percent', '_promo_start', '_promo_end', '_min_sqft', '_min_height', '_max_height', '_min_width', '_max_width', '_max_size', '_starting_at_text', '_starting_at_options'] },
+		{ id: 'pricing', label: 'Pricing and size', fields: ['_hide_calculator', '_size_presets', '_size_preset_list', '_custom_size_note', '_price_per_sqft', '_discount_percent', '_min_order_price', '_min_order_per_side', '_min_order_extra_side', '_max_print_price', '_max_print_extra_side', '_promo_percent', '_promo_start', '_promo_end', '_min_sqft', '_min_height', '_max_height', '_min_width', '_max_width', '_max_size', '_starting_at_text', '_starting_at_options'] },
 		{ id: 'options', label: 'Options', boxes: ['product_attr'] },
 		{ id: 'cl', label: 'Channel letters', boxes: ['product_cl_data', 'product_extra_options'], fields: ['_trimcap_color', '_return_color', '_info_content_face_text', '_info_content_face_image', '_info_content_return_text', '_info_content_return_image', '_info_content_trimcap_text', '_info_content_trimcap_image'] },
 		{ id: 'descriptions', label: 'Descriptions and FAQ', boxes: ['product_additional_info'], fields: ['_product_short_desc', '_product_list_desc', '_product_review_text'] },
@@ -1280,6 +1280,8 @@
 			let letterHeight = 0;
 			let isSqftCalc = false;
 			let running;
+			let flat = 0;
+			let sides = 1;
 
 			if (isCl) {
 				letterCount = (this.input.letters.match(/\S/gu) || []).length;
@@ -1317,20 +1319,34 @@
 				if (price.type === '%') amount = running * price.amount / 100;
 				else if (price.type === 'sqft') amount = (isSqftCalc ? sqft : Math.max(minSqft, sqft)) * price.amount;
 				else if (price.type === 'lft') amount = price.amount * (letterHeight * letterCount / 12);
-				else amount = price.amount;
+				else {
+					amount = price.amount;
+					if (isSqftCalc && D.flatOnTop) flat += amount;
+				}
+				if (['of-sides', 'sides'].includes(String(attr.name).toLowerCase()) && parseInt(option.label, 10) > 1) sides = parseInt(option.label, 10);
 				if (Math.round(amount * 100) !== 0) lines.push([titleFromId(attr.name) + ': ' + option.label, amount]);
 				running += amount;
 			});
 
 			if (running <= 0) return { error: 'This works out to $0. Check the price per sq ft and options.', lines };
-			// wholesale_product_min_order(): empty uses the site default, 0 means none. The
-			// minimum is what one item costs after the everyday price adjustment.
+			// wholesale_price_quote(): the printed size (without flat options such as grommets)
+			// costs at least the minimum and at most the full sheet price, after the everyday
+			// price adjustment; flat options are added on top. Empty minimum = site default, 0 = none.
 			const minField = fieldVal('_min_order_price').trim();
-			const floor = isNum(minField) ? Math.max(0, num(minField)) : (D.sqftMinPrice || 16.5);
+			const extraSides = Math.max(0, sides - 1);
+			let floor = isNum(minField) ? Math.max(0, num(minField)) : (D.sqftMinPrice || 16.5);
+			if (fieldVal('_min_order_per_side') === 'on') floor *= sides;
+			if (floor > 0) floor += extraSides * Math.max(0, phpFloat(fieldVal('_min_order_extra_side')));
+			let cap = Math.max(0, phpFloat(fieldVal('_max_print_price')));
+			if (cap > 0) cap += extraSides * Math.max(0, phpFloat(fieldVal('_max_print_extra_side')));
 			const keep = (100 - Math.min(100, Math.max(0, phpFloat(fieldVal('_discount_percent'))))) / 100;
-			if (isSqftCalc && keep > 0 && floor > 0 && running * keep < floor) {
-				lines.push(['Minimum order (' + money(floor) + ')', floor / keep - running]);
-				running = floor / keep;
+			const printed = running - flat;
+			if (isSqftCalc && keep > 0 && floor > 0 && printed * keep < floor) {
+				lines.push(['Minimum order (' + money(floor) + ')', floor / keep - printed]);
+				running += floor / keep - printed;
+			} else if (isSqftCalc && keep > 0 && cap > 0 && cap >= floor && printed * keep > cap) {
+				lines.push(['Full sheet price (' + money(cap) + ')', cap / keep - printed]);
+				running += cap / keep - printed;
 			}
 			return this.finish(running, lines);
 		},

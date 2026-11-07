@@ -4,9 +4,9 @@
  *
  * Lists the /locations/ hub and every approved ('live') state and city guide
  * (inc/guide-pages.php) whose WordPress page is published, indexable and
- * canonical to itself. <lastmod> is the date the entry's facts were last
- * checked ('updated' in its data file), else the data file's date; the hub
- * takes the newest of its guides. Guides still in review never appear.
+ * canonical to itself. <lastmod> reflects significant content updates;
+ * the hub takes the newest of its own revision and its guides. Guides
+ * still in review never appear.
  * Submit it in Search Console next to /sitemap.xml.
  *
  * @package litsign
@@ -42,18 +42,21 @@ function wholesale_location_sitemap_listable($page)
 		return false;
 	}
 
-	$excluded = array_map('intval', array_merge(
-		wholesale_seo_noindex_page_ids(),
-		(array) apply_filters('wholesale_seo_sitemap_excluded_post_ids', array())
-	));
-	if (in_array((int) $page->ID, $excluded, true)) {
+	static $excluded = null;
+	if (null === $excluded) {
+		$excluded = array_fill_keys(array_map('intval', array_merge(
+			wholesale_seo_noindex_page_ids(),
+			(array) apply_filters('wholesale_seo_sitemap_excluded_post_ids', array())
+		)), true);
+	}
+	if (isset($excluded[$page->ID])) {
 		return false;
 	}
 
 	// A canonical set on the page under SEO (inc/seo-admin/) that isn't the page itself.
 	if (function_exists('wholesale_seo_stored_value')) {
 		$canonical = wholesale_seo_stored_value('post', $page->ID, 'canonical');
-		if ('' !== $canonical && untrailingslashit($canonical) !== untrailingslashit(get_permalink($page))) {
+		if ('' !== $canonical && $canonical !== get_permalink($page)) {
 			return false;
 		}
 	}
@@ -62,16 +65,14 @@ function wholesale_location_sitemap_listable($page)
 }
 
 /**
- * The URLs the location sitemap lists: hub first, then states A-Z, each
- * followed by its cities A-Z.
+ * The same published, indexable guides appear in the directory and sitemap.
  *
- * @return array List of array('loc' => URL, 'lastmod' => Y-m-d).
+ * @return array Registry entries with the WordPress page, URL and lastmod.
  */
-function wholesale_location_sitemap_entries()
+function wholesale_location_public_guides()
 {
 	$states = wholesale_guide_states();
 	$entries = array();
-	$newest = '';
 
 	foreach (wholesale_guide_registry() as $path => $entry) {
 		if (empty($entry['type']) || !in_array($entry['type'], array('state', 'city'), true) || 'live' !== $entry['status']) {
@@ -84,24 +85,36 @@ function wholesale_location_sitemap_entries()
 		}
 
 		$state = $states[$entry['state']];
-		$lastmod = 'city' === $entry['type'] ? wholesale_guide_updated($state['cities'][$entry['city']]) : '';
-		// Inline cities live in the state file, so they share its date.
-		$lastmod = $lastmod ? $lastmod : wholesale_guide_updated($state);
+		$place = 'city' === $entry['type'] ? $state['cities'][$entry['city']] : $state;
 
 		// Sort key: state name, then city name, so each state is followed by its cities A-Z.
 		$sort = $state['name'] . "\0" . ('city' === $entry['type'] ? $state['cities'][$entry['city']]['name'] : '');
-		$entries[] = array('loc' => get_permalink($page), 'lastmod' => $lastmod, 'sort' => $sort);
-		$newest = max($newest, $lastmod);
+		$entries[] = $entry + array(
+			'page' => $page,
+			'loc' => get_permalink($page),
+			'lastmod' => wholesale_location_modified($place),
+			'sort' => $sort,
+		);
 	}
 
 	usort($entries, static function ($a, $b) {
 		return strcasecmp($a['sort'], $b['sort']);
 	});
+	return $entries;
+}
 
+function wholesale_location_directory_modified($guides)
+{
+	return $guides ? max(array_column($guides, 'lastmod')) : wholesale_location_modified();
+}
+
+/** @return array Sitemap URLs and dates, with the location hub first. */
+function wholesale_location_sitemap_entries()
+{
+	$entries = wholesale_location_public_guides();
 	$hub = get_page_by_path('locations');
 	if (wholesale_guide_is_live('locations') && wholesale_location_sitemap_listable($hub)) {
-		$hub_date = gmdate('Y-m-d', (int) filemtime(get_template_directory() . '/page-locations.php'));
-		array_unshift($entries, array('loc' => get_permalink($hub), 'lastmod' => max($newest, $hub_date)));
+		array_unshift($entries, array('loc' => get_permalink($hub), 'lastmod' => wholesale_location_directory_modified($entries)));
 	}
 
 	return $entries;

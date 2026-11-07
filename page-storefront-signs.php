@@ -11,7 +11,7 @@
 
 $builder_url = home_url('/channel-letter-builder/');
 $contact_page = get_page_by_path('contact');
-$contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
+$contact_url = function_exists('wholesale_quote_url') ? wholesale_quote_url('channel-letters', '', false) : ($contact_page ? get_permalink($contact_page) : home_url('/contact/'));
 $channel_letters_url = home_url('/');
 
 $product_url = static function ($slug, $fallback) {

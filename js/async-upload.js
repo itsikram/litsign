@@ -33,8 +33,10 @@
       }
       xhr.onload = function () {
         var json = xhr.response;
-        if (json && json.success && json.data && json.data.token) resolve(json.data.token);
-        else reject(new Error((json && json.data && json.data.message) || "upload_failed"));
+        if (json && json.success && json.data && json.data.token) return resolve(json.data.token);
+        var error = new Error((json && json.data && json.data.message) || "upload_failed");
+        error.status = xhr.status;
+        reject(error);
       };
       xhr.onerror = function () { reject(new Error("upload_failed")); };
       xhr.onabort = function () { reject(new Error("aborted")); };
@@ -44,6 +46,17 @@
   }
 
   var pending = new Set();
+
+  function sizeText(bytes) {
+    return (bytes / 1048576).toFixed(bytes < 10485760 ? 1 : 0).replace(/\.0$/, "") + " MB";
+  }
+
+  // What to do with a file the site can't take. Product artwork is optional, so the
+  // visitor can still add the item and send the file by email.
+  function rejectedText(input, message) {
+    if (input.getAttribute("data-async-upload") !== "artwork") return message;
+    return message + " Choose another file (a PDF or JPG export works best), or add to cart without it and email a download link (Google Drive, Dropbox or WeTransfer) to TR@StorefrontSignOnline.com with your order number.";
+  }
 
   // Hold a form's submit until its uploads finish, then submit it again.
   function holdSubmit(form, waitFor) {
@@ -108,6 +121,16 @@
       var file = input.files && input.files[0];
       if (!file) return;
 
+      // Over the limit: the server would refuse it twice (here, then again with the form
+      // post, after a long upload). Take it out of the form and say why.
+      var max = config.max && config.max[context];
+      if (max && file.size > max) {
+        input.value = "";
+        status.textContent = rejectedText(input, "This file is " + sizeText(file.size) + ". Files must be under " + sizeText(max) + ".");
+        status.className = "async-upload-status is-error";
+        return;
+      }
+
       status.textContent = "Uploading… 0%";
       var current = upload(file, context, function (p) {
         status.textContent = "Uploading… " + Math.round(p * 100) + "%";
@@ -127,8 +150,14 @@
         status.className = "async-upload-status is-done";
       }, function (err) {
         if (job !== current || err.message === "aborted") return;
-        // Leave the file in the input so the normal form post still carries it.
-        status.textContent = err.message === "upload_failed" ? "" : err.message;
+        if (err.status === 400 && err.message !== "upload_failed") {
+          // The server turned the file down (size, type): the form post would fail the same way.
+          input.value = "";
+          status.textContent = rejectedText(input, err.message);
+        } else {
+          // Leave the file in the input so the normal form post still carries it.
+          status.textContent = err.message === "upload_failed" ? "" : err.message;
+        }
         status.className = "async-upload-status is-error";
       }).then(function () {
         pending.delete(current);

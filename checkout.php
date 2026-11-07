@@ -175,7 +175,7 @@ get_header();
                     </div>
 
                     <label class="checkout-check">
-                        <input type="checkbox" name="same_shipping_address" id="sameShippingAddress">
+                        <input type="checkbox" name="same_shipping_address" id="sameShippingAddress" checked>
                         Ship my <?php echo esc_html($noun); ?> to this address
                     </label>
 

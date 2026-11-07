@@ -624,7 +624,7 @@ $logo_id = get_theme_mod('custom_logo');
 						} elseif ($cta_on_page_quote) {
 							$cta_quote = true;
 						}
-						$cta_url   = $cta_quote ? ($cta_on_page_quote ? '#quote' : home_url('/contact/')) : home_url('/channel-letter-builder/');
+						$cta_url   = $cta_quote ? ($cta_on_page_quote ? '#quote' : (is_singular('product') && function_exists('wholesale_quote_url') ? wholesale_quote_url('', get_post_field('post_name', get_queried_object_id())) : home_url('/contact/'))) : home_url('/channel-letter-builder/');
 						$cta_label = $cta_quote ? 'Free Quote' : 'Start Building';
 						?>
 
@@ -1870,6 +1870,37 @@ $logo_id = get_theme_mod('custom_logo');
 			<!-- Navigation row -->
 			<div class="ssx-nav">
 				<div class="ssx-container ssx-nav__in">
+					<button type="button" class="ssx-allbtn" id="ssxMegaBtn" aria-expanded="false" aria-controls="ssxMega">
+						<?php echo $ssx_icon('grid', 18); // Static SVG. ?>
+						All Products
+						<?php echo $ssx_icon('chevron', 16); // Static SVG. ?>
+					</button>
+
+					<div class="ssx-mega" id="ssxMega">
+						<div class="ssx-container ssx-mega__grid">
+							<?php foreach ($mega_columns as $column) : ?>
+								<div class="ssx-mega__col">
+									<?php foreach ($column as $group) : ?>
+										<div class="ssx-mega__group">
+											<h3 class="ssx-mega__title"><?php echo esc_html($group['title']); ?></h3>
+											<ul class="ssx-mega__list">
+												<?php foreach ($group['links'] as $link) : ?>
+													<li><a href="<?php echo esc_url($link[1]); ?>"><?php echo esc_html($link[0]); ?></a></li>
+												<?php endforeach; ?>
+											</ul>
+										</div>
+									<?php endforeach; ?>
+								</div>
+							<?php endforeach; ?>
+						</div>
+						<div class="ssx-mega__foot">
+							<div class="ssx-container ssx-mega__foot-in">
+								<p>Not sure what you need? Call <a href="<?php echo esc_url($phone_href); ?>"><?php echo esc_html($phone_display); ?></a> and we&rsquo;ll help.</p>
+								<a class="ssx-cta" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($cta_label); ?></a>
+							</div>
+						</div>
+					</div>
+
 					<nav class="ssx-nav__links" aria-label="<?php esc_attr_e('Product categories', 'litsign'); ?>">
 						<?php wp_nav_menu(array(
 							'theme_location' => 'header-bottom-menu',
@@ -1879,8 +1910,12 @@ $logo_id = get_theme_mod('custom_logo');
 							'depth'          => 1,
 						)); ?>
 					</nav>
+
+					<a class="ssx-cta" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($cta_label); ?></a>
 				</div>
 			</div>
+
+			<div class="ssx-backdrop" id="ssxBackdrop" aria-hidden="true"></div>
 		</header>
 
 		<script>
@@ -1891,6 +1926,54 @@ $logo_id = get_theme_mod('custom_logo');
 					return document.getElementById(id);
 				};
 				var canHover = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+				/* ---------- Mega menu ---------- */
+				var megaBtn = $('ssxMegaBtn'),
+					mega = $('ssxMega'),
+					backdrop = $('ssxBackdrop'),
+					megaTimer;
+
+				function setMega(open) {
+					clearTimeout(megaTimer);
+					mega.classList.toggle('is-open', open);
+					root.classList.toggle('is-mega', open);
+					megaBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+				}
+				var megaOpen = function() {
+					return mega.classList.contains('is-open');
+				};
+
+				megaBtn.addEventListener('click', function() {
+					setMega(!megaOpen());
+				});
+				backdrop.addEventListener('click', function() {
+					setMega(false);
+				});
+				[megaBtn, mega].forEach(function(el) {
+					el.addEventListener('mouseenter', function() {
+						if (!canHover.matches) return;
+						clearTimeout(megaTimer);
+						if (el === megaBtn && !megaOpen()) megaTimer = setTimeout(function() {
+							setMega(true);
+						}, 90);
+					});
+					el.addEventListener('mouseleave', function() {
+						if (!canHover.matches) return;
+						clearTimeout(megaTimer);
+						megaTimer = setTimeout(function() {
+							setMega(false);
+						}, 180);
+					});
+				});
+				mega.addEventListener('click', function(e) {
+					if (e.target.closest('a')) setMega(false);
+				});
+				document.addEventListener('click', function(e) {
+					if (megaOpen() && !megaBtn.contains(e.target) && !mega.contains(e.target)) setMega(false);
+				});
+				root.addEventListener('focusin', function(e) {
+					if (megaOpen() && !megaBtn.contains(e.target) && !mega.contains(e.target)) setMega(false);
+				});
 
 				/* ---------- Search ---------- */
 				var form = $('ssxSearch'),
@@ -1947,7 +2030,10 @@ $logo_id = get_theme_mod('custom_logo');
 
 				document.addEventListener('keydown', function(e) {
 					if (e.key !== 'Escape') return;
-					if (!panel.hidden) {
+					if (megaOpen()) {
+						setMega(false);
+						megaBtn.focus();
+					} else if (!panel.hidden) {
 						hidePanel();
 					}
 				});

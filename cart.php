@@ -62,10 +62,11 @@ get_header();
         <?php if (!$items) : ?>
             <section class="cart-empty checkout-card">
                 <h2>Your cart is empty</h2>
-                <p>Choose a channel letter style to see your price, or design your sign online.</p>
+                <p>Pick a product and enter your size to see your price online.</p>
+                <?php // The home page leads with banners & displays; #product-box-container is gone from it. ?>
                 <div class="cart-empty-actions">
-                    <a class="checkout-pay" href="<?php echo esc_url(home_url('/#product-box-container')); ?>">Shop Channel Letters</a>
-                    <a class="cart-secondary" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Design Your Sign Online</a>
+                    <a class="checkout-pay" href="<?php echo esc_url(home_url('/#banners-displays')); ?>">Shop Banners &amp; Displays</a>
+                    <a class="cart-secondary" href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>">Shop Channel Letters</a>
                 </div>
                 <p class="cart-help">Need help? Call <a href="tel:+18664362101">866-436-2101</a>, Mon&ndash;Fri 8am&ndash;5pm PT.</p>
             </section>
@@ -134,7 +135,7 @@ get_header();
                         </article>
                     <?php endforeach; ?>
 
-                    <a class="cart-continue" href="<?php echo esc_url(home_url('/#product-box-container')); ?>">&larr; Continue shopping</a>
+                    <a class="cart-continue" href="<?php echo esc_url(home_url('/')); ?>">&larr; Continue shopping</a>
                 </section>
 
                 <aside class="checkout-summary" aria-labelledby="cart-summary-title">

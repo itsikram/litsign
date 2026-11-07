@@ -171,6 +171,64 @@ add_action('admin_footer-edit.php', function () {
 	<?php
 });
 
+// Quick edit reads each row's hidden date fields from the title column, which orders don't have. Without them
+// a quick edit saved the order with today's date at midnight, so print them in the order number column instead.
+add_action('manage_order_posts_custom_column', function ($column, $post_id) {
+	if ('order_number' === $column && apply_filters('quick_edit_enabled_for_post_type', true, 'order')) {
+		get_inline_data(get_post($post_id));
+	}
+}, 10, 2);
+
+// The Date column shows when the order was placed (WordPress labels non-published posts "Last Modified").
+add_filter('manage_order_posts_columns', function ($columns) {
+	if (isset($columns['date'])) {
+		$columns['date'] = __('Placed', 'litsign');
+	}
+	return $columns;
+}, 40);
+
+add_filter('post_date_column_status', function ($status, $post) {
+	return 'order' === $post->post_type ? '' : $status;
+}, 10, 2);
+
+// Newest orders first unless a column header was clicked.
+add_action('pre_get_posts', function ($query) {
+	if (is_admin() && $query->is_main_query() && 'order' === $query->get('post_type') && !$query->get('orderby')) {
+		$query->set('orderby', 'date');
+		$query->set('order', 'DESC');
+	}
+});
+
+/**
+ * Puts back the placed date on orders that quick edit reset to midnight of the edit day. The first saved
+ * _wp_old_date is the real day; the admin order email was sent seconds after checkout, so it gives the time.
+ */
+add_action('load-edit.php', function () {
+	global $wpdb;
+	if ('order' !== ($_GET['post_type'] ?? '')) {
+		return;
+	}
+	$rows = $wpdb->get_results(
+		"SELECT p.ID,
+			(SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = p.ID AND meta_key = '_wp_old_date' ORDER BY meta_id LIMIT 1) AS placed_day,
+			(SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = p.ID AND meta_key = '_wholesale_admin_order_email_sent' LIMIT 1) AS emailed
+		FROM {$wpdb->posts} p
+		WHERE p.post_type = 'order' AND TIME(p.post_date) = '00:00:00'
+			AND EXISTS (SELECT 1 FROM {$wpdb->postmeta} WHERE post_id = p.ID AND meta_key = '_wp_old_date')"
+	);
+	foreach ($rows as $row) {
+		if (!$row->emailed || 0 !== strpos($row->emailed, (string) $row->placed_day)) {
+			continue;
+		}
+		$wpdb->update(
+			$wpdb->posts,
+			array('post_date' => $row->emailed, 'post_date_gmt' => get_gmt_from_date($row->emailed)),
+			array('ID' => (int) $row->ID)
+		);
+		clean_post_cache((int) $row->ID);
+	}
+});
+
 /**
  * Order search matches order number, customer name, email and phone.
  */

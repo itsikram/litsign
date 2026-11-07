@@ -284,6 +284,22 @@ function wholesale_settings_page()
 							<?php endforeach; ?>
 						</table>
 					</div>
+					<?php if (function_exists('wholesale_review_request_summary')) : ?>
+						<?php $rr = wholesale_review_request_summary(); ?>
+						<div class="wss-card">
+							<div class="wss-card__head" id="review-requests"><h2>Review request email</h2><p>One email per order, a few days after it arrives, asking the customer to review each item (no account needed) and your business on Google. Product reviews you approve give product pages their star rating in Google search results.</p></div>
+							<table class="form-table" role="presentation">
+								<tr><th>Review request email</th><td><input type="hidden" name="wholesale_review_request_email" value="0"><label class="wss-toggle"><input type="checkbox" name="wholesale_review_request_email" value="1" <?php checked(wholesale_setting_enabled('review_request_email')); ?>> Enabled</label><p class="description">Needs &ldquo;Allow reviews from customers with completed orders&rdquo; above. Orders with a delivery issue, returned, cancelled or refunded, and orders whose items were all reviewed, get no email.</p></td></tr>
+								<tr><th><label for="wholesale_review_request_days">Send</label></th><td><input type="number" min="1" max="60" step="1" class="small-text" id="wholesale_review_request_days" name="wholesale_review_request_days" value="<?php echo esc_attr((string) wholesale_get_setting('review_request_days')); ?>"> days after delivery<p class="description">Orders without delivery tracking count as delivered 7 days after they ship. Channel letter orders wait 7 extra days for installation. Emails go out between 9am and 6pm Pacific.</p></td></tr>
+								<tr><th>Status</th><td><p><?php
+									echo esc_html(sprintf('%d sent in the last 30 days. %d due now, %d coming up%s.', $rr['sent_30'], $rr['due_now'], $rr['upcoming'], $rr['next'] ? ' (next ' . wp_date('M j', $rr['next']) . ')' : ''));
+									if (!wholesale_review_requests_can_send()) {
+										echo ' ' . esc_html('This copy of the site is not storefrontsignonline.com, so it never sends them.');
+									}
+								?></p></td></tr>
+							</table>
+						</div>
+					<?php endif; ?>
 					<div class="wss-card">
 						<div class="wss-card__head" id="google-reviews"><h2>Google reviews</h2><p>Shows your Google Business rating and latest reviews in the site-wide review slider, next to reviews you approve under <a href="<?php echo esc_url(admin_url('edit.php?post_type=review_submission')); ?>">Customer Reviews</a>.</p></div>
 						<table class="form-table" role="presentation">

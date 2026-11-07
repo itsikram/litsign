@@ -65,6 +65,28 @@ function wholesale_delay_tidio_widget()
 add_action('wp', 'wholesale_delay_tidio_widget');
 
 /**
+ * Hero photos for /banners-displays/ and /window-graphics/: desktop and phone URLs.
+ *
+ * Uses img/landing-<name>-desktop.webp and -mobile.webp when both files exist.
+ * Otherwise it uses the page's featured image, then the default hero. A missing
+ * file must never be preloaded: on this site a 404 renders a whole WordPress page.
+ */
+function wholesale_landing_page_hero_images($name)
+{
+	$desktop = '/img/landing-' . $name . '-desktop.webp';
+	$mobile = '/img/landing-' . $name . '-mobile.webp';
+	$dir = get_template_directory();
+	if (file_exists($dir . $desktop) && file_exists($dir . $mobile)) {
+		$uri = get_template_directory_uri();
+		return array($uri . $desktop, $uri . $mobile);
+	}
+
+	$url = get_the_post_thumbnail_url(get_the_ID(), 'large');
+	$url = $url ? wholesale_webp_url(esc_url_raw($url)) : wholesale_default_hero_url();
+	return array($url, $url);
+}
+
+/**
  * Let the browser fetch the /landing-page/ hero image while CSS is still
  * loading; it is that page's largest paint.
  */

@@ -190,7 +190,9 @@ function wholesale_item_specs($item)
         $specs['Turnaround'] = 'Same-day production';
     }
 
-    return $specs;
+    // Size first, so the spec grid always puts Width in the left cell and
+    // Height in the right one, even when a job name is set (owner rule 2026-10-29).
+    return array_intersect_key($specs, array('Width' => 1, 'Height' => 1)) + $specs;
 }
 
 /**
@@ -465,6 +467,120 @@ function wholesale_order_timeline($order_post_id)
         );
     }
     return $events;
+}
+
+/**
+ * Every stage of an order as steps, for the step-by-step tracker on the order and tracking pages: Order received,
+ * In production, Finishing, Shipped, In transit, Out for delivery, Delivered (pickup orders end at Ready for pickup).
+ * On hold, Delivery issue and Returned are shown on the step where they happened. Dates come from the status log;
+ * the tracking sync plugin adds the delivered date and delivery estimate (filter wholesale_order_steps).
+ *
+ * @return array<string,array{label:string,state:string,here:bool,date:int,note:string,warn:bool}> Empty for closed orders.
+ */
+function wholesale_order_steps($order_post_id)
+{
+    $status = (string) get_post_status($order_post_id);
+    if (in_array($status, array('cancelled', 'refunded', 'failed'), true)) {
+        return array();
+    }
+    $labels = array('received' => 'Order received', 'production' => 'In production', 'finishing' => 'Finishing');
+    $labels += 'ready-for-pickup' === $status
+        ? array('pickup' => 'Ready for pickup')
+        : array('shipped' => 'Shipped', 'in-transit' => 'In transit', 'out-for-delivery' => 'Out for delivery', 'delivered' => 'Delivered');
+    // The step each stored status stands on.
+    $at = array(
+        'pending' => 'received',
+        'processing' => 'production',
+        'finishing' => 'finishing',
+        'ready-for-pickup' => 'pickup',
+        'completed' => 'shipped',
+        'in-transit' => 'in-transit',
+        'out-for-delivery' => 'out-for-delivery',
+        'delivered' => 'delivered',
+        'delivery-issue' => 'in-transit',
+        'returned' => 'in-transit',
+    );
+    $keys = array_keys($labels);
+
+    // First time each step was reached, and the furthest step reached (where an on-hold order stopped).
+    $dates = array();
+    $furthest = 0;
+    foreach (wholesale_order_timeline($order_post_id) as $event) {
+        $key = 'placed' === $event['status'] ? 'received' : ($at[$event['status']] ?? '');
+        $index = array_search($key, $keys, true);
+        if (false === $index) {
+            continue;
+        }
+        $dates[$key] = $dates[$key] ?? $event['time'];
+        $furthest = max($furthest, $index);
+    }
+    // A status an order left was reached too (orders are created In production without a log entry).
+    foreach ((array) get_post_meta($order_post_id, '_status_log') as $entry) {
+        $index = array_search($at[$entry['from'] ?? ''] ?? '', $keys, true);
+        if (false !== $index) {
+            $furthest = max($furthest, $index);
+        }
+    }
+    $current = isset($at[$status]) ? (int) array_search($at[$status], $keys, true) : $furthest;
+    // Paid orders start in production the moment they are placed.
+    if ($current >= 1 && !isset($dates['production'])) {
+        $dates['production'] = $dates['received'] ?? 0;
+    }
+    $final = in_array($status, array('delivered', 'ready-for-pickup'), true);
+    $problems = array(
+        'on-hold' => array('On hold', 'We need something from you. Our team will contact you, or call 866-436-2101.'),
+        'on_hold' => array('On hold', 'We need something from you. Our team will contact you, or call 866-436-2101.'),
+        'delivery-issue' => array('Delivery issue', 'The carrier reported a problem or delay. We are following up.'),
+        'returned' => array('Returned to sender', 'The carrier is returning the package. Our team will contact you.'),
+    );
+
+    $steps = array();
+    foreach ($keys as $index => $key) {
+        $done = $index < $current || ($index === $current && $final);
+        $steps[$key] = array(
+            'label' => $labels[$key],
+            'state' => $done ? 'done' : ($index === $current ? 'current' : 'todo'),
+            'here' => $index === $current,
+            'date' => $index <= $current ? (int) ($dates[$key] ?? 0) : 0,
+            'note' => '',
+            'warn' => false,
+        );
+    }
+    $current_key = $keys[$current];
+    if (isset($problems[$status])) {
+        $steps[$current_key]['label'] = $problems[$status][0];
+        $steps[$current_key]['note'] = $problems[$status][1];
+        $steps[$current_key]['warn'] = true;
+    }
+    $ship_by = get_post_meta($order_post_id, 'estimate_delivery_time', true);
+    if ($ship_by && isset($steps['shipped']) && 'todo' === $steps['shipped']['state']) {
+        $steps['shipped']['note'] = 'Est. ' . $ship_by;
+    }
+    return (array) apply_filters('wholesale_order_steps', $steps, (int) $order_post_id);
+}
+
+/**
+ * The step-by-step tracker. Already escaped.
+ */
+function wholesale_order_steps_html($order_post_id)
+{
+    $steps = wholesale_order_steps($order_post_id);
+    if (!$steps) {
+        return '';
+    }
+    $words = array('done' => 'Completed', 'current' => 'Current step', 'todo' => 'Not yet');
+    $html = '<ol class="order-steps" style="--order-steps:' . count($steps) . '" aria-label="Order progress">';
+    foreach ($steps as $step) {
+        $classes = 'order-steps__step is-' . $step['state'] . ($step['warn'] ? ' is-warn' : '');
+        $html .= '<li class="' . esc_attr($classes) . '"' . (!empty($step['here']) ? ' aria-current="step"' : '') . '>'
+            . '<span class="order-steps__dot" aria-hidden="true"></span>'
+            . '<span class="order-steps__text"><strong>' . esc_html($step['label']) . '</strong>'
+            . '<span class="screen-reader-text">' . esc_html($words[$step['state']] ?? '') . '</span>'
+            . ($step['date'] ? '<small>' . esc_html(wp_date('M j', $step['date'])) . '</small>' : '')
+            . ('' !== $step['note'] ? '<small class="order-steps__note">' . esc_html($step['note']) . '</small>' : '')
+            . '</span></li>';
+    }
+    return $html . '</ol>';
 }
 
 // Browser tab title for an order page: "Order #SN6LTHF5IA" instead of the internal post title.

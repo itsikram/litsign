@@ -666,10 +666,46 @@ foreach (array(12, 18, 24) as $example_inches) {
                 </tbody>
             </table>
         </div>
-        <p class="cl-examples-note">This is the price you pay at checkout, before shipping and tax. <a href="<?php echo esc_url(get_permalink(get_page_by_path('standard-channel-letter-front-lit', OBJECT, 'product'))); ?>">Price your own wording</a> or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+        <p class="cl-examples-note">This is the price you pay at checkout, before shipping and tax. <?php echo esc_html(wholesale_cl_shipping_rule_text()); ?> <a href="<?php echo esc_url(get_permalink(get_page_by_path('standard-channel-letter-front-lit', OBJECT, 'product'))); ?>">Price your own wording</a> or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
     </div>
 </section>
 <?php endif; ?>
+<?php // How ordering works + what the price covers (2026-11-05). Facts from data/product-pages/channel-letters.php. ?>
+<section class="cl-journey" aria-labelledby="cl-journey-title">
+    <div class="container">
+        <h2 id="cl-journey-title" class="cl-section-title">How Ordering Channel Letters Works</h2>
+        <ol class="cl-journey-steps">
+            <li><strong>Pick a style</strong>Compare the lit styles below, or choose &ldquo;Not sure &ndash; help me choose&rdquo; on the quote form.</li>
+            <li><strong>Send your logo or a storefront photo</strong>Add the rough wall size if you know it.</li>
+            <li><strong><?php echo esc_html(wholesale_quote_mockup('Get a price and a mockup', 'Get your price')); ?></strong>A specialist replies <?php echo esc_html(wholesale_quote_response_text()); ?>.</li>
+            <li><strong>Approve, then we build</strong>Nothing is made until you approve the quote and pay. Each sign is tested before it ships.</li>
+        </ol>
+        <div class="cl-included">
+            <div>
+                <h3>Included with every sign</h3>
+                <ul>
+                    <li>Letters built to your size, colors and style, with LED modules wired inside</li>
+                    <li>A 3 ft power cord, a wiring diagram and a mounting pattern</li>
+                    <li>5-year warranty on all 7 lit styles</li>
+                </ul>
+            </div>
+            <div>
+                <h3>Priced separately or not included</h3>
+                <ul>
+                    <li>Power supply: an option on each style (the examples above include the standard one)</li>
+                    <li>Raceway, longer cords and mounting accessories: optional add-ons</li>
+                    <li>Wall fasteners and installation: your licensed electrician or sign installer mounts it</li>
+                    <li>Shipping: <?php echo esc_html(lcfirst(wholesale_cl_shipping_rule_text())); ?> Sales tax is added at checkout.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="cl-journey-actions">
+            <a class="is-primary" href="<?php echo esc_url($is_cl_landing ? '#quote' : wholesale_quote_url('channel-letters')); ?>">Get a Free Quote</a>
+            <a class="is-secondary" href="#product-box-container">View Styles &amp; Prices</a>
+        </div>
+    </div>
+</section>
+<?php echo wholesale_render_case_studies(); // Empty until a real, permitted project is published in data/case-studies.php. ?>
 <div class="container">
     <header class="cl-shop-header">
         <p class="cl-kicker">Step 1 &middot; Choose your style</p>

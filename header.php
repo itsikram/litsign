@@ -290,7 +290,7 @@ $logo_id = get_theme_mod('custom_logo');
 						<div class="sh-phone-options" aria-label="<?php esc_attr_e('Call or text us', 'litsign'); ?>">
 							<span class="sh-phone-options__title">Call or text</span>
 							<a class="sh-phone-option" href="<?php echo esc_url($phone_href); ?>">
-								<span class="sh-phone-option__label">Cell:</span>
+								<span class="sh-phone-option__label">Call:</span>
 								<span class="sh-phone-option__number"><?php echo esc_html($phone_display); ?></span>
 							</a>
 							<a class="sh-phone-option" href="<?php echo esc_url($text_href); ?>">
@@ -362,7 +362,7 @@ $logo_id = get_theme_mod('custom_logo');
 						<div class="sh-phone-options" aria-label="<?php esc_attr_e('Call or text us', 'litsign'); ?>">
 							<span class="sh-phone-options__title">Call or text</span>
 							<a class="sh-phone-option" href="<?php echo esc_url($phone_href); ?>">
-								<span class="sh-phone-option__label">Cell:</span>
+								<span class="sh-phone-option__label">Call:</span>
 								<span class="sh-phone-option__number"><?php echo esc_html($phone_display); ?></span>
 							</a>
 							<a class="sh-phone-option" href="<?php echo esc_url($text_href); ?>">

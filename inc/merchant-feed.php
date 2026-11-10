@@ -174,6 +174,9 @@ function wholesale_merchant_size_items($product, $title)
 		return array();
 	}
 	$items = array();
+	// "Custom Magnets 12" x 18" – Full Color Printed": no second "Custom" when the name has one.
+	$search_name = wholesale_seo_product_search_name($product->ID);
+	$suffix = 0 === stripos($search_name, 'custom ') ? 'Full Color Printed' : 'Custom Full Color Printed';
 	foreach (wholesale_size_chips($product->ID) as $chip) {
 		$quote = wholesale_price_quote($product->ID, wholesale_size_chip_request($product->ID, $chip['width'], $chip['height']));
 		if (empty($quote['ok']) || $quote['total'] <= 0) {
@@ -185,7 +188,7 @@ function wholesale_merchant_size_items($product, $title)
 		$size = $chip['width'] . 'x' . $chip['height'];
 		$items[] = array(
 			'id' => wholesale_merchant_item_id($product) . '-' . $size,
-			'title' => sprintf('%s %s – Custom Full Color Printed', wholesale_seo_product_search_name($product->ID), str_replace('×', 'x', $chip['label'])),
+			'title' => sprintf('%s %s – %s', $search_name, str_replace('×', 'x', $chip['label']), $suffix),
 			'link' => add_query_arg('size', $size, get_permalink($product)),
 			'offer' => array(
 				'price' => $price,

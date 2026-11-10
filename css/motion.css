@@ -1,0 +1,459 @@
+/* Motion layer. How it works and why: comments in inc/motion.php. */
+/* 1. Tokens */
+:root {
+  --mo-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --mo-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --mo-ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --mo-fast: 140ms;
+  --mo-base: 240ms;
+  --mo-slow: 600ms;
+  --mo-slower: 900ms;
+  --mo-rise: 24px;
+  --mo-rise-sm: 10px;
+  --mo-stagger: 60ms;
+}
+
+/* 2. Reveal (desktop) */
+html[data-motion="full"] .mo-reveal,
+html[data-motion="full"] .mo-head > * {
+  opacity: 0;
+  transform: translate3d(0, var(--mo-rise), 0);
+}
+
+html[data-motion="full"] .mo-fade,
+html[data-motion="full"] .mo-head,
+html[data-motion="full"] .mo-head > :first-child {
+  transform: none;
+}
+
+html[data-motion="full"] .mo-head {
+  opacity: 1;
+}
+
+html[data-motion="full"] .mo-reveal.is-in,
+html[data-motion="full"] .mo-head.is-in > * {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--mo-slow) var(--mo-ease-out),
+    transform var(--mo-slow) var(--mo-ease-out);
+  transition-delay: var(--mo-delay, 0ms);
+}
+
+html[data-motion="full"] .mo-head.is-in > * {
+  transition-delay: calc(var(--mo-delay, 0ms) + 120ms);
+}
+
+html[data-motion="full"] .mo-fade.is-in,
+html[data-motion="full"] .mo-head.is-in > :first-child {
+  transition: opacity 400ms var(--mo-ease-out) var(--mo-delay, 0ms);
+}
+
+html[data-motion="full"] .mo-now.is-in,
+html[data-motion="full"] .mo-now.is-in > * {
+  transition: none;
+}
+
+html[data-motion="full"] .mo-animating {
+  will-change: opacity, transform;
+}
+
+html[data-motion].scroll-effects-enabled .scroll-reveal {
+  opacity: 1;
+  transform: none;
+  transition: none;
+  will-change: auto;
+}
+
+/* 3. Phones and touch: settle, never hidden */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    @media (max-width: 991.98px), (hover: none) {
+      html[data-motion="full"] :is(.hc-pcard-grid, .hc-shop-cl-grid, .hc-feature, .hc-dir, .sf-type-grid, .cl-steps-list, .cl-journey-steps, .cll-why-grid, .cla-steps, .cla-why-list, .cla-style-grid, .cla-trust-grid, .gd-facts, .gd-family-grid, .gd-link-grid, .related-products-grid, .sc-grid, .product-review-list, .pkg-grid) > *,
+      html[data-motion="full"] :is(.cl-kicker, .cla-kicker, .hc-shop-cl-kicker, .product-section-eyebrow, .contact-eyebrow) + h2 {
+        animation: mo-settle linear backwards;
+        animation-timeline: view();
+        animation-range: entry 0% entry 40%;
+      }
+    }
+  }
+}
+
+@keyframes mo-settle {
+  from {
+    transform: translate3d(0, var(--mo-rise-sm), 0) scale(0.985);
+  }
+}
+
+/* 4. Micro-interactions */
+
+:where(html[data-motion] :is(a, button, summary, [tabindex]):focus-visible) {
+  outline: 2px solid #1fa8de;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion] :is(.home-hero-shop-button, .home-hero-secondary-button, .cl-button, .sf-button-outline, .ssx-cta, .cla-button, .add-to-cart-btn, .pd-qty__btn, .hc-pcard-button, .btn:not(.btn-link, .btn-close)) {
+    transition: transform var(--mo-fast) var(--mo-ease-out), background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+
+  html[data-motion] :is(.home-hero-shop-button, .home-hero-secondary-button, .cl-button, .sf-button-outline, .ssx-cta, .cla-button, .add-to-cart-btn, .pd-qty__btn, .hc-pcard-button, .btn:not(.btn-link, .btn-close)):not(:disabled, .disabled):active {
+    transform: scale(0.97);
+  }
+
+  html[data-motion] .product-details :is(#addToCartBtn, #buyNowBtn):not(:disabled):active {
+    transform: scale(0.97);
+  }
+
+  html[data-motion="full"] :is(.sc-card, .related-product, .sf-type-card, .gd-family) {
+    transition: transform var(--mo-base) var(--mo-ease-out), box-shadow 0.2s, border-color 0.2s;
+  }
+
+  @media (hover: hover) {
+    html[data-motion="full"] :is(.home-hero-shop-button, .home-hero-secondary-button, .cl-button, .sf-button-outline, .ssx-cta):is(:hover, :focus-visible) {
+      transform: translateY(-2px);
+    }
+
+    html[data-motion="full"] :is(.sc-card, .related-product, .sf-type-card, .gd-family):is(:hover, :focus-within) {
+      transform: translateY(-3px);
+    }
+  }
+
+  @media (hover: none) {
+    html[data-motion="full"] :is(.hc-pcard, .hc-shop-cl-card, .hc-feature-link):not(:has(:focus-visible)) {
+      transform: none;
+    }
+
+    html[data-motion="full"] :is(.sc-card, .related-product, .sf-type-card, .gd-family, .hc-pcard, .hc-shop-cl-card, .hc-feature-link, .cla-style-card, .pb-card):active {
+      transform: scale(0.98);
+    }
+  }
+
+  html[data-motion="full"] .pb-size-chip {
+    transition: transform 200ms var(--mo-ease-spring);
+  }
+
+  html[data-motion="full"] .pb-size-chip:active {
+    transform: scale(0.96);
+  }
+
+  html[data-motion="full"] .add-to-cart-btn.mo-ok {
+    position: relative;
+  }
+
+  html[data-motion="full"] .add-to-cart-btn.mo-ok::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+    background: currentColor;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 6 9 17l-5-5' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 6 9 17l-5-5' fill='none' stroke='%23000' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+    animation: mo-ok 1.2s var(--mo-ease-out) both;
+  }
+
+  html[data-motion="full"] details:not(.ssxm-acc)[open] > :not(summary) {
+    animation: mo-open var(--mo-base) var(--mo-ease-out);
+  }
+
+  html[data-motion="full"] :is(.cl-faq-list, .cla-faq) details[open] summary::after {
+    animation: mo-turn var(--mo-base) var(--mo-ease-out);
+  }
+}
+
+@keyframes mo-ok {
+  from { opacity: 0; transform: translateX(-8px); }
+  15%, 80% { opacity: 1; transform: none; }
+  to { opacity: 0; }
+}
+
+@keyframes mo-open {
+  from { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes mo-turn {
+  from { rotate: -90deg; }
+}
+
+/* 5. Scroll UI */
+.mo-progress,
+.mo-top {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    @media (min-width: 992px) {
+      html[data-motion="full"] .ssx-header::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        box-shadow: 0 10px 28px rgba(13, 34, 54, 0.12);
+        pointer-events: none;
+        animation: mo-show linear both;
+        animation-timeline: scroll(root);
+        animation-range: 0 24px;
+      }
+    }
+
+    html[data-motion="full"] .mo-progress {
+      display: block;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1040;
+      height: 3px;
+      background: #1fa8de;
+      transform-origin: 0 50%;
+      pointer-events: none;
+      animation: mo-read linear both;
+      animation-timeline: scroll(root);
+    }
+
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  html[data-motion] .mo-top {
+    display: grid;
+    place-items: center;
+    position: fixed;
+    left: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    z-index: 1020;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #172027;
+    color: #fff;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+    cursor: pointer;
+    animation: mo-top-in linear both;
+    animation-timeline: scroll(root);
+    animation-range: 150vh 200vh;
+  }
+
+  html[data-motion] .mo-top:focus-visible {
+    outline: 2px solid #1fa8de;
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 767.98px) {
+    html[data-motion]:has(.cl-mobile-bar) .mo-top {
+      translate: 0 -72px;
+    }
+
+    html[data-motion]:has(.pd-buy-bar:not([hidden])) .mo-top {
+      translate: 0 -112px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html[data-motion] .mo-top {
+      animation-name: mo-top-show;
+      animation-timing-function: step-end;
+    }
+  }
+}
+
+@keyframes mo-show {
+  from { opacity: 0; }
+}
+
+@keyframes mo-read {
+  from { transform: scaleX(0); }
+}
+
+@keyframes mo-top-in {
+  from {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes mo-top-show {
+  from {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* 6. Hero, light-up, photo swap, loops */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    html.mo-loaded[data-motion="full"] :is(.bd-hero, .sf-hero, .sc-hero, .home-hero, .cla-hero) {
+      view-timeline: --mo-hero block;
+    }
+
+    html.mo-loaded[data-motion="full"] :is(.bd-hero > .container, .sf-hero > .container, .sc-hero > .container, .home-hero-inner, .cla-hero-inner) {
+      animation: mo-hero-out linear;
+      animation-timeline: --mo-hero;
+      animation-range: exit 0% exit 100%;
+    }
+
+    @media (max-width: 991.98px), (hover: none) {
+      html.mo-loaded[data-motion="full"] :is(.bd-hero > .container, .sf-hero > .container, .sc-hero > .container, .home-hero-inner, .cla-hero-inner) {
+        animation-name: mo-hero-out-sm;
+      }
+    }
+  }
+
+  @media (min-width: 992px) and (hover: hover) {
+    html.mo-loaded[data-motion="full"] :is(.bd-hero, .home-hero) .home-hero-shop-button,
+    html.mo-loaded[data-motion="full"] .cla-hero .cla-button--primary {
+      position: relative;
+      overflow: hidden;
+    }
+
+    html.mo-loaded[data-motion="full"] :is(.bd-hero, .home-hero) .home-hero-shop-button::after,
+    html.mo-loaded[data-motion="full"] .cla-hero .cla-button--primary::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.38) 50%, transparent 70%);
+      transform: translateX(-101%);
+      animation: mo-sheen 700ms var(--mo-ease-in-out) 1.2s both;
+      pointer-events: none;
+    }
+  }
+}
+
+@keyframes mo-hero-out {
+  to {
+    opacity: 0.7;
+    transform: translate3d(0, -24px, 0);
+  }
+}
+
+@keyframes mo-hero-out-sm {
+  to {
+    transform: translate3d(0, -24px, 0);
+  }
+}
+
+@keyframes mo-sheen {
+  to {
+    transform: translateX(101%);
+  }
+}
+
+html[data-motion="full"] .mo-glow,
+html[data-motion="full"] .mo-glow::before,
+html[data-motion="full"] .mo-glow::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+html[data-motion="full"] .mo-glow {
+  z-index: 1;
+  border-radius: inherit;
+}
+
+html[data-motion="full"] .mo-glow::before,
+html[data-motion="full"] .mo-glow::after {
+  content: "";
+  border-radius: inherit;
+}
+
+html[data-motion="full"] .mo-glow::before {
+  background: #000;
+  opacity: 0.22;
+}
+
+html[data-motion="full"] .mo-glow::after {
+  background: radial-gradient(60% 50% at 50% 48%, rgba(255, 228, 184, 0.9), rgba(255, 228, 184, 0) 72%);
+  opacity: 0;
+}
+
+html[data-motion="full"] .mo-glow.is-on::before {
+  opacity: 0;
+  transition: opacity var(--mo-slower) var(--mo-ease-out);
+}
+
+html[data-motion="full"] .mo-glow.is-on::after {
+  animation: mo-glow 1.5s var(--mo-ease-out) both;
+}
+
+@keyframes mo-glow {
+  25% { opacity: 0.35; }
+  60% { opacity: 0.18; }
+  to { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-motion="full"] .product-image-zoom .single-product-thumbnail {
+    transition: opacity var(--mo-base) var(--mo-ease-out);
+  }
+
+  html[data-motion="full"] .product-image-zoom.sk-swap:not(.sk-done) .single-product-thumbnail {
+    opacity: 0;
+    transition: none;
+  }
+}
+
+html[data-motion] :is(.hc-shop-cl-dot, .hc-gal-flag) {
+  animation-iteration-count: 3;
+}
+
+html[data-motion] .mo-paused,
+html[data-motion] .mo-paused *,
+html.mo-tab-hidden :is([data-motion="loop"], .hc-shop-cl-dot, .hc-gal-flag) {
+  animation-play-state: paused !important;
+}
+
+/* 7. Safety nets and reduced motion (keep last) */
+html.mo-failsafe .mo-glow,
+html[data-motion="reduce"] .mo-glow {
+  display: none;
+}
+
+html.mo-failsafe .mo-reveal,
+html.mo-failsafe .mo-head > *,
+html[data-motion="reduce"] .mo-reveal,
+html[data-motion="reduce"] .mo-head > * {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+@media print {
+  html .mo-progress,
+  html .mo-top,
+  html .mo-glow {
+    display: none !important;
+  }
+
+  .mo-reveal,
+  .mo-head > * {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-motion] .ssx-mega {
+    transform: none;
+  }
+
+  html[data-motion] .mo-glow {
+    display: none;
+  }
+
+  html[data-motion] .mo-reveal,
+  html[data-motion] .mo-head > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    will-change: auto;
+  }
+}

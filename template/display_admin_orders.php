@@ -111,7 +111,11 @@ function render_order_attr_meta_box($post)
             $subtotal = (float) ($item['product_subtotal'] ?? 0);
             $specs = wholesale_item_specs($item);
             $design_id = absint($item['design_id'] ?? 0);
-            $design = $design_id ? json_decode(stripslashes((string) get_post_meta($design_id, '_cl_data', true)), true) : null;
+            $design_raw = $design_id ? (string) get_post_meta($design_id, '_cl_data', true) : '';
+            $design = $design_raw !== '' ? json_decode($design_raw, true) : null;
+            if ($design_raw !== '' && !is_array($design)) {
+                $design = json_decode(stripslashes($design_raw), true); // Older saves.
+            }
             $product_id = absint($item['product_id'] ?? 0); ?>
             <li class="wo-item">
                 <?php if (!empty($item['product_thumbnail'])) : ?>

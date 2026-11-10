@@ -87,7 +87,8 @@ function ssx_live_search_callback(WP_REST_Request $request)
 				'id'    => (int) $post->ID,
 				'title' => html_entity_decode(wp_strip_all_tags(get_the_title($post)), ENT_QUOTES, 'UTF-8'),
 				'url'   => get_permalink($post),
-				'image' => (string) get_the_post_thumbnail_url($post, 'thumbnail'),
+				// Card-hidden products only have sale-artwork photos (inc/product-photo-overrides.php).
+				'image' => function_exists('wholesale_product_card_hidden') && wholesale_product_card_hidden($post) ? '' : (string) get_the_post_thumbnail_url($post, 'thumbnail'),
 				'type'  => $type_object ? $type_object->labels->singular_name : '',
 				'price' => $price,
 			);

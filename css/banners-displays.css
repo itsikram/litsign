@@ -153,14 +153,17 @@ a.bd-hero-tile:focus-visible {
   border-bottom: 1px solid #e6ebf1;
 }
 
-/* Product line cards: product shots sit on white, so show them whole. */
+/* Product line cards: the photo fills the whole thumbnail, edge to edge.
+   Product photos are square, so a square frame shows them whole, uncropped. */
 .bd-card .sf-type-image {
+  aspect-ratio: 1 / 1;
   border-bottom: 1px solid #e6ebf1;
   background: #ffffff;
 }
 
 .bd-card .sf-type-image img {
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
   transition: transform 0.35s ease;
 }
 
@@ -276,7 +279,7 @@ a.bd-hero-tile:focus-visible {
 
 .bd-product-image {
   display: block;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1 / 1;
   border-bottom: 1px solid #e6ebf1;
   background: #ffffff;
 }
@@ -284,7 +287,8 @@ a.bd-hero-tile:focus-visible {
 .bd-product-image img {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
 }
 
 .bd-product-tag {
@@ -611,7 +615,7 @@ a.bd-hero-tile:focus-visible {
   .bd-page .sf-type-grid { grid-template-columns: 1fr; gap: 14px; }
   .bd-page .sf-type-card { display: grid; grid-template-columns: 100px minmax(0,1fr); align-items: stretch; }
   .bd-page .sf-type-image { aspect-ratio: auto; background: #f3f7fa; }
-  .bd-page .sf-type-image img { object-fit: contain; padding: 6px; }
+  .bd-page .sf-type-image img { object-fit: cover; padding: 0; }
   .bd-page .sf-type-body { padding: 14px; }
   .bd-page .sf-type-body h3 { font-size: 1.05rem; }
   .bd-page .sf-type-body p { font-size: .87rem; }

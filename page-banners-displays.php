@@ -76,6 +76,11 @@ $best_sellers = array(
 	'feather-angled-flag-pole' => 'Roadside attention',
 	'10ft-seg-fabric-display-graphic-frame' => 'Trade show back wall',
 );
+// The X-stand's photos all carry sample sale artwork: the table top stand fills its place
+// until it has a new photo (inc/product-photo-overrides.php).
+if (function_exists('wholesale_card_picks')) {
+	$best_sellers = wholesale_card_picks($best_sellers, array('table-top-banner-stand' => 'Counters &amp; check-in desks'));
+}
 
 // Picks by occasion: id, heading, intro, array(product slug => label).
 $occasions = array(
@@ -156,19 +161,6 @@ if ($type) {
 	usort($lines, static function ($a, $b) use ($types, $type) {
 		return (int) ($b[4] === $types[$type][3]) - (int) ($a[4] === $types[$type][3]);
 	});
-}
-
-// Product slug, label. Each photo opens its product with the price, so a phone
-// visitor can reach a price from the second screen; ad visitors who only saw
-// unlabeled photos there mostly left without opening a product.
-
-if ($type) {
-	$type_slug = $types[$type][2];
-	$hero_photos = array_values(array_filter($hero_photos, static function ($photo) use ($type_slug) {
-		return $photo[0] !== $type_slug;
-	}));
-	array_unshift($hero_photos, array($type_slug, wp_strip_all_tags(html_entity_decode($types[$type][0], ENT_QUOTES, 'UTF-8'))));
-	$hero_photos = array_slice($hero_photos, 0, 4);
 }
 
 // The best sellers are this page's item list in structured data.
@@ -266,17 +258,6 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 		</div>
 	</section>
 
-	<nav class="lp-jump" aria-label="Browse display types">
-		<div class="container">
-			<p>Find your display</p>
-			<div class="lp-jump-links">
-				<?php foreach ($lines as $item) : ?>
-					<a href="#<?php echo esc_attr($item[4]); ?>"><?php echo wp_kses_post($item[2]); ?></a>
-				<?php endforeach; ?>
-			</div>
-		</div>
-	</nav>
-
 	<div class="home-hero-features bd-features" aria-label="Why order from us">
 		<div class="container home-hero-feature-grid">
 			<div class="home-hero-feature">
@@ -298,6 +279,17 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 		</div>
 	</div>
 
+	<nav class="lp-jump" aria-label="Browse display types">
+		<div class="container">
+			<p>Find your display</p>
+			<div class="lp-jump-links">
+				<?php foreach ($lines as $item) : ?>
+					<a href="#<?php echo esc_attr($item[4]); ?>"><?php echo wp_kses_post($item[2]); ?></a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</nav>
+
 	<section class="sf-section" id="products" aria-labelledby="bd-lines-title">
 		<div class="container">
 			<p class="cl-kicker">Shop by product</p>
@@ -307,12 +299,22 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 				<?php foreach ($lines as $line) : ?>
 					<?php
 					$line_url = wholesale_category_url($line[0]);
-					$line_price = $card_price(wholesale_seo_product_starting_text($line[1]));
+					// The category's cheapest Starting at, as on every category card.
+					$line_price = $card_price(wholesale_seo_category_starting_text($line[0]));
 					$line_name = wp_strip_all_tags(html_entity_decode($line[2], ENT_QUOTES, 'UTF-8'));
 					?>
 					<article class="sf-type-card bd-card<?php echo $type && $types[$type][3] === $line[4] ? ' is-highlighted' : ''; ?>" id="<?php echo esc_attr($line[4]); ?>">
 						<a class="sf-type-image" href="<?php echo esc_url($line_url); ?>" tabindex="-1" aria-hidden="true">
-							<?php echo $product_image($line[1], $line_name, '(max-width: 575px) 112px, (max-width: 991px) 50vw, 25vw'); ?>
+							<?php
+							// Phone rows show the photo as a full-height strip (about 100 x 230px,
+							// css/banners-displays.css), so the file is picked by the strip's
+							// height: no WordPress sizes="auto", which would pick by the 100px width.
+							// Wider screens: the card widths measured at each container breakpoint
+							// (same picks as "auto" gave there).
+							add_filter('wp_img_tag_add_auto_sizes', '__return_false');
+							echo $product_image($line[1], $line_name, '(max-width: 575px) 240px, (max-width: 767px) 246px, (max-width: 991px) 336px, (max-width: 1199px) 217px, (max-width: 1399px) 262px, 307px');
+							remove_filter('wp_img_tag_add_auto_sizes', '__return_false');
+							?>
 						</a>
 						<div class="sf-type-body">
 							<h3><a href="<?php echo esc_url($line_url); ?>"><?php echo wp_kses_post($line[2]); ?></a></h3>
@@ -328,7 +330,35 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 		</div>
 	</section>
 
-	<section class="sf-section sf-section--tint" aria-labelledby="bd-occasion-title">
+	<section class="sf-section sf-section--tint" aria-labelledby="bd-best-title">
+		<div class="container">
+			<p class="cl-kicker">Best sellers</p>
+			<h2 id="bd-best-title" class="cl-section-title">Popular Banners &amp; Displays</h2>
+			<div class="bd-product-grid">
+				<?php foreach ($best_sellers as $slug => $label) : ?>
+					<?php
+					$product = wholesale_seo_product($slug);
+					if (!$product) {
+						continue;
+					}
+					$name = wp_strip_all_tags(get_the_title($product));
+					$price = $card_price(wholesale_seo_product_starting_text($slug));
+					?>
+					<a class="bd-product" href="<?php echo esc_url(get_permalink($product)); ?>">
+						<span class="bd-product-image"><?php echo $product_image($slug, $name, '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 25vw'); ?></span>
+						<span class="bd-product-tag"><?php echo wp_kses_post($label); ?></span>
+						<span class="bd-product-name"><?php echo esc_html($name); ?></span>
+						<?php if ($price) : ?>
+							<span class="bd-product-price"><small>From</small> <?php echo wp_kses_post($price); ?></span>
+						<?php endif; ?>
+						<span class="lp-order">Customize &amp; Order <?php echo wholesale_home_icon('arrow'); ?></span>
+					</a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</section>
+
+	<section class="sf-section" aria-labelledby="bd-occasion-title">
 		<div class="container">
 			<p class="cl-kicker">Shop by occasion</p>
 			<h2 id="bd-occasion-title" class="cl-section-title">The Right Display for Every Campaign</h2>
@@ -353,34 +383,6 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 							<?php endforeach; ?>
 						</ul>
 					</article>
-				<?php endforeach; ?>
-			</div>
-		</div>
-	</section>
-
-	<section class="sf-section" aria-labelledby="bd-best-title">
-		<div class="container">
-			<p class="cl-kicker">Best sellers</p>
-			<h2 id="bd-best-title" class="cl-section-title">Popular Banners &amp; Displays</h2>
-			<div class="bd-product-grid">
-				<?php foreach ($best_sellers as $slug => $label) : ?>
-					<?php
-					$product = wholesale_seo_product($slug);
-					if (!$product) {
-						continue;
-					}
-					$name = wp_strip_all_tags(get_the_title($product));
-					$price = $card_price(wholesale_seo_product_starting_text($slug));
-					?>
-					<a class="bd-product" href="<?php echo esc_url(get_permalink($product)); ?>">
-						<span class="bd-product-image"><?php echo $product_image($slug, $name, '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 25vw'); ?></span>
-						<span class="bd-product-tag"><?php echo wp_kses_post($label); ?></span>
-						<span class="bd-product-name"><?php echo esc_html($name); ?></span>
-						<?php if ($price) : ?>
-							<span class="bd-product-price"><small>From</small> <?php echo wp_kses_post($price); ?></span>
-						<?php endif; ?>
-						<span class="lp-order">Customize &amp; Order <?php echo wholesale_home_icon('arrow'); ?></span>
-					</a>
 				<?php endforeach; ?>
 			</div>
 		</div>

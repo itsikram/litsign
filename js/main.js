@@ -6,7 +6,10 @@
     // phones leaving after scrolling a few percent of the page). Only whole
     // sections and cards fade, never their text one element at a time.
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // While the motion layer is on (inc/motion.php tags <html data-motion>),
+    // js/motion.js does the reveals instead of this block.
     const allowReveal = !prefersReducedMotion && 'IntersectionObserver' in window
+      && !document.documentElement.hasAttribute('data-motion')
       && window.matchMedia('(min-width: 992px) and (hover: hover)').matches;
     const revealRoots = ['main', '#content', '.home', '.landing-page', '.product-details', '.contact-page', '.site-main'];
     const revealTargets = ['section', '.card', '.sf-type-card', '.cl-step'];
@@ -445,6 +448,14 @@
 
           priceAfterChange = totalLftCost + priceBeforeChange;
           $(e.currentTarget).attr("data-cCost", totalLftCost);
+        } else if (costType == "clin") {
+          // Per inch of letter height, per letter (channel letter vinyl faces).
+          let sizeInch = parseFloat($(".select-height option:selected").text()) || 0;
+          let letterCharacters = $("#letterInput").val().replace(/\s/g, "").length;
+          let totalClinCost = selectedAttrVal * sizeInch * letterCharacters;
+
+          priceAfterChange = totalClinCost + priceBeforeChange;
+          $(e.currentTarget).attr("data-cCost", totalClinCost);
         } else {
 
           if (!Number.isNaN(selectedAttrVal)) {
@@ -624,12 +635,24 @@
         const long = limit('maxLong');
         return !(long && (width > long || height > long)) && !(short && width > short && height > short);
       };
+      // Feet-and-inches boxes (_size_unit = ftin, 45 products): notes speak in feet and
+      // inches there, not "Sizes are in inches" (Ads visitors on canvas and backlit film,
+      // Nov 8 2026, saw that next to a feet box and left).
+      const ftin = !!box.querySelector('.dim-group--ftin');
+      const len = (inches) => {
+        if (!ftin) return `${inches}"`;
+        const feet = Math.floor(inches / 12);
+        const rest = Math.round((inches - feet * 12) * 100) / 100;
+        const text = [feet ? `${feet} ft` : '', rest ? `${rest} in` : ''].filter(Boolean).join(' ') || '0 in';
+        return inches >= 12 ? `${text} (${inches}")` : text;
+      };
       // Banner buyers think in feet: a "3" in an inch box is likely 3 ft (Ads visitors left
       // on "3 x 33" and "14 x 3"). The too-small note offers that size in inches as a
-      // one-tap fix: the small side x 12, or both sides when both look like feet.
+      // one-tap fix: the small side x 12, or both sides when both look like feet. With
+      // feet-and-inches boxes only a size typed in the inch boxes (under 1 ft) gets it.
       const feetFix = (width, height) => {
         const small = (value, key) => value > 0 && value < limit(key);
-        const both = width <= 20 && height <= 20;
+        const both = ftin ? width > 0 && width < 12 && height > 0 && height < 12 : width <= 20 && height <= 20;
         const fixed = [both || small(width, 'minWidth') ? width * 12 : width, both || small(height, 'minHeight') ? height * 12 : height]
           .map((value) => Math.round(value * 100) / 100);
         return fixed[0] >= limit('minWidth') && fixed[1] >= limit('minHeight') && fitsMax(fixed[0], fixed[1]) ? { fixed, both } : null;
@@ -647,30 +670,47 @@
         let fix = null;
         if (long && (width > long || height > long)) {
           tooBig = true;
-          error = width > long ? `Maximum width is ${long}"` : `Maximum height is ${long}"`;
+          error = width > long ? `Maximum width is ${len(long)}.` : `Maximum height is ${len(long)}.`;
         } else if (short && width > short && height > short) {
           tooBig = true;
-          error = width < height ? `Maximum width is ${short}"` : `Maximum height is ${short}"`;
+          // Either side may be the short one: say so, or turning the size looks impossible.
+          error = short < long
+            ? `One side can be at most ${len(short)}; the other up to ${len(long)}.`
+            : (width < height ? `Maximum width is ${len(short)}.` : `Maximum height is ${len(short)}.`);
         } else if (typing) {
           // Too small or fine: no note until the change.
         } else if (width > 0 && width < limit('minWidth')) {
-          error = `Minimum width is ${limit('minWidth')}". Sizes are in inches.`;
+          error = ftin ? `Minimum width is ${len(limit('minWidth'))}.` : `Minimum width is ${limit('minWidth')}". Sizes are in inches.`;
           fix = feetFix(width, height);
         } else if (height > 0 && height < limit('minHeight')) {
-          error = `Minimum height is ${limit('minHeight')}". Sizes are in inches.`;
+          error = ftin ? `Minimum height is ${len(limit('minHeight'))}.` : `Minimum height is ${limit('minHeight')}". Sizes are in inches.`;
           fix = feetFix(width, height);
         }
         if (dimError) {
           dimError.textContent = error;
           dimError.hidden = !error;
+          // Too big is a dead end on the page: offer the quote form for this product.
+          if (tooBig && dimError.dataset.quoteUrl) {
+            const help = document.createElement('a');
+            help.className = 'pb-dim-help';
+            help.href = dimError.dataset.quoteUrl;
+            help.textContent = 'Need a bigger size? Ask for a quote';
+            dimError.append(' ', help);
+          }
           if (fix) {
             const [fixWidth, fixHeight] = fix.fixed;
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'pb-dim-fix';
-            button.textContent = fix.both
-              ? `Use ${fixWidth}" x ${fixHeight}" (${width} ft x ${height} ft)`
-              : (fixWidth !== width ? `Use ${fixWidth}" (${width} ft)` : `Use ${fixHeight}" (${height} ft)`);
+            if (ftin) {
+              button.textContent = fix.both
+                ? `Use ${width} ft x ${height} ft`
+                : (fixWidth !== width ? `Use ${width} ft wide` : `Use ${height} ft high`);
+            } else {
+              button.textContent = fix.both
+                ? `Use ${fixWidth}" x ${fixHeight}" (${width} ft x ${height} ft)`
+                : (fixWidth !== width ? `Use ${fixWidth}" (${width} ft)` : `Use ${fixHeight}" (${height} ft)`);
+            }
             button.addEventListener('click', () => {
               // Both values first, so the change handlers never see one side fixed alone.
               const changed = [['width', fixWidth], ['height', fixHeight]]

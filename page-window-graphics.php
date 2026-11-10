@@ -219,17 +219,6 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 		</div>
 	</section>
 
-	<nav class="lp-jump" aria-label="Browse window films">
-		<div class="container">
-			<p>Find your film</p>
-			<div class="lp-jump-links">
-				<?php foreach ($films as $item) : ?>
-					<a href="#<?php echo esc_attr($item[0]); ?>"><?php echo wp_kses_post($item[2]); ?></a>
-				<?php endforeach; ?>
-			</div>
-		</div>
-	</nav>
-
 	<div class="home-hero-features bd-features" aria-label="Why order from us">
 		<div class="container home-hero-feature-grid">
 			<div class="home-hero-feature">
@@ -251,6 +240,17 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 		</div>
 	</div>
 
+	<nav class="lp-jump" aria-label="Browse window films">
+		<div class="container">
+			<p>Find your film</p>
+			<div class="lp-jump-links">
+				<?php foreach ($films as $item) : ?>
+					<a href="#<?php echo esc_attr($item[0]); ?>"><?php echo wp_kses_post($item[2]); ?></a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</nav>
+
 	<section class="sf-section" id="films" aria-labelledby="wg-films-title">
 		<div class="container">
 			<p class="cl-kicker">Shop by film</p>
@@ -268,7 +268,16 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					?>
 					<article class="sf-type-card bd-card wg-card<?php echo $type === $film[0] ? ' is-highlighted' : ''; ?>" id="<?php echo esc_attr($film[0]); ?>">
 						<a class="sf-type-image" href="<?php echo esc_url($url); ?>" tabindex="-1" aria-hidden="true">
-							<?php echo $product_image($film[1], $name, '(max-width: 575px) 100px, (max-width: 991px) 50vw, 33vw'); ?>
+							<?php
+							// Phone rows show the photo as a full-height strip (about 100 x 280px,
+							// css/banners-displays.css), so the file is picked by the strip's
+							// height: no WordPress sizes="auto", which would pick by the 100px width.
+							// Wider screens: the card widths measured at each container breakpoint
+							// (same picks as "auto" gave there).
+							add_filter('wp_img_tag_add_auto_sizes', '__return_false');
+							echo $product_image($film[1], $name, '(max-width: 575px) 280px, (max-width: 767px) 246px, (max-width: 991px) 336px, (max-width: 1199px) 297px, (max-width: 1399px) 357px, 417px');
+							remove_filter('wp_img_tag_add_auto_sizes', '__return_false');
+							?>
 						</a>
 						<div class="sf-type-body">
 							<span class="wg-card-tag"><?php echo wp_kses_post($film[4]); ?></span>
@@ -279,6 +288,36 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 							<?php endif; ?>
 							<a class="wg-card-link lp-order" href="<?php echo esc_url($url); ?>">Customize &amp; Order <span aria-hidden="true">&rarr;</span></a>
 						</div>
+					</article>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</section>
+
+	<section class="sf-section sf-section--tint" aria-labelledby="wg-business-title">
+		<div class="container">
+			<p class="cl-kicker">Shop by business</p>
+			<h2 id="wg-business-title" class="cl-section-title">Window Graphics for Every Kind of Business</h2>
+			<p class="cl-section-lead">The combinations businesses order most, from a single door decal to a full storefront.</p>
+			<div class="bd-occasion-grid">
+				<?php foreach ($businesses as $business) : ?>
+					<article class="bd-occasion" id="<?php echo esc_attr($business[0]); ?>">
+						<h3><?php echo wp_kses_post($business[1]); ?></h3>
+						<p><?php echo wp_kses_post($business[2]); ?></p>
+						<ul>
+							<?php foreach ($business[3] as $slug => $label) : ?>
+								<?php $url = $product_url($slug); ?>
+								<?php if ($url) : ?>
+									<li>
+										<a href="<?php echo esc_url($url); ?>">
+											<span><?php echo wp_kses_post($label); ?></span>
+											<?php $price = wholesale_seo_product_starting_text($slug); ?>
+											<?php if ($price) : ?><small><?php echo wp_kses_post($price); ?></small><?php endif; ?>
+										</a>
+									</li>
+								<?php endif; ?>
+							<?php endforeach; ?>
+						</ul>
 					</article>
 				<?php endforeach; ?>
 			</div>
@@ -316,36 +355,6 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 						<?php endforeach; ?>
 					</tbody>
 				</table>
-			</div>
-		</div>
-	</section>
-
-	<section class="sf-section sf-section--tint" aria-labelledby="wg-business-title">
-		<div class="container">
-			<p class="cl-kicker">Shop by business</p>
-			<h2 id="wg-business-title" class="cl-section-title">Window Graphics for Every Kind of Business</h2>
-			<p class="cl-section-lead">The combinations businesses order most, from a single door decal to a full storefront.</p>
-			<div class="bd-occasion-grid">
-				<?php foreach ($businesses as $business) : ?>
-					<article class="bd-occasion" id="<?php echo esc_attr($business[0]); ?>">
-						<h3><?php echo wp_kses_post($business[1]); ?></h3>
-						<p><?php echo wp_kses_post($business[2]); ?></p>
-						<ul>
-							<?php foreach ($business[3] as $slug => $label) : ?>
-								<?php $url = $product_url($slug); ?>
-								<?php if ($url) : ?>
-									<li>
-										<a href="<?php echo esc_url($url); ?>">
-											<span><?php echo wp_kses_post($label); ?></span>
-											<?php $price = wholesale_seo_product_starting_text($slug); ?>
-											<?php if ($price) : ?><small><?php echo wp_kses_post($price); ?></small><?php endif; ?>
-										</a>
-									</li>
-								<?php endif; ?>
-							<?php endforeach; ?>
-						</ul>
-					</article>
-				<?php endforeach; ?>
 			</div>
 		</div>
 	</section>

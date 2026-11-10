@@ -340,7 +340,7 @@ return array(
 	),
 
 	'trade-show-products' => array(
-		'lead' => 'Fabric backwalls for booths, events and photo backdrops, with or without the frame. Graphics ship the next business day when you order and approve artwork by 4 pm Pacific time.',
+		'lead' => 'Fabric backwalls for booths, events and photo backdrops, with or without the aluminum frame. Graphics ship the next business day when you order and approve artwork by 4 pm Pacific time.',
 		'guide' => array(
 			'title' => 'Tension Fabric or Pop Up Display?',
 			'sections' => array(

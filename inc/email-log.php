@@ -295,7 +295,7 @@ add_action('init', 'wholesale_email_log_install');
  */
 function wholesale_email_log_source()
 {
-	$skip = array('wp_mail', 'wholesale_send_html_mail');
+	$skip = array('wp_mail', 'wholesale_send_html_mail', 'wholesale_mail_team');
 	$frames = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
 	$file = '';
 	$line = 0;
@@ -1357,7 +1357,7 @@ function wholesale_email_smtp_tab($status)
 				</div>
 				<label class="wsm-label" for="wsm-recipients">Notification recipients</label>
 				<textarea id="wsm-recipients" name="notify_recipients" rows="3" class="wsm-textarea" spellcheck="false"><?php echo esc_textarea(implode("\n", wholesale_contact_admin_recipients())); ?></textarea>
-				<p class="wsm-muted">One email address per line (or separated by commas).</p>
+				<p class="wsm-muted">One email address per line (or separated by commas). Contact forms and quote requests send each address its own copy, so each one shows as its own row in the Email Log.</p>
 			</div>
 
 			<div class="wsm-form-foot">

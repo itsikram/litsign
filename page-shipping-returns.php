@@ -80,7 +80,7 @@ get_header();
 				<?php if ($free_note) : ?>
 					<li><strong>Free shipping</strong><span><?php echo esc_html($free_note); ?></span></li>
 				<?php endif; ?>
-				<li><strong>Adhesive products</strong><span>Ordered by 4pm PST ship the next business day</span></li>
+				<li><strong>Printed products</strong><span>Ordered by 4 pm PT ship the next business day</span></li>
 				<li><strong>Problems</strong><span>Report within 5 business days of delivery</span></li>
 			</ul>
 		</div>
@@ -111,7 +111,7 @@ get_header();
 			<h3>Production time</h3>
 			<p>Production starts once you approve your final proof in writing (we don&rsquo;t accept verbal approvals). Checkout shows the estimated ship date for each shipping speed, including production.</p>
 			<ul class="gd-checklist">
-				<li><strong>Adhesive products</strong> ordered by 4pm PST ship the next business day. Same-day service is available if you order by 12pm PST.</li>
+				<li><strong>Printed products</strong> (banners, window graphics and vinyl, flags and displays) ordered and approved by 4 pm PT ship the next business day. Same-day service is available on many of them if you order by 12 pm PT; each product page shows its production times.</li>
 				<li><strong>Channel letters</strong> are built, wired and tested for your order and ship ready to install, with a wiring diagram and installation pattern.</li>
 			</ul>
 			<?php if ($locations_url) : ?>

@@ -53,34 +53,147 @@ function wholesale_removed_spam_status()
 add_action('template_redirect', 'wholesale_removed_spam_status', 2);
 
 /**
- * The owner's other domains. They are meant to 301 at the server
- * (seo-plan/domain-redirects.md); if one still reaches WordPress, for example
- * as a cPanel alias of this site, it is sent to the same path on the main
- * site here instead of serving a duplicate copy with its own canonical URLs.
+ * The owner's other domains (Settings > Storefront Sign > Domain redirects).
+ * They are meant to 301 at the server too (seo-plan/domain-redirects.md); if
+ * one still reaches WordPress, for example as a cPanel alias of this site, it
+ * is sent to the main site here instead of serving a duplicate copy with its
+ * own canonical URLs.
  *
- * @return string[] Hosts without www.
+ * Hard-coded target: home_url() may follow the requested host on the live server.
  */
-function wholesale_seo_extra_domains()
+function wholesale_domain_redirect_target()
 {
-	return array(
-		'storefrontsignwholesale.com',
-		'storefrontsignwholesales.com',
-		'onlinestorefrontsigns.com',
-		'mystorefrontsigns.com',
-		'mystorefrontsign.com',
-	);
+	return 'https://storefrontsignonline.com';
+}
+
+/**
+ * Turn the Domains box into rules. One per line: "domain" keeps the visitor's
+ * path, "domain /page/" sends every path to that page ("/" = home page).
+ * http(s)://, www., a port and anything after the domain are ignored; "->" or
+ * "=>" between the two parts is allowed, and so is a full
+ * https://storefrontsignonline.com/... target. The main domain, IPs and
+ * localhost are refused, so a rule can never loop. Not compared with
+ * home_url(): a wp-config that builds WP_HOME from the Host header would make
+ * every listed domain look like this site's own and switch its redirect off.
+ *
+ * @param string $text
+ * @param array  $rejected Filled with "line: reason" for each line left out.
+ * @return array<string,string> Host without www. => '' (same path) or a path.
+ */
+function wholesale_parse_redirect_domains($text, &$rejected = array())
+{
+	$main = (string) wp_parse_url(wholesale_domain_redirect_target(), PHP_URL_HOST);
+	$rules = array();
+	$rejected = array();
+
+	foreach (preg_split('/\R/', (string) $text) as $line) {
+		$line = trim($line);
+		if ('' === $line || '#' === $line[0]) {
+			continue;
+		}
+
+		$parts = preg_split('/\s+/', trim(str_replace(array('=>', '->'), ' ', $line)), 2);
+		$host = strtolower((string) preg_replace('#^[a-z][a-z0-9+.-]*://#i', '', $parts[0]));
+		$host = rtrim((string) preg_replace('#[:/?\#].*$#', '', $host), '.');
+		$host = (string) preg_replace('/^www\./', '', $host);
+
+		if (!preg_match('/^(?=.{4,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:[a-z]{2,63}|xn--[a-z0-9-]{1,59})$/', $host)) {
+			$rejected[] = $line . ': not a domain name';
+			continue;
+		}
+		if ($host === $main) {
+			$rejected[] = $line . ': this is the site itself';
+			continue;
+		}
+		if (isset($rules[$host])) {
+			$rejected[] = $line . ': listed twice, the first line is used';
+			continue;
+		}
+
+		$path = '';
+		if (isset($parts[1]) && '' !== trim($parts[1])) {
+			$target = trim($parts[1]);
+			if (preg_match('#^https?://#i', $target)) {
+				$target_host = strtolower(preg_replace('/^www\./', '', (string) wp_parse_url($target, PHP_URL_HOST)));
+				if ($target_host !== $main) {
+					$rejected[] = $line . ': can only send visitors to ' . $main;
+					continue;
+				}
+				$target = (string) wp_parse_url($target, PHP_URL_PATH);
+			}
+			$target = (string) preg_replace('/[?#].*$/', '', $target);
+			$target = (string) preg_replace('#/{2,}#', '/', '/' . ltrim((string) preg_replace('#[^A-Za-z0-9/._~%-]#', '', $target), '/'));
+			// Permalinks end in "/": without it WordPress adds a second redirect hop.
+			if ('/' !== substr($target, -1) && false === strpos((string) basename($target), '.')) {
+				$target .= '/';
+			}
+			$path = $target;
+		}
+		$rules[$host] = $path;
+	}
+
+	return $rules;
+}
+
+/** The saved rules. @return array<string,string> */
+function wholesale_domain_redirect_rules()
+{
+	static $rules = null;
+	if (null === $rules) {
+		$rules = wholesale_parse_redirect_domains((string) wholesale_get_setting('domain_redirect_domains'));
+	}
+	return $rules;
+}
+
+/**
+ * Where a request goes: the same path and query on the main site, or the
+ * rule's page with the query kept, so ?gclid and UTM tags survive either way.
+ */
+function wholesale_domain_redirect_url($path, $uri)
+{
+	$uri = '/' === substr((string) $uri, 0, 1) ? (string) $uri : '/';
+	if ('' === $path) {
+		return wholesale_domain_redirect_target() . $uri;
+	}
+	$query = (string) wp_parse_url($uri, PHP_URL_QUERY);
+	return wholesale_domain_redirect_target() . $path . ('' !== $query ? '?' . $query : '');
+}
+
+/** Settings sanitizer: the Domains box, cleaned, one rule per line. */
+function wholesale_sanitize_redirect_domains($value)
+{
+	static $reported = false; // A first save runs this twice (update_option, then add_option).
+
+	$rules = wholesale_parse_redirect_domains(is_string($value) ? $value : '', $rejected);
+	if ($rejected && !$reported && function_exists('add_settings_error')) {
+		$reported = true;
+		add_settings_error('wholesale_domain_redirect_domains', 'wholesale_domain_redirect_domains', 'Domain redirects: left out ' . implode('; ', $rejected) . '.', 'warning');
+	}
+
+	$lines = array();
+	foreach ($rules as $host => $path) {
+		$lines[] = '' === $path ? $host : $host . ' ' . $path;
+	}
+	return implode("\n", $lines);
+}
+
+function wholesale_sanitize_redirect_status($value)
+{
+	return '302' === (string) $value ? '302' : '301';
 }
 
 function wholesale_seo_redirect_extra_domains()
 {
-	if (is_admin() || wp_doing_cron() || (defined('WP_CLI') && WP_CLI) || empty($_SERVER['HTTP_HOST'])) {
+	if (is_admin() || wp_doing_cron() || (defined('WP_CLI') && WP_CLI) || empty($_SERVER['HTTP_HOST'])
+		|| !wholesale_setting_enabled('domain_redirect_enabled')) {
 		return;
 	}
 
-	// Only the exact extra domains, with or without www. The main domain, IPs
-	// and localhost never match.
+	// Only the listed domains, with or without www. The main domain, IPs and
+	// localhost can't be listed (see wholesale_parse_redirect_domains()).
 	$host = strtolower(preg_replace('/^www\.|:\d+$/', '', (string) wp_unslash($_SERVER['HTTP_HOST'])));
-	if (!in_array($host, wholesale_seo_extra_domains(), true)) {
+	$rules = wholesale_domain_redirect_rules();
+	if (!isset($rules[$host])) {
 		return;
 	}
 
@@ -91,8 +204,8 @@ function wholesale_seo_redirect_extra_domains()
 		return;
 	}
 
-	// Hard-coded target: home_url() may follow the requested host on the live server.
-	wp_redirect('https://storefrontsignonline.com' . ('/' === substr($uri, 0, 1) ? $uri : '/'), 301);
+	$status = '302' === (string) wholesale_get_setting('domain_redirect_status') ? 302 : 301;
+	wp_redirect(wholesale_domain_redirect_url($rules[$host], $uri), $status, 'Storefront Sign domain redirects');
 	exit;
 }
 add_action('init', 'wholesale_seo_redirect_extra_domains', 1);
@@ -397,6 +510,28 @@ function wholesale_seo_redirect_feeds()
 	}
 }
 add_action('template_redirect', 'wholesale_seo_redirect_feeds', 1);
+
+/**
+ * The home page is a catalog, not a list of posts, so /page/2/, /page/3/ ... answered
+ * 200 with the same page (canonical home); Visitor Insights logged /page/3/ landings that
+ * left at once. Send them home, keeping any ad tags in the query string.
+ */
+function wholesale_seo_redirect_home_pages()
+{
+	// The front page is a static page, so /page/2/ arrives as is_front_page() with paged=2.
+	if (!(is_front_page() || is_home()) || max((int) get_query_var('paged'), (int) get_query_var('page')) < 2) {
+		return;
+	}
+	$home_path = untrailingslashit((string) wp_parse_url(home_url('/'), PHP_URL_PATH));
+	$path = (string) wp_parse_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '', PHP_URL_PATH);
+	if (!preg_match('#^' . preg_quote($home_path, '#') . '/page/\d+/?$#', $path)) {
+		return; // Only the bare /page/N/ of the front page, never a category route.
+	}
+	$query = (string) wp_parse_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '', PHP_URL_QUERY);
+	wp_safe_redirect(home_url('/') . ('' !== $query ? '?' . $query : ''), 301);
+	exit;
+}
+add_action('template_redirect', 'wholesale_seo_redirect_home_pages', 1);
 remove_action('wp_head', 'feed_links', 2);
 remove_action('wp_head', 'feed_links_extra', 3);
 

@@ -2314,3 +2314,289 @@ html.pd-lightbox-open { overflow: hidden; }
 
 /* B2Sign quantity pricing note under the quantity box (inc/product-buy-box.php). */
 .pd-qty__note{display:block;margin-top:4px;color:#5b6d75;font-size:12px;line-height:1.35;max-width:220px}
+
+/* 2026-11-09: the note is its own grid row (.pd-actions--note), under the buttons on
+   desktop and between Add To Cart and Buy Now on phones. In the quantity column it
+   stretched the stepper to 220px and pushed Add To Cart onto two lines. */
+.product-details .pd-actions--note {
+  grid-template-areas:
+    "qty cart buy"
+    "note note note";
+}
+
+.product-details .pd-actions--note > .pd-qty {
+  grid-area: qty;
+}
+
+.product-details .pd-actions--note > #addToCartBtn {
+  grid-area: cart;
+}
+
+.product-details .pd-actions--note > .buy-now-btn {
+  grid-area: buy;
+}
+
+.product-details .pd-actions--note > .pd-qty__note {
+  grid-area: note;
+  max-width: none;
+  margin-top: -4px;
+}
+
+@media (max-width: 767.98px) {
+  .product-details .pd-actions--note {
+    grid-template-areas:
+      "qty cart"
+      "note note"
+      "buy buy";
+  }
+}
+
+/* The divider above Grand Total separates it from the Regular price / sale /
+   same-day rows. Without any of them showing it sat alone at the top of the box,
+   with an empty band above it (2026-11-09). */
+.product-details .product-pricing-box > .container > hr {
+  display: none;
+}
+
+.product-details .product-pricing-box > .container > .subtotal-container:not([hidden]) ~ hr,
+.product-details .product-pricing-box > .container > .totalSaving-container ~ hr,
+.product-details .product-pricing-box > .container > .price-turnaround-row:not([hidden]) ~ hr {
+  display: block;
+}
+
+/* Wide spec tables (e.g. flags: 6 columns) scroll inside their own box
+   (wholesale_product_info_wrap_tables()) instead of widening the whole page,
+   which let phones pan sideways (2026-11-09). */
+.product-info .product-info-table {
+  max-width: 100%;
+  margin: 10px 0 18px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.product-info .product-info-table > table {
+  margin: 0;
+}
+
+@media (max-width: 575.98px) {
+  .product-info .product-info-table th,
+  .product-info .product-info-table td {
+    padding: 7px 8px;
+    font-size: 14px;
+  }
+
+  /* Size charts (5+ columns) keep each value on one line and scroll,
+     instead of breaking 44.95" x 140.75" over three lines. */
+  .product-info .product-info-table table:has(tr > :nth-child(5)) td {
+    white-space: nowrap;
+  }
+}
+
+/* ---------- 17. Card photos fill their thumbnail (2026-11-08) ----------
+   Product card photos cover the whole thumbnail, edge to edge, on every
+   screen size. style.css switches listing cards (channel letter cards too)
+   to object-fit: contain below 573px; that rule stays in style.css so the
+   home page keeps its critical CSS subset, and this one wins by load order. */
+.product-box-container .product-box .pb-image-top img {
+  object-fit: cover;
+  object-position: center;
+}
+
+/* ---------- 18. Visitor Insights fixes (2026-11-09) ----------
+   Contact page: the call/text line in the intro, and on phones a shorter intro
+   so the first form field shows without scrolling (it started at 968px; 13 visits
+   ended on /contact/ on Nov 8 with no request sent). */
+/* Beats style.css .contact-hero-copy > p:not(.contact-eyebrow). */
+.contact-hero .contact-hero-copy > p.contact-hero-call {
+  margin: 12px 0 0;
+  color: #334155;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.contact-hero .contact-hero-call a {
+  color: #0a6f9a;
+  white-space: nowrap;
+}
+
+.contact-card-heading.is-tappable {
+  cursor: pointer;
+}
+
+@media (max-width: 575.98px) {
+  .contact-page .contact-hero {
+    min-height: 0;
+    margin: 10px 0 14px;
+    padding: 22px 18px 18px;
+  }
+
+  .contact-page .contact-hero::before {
+    left: 18px;
+  }
+
+  .contact-page .contact-hero h1 {
+    margin-bottom: 8px;
+    font-size: 1.65rem;
+  }
+
+  .contact-page .contact-hero-copy > p:not(.contact-eyebrow):not(.contact-hero-call) {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .contact-page .contact-trust-row {
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+
+  .contact-page .contact-trust-row span {
+    padding: 4px 9px;
+  }
+
+  .contact-page .contact-form-card {
+    padding-top: 18px;
+  }
+
+  .contact-page .contact-card-heading .contact-eyebrow {
+    display: none;
+  }
+
+  .contact-page .contact-card-heading h2 {
+    margin-bottom: 4px;
+    font-size: 21px;
+  }
+
+  .contact-page .contact-card-heading > p:last-child {
+    margin-bottom: 14px;
+    font-size: 14px;
+  }
+}
+
+/* Product page: a too-big size links to the quote form (js/main.js). */
+.product-details .product-attibute-box .pb-dim-help {
+  display: inline-block;
+  margin-top: 4px;
+  color: #0a6f9a;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The whole "Starting at ... Get your price" box is a tap target (js/ui-polish.js 8). */
+.product-details .product-mobile-price.is-tappable {
+  cursor: pointer;
+}
+
+/* ---------- 19. Size boxes: professional Width / Height fields (2026-11-09) ----------
+   "Width" / "Height" sit as a small caption above; each number gets its own
+   rounded box with the unit (ft / in / inch) inside on the right. Fits the
+   column (no overflow past the card edge). Markup: single-product.php. */
+.product-details .product-attibute-box .pb-size-b2 .dim-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.product-details .product-attibute-box .pb-size-b2 .dim-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  row-gap: 6px;
+  column-gap: 0;
+  width: 100%;
+  min-width: 0;
+}
+/* Caption: "Width" / "Height" */
+.product-details .product-attibute-box .pb-size-b2 .dim-group > .input-group-text:first-child {
+  flex: 0 0 100%;
+  justify-content: flex-start;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+/* Number boxes */
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-input,
+.product-details .product-attibute-box .pb-size-b2 .dim-group--ftin .dim-part {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0 !important;
+  height: 46px;
+  min-height: 46px;
+  margin: 0 !important;
+  padding: 0 4px 0 12px;
+  border: 1px solid #cbd5e1 !important;
+  border-right: 0 !important;
+  border-radius: 10px 0 0 10px !important;
+  background: #fff;
+  box-shadow: none;
+  color: #0f172a;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+  transition: border-color .15s, box-shadow .15s;
+}
+/* Unit suffix inside the box */
+.product-details .product-attibute-box .pb-size-b2 .dim-group > .input-group-text:not(:first-child) {
+  flex: 0 0 auto;
+  justify-content: center;
+  min-width: 0;
+  min-height: 46px;
+  margin: 0 !important;
+  padding: 0 12px 0 4px;
+  border: 1px solid #cbd5e1 !important;
+  border-left: 0 !important;
+  border-radius: 0 10px 10px 0 !important;
+  background: #fff;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color .15s, box-shadow .15s;
+}
+/* Gap between the ft box and the in box */
+.product-details .product-attibute-box .pb-size-b2 .dim-group--ftin .dim-part[data-part="in"] {
+  margin-left: 8px !important;
+}
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-input:hover,
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-part:hover,
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-input:hover + .input-group-text,
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-part:hover + .input-group-text {
+  border-color: #94a3b8 !important;
+}
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-input:focus,
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-part:focus,
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-input:focus + .input-group-text,
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-part:focus + .input-group-text {
+  border-color: #1fa8de !important;
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(31, 168, 222, .18);
+  clip-path: inset(-4px 0 -4px -4px);
+}
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-input:focus + .input-group-text,
+.product-details .product-attibute-box .pb-size-b2 .dim-group .dim-part:focus + .input-group-text {
+  clip-path: inset(-4px -4px -4px 0);
+  color: #1287b5;
+}
+.product-details .product-attibute-box .pb-size-b2 .dim-group:focus-within > .input-group-text:first-child {
+  color: #1287b5;
+}
+/* Summary panel under the boxes */
+.product-details .product-attibute-box .pb-size-b2 + .row .pb-size-summary {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+@media (max-width: 575.98px) {
+  .product-details .product-attibute-box .pb-size-b2 .dim-fields {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

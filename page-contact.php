@@ -267,9 +267,10 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 		? wp_list_pluck($uploaded_files, 'file')
 		: array();
 
-	$headers[] = 'From: ' . get_option('admin_email');
+	// No From header here: the site's sender (Emails → SMTP Settings) is used, like every other
+	// store email. A From of the Gmail admin address, sent from this server, fails Gmail's checks.
 	list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
-	wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers, $attachments);
+	wholesale_mail_team($subject, $body, $headers, $attachments);
 	wholesale_send_quote_confirmation($submission_id);
 	// The request is saved and a failed email is retried automatically, so the visitor sees success.
 	wp_safe_redirect(add_query_arg(array_merge(wholesale_quote_lead_args($submission_id), array('interest' => $interest)), $contact_url) . '#contact-form');
@@ -303,6 +304,8 @@ get_header();
 				<p class="contact-eyebrow">Free quotes from real sign specialists</p>
 				<h1 id="contact-page-title"><?php echo esc_html($copy['heading']); ?></h1>
 				<p><?php echo esc_html($copy['intro']); ?></p>
+				<?php // Visitors who would rather talk reach the phone without scrolling past the form (css/ui-polish.css 18). ?>
+				<p class="contact-hero-call">Prefer to talk? <a href="tel:+18664362101">Call 866-436-2101</a> or <a href="sms:+12066186543">text 206-618-6543</a></p>
 				<div class="contact-trust-row">
 					<span><strong>Since 2002</strong> making signs</span>
 					<span><strong>Ships</strong> to all 50 states</span>

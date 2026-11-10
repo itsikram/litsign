@@ -41,6 +41,11 @@ $card_price = static function ($html) {
 $price_of = static function ($slug) use ($card_price) {
 	return $card_price(preg_replace('/^\s*from\s+/i', '', wholesale_seo_product_starting_text($slug)));
 };
+// A category card's price: the cheapest Starting at among the products its category
+// page lists (wholesale_seo_category_from()), the same on every page that shows it.
+$category_price = static function ($category) use ($card_price) {
+	return $card_price(wholesale_seo_category_starting_text($category));
+};
 
 // Banners & displays product lines: category slug, product whose photo and price
 // represent it, name, summary.
@@ -67,8 +72,16 @@ $everyday = array(
 	'step-and-repeat-backdrop-graphic-frame' => 'Photo &amp; press backdrop',
 	'stretch-table-cover' => 'Fitted booth table',
 );
+// Products whose only photos carry sample sale artwork (9oz fabric, X-stand) sit out
+// until they have new photos; these fill their places (inc/product-photo-overrides.php).
+if (function_exists('wholesale_card_picks')) {
+	$everyday = wholesale_card_picks($everyday, array(
+		'indoor-banner-super-smooth' => 'Crisp photos up close',
+		'deluxe-retractable-insert-stand' => 'Frequent travel &amp; heavy use',
+	));
+}
 
-// Channel letter styles, shown above the banners: product slug => short name,
+// Channel letter styles, shown after the banners & displays grids: product slug => short name,
 // lighting tag, how it lights, floating photo tags (label => color). Cards open the
 // product page, where the customer enters the wording, height and colors and
 // orders. Wording matches the style comparison on /custom-channel-letters/.
@@ -205,6 +218,10 @@ $category_photos = static function ($category, $product, $sizes, $max = 5) use (
 	$photos = array();
 	$seen = array();
 	$add = static function ($item) use (&$photos, &$seen, $photo_key) {
+		// Products whose only photos carry sample sale artwork add none (inc/product-photo-overrides.php).
+		if ($item && function_exists('wholesale_product_card_hidden') && wholesale_product_card_hidden($item)) {
+			return;
+		}
 		$id = $item && has_post_thumbnail($item) ? (int) get_post_thumbnail_id($item) : 0;
 		$key = $id ? $photo_key(wp_get_attachment_url($id)) : '';
 		if (!$id || isset($seen[$key])) {
@@ -317,7 +334,7 @@ $card_turnaround = static function ($product) {
 		return '';
 	}
 	$t = wholesale_product_turnaround($product->ID);
-	if ($t['stock']) {
+	if ($t['stock'] && $t['same_day']) {
 		return 'In stock, ships same day';
 	}
 	if ($t['same_day']) {
@@ -373,15 +390,17 @@ $render_card = static function (array $card) {
 };
 
 // A product line card (category): photos from across the line, product count.
-$line_card = static function ($line) use ($price_of, $category_photos, $card_tags, $card_turnaround, $category_sales) {
+$line_card = static function ($line) use ($category_price, $category_photos, $card_tags, $card_turnaround, $category_sales) {
 	$product = wholesale_seo_product($line[1]);
-	$price = $price_of($line[1]);
+	$price = $category_price($line[0]);
+	// The sale tag follows the product whose price the card shows.
+	$from = wholesale_seo_category_from($line[0]);
 	$range = $category_photos($line[0], $product, '(max-width: 575px) 46vw, (max-width: 991px) 46vw, 280px');
 	return array(
 		'url' => wholesale_category_url($line[0]),
 		'name' => $line[2],
 		'photos' => $range['photos'],
-		'tags' => $card_tags($product, $price, $category_sales($line[0])),
+		'tags' => $card_tags($from ? get_post($from['product_id']) : $product, $price, $category_sales($line[0])),
 		'chip' => $range['count'] > 1 ? sprintf('%d products', $range['count']) : '',
 		'desc' => $line[3],
 		'meta' => $card_turnaround($product),
@@ -521,6 +540,64 @@ get_header();
 
 $google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
 $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_reviews : null;
+
+// First-screen product shortcuts (Visitor Insights, Nov 8 2026: 426 of 451 ad visits
+// landed here on phones, 63% left within 10 s and only 4% opened a product; the hero
+// was text only). Photo, name and starting price, each opening its category.
+$hero_picks = array();
+$pick_slugs = array_column($bd_lines, 1, 0); // category => product whose photo stands for it
+// Each card shows two photos side by side: the category's main product, then a
+// second product from the same line (owner, Nov 9 2026: two photos per card).
+// No photos with sale artwork (18oz blockout "BIG SALE", X-stand "50%" pizza, poster
+// stand "Summer Discount"), and products on the card-hidden list
+// (inc/product-photo-overrides.php) are skipped.
+$pick_seconds = array(
+	'banners' => 'mesh-banner',
+	'banner-stands' => 'table-top-banner-stand',
+	'a-frame-and-sign-holders' => 'snap-poster-graphic-hanger',
+	'channel-letters' => 'hidden-back-halo-lit',
+);
+$pick_photos = static function ($products) {
+	$urls = array();
+	foreach ($products as $product) {
+		if ($product && function_exists('wholesale_product_card_hidden') && wholesale_product_card_hidden($product)) {
+			continue;
+		}
+		$url = $product ? wp_get_attachment_image_url(get_post_thumbnail_id($product), 'medium') : '';
+		if ($url) {
+			$urls[] = $url;
+		}
+	}
+	return $urls;
+};
+foreach (array('banners' => 'Vinyl Banners', 'banner-stands' => 'Banner Stands', 'a-frame-and-sign-holders' => 'A-Frames') as $pick_category => $pick_name) {
+	$pick_product = isset($pick_slugs[$pick_category]) ? wholesale_seo_product($pick_slugs[$pick_category]) : null;
+	// Sale price only (no struck-through price); "$42" for "$42 per item", "$1.38/ft²" for per ft².
+	// "A-Frames" shows the banner A-frame's own price: the cheapest item in its category
+	// is a poster hanger, not an A-frame.
+	$pick_price = 'a-frame-and-sign-holders' === $pick_category ? $price_of($pick_slugs[$pick_category]) : $category_price($pick_category);
+	$pick_price = strip_tags(preg_replace('#<del\b.*?</del>#is', '', (string) $pick_price), '<sup>');
+	$pick_price = trim(preg_replace(array('/\s*per item\s*$/i', '/\s*per ft/i'), array('', '/ft'), $pick_price));
+	if ($pick_product && '' !== $pick_price) {
+		$hero_picks[] = array(
+			'url' => wholesale_category_url($pick_category),
+			'name' => $pick_name,
+			'price' => $pick_price,
+			'photos' => $pick_photos(array($pick_product, wholesale_seo_product($pick_seconds[$pick_category]))),
+		);
+	}
+}
+// Channel letters: the cheapest style's per-letter price, as the style grid below shows it.
+$pick_cl = array_filter(array_map($cl_card_price, array_keys($cl_styles)));
+$pick_cl_product = wholesale_seo_product(array_key_first($cl_styles));
+if ($pick_cl && $pick_cl_product) {
+	$hero_picks[] = array(
+		'url' => '#channel-letters',
+		'name' => 'Channel Letters',
+		'price' => wholesale_whole_dollars(min(array_column($pick_cl, 'amount'))) . '/letter',
+		'photos' => $pick_photos(array($pick_cl_product, wholesale_seo_product($pick_seconds['channel-letters']))),
+	);
+}
 ?>
 
 <main id="primary" class="site-main hc-page">
@@ -530,6 +607,20 @@ $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_r
 				<p class="hc-eyebrow">Made to order &middot; Since 2002</p>
 				<h1 id="home-hero-title" class="bd-hero-title">Custom Banners, Displays &amp; Signs <span>for Your Business</span></h1>
 				<p class="home-hero-lead">From trade show displays to LED storefront signs, choose your size and options to see your price online.</p>
+				<?php if (count($hero_picks) >= 2) : ?>
+					<nav class="hc-hero-picks" aria-label="Popular products">
+						<?php foreach ($hero_picks as $pick) : ?>
+							<a class="hc-hero-pick" href="<?php echo esc_url($pick['url']); ?>">
+								<?php if ($pick['photos']) : ?>
+									<span class="hc-hero-pick-photos" data-count="<?php echo esc_attr(count($pick['photos'])); ?>" aria-hidden="true">
+										<?php foreach ($pick['photos'] as $pick_photo) : ?><img src="<?php echo esc_url(wholesale_webp_url($pick_photo)); ?>" alt="" width="150" height="150" decoding="async" fetchpriority="low"><?php endforeach; ?>
+									</span>
+								<?php endif; ?>
+								<span class="hc-hero-pick-text"><strong><?php echo esc_html($pick['name']); ?></strong><small>From <?php echo wp_kses($pick['price'], array('sup' => array())); ?></small><?php echo wholesale_home_icon('arrow'); ?></span>
+							</a>
+						<?php endforeach; ?>
+					</nav>
+				<?php endif; ?>
 				<div class="home-hero-actions">
 					<a class="home-hero-shop-button" href="#banners-displays">Shop Banners &amp; Displays <?php echo wholesale_home_icon('arrow'); ?></a>
 					<a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>">Get a Free Quote</a>
@@ -568,6 +659,52 @@ $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_r
 			</div>
 		</div>
 	</div>
+
+	<section class="sf-section hc-product-section" id="banners-displays" aria-labelledby="hc-bd-title">
+		<div class="container">
+			<p class="cl-kicker">Product lines</p>
+			<h2 id="hc-bd-title" class="cl-section-title">Shop Banners &amp; Displays</h2>
+			<p class="cl-section-lead">Promote a storefront, an event or a booth: printed in full color and finished the way you&rsquo;ll hang or set it up.</p>
+			<div class="hc-pcard-grid">
+				<?php foreach ($bd_lines as $line) : ?>
+					<?php $render_card($line_card($line)); ?>
+				<?php endforeach; ?>
+			</div>
+			<?php if ($bd_url) : ?>
+				<p class="hc-more-link"><a href="<?php echo esc_url($bd_url); ?>">Compare materials and stands in our banners &amp; displays guide <?php echo wholesale_home_icon('arrow'); ?></a></p>
+			<?php endif; ?>
+		</div>
+	</section>
+
+	<section class="sf-section sf-section--tint hc-product-section hc-order-picks" id="everyday-displays" aria-labelledby="hc-everyday-title">
+		<div class="container">
+			<p class="cl-kicker">Quick picks</p>
+			<h2 id="hc-everyday-title" class="cl-section-title">Everyday Banners &amp; Displays</h2>
+			<p class="cl-section-lead">Single products for a specific job, from fence banners to photo backdrops.</p>
+			<div class="hc-pcard-grid">
+				<?php foreach ($everyday as $slug => $label) : ?>
+					<?php
+					$product = wholesale_seo_product($slug);
+					if (!$product) {
+						continue;
+					}
+					$name = wp_strip_all_tags(get_the_title($product));
+					$price = $price_of($slug);
+					$render_card(array(
+						'url' => get_permalink($product),
+						'name' => esc_html($name),
+						'photos' => $card_photos($product, $name, '(max-width: 575px) 46vw, (max-width: 991px) 46vw, 280px'),
+						'tags' => $card_tags($product, $price, isset($sales[$product->ID]) ? $sales[$product->ID] : 0),
+						'kicker' => $label,
+						'meta' => $card_turnaround($product),
+						'price' => $price,
+						'button' => 'Customize & Order',
+					));
+					?>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</section>
 
 	<?php
 	// Channel letter styles with their prices; the cheapest one gets the "Lowest price" flag.
@@ -677,58 +814,6 @@ $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_r
 	</section>
 	<?php endif; ?>
 
-	<section class="sf-section hc-product-section" id="banners-displays" aria-labelledby="hc-bd-title">
-		<div class="container">
-			<p class="cl-kicker">Product lines</p>
-			<h2 id="hc-bd-title" class="cl-section-title">Shop Banners &amp; Displays</h2>
-			<p class="cl-section-lead">Promote a storefront, an event or a booth: printed in full color and finished the way you&rsquo;ll hang or set it up.</p>
-			<div class="hc-pcard-grid">
-				<?php foreach ($bd_lines as $line) : ?>
-					<?php $render_card($line_card($line)); ?>
-				<?php endforeach; ?>
-			</div>
-			<?php if ($bd_url) : ?>
-				<p class="hc-more-link"><a href="<?php echo esc_url($bd_url); ?>">Compare materials and stands in our banners &amp; displays guide <?php echo wholesale_home_icon('arrow'); ?></a></p>
-			<?php endif; ?>
-		</div>
-	</section>
-
-	<section class="sf-section sf-section--tint hc-product-section hc-order-picks" id="everyday-displays" aria-labelledby="hc-everyday-title">
-		<div class="container">
-			<p class="cl-kicker">Quick picks</p>
-			<h2 id="hc-everyday-title" class="cl-section-title">Everyday Banners &amp; Displays</h2>
-			<p class="cl-section-lead">Single products for a specific job, from fence banners to photo backdrops.</p>
-			<div class="hc-pcard-grid">
-				<?php foreach ($everyday as $slug => $label) : ?>
-					<?php
-					$product = wholesale_seo_product($slug);
-					if (!$product) {
-						continue;
-					}
-					$name = wp_strip_all_tags(get_the_title($product));
-					$price = $price_of($slug);
-					$render_card(array(
-						'url' => get_permalink($product),
-						'name' => esc_html($name),
-						'photos' => $card_photos($product, $name, '(max-width: 575px) 46vw, (max-width: 991px) 46vw, 280px'),
-						'tags' => $card_tags($product, $price, isset($sales[$product->ID]) ? $sales[$product->ID] : 0),
-						'kicker' => $label,
-						'meta' => $card_turnaround($product),
-						'price' => $price,
-						'button' => 'Customize & Order',
-					));
-					?>
-				<?php endforeach; ?>
-			</div>
-		</div>
-	</section>
-
-	<?php
-	// Reviews right after the products instead of above the footer; the footer's
-	// call then renders nothing (the slider prints once per page).
-	wholesale_render_review_slider();
-	?>
-
 	<?php
 	// The full catalog (inc/home-catalog-directory.php): five photo tiles for lines
 	// without a card above, then every category by group. Ported from the trade
@@ -767,7 +852,7 @@ $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_r
 									<span class="hc-feature-count"><?php echo esc_html(sprintf(_n('%d product', '%d products', $item['count'], 'litsign'), $item['count'])); ?></span>
 									<h3 class="hc-feature-name"><?php echo esc_html($item['name']); ?></h3>
 									<span class="hc-feature-blurb"><?php echo esc_html($item['blurb']); ?></span>
-									<?php $tile_price = $price_of($item['product']); ?>
+									<?php $tile_price = $category_price($slug); ?>
 									<?php if ($tile_price) : ?><span class="hc-feature-price"><small>From</small> <?php echo wp_kses_post($tile_price); ?></span><?php endif; ?>
 									<span class="hc-feature-cta">Shop now <?php echo wholesale_home_icon('arrow'); ?></span>
 								</span>
@@ -824,7 +909,6 @@ $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_r
 	</section>
 	<?php endif; ?>
 
-
 	<section class="cl-steps" aria-labelledby="hc-steps-title">
 		<div class="container">
 			<p class="cl-kicker">How it works</p>
@@ -855,13 +939,20 @@ $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_r
 	</section>
 
 	<?php
+	// Reviews after the products and "How to order", next to About us, instead of
+	// above the footer; the footer's call then renders nothing (the slider prints
+	// once per page). Order: products > how to order > reviews > about > FAQ > help.
+	wholesale_render_review_slider();
+	?>
+
+	<?php
 	// Who makes it: the company facts in a few lines, linked to the pages that
 	// cover them in full (owner-confirmed facts only). Hours, shipping and installing
 	// are left to the FAQ and help band below.
 	$about_url = $page_url('about');
 	$reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews_page_url() : $page_url('reviews');
 	?>
-	<section class="sf-section sf-section--tint hc-about" aria-labelledby="hc-about-title">
+	<section class="sf-section hc-about" aria-labelledby="hc-about-title">
 		<div class="container sf-prose">
 			<p class="cl-kicker">About us</p>
 			<h2 id="hc-about-title" class="cl-section-title">Custom Banners &amp; Signs from Renton, WA, Since 2002</h2>
@@ -877,6 +968,22 @@ $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_r
 				<p class="cl-section-lead cl-faq-note">
 					<?php if ($bd_url) : ?>Find sizing and materials in our <a href="<?php echo esc_url($bd_url); ?>#bd-faq-title">banners &amp; displays FAQ</a>. <?php endif; ?>Compare lighting styles and heights in our <a href="<?php echo esc_url($cl_landing_url); ?>#cl-faq-title">channel letter FAQ</a>.
 				</p>
+				<?php
+				// Product photo under the FAQ intro: 480/960/1440 wide copies in AVIF and WebP.
+				$faq_img_base = get_template_directory_uri() . '/img/home-faq-kit-';
+				$faq_img_set = static function ($ext) use ($faq_img_base) {
+					return implode(', ', array_map(static function ($w) use ($faq_img_base, $ext) {
+						return esc_url($faq_img_base . $w . '.' . $ext) . ' ' . $w . 'w';
+					}, array(480, 960, 1440)));
+				};
+				$faq_img_sizes = '(max-width: 767px) calc(100vw - 32px), (max-width: 1399px) 30vw, 460px';
+				?>
+				<div class="hc-faq-media">
+					<picture>
+						<source type="image/avif" srcset="<?php echo $faq_img_set('avif'); ?>" sizes="<?php echo esc_attr($faq_img_sizes); ?>">
+						<img src="<?php echo esc_url($faq_img_base . '960.webp'); ?>" srcset="<?php echo $faq_img_set('webp'); ?>" sizes="<?php echo esc_attr($faq_img_sizes); ?>" width="1440" height="1080" loading="lazy" decoding="async" alt="A lit channel letter, a vinyl banner, a feather flag kit and sign material samples packed for shipping">
+					</picture>
+				</div>
 			</div>
 			<div class="cl-faq-list">
 				<?php wholesale_seo_render_faq(); ?>

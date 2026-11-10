@@ -247,6 +247,9 @@ add_filter('posts_search', function ($search, $query) {
 	);
 }, 10, 2);
 
+// Refresh button and live updates for the list above.
+require_once __DIR__ . '/admin-orders-live.php';
+
 // ------------------------------------------------------------------
 // Order edit screen: header, status, payment and activity
 // ------------------------------------------------------------------

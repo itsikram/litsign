@@ -30,10 +30,49 @@ function wholesale_google_reviews($force_refresh = false)
 	// overall rating and review count still come straight from Google.
 	$min_rating = wholesale_sanitize_star_rating(wholesale_get_setting('google_reviews_min_rating'));
 	$data['reviews'] = array_values(array_filter($data['reviews'], static function ($review) use ($min_rating) {
-		return $review['rating'] >= $min_rating;
+		return $review['rating'] >= $min_rating && !wholesale_review_text_hidden($review['text']);
 	}));
 
 	return $data;
+}
+
+/**
+ * Reviews kept but not shown on public pages (2026-11-09). We build, test and ship;
+ * the customer's own electrician or sign installer mounts the sign. Reviews that say
+ * we installed it ("TR installed my new business sign", "your amazing installation
+ * team", "Thank you, TR, and your installers") contradict the site and the Google Ads
+ * text, so the review slider, product pages, their structured data and /reviews/
+ * leave them out. Nothing is deleted or unpublished: wp-admin still lists them, and
+ * the Google rating and review count are unchanged. To show them again, make this
+ * function return false.
+ */
+function wholesale_review_text_hidden($text)
+{
+	return (bool) preg_match('/\binstall(?:s|ed|er|ers|ing|ation|ations)?\b/i', (string) $text);
+}
+
+/**
+ * IDs of published site reviews hidden by wholesale_review_text_hidden(), for
+ * post__not_in. Empty in wp-admin, where the owner manages every review.
+ *
+ * @return int[]
+ */
+function wholesale_hidden_review_ids()
+{
+	static $ids = null;
+	if (is_admin() && !wp_doing_ajax()) {
+		return array();
+	}
+	if (null === $ids) {
+		global $wpdb;
+		$ids = array();
+		foreach ((array) $wpdb->get_results("SELECT ID, post_content FROM {$wpdb->posts} WHERE post_type = 'review_submission' AND post_status = 'publish'") as $row) {
+			if (wholesale_review_text_hidden(wp_strip_all_tags((string) $row->post_content))) {
+				$ids[] = (int) $row->ID;
+			}
+		}
+	}
+	return $ids;
 }
 
 /**
@@ -128,6 +167,7 @@ function wholesale_site_reviews($limit = 12)
 		'post_type' => 'review_submission',
 		'post_status' => 'publish',
 		'posts_per_page' => $limit,
+		'post__not_in' => wholesale_hidden_review_ids(),
 		'orderby' => 'date',
 		'order' => 'DESC',
 	));
@@ -150,13 +190,35 @@ function wholesale_site_reviews($limit = 12)
 			'url' => '',
 			// Product reviews sent through the site are only accepted from customers with a
 			// completed order. Reviews an admin added or imported have a _review_source.
-			'verified' => $product_id > 0 && '' === get_post_meta($post->ID, '_review_source', true),
+			'verified' => wholesale_review_is_verified($post->ID),
 			'product' => $product_id ? get_the_title($product_id) : '',
 			'product_id' => $product_id,
 		);
 	}
 
 	return $reviews;
+}
+
+/**
+ * Whether a site review carries the "Verified buyer" badge. The review edit screen can
+ * force it: _review_verified '1' = always, '0' = never. Otherwise it is automatic: a
+ * product review sent through the customer form (no _review_source) is verified.
+ */
+function wholesale_review_is_verified($review_id)
+{
+	$override = (string) get_post_meta($review_id, '_review_verified', true);
+	if ('1' === $override) {
+		return true;
+	}
+	if ('0' === $override) {
+		return false;
+	}
+	return wholesale_review_is_verified_auto($review_id);
+}
+
+function wholesale_review_is_verified_auto($review_id)
+{
+	return absint(get_post_meta($review_id, '_review_product_id', true)) > 0 && '' === get_post_meta($review_id, '_review_source', true);
 }
 
 /**

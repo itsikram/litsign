@@ -507,8 +507,10 @@ function wholesale_location_modified($place = array())
 
 /**
  * Product families on location pages, in display order: the page each links
- * to, where it is made and the product whose card price is quoted. Only
- * channel letters are called signs.
+ * to, where it is made and the product whose card price is quoted, or for
+ * product categories ('price_categories') the cheapest Starting at among the
+ * categories it links to, as on every other category card. Only channel
+ * letters are called signs.
  *
  * @return array
  */
@@ -526,6 +528,7 @@ function wholesale_guide_product_families()
 			'url' => wholesale_category_url('banners'),
 			'made' => 'Made in Renton, WA',
 			'price' => '13oz-vinyl-banner',
+			'price_categories' => array('banners', 'banner-stands'),
 			'more' => array(wholesale_category_url('banner-stands') => 'Banner stands'),
 		),
 		'window-graphics' => array(
@@ -533,12 +536,14 @@ function wholesale_guide_product_families()
 			'url' => home_url('/window-graphics/'),
 			'made' => 'Made in Renton, WA',
 			'price' => 'adhesive-window-perf',
+			'price_categories' => array('adhesive-products'),
 		),
 		'flags-aframes' => array(
 			'label' => 'Flags and A-frames',
 			'url' => wholesale_category_url('advertising-flags'),
 			'made' => 'Made in Renton, WA',
 			'price' => 'feather-angled-flag-pole',
+			'price_categories' => array('advertising-flags', 'signicade-a-frames'),
 			'more' => array(wholesale_category_url('signicade-a-frames') => 'A-frames'),
 		),
 		'displays' => array(
@@ -546,6 +551,7 @@ function wholesale_guide_product_families()
 			'url' => wholesale_category_url('trade-show-products'),
 			'made' => 'Made in Renton, WA',
 			'price' => 'curved-tension-fabric-display-graphic-frame',
+			'price_categories' => array('trade-show-products'),
 		),
 	);
 }
@@ -563,7 +569,7 @@ function wholesale_guide_render_families($place)
 	?>
 	<div class="gd-family-grid">
 		<?php foreach ($families as $key => $family) : ?>
-			<?php $price = wholesale_price_no_cents(wholesale_seo_product_starting_text($family['price'])); ?>
+			<?php $price = wholesale_price_no_cents(!empty($family['price_categories']) ? wholesale_seo_category_starting_text($family['price_categories']) : wholesale_seo_product_starting_text($family['price'])); ?>
 			<article class="gd-family">
 				<h3><a href="<?php echo esc_url($family['url']); ?>"><?php echo esc_html($family['label']); ?></a></h3>
 				<p class="gd-family-made"><?php echo esc_html($family['made']); ?></p>

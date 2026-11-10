@@ -19,6 +19,8 @@
  * 6. "Order within ... and it ships ..." delivery estimate, and the Same Day option
  *    shown only while it can still be ordered (inc/product-buy-box.php).
  * 7. Quantity - / + buttons.
+ * 8. The whole "Starting at ... Get your price" box scrolls to the options.
+ * 9. Contact page: a tap on the form heading puts the cursor in the name box.
  */
 
 // ---- 1. Header hides on scroll down (< 992px, the .ssx-legacy header) ----
@@ -520,4 +522,38 @@
   input.addEventListener('input', sync);
   input.addEventListener('change', sync);
   sync();
+})();
+
+// ---- 8. The whole "Starting at ... Get your price" box is a tap target (single-product.php) ----
+// Visitors tapped the price, not the small "Get your price" link beside it, and nothing
+// happened (Visitor Insights, Nov 8 2026: rage clicks on "STARTING AT $176.09 per letter
+// Get your price"). A tap anywhere on the box now scrolls to the options; on channel letters
+// the cursor goes into the sign text box, the one thing to fill in before a price shows.
+(function () {
+  document.querySelectorAll('.product-mobile-price').forEach((box) => {
+    const link = box.querySelector('a[href^="#"]');
+    const target = link && document.getElementById(link.getAttribute('href').slice(1));
+    if (!target) return;
+    box.classList.add('is-tappable');
+    box.addEventListener('click', (e) => {
+      const clicked = e.target.closest('a');
+      if (clicked && clicked !== link) return;
+      e.preventDefault();
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const text = target.querySelector('#letterInput');
+      if (text && !text.value) window.setTimeout(() => text.focus({ preventScroll: true }), 500);
+    });
+  });
+})();
+
+// ---- 9. Contact page: a tap on the form heading starts the form (page-contact.php) ----
+// One visitor tapped "Get your free quote" three times, as if it were a button (Nov 8 2026).
+(function () {
+  const heading = document.querySelector('.contact-card-heading');
+  const name = document.getElementById('contact-name');
+  if (!heading || !name) return;
+  heading.classList.add('is-tappable');
+  heading.addEventListener('click', () => {
+    if (!name.value) name.focus();
+  });
 })();

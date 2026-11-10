@@ -130,6 +130,135 @@
   flex: none;
 }
 
+/* First-screen product shortcuts (template-parts/home-catalog.php): two product
+   photos side by side (each a square, so square product photos show whole), then
+   name, starting price and an arrow. */
+.hc-hero-picks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  max-width: 660px;
+  margin: 0 0 24px;
+}
+
+.hc-hero-pick {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  background: rgba(7, 26, 46, 0.72);
+  box-shadow: 0 10px 26px rgba(2, 12, 24, 0.28);
+  color: #fff;
+  text-decoration: none;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.hc-hero-pick:hover,
+.hc-hero-pick:focus-visible {
+  border-color: #88dcf7;
+  box-shadow: 0 14px 30px rgba(2, 12, 24, 0.4);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.hc-hero-pick:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.hc-hero-pick-photos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  aspect-ratio: 2 / 1;
+  overflow: hidden;
+  background: #e3ebf2;
+}
+
+.hc-hero-pick-photos[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.hc-hero-pick-photos img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  background: #fff;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.hc-hero-pick:hover .hc-hero-pick-photos img,
+.hc-hero-pick:focus-visible .hc-hero-pick-photos img {
+  transform: scale(1.06);
+}
+
+.hc-hero-pick-text {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 6px;
+  padding: 9px 10px 10px;
+  line-height: 1.2;
+}
+
+.hc-hero-pick-text strong {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hc-hero-pick-text small {
+  grid-column: 1;
+  margin-top: 3px;
+  color: #9fe3f8;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.hc-hero-pick-text sup {
+  font-size: 0.6em;
+}
+
+.hc-hero .hc-hero-pick-text .cl-icon {
+  grid-column: 2;
+  grid-row: 2;
+  margin-top: 3px;
+  width: 15px;
+  height: 15px;
+  color: #88dcf7;
+  opacity: 0.75;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.hc-hero-pick:hover .hc-hero-pick-text .cl-icon,
+.hc-hero-pick:focus-visible .hc-hero-pick-text .cl-icon {
+  opacity: 1;
+  transform: translateX(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hc-hero-pick,
+  .hc-hero-pick-photos img,
+  .hc-hero .hc-hero-pick-text .cl-icon {
+    transition: none;
+  }
+
+  .hc-hero-pick:hover,
+  .hc-hero-pick:focus-visible,
+  .hc-hero-pick:hover .hc-hero-pick-photos img,
+  .hc-hero-pick:focus-visible .hc-hero-pick-photos img {
+    transform: none;
+  }
+}
+
 .hc-hero-meta {
   display: flex;
   flex-wrap: wrap;
@@ -231,6 +360,20 @@
     grid-template-columns: 1fr;
     gap: 10px;
     max-width: 420px;
+  }
+
+  .hc-hero-picks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 420px;
+    margin-bottom: 16px;
+  }
+
+  .hc-hero-pick {
+    border-radius: 11px;
+  }
+
+  .hc-hero-pick-text {
+    padding: 7px 9px 8px;
   }
 
   .hc-hero .home-hero-actions a {
@@ -389,7 +532,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #127ea8;
+  color: #0e6b91; /* 5.3:1+ on the tinted section (was #127ea8, 4.26:1) */
   font-weight: 700;
   text-decoration: none;
 }
@@ -433,8 +576,11 @@
   max-width: 65ch;
 }
 
-.hc-page .customer-review-section {
-  background: #ffffff;
+/* Section rhythm after the products: steps white, reviews tint, about white,
+   FAQ tint, then the dark help band. */
+.hc-page .customer-review-section,
+.hc-page .cl-faq {
+  background: var(--hc-tint);
 }
 
 .hc-page .cl-steps {
@@ -470,6 +616,32 @@
 .hc-page .cl-faq .cl-faq-note {
   margin: 14px 0 0;
   text-align: left;
+}
+
+/* Product photo under the FAQ intro. The photo's own backdrop is light gray, so it sits in a framed card. */
+.hc-faq-media {
+  margin-top: clamp(22px, 3vw, 32px);
+  overflow: hidden;
+  border: 1px solid var(--hc-line);
+  border-radius: var(--hc-radius);
+  background: #eceff2;
+  box-shadow: 0 1px 2px rgba(16, 36, 58, 0.06), 0 22px 44px -28px rgba(16, 36, 58, 0.45);
+}
+
+.hc-faq-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+/* Keep the intro and photo in view while answers open, below the sticky header (~143px tall). */
+@media (min-width: 992px) and (min-height: 800px) {
+  .hc-page .hc-faq-intro {
+    position: sticky;
+    top: 168px;
+  }
 }
 
 .hc-page .cl-faq-list {
@@ -1650,7 +1822,9 @@
   .hc-pcard-button {
     min-height: 44px;
     padding: 9px 6px;
+    gap: 5px;
     font-size: 0.86rem;
+    white-space: nowrap;
   }
 
   .hc-pcard-button svg {
@@ -1702,7 +1876,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #127ea8;
+  color: #0e6b91; /* 5.3:1+ on the tinted section (was #127ea8, 4.26:1) */
   font-weight: 700;
   text-decoration: none;
 }
@@ -1767,17 +1941,18 @@
   justify-content: center;
   aspect-ratio: 1 / 1;
   min-height: 0;
-  padding: 10px 10px 0;
+  padding: 0;
+  overflow: hidden;
 }
 
-/* The photo sits as a rounded inset card on the tint. */
+/* The photo fills the whole thumbnail, edge to edge (the tile's own
+   rounded corners and overflow clip it). */
 .hc-feature-media img {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 12px;
   object-fit: cover;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  object-position: center;
   transition: transform 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
@@ -1836,7 +2011,7 @@
   align-items: center;
   gap: 6px;
   margin-top: 4px;
-  color: #127ea8;
+  color: #0e6b91; /* 5.3:1+ on every tile tint (was #127ea8, 4.09:1) */
   font-size: 14px;
   font-weight: 700;
 }
@@ -1849,11 +2024,6 @@
    tablets, a tall tile on desktop. */
 .hc-feature-item--lead .hc-feature-media {
   aspect-ratio: 16 / 10;
-  padding: 12px 12px 0;
-}
-
-.hc-feature-item--lead .hc-feature-media img {
-  border-radius: 14px;
 }
 
 .hc-feature-item--lead .hc-feature-body {
@@ -2003,7 +2173,7 @@
 }
 
 .hc-dir-item:hover .hc-dir-name {
-  color: #127ea8;
+  color: #0e6b91;
 }
 
 .hc-dir-count {
@@ -2026,7 +2196,7 @@
   gap: 6px;
   margin-top: auto;
   padding-top: 14px;
-  color: #127ea8;
+  color: #0e6b91;
   font-size: 14px;
   font-weight: 700;
   text-decoration: none;
@@ -2162,8 +2332,8 @@
 
   .hc-feature-item--lead .hc-feature-media {
     order: 2;
+    align-self: stretch;
     aspect-ratio: 1 / 1;
-    padding: 14px 14px 14px 0;
   }
 
   .hc-feature-item--lead .hc-feature-body {
@@ -2201,8 +2371,8 @@
 
   .hc-feature-item--lead .hc-feature-media {
     order: 0;
+    align-self: auto;
     aspect-ratio: auto;
-    padding: 28px 28px 0;
   }
 
   .hc-feature-item--lead .hc-feature-body {
@@ -2213,8 +2383,9 @@
     font-size: 30px;
   }
 
+  /* Square like the base rule: product photos are square, so nothing is cut off. */
   .hc-feature-media {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1 / 1;
   }
 
   .hc-cats-band {

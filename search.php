@@ -467,17 +467,23 @@ $icon = static function ($name, $size = 20) {
 		position: relative;
 		display: grid;
 		place-items: center;
-		aspect-ratio: 4 / 3;
+		grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+		/* Product photos are square, so a square frame shows them whole. */
+		aspect-ratio: 1 / 1;
+		overflow: hidden;
 		border-bottom: 1px solid var(--srp-line);
 		background: #f6f9fb;
 		color: #a9b8c5;
 	}
 
+	/* The photo fills the whole thumbnail, edge to edge. */
 	.srp-card__img {
+		align-self: stretch;
+		justify-self: stretch;
 		width: 100%;
 		height: 100%;
-		padding: 10px;
-		object-fit: contain;
+		object-fit: cover;
+		object-position: center;
 	}
 
 	.srp-badge {

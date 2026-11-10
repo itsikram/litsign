@@ -52,7 +52,12 @@ function wholesale_review_stats_by_product()
 	));
 
 	$stats = array();
+	// Reviews hidden on public pages (inc/reviews.php) don't count toward a product's public rating.
+	$hidden = function_exists('wholesale_hidden_review_ids') ? wholesale_hidden_review_ids() : array();
 	foreach ($reviews as $review) {
+		if ($hidden && in_array((int) $review->ID, $hidden, true)) {
+			continue;
+		}
 		$product_id = absint(get_post_meta($review->ID, '_review_product_id', true));
 		if (!isset($stats[$product_id])) {
 			$stats[$product_id] = array('published' => 0, 'pending' => 0, 'samples' => 0, 'sum' => 0, 'average' => 0.0, 'imported' => 0);
@@ -133,6 +138,7 @@ function wholesale_product_reviews($product_id, $limit = 6)
 		'post_type' => 'review_submission',
 		'post_status' => $preview ? array('publish', 'draft') : 'publish',
 		'posts_per_page' => $limit,
+		'post__not_in' => function_exists('wholesale_hidden_review_ids') ? wholesale_hidden_review_ids() : array(),
 		'meta_key' => '_review_product_id',
 		'meta_value' => absint($product_id),
 		'orderby' => 'date',
@@ -1121,3 +1127,271 @@ function wholesale_review_manager_styles()
 	</style>
 	<?php
 }
+
+// ------------------------------------------------------------------
+// Edit screen (post.php?post=ID): every review field editable
+// ------------------------------------------------------------------
+
+/**
+ * Meta keys the edit screen manages, with a label and field type.
+ */
+function wholesale_review_edit_fields()
+{
+	return array(
+		'_review_name' => array('label' => 'Name', 'type' => 'text'),
+		'_review_email' => array('label' => 'Customer email', 'type' => 'email'),
+		'_review_rating' => array('label' => 'Rating', 'type' => 'rating'),
+		'_review_product_id' => array('label' => 'Product', 'type' => 'product'),
+		'_review_order_id' => array('label' => 'Order ID', 'type' => 'number'),
+		'_review_title' => array('label' => 'Headline', 'type' => 'text'),
+		'_review_company' => array('label' => 'Company', 'type' => 'text'),
+		'_review_location' => array('label' => 'Location', 'type' => 'text'),
+		'_review_source' => array('label' => 'Where it came from', 'type' => 'source'),
+		'_review_source_note' => array('label' => 'Reference', 'type' => 'text'),
+		'_review_import_key' => array('label' => 'Import key', 'type' => 'text'),
+		'_review_verified' => array('label' => 'Verified buyer badge', 'type' => 'verified'),
+		'_review_is_sample' => array('label' => 'Sample (placeholder) review', 'type' => 'flag'),
+		'_review_hidden_unverified' => array('label' => 'Hidden as unverified on', 'type' => 'date'),
+	);
+}
+
+function wholesale_review_edit_register_meta_box()
+{
+	// Replaces the read-only "Review Details" box from functions.php.
+	remove_meta_box('review-submission-details', 'review_submission', 'normal');
+	add_meta_box(
+		'review-submission-fields',
+		'Review details (all editable)',
+		'wholesale_review_edit_meta_box',
+		'review_submission',
+		'normal',
+		'high'
+	);
+}
+add_action('add_meta_boxes_review_submission', 'wholesale_review_edit_register_meta_box', 20);
+
+function wholesale_review_edit_meta_box($post)
+{
+	wp_nonce_field('wholesale_review_edit_' . $post->ID, 'wholesale_review_edit_nonce');
+
+	$values = array();
+	foreach (wholesale_review_edit_fields() as $key => $field) {
+		$values[$key] = get_post_meta($post->ID, $key, true);
+	}
+
+	$product_id = absint($values['_review_product_id']);
+	$order_id = absint($values['_review_order_id']);
+	$source = (string) $values['_review_source'];
+	$sources = array('' => 'Customer form on the site (shows Verified buyer)', 'import' => 'Imported from a file') + wholesale_review_manager_sources();
+	if (!isset($sources[$source])) {
+		$sources[$source] = $source;
+	}
+
+	$products = get_posts(array(
+		'post_type' => 'product',
+		'post_status' => array('publish', 'draft', 'pending', 'private'),
+		'posts_per_page' => -1,
+		'orderby' => 'title',
+		'order' => 'ASC',
+		'fields' => 'ids',
+		'no_found_rows' => true,
+		'update_post_meta_cache' => false,
+		'update_post_term_cache' => false,
+	));
+	if ($product_id && !in_array($product_id, $products, true)) {
+		$products[] = $product_id;
+	}
+	$rating = min(5, max(0, absint($values['_review_rating'])));
+	$hidden_date = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $values['_review_hidden_unverified']) ? $values['_review_hidden_unverified'] : '';
+	?>
+	<style>
+		.wholesale-re-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 16px; margin-top: 6px; }
+		.wholesale-re-grid label { display: grid; gap: 3px; font-weight: 600; align-content: start; }
+		.wholesale-re-grid input[type=text], .wholesale-re-grid input[type=email], .wholesale-re-grid input[type=number], .wholesale-re-grid input[type=date], .wholesale-re-grid select { width: 100%; max-width: none; }
+		.wholesale-re-grid .wholesale-re-check { display: flex; align-items: center; gap: 8px; }
+		.wholesale-re-grid .description { font-weight: 400; }
+		.wholesale-re-links { margin: 4px 0 0; }
+		.wholesale-re-other { margin-top: 14px; }
+		.wholesale-re-other td { word-break: break-all; }
+	</style>
+	<p class="wholesale-re-links description">
+		Review text is the editor below. Status, publish date and the post title are in the Publish box. Rating, product and sample changes refresh the product card stars on save.
+		<?php if ($product_id && 'product' === get_post_type($product_id)) : ?>
+			<a href="<?php echo esc_url(get_permalink($product_id)); ?>#product-reviews" target="_blank" rel="noopener">View on product page</a> &middot;
+		<?php endif; ?>
+		<?php if ($order_id && 'order' === get_post_type($order_id)) : ?>
+			<a href="<?php echo esc_url(get_edit_post_link($order_id)); ?>">Open order #<?php echo esc_html(function_exists('wholesale_order_number') ? wholesale_order_number($order_id) : $order_id); ?></a> &middot;
+		<?php endif; ?>
+		<a href="<?php echo esc_url(wholesale_review_manager_url()); ?>">Reviews by Product</a>
+	</p>
+	<div class="wholesale-re-grid">
+		<label>Name
+			<input type="text" name="wholesale_review[_review_name]" value="<?php echo esc_attr($values['_review_name']); ?>">
+		</label>
+		<label>Customer email
+			<input type="email" name="wholesale_review[_review_email]" value="<?php echo esc_attr($values['_review_email']); ?>">
+		</label>
+		<label>Rating
+			<select name="wholesale_review[_review_rating]">
+				<?php for ($star = 5; $star >= 1; $star--) : ?>
+					<option value="<?php echo (int) $star; ?>" <?php selected($rating, $star); ?>><?php echo esc_html($star . ' ' . (1 === $star ? 'star' : 'stars')); ?></option>
+				<?php endfor; ?>
+			</select>
+		</label>
+		<label>Product
+			<select name="wholesale_review[_review_product_id]">
+				<option value="0" <?php selected($product_id, 0); ?>>General feedback (no product)</option>
+				<?php foreach ($products as $id) : ?>
+					<option value="<?php echo (int) $id; ?>" <?php selected($product_id, (int) $id); ?>><?php echo esc_html(html_entity_decode(get_the_title($id), ENT_QUOTES) . ' (#' . $id . ('publish' === get_post_status($id) ? '' : ', ' . get_post_status($id)) . ')'); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</label>
+		<label>Order ID <span class="description">(0 = none)</span>
+			<input type="number" min="0" step="1" name="wholesale_review[_review_order_id]" value="<?php echo esc_attr($order_id); ?>">
+		</label>
+		<label>Headline
+			<input type="text" name="wholesale_review[_review_title]" value="<?php echo esc_attr($values['_review_title']); ?>">
+		</label>
+		<label>Company
+			<input type="text" name="wholesale_review[_review_company]" value="<?php echo esc_attr($values['_review_company']); ?>">
+		</label>
+		<label>Location
+			<input type="text" name="wholesale_review[_review_location]" value="<?php echo esc_attr($values['_review_location']); ?>" placeholder="City, ST">
+		</label>
+		<label>Where it came from
+			<select name="wholesale_review[_review_source]">
+				<?php foreach ($sources as $key => $label) : ?>
+					<option value="<?php echo esc_attr($key); ?>" <?php selected($source, (string) $key); ?>><?php echo esc_html($label); ?></option>
+				<?php endforeach; ?>
+			</select>
+		</label>
+		<label>Verified buyer badge
+			<?php $verified_mode = (string) get_post_meta($post->ID, '_review_verified', true); ?>
+			<select name="wholesale_review[_review_verified]">
+				<option value="" <?php selected($verified_mode, ''); ?>>Automatic (<?php echo wholesale_review_is_verified_auto($post->ID) ? 'shows the badge' : 'no badge'; ?>)</option>
+				<option value="1" <?php selected($verified_mode, '1'); ?>>Always show "Verified buyer"</option>
+				<option value="0" <?php selected($verified_mode, '0'); ?>>Never show it (plain "Customer review")</option>
+			</select>
+			<span class="description">Automatic = a product review sent through the site's customer form.</span>
+		</label>
+		<label>Reference <span class="description">(order #, email date...)</span>
+			<input type="text" name="wholesale_review[_review_source_note]" value="<?php echo esc_attr($values['_review_source_note']); ?>">
+		</label>
+		<label>Import key
+			<input type="text" name="wholesale_review[_review_import_key]" value="<?php echo esc_attr($values['_review_import_key']); ?>">
+		</label>
+		<label>Hidden as unverified on
+			<input type="date" name="wholesale_review[_review_hidden_unverified]" value="<?php echo esc_attr($hidden_date); ?>">
+			<span class="description">Set by the 2026-10-27 clean-up. Clear it so a review you publish on purpose stays live.</span>
+		</label>
+		<label class="wholesale-re-check">
+			<input type="checkbox" name="wholesale_review[_review_is_sample]" value="1" <?php checked((bool) $values['_review_is_sample']); ?>>
+			Sample (placeholder) review - never published
+		</label>
+	</div>
+	<?php
+	// Any other review data stored on this post, so nothing is invisible.
+	$known = array_keys(wholesale_review_edit_fields());
+	$extra = array();
+	foreach ((array) get_post_meta($post->ID) as $key => $meta_values) {
+		if (0 === strpos($key, '_review_') && !in_array($key, $known, true)) {
+			$extra[$key] = maybe_unserialize($meta_values[0]);
+		}
+	}
+	if ($extra) :
+		?>
+		<div class="wholesale-re-other">
+			<strong>Other stored fields (read only)</strong>
+			<table class="widefat striped"><tbody>
+				<?php foreach ($extra as $key => $value) : ?>
+					<tr><td><code><?php echo esc_html($key); ?></code></td><td><?php echo esc_html(is_scalar($value) ? (string) $value : wp_json_encode($value)); ?></td></tr>
+				<?php endforeach; ?>
+			</tbody></table>
+		</div>
+		<?php
+	endif;
+}
+
+function wholesale_review_edit_save($post_id, $post)
+{
+	if (!isset($_POST['wholesale_review_edit_nonce'], $_POST['wholesale_review']) || !is_array($_POST['wholesale_review'])) {
+		return;
+	}
+	if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
+		return;
+	}
+	if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['wholesale_review_edit_nonce'])), 'wholesale_review_edit_' . $post_id) || !current_user_can('edit_post', $post_id)) {
+		return;
+	}
+	if ('review_submission' !== $post->post_type) {
+		return;
+	}
+
+	$in = wp_unslash($_POST['wholesale_review']);
+
+	// update_post_meta() unslashes its value, so text is slashed first.
+	foreach (array('_review_name', '_review_title', '_review_company', '_review_location', '_review_source_note', '_review_import_key') as $key) {
+		update_post_meta($post_id, $key, wp_slash(sanitize_text_field(isset($in[$key]) ? (string) $in[$key] : '')));
+	}
+
+	update_post_meta($post_id, '_review_email', sanitize_email(isset($in['_review_email']) ? (string) $in['_review_email'] : ''));
+	update_post_meta($post_id, '_review_rating', min(5, max(1, absint(isset($in['_review_rating']) ? $in['_review_rating'] : 5))));
+
+	$product_id = absint(isset($in['_review_product_id']) ? $in['_review_product_id'] : 0);
+	if ($product_id && 'product' !== get_post_type($product_id)) {
+		$product_id = absint(get_post_meta($post_id, '_review_product_id', true));
+	}
+	update_post_meta($post_id, '_review_product_id', $product_id);
+	update_post_meta($post_id, '_review_order_id', absint(isset($in['_review_order_id']) ? $in['_review_order_id'] : 0));
+
+	// Empty = customer form; "import" and the admin sources are labelled differently on the site.
+	$source = sanitize_key(isset($in['_review_source']) ? (string) $in['_review_source'] : '');
+	if ('' === $source) {
+		delete_post_meta($post_id, '_review_source');
+	} else {
+		update_post_meta($post_id, '_review_source', $source);
+	}
+
+	$verified = isset($in['_review_verified']) ? (string) $in['_review_verified'] : '';
+	if ('1' === $verified || '0' === $verified) {
+		update_post_meta($post_id, '_review_verified', $verified);
+	} else {
+		delete_post_meta($post_id, '_review_verified');
+	}
+
+	$is_sample = !empty($in['_review_is_sample']);
+	if ($is_sample) {
+		update_post_meta($post_id, '_review_is_sample', 1);
+	} else {
+		delete_post_meta($post_id, '_review_is_sample');
+	}
+
+	$hidden = isset($in['_review_hidden_unverified']) ? sanitize_text_field((string) $in['_review_hidden_unverified']) : '';
+	if ('' === $hidden) {
+		delete_post_meta($post_id, '_review_hidden_unverified');
+	} elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $hidden)) {
+		update_post_meta($post_id, '_review_hidden_unverified', $hidden);
+	}
+
+	// Keep the auto-made title ("5-star review from Name") in step with the rating and name.
+	$update = array();
+	$name = (string) get_post_meta($post_id, '_review_name', true);
+	if (preg_match('/^\d-star review from /', (string) $post->post_title) && '' !== $name) {
+		$new_title = sprintf('%d-star review from %s', (int) get_post_meta($post_id, '_review_rating', true), $name);
+		if ($new_title !== $post->post_title) {
+			$update['post_title'] = wp_slash($new_title);
+		}
+	}
+	// A placeholder review can never stay published.
+	if ($is_sample && 'publish' === get_post_status($post_id)) {
+		$update['post_status'] = 'draft';
+	}
+	if ($update) {
+		remove_action('save_post_review_submission', 'wholesale_review_edit_save', 10);
+		wp_update_post($update + array('ID' => $post_id));
+		add_action('save_post_review_submission', 'wholesale_review_edit_save', 10, 2);
+	}
+
+	wholesale_review_stats_flush();
+}
+add_action('save_post_review_submission', 'wholesale_review_edit_save', 10, 2);

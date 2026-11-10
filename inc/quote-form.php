@@ -117,8 +117,7 @@ function wholesale_quote_form_handle(array $args)
 		. ($source ? "Ad source: {$source}\n" : '')
 		. "\nSize, quantity and details:\n{$details}\n";
 	list($subject, $body) = wholesale_contact_mail_tag(sprintf('New %s quote request from %s', strtolower($args['project_label']), $name), $body);
-	wp_mail(
-		wholesale_contact_admin_recipients(),
+	wholesale_mail_team(
 		$subject,
 		$body,
 		array('Content-Type: text/plain; charset=UTF-8', 'Reply-To: ' . $name . ' <' . $email . '>'),
@@ -250,35 +249,28 @@ function wholesale_quote_form_render(array $args)
 }
 
 /**
- * The Google Ads channel letter landing page (/channel-letter-quote/, template
- * page-channel-letters-ads.php). Created on a wp-admin visit when no page uses the
- * template yet, so it appears on live after the theme upload without copying the
- * database. Checked every time instead of once behind a flag: the owner's push
- * copies the options table, so a "done" flag can reach live before the page does.
+ * The separate "Channel Letter Quote" pages (/channel-letter-quote/ and
+ * /channel-letter-quote-2/) were removed on 2026-11-09: quotes now go through the
+ * form on /custom-channel-letters/#quote. Anyone arriving on the old URLs (ads,
+ * bookmarks) is sent there with a 301, keeping the query string so ad click IDs
+ * and ?style= still reach the page. Works whether or not the old pages still
+ * exist in the database.
  */
-function wholesale_ensure_channel_letter_quote_page()
+function wholesale_redirect_channel_letter_quote_pages()
 {
-	if (wp_doing_ajax() || !current_user_can('edit_pages')) {
+	global $wp;
+	if (is_admin() || empty($wp->request)) {
 		return;
 	}
-	$existing = get_posts(array(
-		'post_type' => 'page',
-		'post_status' => array('publish', 'draft', 'pending', 'private', 'future'),
-		'posts_per_page' => 1,
-		'fields' => 'ids',
-		'meta_key' => '_wp_page_template',
-		'meta_value' => 'page-channel-letters-ads.php',
-	));
-	if ($existing || get_page_by_path('channel-letter-quote')) {
+	if (!in_array(trim($wp->request, '/'), array('channel-letter-quote', 'channel-letter-quote-2'), true)) {
 		return;
 	}
-	wp_insert_post(array(
-		'post_type' => 'page',
-		'post_status' => 'publish',
-		'post_title' => 'Channel Letter Quote',
-		'post_name' => 'channel-letter-quote',
-		'post_content' => '',
-		'page_template' => 'page-channel-letters-ads.php',
-	));
+	$target = home_url('/custom-channel-letters/');
+	$query = isset($_SERVER['QUERY_STRING']) ? (string) $_SERVER['QUERY_STRING'] : '';
+	if ('' !== $query) {
+		$target .= '?' . $query;
+	}
+	wp_safe_redirect(esc_url_raw($target . '#quote'), 301);
+	exit;
 }
-add_action('admin_init', 'wholesale_ensure_channel_letter_quote_page');
+add_action('template_redirect', 'wholesale_redirect_channel_letter_quote_pages', 1);

@@ -64,6 +64,13 @@
   // ------------------------------------------------------------------
 
   const pageKey = randomKey(8);
+  const screenSize = window.screen ? window.screen.width + 'x' + window.screen.height : '';
+  let timeZone = '';
+  try {
+    timeZone = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 60);
+  } catch (error) {
+    // Very old browsers: no time zone.
+  }
   const queue = [];
   const originalFetch = window.fetch ? window.fetch.bind(window) : null;
   let lastSent = '';
@@ -286,7 +293,12 @@
         if (!configured || seenOnce.has('price')) return;
         seenOnce.add('price');
       }
-      push(type, { value: json && json.total ? String(json.total) : '' });
+      // The cart answers with its new subtotal ("$45.00"): the cart's value
+      // for following up people who leave without ordering.
+      const data = json && json.data;
+      const value = json && json.total ? String(json.total)
+        : (type === 'add_to_cart' && data && data.subtotal ? String(data.subtotal).replace(/[^0-9.]/g, '') : '');
+      push(type, { value });
       return send();
     }
 
@@ -366,6 +378,10 @@
       p: pageKey,
       url: location.href,
       tp: navigator.maxTouchPoints || 0,
+      // Sent every time so the server can tell a robot's browser from a person's
+      // even when the first page view did not arrive.
+      sc: screenSize,
+      tz: timeZone,
       ping: { secs: activeSeconds, scroll: maxScroll, forms: openForms },
       events: queue.splice(0, 40).map((event) => {
         event.ago = now - event.at;
@@ -407,8 +423,8 @@
     cart: config.cart || 0,
     ref: document.referrer.slice(0, 500),
     campaign,
-    screen: window.screen ? window.screen.width + 'x' + window.screen.height : '',
-    tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 60),
+    screen: screenSize,
+    tz: timeZone,
     lang: (navigator.language || '').slice(0, 20),
   });
   send();

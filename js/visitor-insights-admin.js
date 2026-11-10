@@ -273,7 +273,8 @@
     if (active && body.contains(active) && active.matches('input, select, textarea')) return true;
     const selection = window.getSelection && window.getSelection();
     if (selection && !selection.isCollapsed && body.contains(selection.anchorNode)) return true;
-    return !!body.querySelector('.wvi-tip:not([hidden])');
+    // A lead's message opened to read would close on redraw.
+    return !!body.querySelector('.wvi-tip:not([hidden]), details[open]');
   };
 
   const swap = (html) => {

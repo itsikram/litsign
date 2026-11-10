@@ -113,6 +113,13 @@ if (isset($_SESSION['design_data_' . $product_id])) {
     $design_data_str = str_replace('\\', '', stripslashes($_SESSION['design_data_' . $product_id]));
     $design_data = stripslashes($_SESSION['design_data_' . $product_id]);
     $design_data_array = json_decode($design_data, true);
+    // Re-price the saved design: its stored total goes stale when the price table changes.
+    if (is_array($design_data_array) && function_exists('wholesale_cl_design_total')) {
+        $fresh_total = wholesale_cl_design_total($design_data_array, $product_id);
+        if ($fresh_total > 0) {
+            $design_data_array['total_cost'] = $fresh_total;
+        }
+    }
     $cl_product_cost = round($design_data_array['total_cost'], 2);
     $product_price = round($design_data_array['total_cost'] ? $design_data_array['total_cost'] : 0, 2);
     $design_id = $design_data_array['design_id'];
@@ -276,6 +283,10 @@ get_header();
                         // Size calculator products: the smallest order the cart accepts, the
                         // configuration the structured data and Merchant feed advertise.
                         $smallest = $price_per_sqft > 0 && !$is_hide_calculator ? wholesale_seo_product_lowest_offer(get_the_ID()) : array();
+                        // The price box opens on that price; other products (preset sizes, options) on
+                        // the default choice's price, the same structured data and feed price, until
+                        // the live quote replaces it (the Table Runner opened on $9.53, not $68.92).
+                        $initial_box = $smallest ? $smallest : ('channel-letters' !== $product_category_slug ? wholesale_seo_product_lowest_offer(get_the_ID()) : array());
                         if (!empty($smallest['request']['width-ft']) && !empty($smallest['request']['height-ft'])) :
                             $inches = static function ($feet) {
                                 return rtrim(rtrim(number_format($feet * 12, 1, '.', ''), '0'), '.');
@@ -513,9 +524,9 @@ get_header();
                                                                             }
                                                                     ?>
 
-                                                                            <li data-value="<?php echo $price; ?>" data-text="opt one<?php echo $name; ?>">
+                                                                            <li data-value="<?php echo esc_attr($price); ?>" data-text="opt one<?php echo esc_attr($name); ?>">
                                                                                 <span class="color-sample" style="background-image: url(<?php echo $bgImg; ?>); background-color: <?php echo $bgColor; ?>"></span>
-                                                                                <span><?php echo $name;; ?></span>
+                                                                                <span><?php echo esc_html($name); ?></span>
                                                                             </li>
 
                                                                     <?php  }
@@ -528,8 +539,8 @@ get_header();
                                                             <?php foreach ($single_attr->options as $option) {
                                                                 foreach ($option as $name => $price) {
                                                             ?>
-                                                                    <input type="hidden" name="<?php echo str_replace(' ', '', $attr_name); ?>" value="<?php echo $name; ?>">
-                                                                    <span data-value="<?php echo $price ?>" class="<?php echo $attr_name  . '-option-name'; ?>"><?php echo $name; ?></span>
+                                                                    <input type="hidden" name="<?php echo str_replace(' ', '', $attr_name); ?>" value="<?php echo esc_attr($name); ?>">
+                                                                    <span data-value="<?php echo esc_attr($price); ?>" class="<?php echo $attr_name  . '-option-name'; ?>"><?php echo esc_html($name); ?></span>
                                                             <?php  }
                                                             }; ?>
                                                         <?php
@@ -548,7 +559,7 @@ get_header();
 
                                     <div class="row d-fex align-items-center select-row mt-2">
                                         <div class="col-md-3 col-4">
-                                            <label for="select-<?php echo $attr_name; ?>" class="text-capitalize"><?php echo $attr_name == 'height' ? 'Size - ' : ''; ?><?php echo esc_html(wholesale_attr_label($attr_name)); ?></label><?php $attr_help = wholesale_attr_help($attr_name); if ($attr_help) : ?><small class="pb-attr-help" id="help-<?php echo esc_attr($attr_name); ?>"><?php echo esc_html($attr_help); ?></small><?php endif; ?>
+                                            <label for="select-<?php echo $attr_name; ?>" class="text-capitalize"><?php echo $attr_name == 'height' ? 'Size - ' : ''; ?><?php echo esc_html(wholesale_attr_label($attr_name)); ?></label><?php $attr_help = wholesale_attr_help($attr_name, isset($single_attr->options) ? $single_attr->options : array()); if ($attr_help) : ?><small class="pb-attr-help" id="help-<?php echo esc_attr($attr_name); ?>"><?php echo esc_html($attr_help); ?></small><?php endif; ?>
                                         </div>
                                         <div class="col-8 col-md-9">
                                             <div class="row">
@@ -558,7 +569,7 @@ get_header();
                                                             <?php foreach ($single_attr->options as $option) {
                                                                 foreach ($option as $name => $price) {
                                                             ?>
-                                                                    <option <?php if ($attr_name  == 'height') { ?> data-size="<?php echo intval($name); ?>" <?php }; ?> value="<?php echo $price; ?>"><?php echo 'height' == $attr_name && intval($name) > 0 ? esc_html(intval($name) . ' Inch') : $name; /* Heights always read "24 Inch", whatever the stored label's spacing or case. */ ?></option>
+                                                                    <option <?php if ($attr_name  == 'height') { ?> data-size="<?php echo intval($name); ?>" <?php }; ?> value="<?php echo esc_attr($price); /* Escaped: B2Sign sizes such as 0/33" x 81" hold inch marks, which cut a raw value short and broke the live price. */ ?>"><?php echo 'height' == $attr_name && intval($name) > 0 ? esc_html(intval($name) . ' Inch') : esc_html($name); /* Heights always read "24 Inch", whatever the stored label's spacing or case. */ ?></option>
                                                             <?php  }
                                                             }; ?>
                                                         </select>
@@ -569,8 +580,8 @@ get_header();
                                                         <?php foreach ($single_attr->options as $option) {
                                                             foreach ($option as $name => $price) {
                                                         ?>
-                                                                <input type="hidden" id="select-<?php echo str_replace('-', ' ', $attr_name); ?>" name="<?php echo str_replace(' ', '-', $attr_name); ?>" value="<?php echo $name; ?>">
-                                                                <span data-value="<?php echo $price ?>" class="<?php echo $attr_name  . '-option-name'; ?>"><?php echo $name; ?></span>
+                                                                <input type="hidden" id="select-<?php echo str_replace('-', ' ', $attr_name); ?>" name="<?php echo str_replace(' ', '-', $attr_name); ?>" value="<?php echo esc_attr($name); ?>">
+                                                                <span data-value="<?php echo esc_attr($price); ?>" class="<?php echo $attr_name  . '-option-name'; ?>"><?php echo esc_html($name); ?></span>
                                                         <?php  }
                                                         }; ?>
                                                     <?php
@@ -697,10 +708,24 @@ get_header();
                                 // dated sale), and the page opens on the minimum charge.
                                 $rate_pay = wholesale_promotion_price(get_the_ID(), round($rate_shown, 2));
                                 $min_charge_pay = wholesale_promotion_price(get_the_ID(), $min_charge);
+                                // The B2Sign Sync margin floor can make the smallest order cost more than
+                                // _min_order_price ($28 vs $14 on banners): show what the smallest order costs.
+                                if (!empty($smallest['price']) && $smallest['price'] > $min_charge_pay) {
+                                    $min_charge_pay = (float) $smallest['price'];
+                                    $min_charge = max($min_charge, (float) (isset($smallest['regular']) ? $smallest['regular'] : $smallest['price']));
+                                }
                                 $min_sides = wholesale_product_min_sides(get_the_ID());
                                 $max_sides = wholesale_product_max_sides(get_the_ID());
                                 // The boxes open on the largest size that still costs the minimum charge.
                                 $default_size = wholesale_product_default_size(get_the_ID()) ?: array(0, 0);
+                                // Feet-and-inches boxes open on whole feet (17" -> 1 ft 0 in, still the minimum
+                                // charge): with "1 ft 5 in" a visitor who typed 5 in the feet box got 5 ft 5 in,
+                                // or 5" after clearing it (Visitor Insights, Nov 8 2026).
+                                if ('ftin' === get_post_meta(get_the_ID(), '_size_unit', true)) {
+                                    $default_size = array_map(static function ($side) {
+                                        return $side >= 12 ? floor($side / 12) * 12 : $side;
+                                    }, $default_size);
+                                }
                                 $default_sizes = array('width' => $default_size[0] + 0, 'height' => $default_size[1] + 0);
                                 if ($size_link) {
                                     $default_sizes = array('width' => $size_link['width'], 'height' => $size_link['height']);
@@ -774,7 +799,8 @@ get_header();
                                                 <?php endif; ?>
                                             <?php endforeach; ?>
                                         </div>
-                                        <small class="pb-dim-error" role="alert" hidden></small>
+                                        <?php // data-quote-url: the "Need a bigger size?" link js/main.js adds under a too-big size. ?>
+                                        <small class="pb-dim-error" role="alert" data-quote-url="<?php echo esc_url(function_exists('wholesale_quote_url') ? wholesale_quote_url('', get_post_field('post_name', get_the_ID())) : home_url('/contact/')); ?>" hidden></small>
                                     </div>
                                 </div>
 
@@ -897,9 +923,9 @@ get_header();
                                                                         }
                                                                 ?>
 
-                                                                        <li data-value="<?php echo $price; ?>" data-text="opt one<?php echo $name; ?>">
+                                                                        <li data-value="<?php echo esc_attr($price); ?>" data-text="opt one<?php echo esc_attr($name); ?>">
                                                                             <span class="color-sample" style="background-image: url(<?php echo $bgImg; ?>); background-color: <?php echo $bgColor; ?>"></span>
-                                                                            <span><?php echo $name;; ?></span>
+                                                                            <span><?php echo esc_html($name); ?></span>
                                                                         </li>
 
                                                                 <?php  }
@@ -912,8 +938,8 @@ get_header();
                                                         <?php foreach ($single_attr->options as $option) {
                                                             foreach ($option as $name => $price) {
                                                         ?>
-                                                                <input type="hidden" name="<?php echo strtolower(str_replace(' ', '', $attr_name)); ?>" value="<?php echo $name; ?>">
-                                                                <span data-value="<?php echo $price ?>" class="<?php echo $attr_name  . '-option-name'; ?>"><?php echo $name; ?></span>
+                                                                <input type="hidden" name="<?php echo strtolower(str_replace(' ', '', $attr_name)); ?>" value="<?php echo esc_attr($name); ?>">
+                                                                <span data-value="<?php echo esc_attr($price); ?>" class="<?php echo $attr_name  . '-option-name'; ?>"><?php echo esc_html($name); ?></span>
                                                         <?php  }
                                                         }; ?>
                                                     <?php
@@ -932,7 +958,7 @@ get_header();
 
                                 <div class="row d-fex align-items-center select-row mt-2">
                                     <div class="col-md-3 col-4">
-                                        <label for="select-<?php echo $attr_name; ?>" class="text-capitalize"><?php echo $attr_name == 'height' ? 'Size - ' : ''; ?><?php echo esc_html(wholesale_attr_label($attr_name)); ?></label><?php $attr_help = wholesale_attr_help($attr_name); if ($attr_help) : ?><small class="pb-attr-help" id="help-<?php echo esc_attr($attr_name); ?>"><?php echo esc_html($attr_help); ?></small><?php endif; ?>
+                                        <label for="select-<?php echo $attr_name; ?>" class="text-capitalize"><?php echo $attr_name == 'height' ? 'Size - ' : ''; ?><?php echo esc_html(wholesale_attr_label($attr_name)); ?></label><?php $attr_help = wholesale_attr_help($attr_name, isset($single_attr->options) ? $single_attr->options : array()); if ($attr_help) : ?><small class="pb-attr-help" id="help-<?php echo esc_attr($attr_name); ?>"><?php echo esc_html($attr_help); ?></small><?php endif; ?>
                                     </div>
                                     <div class="col-8 col-md-9">
                                         <div class="row">
@@ -942,7 +968,7 @@ get_header();
                                                         <?php foreach ($single_attr->options as $option) {
                                                             foreach ($option as $name => $price) {
                                                         ?>
-                                                                <option <?php if ($attr_name  == 'height') { ?> data-size="<?php echo intval($name); ?>" <?php }; ?> value="<?php echo $price; ?>"><?php echo 'height' == $attr_name && intval($name) > 0 ? esc_html(intval($name) . ' Inch') : $name; /* Heights always read "24 Inch", whatever the stored label's spacing or case. */ ?></option>
+                                                                <option <?php if ($attr_name  == 'height') { ?> data-size="<?php echo intval($name); ?>" <?php }; ?> value="<?php echo esc_attr($price); /* Escaped: B2Sign sizes such as 0/33" x 81" hold inch marks, which cut a raw value short and broke the live price. */ ?>"><?php echo 'height' == $attr_name && intval($name) > 0 ? esc_html(intval($name) . ' Inch') : esc_html($name); /* Heights always read "24 Inch", whatever the stored label's spacing or case. */ ?></option>
                                                         <?php  }
                                                         }; ?>
                                                     </select>
@@ -962,8 +988,8 @@ get_header();
                                                     <?php foreach ($single_attr->options as $option) {
                                                         foreach ($option as $name => $price) {
                                                     ?>
-                                                            <input type="hidden" id="select-<?php echo str_replace('-', ' ', $attr_name); ?>" name="<?php echo strtolower(str_replace(' ', '-', $attr_name)); ?>" value="<?php echo $name; ?>">
-                                                            <span data-value="<?php echo $price ?>" class="<?php echo $attr_name  . '-option-name'; ?>"><?php echo $name; ?></span>
+                                                            <input type="hidden" id="select-<?php echo str_replace('-', ' ', $attr_name); ?>" name="<?php echo strtolower(str_replace(' ', '-', $attr_name)); ?>" value="<?php echo esc_attr($name); ?>">
+                                                            <span data-value="<?php echo esc_attr($price); ?>" class="<?php echo $attr_name  . '-option-name'; ?>"><?php echo esc_html($name); ?></span>
                                                     <?php  }
                                                     }; ?>
                                                 <?php
@@ -1186,6 +1212,8 @@ get_header();
                                                                                                             } else {
                                                                                                                 echo '0';
                                                                                                             }
+                                                                                                        } elseif (!$size_link && !empty($initial_box['price'])) {
+                                                                                                            echo format_price(isset($initial_box['regular']) ? $initial_box['regular'] : $initial_box['price']);
                                                                                                         } else {
                                                                                                             echo format_price(get_everyday_amount($product_min_price > 0 ? $product_min_price : $product_price));
                                                                                                         }
@@ -1200,7 +1228,7 @@ get_header();
                                     <span class="fs-6"><?php echo esc_html(sprintf('Sale: %s%% off, ends %s', rtrim(rtrim(number_format($product_promo_percent, 2, '.', ''), '0'), '.'), wholesale_promotion_end_text($product_promotion))); ?></span>
                                 </div>
                                 <div class="col-6 price-subtotal-container">
-                                    <span class="fs-6 d-block "><span>You save $</span><span class="price-saving"><?php echo format_price(get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>
+                                    <span class="fs-6 d-block "><span>You save $</span><span class="price-saving"><?php echo format_price(!$size_link && !empty($initial_box['price']) ? max(0, (isset($initial_box['regular']) ? $initial_box['regular'] : $initial_box['price']) - $initial_box['price']) : get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>
                                 </div>
                             </div>
                         <?php } ?>
@@ -1219,6 +1247,9 @@ get_header();
                                                                                                         }
                                                                                                     } elseif ($size_link) {
                                                                                                         echo format_price($size_link['price']);
+                                                                                                    } elseif (!empty($initial_box['price'])) {
+                                                                                                        // The smallest order or default choice (the structured data and feed price) until the live quote replaces it.
+                                                                                                        echo format_price($initial_box['price']);
                                                                                                     } else {
                                                                                                         echo format_price(get_discount_amount($product_min_price > 0 ? $product_min_price : $product_price));
                                                                                                     }
@@ -1235,7 +1266,7 @@ get_header();
                         // Price plus standard shipping below the free minimum (js/ui-polish.js keeps it in step with the total).
                         $delivered_cl = 'channel-letters' === $product_category_slug;
                         $delivered_rates = array_filter(array_map('floatval', explode(',', (string) wholesale_get_setting($delivered_cl ? 'channel_shipping_options' : 'standard_shipping_options'))));
-                        $delivered_initial = $delivered_cl && !$has_cl_design ? 0 : ($size_link ? $size_link['price'] : get_discount_amount($product_min_price > 0 ? $product_min_price : $product_price));
+                        $delivered_initial = $delivered_cl && !$has_cl_design ? 0 : ($size_link ? $size_link['price'] : (!empty($initial_box['price']) ? $initial_box['price'] : get_discount_amount($product_min_price > 0 ? $product_min_price : $product_price)));
                         $delivered_text = wholesale_product_delivered_text($delivered_initial, $delivered_cl);
                         ?>
                         <p class="pd-delivered" data-free-min="<?php echo esc_attr((float) wholesale_get_setting($delivered_cl ? 'free_shipping_channel_min' : 'free_shipping_min')); ?>" data-ship="<?php echo esc_attr($delivered_rates ? min($delivered_rates) : 0); ?>"<?php echo $delivered_text ? '' : ' hidden'; ?>><?php echo esc_html($delivered_text); ?></p>
@@ -1257,6 +1288,7 @@ get_header();
                             <?php elseif ($product_ship_from) : ?>
                                 <li>Standard shipping from <?php echo esc_html($product_ship_from); ?></li>
                             <?php endif; ?>
+                            <li>Order online 24/7 &mdash; your price is shown before checkout</li>
                             <li>Checkout adds only shipping<?php echo (float) wholesale_get_setting('tax_rate') > 0 ? ' and sales tax' : ''; ?> &mdash; no other fees</li>
                             <li>Secure checkout<?php echo wholesale_setting_enabled('payment_disabled') ? '' : ' by Elavon Converge'; ?></li>
                             <?php if ('channel-letters' === $product_category_slug) : ?>

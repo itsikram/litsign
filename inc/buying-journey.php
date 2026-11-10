@@ -94,12 +94,27 @@ function wholesale_attr_label($attr_name)
 	return isset($labels[$key]) ? $labels[$key] : ucfirst(str_replace('-', ' ', (string) $attr_name));
 }
 
-/** One-line explanation shown under a finishing option, or ''. */
-function wholesale_attr_help($attr_name)
+/**
+ * One-line explanation shown under a finishing option, or ''.
+ *
+ * @param string $attr_name Option name.
+ * @param array  $options   The option's choices (product_attr), when known: the sides help
+ *                          is left out for table covers, whose choices are 3 or 4 sided.
+ */
+function wholesale_attr_help($attr_name, $options = array())
 {
+	if (in_array(strtolower((string) $attr_name), array('of-side', 'of-sides'), true)) {
+		foreach ((array) $options as $option) {
+			foreach ((array) $option as $label => $value) {
+				if (preg_match('/\b[34]\s*sided\b/i', (string) $label)) {
+					return '';
+				}
+			}
+		}
+	}
 	$help = array(
-		'of-side' => '2 sides prints your design on the back too, for banners seen from both directions.',
-		'of-sides' => '2 sides prints your design on the back too, for banners seen from both directions.',
+		'of-side' => 'Double sided (2 sides) prints your design on the back too, so it reads from both directions.',
+		'of-sides' => 'Double sided (2 sides) prints your design on the back too, so it reads from both directions.',
 		'grommets' => 'Metal rings along the edges for rope, zip ties or hooks.',
 		'grommet' => 'Metal rings along the edges for rope, zip ties or hooks.',
 		'hem' => 'The edges are folded and welded or sewn for strength.',

@@ -272,6 +272,8 @@ function wholesale_reviews_page_query($product_id = 0, $rating = 0, $page = 1, $
 	$query = new WP_Query(array(
 		'post_type' => 'review_submission',
 		'post_status' => 'publish',
+		// Reviews hidden on public pages (inc/reviews.php wholesale_review_text_hidden()).
+		'post__not_in' => function_exists('wholesale_hidden_review_ids') ? wholesale_hidden_review_ids() : array(),
 		'posts_per_page' => $per_page,
 		'paged' => max(1, absint($page)),
 		'orderby' => 'date',
@@ -296,6 +298,7 @@ function wholesale_reviews_page_summary()
 		'post_type' => 'review_submission',
 		'post_status' => 'publish',
 		'posts_per_page' => -1,
+		'post__not_in' => function_exists('wholesale_hidden_review_ids') ? wholesale_hidden_review_ids() : array(),
 		'fields' => 'ids',
 	));
 

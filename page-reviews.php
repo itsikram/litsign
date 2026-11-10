@@ -119,7 +119,7 @@ get_header();
                                     get_post_meta($review->ID, '_review_company', true),
                                     get_post_meta($review->ID, '_review_location', true),
                                 )));
-                                $verified = $product_id > 0 && '' === get_post_meta($review->ID, '_review_source', true);
+                                $verified = wholesale_review_is_verified($review->ID);
                                 ?>
                                 <article class="product-review-card">
                                     <div class="product-review-card-header">

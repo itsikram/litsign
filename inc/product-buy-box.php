@@ -67,8 +67,12 @@ function wholesale_render_product_eta($product_id)
 function wholesale_render_product_actions($stock_status, $initial_cost)
 {
 	$disabled = $initial_cost <= 0 ? ' disabled' : '';
+	// B2Sign quantity pricing (SFS B2Sign Sync): the price above already follows the quantity.
+	// The note gets its own row under the buttons (css/ui-polish.css section 14): inside the
+	// quantity column it widened the stepper and squeezed Add To Cart onto two lines on phones.
+	$qty_pricing = 'outofstock' !== $stock_status && function_exists('wholesale_product_qty_pricing') ? wholesale_product_qty_pricing(get_the_ID()) : null;
 	?>
-	<div class="pd-actions">
+	<div class="pd-actions<?php echo $qty_pricing ? ' pd-actions--note' : ''; ?>">
 		<div class="pd-qty">
 			<label for="productQuantity" class="form-label">Quantity</label>
 			<div class="pd-qty__box">
@@ -80,19 +84,15 @@ function wholesale_render_product_actions($stock_status, $initial_cost)
 					<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 12h12M12 6v12"/></svg>
 				</button>
 			</div>
-			<?php
-			// B2Sign quantity pricing (SFS B2Sign Sync): the price above already follows the quantity.
-			$qty_pricing = function_exists('wholesale_product_qty_pricing') ? wholesale_product_qty_pricing(get_the_ID()) : null;
-			if ($qty_pricing) :
-				?>
-				<small class="pd-qty__note"><?php echo esc_html(!empty($qty_pricing['sheet']) ? sprintf('Order more, pay less per piece. Pieces that share a %s x %s ft sheet cost no more than the full sheet.', $qty_pricing['sheet']['w'] / 12, $qty_pricing['sheet']['h'] / 12) : 'Order more, pay less per piece. The price updates with the quantity.'); ?></small>
-			<?php endif; ?>
 		</div>
 		<?php if ('outofstock' === $stock_status) : ?>
 			<button id="addToCartBtn" type="button" class="btn btn-secondary d-block w-100 fw-bold pd-actions__out" disabled>Out of stock</button>
 		<?php else : ?>
 			<?php // Add To Cart stays first: pressing Enter in a field submits with the first submit button. ?>
 			<button id="addToCartBtn" type="submit" class="add-to-cart-btn btn btn-danger d-block w-100 fw-bold"<?php echo $disabled; ?>>Add To Cart</button>
+			<?php if ($qty_pricing) : ?>
+				<small class="pd-qty__note"><?php echo esc_html(!empty($qty_pricing['sheet']) ? sprintf('Order more, pay less per piece. Pieces that share a %s x %s ft sheet cost no more than the full sheet.', $qty_pricing['sheet']['w'] / 12, $qty_pricing['sheet']['h'] / 12) : 'Order more, pay less per piece. The price updates with the quantity.'); ?></small>
+			<?php endif; ?>
 			<button id="buyNowBtn" type="submit" name="buy_now" value="1" class="add-to-cart-btn buy-now-btn btn w-100 fw-bold"<?php echo $disabled; ?>>
 				<span class="buy-now-btn__label">Buy Now</span>
 				<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>

@@ -41,7 +41,8 @@ function wholesale_home_catalog_directory()
 			'icon'  => 'flag',
 			'all'   => '',
 			'categories' => array(
-				'banners'               => array('Vinyl & fabric banners', 680),
+				// 658 = 13oz vinyl banner (was 680, the 9oz fabric banner, whose photo reads BLACK FRIDAY 50% OFF).
+				'banners'               => array('Vinyl & fabric banners', 658),
 				'advertising-flags'     => array('Advertising flags', 0),
 				'banner-stands'         => array('Banner stands', 685),
 				'banner-stand-hardware' => array('Banner stand hardware', 0),
@@ -86,11 +87,15 @@ function wholesale_home_catalog_directory()
 	);
 
 	$data = get_transient('wholesale_home_catalog_directory');
-	if (!is_array($data) || empty($data['v']) || 2 !== $data['v']) {
-		$data = array('v' => 2, 'terms' => array(), 'groups' => array(), 'featured' => array());
-		$photo = static function ($product_id) {
+	// v4 (2026-11-09): photos follow inc/product-photo-overrides.php (v4 adds the poster
+	// stand overrides); the version change rebuilds the cached copy, which still held the
+	// sale-artwork photos.
+	if (!is_array($data) || empty($data['v']) || 4 !== $data['v']) {
+		$data = array('v' => 4, 'terms' => array(), 'groups' => array(), 'featured' => array());
+		$card_hidden = function_exists('wholesale_card_hidden_product_ids') ? wholesale_card_hidden_product_ids() : array();
+		$photo = static function ($product_id) use ($card_hidden) {
 			$product_id = (int) $product_id;
-			return $product_id && 'publish' === get_post_status($product_id) ? (int) get_post_thumbnail_id($product_id) : 0;
+			return $product_id && 'publish' === get_post_status($product_id) && !in_array($product_id, $card_hidden, true) ? (int) get_post_thumbnail_id($product_id) : 0;
 		};
 		foreach ($groups as $key => $group) {
 			$slugs = array();
@@ -109,6 +114,7 @@ function wholesale_home_catalog_directory()
 						'fields'         => 'ids',
 						'orderby'        => array('menu_order' => 'ASC', 'date' => 'DESC'),
 						'meta_key'       => '_thumbnail_id',
+						'post__not_in'   => $card_hidden,
 						'no_found_rows'  => true,
 						'tax_query'      => array(array('taxonomy' => 'product_category', 'field' => 'slug', 'terms' => $slug, 'include_children' => false)),
 					));

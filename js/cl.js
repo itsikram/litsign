@@ -32,6 +32,23 @@ const backLitCost = parseFloat(document.getElementById("backLitCost").value);
 const eightFtcableCost = parseFloat(
   document.getElementById("eightFtcableCost").value,
 );
+// Lexan face (percent of the letter price), 1" trimcap ([[up to inches, $ per piece]]) and
+// B2Sign's piece rules (large letters by sq ft, small lit letters), the same as
+// wholesale_cl_option_prices() and wholesale_cl_letter_cost() in inc/pricing.php.
+const clLexanPercent = Math.max(0, parseFloat(document.getElementById("clLexanPercent")?.value) || 0);
+let clTrimcap1in = [];
+try {
+  clTrimcap1in = JSON.parse(document.getElementById("clTrimcap1in")?.value || "[]") || [];
+} catch (e) {
+  clTrimcap1in = [];
+}
+let clPiecePricing = {};
+try {
+  clPiecePricing = JSON.parse(document.getElementById("clPiecePricing")?.value || "{}") || {};
+} catch (e) {
+  clPiecePricing = {};
+}
+const clPiece = (key) => Math.max(0, parseFloat(clPiecePricing[key]) || 0);
 // Same rate the cart charges (WHOLESALE_RACEWAY_COST_PER_FOOT in inc/pricing.php).
 const racewayPerFoot =
   parseFloat(document.getElementById("racewayPerFoot")?.value) || 55;
@@ -444,6 +461,14 @@ const normalizeCost = (value, fallback = 0) => {
     return numericValue;
   }
   return fallback;
+};
+
+// PHP's round(): half away from zero, on the value first rounded to 15 significant digits, so
+// 354.28499999999997 (393.65 less 10%) rounds to 354.29 here as it does in the cart.
+const phpRound = (value, places = 2) => {
+  const number = normalizeCost(value);
+  const factor = Math.pow(10, places);
+  return (Math.sign(number) * Math.round(Number((Math.abs(number) * factor).toPrecision(15)))) / factor;
 };
 
 const clampRacewayHeight = (node) => {
@@ -2581,9 +2606,11 @@ let showLeftSlider = (data, type, column) => {
     headingText.innerText = heading;
     headingContainer.appendChild(headingText);
 
-    if (cost != "0") {
+    // A per-inch face (3M vinyl): what it adds per inch of letter height after the product
+    // discount, as the breakdown and the cart charge it (the stored rate is before the discount).
+    if (normalizeCost(cost) > 0) {
       let costText = document.createElement("span");
-      costText.innerText = cost;
+      costText.innerText = `+${formatMoney(everydayPrice(cost))} per inch of letter height`;
       headingContainer.appendChild(costText);
     }
 
@@ -3161,26 +3188,253 @@ let updateLeftsideBar = () => {
   updateDimenstionDisplay();
 };
 
+// Money to the cent as the cart rounds it (PHP round(), see phpRound()).
 const formatMoney = (amount) =>
   "$" +
-  normalizeCost(amount).toLocaleString("en-US", {
+  phpRound(amount, 2).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 
-// An amount at the everyday price, and after any dated sale.
+// An amount at the everyday price, and after any dated sale, worked out as wholesale_price_quote()
+// does: the product discount taken off the amount, then the sale off the everyday price in cents.
 const everydayPrice = (amount) =>
-  normalizeCost(amount) * (1 - everydayPercent / 100);
+  normalizeCost(amount) - (normalizeCost(amount) * everydayPercent) / 100;
 const salePrice = (amount) =>
-  everydayPrice(amount) * (1 - discountPercent / 100);
+  discountPercent > 0
+    ? phpRound(phpRound(everydayPrice(amount), 2) * (1 - discountPercent / 100), 2)
+    : everydayPrice(amount);
 
 // Design totals, matching wholesale_cl_design_quote() and wholesale_price_quote():
 // power supply, lighting and cable are only charged once there is something to
 // power, and the product discount, then any dated sale, come off the whole total.
+// The face color's per-inch rate from the current product data, as wholesale_cl_face_rate():
+// the group holding that name and color code, else the first group holding the name.
+const getFaceRate = (faceColor, fallback) => {
+  const title = String((faceColor && faceColor.title) || "").trim();
+  if (!title) {
+    return normalizeCost(fallback);
+  }
+  const code = String((faceColor && faceColor.code) || "").replace(/\s+/g, "").toLowerCase();
+  let byTitle = null;
+  for (const group of productClData || []) {
+    if (!group || String(group.id || "").indexOf("color-") !== 0) {
+      continue;
+    }
+    for (const option of group.options || []) {
+      for (const label in option) {
+        if (String(label).trim() !== title) {
+          continue;
+        }
+        if (code && String(option[label]).replace(/\s+/g, "").toLowerCase() === code) {
+          return normalizeCost(group.cost);
+        }
+        if (byTitle === null) {
+          byTitle = normalizeCost(group.cost);
+        }
+      }
+    }
+  }
+  return byTitle === null ? normalizeCost(fallback) : byTitle;
+};
+
+// An element's letter price and face price from the current rate table, the same way
+// wholesale_cl_design_quote() prices it, so a restored draft or an element re-priced with
+// another element's face rate never shows a different total from the cart.
+// B2Sign prices each letter by its own longer side, rounded up to the next inch, within the
+// product's height table; same as wholesale_cl_rate_for_side() in inc/pricing.php.
+const rateHeights = () =>
+  ((getDataById(["cost-per-inch"], productClData)[0] || {}).options || [])
+    .map((o) => parseInt(Object.keys(o)[0], 10))
+    .filter((h) => Number.isFinite(h));
+const rateForSide = (side) => {
+  const heights = rateHeights();
+  if (!heights.length) {
+    return 0;
+  }
+  let inches = Math.ceil(phpRound(side, 1) - 0.000001);
+  inches = Math.max(Math.min(...heights), Math.min(Math.max(...heights), inches));
+  return costPerInch(inches);
+};
+
+// Separate pieces in one character (the dot of an i, an accent): B2Sign prices each piece.
+// Same list as wholesale_cl_char_pieces().
+const charPieces = (ch) =>
+  'ij!?:;="%'.includes(ch) ||
+  /^[À-ÅÇ-ÏÑ-ÖÙ-Ýà-åç-ïñ-öù-ýÿ]$/.test(ch)
+    ? 2
+    : 1;
+
+// Each letter's measured size in inches ([width, height] per non-space character), with the
+// text's height taken as the height of all its letters together, as on B2Sign. Sent with the
+// design so the cart prices the same letters (wholesale_cl_text_letters()).
+const glyphCanvas = document.createElement("canvas").getContext("2d");
+const glyphCache = new Map();
+if (document.fonts && document.fonts.addEventListener) {
+  document.fonts.addEventListener("loadingdone", () => glyphCache.clear());
+}
+const getGlyphSizes = (element) => {
+  if (!element || element.type !== "Text" || !glyphCanvas || typeof glyphCanvas.measureText !== "function") {
+    return null;
+  }
+  const chars = Array.from(String(element.text || "").replace(/\s/g, ""));
+  const height = normalizeCost(element.height);
+  if (!chars.length || !(height > 0)) {
+    return null;
+  }
+  const family = String((element.font && element.font.code) || "Arial").replace(/"/g, "");
+  const key = family + "|" + chars.join("");
+  let metrics = glyphCache.get(key);
+  if (!metrics) {
+    glyphCanvas.font = `200px "${family}", Arial, sans-serif`;
+    metrics = chars.map((ch) => {
+      const m = glyphCanvas.measureText(ch);
+      const left = Number(m.actualBoundingBoxLeft) || 0;
+      const right = Number.isFinite(m.actualBoundingBoxRight) ? m.actualBoundingBoxRight : m.width;
+      return [Math.max(0, left + right), Number(m.actualBoundingBoxAscent) || 0, Number(m.actualBoundingBoxDescent) || 0];
+    });
+    glyphCache.set(key, metrics);
+  }
+  const ink = Math.max(...metrics.map((m) => m[1])) + Math.max(0, ...metrics.map((m) => m[2]));
+  if (!(ink > 0)) {
+    return null;
+  }
+  const scale = height / ink;
+  return metrics.map((m) => [Math.round(m[0] * scale * 10) / 10, Math.round((m[1] + m[2]) * scale * 10) / 10]);
+};
+
+// Each letter of a text element as wholesale_cl_text_letters() reads it: its measured width w
+// and height h (up to 2.5 times the text height), its longer side raw, and the side the rate table
+// prices (at least half the text height). Without measured sizes, as
+// wholesale_cl_text_letters_unmeasured(): the text height, 80% as wide as it is tall.
+const getTextLetters = (element) => {
+  const chars = Array.from(String(element.text || "").replace(/\s/g, ""));
+  const height = normalizeCost(element.height);
+  const glyphs = getGlyphSizes(element);
+  return chars.map((ch, i) => {
+    if (glyphs && glyphs.length === chars.length && height > 0) {
+      const w = Math.min(Math.max(0, normalizeCost(glyphs[i][0])), 2.5 * height);
+      const h = Math.min(Math.max(0, normalizeCost(glyphs[i][1])), 2.5 * height);
+      return { ch, side: Math.max(Math.max(w, h), 0.5 * height), raw: Math.max(w, h), w, h };
+    }
+    return { ch, side: height, raw: height, w: 0.8 * height, h: height };
+  });
+};
+
+// Pieces in a text (the dot of an i is its own piece), as wholesale_cl_count_pieces().
+const countPieces = (text) =>
+  Array.from(String(text || "").replace(/\s/g, "")).reduce((sum, ch) => sum + charPieces(ch), 0);
+
+// One letter (a text character, or a whole shape) priced as B2Sign prices its pieces, before the
+// product discount; same as wholesale_cl_letter_cost() in inc/pricing.php.
+const getLetterCosts = (letter, element) => {
+  const heights = rateHeights();
+  const pieces = letter.ch === "" ? 1 : charPieces(letter.ch);
+  let rate = rateForSide(letter.side);
+  // Longer than the rate table: at least B2Sign's price per inch.
+  const inches = Math.ceil(phpRound(letter.side, 1) - 0.000001);
+  if (clPiece("per_inch") > 0 && heights.length && inches > Math.max(...heights)) {
+    rate = Math.max(rate, clPiece("per_inch") * inches);
+  }
+  // B2Sign's lit letters: a piece under 6" costs its small-piece price; the pieces of a
+  // two-piece character are small, so they all count as under it.
+  if (clPiece("under_price") > 0 && (pieces > 1 || phpRound(letter.raw, 1) < clPiece("under_in"))) {
+    rate = Math.max(rate, clPiece("under_price"));
+  }
+  // B2Sign's standard letter over 10 sq ft: a price per sq ft of its real width x height, when it
+  // is larger than the letter the rate table holds at that height.
+  let large = 0;
+  if (clPiece("per_sqft") > 0 && heights.length) {
+    const sqft = phpRound((phpRound(letter.w, 1) * phpRound(letter.h, 1)) / 144, 1);
+    const tableInches = Math.max(Math.min(...heights), Math.min(Math.max(...heights), inches));
+    const tableSqft = phpRound((phpRound(clPiece("width_share") * tableInches, 1) * tableInches) / 144, 1);
+    if (sqft > clPiece("large_sqft") && sqft > tableSqft) {
+      large = clPiece("per_sqft") * sqft;
+    }
+  }
+  const main = Math.max(rate, large);
+  const costs = { cost: main + rate * (pieces - 1), lexan: 0, trimcap: 0 };
+  const faceTitle = (element.faceColor && element.faceColor.title) || "";
+  if (clLexanPercent > 0 && /lexan/i.test(faceTitle)) {
+    costs.lexan =
+      Math.max(rate * (1 + clLexanPercent / 100), large * (1 + clPiece("lexan_large") / 100)) - main +
+      (rate * (pieces - 1) * clLexanPercent) / 100;
+  }
+  const trimcapTitle = ((element.trimcapSize && element.trimcapSize.title) || "").trim();
+  if (clTrimcap1in.length && /^1\s*inch/i.test(trimcapTitle)) {
+    // On every piece by its own size (B2Sign: up to 16" / 24" / 30"); the pieces of a two-piece
+    // character are small, so they take the smallest size's price.
+    const side = pieces > 1 ? 0 : phpRound(letter.raw, 1);
+    const tier = clTrimcap1in.find((t) => Array.isArray(t) && t.length >= 2 && side <= parseFloat(t[0]));
+    if (tier) {
+      costs.trimcap = parseFloat(tier[1]) * pieces;
+    }
+  }
+  return costs;
+};
+
+// The design as the cart receives it: text elements carry their measured letter sizes.
+const withLetterSizes = (elements) =>
+  (elements || []).map((element) =>
+    element && element.type === "Text" ? { ...element, glyphs: getGlyphSizes(element) || undefined } : element,
+  );
+
+// One element's prices before the product discount: letters (cost), face (colorCost), Lexan and
+// 1" trimcap, and each letter's total in the order wholesale_cl_design_quote() adds them (parts).
+const getElementCosts = (element) => {
+  const costs = { cost: 0, colorCost: 0, lexan: 0, trimcap: 0, parts: [] };
+  if (!element) {
+    return costs;
+  }
+  if (element.type === "Raceway") {
+    costs.cost = (normalizeCost(element.width) / 12) * racewayPerFoot;
+    costs.parts.push(costs.cost);
+    return costs;
+  }
+  const faceRate = getFaceRate(element.faceColor, element.faceCostPerInch);
+  let letters;
+  if (element.type === "Text") {
+    letters = getTextLetters(element);
+  } else {
+    // A shape is one piece, priced on its larger side like a letter and by its width x height.
+    const width = normalizeCost(element.width);
+    const height = normalizeCost(element.height);
+    const size = Math.max(width, height);
+    letters = [{ ch: "", side: size, raw: size, w: width, h: height }];
+  }
+  letters.forEach((letter) => {
+    const letterCosts = getLetterCosts(letter, element);
+    costs.cost += letterCosts.cost;
+    costs.colorCost += letter.side * faceRate;
+    costs.lexan += letterCosts.lexan;
+    costs.trimcap += letterCosts.trimcap;
+    costs.parts.push(letterCosts.cost + letter.side * faceRate + letterCosts.lexan + letterCosts.trimcap);
+  });
+  return costs;
+};
+
+const getElementPrices = (element) => {
+  const costs = getElementCosts(element);
+  return { cost: costs.cost, colorCost: costs.colorCost };
+};
+
+// Lexan face and 1" trimcap charges for one element (none for a raceway).
+const getElementOptionCosts = (element) => {
+  const costs = getElementCosts(element);
+  return { lexan: costs.lexan, trimcap: costs.trimcap };
+};
+
 const getDesignTotals = (elements, extras) => {
   let elementTotal = 0;
+  let lexanTotal = 0;
+  let trimcapTotal = 0;
   elements.forEach((element) => {
-    elementTotal += normalizeCost(element.cost) + normalizeCost(element.colorCost);
+    const costs = getElementCosts(element);
+    lexanTotal += costs.lexan;
+    trimcapTotal += costs.trimcap;
+    costs.parts.forEach((part) => {
+      elementTotal += part;
+    });
   });
   const hasElements = elements.length > 0;
   const powerSupply =
@@ -3192,11 +3446,13 @@ const getDesignTotals = (elements, extras) => {
   const lit = (elementTotal * litPercent) / 100;
   const cable =
     hasElements && extras.cable && extras.cable.qty > 0 ? normalizeCost(extras.cable.cost) : 0;
-  const listed = hasElements ? elementTotal + powerSupply + lit + cable : 0;
-  const regular = everydayPrice(listed);
-  const sale = salePrice(listed);
+  // Rounded to cents before the discount, as wholesale_cl_design_quote() does, then the
+  // everyday and sale prices to cents as wholesale_price_quote() does.
+  const listed = hasElements ? phpRound(elementTotal + (powerSupply + lit + cable), 2) : 0;
+  const regular = phpRound(everydayPrice(listed), 2);
+  const sale = discountPercent > 0 ? salePrice(listed) : regular;
 
-  return { elementTotal, powerSupply, litPercent, lit, cable, regular, sale, saving: regular - sale };
+  return { elementTotal, lexanTotal, trimcapTotal, powerSupply, litPercent, lit, cable, regular, sale, saving: regular - sale };
 };
 
 const getElementLabel = (element, elementNode) => {
@@ -3256,8 +3512,9 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     }
     const elementHeight = normalizeCost(elements[i].height);
     const elementWidth = normalizeCost(elements[i].width);
-    const elementCost = normalizeCost(elements[i].cost);
-    const elementColorCost = normalizeCost(elements[i].colorCost);
+    const elementPrices = getElementPrices(elements[i]);
+    const elementCost = elementPrices.cost;
+    const elementColorCost = elementPrices.colorCost;
 
     const row = document.createElement("tr");
     row.appendChild(createCell(String(getNodeIndex(elements[i].id)), "cost-index"));
@@ -3268,9 +3525,13 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     typeCell.appendChild(typeName);
     const letterText = (elements[i].text || "").trim();
     if (letterText) {
-      const letterCount = letterText.replace(/\s/g, "").length;
+      const letterCount = Array.from(letterText.replace(/\s/g, "")).length;
+      const pieceCount = countPieces(letterText);
       const detail = document.createElement("span");
-      detail.textContent = `“${letterText}” · ${letterCount} ${letterCount == 1 ? "letter" : "letters"}`;
+      // The dot of an i or an accent is its own piece, priced like a letter (as the product page line says).
+      detail.textContent =
+        `“${letterText}” · ${letterCount} ${letterCount == 1 ? "letter" : "letters"}` +
+        (pieceCount > letterCount ? ` (${pieceCount} pieces)` : "");
       typeCell.appendChild(detail);
     }
     row.appendChild(typeCell);
@@ -3305,6 +3566,12 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
   };
 
   if (elements.length) {
+    if (totals.lexanTotal > 0) {
+      appendExtraRow("Face", `Lexan (+${+clLexanPercent.toFixed(2)}%)`, totals.lexanTotal);
+    }
+    if (totals.trimcapTotal > 0) {
+      appendExtraRow("Trimcap", "1 Inch", totals.trimcapTotal);
+    }
     if (extras.powerSupply && extras.powerSupply.qty > 0) {
       appendExtraRow("Power supply", extras.powerSupply.value, totals.powerSupply);
     }
@@ -3557,6 +3824,8 @@ window.addEventListener("load", function (e) {
     layer.add(textNode);
 
     const tr = new Konva.Transformer({
+    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
+    flipEnabled: false,
       nodes: [textNode],
       keepRatio: true,
       boundBoxFunc: function (oldBoundBox, newBoundBox) {
@@ -3929,6 +4198,8 @@ window.addEventListener("load", function (e) {
     }
 
     const tr = new Konva.Transformer({
+    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
+    flipEnabled: false,
       nodes: [shape],
       keepRatio: isKeepRatio,
       boundBoxFunc: function (oldBoundBox, newBoundBox) {
@@ -4388,6 +4659,8 @@ window.addEventListener("load", function (e) {
     updatePreview("raceway", raceway);
 
     const tr = new Konva.Transformer({
+    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
+    flipEnabled: false,
       nodes: [raceway],
       rotateEnabled: false,
       rotateLineVisible: false,
@@ -4924,6 +5197,8 @@ window.addEventListener("load", function (e) {
     }
 
     const tr = new Konva.Transformer({
+    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
+    flipEnabled: false,
       nodes: [cloneNode],
       keepRatio: true,
       rotationSnaps: false,
@@ -6399,7 +6674,7 @@ window.addEventListener("load", function (e) {
     }
 
     const designData = JSON.stringify({
-      elements: store.getState()["elements"],
+      elements: withLetterSizes(store.getState()["elements"]),
       extras: store.getState()["extras"],
       contentDimenstion: { height: contentHeight, width: contentWidth },
     });
@@ -6546,7 +6821,7 @@ window.addEventListener("load", function (e) {
         height: contentHeight,
         width: contentWidth,
       };
-      const elements = store.getState()["elements"];
+      const elements = withLetterSizes(store.getState()["elements"]);
       const extras = store.getState()["extras"];
       const updatedState = { elements, extras, contentDimenstion };
       const designData = JSON.stringify(updatedState);
@@ -6591,7 +6866,7 @@ window.addEventListener("load", function (e) {
                 height: contentHeight,
                 width: contentWidth
             }
-            let elements = store.getState()['elements']
+            let elements = withLetterSizes(store.getState()['elements'])
             let extras = store.getState()['extras']
             let updatedState = { elements, extras, contentDimenstion }
 
@@ -7783,6 +8058,8 @@ function selectAllElements() {
   hideLeftSlider();
 
   const transformer = new Konva.Transformer({
+    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
+    flipEnabled: false,
     nodes,
     keepRatio: true,
     rotateEnabled: false,

@@ -11,7 +11,14 @@ class Cart
     {
 
         if (isset($_SESSION['cart_items'])) {
-            $cart_session = str_replace("\\", '', $_SESSION['cart_items']);
+            // The cart is stored as plain JSON, where an inch mark in an option such as
+            // 33" x 81" is written \". Removing every backslash (the old reading) broke that
+            // JSON and emptied the whole cart, so the backslashes are only removed for older
+            // carts that were saved with extra slashes and don't read without it.
+            $cart_session = (string) $_SESSION['cart_items'];
+            if (!is_array(json_decode($cart_session))) {
+                $cart_session = str_replace("\\", '', $cart_session);
+            }
             if (is_array(json_decode($cart_session))) {
                 $this->have_items = count(json_decode($cart_session)) == 0 ? false : true;
             }
@@ -48,7 +55,10 @@ class Cart
                 }
 
                 foreach ($single_option as $title => $value) {
-                    if (trim((string) $value) == trim((string) $match)) {
+                    // The posted value went through sanitize_text_field(), which collapses
+                    // double spaces (round table cover: '31.5"  (Overhang 27")'), the same
+                    // fallback the price check accepts (inc/pricing.php).
+                    if (trim((string) $value) == trim((string) $match) || sanitize_text_field((string) $value) === trim((string) $match)) {
                         return $title;
                     }
                 }

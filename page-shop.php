@@ -52,7 +52,8 @@ foreach ($category_tree as $node) {
 	foreach ($tiles as $tile) {
 		$tile_image = 0;
 		foreach ($all_products as $product) {
-			if ($product['thumb'] && in_array($tile['term']->slug, $product['cats'], true)) {
+			// A product whose only photos carry sample sale artwork doesn't picture a category (inc/product-photo-overrides.php).
+			if ($product['thumb'] && in_array($tile['term']->slug, $product['cats'], true) && !(function_exists('wholesale_product_card_hidden') && wholesale_product_card_hidden($product['id']))) {
 				$tile_image = $product['thumb'];
 				break;
 			}

@@ -126,6 +126,45 @@
   line-height: 1.6;
 }
 
+/* "How Ordering Channel Letters Works" (the 11-05 journey and the old "How It
+   Works" steps, merged 2026-11-09): a white band between the tinted example
+   prices and "Why" sections. Two classes so it beats .cl-steps (style.css) and
+   .cl-journey (buying-journey.css). */
+.cl-steps.cl-journey {
+  margin-top: 0;
+  padding: 64px 0;
+  background: #ffffff;
+}
+
+.cl-journey .cll-install,
+.cl-journey .cl-included {
+  text-align: left;
+}
+
+.cl-journey .cll-install {
+  margin-top: 28px;
+}
+
+.cl-journey .cl-included {
+  margin-top: 20px;
+}
+
+.cl-journey .cl-journey-actions {
+  justify-content: center;
+  margin-top: 28px;
+}
+
+/* FAQ on the tint, so it stands apart from the white specs table above it. */
+.cll-faq {
+  background: #f7f8fc;
+}
+
+@media (max-width: 767px) {
+  .cl-steps.cl-journey {
+    padding: 48px 0;
+  }
+}
+
 @media (max-width: 991px) {
   .cll-trust-list,
   .cll-why-grid {

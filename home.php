@@ -40,6 +40,72 @@ function get_variant_cost($product_cost, $variable_cost)
     return round(floatval($product_cost) + floatval($variable_cost), 2);
 }
 
+/**
+ * What the cart charges for one item in a size from a card's size table: the product's
+ * own quote (product discount, margin floor and any dated sale included) at that size
+ * with the cheapest choice of every other option, so the cheapest row is the card's
+ * "Starting at". array('total' => float, 'was' => the everyday price during a dated
+ * sale, else 0). Falls back to the size's listed price when it can't be quoted.
+ */
+function wholesale_size_table_price($product_id, $attr_name, $value, $price_per_sqft)
+{
+    $request = array('product_quantity' => 1, $attr_name => (string) $value);
+    $axes = array();
+    foreach (wholesale_product_price_attrs($product_id) as $attr) {
+        $options = wp_list_pluck(wholesale_attr_options($attr), 'value');
+        if (!empty($attr['name']) && $attr['name'] !== $attr_name && $options) {
+            $request[$attr['name']] = $options[0];
+            if (count($options) > 1) {
+                $axes[$attr['name']] = $options;
+            }
+        }
+    }
+
+    $best = null;
+    $try = static function ($try_request) use ($product_id, &$best) {
+        $quote = wholesale_price_quote($product_id, $try_request);
+        if (empty($quote['ok']) || $quote['total'] <= 0) {
+            return null;
+        }
+        if (null === $best || $quote['total'] < $best['total']) {
+            $best = array('total' => (float) $quote['total'], 'was' => $quote['promo_discount'] > 0 ? round($quote['total'] + $quote['promo_discount'], 2) : 0.0);
+        }
+        return (float) $quote['total'];
+    };
+    if (array_product(array_map('count', $axes)) <= 64) {
+        // Every combination of the other options (a few dozen at most).
+        $requests = array($request);
+        foreach ($axes as $name => $options) {
+            $next = array();
+            foreach ($requests as $each) {
+                foreach ($options as $option) {
+                    $next[] = array_merge($each, array($name => $option));
+                }
+            }
+            $requests = $next;
+        }
+        array_map($try, $requests);
+    } else {
+        // Each option on its own, then the cheapest choice of each together.
+        $pick = $request;
+        foreach ($axes as $name => $options) {
+            $low = null;
+            foreach ($options as $option) {
+                $total = $try(array_merge($request, array($name => $option)));
+                if (null !== $total && (null === $low || $total < $low[0])) {
+                    $low = array($total, $option);
+                }
+            }
+            if ($low) {
+                $pick[$name] = $low[1];
+            }
+        }
+        $try($pick);
+    }
+
+    return $best ? $best : array('total' => get_variant_cost($price_per_sqft, explode('/', (string) $value)[0]), 'was' => 0.0);
+}
+
 function wholesale_render_home_product_gallery($product_id, $product_title, $thumbnail_id, $loading = 'lazy')
 {
     $gallery_images = get_post_meta($product_id, '_product_gallery', true);
@@ -244,19 +310,34 @@ $cl_max_height = $cl_heights ? $cl_heights[1] : 0;
 $storefront_signs_url = function_exists('wholesale_seo_storefront_signs_url') ? wholesale_seo_storefront_signs_url() : '';
 
 // The last dollar amount in a product's "starting at" text (after any struck-through price), e.g. "$11.70".
-function wholesale_home_from_price($slug)
+// With a product category: the category's cheapest Starting at (wholesale_seo_category_starting_text()).
+function wholesale_home_from_price($slug, $category = '')
 {
-    if (!preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', wp_strip_all_tags(wholesale_seo_product_starting_text($slug)), $prices)) {
+    // With a category: the cheapest price shown on that category page, whole dollars
+    // (wholesale_category_card_from()), so the card matches the page it links to.
+    if ($category && function_exists('wholesale_category_card_from')) {
+        $from = wholesale_category_card_from($category);
+
+        return $from ? $from[0] : '';
+    }
+
+    $text = wp_strip_all_tags(wholesale_seo_product_starting_text($slug));
+    if (!preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', $text, $prices)) {
         return '';
     }
 
-    return '$' . end($prices[1]);
+    return function_exists('wholesale_whole_dollars') ? wholesale_whole_dollars(str_replace(',', '', end($prices[1]))) : '$' . end($prices[1]);
 }
 
-// The unit a "starting at" price is quoted in, so "$1.98" reads as "$1.98/sq ft".
-function wholesale_home_price_unit($slug)
+// The unit a "starting at" price is quoted in, so "$2" reads as "$2/sq ft".
+function wholesale_home_price_unit($slug, $category = '')
 {
-    $text = strtolower(wp_strip_all_tags(wholesale_seo_product_starting_text($slug)));
+    if ($category && function_exists('wholesale_category_card_from')) {
+        $from = wholesale_category_card_from($category);
+
+        return $from ? $from[1] : '';
+    }
+    $text = strtolower(wp_strip_all_tags($category ? wholesale_seo_category_starting_text($category) : wholesale_seo_product_starting_text($slug)));
     if (false !== strpos($text, 'letter')) {
         return '/letter';
     }
@@ -268,21 +349,22 @@ function wholesale_home_price_unit($slug)
 }
 
 // Hero proof points: the lowest channel letter price and the Google rating.
-$cl_from_price = wholesale_home_from_price('standard-channel-letter-front-lit');
+$cl_from_price = wholesale_home_from_price('standard-channel-letter-front-lit', 'channel-letters');
 $google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
 $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_reviews : null;
 
-// More product lines for storefronts: product slug (image and starting price), link, name, summary.
+// More product lines for storefronts: product slug (image), link, name, summary, product category
+// (its cheapest Starting at is the price shown, as on every other category card).
 // Listed in the "Shop by sign type" row under the hero and the "More for your storefront" section.
 $more_products = array(
-    array('adhesive-window-perf', wholesale_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted film and clings for your storefront glass.'),
-    array('deluxe-signicade-graphic-frame', wholesale_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street.'),
-    array('13oz-vinyl-banner', wholesale_category_url('banners'), 'Banners', 'Vinyl, mesh and fabric banners for grand openings, sales and events.'),
-    array('feather-angled-flag-pole', wholesale_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that catch drivers&rsquo; attention from the road.'),
-    array('aluminum-sign', wholesale_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours and parking.'),
-    array('standard-retractable-insert-stand', wholesale_category_url('banner-stands'), 'Banner Stands', 'Retractable and X-stands for lobbies, trade shows and in-store promotions.'),
-    array('straight-tension-fabric-displays-graphic-frame', wholesale_category_url('trade-show-products'), 'Trade Show Displays', 'Tension fabric and pop up backwalls for your booth.'),
-    array('event-tent-full-canopy-graphic-frame', wholesale_category_url('custom-event-tents'), 'Event Tents', 'Printed 10x10 canopy tents with walls and flags for outdoor events.'),
+    array('adhesive-window-perf', wholesale_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted film and clings for your storefront glass.', 'adhesive-products'),
+    array('deluxe-signicade-graphic-frame', wholesale_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street.', 'signicade-a-frames'),
+    array('13oz-vinyl-banner', wholesale_category_url('banners'), 'Banners', 'Vinyl, mesh and fabric banners for grand openings, sales and events.', 'banners'),
+    array('feather-angled-flag-pole', wholesale_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that catch drivers&rsquo; attention from the road.', 'advertising-flags'),
+    array('aluminum-sign', wholesale_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours and parking.', 'rigid-signs-and-magnets'),
+    array('standard-retractable-insert-stand', wholesale_category_url('banner-stands'), 'Banner Stands', 'Retractable and X-stands for lobbies, trade shows and in-store promotions.', 'banner-stands'),
+    array('straight-tension-fabric-displays-graphic-frame', wholesale_category_url('trade-show-products'), 'Trade Show Displays', 'Tension fabric and pop up backwalls for your booth.', 'trade-show-products'),
+    array('event-tent-full-canopy-graphic-frame', wholesale_category_url('custom-event-tents'), 'Event Tents', 'Printed 10x10 canopy tents with walls and flags for outdoor events.', 'custom-event-tents'),
 );
 
 if ($is_front_home) {
@@ -461,10 +543,15 @@ if ('' === $category_description_text && '' === $category_intro) {
                 <?php endif; ?>
                 <div class="home-hero-actions">
                     <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>
-                    <button class="home-hero-video-link" type="button" data-youtube-video="https://www.youtube-nocookie.com/embed?listType=search&amp;list=channel%20letter%20signs" aria-controls="homeVideoModal" aria-haspopup="dialog">
+                    <?php // Our own channel letter video, on the channel letters category only. The old
+                    // YouTube search embed (listType=search) no longer plays and searched channel
+                    // letters on every category page, trade show displays included. ?>
+                    <?php if ($is_channel_letters) : ?>
+                    <button class="home-hero-video-link" type="button" data-youtube-video="https://www.youtube-nocookie.com/embed/HA2olg_MLLw?rel=0" aria-controls="homeVideoModal" aria-haspopup="dialog">
                         <span class="home-hero-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
                         <span>Watch Video</span>
                     </button>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>
@@ -541,13 +628,13 @@ if ('' === $category_description_text && '' === $category_intro) {
         <ul class="home-types-list" data-types-list>
             <?php
             $type_links = array_merge(
-                array(array('standard-channel-letter-front-lit', $is_channel_letters ? '#product-box-container' : wholesale_category_url('channel-letters'), 'Channel Letters')),
+                array(array('standard-channel-letter-front-lit', $is_channel_letters ? '#product-box-container' : wholesale_category_url('channel-letters'), 'Channel Letters', '', 'channel-letters')),
                 $more_products
             );
             foreach ($type_links as $type_link) :
                 $type_product = wholesale_seo_product($type_link[0]);
-                $type_price = wholesale_home_from_price($type_link[0]);
-                $type_price .= $type_price ? wholesale_home_price_unit($type_link[0]) : '';
+                $type_price = wholesale_home_from_price($type_link[0], isset($type_link[4]) ? $type_link[4] : '');
+                $type_price .= $type_price ? wholesale_home_price_unit($type_link[0], isset($type_link[4]) ? $type_link[4] : '') : '';
                 ?>
                 <li>
                     <a class="home-types-item" href="<?php echo esc_url($type_link[1]); ?>">
@@ -736,12 +823,13 @@ if ('' === $category_description_text && '' === $category_intro) {
 
                                         <?php if ($starting_at_options) {
                                             $product_size_data = get_product_attribute_data(get_the_ID(), $starting_at_options);
+                                            // Each row is what the cart charges for that size (wholesale_size_table_price()).
                                             // Phones show one "Starting at" line instead of the size table.
-                                            $size_prices = array();
-                                            foreach ($product_size_data as $size_value) {
-                                                $size_prices[] = get_variant_cost($price_per_sqft, str_contains($size_value, '/') ? explode('/', $size_value)[0] : $size_value);
+                                            $size_rows = array();
+                                            foreach ($product_size_data as $size_name => $size_value) {
+                                                $size_rows[$size_name] = wholesale_size_table_price(get_the_ID(), $starting_at_options, $size_value, $price_per_sqft);
                                             }
-                                            $size_prices = array_filter($size_prices);
+                                            $size_prices = array_filter(array_column($size_rows, 'total'));
                                         ?>
                                             <?php if ($size_prices || trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
                                                 <p class="pb-price-summary">
@@ -765,7 +853,8 @@ if ('' === $category_description_text && '' === $category_intro) {
                                                                 </a></th>
                                                             <td>
                                                                 <a href="<?php echo esc_url(add_query_arg($starting_at_options, $value, get_permalink(get_the_ID()))); ?>" rel="nofollow">
-                                                                    <?php echo esc_html(wholesale_whole_dollars(get_variant_cost($price_per_sqft, str_contains($value, '/') ? explode('/', $value)[0] : $value))); ?>
+                                                                    <?php $size_row = $size_rows[$name]; ?>
+                                                                    <?php echo wp_kses_post(wholesale_price_no_cents(($size_row['was'] > $size_row['total'] ? '<del>$' . number_format($size_row['was'], 2) . '</del> ' : '') . '$' . number_format($size_row['total'], 2))); ?>
                                                                 </a>
                                                             </td>
 
@@ -1003,7 +1092,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                 <?php foreach ($more_products as $item) : ?>
                     <?php
                     $item_product = wholesale_seo_product($item[0]);
-                    $item_price = wholesale_price_no_cents(wholesale_seo_product_starting_text($item[0]));
+                    $item_price = wholesale_price_no_cents(wholesale_seo_category_starting_text($item[4]));
                     ?>
                     <article class="sf-type-card">
                         <a class="sf-type-image" href="<?php echo esc_url($item[1]); ?>" tabindex="-1" aria-hidden="true">

@@ -25,6 +25,13 @@ if (!defined('ABSPATH')) {
 const WHOLESALE_RACEWAY_COST_PER_FOOT = 55;
 const WHOLESALE_CL_MIN_INCHES = 8;
 const WHOLESALE_CL_MAX_INCHES = 45;
+// Channel letters can carry B2Sign's per-letter option prices: Lexan face (_cl_lexan_percent),
+// 1" trimcap (_cl_trimcap_1in) and per-inch faces ("N/clin/..."). SFS B2Sign Sync only writes
+// them to a theme that defines this.
+const WHOLESALE_CL_OPTION_PRICING = 1;
+// Channel letters can carry B2Sign's piece rules (_cl_piece_pricing, see wholesale_cl_option_prices()):
+// large letters by sq ft and small lit letters. SFS B2Sign Sync only writes them to a theme that defines this.
+const WHOLESALE_CL_PIECE_PRICING = 1;
 // Default lowest per-item price for products sized with the sq ft dimensions calculator.
 // A product can set its own with _min_order_price (see wholesale_product_min_order()).
 const WHOLESALE_SQFT_MIN_PRICE = 16.5;
@@ -245,6 +252,7 @@ function wholesale_attr_options($attr)
  * double-sided upcharge, which also covers its holes).
  * Per linear foot of the typed size, for B2Sign-style finishing (SFS B2Sign Sync mirrors these):
  * "2.5/perim/..." all four edges, "1.2/wlft/..." the width, "1.2/hlft/..." the height.
+ * Channel letters: "0.88/clin/..." per inch of letter height, per letter (B2Sign's vinyl faces).
  * A value that doesn't start with a number (a color name, "3-Inch") carries no price.
  */
 function wholesale_parse_option_price($value)
@@ -256,7 +264,7 @@ function wholesale_parse_option_price($value)
 	$type = isset($parts[1]) ? strtolower(trim($parts[1])) : '';
 	return array(
 		'amount' => (float) $parts[0],
-		'type' => in_array($type, array('%', '%total', 'sqft', 'lft', 'perim', 'wlft', 'hlft'), true) ? $type : 'fixed',
+		'type' => in_array($type, array('%', '%total', 'sqft', 'lft', 'perim', 'wlft', 'hlft', 'clin'), true) ? $type : 'fixed',
 	);
 }
 
@@ -282,6 +290,34 @@ function wholesale_attr_is_preset_size($attr)
 {
 	$css = (string) ($attr['cssClass'] ?? '');
 	return 'size' === strtolower(trim((string) ($attr['name'] ?? ''))) && false === strpos($css, 'size-width-inch') && false === strpos($css, 'size-height-inch');
+}
+
+/**
+ * B2Sign's price for dropdown sizes (meta _size_dropdown, written by SFS B2Sign Sync 1.7.0), or null.
+ * {"w":{"18":[add-on, minimum],...},"label":"Hardware","extra":{"attr":name,"value":option value,"min":amount}}
+ * Per width: a fixed add-on (stored, like option prices: pole banner hardware $38.50 / $44 / $46.20 at B2Sign
+ * cost for 18" / 24" / 30") and the lowest price of the item (after the product's discount, like
+ * _min_order_price; 0 = none). "extra" raises the minimum when that option is chosen (two-sided).
+ */
+function wholesale_size_dropdown_pricing($product_id)
+{
+	$data = json_decode((string) get_post_meta($product_id, '_size_dropdown', true), true);
+	if (!is_array($data) || !isset($data['w']) || !is_array($data['w']) || !$data['w']) {
+		return null;
+	}
+	$widths = array();
+	foreach ($data['w'] as $width => $entry) {
+		if (!is_numeric($width) || !is_array($entry) || !isset($entry[0], $entry[1]) || !is_numeric($entry[0]) || !is_numeric($entry[1]) || $entry[1] < 0) {
+			return null;
+		}
+		$widths[(string) (0 + (float) $width)] = array((float) $entry[0], (float) $entry[1]);
+	}
+	$extra = null;
+	if (isset($data['extra']['attr'], $data['extra']['value'], $data['extra']['min']) && is_numeric($data['extra']['min'])) {
+		$extra = array('attr' => (string) $data['extra']['attr'], 'value' => (string) $data['extra']['value'], 'min' => max(0, (float) $data['extra']['min']));
+	}
+	$label = isset($data['label']) && is_string($data['label']) && '' !== trim($data['label']) ? sanitize_text_field($data['label']) : 'Hardware';
+	return array('w' => $widths, 'label' => $label, 'extra' => $extra);
 }
 
 /**
@@ -313,7 +349,25 @@ function wholesale_product_qty_pricing($product_id)
 	}
 	usort($unit, static function ($a, $b) { return $a[0] <=> $b[0]; });
 	$sheet = isset($data['sheet']['w'], $data['sheet']['h'], $data['sheet']['price']) && $data['sheet']['price'] > 0 ? array('w' => (float) $data['sheet']['w'], 'h' => (float) $data['sheet']['h'], 'price' => (float) $data['sheet']['price'], 'extra_side' => max(0, (float) ($data['sheet']['extra_side'] ?? 0))) : null;
-	return $min || $sheet || $unit ? array('min' => $min, 'sheet' => $sheet, 'unit' => $unit) : null;
+	// "opt" (SFS B2Sign Sync 1.7.0): [[attribute name, option value, [[from qty, shown change per item]]]], how much
+	// an option's own difference moves with the quantity (yard sign Single Sided: -$1.00 at 1, -$0.42 each for 2-5).
+	$opt = array();
+	foreach (isset($data['opt']) && is_array($data['opt']) ? $data['opt'] : array() as $o) {
+		if (!is_array($o) || !isset($o[0], $o[1], $o[2]) || !is_string($o[0]) || !is_string($o[1]) || !is_array($o[2])) {
+			continue;
+		}
+		$tiers = array();
+		foreach ($o[2] as $tier) {
+			if (is_array($tier) && isset($tier[0], $tier[1]) && is_numeric($tier[0]) && is_numeric($tier[1])) {
+				$tiers[] = array(max(1, (int) $tier[0]), (float) $tier[1]);
+			}
+		}
+		usort($tiers, static function ($a, $b) { return $a[0] <=> $b[0]; });
+		if ($tiers) {
+			$opt[] = array($o[0], $o[1], $tiers);
+		}
+	}
+	return $min || $sheet || $unit ? array('min' => $min, 'sheet' => $sheet, 'unit' => $unit, 'opt' => $opt) : null;
 }
 
 /** Pieces of w x h inches that fit on a W x H inch sheet, either way round. */
@@ -413,23 +467,190 @@ function wholesale_cl_face_rate($product_id, $cl_data, $face_color)
 	if (empty($face_color['title'])) {
 		return (float) get_post_meta($product_id, '_default_color_cost', true);
 	}
+	// Several groups share a name (acrylic "Yellow" and 3M vinyl "Yellow"), so the color code
+	// picks the group; the name alone is the fallback for designs saved without a code.
+	$code = strtolower(preg_replace('/\s+/', '', (string) ($face_color['code'] ?? '')));
+	$by_title = null;
 	foreach ($cl_data as $group) {
 		if (!isset($group['id']) || 0 !== strpos((string) $group['id'], 'color-')) {
 			continue;
 		}
 		foreach (wholesale_attr_options($group) as $option) {
-			if (trim($option['label']) === trim((string) $face_color['title'])) {
+			if (trim($option['label']) !== trim((string) $face_color['title'])) {
+				continue;
+			}
+			if ('' !== $code && strtolower(preg_replace('/\s+/', '', (string) $option['value'])) === $code) {
 				return (float) ($group['cost'] ?? 0);
+			}
+			if (null === $by_title) {
+				$by_title = (float) ($group['cost'] ?? 0);
 			}
 		}
 	}
-	return null;
+	return $by_title;
+}
+
+/**
+ * A channel letter product's per-letter option prices and piece rules (written by SFS B2Sign Sync,
+ * B2Sign's rules at our markup, stored before the product discount like the rate table):
+ * - lexan_percent: Lexan face as a percent of the letter price;
+ * - trimcap_1in: the 1" trimcap add-on per piece by size ([[up to inches, dollars], ...]; nothing
+ *   above the last size, as on B2Sign);
+ * - from meta _cl_piece_pricing (0 when the product has no such rule): a piece over large_sqft sq ft
+ *   costs per_sqft per sq ft of its width x height (Lexan White lexan_large percent more) when it is
+ *   larger than a letter width_share as wide as it is tall (the rate table already holds that one's
+ *   price), a piece longer than the rate table at least per_inch per inch, and a piece under under_in
+ *   inches under_price (B2Sign's lit letters).
+ * The builder reads the same array (cl_builderr.php).
+ */
+function wholesale_cl_option_prices($product_id)
+{
+	$trimcap = json_decode((string) get_post_meta($product_id, '_cl_trimcap_1in', true), true);
+	$piece = json_decode((string) get_post_meta($product_id, '_cl_piece_pricing', true), true);
+	$prices = array(
+		'lexan_percent' => max(0.0, (float) get_post_meta($product_id, '_cl_lexan_percent', true)),
+		'trimcap_1in' => is_array($trimcap) ? $trimcap : array(),
+	);
+	foreach (array('large_sqft', 'per_sqft', 'width_share', 'lexan_large', 'per_inch', 'under_in', 'under_price') as $key) {
+		$prices[$key] = is_array($piece) && isset($piece[$key]) && is_numeric($piece[$key]) ? max(0.0, (float) $piece[$key]) : 0.0;
+	}
+	return $prices;
+}
+
+/**
+ * One letter of a builder design (a text character, or a whole shape) priced as B2Sign prices its
+ * pieces, before the product discount: array('letter' => all its pieces, 'lexan' => what Lexan White
+ * adds, 'trimcap' => what the 1" trimcap adds). $letter: char ('' for a shape), side (the side the
+ * rate table prices), raw (its measured longer side), w and h (its measured size), in inches.
+ * Same as getLetterCosts() in js/cl.js.
+ */
+function wholesale_cl_letter_cost($cost_table, $options, $letter, $element)
+{
+	$pieces = '' === (string) $letter['char'] ? 1 : wholesale_cl_char_pieces($letter['char']);
+	$rate = (float) wholesale_cl_rate_for_side($cost_table, $letter['side']);
+	// Longer than the rate table: at least B2Sign's price per inch.
+	$inches = (int) ceil(round((float) $letter['side'], 1) - 0.000001);
+	if ($options['per_inch'] > 0 && $cost_table && $inches > max(array_keys($cost_table))) {
+		$rate = max($rate, $options['per_inch'] * $inches);
+	}
+	// B2Sign's lit letters: a piece under 6" costs more than its 6"-9" prices. The pieces of a
+	// two-piece character (the dot of an i, an accent) are small, so they all count as under it.
+	if ($options['under_price'] > 0 && ($pieces > 1 || round((float) $letter['raw'], 1) < $options['under_in'])) {
+		$rate = max($rate, $options['under_price']);
+	}
+	// B2Sign's standard letter over 10 sq ft: a price per sq ft of its real width x height, when it is
+	// larger than the letter the rate table holds at that height (width_share as wide as it is tall).
+	$large = 0.0;
+	if ($options['per_sqft'] > 0 && $cost_table) {
+		$sqft = round(round((float) $letter['w'], 1) * round((float) $letter['h'], 1) / 144, 1);
+		$table_inches = max(min(array_keys($cost_table)), min(max(array_keys($cost_table)), $inches));
+		$table_sqft = round(round($options['width_share'] * $table_inches, 1) * $table_inches / 144, 1);
+		if ($sqft > $options['large_sqft'] && $sqft > $table_sqft) {
+			$large = $options['per_sqft'] * $sqft;
+		}
+	}
+	$main = max($rate, $large);
+	$cost = array('letter' => $main + $rate * ($pieces - 1), 'lexan' => 0.0, 'trimcap' => 0.0);
+	$face = isset($element['faceColor']['title']) ? (string) $element['faceColor']['title'] : '';
+	if ($options['lexan_percent'] > 0 && false !== stripos($face, 'lexan')) {
+		$cost['lexan'] = max($rate * (1 + $options['lexan_percent'] / 100), $large * (1 + $options['lexan_large'] / 100)) - $main
+			+ $rate * ($pieces - 1) * $options['lexan_percent'] / 100;
+	}
+	$trimcap = isset($element['trimcapSize']['title']) ? trim((string) $element['trimcapSize']['title']) : '';
+	if ($options['trimcap_1in'] && preg_match('/^1\s*inch/i', $trimcap)) {
+		// On every piece by its own size, as B2Sign; the pieces of a two-piece character are small,
+		// so they take the smallest size's price.
+		$side = $pieces > 1 ? 0.0 : round((float) $letter['raw'], 1);
+		foreach ($options['trimcap_1in'] as $tier) {
+			if (is_array($tier) && count($tier) >= 2 && $side <= (float) $tier[0]) {
+				$cost['trimcap'] = (float) $tier[1] * $pieces;
+				break;
+			}
+		}
+	}
+	return $cost;
 }
 
 function wholesale_cl_rate_for_size($cost_table, $inches)
 {
 	$size = (int) floor((float) $inches);
 	return isset($cost_table[$size]) ? $cost_table[$size] : null;
+}
+
+/**
+ * The rate for one letter by its longer side, as B2Sign prices it: rounded up to the next inch,
+ * within the product's table (a small lowercase letter pays the smallest height's price).
+ */
+function wholesale_cl_rate_for_side($cost_table, $side)
+{
+	if (!$cost_table) {
+		return null;
+	}
+	$keys = array_keys($cost_table);
+	$inches = (int) ceil(round((float) $side, 1) - 0.000001);
+	$inches = max(min($keys), min(max($keys), $inches));
+	return isset($cost_table[$inches]) ? $cost_table[$inches] : null;
+}
+
+/** Separate pieces in one character, which B2Sign prices one by one: the dot of an i, an accent. */
+function wholesale_cl_char_pieces($char)
+{
+	if (false !== strpos('ij!?:;="%', $char)) {
+		return 2;
+	}
+	// Accented letters (É, ñ, ü): the accent is its own piece. Same list as js/cl.js.
+	return preg_match('/^[\x{C0}-\x{C5}\x{C7}-\x{CF}\x{D1}-\x{D6}\x{D9}-\x{DD}\x{E0}-\x{E5}\x{E7}-\x{EF}\x{F1}-\x{F6}\x{F9}-\x{FD}\x{FF}]$/u', $char) ? 2 : 1;
+}
+
+/**
+ * Each letter of a builder text element in inches, from the sizes the builder measured (element
+ * "glyphs": [[width, height], ...] per non-space character), or null when they are missing or don't
+ * fit the text: its width w and height h, its longer side raw, and the side the rate table prices.
+ * Sizes are kept up to 2.5 times the text height, and the priced side at least half of it, so a
+ * tampered design can't price letters far below their real size. Same as getTextLetters() in js/cl.js.
+ */
+function wholesale_cl_text_letters($element, $height)
+{
+	$chars = preg_split('//u', preg_replace('/\s+/u', '', (string) ($element['text'] ?? '')), -1, PREG_SPLIT_NO_EMPTY);
+	$glyphs = isset($element['glyphs']) && is_array($element['glyphs']) ? array_values($element['glyphs']) : array();
+	if (!$chars || count($glyphs) !== count($chars) || $height <= 0) {
+		return null;
+	}
+	$letters = array();
+	foreach ($chars as $i => $char) {
+		$g = $glyphs[$i];
+		if (!is_array($g) || !isset($g[0], $g[1]) || !is_numeric($g[0]) || !is_numeric($g[1]) || !is_finite((float) $g[0]) || !is_finite((float) $g[1])) {
+			return null;
+		}
+		$w = min(max(0.0, (float) $g[0]), 2.5 * $height);
+		$h = min(max(0.0, (float) $g[1]), 2.5 * $height);
+		$letters[] = array('char' => $char, 'side' => max(max($w, $h), 0.5 * $height), 'raw' => max($w, $h), 'w' => $w, 'h' => $h);
+	}
+	return $letters;
+}
+
+/**
+ * The letters of a builder text element without measured sizes (no canvas, or a design saved before
+ * the builder measured letters): each real character at the text height, 80% as wide as it is tall
+ * (the letter the rate table is priced for). Same as getTextLetters() in js/cl.js.
+ */
+function wholesale_cl_text_letters_unmeasured($element, $height)
+{
+	$letters = array();
+	foreach (preg_split('//u', (string) preg_replace('/\s+/u', '', (string) ($element['text'] ?? '')), -1, PREG_SPLIT_NO_EMPTY) ?: array() as $char) {
+		$letters[] = array('char' => $char, 'side' => $height, 'raw' => $height, 'w' => 0.8 * $height, 'h' => $height);
+	}
+	return $letters;
+}
+
+/** Pieces in a channel letter text, as the builder and B2Sign count them (wholesale_cl_char_pieces()). */
+function wholesale_cl_count_pieces($text)
+{
+	$pieces = 0;
+	foreach (preg_split('//u', (string) preg_replace('/\s+/u', '', (string) $text), -1, PREG_SPLIT_NO_EMPTY) ?: array() as $char) {
+		$pieces += wholesale_cl_char_pieces($char);
+	}
+	return $pieces;
 }
 
 /**
@@ -459,6 +680,7 @@ function wholesale_cl_design_quote($product_id, $design)
 		return new WP_Error('empty_design', 'Your design is empty. Add your letters in the builder first.');
 	}
 
+	$option_prices = wholesale_cl_option_prices($product_id);
 	$letters_cost = 0.0;
 	foreach ($elements as $element) {
 		if (!is_array($element)) {
@@ -485,19 +707,26 @@ function wholesale_cl_design_quote($product_id, $design)
 				continue;
 			}
 			if (null === $rate) {
-				return new WP_Error('bad_size', sprintf('Letter height must be between %d" and %d". Please resize your letters in the builder.', WHOLESALE_CL_MIN_INCHES, WHOLESALE_CL_MAX_INCHES));
+				return new WP_Error('bad_size', sprintf('Letter height must be between %d" and %d". Please resize your letters in the builder.', min(array_keys($cost_table)), max(array_keys($cost_table))));
 			}
-			$letters_cost += $rate * $count + $height * $count * $face_rate;
-			continue;
+			// Like B2Sign: every letter by its own size (wholesale_cl_letter_cost()), and every separate
+			// piece (the dot of an i) priced on its own. Without measured letters, all take the text height.
+			$letters = wholesale_cl_text_letters($element, $height);
+			if (!$letters) {
+				$letters = wholesale_cl_text_letters_unmeasured($element, $height);
+			}
+		} else {
+			// A shape is one piece, priced on its larger side like a letter (rounded up) and by its width x height.
+			$size = max($width, $height);
+			if (null === wholesale_cl_rate_for_size($cost_table, $size)) {
+				return new WP_Error('bad_size', sprintf('Shapes must be between %d" and %d". Please resize them in the builder.', min(array_keys($cost_table)), max(array_keys($cost_table))));
+			}
+			$letters = array(array('char' => '', 'side' => $size, 'raw' => $size, 'w' => $width, 'h' => $height));
 		}
-
-		// Shapes are priced on their larger side.
-		$size = max($width, $height);
-		$rate = wholesale_cl_rate_for_size($cost_table, $size);
-		if (null === $rate) {
-			return new WP_Error('bad_size', sprintf('Shapes must be between %d" and %d". Please resize them in the builder.', WHOLESALE_CL_MIN_INCHES, WHOLESALE_CL_MAX_INCHES));
+		foreach ($letters as $letter) {
+			$cost = wholesale_cl_letter_cost($cost_table, $option_prices, $letter, $element);
+			$letters_cost += $cost['letter'] + $letter['side'] * $face_rate + $cost['lexan'] + $cost['trimcap'];
 		}
-		$letters_cost += $rate + $size * $face_rate;
 	}
 
 	// Same fallbacks as cl_builderr.php.
@@ -594,8 +823,11 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		if (null === $per_letter) {
 			return $fail('Please choose a letter height.');
 		}
-		$running = $letter_count * $per_letter;
-		$lines[] = array('label' => sprintf('%d letters at %d"', $letter_count, $letter_height), 'amount' => $running);
+		// Every separate piece (the dot of an i, an accent) costs a letter, as in the builder and on B2Sign;
+		// per-inch faces and the raceway still go by the letters ($letter_count).
+		$letter_pieces = max($letter_count, wholesale_cl_count_pieces($request['letters'] ?? ''));
+		$running = $letter_pieces * $per_letter;
+		$lines[] = array('label' => $letter_pieces > $letter_count ? sprintf('%d letters (%d pieces) at %d"', $letter_count, $letter_pieces, $letter_height) : sprintf('%d letters at %d"', $letter_count, $letter_height), 'amount' => $running);
 	} else {
 		$has_calculator = !get_post_meta($product_id, '_hide_calculator', true);
 		$width_attr_value = null;
@@ -645,6 +877,23 @@ function wholesale_price_quote($product_id, $request, $design = null)
 
 		$running = $sqft * $price_per_sqft;
 		$lines[] = array('label' => $has_calculator || null !== $width_attr_value ? sprintf('%s sq ft', number_format($sqft, 2)) : 'Base price', 'amount' => $running);
+		// Dropdown sizes priced like B2Sign (meta _size_dropdown): the width's add-on, and its minimum below.
+		$size_dropdown = null !== $width_attr_value && null !== $height_attr_value ? wholesale_size_dropdown_pricing($product_id) : null;
+		if ($size_dropdown) {
+			$width_key = (string) (0 + (float) $width_attr_value);
+			if (!isset($size_dropdown['w'][$width_key])) {
+				return $fail('Please choose a valid width.');
+			}
+			[$width_add, $dropdown_min] = $size_dropdown['w'][$width_key];
+			if (0.0 !== round($width_add, 2)) {
+				$lines[] = array('label' => sprintf('%s (%s" wide)', $size_dropdown['label'], $width_key), 'amount' => $width_add);
+				$running += $width_add;
+			}
+			$extra = $size_dropdown['extra'];
+			if ($extra && null !== ($chosen_extra = wholesale_request_attr_value($request, $extra['attr'])) && trim($chosen_extra) === trim($extra['value'])) {
+				$dropdown_min += $extra['min'];
+			}
+		}
 	}
 
 	$sides = 1;
@@ -680,6 +929,9 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		}
 		if (in_array(strtolower((string) $attr['name']), array('of-sides', 'sides'), true) && (int) $chosen['label'] > 1) {
 			$sides = (int) $chosen['label'];
+		} elseif (in_array(strtolower((string) $attr['name']), array('of-sides', 'sides'), true) && preg_match('/^\s*double[\s-]*sided\b/i', (string) $chosen['label'])) {
+			// B2Sign's "Double Sided" (pole flags) is 2 sides too, for the two-sided minimum below.
+			$sides = 2;
 		}
 
 		$price = wholesale_parse_option_price($chosen['value']);
@@ -696,6 +948,9 @@ function wholesale_price_quote($product_id, $request, $design = null)
 				break;
 			case 'lft':
 				$amount = $price['amount'] * ($letter_height * $letter_count / 12);
+				break;
+			case 'clin':
+				$amount = $price['amount'] * $letter_height * $letter_count;
 				break;
 			case 'perim':
 				$amount = $price['amount'] * 2 * ($width_ft + $height_ft);
@@ -741,6 +996,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	$extra_sides = max(0, $sides - 1);
 	$printed = $running - $flat_total;
 	$min_price = $is_sqft_calc && $keep > 0 ? wholesale_product_min_order($product_id) : 0;
+	$min_one_side = $min_price;
 	// _min_order_per_side: the minimum is per printed side (B2Sign banners: $8 one side, $16 two).
 	if (get_post_meta($product_id, '_min_order_per_side', true)) {
 		$min_price *= $sides;
@@ -748,6 +1004,12 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	// _min_order_extra_side: added to the minimum for each extra side (B2Sign coroplast: $6.99 one side, $7.99 two).
 	if ($min_price > 0) {
 		$min_price += $extra_sides * max(0, (float) get_post_meta($product_id, '_min_order_extra_side', true));
+	}
+	// What the extra printed sides add to the minimum (the quantity pricing below adds it to its first tier).
+	$sides_min_add = max(0, $min_price - $min_one_side);
+	// Dropdown sizes priced like B2Sign: the chosen width's own minimum (meta _size_dropdown).
+	if (isset($dropdown_min)) {
+		$min_price = $keep > 0 ? max(0, (float) $dropdown_min) : 0;
 	}
 	$max_price = $is_sqft_calc && $keep > 0 ? max(0, (float) get_post_meta($product_id, '_max_print_price', true)) : 0;
 	if ($max_price > 0) {
@@ -772,10 +1034,17 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	if ($qty_pricing && $keep > 0) {
 		$printed_now = $running - $flat_total;
 		$tier_min = 0.0;
-		foreach ($qty_pricing['min'] as $tier) {
+		$tier_index = -1;
+		foreach ($qty_pricing['min'] as $index => $tier) {
 			if ($quantity >= $tier[0]) {
 				$tier_min = (float) $tier[1];
+				$tier_index = $index;
 			}
+		}
+		// The two-sided minimum raises the first tier (B2Sign coroplast: one two-sided piece $7.99 against $6.99);
+		// B2Sign's two-sided minimums for 2 pieces and more are the one-sided ones.
+		if (0 === $tier_index && $sides_min_add > 0) {
+			$tier_min += $sides_min_add;
 		}
 		// Like B2Sign: the sheet share caps the price first, then the quantity's minimum per piece applies
 		// (128 Coroplast pieces of 6" x 6" fill one sheet but still cost the minimum per piece).
@@ -801,6 +1070,20 @@ function wholesale_price_quote($product_id, $request, $design = null)
 				}
 			}
 			$unit_printed = $printed_now + ($tier_unit - $first_unit) / $keep;
+			// A chosen option whose own difference changes with the quantity (meta _qty_pricing "opt").
+			foreach ($qty_pricing['opt'] as $o) {
+				$chosen_opt = wholesale_request_attr_value($request, $o[0]);
+				if (null === $chosen_opt || trim($chosen_opt) !== trim($o[1])) {
+					continue;
+				}
+				$opt_change = 0.0;
+				foreach ($o[2] as $tier) {
+					if ($quantity >= $tier[0]) {
+						$opt_change = (float) $tier[1];
+					}
+				}
+				$unit_printed += $opt_change / $keep;
+			}
 		}
 		$minimum_order = $tier_min > 0 && $unit_printed * $keep < $tier_min ? $tier_min : 0;
 		$unit_printed = max($unit_printed, $tier_min / $keep);
@@ -922,12 +1205,15 @@ function wholesale_store_session_cl_design($product_id, $design_id, $design_json
 		}
 	}
 
-	update_post_meta($design_id, '_cl_data', stripslashes((string) $design_json));
+	// update_post_meta() unslashes, so slash the JSON once more to store it exactly.
+	update_post_meta($design_id, '_cl_data', wp_slash(stripslashes((string) $design_json)));
 	$design['design_url'] = wp_get_attachment_url($design_id);
 	$design['design_id'] = $design_id;
 	$design['total_cost'] = wholesale_cl_design_total($design, $product_id);
 	$design['product_id'] = $product_id;
-	$_SESSION['design_data_' . $product_id] = stripslashes(wp_json_encode($design));
+	// Every reader runs stripslashes() before json_decode(), so store it slashed. Unescaped
+	// unicode keeps "CAFÉ" from being read back as "CAFu00c9" (extra letters charged).
+	$_SESSION['design_data_' . $product_id] = addslashes(wp_json_encode($design, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
 	return $design;
 }
@@ -1220,6 +1506,51 @@ function wholesale_starting_text_for_sale($product_id, $text)
 }
 
 /**
+ * The cheapest way to buy one of a product: the smallest-size quote Google gets
+ * (wholesale_seo_product_lowest_price, default choices), then every choice of each
+ * option on its own, then the cheapest choice of every option together. 0 when the
+ * product has no online price.
+ */
+function wholesale_product_cheapest_price($product_id)
+{
+	static $cache = array();
+	$product_id = (int) $product_id;
+	if (isset($cache[$product_id])) {
+		return $cache[$product_id];
+	}
+	$lowest = function_exists('wholesale_seo_product_lowest_price') ? (float) wholesale_seo_product_lowest_price($product_id) : 0.0;
+	$request = $GLOBALS['wholesale_seo_lowest_quote'][$product_id]['request'] ?? null;
+	if ($lowest <= 0 || !is_array($request)) {
+		return $cache[$product_id] = $lowest;
+	}
+	$pick = array();
+	foreach (wholesale_product_price_attrs($product_id) as $attr) {
+		$options = wholesale_attr_options($attr);
+		if (empty($attr['name']) || count($options) < 2) {
+			continue;
+		}
+		$low = null;
+		foreach ($options as $option) {
+			$quote = wholesale_price_quote($product_id, array_merge($request, array($attr['name'] => $option['value'])));
+			if (!empty($quote['ok']) && $quote['total'] > 0 && (null === $low || $quote['total'] < $low[0])) {
+				$low = array((float) $quote['total'], $option['value']);
+			}
+		}
+		if ($low) {
+			$lowest = min($lowest, $low[0]);
+			$pick[$attr['name']] = $low[1];
+		}
+	}
+	if (count($pick) > 1) {
+		$quote = wholesale_price_quote($product_id, array_merge($request, $pick));
+		if (!empty($quote['ok']) && $quote['total'] > 0) {
+			$lowest = min($lowest, (float) $quote['total']);
+		}
+	}
+	return $cache[$product_id] = round($lowest, 2);
+}
+
+/**
  * On the storefront, every reader of a product's _starting_at_text (cards, category
  * pages, comparison tables, the builder's product switcher) gets the text shoppers
  * should see: the computed per-letter text above for channel letters, the stored text
@@ -1242,6 +1573,15 @@ add_filter('get_post_metadata', function ($value, $object_id, $meta_key) {
 		if ($rate > 0 && !get_post_meta($object_id, '_hide_calculator', true) && ('' === $stored || preg_match('/per\s*(ft|sq)/i', $stored))) {
 			$discount = min(100, max(0, (float) get_post_meta($object_id, '_discount_percent', true)));
 			$stored = '$' . number_format(round($rate * (100 - $discount) / 100, 2), 2) . ' per ft<sup>2</sup>';
+		} elseif (get_post_meta($object_id, '_hide_calculator', true) && preg_match('/per\s*(ft|sq)/i', $stored) && function_exists('wholesale_seo_product_lowest_price')) {
+			// Preset sizes (Table Runner, DTF): no one can buy at the per sq ft rate, so show the
+			// cheapest real price (owner 2026-11-08: the cheapest choice, not the default one).
+			$reading = true;
+			$lowest = wholesale_product_cheapest_price($object_id);
+			$reading = false;
+			if ($lowest > 0) {
+				$stored = '$' . number_format($lowest, 2) . ' per item';
+			}
 		}
 		if ('' === $stored) {
 			return $value;

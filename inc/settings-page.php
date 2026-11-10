@@ -23,6 +23,7 @@ function wholesale_settings_panels()
 		'tickets' => array('Payment tickets', 'dashicons-media-text'),
 		'payments' => array('Payments & checkout', 'dashicons-cart'),
 		'marketing' => array('Google Ads & Analytics', 'dashicons-chart-line'),
+		'domains' => array('Domain redirects', 'dashicons-randomize'),
 		'media-sync' => array('Media sync', 'dashicons-update'),
 	);
 }
@@ -165,6 +166,18 @@ function wholesale_settings_page()
 							</td></tr>
 						</table>
 					</div>
+					<?php if (function_exists('wholesale_motion_enabled')) : ?>
+					<div class="wss-card">
+						<div class="wss-card__head" id="motion-effects"><h2>Motion effects</h2></div>
+						<table class="form-table" role="presentation">
+							<tr><th scope="row">Enable motion effects</th><td>
+								<input type="hidden" name="wholesale_motion_enabled" value="0">
+								<label class="wss-toggle"><input type="checkbox" name="wholesale_motion_enabled" value="1" <?php checked(wholesale_motion_enabled()); ?>> Scroll reveals, hover and tap effects</label>
+								<p class="description">Visitors whose device asks for less motion never see them. Cart, checkout, account and order pages only get button and focus effects, and the channel letter builder gets none. Turn this off to go back to the site exactly as it was.</p>
+							</td></tr>
+						</table>
+					</div>
+					<?php endif; ?>
 					<?php if (function_exists('wholesale_es_setting')) : ?>
 					<div class="wss-card">
 						<div class="wss-card__head" id="exit-survey"><h2>Exit survey</h2></div>
@@ -442,6 +455,59 @@ function wholesale_settings_page()
 						</table>
 					</div>
 				</section>
+
+				<section class="wss-panel" id="wss-panel-domains" data-wss-panel="domains" role="tabpanel">
+					<?php
+					$redirect_on = wholesale_setting_enabled('domain_redirect_enabled');
+					$redirect_rules = wholesale_domain_redirect_rules();
+					$redirect_target = wholesale_domain_redirect_target();
+					$redirect_status = (string) wholesale_get_setting('domain_redirect_status');
+					?>
+					<div class="wss-card">
+						<div class="wss-card__head" id="domain-redirects">
+							<h2>Other domains <span class="wss-badge <?php echo $redirect_on && $redirect_rules ? 'is-ok' : 'is-info'; ?>"><?php echo $redirect_on && $redirect_rules ? esc_html(sprintf('On, %d domain%s', count($redirect_rules), 1 === count($redirect_rules) ? '' : 's')) : 'Off'; ?></span></h2>
+							<p>Visitors who open this site through one of your other domains are sent to <code><?php echo esc_html($redirect_target); ?></code>, so Google sees one site instead of duplicate copies. The page they asked for and ad tags such as <code>gclid</code> and UTM are kept.</p>
+						</div>
+						<table class="form-table" role="presentation">
+							<tr><th scope="row">Redirect other domains</th><td>
+								<input type="hidden" name="wholesale_domain_redirect_enabled" value="0">
+								<label class="wss-toggle"><input type="checkbox" name="wholesale_domain_redirect_enabled" value="1" <?php checked($redirect_on); ?>> Send the domains below to <?php echo esc_html(wp_parse_url($redirect_target, PHP_URL_HOST)); ?></label>
+								<p class="description">Turned off, those domains show this site as it is, with no redirect.</p>
+							</td></tr>
+							<tr><th><label for="wholesale_domain_redirect_domains">Domains</label></th><td>
+								<textarea class="large-text code" rows="7" id="wholesale_domain_redirect_domains" name="wholesale_domain_redirect_domains" spellcheck="false" placeholder="mystorefrontsigns.com"><?php echo esc_textarea((string) wholesale_get_setting('domain_redirect_domains')); ?></textarea>
+								<p class="description">One domain per line. <code>www.</code> and <code>https://</code> don't matter: both versions are covered. To send every page of a domain to one page instead of the same page, add that page after it, for example <code>mystorefrontsigns.com /custom-channel-letters/</code> (<code>/</code> for the home page). <?php echo esc_html(wp_parse_url($redirect_target, PHP_URL_HOST)); ?> itself can't be listed. wp-admin, the REST API, cron and <code>/.well-known/</code> (SSL certificate checks) are never redirected.</p>
+							</td></tr>
+							<tr><th><label for="wholesale_domain_redirect_status">Redirect type</label></th><td>
+								<select id="wholesale_domain_redirect_status" name="wholesale_domain_redirect_status">
+									<option value="301" <?php selected($redirect_status, '301'); ?>>Permanent (301), recommended</option>
+									<option value="302" <?php selected($redirect_status, '302'); ?>>Temporary (302)</option>
+								</select>
+								<p class="description">301 tells Google to move the domain's rankings to the main site. Browsers remember a 301, so someone who already visited may still be redirected for a while after a domain is removed here. Use 302 to try a change first.</p>
+							</td></tr>
+							<tr><th scope="row">What happens</th><td>
+								<?php if (!$redirect_rules) : ?>
+									<p class="description">No domains listed.</p>
+								<?php else : ?>
+									<?php if (!$redirect_on) : ?>
+										<p class="description"><strong>Redirects are off.</strong> When on, after saving:</p>
+									<?php endif; ?>
+									<table class="widefat striped wss-redirects">
+										<thead><tr><th>Visitor opens</th><th>Goes to (<?php echo esc_html($redirect_status); ?>)</th></tr></thead>
+										<tbody>
+											<?php foreach ($redirect_rules as $redirect_host => $redirect_path) : ?>
+												<?php $redirect_sample = '/product/coroplast/?gclid=test'; ?>
+												<tr><td><code><?php echo esc_html($redirect_host . $redirect_sample); ?></code><br><span class="description">and www.<?php echo esc_html($redirect_host); ?>, http or https</span></td><td><code><?php echo esc_html(wholesale_domain_redirect_url($redirect_path, $redirect_sample)); ?></code><br><span class="description"><?php echo '' === $redirect_path ? 'Same page' : ('/' === $redirect_path ? 'Home page, every page' : 'This page, every page'); ?></span></td></tr>
+											<?php endforeach; ?>
+										</tbody>
+									</table>
+								<?php endif; ?>
+								<p class="description">Only domains that open this WordPress site are covered, such as cPanel aliases of it. A domain with its own website folder in cPanel, or one forwarded at GoDaddy, never reaches this site, so its redirect has to be set where it is hosted.</p>
+							</td></tr>
+						</table>
+					</div>
+				</section>
+
 				<section class="wss-panel" id="wss-panel-media-sync" data-wss-panel="media-sync" role="tabpanel">
 					<div class="wss-card">
 						<div class="wss-card__head" id="media-sync"><h2>Media sync</h2><p>Copy Media Library files between this site and the live site when one of them is missing some, using the Diagnostics Toolkit Site Migration connection.</p></div>

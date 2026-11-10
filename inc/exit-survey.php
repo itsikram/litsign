@@ -402,8 +402,7 @@ function wholesale_es_notify($id)
 	global $wpdb;
 
 	$row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . wholesale_es_table() . ' WHERE id = %d', $id));
-	$recipients = function_exists('wholesale_contact_admin_recipients') ? wholesale_contact_admin_recipients() : array(get_option('admin_email'));
-	if (!$row || !$recipients) {
+	if (!$row) {
 		return;
 	}
 
@@ -432,7 +431,7 @@ function wholesale_es_notify($id)
 		$headers[] = 'Reply-To: ' . $row->contact;
 	}
 
-	wp_mail($recipients, 'Exit survey: a visitor wants a reply', implode("\n", $lines), $headers);
+	wholesale_mail_team('Exit survey: a visitor wants a reply', implode("\n", $lines), $headers);
 }
 
 /* ---------------------------------------------------------------------------

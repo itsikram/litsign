@@ -13,7 +13,8 @@
  * below is printed only for pages that have a photo, so every other page keeps
  * its current hero byte for byte. The photos replace the background of the hero
  * band the template already prints (.home-hero-content, .bd-hero, .sf-hero,
- * .sc-hero, .contact-hero), so no template needs its own wiring.
+ * .sc-hero, .contact-hero, .cla-hero, .pkg-hero, .track-hero), so no template
+ * needs its own wiring.
  */
 
 if (!defined('ABSPATH')) {
@@ -38,7 +39,7 @@ function wholesale_hero_overlays()
 			'label' => 'Dark on the left (headline left, subject right)',
 			'd' => "linear-gradient(90deg,{$n}.96) 0%,{$n}.86) 32%,{$n}.34) 58%,{$n}.06) 100%),linear-gradient(0deg,{$n}.38) 0%,{$n}0) 38%)",
 			't' => "linear-gradient(90deg,{$n}.96) 0%,{$n}.9) 50%,{$n}.7) 80%,{$n}.45) 100%)",
-			'm' => "linear-gradient(180deg,{$n}.94) 0%,{$n}.8) 55%,{$n}.62) 100%)",
+			'm' => "linear-gradient(180deg,{$n}.9) 0%,{$n}.74) 38%,{$n}.52) 72%,{$n}.42) 100%)",
 		),
 		'bottom' => array(
 			'label' => 'Dark at the bottom (centered or short heroes)',
@@ -50,7 +51,7 @@ function wholesale_hero_overlays()
 			'label' => 'Even dim (busy photos)',
 			'd' => "linear-gradient({$n}.72),{$n}.72))",
 			't' => "linear-gradient({$n}.76),{$n}.76))",
-			'm' => "linear-gradient({$n}.8),{$n}.8))",
+			'm' => "linear-gradient({$n}.72),{$n}.72))",
 		),
 		'brand' => array(
 			'label' => 'Navy to brand blue tint',
@@ -195,8 +196,9 @@ function wholesale_hero_config()
 
 	$config = array(
 		'desktop' => $url($found['desktop'], '2048x2048'),
-		// Phones: their own photo, else the 1024 px copy of the desktop one.
-		'mobile' => $found['mobile'] ? $url($found['mobile'], 'large') : $url($found['desktop'], 'large'),
+		// Phones: their own photo (up to 1536 px, sharp on high-density screens),
+		// else the 1024 px copy of the desktop one.
+		'mobile' => $found['mobile'] ? $url($found['mobile'], '1536x1536') : $url($found['desktop'], 'large'),
 		'overlay' => $found['overlay'],
 		'focus' => $found['focus'],
 	);
@@ -254,7 +256,7 @@ function wholesale_hero_head()
 
 	// The hero bands the templates print. body.sfs-hero-on keeps these rules
 	// above the per-page rules in style.css, whatever the load order.
-	$bands = 'body.sfs-hero-on .home-hero .home-hero-content,body.sfs-hero-on .bd-hero,body.sfs-hero-on .sf-hero,body.sfs-hero-on .sc-hero,body.sfs-hero-on .contact-hero';
+	$bands = 'body.sfs-hero-on .home-hero .home-hero-content,body.sfs-hero-on .bd-hero,body.sfs-hero-on .sf-hero,body.sfs-hero-on .sc-hero,body.sfs-hero-on .contact-hero,body.sfs-hero-on .cla-hero,body.sfs-hero-on .pkg-hero,body.sfs-hero-on .track-hero';
 	$base = 'background-color:#031835;background-size:cover;background-repeat:no-repeat;background-position:' . $pos . ';';
 
 	$css = $bands . '{' . $base . '}';
@@ -281,11 +283,25 @@ function wholesale_hero_head()
 		. 'body.sfs-hero-on .sc-hero{padding-bottom:48px}'
 		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-hero-title,body.sfs-hero-on .sc-hero-title,body.sfs-hero-on .contact-hero h1{color:#fff}'
 		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-hero-lead,body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-byline,body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-hero-points,body.sfs-hero-on .sc-hero-lead,body.sfs-hero-on .contact-hero-copy>p:not(.contact-eyebrow),body.sfs-hero-on .contact-trust-row,body.sfs-hero-on .contact-trust-row strong{color:rgba(255,255,255,.88)}'
-		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .cl-kicker{color:#7fd3f2}'
+		// css/ui-polish.css forces .cl-kicker to dark teal with !important (for white bands).
+		. 'body.sfs-hero-on .sf-hero .cl-kicker{color:#7fd3f2!important}'
 		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .site-breadcrumbs ol,body.sfs-hero-on .sc-hero .site-breadcrumbs ol{border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:rgba(255,255,255,.7)}'
 		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .site-breadcrumbs a,body.sfs-hero-on .sc-hero .site-breadcrumbs a{color:#7fd3f2}'
 		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .site-breadcrumbs [aria-current="page"],body.sfs-hero-on .sc-hero .site-breadcrumbs [aria-current="page"]{color:#fff}'
-		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-button-outline{border-color:#fff;color:#fff}';
+		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-button-outline{border-color:#fff;color:#fff}'
+		// Plain text links in the hero copy (phone numbers, jump links) turn light on the photo.
+		. 'body.sfs-hero-on .contact-hero-call a,body.sfs-hero-on .sf-hero .gd-hero-call,body.sfs-hero-on .sf-hero .gd-jump-links a,body.sfs-hero-on .sf-hero-lead a,body.sfs-hero-on .sf-byline a,body.sfs-hero-on .sf-hero-points a,body.sfs-hero-on .sc-hero-lead a{color:#7fd3f2}'
+		// Sign packages and track order print a plain text header inside the page
+		// container: with a photo it becomes a rounded photo card with white text.
+		. 'body.sfs-hero-on .pkg-hero,body.sfs-hero-on .track-hero{max-width:none;border-radius:16px;padding:64px 48px;min-height:300px;display:flex;flex-direction:column;justify-content:center;color:#fff}'
+		. 'body.sfs-hero-on .pkg-hero{margin-bottom:28px}body.sfs-hero-on .pkg-hero>*{max-width:640px}'
+		. 'body.sfs-hero-on .track-hero{align-items:center;margin-bottom:28px}body.sfs-hero-on .track-hero>*{max-width:560px}'
+		. 'body.sfs-hero-on .pkg-hero h1,body.sfs-hero-on .track-hero h1{color:#fff}'
+		. 'body.sfs-hero-on .pkg-hero p,body.sfs-hero-on .track-hero p{color:rgba(255,255,255,.9)}'
+		. 'body.sfs-hero-on .track-hero .track-eyebrow{color:#7fd3f2}'
+		. '@media(max-width:767px){body.sfs-hero-on .pkg-hero,body.sfs-hero-on .track-hero{padding:44px 22px;min-height:340px;border-radius:12px}'
+		// Phones show more of the photo (lighter overlay): a soft shadow keeps the copy crisp.
+		. 'body.sfs-hero-on :is(.home-hero-copy,.bd-hero-copy,.sf-hero>.container,.sc-hero-copy,.contact-hero-copy,.cla-hero-copy,.pkg-hero,.track-hero)>:is(h1,p){text-shadow:0 1px 3px rgba(3,24,53,.65)}}';
 
 	echo '<style id="sfs-hero-images">' . $css . "</style>\n"; // Built from fixed presets and escaped URLs.
 }

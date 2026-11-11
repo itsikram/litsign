@@ -175,51 +175,67 @@ function wholesale_product_cutoff_hours($product_id)
 }
 
 /**
- * The product's own production times (single-product.php), mirrored from B2Sign: one radio per choice,
- * with the quantities it allows. js/ui-polish.js hides choices the quantity or the Pacific clock rules out.
+ * "12:00" → "12pm", "23:59" → "11:59pm", "06:00" → "6am" (as B2Sign prints its cut-off times).
+ */
+function wholesale_turnaround_clock($hhmm)
+{
+	$t = strtotime('2000-01-01 ' . $hhmm);
+	return $t ? date('i', $t) === '00' ? date('ga', $t) : date('g:ia', $t) : '';
+}
+
+/**
+ * The product's own production times (single-product.php), the way B2Sign shows them: grouped under "Same Day",
+ * "Next Day" and the slower ones, each with "Cut-off time … PST" and its price ("Free" or "+$8.00"; js/main.js
+ * fills in the dollars from each price quote). B2Sign's default (Next Day) is checked. js/ui-polish.js greys out
+ * choices closed by the Pacific clock or the size, and hides those the quantity rules out.
  */
 function wholesale_render_turnaround_choices($spec)
 {
-	$free = null;
-	foreach ($spec as $o) {
-		if ($o['automatic']) {
-			$free = $o;
+	$choices = array_values(array_filter($spec, static function ($o) {
+		return $o['choice'];
+	}));
+	if (!$choices) {
+		return;
+	}
+	$checked = '';
+	foreach ($choices as $o) {
+		if ($o['default']) {
+			$checked = $o['value'];
+			break;
 		}
 	}
-	$first = true;
+	if ('' === $checked) {
+		// Older data without B2Sign's default: Next Day when offered, as B2Sign checks it.
+		$checked = in_array('next_day', array_column($choices, 'value'), true) ? 'next_day' : $choices[0]['value'];
+	}
+	$sections = array();
+	foreach ($choices as $o) {
+		$sections[$o['section']][] = $o;
+	}
 	?>
-	<div class="row d-fex align-items-center my-2 mt-3" data-turnaround-choices>
+	<div class="row d-fex align-items-start my-2 mt-3" data-turnaround-choices>
 		<div class="col-md-3 col-4">
 			<label class="text-capitalize">Production time</label><small class="pb-attr-help">Time to make your order before it ships. Shipping speed (standard, 3-day, 2-day or overnight) is chosen at checkout.</small>
 		</div>
 		<div class="col-md-9 col-8">
-			<div class="row">
-				<?php foreach ($spec as $o) :
-					if ($o['automatic']) {
-						continue;
-					}
-					$id = 'turnaround_' . $o['value'];
-					$same = 0 === $o['days'];
-					$note = '' !== $o['cutoff'] ? sprintf('Cut-off time %s PST', date('ga', strtotime($o['cutoff']))) : '';
-					if ($o['min_qty'] > 1 || null !== $o['max_qty']) {
-						$note .= ($note ? ' · ' : '') . (null === $o['max_qty'] ? sprintf('%d+ items', $o['min_qty']) : sprintf('%d–%d items', $o['min_qty'], $o['max_qty']));
-					}
-					if ($o['percent'] > 0) {
-						$note .= ($note ? ' · ' : '') . sprintf('+%s%%', rtrim(rtrim(number_format($o['percent'], 2), '0'), '.'));
-					}
-					?>
-					<div class="col-12 col-md-6" data-turnaround-option data-min-qty="<?php echo esc_attr($o['min_qty']); ?>" data-max-qty="<?php echo esc_attr(null === $o['max_qty'] ? '' : $o['max_qty']); ?>" data-cutoff="<?php echo esc_attr($same ? $o['cutoff'] : ''); ?>"<?php echo $same ? ' data-same-day-option' : ''; ?>>
-						<div class="form-check">
-							<input class="form-check-input turnaround-option" type="radio" name="turnaround_option" id="<?php echo esc_attr('next_day' === $o['value'] ? 'turnaroundNextDay' : $id); ?>" value="<?php echo esc_attr($o['value']); ?>"<?php echo $first ? ' checked' : ''; ?>>
-							<label class="form-check-label" for="<?php echo esc_attr('next_day' === $o['value'] ? 'turnaroundNextDay' : $id); ?>">
-								<?php echo esc_html($o['label']); ?>
-								<?php if ($note) : ?><p class="form-text mb-0 mt-0 fw-normal"><?php echo esc_html($note); ?></p><?php endif; ?>
-								<?php if ($free && 'next_day' === $o['value']) : ?><p class="form-text mb-0 mt-0 fw-normal"><?php echo esc_html(sprintf('Approve your artwork before %s PST on a weekday and it ships the same day, free.', date('ga', strtotime($free['cutoff'] ?: '06:00')))); ?></p><?php endif; ?>
+			<?php foreach ($sections as $title => $rows) : ?>
+				<div class="pb-turn-section" data-turnaround-section>
+					<div class="pb-turn-title"><?php echo esc_html($title); ?></div>
+					<?php foreach ($rows as $o) :
+						$id = 'next_day' === $o['value'] ? 'turnaroundNextDay' : 'turnaround_' . $o['value'];
+						$cut = '' !== $o['cutoff_label'] ? wholesale_turnaround_clock($o['cutoff_label']) : '';
+						$percent = rtrim(rtrim(number_format($o['percent'], 2), '0'), '.');
+						?>
+						<div class="form-check pb-turn-choice" data-turnaround-option data-value="<?php echo esc_attr($o['value']); ?>" data-min-qty="<?php echo esc_attr($o['min_qty']); ?>" data-max-qty="<?php echo esc_attr(null === $o['max_qty'] ? '' : $o['max_qty']); ?>" data-time-gate="<?php echo esc_attr($o['time_gate']); ?>" data-reopen-at="<?php echo esc_attr($o['reopen_at']); ?>" data-open-off-days="<?php echo $o['open_off_days'] ? '1' : ''; ?>" data-max-both="<?php echo esc_attr(null === $o['max_both_sides'] ? '' : $o['max_both_sides']); ?>" data-percent="<?php echo esc_attr($percent); ?>"<?php echo $o['default'] ? ' data-default' : ''; ?><?php echo 0 === $o['days'] ? ' data-same-day-option' : ''; ?>>
+							<input class="form-check-input turnaround-option" type="radio" name="turnaround_option" id="<?php echo esc_attr($id); ?>" value="<?php echo esc_attr($o['value']); ?>"<?php echo $checked === $o['value'] ? ' checked' : ''; ?>>
+							<label class="form-check-label" for="<?php echo esc_attr($id); ?>">
+								<span class="pb-turn-cut"><?php echo esc_html($cut ? sprintf('Cut-off time %s PST', $cut) : $o['label']); ?></span>
+								<span class="pb-turn-price" data-turnaround-price><?php echo esc_html($o['percent'] > 0 ? '+' . $percent . '%' : 'Free'); ?></span>
 							</label>
 						</div>
-					</div>
-					<?php $first = false; endforeach; ?>
-			</div>
+					<?php endforeach; ?>
+				</div>
+			<?php endforeach; ?>
 		</div>
 	</div>
 	<?php

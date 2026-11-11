@@ -2600,3 +2600,34 @@ html.pd-lightbox-open { overflow: hidden; }
     gap: 12px;
   }
 }
+
+/* ---- Production-time choices mirrored from B2Sign (inc/product-buy-box.php, B2Sign Sync 1.9.1) ----
+   Laid out like B2Sign: "Same Day" / "Next Day" headings, one row per choice with its cut-off and price.
+   Closed choices (Pacific clock, size over 120" on both sides) are greyed out, as on B2Sign. */
+.product-details [data-turnaround-choices] .pb-turn-section + .pb-turn-section {
+  margin-top: 10px;
+}
+.product-details [data-turnaround-choices] .pb-turn-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.product-details [data-turnaround-choices] .pb-turn-choice {
+  padding: 4px 0 4px 1.6em;
+  margin: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.product-details [data-turnaround-choices] .pb-turn-choice:last-child {
+  border-bottom: 0;
+}
+.product-details [data-turnaround-choices] .pb-turn-choice .form-check-label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-weight: 400;
+}
+.product-details [data-turnaround-choices] .pb-turn-price {
+  font-weight: 600;
+}
+.product-details [data-turnaround-choices] .pb-turn-choice.is-closed .form-check-label {
+  opacity: 0.45;
+}

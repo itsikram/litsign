@@ -343,16 +343,21 @@
   });
 })();
 
-// ---- 6. Delivery estimate and Same Day option (inc/product-buy-box.php) ----
+// ---- 6. Delivery estimate and production-time choices (inc/product-buy-box.php) ----
 // The same rules as checkout (inc/payments.php wholesale_estimated_ship_datetime()):
 // Pacific time, weekdays only, orders after the 4pm cut-off (or on a weekend) count from
-// the next business day, then the product's production days. Same Day ships today when
-// ordered by 12pm on a weekday. Worked out here because the page may come from the page
-// cache, hours old. Holidays aren't known to checkout either.
+// the next business day, then the product's production days. Worked out here because the
+// page may come from the page cache, hours old. Holidays aren't known to checkout either.
+// Choices mirrored from B2Sign (data-time-gate etc., B2Sign Sync 1.9.1) follow B2Sign's own rules:
+// a Same Day choice is open on business days before its time (some again from 4pm) and all day on
+// days off; it is closed when both sides of the size are over 120". Closed choices are greyed out,
+// as on B2Sign; choices the quantity rules out are hidden. The cart checks all of it again.
 (function () {
   const box = document.querySelector('.product-pricing-box .pd-eta');
-  const sameDay = document.querySelector('[data-same-day-option]');
-  if (!box && !sameDay) return;
+  const choices = Array.from(document.querySelectorAll('[data-turnaround-option]'));
+  // Products without mirrored choices: the site's own Next Day / Same Day (12pm) markup.
+  const legacySameDay = choices.length ? null : document.querySelector('[data-same-day-option]');
+  if (!box && !choices.length && !legacySameDay) return;
 
   let clock;
   try {
@@ -396,41 +401,97 @@
     const sameMonth = new Date(from).getUTCMonth() === new Date(to).getUTCMonth();
     return monthDay.format(from) + ' – ' + (sameMonth ? dayOnly.format(to) : monthDay.format(to));
   };
+  const hm = (text) => (/^\d\d:\d\d$/.test(text || '') ? +text.slice(0, 2) * 60 + +text.slice(3) : null);
 
-  const form = box ? box.closest('form') : null;
+  const form = (box || choices[0] || legacySameDay).closest('form');
   const noun = form && form.dataset.noun && form.dataset.noun !== 'product' ? 'your ' + form.dataset.noun : 'it';
-  const nextDayRadio = document.getElementById('turnaroundNextDay');
-  const sameDayRadio = sameDay ? sameDay.querySelector('input[type="radio"]') : null;
+  const qty = document.getElementById('productQuantity');
+  const radio = (el) => el.querySelector('input[type="radio"]');
+  const inches = (name) => {
+    const input = form ? form.querySelector('input[name="' + name + '"]') : null;
+    return input ? parseFloat(input.value) || 0 : 0;
+  };
+  const typedSize = () => {
+    const w = inches('width-in');
+    const h = inches('height-in');
+    return w > 0 && h > 0 ? [w, h] : null;
+  };
+  const choose = (el) => {
+    const r = el && radio(el);
+    if (r && !r.checked) {
+      r.checked = true;
+      // js/main.js reacts to this change (jQuery handler) and asks for a new price.
+      r.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  };
+
+  // Which mirrored choices are open (clock, size) and allowed (quantity) right now.
+  const refreshChoices = (t) => {
+    const weekday = t.weekday > 0 && t.weekday < 6;
+    const n = qty ? Math.max(1, parseInt(qty.value, 10) || 1) : 1;
+    const size = typedSize();
+    choices.forEach((el) => {
+      const min = parseInt(el.dataset.minQty, 10) || 1;
+      const max = el.dataset.maxQty ? parseInt(el.dataset.maxQty, 10) : Infinity;
+      el.hidden = n < min || n > max;
+      const gate = hm(el.dataset.timeGate);
+      const reopen = hm(el.dataset.reopenAt);
+      let open = true;
+      if (gate !== null) open = weekday ? (t.minutes < gate || (reopen !== null && t.minutes >= reopen)) : el.dataset.openOffDays === '1';
+      const maxBoth = parseFloat(el.dataset.maxBoth);
+      if (open && maxBoth > 0 && size && Math.min(size[0], size[1]) > maxBoth) open = false;
+      el.classList.toggle('is-closed', !open);
+      const r = radio(el);
+      if (r) r.disabled = !open;
+    });
+    document.querySelectorAll('[data-turnaround-section]').forEach((section) => {
+      section.hidden = !Array.from(section.querySelectorAll('[data-turnaround-option]')).some((el) => !el.hidden);
+    });
+    const usable = (el) => !el.hidden && !el.classList.contains('is-closed');
+    const checked = choices.find((el) => radio(el) && radio(el).checked);
+    if (!checked || !usable(checked)) {
+      choose(choices.find((el) => el.hasAttribute('data-default') && usable(el)) || choices.find(usable));
+    }
+  };
 
   const update = () => {
     const t = now();
     const weekday = t.weekday > 0 && t.weekday < 6;
 
-    // Same Day: only until 12pm on a weekday (the cart refuses it after noon too).
-    // Products with their own production times (B2Sign Sync) carry their Same Day cut-off, e.g. "12:00".
-    const sameDayCut = sameDay && /^\d\d:\d\d$/.test(sameDay.dataset.cutoff || '') ? +sameDay.dataset.cutoff.slice(0, 2) * 60 + +sameDay.dataset.cutoff.slice(3) : 12 * 60;
-    const sameDayOpen = weekday && t.minutes < sameDayCut;
-    if (sameDay) {
-      sameDay.hidden = !sameDayOpen || sameDay.dataset.qtyHidden === '1';
+    let rush = false;
+    let rushCut = 12 * 60;
+    if (choices.length) {
+      refreshChoices(t);
+      const checked = choices.find((el) => radio(el) && radio(el).checked);
+      const gate = checked ? hm(checked.dataset.timeGate) : null;
+      if (checked && checked.hasAttribute('data-same-day-option') && !checked.classList.contains('is-closed') && weekday && gate !== null && t.minutes < gate) {
+        rush = true;
+        rushCut = gate;
+      }
+    } else if (legacySameDay) {
+      // The site's own Same Day: only until 12pm on a weekday (the cart refuses it after noon too).
+      const nextDayRadio = document.getElementById('turnaroundNextDay');
+      const sameDayRadio = legacySameDay.querySelector('input[type="radio"]');
+      const sameDayOpen = weekday && t.minutes < 12 * 60;
+      legacySameDay.hidden = !sameDayOpen;
       if (!sameDayOpen && sameDayRadio && sameDayRadio.checked && nextDayRadio) {
         nextDayRadio.checked = true;
-        // js/main.js takes the same day charge off on this change (jQuery handler).
         nextDayRadio.dispatchEvent(new Event('change', { bubbles: true }));
       }
+      rush = Boolean(sameDayRadio && sameDayRadio.checked && sameDayOpen);
+      rushCut = (parseInt(box && box.dataset.sameDayCutoff, 10) || 12) * 60;
     }
     if (!box) return;
 
     const cutoff = (parseInt(box.dataset.cutoff, 10) || 16) * 60;
-    const sameDayCutoff = (parseInt(box.dataset.sameDayCutoff, 10) || 12) * 60;
     const production = Math.max(1, parseInt(box.dataset.productionDays, 10) || 1);
     const fastestDays = parseInt(box.dataset.fastestDays, 10) || 0;
-    const rush = Boolean(sameDayRadio && sameDayRadio.checked && sameDayOpen);
 
     let ship;
     let minutesLeft = 0;
     if (rush) {
       ship = t.date;
-      minutesLeft = sameDayCutoff - t.minutes;
+      minutesLeft = rushCut - t.minutes;
     } else {
       let orderDay = t.date;
       if (!weekday || t.minutes >= cutoff) orderDay = addBusinessDays(orderDay, 1);
@@ -462,39 +523,15 @@
   window.setInterval(update, 30000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) update(); });
   document.addEventListener('change', (e) => { if (e.target && e.target.name === 'turnaround_option') update(); });
-})();
-
-// ---- 6b. Production times that depend on the quantity (inc/product-buy-box.php, B2Sign Sync) ----
-// B2Sign allows Same Day up to 10 items, Next Day up to 100, then 3 or 5 business days. Choices the
-// quantity rules out are hidden; when the chosen one goes, the first allowed one is chosen instead.
-(function () {
-  const options = Array.from(document.querySelectorAll('[data-turnaround-option]'));
-  const qty = document.getElementById('productQuantity');
-  if (!options.length || !qty) return;
-  const apply = () => {
-    const n = Math.max(1, parseInt(qty.value, 10) || 1);
-    options.forEach((el) => {
-      const min = parseInt(el.dataset.minQty, 10) || 1;
-      const max = el.dataset.maxQty === '' ? Infinity : parseInt(el.dataset.maxQty, 10);
-      const out = n < min || n > max;
-      el.dataset.qtyHidden = out ? '1' : '';
-      // Same Day also closes at its cut-off; section 6 above keeps that part up to date.
-      if (!el.hasAttribute('data-same-day-option')) el.hidden = out;
-      else if (out) el.hidden = true;
-    });
-    const checked = options.find((el) => el.querySelector('input:checked'));
-    if (!checked || checked.hidden) {
-      const first = options.find((el) => !el.hidden);
-      const radio = first && first.querySelector('input');
-      if (radio && !radio.checked) {
-        radio.checked = true;
-        radio.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    }
-  };
-  qty.addEventListener('input', apply);
-  qty.addEventListener('change', apply);
-  apply();
+  if (qty) {
+    qty.addEventListener('input', update);
+    qty.addEventListener('change', update);
+  }
+  // The size boxes fill hidden width-in / height-in inputs (js/main.js): check after they are updated.
+  if (form && choices.some((el) => el.dataset.maxBoth)) {
+    form.addEventListener('input', () => setTimeout(update, 0));
+    form.addEventListener('change', () => setTimeout(update, 0));
+  }
 })();
 
 // ---- 7. Quantity - / + buttons (inc/product-buy-box.php) ----

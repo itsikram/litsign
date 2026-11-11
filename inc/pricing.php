@@ -387,22 +387,64 @@ function wholesale_product_turnaround_spec($product_id)
 {
 	$data = json_decode((string) get_post_meta($product_id, '_turnaround_spec', true), true);
 	$out = array();
+	$clock = static function ($v) {
+		return preg_match('/^\d\d:\d\d$/', (string) $v) ? (string) $v : '';
+	};
 	foreach (is_array($data) ? $data : array() as $o) {
 		if (!is_array($o) || empty($o['value']) || !preg_match('/^[a-z0-9_]+$/', (string) $o['value'])) {
 			continue;
 		}
+		$days = max(0, (int) ($o['days'] ?? 1));
+		$cutoff = $clock($o['cutoff'] ?? '');
+		// B2Sign Sync 1.9.1 adds B2Sign's exact rules (choice, section, cut-off shown, time gate, size limit, default).
+		// Older data: Same Day closes at its cut-off on weekdays, and the automatic Free Same Day is no choice.
+		$exact = array_key_exists('choice', $o);
 		$out[] = array(
 			'value' => (string) $o['value'],
 			'label' => sanitize_text_field((string) ($o['label'] ?? $o['value'])),
 			'min_qty' => max(1, (int) ($o['min_qty'] ?? 1)),
 			'max_qty' => isset($o['max_qty']) && null !== $o['max_qty'] ? (int) $o['max_qty'] : null,
-			'cutoff' => preg_match('/^\d\d:\d\d$/', (string) ($o['cutoff'] ?? '')) ? (string) $o['cutoff'] : '',
-			'days' => max(0, (int) ($o['days'] ?? 1)),
+			'cutoff' => $cutoff,
+			'days' => $days,
 			'percent' => max(0, (float) ($o['percent'] ?? 0)),
 			'automatic' => !empty($o['automatic']),
+			'choice' => $exact ? !empty($o['choice']) : empty($o['automatic']),
+			'section' => sanitize_text_field((string) ($o['section'] ?? (0 === $days ? 'Same Day' : ('next_day' === $o['value'] ? 'Next Day' : ($o['label'] ?? ''))))),
+			'cutoff_label' => $clock($o['cutoff_label'] ?? '') ?: $cutoff,
+			'time_gate' => $exact ? $clock($o['time_gate'] ?? '') : (0 === $days ? $cutoff : ''),
+			'open_off_days' => !empty($o['open_off_days']),
+			'reopen_at' => $clock($o['reopen_at'] ?? ''),
+			'max_both_sides' => isset($o['max_both_sides']) && is_numeric($o['max_both_sides']) ? (float) $o['max_both_sides'] : null,
+			'default' => !empty($o['default']),
 		);
 	}
 	return $out;
+}
+
+/**
+ * True when B2Sign Sync mirrored that B2Sign offers no production-time choice for this product (meta "[]",
+ * hardware): the page then shows none, like B2Sign, instead of the site's Next Day / Same Day.
+ */
+function wholesale_product_turnaround_none($product_id)
+{
+	return '[]' === trim((string) get_post_meta($product_id, '_turnaround_spec', true));
+}
+
+/**
+ * Is a production-time choice open now (Pacific)? Like B2Sign: a choice with a time gate is open on business days
+ * before it (and again from reopen_at), and all day on days off when B2Sign says so. Holidays are not known here.
+ */
+function wholesale_turnaround_open_now($o)
+{
+	if ('' === $o['time_gate']) {
+		return true;
+	}
+	$now = new DateTime('now', new DateTimeZone('America/Los_Angeles'));
+	if ((int) $now->format('N') >= 6) {
+		return $o['open_off_days'];
+	}
+	$t = $now->format('H:i');
+	return $t < $o['time_gate'] || ('' !== $o['reopen_at'] && $t >= $o['reopen_at']);
 }
 
 /** True on a weekday before the Pacific time "HH:MM". */
@@ -413,14 +455,19 @@ function wholesale_before_pacific_time($cutoff)
 }
 
 /**
- * The chosen production time for a quantity, or an error message. No choice sent: the fastest one
- * the quantity allows that is still open today.
+ * The chosen production time for a quantity, or an error message. No choice sent: B2Sign's default
+ * (Next Day) when open, else the first choice open now.
+ * $size: array(width_in, height_in) when the product has a size box. B2Sign closes Same Day when both
+ * sides are over 120" (max_both_sides).
  */
-function wholesale_turnaround_choice($spec, $value, $quantity)
+function wholesale_turnaround_choice($spec, $value, $quantity, $size = null)
 {
 	$open = array();
 	foreach ($spec as $o) {
-		if ($o['automatic'] || $quantity < $o['min_qty'] || (null !== $o['max_qty'] && $quantity > $o['max_qty'])) {
+		if (!$o['choice'] || $quantity < $o['min_qty'] || (null !== $o['max_qty'] && $quantity > $o['max_qty'])) {
+			continue;
+		}
+		if (null !== $o['max_both_sides'] && is_array($size) && min($size) > 0 && min($size) > $o['max_both_sides']) {
 			continue;
 		}
 		$open[$o['value']] = $o;
@@ -428,21 +475,29 @@ function wholesale_turnaround_choice($spec, $value, $quantity)
 	if (!$open) {
 		return 'No production time is available for this quantity. Please contact us.';
 	}
-	$labels = implode(' or ', wp_list_pluck(array_values($open), 'label'));
+	// Suggest only choices open right now (a greyed-out Free Same Day is no help).
+	$now_open = array_filter($open, 'wholesale_turnaround_open_now');
+	$labels = implode(' or ', wp_list_pluck(array_values($now_open ?: $open), 'label'));
 	if ('' === $value) {
+		// B2Sign's own default (Next Day) when it is open, else the first choice open now.
 		foreach ($open as $o) {
-			if (0 !== $o['days'] || '' === $o['cutoff'] || wholesale_before_pacific_time($o['cutoff'])) {
+			if ($o['default'] && wholesale_turnaround_open_now($o)) {
+				return $o;
+			}
+		}
+		foreach ($open as $o) {
+			if (wholesale_turnaround_open_now($o)) {
 				return $o;
 			}
 		}
 		return reset($open);
 	}
 	if (!isset($open[$value])) {
-		return sprintf('That production time is not available for %d items. Please choose %s.', $quantity, $labels);
+		return sprintf('That production time is not available for this order. Please choose %s.', $labels);
 	}
 	$o = $open[$value];
-	if (0 === $o['days'] && '' !== $o['cutoff'] && !wholesale_before_pacific_time($o['cutoff'])) {
-		return sprintf('%s is only available on weekdays before %s PST. Please choose another production time.', $o['label'], date('g:ia', strtotime($o['cutoff'])));
+	if (!wholesale_turnaround_open_now($o)) {
+		return sprintf('%s is only available on business days before %s PST. Please choose another production time.', $o['label'], date('g:ia', strtotime($o['time_gate'])));
 	}
 	return $o;
 }
@@ -1120,13 +1175,22 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	// Per-product production times mirrored from B2Sign (meta _turnaround_spec): which choices a quantity
 	// allows, their Pacific cut-off and their surcharge. Products without it keep Next Day / Same Day +100%.
 	$turnaround_spec = $is_cl ? array() : wholesale_product_turnaround_spec($product_id);
+	// What each choice would add at this price, for the "+$8.00" / "Free" B2Sign shows next to each one.
+	$turnaround_options = array();
 	if ($turnaround_spec) {
-		$chosen = wholesale_turnaround_choice($turnaround_spec, (string) ($request['turnaround_option'] ?? ''), $quantity);
+		$typed = $width_ft > 0 && $height_ft > 0 ? array($width_ft * 12, $height_ft * 12) : null;
+		$chosen = wholesale_turnaround_choice($turnaround_spec, (string) ($request['turnaround_option'] ?? ''), $quantity, $typed);
 		if (is_string($chosen)) {
 			return $fail($chosen);
 		}
 		$turnaround = $subtotal * $chosen['percent'] / 100;
 		$turnaround_label = $chosen['label'];
+		foreach ($turnaround_spec as $o) {
+			$turnaround_options[$o['value']] = round($subtotal * $o['percent'] / 100, 2);
+		}
+	} elseif (!$is_cl && wholesale_product_turnaround_none($product_id)) {
+		// B2Sign offers no production-time choice for this product (hardware): nothing to choose or charge.
+		$turnaround = 0.0;
 	} elseif (!$is_cl && isset($request['turnaround_option']) && 'same_day' === $request['turnaround_option']) {
 		if (!wholesale_same_day_available()) {
 			return $fail('Same-day production is only available for orders placed before 12pm PST. Please choose Next Day.');
@@ -1151,6 +1215,8 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		'turnaround' => round($turnaround, 2),
 		// The production time's name when the product has its own choices (cart and order show it).
 		'turnaround_label' => $turnaround_label,
+		// Each choice's charge at this price (value => dollars), for the amounts next to the choices.
+		'turnaround_options' => $turnaround_options,
 		'total' => round($subtotal - $discount + $turnaround, 2),
 		// The minimum order price when it replaced the calculator price, else 0.
 		'minimum_order' => $minimum_order,

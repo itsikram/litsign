@@ -1761,6 +1761,15 @@
           showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
           turnaroundRow.hidden = !(quote.turnaround > 0);
           turnaroundRow.querySelector('.price-turnaround').textContent = money(quote.turnaround);
+          turnaroundRow.querySelector('.fs-6').textContent = quote.turnaround_label ? quote.turnaround_label + ' production' : 'Same-day production';
+          // Each production-time choice's charge at this price, as B2Sign shows it: "+$8.00" or "Free".
+          if (quote.turnaround_options) {
+            form.querySelectorAll('[data-turnaround-option]').forEach((el) => {
+              const amount = quote.turnaround_options[el.dataset.value];
+              const label = el.querySelector('[data-turnaround-price]');
+              if (label && typeof amount === 'number') label.textContent = amount > 0 ? '+$' + money(amount) : 'Free';
+            });
+          }
           // The add-to-cart handler applies the discount to this value before submitting.
           form.querySelectorAll('#totalCost').forEach((input) => { input.value = quote.subtotal.toFixed(2); });
           addButtons.forEach((button) => { button.disabled = false; });

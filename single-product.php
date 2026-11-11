@@ -1090,7 +1090,7 @@ get_header();
                     <?php if ($product_category_slug  != 'channel-letters') { ?>
                     <?php // Production times mirrored from B2Sign (SFS B2Sign Sync) replace the default Next Day / Same Day choices.
                     $sfs_turnaround = function_exists('wholesale_product_turnaround_spec') ? wholesale_product_turnaround_spec(get_the_ID()) : array();
-                    if ($sfs_turnaround) { wholesale_render_turnaround_choices($sfs_turnaround); } else { ?>
+                    if ($sfs_turnaround) { wholesale_render_turnaround_choices($sfs_turnaround); } elseif (function_exists('wholesale_product_turnaround_none') && wholesale_product_turnaround_none(get_the_ID())) { /* B2Sign offers no production-time choice (hardware): none here either. */ } else { ?>
 
                         <div class="row d-fex align-items-center  my-2 mt-3">
                             <div class="col-md-3 col-4">

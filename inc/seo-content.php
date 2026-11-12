@@ -1126,8 +1126,8 @@ function wholesale_seo_category_from_skipped()
 
 /**
  * A category's "From" price for a sign-type card, as the category page shows its
- * cheapest product: whole dollars rounded up (wholesale_whole_dollars()) plus the
- * unit, e.g. array('$126', '/letter'), array('$2', '/sq ft'), array('$42', '').
+ * cheapest product: the exact amount without ".00" (wholesale_whole_dollars(), no
+ * rounding since 2026-11-12) plus the unit, e.g. array('$1.58', '/sq ft'), array('$42', '').
  * Channel letters: the cheapest per-letter price of any style in the category.
  *
  * @return array array(amount, unit), or an empty array.
@@ -1218,15 +1218,18 @@ function wholesale_seo_letter_height_range($slug)
  * at the smallest height without a power supply. Product structured data uses
  * it so Google sees the same price the page and cart charge.
  *
+ * @param bool $fresh Work it out again instead of using this request's earlier answer
+ *                    (SFS B2Sign Sync prices proposed values before saving them).
  * @return float 0 when the product has no online price.
  */
-function wholesale_seo_product_lowest_price($product_id)
+function wholesale_seo_product_lowest_price($product_id, $fresh = false)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
-	if (isset($cache[$product_id])) {
+	if (!$fresh && isset($cache[$product_id])) {
 		return $cache[$product_id];
 	}
+	unset($GLOBALS['wholesale_seo_lowest_quote'][$product_id]);
 
 	$cache[$product_id] = 0.0;
 	if (!function_exists('wholesale_price_quote')) {

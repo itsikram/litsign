@@ -172,10 +172,6 @@
                             <li><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($label); ?></a></li>
                         <?php endforeach; ?>
                     </ul>
-                    <button type="button" class="sf-review-btn" id="feedbackmodalTrigger" data-bs-toggle="modal" data-bs-target="#feedbackModal">
-                        <?php echo $footer_icon('star'); // Static SVG. ?>
-                        Leave a Review
-                    </button>
                 </nav>
 
                 <div class="sf-col sf-contact">

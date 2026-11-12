@@ -207,6 +207,9 @@
   border: 1px solid var(--sc-line);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.85);
+  /* Own color: the hero photo layer (inc/hero-images.php) turns .sc-hero text
+     white, and these cards stay white, so the subtitle must not inherit it. */
+  color: var(--sc-muted);
   font-size: 0.9rem;
   line-height: 1.35;
 }

@@ -47,6 +47,7 @@ require_once(dirname(__FILE__) . '/inc/site-timezone.php');
 require_once(dirname(__FILE__) . '/inc/orders.php');
 require_once(dirname(__FILE__) . '/inc/reviews.php');
 require_once(dirname(__FILE__) . '/inc/review-manager.php');
+require_once(dirname(__FILE__) . '/inc/google-review-links.php');
 // inc/review-pricing.php (the "Review Product Sale Pricing" tool) is retired: it raised
 // regular prices to create crossed-out "was" prices nobody paid. Sales now come only from
 // the dated promotion under Settings > Storefront Sign. Its per-product snapshots of the
@@ -55,6 +56,7 @@ require_once(dirname(__FILE__) . '/inc/order-reviews.php');
 require_once(dirname(__FILE__) . '/inc/review-requests.php');
 require_once(dirname(__FILE__) . '/inc/pricing.php');
 require_once(dirname(__FILE__) . '/inc/stock-status.php');
+require_once(dirname(__FILE__) . '/inc/product-bulk-status.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');
 require_once(dirname(__FILE__) . '/inc/mini-cart.php');
 require_once(dirname(__FILE__) . '/inc/admin-orders.php');

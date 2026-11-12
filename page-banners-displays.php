@@ -139,7 +139,8 @@ wholesale_seo_prime_products(array_merge(
 	array('banner-a-banner-frame', 'deluxe-retractable-insert-stand', 'teardrop-flag-pole', 'table-top-banner-stand')
 ));
 
-$vinyl_price = wholesale_seo_product_starting_text('13oz-vinyl-banner');
+// Whole dollars like the cards: since 2026-11-12 Starting at is the cheapest real order ("$28.00 per item"), not a per ft² rate.
+$vinyl_price = $card_price(wholesale_seo_product_starting_text('13oz-vinyl-banner'));
 
 // Ad group headlines (?type=key): headline, lead, the product the hero button opens,
 // and the product line card (anchor id) shown first. Anything else shows the default

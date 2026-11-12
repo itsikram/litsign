@@ -4808,7 +4808,7 @@ function wholesale_vi_md_business()
 	$md .= "- Never say or imply the company installs signs, or has shops or offices outside Renton, WA. No made-up reviews, ratings, customer counts, addresses or projects.\n";
 	$md .= "- Each product uses its own word (banner, display, decal, flag, print); \"sign\" is for channel letters and sign products. `wholesale_product_noun()` in `inc/pricing.php` picks it.\n";
 	$md .= "- Sizes are always written width × height.\n";
-	$md .= "- \"Starting at\" prices on product cards are whole dollars, rounded up (`wholesale_price_no_cents()`); product pages, the builder and checkout keep cents.\n";
+	$md .= "- \"Starting at\" prices on product cards are exact, as on the product page, only without \".00\" (`wholesale_price_no_cents()`, no rounding since 2026-11-12).\n";
 	$md .= "- No permanent sale badges or crossed-out prices. Discounts come only from the dated promotion in Settings → Storefront Sign.\n";
 	$md .= "- Channel letter price rules live in both `js/cl.js` (what the builder shows) and `inc/pricing.php` (what the cart charges): change both together.\n";
 	$md .= "- The theme owns SEO (titles, meta, schema, sitemaps); Rank Math is not used.\n";

@@ -1384,6 +1384,8 @@ get_header();
     $product_review_data = wholesale_product_review_data($product_id);
     $show_product_reviews = wholesale_setting_enabled('show_product_reviews');
     $product_reviews = wholesale_product_reviews($product_id, 6);
+    // Google reviews the owner linked to this product (inc/google-review-links.php); never in the schema.
+    $product_google_reviews_html = function_exists('wholesale_product_google_reviews_html') ? wholesale_product_google_reviews_html($product_id) : '';
     $review_eligibility = wholesale_setting_enabled('allow_verified_reviews') ? wholesale_review_eligibility_from_request($product_id) : array('order' => 0, 'reason' => 'none');
     $can_review_product = $review_eligibility['order'] > 0;
     $review_status = isset($_GET['review_status']) ? sanitize_key(wp_unslash($_GET['review_status'])) : '';
@@ -1462,9 +1464,10 @@ get_header();
             <?php if ($product_review_data['count'] > count($product_reviews)) : ?>
                 <p class="product-review-more"><a href="<?php echo esc_url(wholesale_reviews_page_url(array('review_product' => $product_id))); ?>">See all <?php echo esc_html(number_format_i18n($product_review_data['count'])); ?> reviews for this product &rarr;</a></p>
             <?php endif; ?>
-        <?php else : ?>
+        <?php elseif (!$product_google_reviews_html) : ?>
             <p class="product-review-note">No reviews for this product yet.</p>
         <?php endif; ?>
+        <?php echo $product_google_reviews_html; // Escaped in wholesale_product_google_reviews_html(). ?>
         <?php if ($can_review_product) : ?>
             <div class="product-review-form-card" id="write-review">
                 <h3>Share your experience</h3>

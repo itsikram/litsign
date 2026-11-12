@@ -229,9 +229,16 @@ function wholesale_product_group_assets()
 	wp_enqueue_script('wholesale-product-group-swap', get_template_directory_uri() . $path, array(), file_exists($file) ? (string) filemtime($file) : '1', array('in_footer' => true, 'strategy' => 'defer'));
 	wp_add_inline_style(
 		'wholesale-ui-polish',
-		'.product-details.is-swapping #product-options,.product-details.is-swapping .pd-hero{opacity:.55;transition:opacity .15s ease .1s;pointer-events:none}'
-		. '.product-group-item.is-loading .product-group-item-link{cursor:progress}'
-		. '@media (prefers-reduced-motion:reduce){.product-details.is-swapping #product-options,.product-details.is-swapping .pd-hero{transition:none}}'
+		'.product-details.is-swapping #product-options,.product-details.is-swapping .pd-hero{opacity:.55;transition:opacity .15s ease;pointer-events:none}'
+		. '.product-group-item.is-loading .product-group-item-link{cursor:progress;position:relative}'
+		// Small ring inside the tapped button.
+		. '.product-group-item.is-loading .product-group-item-link::after{content:"";position:absolute;right:10px;top:50%;width:16px;height:16px;margin-top:-8px;border:2px solid rgba(31,168,222,.25);border-top-color:#1fa8de;border-radius:50%;animation:pgs-spin .7s linear infinite}'
+		// Screen-centre spinner (js/product-group-swap.js adds it to the body).
+		. '.pgs-spinner{position:fixed;left:50%;top:50%;z-index:99990;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 20px;border-radius:12px;background:rgba(255,255,255,.96);box-shadow:0 8px 30px rgba(15,23,42,.18);color:#0f172a;font-size:14px;font-weight:600;transform:translate(-50%,-50%) scale(.92);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease,transform .12s ease,visibility 0s linear .12s}'
+		. '.pgs-spinner.is-on{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1);transition:opacity .12s ease,transform .12s ease}'
+		. '.pgs-spinner__ring{width:38px;height:38px;border:4px solid rgba(31,168,222,.2);border-top-color:#1fa8de;border-radius:50%;animation:pgs-spin .7s linear infinite}'
+		. '@keyframes pgs-spin{to{transform:rotate(360deg)}}'
+		. '@media (prefers-reduced-motion:reduce){.product-details.is-swapping #product-options,.product-details.is-swapping .pd-hero,.pgs-spinner{transition:none}.pgs-spinner__ring,.product-group-item.is-loading .product-group-item-link::after{animation-duration:1.6s}}'
 	);
 }
 add_action('wp_enqueue_scripts', 'wholesale_product_group_assets', 110); // After css/ui-polish.css (100).

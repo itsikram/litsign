@@ -97,18 +97,22 @@ function wholesale_emphasize_price($html)
 }
 
 /**
- * Whole-dollar amount for card and comparison "starting at" prices. Rounds up so the
- * shown price is never below what the customer pays: 1.98 -> "$2", 27.00 -> "$27".
+ * Card and comparison "starting at" amount, exactly as the product page shows it, only
+ * without a ".00": 1.58 -> "$1.58", 13.98 -> "$13.98", 16.00 -> "$16". Owner 2026-11-12:
+ * "I don't need you to round" (the banners card read "$2" while its product page said
+ * $1.58 per ft²); before that, card prices were rounded up to whole dollars.
  */
 function wholesale_whole_dollars($amount)
 {
-	return '$' . number_format(ceil(round((float) $amount, 2)));
+	$amount = round((float) $amount, 2);
+
+	return '$' . (abs($amount - round($amount)) < 0.005 ? number_format($amount) : number_format($amount, 2));
 }
 
 /**
- * Drops the cents from every dollar amount in "starting at" text, e.g.
- * "<del>$2.26</del> $1.98 per ft<sup>2</sup>" -> "<del>$3</del> $2 per ft<sup>2</sup>".
- * A struck-through price that rounds to the current price is removed.
+ * Every dollar amount in "starting at" text in the card form above (exact, no ".00"),
+ * e.g. "<del>$2.26</del> $1.98 per ft<sup>2</sup>" stays as it is and "$16.00 per item"
+ * reads "$16 per item". A struck-through price equal to the current price is removed.
  */
 function wholesale_price_no_cents($html)
 {
@@ -119,7 +123,7 @@ function wholesale_price_no_cents($html)
 		return wholesale_whole_dollars(str_replace(',', '', $m[1]));
 	}, (string) $html);
 
-	if (preg_match('/<del\b[^>]*>[^$<]*(\$[\d,]+)\s*<\/del>/i', $html, $was) && preg_match_all('/\$[\d,]+/', wp_strip_all_tags(preg_replace('/<del\b.*?<\/del>/is', '', $html)), $now) && end($now[0]) === $was[1]) {
+	if (preg_match('/<del\b[^>]*>[^$<]*(\$[\d,]+(?:\.\d+)?)\s*<\/del>/i', $html, $was) && preg_match_all('/\$[\d,]+(?:\.\d+)?/', wp_strip_all_tags(preg_replace('/<del\b.*?<\/del>/is', '', $html)), $now) && end($now[0]) === $was[1]) {
 		$html = trim(preg_replace('/<del\b.*?<\/del>\s*/is', '', $html));
 	}
 

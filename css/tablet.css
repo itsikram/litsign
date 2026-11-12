@@ -32,8 +32,10 @@
   max-width: none;
 }
 
+/* The desktop-style header (.ssx-container, landscape) prints its CSS inside the
+   page body, after this file, hence the extra "body". */
 .container,
-.ssx-container {
+body .ssx-container {
   padding-left: var(--tab-gutter);
   padding-right: var(--tab-gutter);
 }
@@ -180,6 +182,48 @@
   }
 }
 
+/* ---------- 4b. Shop page (/shop/) ---------- */
+/* Landscape: the 272px filter column left two product columns. A slimmer filter
+   column fits three, like the category pages. (Portrait already hides the
+   filters behind the Filters button and shows three columns.) */
+@media (min-width: 992px) {
+  .sc-layout {
+    grid-template-columns: 244px minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .sc-grid:not(.sc-grid--list) {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+}
+
+/* ---------- 4c. Search results (search.php) ----------
+   search.php prints its CSS inline in the page body, after this file, so these
+   rules carry an extra "body" to win. Portrait had two very large cards per row
+   and content 12px from the edge. */
+body .srp-container {
+  padding-left: var(--tab-gutter);
+  padding-right: var(--tab-gutter);
+}
+
+body .srp-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+/* Price and "View product" each stay on one line; the link drops under the
+   price when both do not fit, instead of both wrapping into two-line stacks. */
+body .srp-card__foot {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+body .srp-price,
+body .srp-more {
+  white-space: nowrap;
+}
+
 /* ---------- 5. Product page ---------- */
 /* The photo column was a third of the width in portrait, and every option label
    with its help text was squeezed into a ~100px column beside its dropdown
@@ -246,6 +290,28 @@
 
 .product-details .pd-hero .product-gallery-container > .gallery-image-item {
   scroll-snap-align: start;
+}
+
+/* Portrait: quantity | Add To Cart | Buy Now did not fit the ~460px column, so
+   "Add To Cart" broke onto two lines. Same arrangement as phones: quantity and
+   Add To Cart, then a full-width Buy Now. */
+@media (max-width: 991.98px) {
+  .product-details .pd-actions {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .product-details .pd-actions--note {
+    grid-template-areas:
+      "qty cart"
+      "note note"
+      "buy buy";
+  }
+
+  .product-details .pd-actions .buy-now-btn {
+    grid-column: 1 / -1;
+    min-height: 50px;
+    font-size: 17px;
+  }
 }
 
 /* Long-form sections under the buy box: same reading measure as the guide pages. */

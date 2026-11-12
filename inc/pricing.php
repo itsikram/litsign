@@ -1614,21 +1614,38 @@ function wholesale_starting_text_for_sale($product_id, $text)
 /**
  * The cheapest way to buy one of a product: the smallest-size quote Google gets
  * (wholesale_seo_product_lowest_price, default choices), then every choice of each
- * option on its own, then the cheapest choice of every option together. 0 when the
- * product has no online price.
+ * option on its own, then the cheapest choice of every option together.
+ *
+ * @return array array('total' => what checkout charges now, after any dated sale and
+ *               the default production time; 'everyday' => the same order before the
+ *               dated sale, with the free production time every product offers).
+ *               Zeros when the product has no online price.
+ * @param bool $fresh Work it out again instead of using this request's earlier answer:
+ *                    SFS B2Sign Sync prices its proposed values this way, so the
+ *                    "Starting at" it saves is exactly what the storefront shows.
  */
-function wholesale_product_cheapest_price($product_id)
+function wholesale_product_cheapest_quote($product_id, $fresh = false)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
-	if (isset($cache[$product_id])) {
+	if (!$fresh && isset($cache[$product_id])) {
 		return $cache[$product_id];
 	}
-	$lowest = function_exists('wholesale_seo_product_lowest_price') ? (float) wholesale_seo_product_lowest_price($product_id) : 0.0;
-	$request = $GLOBALS['wholesale_seo_lowest_quote'][$product_id]['request'] ?? null;
-	if ($lowest <= 0 || !is_array($request)) {
-		return $cache[$product_id] = $lowest;
+	$lowest = function_exists('wholesale_seo_product_lowest_price') ? (float) wholesale_seo_product_lowest_price($product_id, $fresh) : 0.0;
+	$first = $GLOBALS['wholesale_seo_lowest_quote'][$product_id] ?? null;
+	if ($lowest <= 0 || !is_array($first) || !is_array($first['request'] ?? null)) {
+		return $cache[$product_id] = array('total' => round($lowest, 2), 'everyday' => round($lowest, 2));
 	}
+	$request = $first['request'];
+	$best = array('total' => $lowest, 'everyday' => (float) $first['everyday'] > 0 ? (float) $first['everyday'] : $lowest);
+	$keep = static function ($quote) use (&$best) {
+		if (!empty($quote['ok']) && $quote['total'] > 0) {
+			$best['total'] = min($best['total'], (float) $quote['total']);
+			if ($quote['everyday'] > 0) {
+				$best['everyday'] = min($best['everyday'], (float) $quote['everyday']);
+			}
+		}
+	};
 	$pick = array();
 	foreach (wholesale_product_price_attrs($product_id) as $attr) {
 		$options = wholesale_attr_options($attr);
@@ -1638,57 +1655,167 @@ function wholesale_product_cheapest_price($product_id)
 		$low = null;
 		foreach ($options as $option) {
 			$quote = wholesale_price_quote($product_id, array_merge($request, array($attr['name'] => $option['value'])));
+			$keep($quote);
 			if (!empty($quote['ok']) && $quote['total'] > 0 && (null === $low || $quote['total'] < $low[0])) {
 				$low = array((float) $quote['total'], $option['value']);
 			}
 		}
 		if ($low) {
-			$lowest = min($lowest, $low[0]);
 			$pick[$attr['name']] = $low[1];
 		}
 	}
 	if (count($pick) > 1) {
-		$quote = wholesale_price_quote($product_id, array_merge($request, $pick));
-		if (!empty($quote['ok']) && $quote['total'] > 0) {
-			$lowest = min($lowest, (float) $quote['total']);
+		$keep(wholesale_price_quote($product_id, array_merge($request, $pick)));
+	}
+	return $cache[$product_id] = array('total' => round($best['total'], 2), 'everyday' => round($best['everyday'], 2));
+}
+
+/**
+ * What checkout charges now for the cheapest way to buy one of a product (see
+ * wholesale_product_cheapest_quote()). 0 when the product has no online price.
+ */
+function wholesale_product_cheapest_price($product_id)
+{
+	$cheapest = wholesale_product_cheapest_quote($product_id);
+
+	return $cheapest['total'];
+}
+
+/**
+ * A product's "Starting at" amount before any dated sale: the cheapest price checkout
+ * actually charges for one of it (owner 2026-11-12: "starting at" is the real lowest
+ * cost, e.g. 13oz Vinyl Banner $28.00 at its smallest size, not the $1.58 per ft² rate
+ * only large sizes reach). Channel letters use their own per-inch text instead.
+ *
+ * Kept in the option sfs_starting_price_cache with a fingerprint of everything the price
+ * is built from (the product's meta and status, and this pricing code), so it is worked
+ * out again as soon as a price, option, minimum or discount changes, whoever changed it
+ * (product editor, B2Sign Sync, Price Adjuster, a database push), and not on every page.
+ *
+ * @return float 0 when the product has no online price.
+ */
+function wholesale_product_starting_everyday($product_id)
+{
+	static $store = null;
+	static $dirty = false;
+	$product_id = (int) $product_id;
+	if (!$product_id) {
+		return 0.0;
+	}
+	if (null === $store) {
+		$store = get_option('sfs_starting_price_cache', array());
+		$store = is_array($store) ? $store : array();
+		add_action('shutdown', static function () use (&$store, &$dirty) {
+			if ($dirty) {
+				update_option('sfs_starting_price_cache', $store, false);
+			}
+		});
+	}
+	$meta = get_post_meta($product_id);
+	unset($meta['_edit_lock'], $meta['_edit_last'], $meta['_starting_at_text'], $meta['_wholesale_review_pricing_snapshot']);
+	foreach (array_keys((array) $meta) as $key) {
+		if (0 === strpos($key, 'rank_math_')) {
+			unset($meta[$key]);
 		}
 	}
-	return $cache[$product_id] = round($lowest, 2);
+	ksort($meta);
+	static $code = null;
+	if (null === $code) {
+		$code = @filemtime(__FILE__) . '|' . @filemtime(__DIR__ . '/seo-content.php');
+	}
+	$fingerprint = md5(serialize($meta) . '|' . get_post_status($product_id) . '|' . $code);
+	if (isset($store[$product_id]['fp'], $store[$product_id]['everyday']) && $fingerprint === $store[$product_id]['fp']) {
+		return (float) $store[$product_id]['everyday'];
+	}
+	$cheapest = wholesale_product_cheapest_quote($product_id);
+	$store[$product_id] = array('fp' => $fingerprint, 'everyday' => (float) $cheapest['everyday']);
+	$dirty = true;
+
+	return (float) $cheapest['everyday'];
+}
+
+/**
+ * "$1.58 per ft<sup>2</sup>": the rate the cart charges per sq ft (the product's price per
+ * sq ft after its own discount), for a product with the size calculator shown. '' for
+ * any other product.
+ */
+function wholesale_product_sqft_starting_text($product_id)
+{
+	$rate = (float) get_post_meta($product_id, '_price_per_sqft', true);
+	if ($rate <= 0 || get_post_meta($product_id, '_hide_calculator', true)) {
+		return '';
+	}
+	$discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
+
+	return '$' . number_format(round($rate * (100 - $discount) / 100, 2), 2) . ' per ft<sup>2</sup>';
+}
+
+/**
+ * The "Starting at" text to store and show for a product, in the unit B2Sign's own card
+ * shows it in (owner 2026-11-12: "if B2Sign shows Starting at per sq ft, we show it per
+ * ft² too"): the per sq ft rate the cart charges ("$1.58 per ft²") for a size calculator
+ * product whose stored text says per ft² (SFS B2Sign Sync writes it so), otherwise the
+ * cheapest price checkout charges for one item before any dated sale ("$16.00 per item").
+ * '' for channel letters (per inch, wholesale_cl_starting_text()) and for products with
+ * no online price.
+ *
+ * @param string|null $unit  'sqft' or 'item'; null follows the stored text.
+ * @param bool        $fresh Work the item price out again instead of using the cache
+ *                           (SFS B2Sign Sync prices proposed values this way).
+ */
+function wholesale_product_starting_text($product_id, $unit = null, $fresh = false)
+{
+	if (wholesale_product_is_channel_letter($product_id)) {
+		return '';
+	}
+	if (null === $unit) {
+		// All meta at once: a single-key read would go through the storefront filter below.
+		$meta = get_post_meta($product_id);
+		$unit = preg_match('/per\s*(ft|sq)/i', wp_strip_all_tags((string) ($meta['_starting_at_text'][0] ?? ''))) ? 'sqft' : 'item';
+	}
+	if ('sqft' === $unit) {
+		$text = wholesale_product_sqft_starting_text($product_id);
+		if ('' !== $text) {
+			return $text;
+		}
+	}
+	if ($fresh) {
+		$cheapest = wholesale_product_cheapest_quote($product_id, true);
+		$everyday = (float) $cheapest['everyday'];
+	} else {
+		$everyday = wholesale_product_starting_everyday($product_id);
+	}
+
+	return $everyday > 0 ? '$' . number_format($everyday, 2) . ' per item' : '';
 }
 
 /**
  * On the storefront, every reader of a product's _starting_at_text (cards, category
  * pages, comparison tables, the builder's product switcher) gets the text shoppers
- * should see: the computed per-letter text above for channel letters, the stored text
- * through wholesale_starting_text_for_sale() for everything else. The admin editor
- * still shows and saves the stored value.
+ * should see: the computed per-inch text above for channel letters, and for every other
+ * product with an online price the live per ft² rate or cheapest item price, in the unit
+ * its stored text names (wholesale_product_starting_text()), through
+ * wholesale_starting_text_for_sale(). Only a product with no online
+ * price shows its stored text. The admin editor still shows and saves the stored value.
  */
 add_filter('get_post_metadata', function ($value, $object_id, $meta_key) {
 	static $reading = false;
+	if ('_starting_at_text' === $meta_key && !empty($GLOBALS['wholesale_starting_raw_read'][(int) $object_id])) {
+		// update_post_meta()'s own "has it changed?" read (see the update_post_metadata hook below).
+		unset($GLOBALS['wholesale_starting_raw_read'][(int) $object_id]);
+		return $value;
+	}
 	if ($reading || '_starting_at_text' !== $meta_key || null !== $value || (is_admin() && !wp_doing_ajax()) || 'product' !== get_post_type($object_id)) {
 		return $value;
 	}
 	$text = wholesale_product_is_channel_letter($object_id) ? wholesale_cl_starting_text($object_id) : '';
 	if ('' === $text) {
 		$reading = true;
-		$stored = (string) get_post_meta($object_id, '_starting_at_text', true);
-		$reading = false;
-		// Size calculator products: always the per sq ft rate the cart charges (after the
-		// product's own discount), so the text can't fall behind a rate change.
-		$rate = (float) get_post_meta($object_id, '_price_per_sqft', true);
-		if ($rate > 0 && !get_post_meta($object_id, '_hide_calculator', true) && ('' === $stored || preg_match('/per\s*(ft|sq)/i', $stored))) {
-			$discount = min(100, max(0, (float) get_post_meta($object_id, '_discount_percent', true)));
-			$stored = '$' . number_format(round($rate * (100 - $discount) / 100, 2), 2) . ' per ft<sup>2</sup>';
-		} elseif (get_post_meta($object_id, '_hide_calculator', true) && preg_match('/per\s*(ft|sq)/i', $stored) && function_exists('wholesale_seo_product_lowest_price')) {
-			// Preset sizes (Table Runner, DTF): no one can buy at the per sq ft rate, so show the
-			// cheapest real price (owner 2026-11-08: the cheapest choice, not the default one).
-			$reading = true;
-			$lowest = wholesale_product_cheapest_price($object_id);
-			$reading = false;
-			if ($lowest > 0) {
-				$stored = '$' . number_format($lowest, 2) . ' per item';
-			}
+		$stored = wholesale_product_starting_text($object_id);
+		if ('' === $stored) {
+			$stored = (string) get_post_meta($object_id, '_starting_at_text', true);
 		}
+		$reading = false;
 		if ('' === $stored) {
 			return $value;
 		}
@@ -1699,6 +1826,31 @@ add_filter('get_post_metadata', function ($value, $object_id, $meta_key) {
 
 	return array($text);
 }, 10, 3);
+
+/**
+ * update_post_meta() first reads the current value to skip a save that changes nothing,
+ * and outside wp-admin that read went through the filter above, which returns the shown
+ * text. Saving exactly that text (SFS B2Sign Sync from a REST or cron request, a CLI fix)
+ * then looked unchanged and was silently dropped (found 2026-11-12). The read that follows
+ * this hook gets the stored value; the flag is cleared if no read happens.
+ */
+add_filter('update_post_metadata', function ($check, $object_id, $meta_key) {
+	if (null === $check && '_starting_at_text' === $meta_key) {
+		$GLOBALS['wholesale_starting_raw_read'][(int) $object_id] = true;
+	}
+
+	return $check;
+}, PHP_INT_MAX, 3);
+add_action('update_post_meta', static function ($meta_id, $object_id, $meta_key) {
+	if ('_starting_at_text' === $meta_key) {
+		unset($GLOBALS['wholesale_starting_raw_read'][(int) $object_id]);
+	}
+}, 10, 3);
+add_action('add_post_meta', static function ($object_id, $meta_key) {
+	if ('_starting_at_text' === $meta_key) {
+		unset($GLOBALS['wholesale_starting_raw_read'][(int) $object_id]);
+	}
+}, 10, 2);
 
 /**
  * Whole-number percentage for a product's sale badge: the dated sale running now,

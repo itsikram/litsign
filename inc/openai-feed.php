@@ -20,7 +20,8 @@
  */
 
 // v2 (2026-11-12): product group options as variants. A new name drops the old cached file.
-const WHOLESALE_OPENAI_FEED_CACHE = 'wholesale_openai_feed_v2';
+// v3 (2026-11-12): exchanges, privacy/terms URLs, is_digital, size dimensions.
+const WHOLESALE_OPENAI_FEED_CACHE = 'wholesale_openai_feed_v3';
 
 function wholesale_openai_feed_rewrite()
 {
@@ -70,6 +71,13 @@ function wholesale_openai_feed_record($row)
 		'target_countries' => array('US'),
 		'store_country' => 'US',
 		'return_policy' => home_url('/shipping-returns/'),
+		// accepts_returns is left out on purpose: the policy is "defective or incorrect
+		// orders are reprinted or refunded, correct made-to-order items can't be returned",
+		// which neither true (needs a return window) nor false states correctly.
+		'accepts_exchanges' => false,
+		'seller_privacy_policy' => home_url('/privacy-policy/'),
+		'seller_tos' => home_url('/terms-conditions/'),
+		'is_digital' => false,
 	);
 	if ($row['gallery']) {
 		$record['additional_image_urls'] = array_values($row['gallery']);
@@ -96,6 +104,10 @@ function wholesale_openai_feed_record($row)
 		$record['group_id'] = $row['group_id'] . '-sizes';
 		$record['listing_has_variations'] = true;
 		$record['variant_dict'] = array('Size' => (string) $row['size']);
+		// "24 x 36 in" (width first) also as structured dimensions.
+		if (preg_match('/^\s*(\d+(?:\.\d+)?)\s*x\s*(\d+(?:\.\d+)?)\s*in\s*$/i', (string) $row['size'], $match)) {
+			$record['dimensions'] = array('width' => $match[1], 'height' => $match[2], 'unit' => 'in');
+		}
 	} elseif (!empty($row['option_group'])) {
 		// One product page with option buttons ("Graphic + Frame" / "Graphic Only",
 		// inc/product-group-swap.php): the options are variants of one listing. Each keeps

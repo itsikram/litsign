@@ -142,6 +142,21 @@
     if (edit && ownEdit) ownEdit.setAttribute('href', edit.getAttribute('href'));
   };
 
+  // The screen-centre spinner (styles: inc/product-group-swap.php). Fixed to the viewport, so
+  // it shows wherever the visitor has scrolled; it never takes clicks.
+  var SPIN_MIN = 350;
+  var spinnerEl = null;
+  var spinner = function (on) {
+    if (on && !spinnerEl) {
+      spinnerEl = document.createElement('div');
+      spinnerEl.className = 'pgs-spinner';
+      spinnerEl.setAttribute('role', 'status');
+      spinnerEl.innerHTML = '<span class="pgs-spinner__ring" aria-hidden="true"></span><span class="pgs-spinner__text">Loading…</span>';
+      document.body.appendChild(spinnerEl);
+    }
+    if (spinnerEl) spinnerEl.classList.toggle('is-on', Boolean(on));
+  };
+
   var latest = 0;
   // url: the group link the address bar shows; from: the page that has its product block.
   var swap = function (url, from, push, link) {
@@ -160,12 +175,20 @@
         item.classList.toggle('is-loading', on);
       });
     }
-    // Dim the old options only when the new ones are not ready yet.
-    var dim = window.setTimeout(function () { if (ticket === latest) current.classList.add('is-swapping'); }, 60);
+    // Loading spinner: in the chosen button and in the middle of the screen, over the dimmed
+    // options. It stays at least SPIN_MIN ms so a swap that is ready at once still reads as
+    // "changing" instead of a jump.
+    var started = Date.now();
+    current.classList.add('is-swapping');
+    spinner(true);
 
     load(from, false).then(function (doc) {
-      window.clearTimeout(dim);
       if (ticket !== latest) return;
+      var wait = SPIN_MIN - (Date.now() - started);
+      return wait > 0 ? new Promise(function (done) { window.setTimeout(function () { done(doc); }, wait); }) : doc;
+    }).then(function (doc) {
+      if (!doc || ticket !== latest) return;
+      spinner(false);
       var next = doc.querySelector(SELECTOR);
 
       var apply = function () {
@@ -195,7 +218,7 @@
       // Straight swap, like B2Sign: a crossfade's snapshot alone cost ~150 ms per tap.
       apply();
     }).catch(function () {
-      window.clearTimeout(dim);
+      // The spinner stays up while the browser opens the link instead.
       if (ticket === latest) window.location.assign(url);
     });
   };

@@ -140,6 +140,9 @@ function wholesale_fetch_google_reviews($force_refresh = false)
 			'photo' => isset($review['authorAttribution']['photoUri']) ? $review['authorAttribution']['photoUri'] : '',
 			'when' => isset($review['relativePublishTimeDescription']) ? $review['relativePublishTimeDescription'] : '',
 			'url' => isset($review['googleMapsUri']) ? $review['googleMapsUri'] : '',
+			// For linking reviews to products (inc/google-review-links.php).
+			'id' => isset($review['name']) ? (string) $review['name'] : '',
+			'date' => !empty($review['publishTime']) && ($published = strtotime(substr((string) $review['publishTime'], 0, 19) . 'Z')) ? wp_date('Y-m-d', $published) : '',
 		);
 	}
 
@@ -154,6 +157,7 @@ function wholesale_fetch_google_reviews($force_refresh = false)
 
 	set_transient(WHOLESALE_GOOGLE_REVIEWS_TRANSIENT, $data, 12 * HOUR_IN_SECONDS);
 	update_option(WHOLESALE_GOOGLE_REVIEWS_BACKUP, $data, false);
+	do_action('wholesale_google_reviews_fetched', $data);
 
 	return $data;
 }

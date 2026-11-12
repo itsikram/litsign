@@ -67,9 +67,9 @@ function wholesale_lc_facts()
 	}
 
 	$front_lit = function_exists('wholesale_seo_product') ? wholesale_seo_product('standard-channel-letter-front-lit') : null;
-	$from = $front_lit && function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price($front_lit->ID) : null;
+	$from = $front_lit && function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($front_lit->ID) : null;
 	if ($from && !empty($from['price'])) {
-		$facts['cl_from'] = wholesale_whole_dollars($from['price']);
+		$facts['cl_from'] = '$' . number_format($from['price'], 2);
 		$facts['cl_height'] = (int) $from['height'];
 	}
 
@@ -103,8 +103,8 @@ function wholesale_lc_from_text($slug)
 	$lower = strtolower($text);
 	if (false !== strpos($lower, 'letter') || false !== strpos($lower, 'inch')) {
 		$product = wholesale_seo_product($slug);
-		$from = $product && function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price($product->ID) : null;
-		return $from && !empty($from['price']) ? 'from ' . wholesale_whole_dollars($from['price']) . ' per letter' : '';
+		$from = $product && function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($product->ID) : null;
+		return $from && !empty($from['price']) ? 'from $' . number_format($from['price'], 2) . ' per inch' : '';
 	}
 	if (false !== strpos($lower, 'ft')) {
 		// Square-foot prices keep their cents: "$2" would misstate a $2.18 rate.
@@ -294,7 +294,7 @@ function wholesale_lc_cl_sentences()
 	$f = wholesale_lc_facts();
 	$price = '';
 	if ($f['cl_from']) {
-		$price = sprintf('Front lit channel letters start at <strong>%s per letter</strong> (one %d-inch letter). Taller letters and halo or trimless styles cost more.', $f['cl_from'], $f['cl_height']);
+		$price = sprintf('Front lit channel letters start at <strong>%s per inch</strong> of letter height at %d inches tall. Rates vary by height and style; the builder shows the full sign price.', $f['cl_from'], $f['cl_height']);
 	}
 	$example = $f['cl_example'] ? ' ' . $f['cl_example'] . '.' : '';
 	$shipping = '';

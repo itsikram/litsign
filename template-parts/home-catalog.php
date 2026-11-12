@@ -286,16 +286,15 @@ $category_sales = static function ($category) use ($sales, &$counted_products, &
 	return array_sum(array_intersect_key($sales, array_flip($ids)));
 };
 
-// Whole-dollar "from" price for one channel letter at its smallest height, with the
-// everyday price struck through during a dated sale. Null when it can't be priced.
+// Lowest effective per-inch rate for each channel letter style.
 $cl_card_price = static function ($slug) {
 	$product = wholesale_seo_product($slug);
-	$from = $product && function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price($product->ID) : null;
+	$from = $product && function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($product->ID) : null;
 	if (!$from || $from['price'] <= 0) {
 		return null;
 	}
-	$now = wholesale_whole_dollars($from['price']);
-	$was = wholesale_whole_dollars($from['everyday']);
+	$now = '$' . number_format($from['price'], 2);
+	$was = '$' . number_format($from['everyday'], 2);
 
 	return array(
 		'now' => $now,
@@ -469,7 +468,7 @@ wholesale_seo_set_page_faq(array_values(array_filter(array(
 	),
 	array(
 		'q' => 'How do I see what my order will cost?',
-		'a' => 'Open any product and choose a size and options; your price updates before you add it to the cart. Banners and vinyl are priced by the square foot, stands, flags and displays come as a set with the printed graphic, and channel letters are priced per letter by height. For a large or mixed order, ' . $home_link($contact_url, 'request a free quote') . '.',
+		'a' => 'Open any product and choose a size and options; your price updates before you add it to the cart. Banners and vinyl are priced by the square foot, stands, flags and displays come as a set with the printed graphic, and channel letter starting rates are shown per inch of letter height. For a large or mixed order, ' . $home_link($contact_url, 'request a free quote') . '.',
 	),
 	array(
 		'q' => 'How quickly will my order arrive?',
@@ -570,12 +569,10 @@ $pick_photos = static function ($products) {
 	}
 	return $urls;
 };
-foreach (array('banners' => 'Vinyl Banners', 'banner-stands' => 'Banner Stands', 'a-frame-and-sign-holders' => 'A-Frames') as $pick_category => $pick_name) {
+foreach (array('banners' => 'Vinyl Banners', 'banner-stands' => 'Banner Stands', 'a-frame-and-sign-holders' => 'A-Frames & Holders') as $pick_category => $pick_name) {
 	$pick_product = isset($pick_slugs[$pick_category]) ? wholesale_seo_product($pick_slugs[$pick_category]) : null;
 	// Sale price only (no struck-through price); "$42" for "$42 per item", "$1.38/ft²" for per ft².
-	// "A-Frames" shows the banner A-frame's own price: the cheapest item in its category
-	// is a poster hanger, not an A-frame.
-	$pick_price = 'a-frame-and-sign-holders' === $pick_category ? $price_of($pick_slugs[$pick_category]) : $category_price($pick_category);
+	$pick_price = $category_price($pick_category);
 	$pick_price = strip_tags(preg_replace('#<del\b.*?</del>#is', '', (string) $pick_price), '<sup>');
 	$pick_price = trim(preg_replace(array('/\s*per item\s*$/i', '/\s*per ft/i'), array('', '/ft'), $pick_price));
 	if ($pick_product && '' !== $pick_price) {
@@ -587,14 +584,14 @@ foreach (array('banners' => 'Vinyl Banners', 'banner-stands' => 'Banner Stands',
 		);
 	}
 }
-// Channel letters: the cheapest style's per-letter price, as the style grid below shows it.
-$pick_cl = array_filter(array_map($cl_card_price, array_keys($cl_styles)));
+// Channel letters: use the same lowest in-stock per-inch price as the category card.
+$pick_cl_from = wholesale_category_card_from('channel-letters');
 $pick_cl_product = wholesale_seo_product(array_key_first($cl_styles));
-if ($pick_cl && $pick_cl_product) {
+if ($pick_cl_from && $pick_cl_product) {
 	$hero_picks[] = array(
 		'url' => '#channel-letters',
 		'name' => 'Channel Letters',
-		'price' => wholesale_whole_dollars(min(array_column($pick_cl, 'amount'))) . '/letter',
+		'price' => implode('', $pick_cl_from),
 		'photos' => $pick_photos(array($pick_cl_product, wholesale_seo_product($pick_seconds['channel-letters']))),
 	);
 }
@@ -622,7 +619,7 @@ if ($pick_cl && $pick_cl_product) {
 					</nav>
 				<?php endif; ?>
 				<div class="home-hero-actions">
-					<a class="home-hero-shop-button" href="#banners-displays">Shop Banners &amp; Displays <?php echo wholesale_home_icon('arrow'); ?></a>
+					<a class="home-hero-shop-button" href="<?php echo esc_url(wholesale_shop_url()); ?>">Shop All Products <?php echo wholesale_home_icon('arrow'); ?></a>
 					<a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>">Get a Free Quote</a>
 				</div>
 				<div class="hc-hero-meta">
@@ -724,7 +721,6 @@ if ($pick_cl && $pick_cl_product) {
 	}
 	$cl_priced = array_filter(array_column($cl_cards, 'price'));
 	$cl_lowest = $cl_priced ? min(array_column($cl_priced, 'amount')) : 0;
-	$cl_height = $cl_priced ? (int) reset($cl_priced)['height'] : 0;
 	?>
 	<?php if ($cl_cards) : ?>
 	<section class="hc-shop-cl" id="channel-letters" aria-labelledby="hc-shop-cl-title">
@@ -788,7 +784,7 @@ if ($pick_cl && $pick_cl_product) {
 									<small>From</small>
 									<?php if ($card['price']['was']) : ?><del><?php echo esc_html($card['price']['was']); ?></del><?php endif; ?>
 									<strong><?php echo esc_html($card['price']['now']); ?></strong>
-									<small>/ letter</small>
+									<small>/ inch</small>
 								</span>
 							<?php endif; ?>
 							<span class="hc-shop-cl-button"><span class="hc-shop-cl-button-long">Customize &amp; Order</span><span class="hc-shop-cl-button-short" aria-hidden="true">Order Now</span> <?php echo wholesale_home_icon('arrow'); ?></span>
@@ -807,7 +803,7 @@ if ($pick_cl && $pick_cl_product) {
 			</div>
 
 			<p class="hc-shop-cl-note">
-				<?php if ($cl_height) : ?>Prices are for one <?php echo (int) $cl_height; ?>&Prime; letter before options; your total updates as you choose height and letters. <?php endif; ?>
+				Rates are per inch of letter height and vary with height and style. Enter your design to see the full price before checkout.
 				<a href="<?php echo esc_url($cl_landing_url); ?>">Compare all 7 styles, heights &amp; warranty <?php echo wholesale_home_icon('arrow'); ?></a>
 			</p>
 		</div>

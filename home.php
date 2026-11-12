@@ -166,7 +166,8 @@ function wholesale_render_home_product_gallery($product_id, $product_title, $thu
                 ?>
                 <img class="pb-gallery-image<?php echo $index === 0 ? ' is-active' : ''; ?>"
                     <?php echo $index === 0 ? 'src="' . esc_url($image) . '"' : ''; ?>
-                    <?php echo $index === 0 && $card_image['srcset'] ? 'srcset="' . esc_attr($card_image['srcset']) . '" sizes="(max-width: 767px) 100vw, 300px" width="300" height="300"' : ''; ?>
+                    <?php echo $index === 0 && $card_image['srcset'] ? 'srcset="' . esc_attr($card_image['srcset']) . '" sizes="(max-width: 767px) 100vw, 300px"' : ''; ?>
+                    width="300" height="300"
                     data-gallery-src="<?php echo esc_url($image); ?>"
                     alt="<?php echo esc_attr($image_alt); ?>"
                     loading="<?php echo $index === 0 ? esc_attr($loading) : 'lazy'; ?>"
@@ -326,7 +327,7 @@ function wholesale_home_from_price($slug, $category = '')
         return '';
     }
 
-    return function_exists('wholesale_whole_dollars') ? wholesale_whole_dollars(str_replace(',', '', end($prices[1]))) : '$' . end($prices[1]);
+    return false !== stripos($text, 'inch') ? '$' . end($prices[1]) : (function_exists('wholesale_whole_dollars') ? wholesale_whole_dollars(str_replace(',', '', end($prices[1]))) : '$' . end($prices[1]));
 }
 
 // The unit a "starting at" price is quoted in, so "$2" reads as "$2/sq ft".
@@ -393,7 +394,7 @@ if ($is_front_home) {
         ),
         array(
             'q' => 'How do I find out what my sign will cost?',
-            'a' => 'Every product page shows your price as you choose a size and options, before checkout. Channel letters are priced per letter by height' . ($home_cost_url ? '; the ' . $home_link($home_cost_url, 'channel letter cost guide') . ' shows real examples' : '') . '. For a logo or a large project, ' . $home_link($contact_url, 'request a free quote') . '.',
+            'a' => 'Every product page shows your price as you choose a size and options, before checkout. Channel letter starting rates are shown per inch of letter height' . ($home_cost_url ? '; the ' . $home_link($home_cost_url, 'channel letter cost guide') . ' shows real examples' : '') . '. For a logo or a large project, ' . $home_link($contact_url, 'request a free quote') . '.',
         ),
         array(
             'q' => 'Can you work from my logo?',
@@ -515,7 +516,7 @@ if ('' === $category_description_text && '' === $category_intro) {
                     <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
                     <?php endif; ?>
                     <div class="home-hero-actions home-hero-actions--cl">
-                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per letter</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
+                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
                         <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
                     </div>
                     <?php $cl_example_text = function_exists('wholesale_cl_worked_example_text') ? wholesale_cl_worked_example_text() : ''; ?><?php if ($cl_example_text) : ?><p class="home-hero-example"><?php echo wp_kses_post($cl_example_text); ?></p><?php endif; ?>
@@ -669,6 +670,12 @@ if ('' === $category_description_text && '' === $category_intro) {
 </div>
 <?php endif; ?>
 
+<?php
+// The listing's template indentation was up to 40% of a category page's HTML
+// (184 KB on /indoor-outdoor-displays/); it is dropped below. Nothing in the
+// listing uses <pre>, <textarea> or white-space: pre.
+ob_start();
+?>
 <div class="container my-3 product-listing-container<?php echo $is_channel_letters ? ' product-listing-container--cl' : ''; ?>">
 
     <div class="row">
@@ -961,6 +968,7 @@ if ('' === $category_description_text && '' === $category_intro) {
         </div>
     </div>
 </div>
+<?php echo preg_replace('/\n\s+/', "\n", (string) ob_get_clean()); // Markup built above; only whitespace removed. ?>
 
 <?php if (!$is_channel_letters && $current_term) {
     wholesale_render_category_guide($current_term->slug);
@@ -1074,7 +1082,7 @@ if ('' === $category_description_text && '' === $category_intro) {
 
             <h3>How channel letter pricing works</h3>
             <?php $cl_price_note = function_exists('wholesale_cl_starting_price_note') ? wholesale_cl_starting_price_note() : ''; ?>
-            <p><?php if ($cl_price_note) : ?><?php echo wp_kses_post($cl_price_note); ?> You see your total before checkout. <?php else : ?>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, and you see it before checkout. <?php endif; ?><?php if ($is_front_home) : ?>Each style above lists its starting price; <?php else : ?>The table above shows where each style starts; <?php endif; ?><a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+            <p><?php if ($cl_price_note) : ?><?php echo wp_kses_post($cl_price_note); ?> You see your total before checkout. <?php else : ?>Starting rates are shown per inch of letter height. Your full price depends on the height, number of letters and options such as a raceway, and appears before checkout. <?php endif; ?><?php if ($is_front_home) : ?>Each style above lists its starting rate; <?php else : ?>The table above shows where each style starts; <?php endif; ?><a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
             <?php if ($is_front_home) : ?>
             <h3>Compare every lighting style</h3>
             <p>Front lit, back lit, dual lit, halo lit, reverse lit, trimless and borderless letters each suit a different storefront. Our <a href="<?php echo esc_url($cl_landing_url); ?>">custom channel letters page</a> compares all seven side by side, with how each one lights, what it is best for and where its price starts.</p>

@@ -112,6 +112,9 @@ function wholesale_whole_dollars($amount)
  */
 function wholesale_price_no_cents($html)
 {
+	if (preg_match('/per\s*inch|\/\s*inch/i', wp_strip_all_tags((string) $html))) {
+		return $html;
+	}
 	$html = preg_replace_callback('/\$\s?([\d,]+(?:\.\d+)?)/', static function ($m) {
 		return wholesale_whole_dollars(str_replace(',', '', $m[1]));
 	}, (string) $html);

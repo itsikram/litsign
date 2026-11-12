@@ -205,12 +205,15 @@ function wholesale_merchant_size_items($product, $title)
 	return $items;
 }
 
-function wholesale_render_merchant_feed()
+/**
+ * Every feed item (a product and its popular-size items) as plain data, shared
+ * by the Google feed (/merchant-feed.xml) and the OpenAI feed
+ * (inc/openai-feed.php) so both always list the same IDs, prices and links.
+ *
+ * @return array[]
+ */
+function wholesale_merchant_feed_rows()
 {
-	if ('1' !== get_query_var('wholesale_merchant_feed')) {
-		return;
-	}
-
 	$products = get_posts(array(
 		'post_type' => 'product',
 		'post_status' => 'publish',
@@ -220,21 +223,7 @@ function wholesale_render_merchant_feed()
 		'order' => 'ASC',
 	));
 
-	nocache_headers();
-	header('Content-Type: application/xml; charset=UTF-8');
-	header('X-Robots-Tag: noindex, follow');
-	status_header(200);
-
-	$x = static function ($value) {
-		return esc_xml(wp_strip_all_tags((string) $value));
-	};
-
-	echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-	echo '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">' . "\n<channel>\n";
-	echo '<title>' . $x(get_bloginfo('name')) . "</title>\n";
-	echo '<link>' . esc_url(home_url('/')) . "</link>\n";
-	echo '<description>' . $x(get_bloginfo('name') . ' products') . "</description>\n";
-
+	$rows = array();
 	foreach ($products as $product) {
 		$offer = wholesale_seo_product_lowest_offer($product->ID);
 		$price = $offer ? $offer['price'] : 0;
@@ -281,6 +270,10 @@ function wholesale_render_merchant_feed()
 		}
 
 		$shipping = wholesale_seo_offer_shipping_details($product->ID, $price);
+		$stock = wholesale_product_stock_status($product->ID);
+		$availability_date = 'backorder' === $stock
+			? (new DateTimeImmutable(wholesale_product_backorder_date($product->ID), wp_timezone()))->format('c')
+			: '';
 
 		// The product, then its popular sizes as their own items (inc/size-chips.php):
 		// "13oz Vinyl Banner 3 x 6 ft" at that size's price, linking to the page opened
@@ -298,27 +291,76 @@ function wholesale_render_merchant_feed()
 			$variants[] = $sized;
 		}
 
-		foreach ($variants as $variant_item) :
-		$offer = $variant_item['offer'];
-		$price = $variant_item['price'];
-		$shipping = $variant_item['shipping'];
-		echo "<item>\n";
-		echo '<g:id>' . $x($variant_item['id']) . "</g:id>\n";
-		if ($variant_item['size']) {
-			echo '<g:item_group_id>' . $x($variants[0]['id']) . "</g:item_group_id>\n";
+		foreach ($variants as $variant_item) {
+			$rows[] = array(
+				'product_id' => $product->ID,
+				'id' => $variant_item['id'],
+				'group_id' => $variant_item['size'] ? $variants[0]['id'] : '',
+				'title' => $variant_item['title'],
+				'description' => $description,
+				'link' => $variant_item['link'],
+				'image' => $image,
+				'gallery' => array_slice($images, 1),
+				'stock' => $stock,
+				'availability_date' => $availability_date,
+				'offer' => $variant_item['offer'],
+				'price' => $variant_item['price'],
+				'shipping' => $variant_item['shipping'],
+				'size' => $variant_item['size'],
+				'term_slug' => $term ? $term->slug : '',
+				'term_name' => $term ? $term->name : '',
+				'product_type' => $product_type,
+			);
 		}
-		echo '<g:title>' . $x(mb_substr($variant_item['title'], 0, 150)) . "</g:title>\n";
-		echo '<g:description>' . $x($description) . "</g:description>\n";
-		echo '<g:link>' . esc_url($variant_item['link']) . "</g:link>\n";
-		echo '<g:image_link>' . esc_url($image) . "</g:image_link>\n";
-		foreach (array_slice($images, 1) as $gallery_url) {
+	}
+
+	return $rows;
+}
+
+function wholesale_render_merchant_feed()
+{
+	if ('1' !== get_query_var('wholesale_merchant_feed')) {
+		return;
+	}
+
+	$rows = wholesale_merchant_feed_rows();
+
+	nocache_headers();
+	header('Content-Type: application/xml; charset=UTF-8');
+	header('X-Robots-Tag: noindex, follow');
+	status_header(200);
+
+	$x = static function ($value) {
+		return esc_xml(wp_strip_all_tags((string) $value));
+	};
+
+	echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+	echo '<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">' . "\n<channel>\n";
+	echo '<title>' . $x(get_bloginfo('name')) . "</title>\n";
+	echo '<link>' . esc_url(home_url('/')) . "</link>\n";
+	echo '<description>' . $x(get_bloginfo('name') . ' products') . "</description>\n";
+
+	foreach ($rows as $row) {
+		$offer = $row['offer'];
+		$price = $row['price'];
+		$shipping = $row['shipping'];
+		echo "<item>\n";
+		echo '<g:id>' . $x($row['id']) . "</g:id>\n";
+		if ($row['size']) {
+			echo '<g:item_group_id>' . $x($row['group_id']) . "</g:item_group_id>\n";
+		}
+		echo '<g:title>' . $x(mb_substr($row['title'], 0, 150)) . "</g:title>\n";
+		echo '<g:description>' . $x($row['description']) . "</g:description>\n";
+		echo '<g:link>' . esc_url($row['link']) . "</g:link>\n";
+		echo '<g:image_link>' . esc_url($row['image']) . "</g:image_link>\n";
+		foreach ($row['gallery'] as $gallery_url) {
 			echo '<g:additional_image_link>' . esc_url($gallery_url) . "</g:additional_image_link>\n";
 		}
-		$stock = wholesale_product_stock_status($product->ID);
+		$stock = $row['stock'];
 		echo '<g:availability>' . ('instock' === $stock ? 'in_stock' : ('backorder' === $stock ? 'backorder' : 'out_of_stock')) . "</g:availability>\n";
 		if ('backorder' === $stock) {
 			// Merchant Center requires the date a backordered item ships.
-			echo '<g:availability_date>' . (new DateTimeImmutable(wholesale_product_backorder_date($product->ID), wp_timezone()))->format('c') . "</g:availability_date>\n";
+			echo '<g:availability_date>' . $row['availability_date'] . "</g:availability_date>\n";
 		}
 		// The everyday price, plus the dated sale price checkout charges while a sale runs.
 		echo '<g:price>' . number_format($offer['regular'], 2, '.', '') . " USD</g:price>\n";
@@ -331,18 +373,18 @@ function wholesale_render_merchant_feed()
 				echo '<g:sale_price_effective_date>' . $starts->format('Y-m-d\TH:iO') . '/' . $ends->format('Y-m-d\TH:iO') . "</g:sale_price_effective_date>\n";
 			}
 		}
-		if ($variant_item['size']) {
-			echo '<g:size>' . $x($variant_item['size']) . "</g:size>\n";
+		if ($row['size']) {
+			echo '<g:size>' . $x($row['size']) . "</g:size>\n";
 		}
 		echo "<g:condition>new</g:condition>\n";
 		echo '<g:brand>' . $x(get_bloginfo('name')) . "</g:brand>\n";
 		// Made to order: no GTIN or manufacturer part number exists.
 		echo "<g:identifier_exists>no</g:identifier_exists>\n";
-		echo '<g:google_product_category>' . (int) wholesale_merchant_google_category($term ? $term->slug : '') . "</g:google_product_category>\n";
-		if ($product_type) {
-			echo '<g:product_type>' . $x($product_type) . "</g:product_type>\n";
+		echo '<g:google_product_category>' . (int) wholesale_merchant_google_category($row['term_slug']) . "</g:google_product_category>\n";
+		if ($row['product_type']) {
+			echo '<g:product_type>' . $x($row['product_type']) . "</g:product_type>\n";
 			// Lets ads campaigns bid and report by product line.
-			echo '<g:custom_label_0>' . $x($term->name) . "</g:custom_label_0>\n";
+			echo '<g:custom_label_0>' . $x($row['term_name']) . "</g:custom_label_0>\n";
 		}
 		echo "<g:shipping>\n<g:country>US</g:country>\n<g:service>Standard</g:service>\n";
 		echo '<g:price>' . $x($shipping['shippingRate']['value']) . " USD</g:price>\n";
@@ -352,7 +394,6 @@ function wholesale_render_merchant_feed()
 		echo '<g:max_transit_time>' . (int) $shipping['deliveryTime']['transitTime']['maxValue'] . "</g:max_transit_time>\n";
 		echo "</g:shipping>\n";
 		echo "</item>\n";
-		endforeach;
 	}
 
 	echo "</channel>\n</rss>\n";

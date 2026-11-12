@@ -14,7 +14,16 @@ $tax_rate = (float) wholesale_get_setting('tax_rate');
 $tax = round($sub_total * $tax_rate / 100, 2);
 $free_shipping_min = wholesale_free_shipping_threshold($cart);
 $free_shipping = wholesale_cart_qualifies_free_shipping($cart);
-$first_shipping = $free_shipping || !$shipping_options ? 0 : $shipping_options[0];
+// The checked speed: Free Shipping when the cart qualifies, else Standard. A speed the customer picked in the live
+// chat (cookie sfs_ship from the chat widget: 0-3 or "free", 2 hours) is checked instead when this cart offers it.
+$ship_pick = $free_shipping ? 'free' : 0;
+$chat_ship = isset($_COOKIE['sfs_ship']) ? sanitize_key(wp_unslash($_COOKIE['sfs_ship'])) : '';
+if ('free' === $chat_ship && $free_shipping) {
+    $ship_pick = 'free';
+} elseif (preg_match('/^[0-3]$/', $chat_ship) && isset($shipping_options[(int) $chat_ship]) && !($free_shipping && 0 === (int) $chat_ship)) {
+    $ship_pick = (int) $chat_ship;
+}
+$first_shipping = 'free' === $ship_pick || !$shipping_options ? 0 : $shipping_options[$ship_pick];
 $card_enabled = !wholesale_setting_enabled('payment_disabled');
 $direct_card = $card_enabled && 'direct' === wholesale_payment_method();
 $noun = wholesale_items_noun($cart->get_items());
@@ -234,7 +243,7 @@ get_header();
                     <div class="checkout-options" role="radiogroup" aria-labelledby="checkout-shipping">
                         <?php if ($free_shipping_min > 0) : ?>
                             <label class="checkout-option<?php echo $free_shipping ? '' : ' is-disabled'; ?>">
-                                <input type="radio" name="shipping_method" value="free" <?php checked($free_shipping); ?> <?php disabled(!$free_shipping); ?> required data-shipping-amount="0">
+                                <input type="radio" name="shipping_method" value="free" <?php checked('free' === $ship_pick); ?> <?php disabled(!$free_shipping); ?> required data-shipping-amount="0">
                                 <span class="checkout-option-body">
                                     <strong><?php echo esc_html(wholesale_free_shipping_label()); ?></strong>
                                     <?php if ($free_shipping) : ?>
@@ -251,7 +260,7 @@ get_header();
                                 continue; // Free Shipping replaces Standard.
                             } ?>
                             <label class="checkout-option">
-                                <input type="radio" name="shipping_method" value="<?php echo esc_attr($amount); ?>" <?php checked(!$free_shipping && 0 === $index); ?> required data-shipping-amount="<?php echo esc_attr($amount); ?>">
+                                <input type="radio" name="shipping_method" value="<?php echo esc_attr($amount); ?>" <?php checked($ship_pick === $index); ?> required data-shipping-amount="<?php echo esc_attr($amount); ?>">
                                 <span class="checkout-option-body">
                                     <strong><?php echo esc_html(wholesale_shipping_label($index)); ?></strong>
                                     <small>Est. delivery <?php echo esc_html(wholesale_estimated_delivery_date($cart, $index)); ?></small>

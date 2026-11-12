@@ -429,6 +429,26 @@ function wholesale_seo_category_faq($slug)
 			),
 			$shipping,
 		),
+		'indoor-outdoor-displays' => array(
+			array(
+				'q' => 'Which display should I choose?',
+				'a' => 'Pick by where it goes. Use ' . $link('advertising-flags', 'feather and teardrop flags') . ' and ' . $link('signicade-a-frames', 'sidewalk A-frames') . ' at the roadside or storefront, ' . $link('trade-show-products', 'fabric backwalls') . ' and ' . $link('table-throws', 'table covers') . ' for a trade show booth, ' . $link('banner-stands', 'banner stands') . ' for a lobby or retail floor, and ' . $link('custom-event-tents', 'event tents') . ' for outdoor events and markets.',
+			),
+			array(
+				'q' => 'Do displays come with the hardware?',
+				'a' => 'Most displays are sold as a complete kit or as the graphic only, so you can order a new print for a frame, stand or pole you already own.',
+			),
+			array(
+				'q' => 'Can I buy replacement hardware?',
+				'a' => 'Yes. Replacement poles, bases, frames and stands are in ' . $link('flag-hardware', 'flag hardware') . ', ' . $link('hardware-only', 'display hardware') . ' and ' . $link('event-tent-hardware-only', 'event tent hardware') . '.',
+			),
+			array(
+				'q' => 'How do I make a booth look like one brand?',
+				'a' => 'Use the same artwork across a backwall, table cover and banner stand so the booth reads as one brand from the aisle, and add a flag outside the venue or at your tent.',
+			),
+			$shipping,
+			$help,
+		),
 	);
 
 	return isset($faqs[$slug]) ? $faqs[$slug] : array();
@@ -645,6 +665,85 @@ function wholesale_seo_sitemap_exclude_duplicate_products($args, $post_type)
 	return $args;
 }
 add_filter('wp_sitemaps_posts_query_args', 'wholesale_seo_sitemap_exclude_duplicate_products', 20, 2);
+
+/**
+ * The listed product that a hidden "-2"/"-3" copy should send shoppers to, or 0.
+ *
+ * Only exact copies count: same name as a published original, the copy hidden
+ * from product lists ("Show in product lists" unticked) and the original shown.
+ * Shoppers reached such a copy from search and old links and went back and
+ * forth between two identical pages (standard-retractable-hardware-only-2,
+ * Nov 2026). A copy that is still listed, or that differs in name, stays open:
+ * it may be a new product that happens to share a name.
+ */
+function wholesale_seo_product_copy_redirect_target($product_id)
+{
+	$product_id = (int) $product_id;
+	if (!preg_match('/-\d+$/', (string) get_post_field('post_name', $product_id))
+		|| 'on' === get_post_meta($product_id, '_show_in_list', true)) {
+		return 0;
+	}
+
+	$original = wholesale_seo_product_duplicate_of($product_id);
+
+	return $original && 'on' === get_post_meta($original, '_show_in_list', true) ? (int) $original : 0;
+}
+
+/**
+ * Send shoppers on a hidden copy to the listed original (301, query string kept
+ * so ad and tracking parameters survive). Previews are left alone.
+ */
+function wholesale_seo_redirect_product_copies()
+{
+	if (is_admin() || is_preview() || !is_singular('product')) {
+		return;
+	}
+
+	$original = wholesale_seo_product_copy_redirect_target(get_queried_object_id());
+	if (!$original) {
+		return;
+	}
+
+	$target = get_permalink($original);
+	$query = isset($_SERVER['QUERY_STRING']) ? (string) wp_unslash($_SERVER['QUERY_STRING']) : '';
+	wp_safe_redirect('' !== $query ? $target . '?' . $query : $target, 301);
+	exit;
+}
+add_action('template_redirect', 'wholesale_seo_redirect_product_copies', 2);
+
+/**
+ * Hidden copies that redirect stay out of search results (the results page and
+ * the live search box), so a search shows one card per product.
+ */
+function wholesale_seo_search_exclude_product_copies($query)
+{
+	if (is_admin() || !$query->is_search() || $query->get('wholesale_copy_check')) {
+		return;
+	}
+
+	static $copies = null;
+	if (null === $copies) {
+		$copies = array();
+		$ids = get_posts(array(
+			'post_type' => 'product',
+			'post_status' => 'publish',
+			'posts_per_page' => -1,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+			'wholesale_copy_check' => true,
+		));
+		foreach ($ids as $id) {
+			if (preg_match('/-\d+$/', (string) get_post_field('post_name', $id)) && wholesale_seo_product_copy_redirect_target($id)) {
+				$copies[] = (int) $id;
+			}
+		}
+	}
+
+	if ($copies) {
+		$query->set('post__not_in', array_merge((array) $query->get('post__not_in'), $copies));
+	}
+}
+add_action('pre_get_posts', 'wholesale_seo_search_exclude_product_copies');
 
 /**
  * Plain-text description from product meta: list items become sentences and
@@ -1054,13 +1153,13 @@ function wholesale_category_card_from($category)
 			if (!wholesale_product_is_channel_letter($id) || (function_exists('wholesale_product_stock_status') && 'outofstock' === wholesale_product_stock_status($id))) {
 				continue;
 			}
-			$from = function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price($id) : null;
+			$from = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($id) : null;
 			if ($from && $from['price'] > 0 && (!$low || $from['price'] < $low)) {
 				$low = (float) $from['price'];
 			}
 		}
 		if ($low > 0) {
-			$cache[$category] = array(wholesale_whole_dollars($low), '/letter');
+			$cache[$category] = array('$' . number_format($low, 2), '/inch');
 		}
 
 		return $cache[$category];
@@ -1400,9 +1499,10 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 			if ($from_price > 0 && $heights) :
 				?>
 				<?php
-				$from_cl = function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price($product_id) : null;
+				$from_cl = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($product_id) : null;
 				$from_height = $from_cl && !empty($from_cl['height']) ? (int) $from_cl['height'] : $heights[0];
-				echo '<strong>' . esc_html(sprintf('Prices start at $%s for one %d inch letter', number_format($from_price, 2), $from_height)) . '</strong>'
+				$from_rate = $from_cl ? (float) $from_cl['price'] : 0.0;
+				echo '<strong>' . esc_html(sprintf('Starting rate: $%s per inch of letter height at %d inches tall', number_format($from_rate, 2), $from_height)) . '</strong>'
 					. esc_html($promotion ? sprintf(', including the %s%% sale that ends %s,', rtrim(rtrim(number_format($promotion['percent'], 2), '0'), '.'), wholesale_promotion_end_text($promotion)) : ',')
 					. ' before options such as a power supply or raceway.';
 				$cost_page = get_page_by_path('channel-letter-cost');
@@ -1411,7 +1511,7 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 				}
 				?>
 			<?php endif; ?>
-			Price is per letter by height: choose your height, enter your wording and colors above, and your total updates before you add it to the cart. Every sign is tested before it ships, with an installation pattern and wiring diagram for your installer.
+			Rates vary by height and style. Choose your height, enter your wording and colors above, and your full sign price updates before you add it to the cart. Every sign is tested before it ships, with an installation pattern and wiring diagram for your installer.
 		</p>
 
 		<h3>Compare other channel letter styles</h3>

@@ -220,6 +220,26 @@
       return;
     }
 
+    const chat = event.target.closest('[data-chat-visitor]');
+    if (chat && window.wholesaleVIAdmin) {
+      const text = window.prompt('Message to send through Live Chat:', 'Hi! 👋 Can I help you find the right sign?');
+      if (!text || !text.trim()) return;
+      chat.disabled = true;
+      const form = new FormData();
+      form.append('action', 'wholesale_vi_chat_message');
+      form.append('nonce', window.wholesaleVIAdmin.nonce);
+      form.append('visitor', chat.dataset.chatVisitor);
+      form.append('body', text.trim());
+      fetch(window.wholesaleVIAdmin.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: form })
+        .then((response) => response.json())
+        .then((result) => {
+          chat.textContent = result && result.success ? 'Sent ✓' : 'Failed';
+          if (!(result && result.success)) window.alert((result && result.data) || 'The message could not be sent.');
+        })
+        .catch(() => { chat.textContent = 'Failed'; chat.disabled = false; });
+      return;
+    }
+
     const row = event.target.closest('.wvi-row-link');
     if (row && !event.target.closest('a, button, input')) {
       if (event.ctrlKey || event.metaKey) {

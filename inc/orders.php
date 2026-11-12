@@ -47,7 +47,8 @@ function wholesale_insert_order($product_data, $order_cost, $billing_data, $ship
    $new_order = wp_insert_post(array(
        'post_type' => 'order',
        'post_title' => sanitize_text_field($order_slug),
-       'post_status' => 'processing',
+       // Review in progress until the B2Sign order is linked; the tracking sync plugin then moves it to In production.
+       'post_status' => 'in-review',
        'meta_input' => array_merge(array(
            'product_json' => $product_data,
            'shipping_address' => $shipping_data,
@@ -67,6 +68,20 @@ function wholesale_insert_order($product_data, $order_cost, $billing_data, $ship
 
    return $new_order;
 }
+
+// New orders start in "Review in progress" until the B2Sign order is linked (2026-11-12). Registered like the other
+// order statuses (functions.php). Not core "pending": that one hides the order page from customers, gives a new order
+// no slug and resets the placed date when the status changes.
+add_action('init', function () {
+   register_post_status('in-review', array(
+       'label' => _x('Review in progress', 'post'),
+       'public' => true,
+       'exclude_from_search' => false,
+       'show_in_admin_all_list' => true,
+       'show_in_admin_status_list' => true,
+       'label_count' => _n_noop('Review in progress <span class="count">(%s)</span>', 'Review in progress <span class="count">(%s)</span>'),
+   ));
+});
 
 function place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart)
 {
@@ -282,7 +297,9 @@ function wholesale_order_status_info($order_post_id = 0)
     // Notes name what was ordered ("Your banner is being made."); without an order it is just "order".
     $noun = $order_post_id ? wholesale_order_noun($order_post_id) : 'order';
     return array(
-        'pending' => array('label' => 'Pending review', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are reviewing the details.'),
+        'in-review' => array('label' => 'Review in progress', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are checking the details before production.'),
+        // Legacy duplicate of "in-review" (core WordPress status: hides the order page from customers).
+        'pending' => array('label' => 'Review in progress', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are checking the details before production.'),
         'processing' => array('label' => 'In production', 'tone' => 'info', 'step' => 2, 'note' => "Your {$noun} is being made."),
         'finishing' => array('label' => 'Finishing', 'tone' => 'info', 'step' => 2, 'note' => "Your {$noun} is printed and is being trimmed and packed for shipping."),
         'ready-for-pickup' => array('label' => 'Ready for pickup', 'tone' => 'success', 'step' => 2, 'note' => "Your {$noun} is ready. Our team will contact you about pickup, or call 866-436-2101."),
@@ -489,6 +506,7 @@ function wholesale_order_steps($order_post_id)
         : array('shipped' => 'Shipped', 'in-transit' => 'In transit', 'out-for-delivery' => 'Out for delivery', 'delivered' => 'Delivered');
     // The step each stored status stands on.
     $at = array(
+        'in-review' => 'received',
         'pending' => 'received',
         'processing' => 'production',
         'finishing' => 'finishing',
@@ -514,7 +532,8 @@ function wholesale_order_steps($order_post_id)
         $dates[$key] = $dates[$key] ?? $event['time'];
         $furthest = max($furthest, $index);
     }
-    // A status an order left was reached too (orders are created In production without a log entry).
+    // A status an order left was reached too (orders are created without a log entry: Review in progress since
+    // 2026-11-12, In production before).
     foreach ((array) get_post_meta($order_post_id, '_status_log') as $entry) {
         $index = array_search($at[$entry['from'] ?? ''] ?? '', $keys, true);
         if (false !== $index) {
@@ -522,7 +541,7 @@ function wholesale_order_steps($order_post_id)
         }
     }
     $current = isset($at[$status]) ? (int) array_search($at[$status], $keys, true) : $furthest;
-    // Paid orders start in production the moment they are placed.
+    // Orders placed before 2026-11-12 started in production the moment they were placed.
     if ($current >= 1 && !isset($dates['production'])) {
         $dates['production'] = $dates['received'] ?? 0;
     }
@@ -547,6 +566,9 @@ function wholesale_order_steps($order_post_id)
         );
     }
     $current_key = $keys[$current];
+    if (in_array($status, array('in-review', 'pending'), true)) {
+        $steps[$current_key]['note'] = 'Checking your details';
+    }
     if (isset($problems[$status])) {
         $steps[$current_key]['label'] = $problems[$status][0];
         $steps[$current_key]['note'] = $problems[$status][1];

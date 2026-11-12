@@ -691,6 +691,10 @@ function wholesale_product_content_modified($product)
 	if ($product && defined('WHOLESALE_PRODUCT_PAGES_REVISED') && wholesale_product_page($product->ID) && strtotime(WHOLESALE_PRODUCT_PAGES_REVISED) > strtotime($modified)) {
 		$modified = WHOLESALE_PRODUCT_PAGES_REVISED;
 	}
+	// So do the group option buttons (inc/product-group-swap.php).
+	if ($product && defined('WHOLESALE_PRODUCT_GROUPS_REVISED') && function_exists('wholesale_product_group') && wholesale_product_group($product->ID) && strtotime(WHOLESALE_PRODUCT_GROUPS_REVISED) > strtotime($modified)) {
+		$modified = WHOLESALE_PRODUCT_GROUPS_REVISED;
+	}
 
 	return $modified;
 }

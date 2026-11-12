@@ -375,6 +375,13 @@ function wholesale_settings_page()
 				</section>
 
 				<section class="wss-panel" id="wss-panel-payments" data-wss-panel="payments" role="tabpanel">
+					<?php // Since 2026-11-12 the SFS Wallet Payments plugin edits these options (same names) on its Card tab; its allowed_options filter keeps a save here from emptying them. ?>
+					<?php if (function_exists('sfs_wallet_card_settings_url')) : ?>
+					<div class="wss-card">
+						<div class="wss-card__head"><h2>Card payments <span class="wss-badge <?php echo wholesale_setting_enabled('payment_disabled') ? 'is-info' : 'is-ok'; ?>"><?php echo esc_html(wholesale_setting_enabled('payment_disabled') ? 'Off at checkout' : (wholesale_setting_enabled('payment_test_mode') ? 'Demo' : 'Live')); ?></span></h2><p>Card payment through Elavon Converge (on or off at checkout, card entry, Demo or Live, and the merchant ID, user ID and PIN) is set in the SFS Wallet Payments plugin now, next to Apple Pay, Google Pay and PayPal.</p></div>
+						<p><a class="button button-primary" href="<?php echo esc_url(sfs_wallet_card_settings_url()); ?>"><span class="dashicons dashicons-id-alt" aria-hidden="true"></span> Open card payment settings</a></p>
+					</div>
+					<?php else : ?>
 					<div class="wss-card">
 						<div class="wss-card__head"><h2>Payment gateway</h2></div>
 						<table class="form-table" role="presentation">
@@ -391,6 +398,7 @@ function wholesale_settings_page()
 							<tr><th><label for="wholesale_gateway_pin">Gateway PIN</label></th><td><input type="password" class="regular-text" id="wholesale_gateway_pin" name="wholesale_gateway_pin" value="<?php echo esc_attr(wholesale_get_setting('gateway_pin')); ?>" autocomplete="new-password"></td></tr>
 						</table>
 					</div>
+					<?php endif; ?>
 					<div class="wss-card">
 						<div class="wss-card__head"><h2>Checkout defaults</h2></div>
 						<table class="form-table" role="presentation">

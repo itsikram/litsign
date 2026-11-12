@@ -489,7 +489,7 @@ get_header();
                     <p class="home-hero-lead">UL listed LED channel letters, built to order in Washington and California. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
                     <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
                     <div class="home-hero-actions home-hero-actions--cl">
-                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per letter</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
+                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
                         <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
                     </div>
                     <?php $cl_example_text = function_exists('wholesale_cl_worked_example_text') ? wholesale_cl_worked_example_text() : ''; ?><?php if ($cl_example_text) : ?><p class="home-hero-example"><?php echo wp_kses_post($cl_example_text); ?></p><?php endif; ?>
@@ -559,7 +559,7 @@ get_header();
         <ul class="home-types-list" data-types-list>
             <?php
             $type_links = array_merge(
-                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/letter', 'channel-letters')),
+                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/inch', 'channel-letters')),
                 array_map(static function ($item) {
                     // Category slug from the card's link, e.g. /banners/ -> banners.
                     return array($item[0], $item[1], $item[2], '', '', basename(untrailingslashit((string) wp_parse_url($item[1], PHP_URL_PATH))));

@@ -201,6 +201,8 @@ function wholesale_hero_config()
 		'mobile' => $found['mobile'] ? $url($found['mobile'], '1536x1536') : $url($found['desktop'], 'large'),
 		'overlay' => $found['overlay'],
 		'focus' => $found['focus'],
+		// Share previews (og:image): the uploaded file at 1024 px, in the format it was uploaded in.
+		'share' => (string) wp_get_attachment_image_url($found['desktop'] ? $found['desktop'] : $found['mobile'], 'large'),
 	);
 	if ('' === $config['desktop'] && '' === $config['mobile']) {
 		$config = null;

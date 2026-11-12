@@ -23,6 +23,27 @@
  * 9. Contact page: a tap on the form heading puts the cursor in the name box.
  */
 
+// Product group buttons (js/product-group-swap.js) swap another product into the page and
+// fire "wholesale:product-swapped"; the product sections (3-8) then run again on the new
+// markup. The signal ends the last run's window/document listeners, timers and observers,
+// and its cleanup removes what that run added outside the product (the phone buy bar).
+const wholesaleProductSection = (setup) => {
+  let scope = null;
+  const run = () => {
+    if (scope) scope.abort();
+    scope = new AbortController();
+    setup(scope.signal);
+  };
+  run();
+  document.addEventListener('wholesale:product-swapped', run);
+};
+// A MutationObserver that stops with the section's run.
+const wholesaleWatch = (signal, target, options, callback) => {
+  const observer = new MutationObserver(callback);
+  observer.observe(target, options);
+  signal.addEventListener('abort', () => observer.disconnect());
+};
+
 // ---- 1. Header hides on scroll down (< 992px, the .ssx-legacy header) ----
 (function () {
   const header = document.querySelector('.main-header.ssx-legacy');
@@ -97,7 +118,7 @@
 })();
 
 // ---- 3. Product pages ----
-(function () {
+wholesaleProductSection((signal) => {
   const form = document.querySelector('.product-details form[data-noun]');
   const addButton = document.getElementById('addToCartBtn');
   // Buy Now (inc/product-buy-box.php); missing when the product is out of stock.
@@ -122,8 +143,12 @@
   };
   if (column) {
     fitColumn();
-    window.addEventListener('resize', fitColumn);
-    if ('ResizeObserver' in window) new ResizeObserver(fitColumn).observe(column);
+    window.addEventListener('resize', fitColumn, { signal });
+    if ('ResizeObserver' in window) {
+      const resize = new ResizeObserver(fitColumn);
+      resize.observe(column);
+      signal.addEventListener('abort', () => resize.disconnect());
+    }
   }
 
   const pricingBox = form.querySelector('.product-pricing-box');
@@ -192,11 +217,11 @@
     bar.classList.toggle('is-updating', pricingBox.classList.contains('is-updating'));
   };
   render();
-  new MutationObserver(render).observe(totalEl, { childList: true, characterData: true, subtree: true });
-  new MutationObserver(render).observe(addButton, { attributes: true, attributeFilter: ['disabled', 'class'] });
-  if (buyButton) new MutationObserver(render).observe(buyButton, { attributes: true, attributeFilter: ['disabled', 'class'] });
+  wholesaleWatch(signal, totalEl, { childList: true, characterData: true, subtree: true }, render);
+  wholesaleWatch(signal, addButton, { attributes: true, attributeFilter: ['disabled', 'class'] }, render);
+  if (buyButton) wholesaleWatch(signal, buyButton, { attributes: true, attributeFilter: ['disabled', 'class'] }, render);
   // The box's own class (.is-updating) and the hint message inside it (hidden / .is-hint).
-  new MutationObserver(render).observe(pricingBox, { attributes: true, attributeFilter: ['class', 'hidden'], subtree: true });
+  wholesaleWatch(signal, pricingBox, { attributes: true, attributeFilter: ['class', 'hidden'], subtree: true }, render);
 
   barButton.addEventListener('click', () => mainButton.click());
   if (barCart) barCart.addEventListener('click', () => addButton.click());
@@ -229,14 +254,21 @@
   });
   observer.observe(pricingBox);
   if (pill) observer.observe(pill);
-  window.addEventListener('scroll', update, { passive: true });
-  phone.addEventListener('change', update);
-})();
+  window.addEventListener('scroll', update, { passive: true, signal });
+  phone.addEventListener('change', update, { signal });
+  // A product swap builds a new bar for the new product.
+  signal.addEventListener('abort', () => {
+    observer.disconnect();
+    bar.remove();
+    document.body.classList.remove('has-pd-buy-bar');
+    liftChat(false);
+  });
+});
 
 // ---- 4. Delivered price under the Grand Total and in the phone buy bar ----
 // Price plus standard shipping below the free shipping minimum, so the price an
 // ad visitor sees is the price they pay before tax (single-product.php .pd-delivered).
-(function () {
+wholesaleProductSection((signal) => {
   const line = document.querySelector('.product-pricing-box .pd-delivered');
   const totalEl = document.querySelector('.product-pricing-box .price-total');
   if (!line || !totalEl) return;
@@ -270,19 +302,19 @@
     }
   };
   render();
-  new MutationObserver(render).observe(totalEl, { childList: true, characterData: true, subtree: true });
+  wholesaleWatch(signal, totalEl, { childList: true, characterData: true, subtree: true }, render);
   const box = totalEl.closest('.product-pricing-box');
-  if (box) new MutationObserver(render).observe(box, { attributes: true, attributeFilter: ['class'] });
+  if (box) wholesaleWatch(signal, box, { attributes: true, attributeFilter: ['class'] }, render);
   // The buy bar is built by section 3 after this script's first run on some pages.
-  window.addEventListener('load', render);
-})();
+  window.addEventListener('load', render, { signal });
+});
 
 // ---- 5. One-tap size chips (inc/size-chips.php) ----
 // A size chip fills width and height and prices them (js/main.js prices on the boxes'
 // input/change events); typing a size selects the matching chip, or none. Banner
 // stands: phones tap a size chip instead of opening the size dropdown, which stays
 // in the form. Visitor Insights logs chip taps as clicks with the chip's text.
-(function () {
+wholesaleProductSection(() => {
   const mark = (group, chip) => {
     group.querySelectorAll('.pb-size-chip').forEach((el) => {
       const on = el === chip;
@@ -341,7 +373,7 @@
     select.addEventListener('change', sync);
     sync();
   });
-})();
+});
 
 // ---- 6. Delivery estimate and production-time choices (inc/product-buy-box.php) ----
 // The same rules as checkout (inc/payments.php wholesale_estimated_ship_datetime()):
@@ -352,7 +384,7 @@
 // a Same Day choice is open on business days before its time (some again from 4pm) and all day on
 // days off; it is closed when both sides of the size are over 120". Closed choices are greyed out,
 // as on B2Sign; choices the quantity rules out are hidden. The cart checks all of it again.
-(function () {
+wholesaleProductSection((signal) => {
   const box = document.querySelector('.product-pricing-box .pd-eta');
   const choices = Array.from(document.querySelectorAll('[data-turnaround-option]'));
   // Products without mirrored choices: the site's own Next Day / Same Day (12pm) markup.
@@ -520,9 +552,10 @@
   };
 
   update();
-  window.setInterval(update, 30000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) update(); });
-  document.addEventListener('change', (e) => { if (e.target && e.target.name === 'turnaround_option') update(); });
+  const tick = window.setInterval(update, 30000);
+  signal.addEventListener('abort', () => window.clearInterval(tick));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) update(); }, { signal });
+  document.addEventListener('change', (e) => { if (e.target && e.target.name === 'turnaround_option') update(); }, { signal });
   if (qty) {
     qty.addEventListener('input', update);
     qty.addEventListener('change', update);
@@ -532,12 +565,12 @@
     form.addEventListener('input', () => setTimeout(update, 0));
     form.addEventListener('change', () => setTimeout(update, 0));
   }
-})();
+});
 
 // ---- 7. Quantity - / + buttons (inc/product-buy-box.php) ----
 // They change the number box and send it a change event, which js/main.js prices
 // (its jQuery handler and the server quote both listen for it).
-(function () {
+wholesaleProductSection(() => {
   const input = document.getElementById('productQuantity');
   const box = input && input.closest('.pd-qty__box');
   if (!box) return;
@@ -559,14 +592,14 @@
   input.addEventListener('input', sync);
   input.addEventListener('change', sync);
   sync();
-})();
+});
 
 // ---- 8. The whole "Starting at ... Get your price" box is a tap target (single-product.php) ----
 // Visitors tapped the price, not the small "Get your price" link beside it, and nothing
 // happened (Visitor Insights, Nov 8 2026: rage clicks on "STARTING AT $176.09 per letter
 // Get your price"). A tap anywhere on the box now scrolls to the options; on channel letters
 // the cursor goes into the sign text box, the one thing to fill in before a price shows.
-(function () {
+wholesaleProductSection(() => {
   document.querySelectorAll('.product-mobile-price').forEach((box) => {
     const link = box.querySelector('a[href^="#"]');
     const target = link && document.getElementById(link.getAttribute('href').slice(1));
@@ -581,7 +614,7 @@
       if (text && !text.value) window.setTimeout(() => text.focus({ preventScroll: true }), 500);
     });
   });
-})();
+});
 
 // ---- 9. Contact page: a tap on the form heading starts the form (page-contact.php) ----
 // One visitor tapped "Get your free quote" three times, as if it were a button (Nov 8 2026).

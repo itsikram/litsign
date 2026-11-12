@@ -1,5 +1,15 @@
 (function ($) {
-  $(document).ready((e) => {
+  // Product group buttons (js/product-group-swap.js) swap another product into the page
+  // and fire "wholesale:product-swapped"; everything below then runs again on the new
+  // product, except the header, menu and scroll-reveal code (first run only). Each run's
+  // document-level product handlers end before the next run binds its own.
+  let pageScope = null;
+  const pageInit = (first, e = $) => {
+    if (pageScope) pageScope.abort();
+    pageScope = new AbortController();
+    const signal = pageScope.signal;
+    $(document).off('.productPage');
+
     // Fade sections in as they scroll into view, on desktop only. Phones skip
     // it: visitors there scroll fast, and hidden content read as blank gaps
     // and missing product names (Visitor Insights showed most ad visitors on
@@ -8,7 +18,7 @@
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     // While the motion layer is on (inc/motion.php tags <html data-motion>),
     // js/motion.js does the reveals instead of this block.
-    const allowReveal = !prefersReducedMotion && 'IntersectionObserver' in window
+    const allowReveal = first && !prefersReducedMotion && 'IntersectionObserver' in window
       && !document.documentElement.hasAttribute('data-motion')
       && window.matchMedia('(min-width: 992px) and (hover: hover)').matches;
     const revealRoots = ['main', '#content', '.home', '.landing-page', '.product-details', '.contact-page', '.site-main'];
@@ -30,7 +40,9 @@
       return true;
     });
 
-    const galleries = [...document.querySelectorAll('[data-gallery]')];
+    // Card galleries set up by an earlier run keep their handlers.
+    const galleries = [...document.querySelectorAll('[data-gallery]:not([data-gallery-bound])')];
+    galleries.forEach((gallery) => { gallery.dataset.galleryBound = ''; });
     const setGalleryImage = (gallery, nextIndex) => {
       const images = [...gallery.querySelectorAll('.pb-gallery-image')];
       const count = gallery.querySelector('.pb-gallery-count');
@@ -63,7 +75,7 @@
       const currentIndex = Number(gallery.dataset.galleryIndex || 0);
       const isPrevious = arrow.classList.contains('pb-gallery-prev');
       setGalleryImage(gallery, currentIndex + (isPrevious ? -1 : 1));
-    });
+    }, { signal });
 
     galleries.forEach((gallery) => {
       setGalleryImage(gallery, 0);
@@ -364,7 +376,7 @@
 
     // change attribute
     $(document).on(
-      "change",
+      "change.productPage",
       ".product-attibute-box .dynamic-select:not(.avoid-price)",
       (e) => {
 
@@ -491,12 +503,12 @@
       if (!feet) return;
       feet.value = (parseFloat(feet.value) || 0) + Math.floor(value / 12);
       inch.value = Math.round((value % 12) * 100) / 100;
-    }, true);
+    }, { capture: true, signal });
 
     // Scrolling the page over a focused size box must not change the size.
     document.addEventListener('wheel', (e) => {
       if (e.target === document.activeElement && e.target.matches && e.target.matches('.dimenstion-calculator input[type="number"]')) e.target.blur();
-    }, { passive: true });
+    }, { passive: true, signal });
 
     // B2Sign-style Size selector (_size_presets products, single-product.php): a preset
     // fills in the width and height, whose boxes stay hidden; "Custom Sizes" shows the
@@ -584,7 +596,7 @@
         const option = e.target.closest('[role="option"]');
         if (option && option !== active) setActive(option);
       });
-      document.addEventListener('click', (e) => { if (!sizeSelect.contains(e.target)) close(false); });
+      document.addEventListener('click', (e) => { if (!sizeSelect.contains(e.target)) close(false); }, { signal });
     }
 
     // Size box in feet and inches (meta _size_unit = ftin, like B2Sign's banner page): the visible
@@ -758,7 +770,7 @@
     });
 
     // change dimension inputs
-    $(document).on("change", ".product-attibute-box .dimenstion-calculator input", (e) => {
+    $(document).on("change.productPage", ".product-attibute-box .dimenstion-calculator input", (e) => {
       switch (e.target.name) {
         // Height Feat
         case "height-ft":
@@ -1154,6 +1166,8 @@
 
     }
 
+    // Header, menus and the cart badge: first run only (a product swap keeps the header).
+    if (first) {
     const updateStickyHeader = () => {
       $(".main-header").toggleClass("is-scrolled", window.scrollY > 12);
     };
@@ -1241,58 +1255,6 @@
       toggler.toggleClass('is-open', !isExpanded);
     })
 
-    // custom select
-
-    $(".custom-select-container").click((e) => {
-      $(e.currentTarget).children(".custom-select").toggle();
-    });
-
-    $(".custom-select li").click((e) => {
-      let currentSlectedText = $(e.currentTarget).text();
-      let selectedValue = $(e.currentTarget).data("value");
-      let selectId = $(e.currentTarget)
-        .parents(".custom-select-container")
-        .attr("id")
-        .split("-")[2];
-      $(e.currentTarget)
-        .parents(".custom-select-container")
-        .attr("data-value", selectedValue);
-
-      $(e.currentTarget)
-        .parent()
-        .siblings(".color-sample")
-        .css("background-color", selectedValue.split("/")[2] || selectedValue);
-      $(e.currentTarget)
-        .parent()
-        .siblings(".custom-select-selected")
-        .text(currentSlectedText);
-      $("#select-" + selectId + "").val(selectedValue);
-      $("#select-" + selectId + "").trigger("change");
-    });
-
-    $(".custom-select li:first-child").trigger("click");
-    $(".custom-select").hide();
-
-    $("#select-face").parents(".select-row").hide();
-    $("#select-trimcap").parents(".select-row").hide();
-    $("#select-return").parents(".select-row").hide();
-
-    // The big "Enter Your Text" preview looks like the place to type; visitors
-    // tapped it repeatedly. Send them to the real text box.
-    $('#letter-output').css('cursor', 'text').on('click', () => {
-      $('#letterInput').trigger('focus');
-    });
-
-    $('.option-info-button').click(e => {
-      $(e.currentTarget).siblings('.option-info-content').toggle();
-    })
-
-
-    $('.cart-details-toggler').click(e => {
-      let currentTarget = e.currentTarget
-      $(currentTarget).parent().siblings('.cart-details-container').toggle();
-    })
-
     $('#allProductsBtn').click( e => {
       e.stopPropagation();
       const button = $(e.currentTarget);
@@ -1369,6 +1331,61 @@
     });
 
     $('.mega-menu-backdrop').click(closeMegaMenu);
+    }
+
+    // Product options (channel letter color pickers, letter preview, option info) and the cart page.
+    // custom select
+
+    $(".custom-select-container").click((e) => {
+      $(e.currentTarget).children(".custom-select").toggle();
+    });
+
+    $(".custom-select li").click((e) => {
+      let currentSlectedText = $(e.currentTarget).text();
+      let selectedValue = $(e.currentTarget).data("value");
+      let selectId = $(e.currentTarget)
+        .parents(".custom-select-container")
+        .attr("id")
+        .split("-")[2];
+      $(e.currentTarget)
+        .parents(".custom-select-container")
+        .attr("data-value", selectedValue);
+
+      $(e.currentTarget)
+        .parent()
+        .siblings(".color-sample")
+        .css("background-color", selectedValue.split("/")[2] || selectedValue);
+      $(e.currentTarget)
+        .parent()
+        .siblings(".custom-select-selected")
+        .text(currentSlectedText);
+      $("#select-" + selectId + "").val(selectedValue);
+      $("#select-" + selectId + "").trigger("change");
+    });
+
+    $(".custom-select li:first-child").trigger("click");
+    $(".custom-select").hide();
+
+    $("#select-face").parents(".select-row").hide();
+    $("#select-trimcap").parents(".select-row").hide();
+    $("#select-return").parents(".select-row").hide();
+
+    // The big "Enter Your Text" preview looks like the place to type; visitors
+    // tapped it repeatedly. Send them to the real text box.
+    $('#letter-output').css('cursor', 'text').on('click', () => {
+      $('#letterInput').trigger('focus');
+    });
+
+    $('.option-info-button').click(e => {
+      $(e.currentTarget).siblings('.option-info-content').toggle();
+    })
+
+
+    $('.cart-details-toggler').click(e => {
+      let currentTarget = e.currentTarget
+      $(currentTarget).parent().siblings('.cart-details-container').toggle();
+    })
+
 
 
     //checkout page data 
@@ -1475,7 +1492,7 @@
     //       }
     //     })
 
-    $(document).on('change', 'input[name="turnaround_option"]', e => {
+    $(document).on('change.productPage', 'input[name="turnaround_option"]', e => {
       let turnaroundOption = e.target.value;
       let productTotalCost = parseFloat($('#totalCost').val());
 
@@ -1492,21 +1509,77 @@
       }
     })
 
-    const windowUrl = new URL(window.location.href);
-    // Use URLSearchParams to get query string parameters
-    const params = new URLSearchParams(windowUrl.search);
-    for (const [key, value] of params) {
-      // ?size=36x72 is a size link (width x height, single-product.php), not a select value.
-      if (key === 'size' && /^\d+(\.\d+)?x\d+(\.\d+)?$/.test(value)) continue;
-      let querySelector = (`#select-${(key)}`)
-      let currentAttr = $(querySelector);
-      if (currentAttr) {
-        currentAttr.val(value);
-        currentAttr.trigger('change');
+    // Option links open the product with those options chosen:
+    //   ?display-size=10ft&of-sides=double-sided&turnaround_option=days_3&quantity=2
+    // A select (#select-<name> or name="<name>") takes the option whose name matches however
+    // the link writes it ("10ft", "10-ft", "Double Sided", "double-sided", "24x18" for 24" x 18",
+    // or the stored "141.17/10ft"); a radio group takes the matching choice; quantity sets the
+    // number box. Selects first, then radios and quantity (an option change resets those).
+    // Unknown keys or values change nothing; hidden and price fields are never set from a link.
+    // ?size=WxH is a size link (single-product.php); ?graphic_only=true etc. picks a product of
+    // the group (inc/product-group-swap.php). Native change events, so the live price (server
+    // quote), the option chips and the advanced finishing box follow.
+    const productForm = document.querySelector('.product-details form[data-noun]');
+    const params = new URLSearchParams(window.location.search);
+    if (productForm && [...params.keys()].length) {
+      const squash = (text) => String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const optionName = (value) => String(value).replace(/^-?[\d.]+\//, '');
+      const chooseSelect = (select, wanted) => {
+        const options = [...select.options].filter((o) => !o.disabled);
+        const option = options.find((o) => o.value === wanted)
+          || options.find((o) => squash(o.textContent) === squash(wanted))
+          || options.find((o) => squash(optionName(o.value)) === squash(wanted))
+          || options.find((o) => squash(o.value) === squash(wanted));
+        if (!option || option.selected) return;
+        // Channel letter color pickers show a list over a hidden select; their click sets both.
+        const picker = document.querySelector(`#custom-select-${CSS.escape(select.id.replace(/^select-/, ''))} li[data-value="${CSS.escape(option.value)}"]`);
+        if (picker) {
+          picker.click();
+        } else {
+          select.value = option.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        const advanced = select.closest('details.pb-advanced-finishing');
+        if (advanced && select.selectedIndex > 0) advanced.open = true;
+      };
+      const selects = [...productForm.querySelectorAll('select')];
+      const later = [];
+      for (const [key, value] of params) {
+        if (!value) continue;
+        if (key === 'size' && /^\d+(\.\d+)?x\d+(\.\d+)?$/.test(value)) continue;
+        if (document.querySelector(`.product-group-item-link[data-group-key="${CSS.escape(key)}"]`)) continue;
+        const select = productForm.querySelector(`select#select-${CSS.escape(key)}`)
+          || selects.find((s) => s.name === key)
+          || selects.find((s) => squash(s.name) === squash(key) || squash(s.id.replace(/^select-/, '')) === squash(key));
+        if (select) {
+          chooseSelect(select, value);
+        } else {
+          later.push([key, value]);
+        }
       }
-
+      for (const [key, value] of later) {
+        if (/^(quantity|qty)$/i.test(key)) {
+          const qty = productForm.querySelector('#productQuantity');
+          const count = Math.min(1000, Math.max(1, parseInt(value, 10) || 0));
+          if (qty && count && String(count) !== qty.value) {
+            qty.value = count;
+            qty.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+          continue;
+        }
+        const radios = [...productForm.querySelectorAll('input[type="radio"]')].filter((r) => r.name === key || squash(r.name) === squash(key));
+        const radio = radios.find((r) => r.value === value)
+          || radios.find((r) => squash(r.value) === squash(value))
+          || radios.find((r) => r.labels && r.labels[0] && squash(r.labels[0].textContent) === squash(value));
+        if (radio && !radio.disabled && !radio.checked) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
     }
-  });
+  };
+  $(document).ready(() => pageInit(true));
+  document.addEventListener('wholesale:product-swapped', () => pageInit(false));
 })(jQuery);
 
 // Footer review slider (rendered by inc/reviews.php on every page).
@@ -1591,7 +1664,12 @@
 
 // Live price from the server (inc/pricing.php) so the product page shows exactly what the cart charges.
 (() => {
+  // Runs again after a product group swap (js/product-group-swap.js); each run's document
+  // listener ends before the next run binds its own.
+  let scope = null;
   const init = () => {
+    if (scope) scope.abort();
+    scope = new AbortController();
     const productIdInput = document.querySelector('form input[name="product_id"]');
     const pricingBox = document.querySelector('.product-pricing-box');
     if (!productIdInput || !pricingBox || !window.wholesaleShop) return;
@@ -1794,7 +1872,7 @@
     // Custom color pickers update hidden selects without bubbling a native change event.
     document.addEventListener('click', (event) => {
       if (event.target.closest('.custom-select li')) refresh();
-    });
+    }, { signal: scope.signal });
     refresh();
   };
 
@@ -1803,6 +1881,7 @@
   } else {
     init();
   }
+  document.addEventListener('wholesale:product-swapped', init);
 })();
 
 // "Shop by sign type" rail: show prev/next arrows only while there is more to scroll.
@@ -1862,6 +1941,10 @@
   const frameOf = (node) => (node && node.tagName === 'IMG' ? node.closest(frames) : null);
 
   document.querySelectorAll(frames).forEach((frame) => sync(frame, false));
+  // A product group swap (js/product-group-swap.js) brings in new frames.
+  document.addEventListener('wholesale:product-swapped', () => {
+    document.querySelectorAll(frames).forEach((frame) => sync(frame, false));
+  });
 
   // Load and error don't bubble; capture catches lazy images loading later.
   const onImage = (event) => {

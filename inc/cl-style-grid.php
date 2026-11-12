@@ -138,10 +138,10 @@ function wholesale_render_cl_style_grid(array $args = array())
 			continue;
 		}
 		$price = null;
-		$from = function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price($product->ID) : null;
+		$from = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($product->ID) : null;
 		if ($from && $from['price'] > 0) {
-			$now = wholesale_whole_dollars($from['price']);
-			$was = wholesale_whole_dollars($from['everyday']);
+			$now = '$' . number_format($from['price'], 2);
+			$was = '$' . number_format($from['everyday'], 2);
 			$price = array(
 				'now' => $now,
 				'was' => $was !== $now && $from['everyday'] > $from['price'] ? $was : '',
@@ -163,7 +163,6 @@ function wholesale_render_cl_style_grid(array $args = array())
 	}
 	$priced = array_filter(array_column($cards, 'price'));
 	$lowest = $priced ? min(array_column($priced, 'amount')) : 0;
-	$height = $priced ? (int) reset($priced)['height'] : 0;
 	$title_id = 'cl-style-grid-title';
 	?>
 	<section class="hc-shop-cl cl-style-grid" id="<?php echo esc_attr($args['section_id']); ?>" aria-labelledby="<?php echo esc_attr($title_id); ?>">
@@ -228,7 +227,7 @@ function wholesale_render_cl_style_grid(array $args = array())
 									<small>From</small>
 									<?php if ($card['price']['was']) : ?><del><?php echo esc_html($card['price']['was']); ?></del><?php endif; ?>
 									<strong><?php echo esc_html($card['price']['now']); ?></strong>
-									<small>/ letter</small>
+									<small>/ inch</small>
 								</span>
 							<?php endif; ?>
 							<span class="hc-shop-cl-button"><span class="hc-shop-cl-button-long">Customize &amp; Order</span><span class="hc-shop-cl-button-short" aria-hidden="true">Order Now</span> <?php echo wholesale_home_icon('arrow'); ?></span>
@@ -247,7 +246,7 @@ function wholesale_render_cl_style_grid(array $args = array())
 			</div>
 
 			<p class="hc-shop-cl-note">
-				<?php if ($height) : ?>Prices are for one <?php echo (int) $height; ?>&Prime; letter before options; your total updates as you choose height and letters. <?php endif; ?>
+				Rates are per inch of letter height and vary with height and style. Enter your design to see the full price before checkout.
 				<?php if ($args['compare_url']) : ?><a href="<?php echo esc_url($args['compare_url']); ?>">Compare all 7 styles, heights &amp; warranty <?php echo wholesale_home_icon('arrow'); ?></a><?php endif; ?>
 			</p>
 		</div>

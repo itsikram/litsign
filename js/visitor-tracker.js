@@ -248,7 +248,9 @@
   // Facebook and Instagram apps on iPhone call window.webkit.messageHandlers),
   // not from the site itself. "ResizeObserver loop ..." is the browser noting a
   // layout pass it postponed; nothing breaks and the visitor sees nothing.
-  const injectedError = /webkit\.messageHandlers|__gCrWeb|instantSearchSDKJSBridgeClearHighlight|^ResizeObserver loop/;
+  // _AutofillCallbackHandler: iPhone in-app browsers' own autofill script, which
+  // calls a handler that doesn't exist on the page (nothing on the site uses it).
+  const injectedError = /webkit\.messageHandlers|__gCrWeb|instantSearchSDKJSBridgeClearHighlight|_AutofillCallbackHandler|^ResizeObserver loop/;
 
   let errorCount = 0;
   const logError = (message, where) => {
@@ -411,7 +413,23 @@
         keepalive: body.length < 60000,
         credentials: 'same-origin',
         headers: { 'Content-Type': 'text/plain' },
-      })).catch(() => {});
+      }))
+        // 200 + {chat: 1}: an agent started a chat with this visitor; open it.
+        .then((response) => (response && response.status === 200 ? response.json() : null))
+        .then((json) => {
+          const chat = window.SFSChatLoader;
+          if (!json || !json.chat || !chat || typeof chat.load !== 'function' || chat.widget) return;
+          // Desktop: open the chat. Phones: load it and show the agent's message as a bubble
+          // (an open chat would cover the whole screen).
+          const phone = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+          if (!phone) {
+            chat.load(true);
+          } else {
+            chat.invited = true;
+            chat.load(false);
+          }
+        })
+        .catch(() => {});
     } catch (error) {
       // Offline or blocked: drop it.
     }

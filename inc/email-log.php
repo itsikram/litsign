@@ -543,7 +543,9 @@ function wholesale_email_log_resend($id)
 
 function wholesale_email_admin_url($tab = 'log', $args = array())
 {
-	return add_query_arg($args, admin_url('admin.php?page=' . ('smtp' === $tab ? 'wholesale-emails-smtp' : 'wholesale-emails')));
+	$pages = array('smtp' => 'wholesale-emails-smtp', 'compose' => 'wholesale-emails-compose');
+
+	return add_query_arg($args, admin_url('admin.php?page=' . (isset($pages[$tab]) ? $pages[$tab] : 'wholesale-emails')));
 }
 
 function wholesale_email_failed_recent_count()
@@ -561,6 +563,7 @@ function wholesale_email_add_admin_menu()
 
 	add_menu_page('Email Log', 'Emails' . $badge, 'manage_options', 'wholesale-emails', 'wholesale_email_admin_page', 'dashicons-email', 27);
 	add_submenu_page('wholesale-emails', 'Email Log', 'Email Log', 'manage_options', 'wholesale-emails', 'wholesale_email_admin_page');
+	add_submenu_page('wholesale-emails', 'Send Email', 'Send Email', 'manage_options', 'wholesale-emails-compose', 'wholesale_email_admin_page');
 	add_submenu_page('wholesale-emails', 'SMTP Settings', 'SMTP Settings', 'manage_options', 'wholesale-emails-smtp', 'wholesale_email_admin_page');
 }
 add_action('admin_menu', 'wholesale_email_add_admin_menu');
@@ -581,7 +584,11 @@ function wholesale_email_redirect($tab, $notice, $type = 'success', $extra = arr
 {
 	set_transient('wholesale_email_notice_' . get_current_user_id(), array('type' => $type, 'message' => $notice), MINUTE_IN_SECONDS);
 	$back = wp_get_referer();
-	$url = $back && false !== strpos($back, 'page=wholesale-emails') ? remove_query_arg(array('_wpnonce'), $back) : wholesale_email_admin_url($tab);
+	$target = wholesale_email_admin_url($tab);
+	parse_str((string) wp_parse_url($target, PHP_URL_QUERY), $target_query);
+	parse_str((string) wp_parse_url((string) $back, PHP_URL_QUERY), $back_query);
+	$same_page = $back && isset($back_query['page'], $target_query['page']) && $back_query['page'] === $target_query['page'];
+	$url = $same_page ? remove_query_arg(array('_wpnonce'), $back) : $target;
 	wp_safe_redirect(add_query_arg($extra, $url));
 	exit;
 }
@@ -825,7 +832,8 @@ function wholesale_email_admin_page()
 		return;
 	}
 
-	$tab = isset($_GET['page']) && 'wholesale-emails-smtp' === $_GET['page'] ? 'smtp' : 'log';
+	$page_slug = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+	$tab = 'wholesale-emails-smtp' === $page_slug ? 'smtp' : ('wholesale-emails-compose' === $page_slug ? 'compose' : 'log');
 	$notice_key = 'wholesale_email_notice_' . get_current_user_id();
 	$notice = get_transient($notice_key);
 	delete_transient($notice_key);
@@ -852,6 +860,7 @@ function wholesale_email_admin_page()
 
 		<nav class="wsm-tabs">
 			<a href="<?php echo esc_url(wholesale_email_admin_url('log')); ?>" class="<?php echo 'log' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-list-view"></span> Email Log</a>
+			<a href="<?php echo esc_url(wholesale_email_admin_url('compose')); ?>" class="<?php echo 'compose' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-edit"></span> Send Email</a>
 			<a href="<?php echo esc_url(wholesale_email_admin_url('smtp')); ?>" class="<?php echo 'smtp' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-admin-generic"></span> SMTP Settings</a>
 		</nav>
 
@@ -870,6 +879,8 @@ function wholesale_email_admin_page()
 		<?php
 		if ('smtp' === $tab) {
 			wholesale_email_smtp_tab($status);
+		} elseif ('compose' === $tab) {
+			wholesale_email_compose_tab();
 		} else {
 			wholesale_email_log_tab();
 		}
@@ -1189,6 +1200,101 @@ function wholesale_email_log_tab()
 		});
 	})();
 	</script>
+	<?php
+}
+
+/**
+ * Send a custom email to chosen people. Each recipient gets their own copy so
+ * nobody sees the other addresses.
+ */
+function wholesale_handle_compose_email()
+{
+	wholesale_email_require_admin('wholesale_compose_email');
+
+	$post = wp_unslash($_POST);
+	$input = preg_split('/[\s,;]+/', isset($post['to']) ? (string) $post['to'] : '', -1, PREG_SPLIT_NO_EMPTY);
+	$recipients = array_values(array_unique(array_filter(array_map('sanitize_email', $input), 'is_email')));
+	$subject = trim(sanitize_text_field(isset($post['subject']) ? $post['subject'] : ''));
+	$body = isset($post['message']) ? wp_kses_post((string) $post['message']) : '';
+	$reply_to = sanitize_email(isset($post['reply_to']) ? $post['reply_to'] : '');
+
+	// Keep what was typed so a mistake does not lose the message.
+	set_transient('wholesale_email_compose_' . get_current_user_id(), array('to' => isset($post['to']) ? (string) $post['to'] : '', 'subject' => $subject, 'message' => $body, 'reply_to' => $reply_to), 10 * MINUTE_IN_SECONDS);
+
+	if (!$recipients) {
+		wholesale_email_redirect('compose', 'Enter at least one valid recipient email address.', 'error');
+	}
+	if (count($recipients) > 50) {
+		wholesale_email_redirect('compose', 'Send to 50 addresses or fewer at a time.', 'error');
+	}
+	if ('' === $subject || '' === trim(wp_strip_all_tags($body))) {
+		wholesale_email_redirect('compose', 'Add a subject and a message.', 'error');
+	}
+
+	$headers = array('Content-Type: text/html; charset=UTF-8');
+	if ($reply_to) {
+		$headers[] = 'Reply-To: ' . $reply_to;
+	}
+	$html = '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1d2327;max-width:620px;">' . wpautop($body) . '</div>';
+
+	$sent = 0;
+	$errors = array();
+	foreach ($recipients as $to) {
+		$result = wholesale_send_html_mail($to, $subject, $html, $headers);
+		if (true === $result) {
+			$sent++;
+		} else {
+			$errors[] = $to . ' (' . $result . ')';
+		}
+	}
+
+	if (!$errors) {
+		delete_transient('wholesale_email_compose_' . get_current_user_id());
+		wholesale_email_redirect('log', sprintf(_n('Email sent to %d recipient.', 'Email sent to %d recipients.', $sent, 'litsign'), $sent));
+	}
+	wholesale_email_redirect('compose', sprintf('%d sent, %d failed: %s', $sent, count($errors), implode('; ', $errors)), $sent ? 'warning' : 'error');
+}
+add_action('admin_post_wholesale_compose_email', 'wholesale_handle_compose_email');
+
+function wholesale_email_compose_tab()
+{
+	$key = 'wholesale_email_compose_' . get_current_user_id();
+	$saved = get_transient($key);
+	delete_transient($key);
+	$saved = is_array($saved) ? $saved : array('to' => '', 'subject' => '', 'message' => '', 'reply_to' => '');
+	$status = wholesale_mail_status();
+	?>
+	<form class="wsm-card wsm-form wsm-compose" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+		<input type="hidden" name="action" value="wholesale_compose_email">
+		<?php wp_nonce_field('wholesale_compose_email'); ?>
+		<div class="wsm-section">
+			<div class="wsm-section-head">
+				<div>
+					<h2>Send a custom email</h2>
+					<p>Write your own message and send it from <strong><?php echo esc_html($status['from']); ?></strong>. Each person gets a separate copy, and it appears in the Email Log.</p>
+				</div>
+			</div>
+			<p><label for="wsm-compose-to"><strong>To</strong></label><br>
+				<textarea id="wsm-compose-to" name="to" rows="2" class="large-text" placeholder="name@example.com, another@example.com" required><?php echo esc_textarea($saved['to']); ?></textarea>
+				<span class="description">Separate several addresses with commas, spaces or new lines (up to 50).</span></p>
+			<p><label for="wsm-compose-reply"><strong>Reply-To</strong> (optional)</label><br>
+				<input type="email" id="wsm-compose-reply" name="reply_to" value="<?php echo esc_attr($saved['reply_to']); ?>" placeholder="Where replies should go"></p>
+			<p><label for="wsm-compose-subject"><strong>Subject</strong></label><br>
+				<input type="text" id="wsm-compose-subject" name="subject" value="<?php echo esc_attr($saved['subject']); ?>" required></p>
+			<p><strong>Message</strong></p>
+			<?php
+			wp_editor($saved['message'], 'wsm_compose_message', array(
+				'textarea_name' => 'message',
+				'textarea_rows' => 12,
+				'media_buttons' => false,
+				'teeny' => true,
+			));
+			?>
+		</div>
+		<div class="wsm-form-foot">
+			<button type="submit" class="button button-primary button-large">Send email</button>
+		</div>
+	</form>
 	<?php
 }
 
@@ -1606,6 +1712,7 @@ function wholesale_email_admin_styles()
 		.wsm-switch.is-small .wsm-switch-ui::after{width:14px;height:14px}
 		.wsm-switch.is-small input:checked+.wsm-switch-ui::after{transform:translateX(16px)}
 		.is-disabled{opacity:.45;pointer-events:none}
+		.wsm-compose{max-width:860px}.wsm-compose .wsm-section{padding:20px 24px}.wsm-compose textarea.large-text{width:100%;border-radius:6px}.wsm-compose .description{color:var(--wsm-muted)}
 		.wsm-form-foot{padding:16px 24px;background:#fbfbfc;border-radius:0 0 var(--wsm-radius) var(--wsm-radius);position:sticky;bottom:0}
 		.wsm-side{display:flex;flex-direction:column;gap:16px}
 		.wsm-side .wsm-card{padding:18px}

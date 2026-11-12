@@ -30,8 +30,80 @@ $quote_file_max_total = 25 * MB_IN_BYTES;
 // Email providers reject large messages, so bigger uploads are sent as links only.
 $quote_file_attach_limit = 15 * MB_IN_BYTES;
 
+// The form posts in the background (script at the bottom, header X-Contact-Async) and
+// gets JSON back; without JavaScript it posts normally and the redirects below run.
+$contact_async = !empty($_SERVER['HTTP_X_CONTACT_ASYNC']);
+
+// Error messages, shown above the form after a redirect or returned to the background post.
+$quote_status_messages = array(
+	'file_error' => 'One of your files couldn’t be uploaded. Please attach up to ' . esc_html($quote_file_max_count) . ' JPG, PNG, WEBP, HEIC or PDF files, each under ' . esc_html(size_format($quote_file_max_bytes)) . ', and try again. Larger files: email a download link to <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a>.',
+	'expired' => 'This page was open too long, so the form expired. Please send it again; nothing was saved.',
+	'error' => 'Please fill in your name, email, phone and what you need, then try again. If it still doesn’t send, call <a href="tel:+18664362101">866-436-2101</a>.',
+);
+$contact_async_fail = static function ($status) use ($quote_status_messages) {
+	wp_send_json(array(
+		'ok' => false,
+		'status' => $status,
+		// The page is still open with the old form key, so a reload is needed first.
+		'message' => 'expired' === $status ? 'This page was open too long, so the form expired. Please reload the page and send it again; nothing was saved.'
+			: (isset($quote_status_messages[$status]) ? $quote_status_messages[$status] : $quote_status_messages['error']),
+	));
+};
+
+// The thank-you panel: printed on the "quote sent" page view and returned to the background post.
+$contact_sent_html = static function ($next_steps) use ($contact_url) {
+	ob_start();
+	?>
+	<div class="contact-sent" role="status" tabindex="-1" data-contact-sent>
+		<p class="contact-eyebrow">Request received</p>
+		<h2 id="contact-form-title">Thanks, we have your request</h2>
+		<p>A sign specialist will reply <?php echo esc_html(wholesale_quote_response_text()); ?>. We sent a copy to your email. Nothing is made or charged until you approve a quote.</p>
+		<h3>What happens next</h3>
+		<ol class="contact-next-steps">
+			<?php foreach ($next_steps as $step) : ?>
+				<li><?php echo esc_html($step); ?></li>
+			<?php endforeach; ?>
+		</ol>
+		<p>Need it sooner? Call <a href="tel:+18664362101">866-436-2101</a> or text <a href="sms:+12066186543">206-618-6543</a>.</p>
+		<p><a class="contact-sent-link" href="<?php echo esc_url($contact_url); ?>">Send another request</a></p>
+	</div>
+	<?php
+	return ob_get_clean();
+};
+
+// Success answer for the background post. The Google Ads lead conversion is sent by the
+// page itself (same data as wholesale_track_quote_lead()), once per lead.
+$contact_async_sent = static function ($lead_id, $interest) use ($contact_url, $quote_interests, $contact_sent_html) {
+	$conversion = null;
+	if (!get_post_meta($lead_id, '_conversion_tracked', true)) {
+		update_post_meta($lead_id, '_conversion_tracked', current_time('mysql'));
+		$digits = preg_replace('/\D/', '', (string) get_post_meta($lead_id, '_contact_phone', true));
+		$conversion = array(
+			'send_to' => 'AW-18454059893/' . wholesale_ads_lead_label(),
+			'transaction_id' => 'lead-' . $lead_id,
+			'user_data' => (object) array_filter(array(
+				'email' => (string) get_post_meta($lead_id, '_contact_email', true),
+				'phone_number' => 10 === strlen($digits) ? '+1' . $digits : (11 === strlen($digits) && '1' === $digits[0] ? '+' . $digits : ''),
+			)),
+			'source' => 'contact_page',
+		);
+	}
+	$next = isset($quote_interests[$interest]['next']) ? $quote_interests[$interest]['next'] : $quote_interests['not-sure']['next'];
+	wp_send_json(array(
+		'ok' => true,
+		'lead' => (int) $lead_id,
+		// Shown in the address bar, so a reload shows the thank-you panel again.
+		'url' => add_query_arg(array_merge(wholesale_quote_lead_args($lead_id), array('interest' => $interest)), $contact_url) . '#contact-form',
+		'html' => $contact_sent_html($next),
+		'conversion' => $conversion,
+	));
+};
+
 // A request larger than post_max_size arrives with an empty $_POST.
 if ('POST' === $_SERVER['REQUEST_METHOD'] && empty($_POST) && !empty($_SERVER['CONTENT_LENGTH'])) {
+	if ($contact_async) {
+		$contact_async_fail('file_error');
+	}
 	wp_safe_redirect(add_query_arg('quote_status', 'file_error', $contact_url ? $contact_url : home_url('/contact/')) . '#contact-form');
 	exit;
 }
@@ -52,7 +124,10 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 		'interest' => $context['interest'],
 		'item' => $context['item'] ? $context['item']['key'] : '',
 	)), $redirect_url);
-	$fail = static function ($status = 'error') use ($redirect_url) {
+	$fail = static function ($status = 'error') use ($redirect_url, $contact_async, $contact_async_fail) {
+		if ($contact_async) {
+			$contact_async_fail($status);
+		}
 		wp_safe_redirect(add_query_arg('quote_status', $status, $redirect_url) . '#contact-form');
 		exit;
 	};
@@ -81,6 +156,9 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 	foreach (array_filter(array($form_key ? 'wholesale_qkey_' . md5($form_key) : '', 'wholesale_qfp_' . $fingerprint)) as $dupe_key) {
 		$existing = (int) get_transient($dupe_key);
 		if ($existing && 'contact_submission' === get_post_type($existing)) {
+			if ($contact_async) {
+				$contact_async_sent($existing, $interest);
+			}
 			wp_safe_redirect(add_query_arg(array_merge(wholesale_quote_lead_args($existing), array('interest' => $interest)), $contact_url) . '#contact-form');
 			exit;
 		}
@@ -273,6 +351,9 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 	wholesale_mail_team($subject, $body, $headers, $attachments);
 	wholesale_send_quote_confirmation($submission_id);
 	// The request is saved and a failed email is retried automatically, so the visitor sees success.
+	if ($contact_async) {
+		$contact_async_sent($submission_id, $interest);
+	}
 	wp_safe_redirect(add_query_arg(array_merge(wholesale_quote_lead_args($submission_id), array('interest' => $interest)), $contact_url) . '#contact-form');
 	exit;
 }
@@ -321,19 +402,7 @@ get_header();
 		<div class="contact-layout">
 			<section class="contact-form-card" id="contact-form" aria-labelledby="contact-form-title">
 				<?php if ($quote_sent) : ?>
-					<div class="contact-sent" role="status" tabindex="-1" data-contact-sent>
-						<p class="contact-eyebrow">Request received</p>
-						<h2 id="contact-form-title">Thanks, we have your request</h2>
-						<p>A sign specialist will reply <?php echo esc_html(wholesale_quote_response_text()); ?>. We sent a copy to your email. Nothing is made or charged until you approve a quote.</p>
-						<h3>What happens next</h3>
-						<ol class="contact-next-steps">
-							<?php foreach ($copy['next'] as $step) : ?>
-								<li><?php echo esc_html($step); ?></li>
-							<?php endforeach; ?>
-						</ol>
-						<p>Need it sooner? Call <a href="tel:+18664362101">866-436-2101</a> or text <a href="sms:+12066186543">206-618-6543</a>.</p>
-						<p><a class="contact-sent-link" href="<?php echo esc_url($contact_url); ?>">Send another request</a></p>
-					</div>
+					<?php echo $contact_sent_html($copy['next']); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped inside. ?>
 				<?php else : ?>
 				<div class="contact-card-heading">
 					<p class="contact-eyebrow">Start your project</p>
@@ -341,16 +410,14 @@ get_header();
 					<p>Fields marked <span aria-hidden="true">*</span><span class="screen-reader-text">with an asterisk</span> are required. Everything else is optional.</p>
 				</div>
 
-				<?php if ('file_error' === $quote_status) : ?>
-					<div class="contact-message contact-message-error" role="alert">One of your files couldn’t be uploaded. Please attach up to <?php echo esc_html($quote_file_max_count); ?> JPG, PNG, WEBP, HEIC or PDF files, each under <?php echo esc_html(size_format($quote_file_max_bytes)); ?>, and try again. Larger files: email a download link to <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a>.</div>
-				<?php elseif ('expired' === $quote_status) : ?>
-					<div class="contact-message contact-message-error" role="alert">This page was open too long, so the form expired. Please send it again; nothing was saved.</div>
-				<?php elseif ('error' === $quote_status) : ?>
-					<div class="contact-message contact-message-error" role="alert">Please fill in your name, email, phone and what you need, then try again. If it still doesn’t send, call <a href="tel:+18664362101">866-436-2101</a>.</div>
+				<?php if (isset($quote_status_messages[$quote_status])) : ?>
+					<div class="contact-message contact-message-error" role="alert"><?php echo $quote_status_messages[$quote_status]; // phpcs:ignore WordPress.Security.EscapeOutput -- fixed text above. ?></div>
 				<?php endif; ?>
 
 				<form method="post" action="<?php echo esc_url($contact_url); ?>" class="contact-form" enctype="multipart/form-data" data-contact-form>
 					<?php wp_nonce_field('contact_quote', 'contact_quote_nonce'); ?>
+					<?php // Also sent when the script falls back to form.submit(), which leaves out the button. ?>
+					<input type="hidden" name="contact_quote_submit" value="1">
 					<input type="hidden" name="contact_form_key" value="" data-form-key>
 					<input type="hidden" name="contact_item" value="<?php echo esc_attr($current_item ? $current_item['key'] : ''); ?>">
 					<?php foreach (array('utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'gclid', 'landing', 'from', 'referrer') as $attr_field) : ?>
@@ -460,7 +527,8 @@ get_header();
 						<ul class="contact-upload-list" data-contact-upload-list aria-live="polite"></ul>
 					</div>
 					<p class="contact-form-errors" role="alert" data-contact-errors hidden></p>
-					<button class="contact-submit" type="submit" name="contact_quote_submit" value="1" data-contact-submit>Request my free quote <span aria-hidden="true">&rarr;</span></button>
+					<p class="contact-submit-hint" id="contact-submit-hint">All done? Press <strong>Submit</strong> to send your request to our team.</p>
+					<button class="contact-submit" type="submit" aria-describedby="contact-submit-hint" name="contact_quote_submit" value="1" data-contact-submit><span class="contact-submit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg></span>Submit</button>
 					<p class="contact-form-note">We reply <?php echo esc_html(wholesale_quote_response_text()); ?>. We use your details only to answer this request.</p>
 				</form>
 				<?php endif; ?>
@@ -728,17 +796,126 @@ get_header();
 			}
 		});
 
+		// Runs before the sending script below, so the post carries the current files and tokens.
 		form.addEventListener('submit', function () {
 			sync();
-			if (!submit || !form.checkValidity()) {
+		});
+	})();
+
+	// Send the form in the background and show the thank-you panel in place, without a reload.
+	// The server answers JSON when it sees X-Contact-Async; anything unexpected falls back to
+	// a normal post (the form key stops a second copy if the first one did arrive).
+	(function () {
+		var form = document.querySelector('[data-contact-form]');
+		var submit = form && form.querySelector('[data-contact-submit]');
+		if (!submit) {
+			return;
+		}
+		var card = form.closest('.contact-form-card') || form.parentNode;
+		var errors = form.querySelector('[data-contact-errors]');
+		var canFetch = !!(window.fetch && window.FormData);
+		var busy = false;
+
+		function label(text) {
+			for (var i = submit.childNodes.length - 1; i >= 0; i--) {
+				if (3 === submit.childNodes[i].nodeType && submit.childNodes[i].nodeValue.trim()) {
+					submit.childNodes[i].nodeValue = text;
+					return;
+				}
+			}
+			submit.appendChild(document.createTextNode(text));
+		}
+
+		function setBusy(on, text) {
+			busy = on;
+			submit.disabled = on;
+			submit.classList.toggle('is-loading', on);
+			submit.setAttribute('aria-busy', on ? 'true' : 'false');
+			label(on ? text : 'Submit');
+		}
+
+		function showError(html) {
+			if (!errors) {
 				return;
 			}
-			// Leave the button's value in the request, then show progress.
-			window.setTimeout(function () {
-				submit.disabled = true;
-				submit.classList.add('is-loading');
-				submit.firstChild.textContent = input.files.length ? 'Uploading files… ' : 'Sending… ';
-			}, 0);
+			errors.innerHTML = html || '';
+			errors.hidden = !html;
+			if (html) {
+				errors.scrollIntoView({ block: 'center', behavior: 'smooth' });
+			}
+		}
+
+		// Same events wholesale_track_quote_lead() prints on the "quote sent" page view.
+		function sendConversion(conversion) {
+			if (!conversion || !conversion.send_to) {
+				return;
+			}
+			window.dataLayer = window.dataLayer || [];
+			window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
+			if (conversion.user_data && Object.keys(conversion.user_data).length) {
+				window.gtag('set', 'user_data', conversion.user_data);
+			}
+			window.gtag('event', 'conversion', { send_to: conversion.send_to, transaction_id: conversion.transaction_id });
+			window.gtag('event', 'generate_lead', { lead_source: conversion.source });
+		}
+
+		function hasFiles() {
+			return Array.prototype.some.call(form.querySelectorAll('input[type="file"]'), function (field) {
+				return !field.disabled && field.files && field.files.length > 0;
+			});
+		}
+
+		form.addEventListener('submit', function (event) {
+			if (!canFetch) {
+				// Old browsers: normal post, just show progress.
+				window.setTimeout(function () {
+					setBusy(true, hasFiles() ? 'Uploading files…' : 'Sending…');
+				}, 0);
+				return;
+			}
+			event.preventDefault();
+			if (busy) {
+				return;
+			}
+			showError('');
+			setBusy(true, hasFiles() ? 'Uploading files…' : 'Sending…');
+
+			fetch(form.action, {
+				method: 'POST',
+				body: new FormData(form),
+				credentials: 'same-origin',
+				headers: { 'X-Contact-Async': '1', 'Accept': 'application/json' }
+			}).then(function (response) {
+				return response.json();
+			}).then(function (result) {
+				if (!result || 'boolean' !== typeof result.ok) {
+					throw new Error('Unexpected answer');
+				}
+				if (!result.ok) {
+					setBusy(false);
+					showError(result.message);
+					return;
+				}
+				sendConversion(result.conversion);
+				if (result.url && window.history && window.history.replaceState) {
+					window.history.replaceState(null, '', result.url);
+				}
+				card.innerHTML = result.html;
+				card.classList.add('is-sent');
+				var sent = card.querySelector('[data-contact-sent]');
+				// Below the sticky site header, so the "Thanks" heading isn't hidden behind it.
+				var header = document.getElementById('ssxHeader');
+				var offset = header ? Math.max(0, header.getBoundingClientRect().bottom) : 0;
+				window.scrollTo({ top: Math.max(0, card.getBoundingClientRect().top + window.pageYOffset - offset - 16), behavior: 'smooth' });
+				if (sent) {
+					sent.focus({ preventScroll: true });
+				}
+				document.dispatchEvent(new CustomEvent('sfs:contact-sent', { detail: { lead: result.lead } }));
+			}).catch(function () {
+				// Network trouble or a non-JSON answer: send it the normal way instead.
+				label('Sending…');
+				HTMLFormElement.prototype.submit.call(form);
+			});
 		});
 	})();
 </script>

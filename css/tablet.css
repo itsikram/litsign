@@ -1,0 +1,365 @@
+/*
+ * Tablet layer (2026-11-12).
+ *
+ * Loaded by wholesale_tablet_assets() in functions.php with
+ *   media="(min-width: 768px) and (max-width: 1199.98px)"
+ * so NOTHING in this file reaches phones (< 768px) or desktops (>= 1200px).
+ * Every rule below therefore only has to tell portrait tablets (768-991px:
+ * iPad, iPad Air, iPad Pro 11, Galaxy Tab, the phone-style header) from
+ * landscape tablets (992-1199px: iPad / iPad Air / iPad Pro 11 sideways,
+ * the desktop-style header).
+ *
+ * It prints after ui-polish.css and motion.css, so equal-specificity rules win.
+ */
+
+/* ---------- 1. Page width and gutters ----------
+   Bootstrap's fixed .container (720px at 768-991, 960px at 992-1199) left up to
+   135px of empty space on each side of an 991px tablet, while the product page
+   (1240px max) and the guide/about prose (860px max) ran to 12px from the edge,
+   so text started at a different place on every page. All containers now share
+   one gutter. Containers with their own max-width keep it. */
+:root {
+  --tab-gutter: 24px;
+}
+
+@media (min-width: 992px) {
+  :root {
+    --tab-gutter: 32px;
+  }
+}
+
+.container:not(.sf-prose):not(.account-container) {
+  max-width: none;
+}
+
+.container,
+.ssx-container {
+  padding-left: var(--tab-gutter);
+  padding-right: var(--tab-gutter);
+}
+
+/* ---------- 2. Header ---------- */
+/* Landscape: the desktop nav row (Channel Letters ... About) is wider than an
+   iPad, so "Shop", "Contact" and "About" slid under the Free Quote button with
+   no sign that the row scrolls. Tighter links, plus a fade on the right edge. */
+.ssx-header .ssx-menu a {
+  padding: 10px 9px;
+  font-size: 0.94rem;
+}
+
+.ssx-header .ssx-menu {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 36px), transparent);
+}
+
+.ssx-header .ssx-menu::after {
+  flex: 0 0 28px;
+  content: "";
+}
+
+/* ---------- 3. Home page ---------- */
+@media (max-width: 991.98px) {
+  /* Hero: the copy column was 65% wide, so the four product tiles were ~110px
+     and every name was cut off ("Vinyl Ban...", "Channel L..."). The tiles now
+     use the full width; the heading and intro keep a readable measure. */
+  .hc-hero-copy {
+    width: 100%;
+  }
+
+  .hc-hero .bd-hero-title,
+  .hc-hero .home-hero-lead {
+    max-width: 560px;
+  }
+
+  .hc-hero-picks {
+    max-width: none;
+    gap: 12px;
+  }
+
+  .hc-hero-pick-text strong {
+    font-size: 0.9rem;
+  }
+
+  /* Product line and "Everyday" cards: three to a row instead of two, so the
+     catalog reads like a shop shelf and the page is about a third shorter. */
+  .hc-pcard-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+}
+
+/* ---------- 4. Category pages (home.php listing) ---------- */
+/* Portrait: the category sidebar took 30% of the width and pushed the products
+   into one column of very large cards (a 14,500px page). The sidebar becomes
+   the same "Browse categories" bar phones use, and the products get three
+   columns. Opening the bar shows the three category groups side by side. */
+@media (max-width: 991.98px) {
+  .product-listing-container:not(.product-listing-container--cl) > .row > .col-md-2,
+  .product-listing-container:not(.product-listing-container--cl) > .row > .col-md-10 {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .product-listing-container .category-filter-menu-wrapper {
+    position: static;
+    max-height: none;
+    margin-bottom: 22px;
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .category-filter-menu-wrapper .category-filter-toggler {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 52px;
+    padding: 12px 18px;
+    border: 1px solid #dbe4ee;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    color: #172027;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .category-filter-menu-wrapper .category-filter-toggler i {
+    transition: transform 160ms ease;
+  }
+
+  .category-filter-menu-wrapper .category-filter-toggler.is-open i {
+    transform: rotate(180deg);
+  }
+
+  .category-filter-menu-wrapper .menu-filter-menu-container {
+    display: none;
+    margin-top: 10px;
+    padding: 18px 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  }
+
+  .category-filter-menu-wrapper .menu-filter-menu-container > .filter-menu {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px 24px;
+    align-items: start;
+  }
+
+  .category-filter-menu-wrapper .menu-filter-menu-container > .filter-menu > .menu-item + .menu-item {
+    margin-top: 0;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box-container {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+}
+
+/* Landscape: a slimmer sidebar so the products get three columns too. */
+@media (min-width: 992px) {
+  .product-listing-container:not(.product-listing-container--cl) > .row > .col-md-2 {
+    width: 25%;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) > .row > .col-md-10 {
+    width: 75%;
+  }
+
+  .product-listing-container:not(.product-listing-container--cl) .product-box-container {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 18px;
+  }
+}
+
+/* ---------- 5. Product page ---------- */
+/* The photo column was a third of the width in portrait, and every option label
+   with its help text was squeezed into a ~100px column beside its dropdown
+   ("Time to make your order before it ships..." ran 8 lines). The photo column
+   is now 5/12 wide and each option's label + help sit above a full-width
+   control, the way phones show it. */
+.product-details > main > article > form > .row.pd-hero {
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  column-gap: 28px;
+}
+
+.product-details .product-attibute-box > .row > .col-4,
+.product-details .product-attibute-box > .row > .col-8,
+.product-details .product-attibute-box > .row > .col-md-3,
+.product-details .product-attibute-box > .row > .col-md-9 {
+  flex: 0 0 100%;
+  width: 100%;
+  max-width: 100%;
+}
+
+.product-details .product-attibute-box > .row > .offset-4,
+.product-details .product-attibute-box > .row > .offset-md-3 {
+  margin-left: 0;
+}
+
+.product-details .product-attibute-box > .row.align-items-center + .row.align-items-center,
+.product-details .product-attibute-box > .row.align-items-start {
+  margin-top: 16px !important;
+}
+
+.product-details .product-attibute-box > .row > .col-md-3 > label,
+.product-details .product-attibute-box > .row > .col-md-3 > .dim-label {
+  display: inline-block;
+  margin-bottom: 4px;
+  font-size: 15px;
+}
+
+.product-details .product-attibute-box > .row > .col-md-3 > .pb-attr-help {
+  display: block;
+  margin: 0 0 8px;
+  max-width: 60ch;
+}
+
+.product-details .product-attibute-box .form-control,
+.product-details .product-attibute-box .form-select {
+  min-height: 46px;
+}
+
+/* Thumbnails: one swipeable row under the photo instead of two rows. */
+.product-details .pd-hero .product-gallery-container {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 4 * 8px) / 5);
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.product-details .pd-hero .product-gallery-container::-webkit-scrollbar {
+  display: none;
+}
+
+.product-details .pd-hero .product-gallery-container > .gallery-image-item {
+  scroll-snap-align: start;
+}
+
+/* Long-form sections under the buy box: same reading measure as the guide pages. */
+.product-details .product-guide,
+.product-details .product-info {
+  max-width: 920px;
+}
+
+/* ---------- 6. Contact page ---------- */
+/* style.css sizes the contact page at 70% of the window, which left the form in
+   a ~540px column with wide empty margins on a tablet. */
+.contact-page {
+  width: auto;
+  max-width: none;
+}
+
+@media (max-width: 991.98px) {
+  .contact-faq-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- 7. Sign packages ---------- */
+/* Portrait: three package cards made a 2 + 1 grid with an empty half row. The
+   last card spans the row and lays its items out side by side. */
+@media (max-width: 991.98px) {
+  .pkg-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pkg-grid > .pkg-card:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .pkg-grid > .pkg-card:last-child:nth-child(odd) .pkg-items {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .pkg-grid > .pkg-card:last-child:nth-child(odd) .pkg-cta {
+    align-self: flex-start;
+    min-width: 280px;
+  }
+}
+
+@media (min-width: 992px) {
+  .pkg-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ---------- 8. Footer ---------- */
+/* Portrait stacked brand, two link lists and a two-column contact block; landscape
+   squeezed the contact column so the email address broke mid-word. Both now show
+   the brand as a band, then Products | Company | Get in touch. */
+.sf-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.35fr);
+  gap: 36px 32px;
+}
+
+.sf-brand {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 250px) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 40px;
+  row-gap: 12px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sf-brand > .sf-brand__logo {
+  grid-row: span 2;
+  max-width: 250px;
+  margin: 0;
+}
+
+.sf-brand > .sf-brand__text,
+.sf-brand > .sf-badges {
+  grid-column: 2;
+  margin: 0;
+}
+
+.sf-brand > .sf-brand__text {
+  max-width: 560px;
+}
+
+.sf-grid > .sf-contact {
+  grid-column: auto;
+}
+
+.sf-contact .sf-contact__list {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.sf-contact .sf-contact__list a {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- 9. Touch comfort ---------- */
+/* Tablets are touch screens: give small text links a finger-sized hit area and
+   stop cards from "sticking" in their hover lift after a tap. */
+.sf-links a,
+.site-breadcrumbs a {
+  display: inline-block;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+@media (hover: none) {
+  .product-listing-container:not(.product-listing-container--cl) .product-box-container .product-box:hover,
+  .sc-card:hover,
+  .hc-pcard:hover {
+    transform: none;
+  }
+}

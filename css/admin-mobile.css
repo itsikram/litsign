@@ -1,0 +1,315 @@
+/*
+ * Phone-friendly wp-admin (inc/admin-mobile.php). Every rule is inside
+ * max-width: 782px (WordPress's own phone breakpoint), so desktop is unchanged.
+ */
+@media screen and (max-width: 782px) {
+
+	/* ---- 1. Never wider than the phone ---------------------------------- */
+	html.wp-toolbar,
+	body.wp-admin {
+		max-width: 100%;
+	}
+	#wpbody-content img,
+	#wpbody-content video,
+	#wpbody-content iframe:not([width]) {
+		max-width: 100%;
+		height: auto;
+	}
+	#wpbody-content pre {
+		max-width: 100%;
+		overflow-x: auto;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+	/* Wide tables get their own sideways scroll (wrapper added by js/admin-mobile.js). */
+	.wam-scroll {
+		max-width: 100%;
+		overflow-x: auto;
+		-webkit-overflow-scrolling: touch;
+		margin-bottom: 12px;
+	}
+	.wam-scroll > table {
+		margin-bottom: 0;
+	}
+	/* Hidden screen-reader labels inside a scrolled table otherwise anchor to the
+	   page and stretch it sideways; keep them inside their table. */
+	#wpbody-content table {
+		position: relative;
+	}
+	/* Flex rows that would push past the edge wrap instead (class set by the script). */
+	.wam-wrap {
+		flex-wrap: wrap !important;
+		max-width: 100%;
+	}
+	.wam-fit {
+		max-width: 100% !important;
+		min-width: 0 !important;
+	}
+
+	/* ---- 2. Toolbar: show every item, wrap to a second row ---------------- */
+	#wpadminbar {
+		height: auto !important;
+		min-height: 46px;
+	}
+	#wpadminbar .quicklinks,
+	#wpadminbar #wp-toolbar {
+		height: auto;
+	}
+	#wpadminbar .quicklinks::after {
+		content: "";
+		display: table;
+		clear: both;
+	}
+	#wpadminbar li#wp-admin-bar-updates,
+	#wpadminbar li#wp-admin-bar-comments,
+	#wpadminbar li#wp-admin-bar-sfs-live-chat,
+	#wpadminbar li#wp-admin-bar-wudt-diagnostics,
+	#wpadminbar li#wp-admin-bar-wholesale-visitor-insights,
+	#wpadminbar li#wp-admin-bar-wholesale-store-admin,
+	#wpadminbar li#wp-admin-bar-wholesale-clear-cache {
+		display: block;
+	}
+	/* Content sits below the toolbar however many rows it takes (height set by the script). */
+	html.wp-toolbar.wam-tall {
+		padding-top: var(--wam-bar-h, 46px) !important;
+	}
+	html.wam-tall .auto-fold #adminmenu {
+		top: var(--wam-bar-h, 46px);
+	}
+	/* Block editor (pages, posts, widgets, site editor) is pinned under the toolbar. */
+	html.wam-tall .interface-interface-skeleton {
+		top: var(--wam-bar-h, 46px);
+	}
+	/* Store tools that only had a text label get an icon (keeps the bar to two rows). */
+	#wpadminbar li#wp-admin-bar-wudt-diagnostics > .ab-item,
+	#wpadminbar li#wp-admin-bar-wholesale-visitor-insights > .ab-item,
+	#wpadminbar li#wp-admin-bar-wholesale-store-admin > .ab-item {
+		display: block;
+		width: 52px !important;
+		padding: 0 !important;
+		overflow: hidden;
+		font-size: 0 !important;
+		text-align: center;
+	}
+	#wpadminbar li#wp-admin-bar-wudt-diagnostics > .ab-item > *,
+	#wpadminbar li#wp-admin-bar-wholesale-visitor-insights > .ab-item > *,
+	#wpadminbar li#wp-admin-bar-wholesale-store-admin > .ab-item > * {
+		display: none !important;
+	}
+	#wpadminbar li#wp-admin-bar-wudt-diagnostics > .ab-item::before,
+	#wpadminbar li#wp-admin-bar-wholesale-visitor-insights > .ab-item::before,
+	#wpadminbar li#wp-admin-bar-wholesale-store-admin > .ab-item::before {
+		display: inline-block;
+		font: normal 28px/46px dashicons;
+		color: #a7aaad;
+		-webkit-font-smoothing: antialiased;
+	}
+	#wpadminbar li#wp-admin-bar-wudt-diagnostics > .ab-item::before {
+		content: "\f311"; /* performance gauge */
+	}
+	#wpadminbar li#wp-admin-bar-wholesale-visitor-insights > .ab-item::before {
+		content: "\f185"; /* bar chart */
+	}
+	#wpadminbar li#wp-admin-bar-wholesale-store-admin > .ab-item::before {
+		content: "\f513"; /* store */
+	}
+	/* Clear Cache shares the refresh icon with Updates: tint it so they differ. */
+	#wpadminbar #wp-admin-bar-wholesale-clear-cache:not(.is-done):not(.is-failed) .ab-icon::before {
+		color: #72aee6;
+	}
+	/* Items from other plugins without a phone icon get a short text label instead. */
+	#wpadminbar li.wam-text-item > .ab-item {
+		width: auto !important;
+		padding: 0 10px !important;
+		font-size: 13px !important;
+		line-height: 46px !important;
+		white-space: nowrap;
+	}
+	#wpadminbar li.wam-text-item > .ab-item .ab-label {
+		display: inline !important;
+	}
+	/* Comment / update / chat counts stay readable. */
+	#wpadminbar #wp-admin-bar-comments .ab-label,
+	#wpadminbar #wp-admin-bar-updates .ab-label {
+		display: inline-block !important;
+		margin-left: -8px;
+		font-size: 12px !important;
+		line-height: 46px;
+	}
+	#wpadminbar #wp-admin-bar-comments > .ab-item,
+	#wpadminbar #wp-admin-bar-updates > .ab-item {
+		width: auto !important;
+		padding-right: 8px !important;
+	}
+}
+
+/* Phones under 600px: WordPress moves the toolbar offset from the page to #wpbody. */
+@media screen and (max-width: 600px) {
+	html.wp-toolbar.wam-tall {
+		padding-top: 0 !important;
+	}
+	html.wam-tall #wpbody {
+		padding-top: var(--wam-bar-h, 46px);
+	}
+}
+
+@media screen and (max-width: 782px) {
+
+	/* ---- 3. List screens: filters, bulk actions, export, sort ------------- */
+	.tablenav.top {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 8px;
+		align-items: center;
+		height: auto;
+		margin-bottom: 10px;
+	}
+	.tablenav.top .actions {
+		display: flex !important;
+		flex-wrap: wrap;
+		gap: 6px;
+		align-items: center;
+		float: none;
+		width: 100%;
+		margin: 0;
+		padding: 0;
+		overflow: visible;
+	}
+	.tablenav.top .actions > * {
+		margin: 0 !important;
+		float: none !important;
+	}
+	.tablenav.top .actions select {
+		flex: 1 1 calc(50% - 6px);
+		min-width: 0;
+		max-width: 100%;
+	}
+	.tablenav.top .actions .button,
+	.tablenav.top .actions input[type="submit"] {
+		flex: 0 0 auto;
+		min-height: 40px;
+	}
+	.tablenav.top .actions input[type="text"],
+	.tablenav.top .actions input[type="search"],
+	.tablenav.top .actions input[type="date"] {
+		flex: 1 1 100%;
+		min-width: 0;
+	}
+	/* Bulk actions are now at the top; keep the bottom copy too (long lists). */
+	.tablenav.top .tablenav-pages {
+		width: 100%;
+		margin: 0;
+	}
+	.tablenav.top .displaying-num {
+		display: inline-block;
+	}
+	/* The "Sort by" box the script builds from the hidden column headers. */
+	.wam-sort {
+		display: flex;
+		align-items: center;
+		gap: 6px;
+		width: 100%;
+	}
+	.wam-sort label {
+		font-weight: 600;
+		white-space: nowrap;
+	}
+	.wam-sort select {
+		flex: 1 1 auto;
+		min-width: 0;
+		max-width: 100%;
+	}
+	/* Search box: full width and easy to hit. */
+	p.search-box {
+		position: static;
+		float: none;
+		display: flex;
+		gap: 6px;
+		width: 100%;
+		height: auto;
+		margin: 0 0 10px;
+	}
+	p.search-box input[type="search"] {
+		flex: 1 1 auto;
+		width: auto;
+		min-width: 0;
+	}
+	/* Status links (All | Paid | ...) wrap instead of running off the edge. */
+	.subsubsub {
+		float: none;
+		white-space: normal;
+		line-height: 2.2;
+	}
+
+	/* ---- 4. Forms, settings, meta boxes --------------------------------- */
+	.form-table td input.regular-text,
+	.form-table td input.large-text,
+	.form-table td select,
+	.form-table td textarea {
+		max-width: 100%;
+	}
+	#poststuff .inside .regular-text,
+	#poststuff .inside .large-text,
+	#poststuff .inside select,
+	#poststuff .inside textarea {
+		max-width: 100%;
+	}
+	.wrap .nav-tab-wrapper,
+	.wrap h2.nav-tab-wrapper {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 4px;
+		border-bottom: 1px solid #c3c4c7;
+		padding-bottom: 0;
+	}
+	.wrap .nav-tab {
+		float: none;
+		margin: 0;
+	}
+	.wrap .page-title-action {
+		display: inline-block;
+		margin: 6px 6px 0 0;
+	}
+	/* Sticky publish box on the product editor collides with the phone toolbar. */
+	.post-type-product #submitdiv {
+		position: static;
+	}
+
+	/* Block editor: WordPress drops Undo / Redo from the phone toolbar. */
+	.editor-header .editor-history__undo,
+	.editor-header .editor-history__redo {
+		display: inline-flex !important;
+	}
+
+	/* ---- 5. Page-specific fixes ----------------------------------------- */
+	/* Visitor Insights toolbar (date range + buttons). */
+	.wvi-toolbar-right {
+		max-width: 100%;
+		min-width: 0;
+	}
+	.wvi-toolbar-right > * {
+		max-width: 100%;
+	}
+	.wvi-search input {
+		min-width: 0 !important;
+	}
+	/* Email Log tabs. */
+	.wsm-segments {
+		display: flex !important;
+		flex-wrap: wrap;
+		max-width: 100%;
+	}
+	/* Reviews by Product: slug box. */
+	.wholesale-rm .wholesale-rm-open {
+		flex-wrap: wrap;
+	}
+	.wholesale-rm .wholesale-rm-open input[type="text"] {
+		flex: 1 1 100%;
+		width: auto;
+		min-width: 0;
+	}
+	/* Tracking sync facts table header column. */
+	.sfs-table--facts th {
+		width: auto;
+	}
+}

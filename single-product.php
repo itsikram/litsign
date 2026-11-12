@@ -34,10 +34,10 @@ $product_stock_status = wholesale_product_stock_status(get_the_ID());
 // A size link (?size=36x72, from ads and Shopping) opens on that size, with its price in the HTML (inc/size-chips.php).
 $size_link = wholesale_size_link(get_the_ID());
 
-$product_group_json = get_post_meta(get_the_ID(), '_product_group_data', true);
-$product_group_array = json_decode($product_group_json, true);
-
-$product_has_group = $product_group_array[0]['slug'] == 'null' ? false : true;
+// Group buttons ("Graphic + Frame" / "Graphic Only"), inc/product-group-swap.php: the group of
+// the product the URL names (?graphic_only=true shows another member on that URL).
+$product_group_members = wholesale_product_group_for_page();
+$product_has_group = count($product_group_members) > 1;
 $product_attr_json = get_post_meta(get_the_ID(), 'product_attr', true);
 $product_attr_array = json_decode((string) $product_attr_json);
 if (!is_array($product_attr_array)) {
@@ -152,7 +152,8 @@ get_header();
 
 ?>
 
-<div class="container  product-details">
+<?php // data-product-page: the block a product group button swaps (js/product-group-swap.js). ?>
+<div class="container  product-details" data-product-page="<?php echo (int) get_the_ID(); ?>">
     <?php wholesale_breadcrumbs(); ?>
     <main id="primary">
     <article <?php post_class('product-article'); ?>>
@@ -315,15 +316,15 @@ get_header();
                     <?php endif; ?>
 
                 <?php } elseif (trim(wp_strip_all_tags((string) $starting_at_text)) !== '') {
-                    // Channel letters: the computed per-letter "from" price, so visitors
+					// Channel letters: the computed per-inch starting rate, so visitors
                     // arriving from an ad see a price before they type their sign text.
-                    $cl_from = function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price(get_the_ID()) : null;
+					$cl_from = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate(get_the_ID()) : null;
                     ?>
                     <div class="product-price-per-sqft text-end py-2 text-secondary">
                         <span class="product-price-label">Starting at</span>
                         <span class="product-price-value"><?php echo wholesale_emphasize_price($starting_at_text); ?></span>
                         <?php if (!empty($cl_from['height'])) : ?>
-                            <small class="d-block"><?php echo esc_html(sprintf('One %d inch letter, before options such as a power supply', $cl_from['height'])); ?></small>
+							<small class="d-block"><?php echo esc_html(sprintf('Effective rate at %d inch letter height. Enter your design for the full price.', $cl_from['height'])); ?></small>
                         <?php endif; ?>
                     </div>
                 <?php }; ?>
@@ -632,43 +633,36 @@ get_header();
 
                             <div class="row d-fex align-items-center">
 
-                                <div class="product-group-container">
+                                <div class="product-group-container" role="group" aria-label="Product options">
 
                                     <?php
                                     // Kit / partial toggles (Stand + Graphic vs Graphic only) get labels and prices.
                                     $group_is_kit_toggle = (bool) wholesale_product_kit_info($product_id);
-                                    foreach ($product_group_array as $product_group) {
-                                        $group_member = !empty($product_group['slug']) ? get_page_by_path($product_group['slug'], OBJECT, 'product') : null;
-                                        if ($group_member && wholesale_product_kit_info($group_member->ID)) {
+                                    foreach ($product_group_members as $group_member) {
+                                        if (wholesale_product_kit_info($group_member['id'])) {
                                             $group_is_kit_toggle = true;
                                         }
                                     }
 
-                                    foreach ($product_group_array as $product_group) {
-                                        $group_item_slug = $product_group['slug'];
-                                        $group_item_title = $product_group['title'];
-                                        if ($group_item_slug == true) {
-                                            $group_product = get_page_by_path($group_item_slug, OBJECT, 'product');
-                                            if ($group_product) {
-                                                $group_product_id = $group_product->ID;
-                                            }
-                                        } else {
-                                            $group_product_id = get_the_ID();
-                                        }
-
-                                        $group_product_permalink = get_permalink($group_product_id);
-                                        $is_current_product = $group_product_id == $product_id ? 'current' : '';
-                                        if ($is_current_product == 'current') {
-                                            $group_product_permalink = 'javascript:void(0)';
-                                        }
+                                    // A button swaps that product into this page without reloading
+                                    // (js/product-group-swap.js). Its link is the group's first product,
+                                    // with ?graphic_only=true etc. for the others; opened directly, that
+                                    // link shows the same product (inc/product-group-swap.php).
+                                    // A duplicate page (e.g. straight-velcro-...-graphic-frame-only) marks the product it copies.
+                                    $group_current_id = function_exists('wholesale_seo_product_duplicate_of') && !in_array((int) $product_id, wp_list_pluck($product_group_members, 'id'), true)
+                                        ? (int) wholesale_seo_product_duplicate_of($product_id)
+                                        : 0;
+                                    foreach ($product_group_members as $group_member) {
+                                        $group_product_id = $group_member['id'];
+                                        $is_current_product = $group_product_id == $product_id || $group_product_id == $group_current_id ? 'current' : '';
                                         // Each option shows what it is and its starting price; the complete kit is the primary option.
                                         $group_option = $group_is_kit_toggle
-                                            ? wholesale_product_kit_toggle_option($group_product_id, $group_item_title)
-                                            : array('label' => wp_strip_all_tags((string) $group_item_title), 'price' => 0, 'is_kit' => false);
+                                            ? wholesale_product_kit_toggle_option($group_product_id, $group_member['title'])
+                                            : array('label' => wp_strip_all_tags((string) $group_member['title']), 'price' => 0, 'is_kit' => false);
                                     ?>
 
                                         <div class="product-group-item <?php echo $is_current_product; ?><?php echo $group_option['is_kit'] ? ' product-group-item--kit' : ''; ?>">
-                                            <a href="<?php echo $group_product_permalink; ?>" class="product-group-item-link"><?php echo esc_html($group_option['label']); ?><?php if ($group_option['price'] > 0) : ?> <span class="product-group-item-price">$<?php echo esc_html(number_format($group_option['price'], 2)); ?></span><?php endif; ?></a>
+                                            <a href="<?php echo esc_url($group_member['url']); ?>" class="product-group-item-link" data-group-key="<?php echo esc_attr($group_member['key']); ?>" data-product-id="<?php echo (int) $group_product_id; ?>" data-fetch-url="<?php echo esc_url(wholesale_product_group_fetch_url($group_member, $product_group_members)); ?>"<?php echo $is_current_product ? ' aria-current="page"' : ''; ?>><?php echo esc_html($group_option['label']); ?><?php if ($group_option['price'] > 0) : ?> <span class="product-group-item-price">$<?php echo esc_html(number_format($group_option['price'], 2)); ?></span><?php endif; ?></a>
                                         </div>
 
 

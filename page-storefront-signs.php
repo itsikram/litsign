@@ -63,7 +63,7 @@ wholesale_seo_set_page_faq(array(
 	),
 	array(
 		'q' => 'How much does a storefront sign cost?',
-		'a' => 'Channel letters are priced per letter by letter height, so the total depends on how many letters you need, how tall they are and the style. Each style shows its starting price, and the <a href="' . esc_url($builder_url) . '">online sign builder</a> shows your full price as you design. Window graphics and banners are priced per square foot.',
+		'a' => 'Channel letter starting rates are shown per inch of letter height. The full price depends on how many letters you need, how tall they are and the style. Each style shows its starting rate, and the <a href="' . esc_url($builder_url) . '">online sign builder</a> shows your full price as you design. Window graphics and banners are priced per square foot.',
 	),
 	array(
 		'q' => 'What size should my storefront sign letters be?',
@@ -258,7 +258,7 @@ get_header();
 		<div class="container sf-prose">
 			<p class="cl-kicker">Pricing guidance</p>
 			<h2 id="sf-pricing-title" class="cl-section-title">How Much Does a Storefront Sign Cost?</h2>
-			<p>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, so a short name in smaller letters costs far less than a long name in tall letters. You see the full price before checkout.<?php $cost_page = get_page_by_path('channel-letter-cost'); if ($cost_page && 'publish' === $cost_page->post_status) : ?> See prices for every style and height, with example signs, in our <a href="<?php echo esc_url(get_permalink($cost_page)); ?>">channel letter cost guide</a>.<?php endif; ?></p>
+			<p>Starting rates are shown per inch of letter height. Your total depends on the number of letters, the height you choose and options such as a raceway, so a short name in smaller letters costs far less than a long name in tall letters. You see the full price before checkout.<?php $cost_page = get_page_by_path('channel-letter-cost'); if ($cost_page && 'publish' === $cost_page->post_status) : ?> See prices for every style and height, with example signs, in our <a href="<?php echo esc_url(get_permalink($cost_page)); ?>">channel letter cost guide</a>.<?php endif; ?></p>
 			<div class="cl-compare-table-wrap">
 				<table class="cl-compare-table sf-price-table" aria-label="Channel letter starting prices by style">
 					<thead>

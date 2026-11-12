@@ -60,6 +60,7 @@ if ($order_post_id) {
 
 
     $headline = array(
+        'in-review' => 'We\'re reviewing your order',
         'pending' => 'We\'re reviewing your order',
         'processing' => 'Your order is in production',
         'completed' => 'Your order has shipped',

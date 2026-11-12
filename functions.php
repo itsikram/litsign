@@ -64,6 +64,7 @@ require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
 require_once(dirname(__FILE__) . '/inc/product-kit.php');
+require_once(dirname(__FILE__) . '/inc/product-group-swap.php');
 require_once(dirname(__FILE__) . '/inc/size-chips.php');
 require_once(dirname(__FILE__) . '/inc/product-buy-box.php');
 require_once(dirname(__FILE__) . '/inc/product-hero.php');
@@ -72,6 +73,7 @@ require_once(dirname(__FILE__) . '/inc/product-guides.php');
 require_once(dirname(__FILE__) . '/inc/product-page-content.php');
 require_once(dirname(__FILE__) . '/inc/category-page-content.php');
 require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
+require_once(dirname(__FILE__) . '/inc/openai-feed.php');
 require_once(dirname(__FILE__) . '/inc/product-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/location-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
@@ -103,7 +105,9 @@ require_once(dirname(__FILE__) . '/inc/developer-page.php');
 require_once(dirname(__FILE__) . '/inc/seo-admin/loader.php');
 require_once(dirname(__FILE__) . '/inc/admin-product-editor.php');
 require_once(dirname(__FILE__) . '/inc/admin-edit-links.php');
+require_once(dirname(__FILE__) . '/inc/admin-mobile.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
+require_once(dirname(__FILE__) . '/inc/order-pay-link.php');
 require_once(dirname(__FILE__) . '/ssx-live-search.php');
 
 /**
@@ -456,7 +460,7 @@ function wholesale_setting_defaults()
 		'channel_shipping_options' => '50,200,250,300',
 		// Standard shipping is free once the cart subtotal reaches these (0 = off).
 		'free_shipping_min' => '100',
-		'free_shipping_channel_min' => '1000',
+		'free_shipping_channel_min' => '100',
 		'google_places_api_key' => defined('WHOLESALE_GOOGLE_PLACES_API_KEY') ? WHOLESALE_GOOGLE_PLACES_API_KEY : '',
 		'google_place_id' => '',
 		// Google reviews below this many stars are hidden on the site.
@@ -3077,6 +3081,23 @@ function wholesale_ui_polish_assets()
 add_action('wp_enqueue_scripts', 'wholesale_ui_polish_assets', 100);
 
 /**
+ * Tablet-only layout layer (css/tablet.css). The media attribute limits it to
+ * 768-1199px wide screens, so phones and desktops never apply it (browsers still
+ * fetch it at low priority without holding back the first paint there).
+ * Priority 120: prints after ui-polish.css (100), motion.css and the product
+ * group styles (110), so its equal-specificity rules win.
+ */
+function wholesale_tablet_assets()
+{
+	if (is_admin() || is_page('channel-letter-builder')) {
+		return;
+	}
+	$path = '/css/tablet.css';
+	wp_enqueue_style('wholesale-tablet', get_template_directory_uri() . $path, array('wholesale-ui-polish'), (string) filemtime(get_template_directory() . $path), '(min-width: 768px) and (max-width: 1199.98px)');
+}
+add_action('wp_enqueue_scripts', 'wholesale_tablet_assets', 120);
+
+/**
  * Preload both font files: body text and the hero heading use them above the fold.
  */
 function wholesale_preload_typography_fonts()
@@ -3466,7 +3487,7 @@ function wholesale_seo_page_defaults()
 		),
 		'contact' => array(
 			'title' => __('Contact Us | Free Sign, Banner & Display Quote', 'litsign'),
-			'description' => __('Request a free quote for channel letters, banners, flags, trade show displays or window graphics. Call 866-436-2101, text or email your logo, Mon-Fri 8am-5pm PT.', 'litsign'),
+			'description' => __('Free quote for channel letters, banners, flags, displays and window graphics. Call 866-436-2101 or send your logo, Mon-Fri 8am-5pm PT. Ships nationwide.', 'litsign'),
 		),
 		'sign-packages' => array(
 			'title' => __('Sign Packages: Grand Opening, Trade Show & New Storefront', 'litsign'),
@@ -3483,8 +3504,8 @@ function wholesale_seo_page_defaults()
 		),
 		'channel-letter-cost' => array(
 			// The prices are live, so the year stays current.
-			'title' => sprintf(__('Channel Letter Cost: Real Prices per Letter & Height (%s)', 'litsign'), wp_date('Y')),
-			'description' => __('How much do channel letters cost? See real per-letter prices for 7 lit styles from 8" to 36", example sign totals, and what adds to the price.', 'litsign'),
+			'title' => sprintf(__('Channel Letter Cost: Rates per Inch & Sign Examples (%s)', 'litsign'), wp_date('Y')),
+			'description' => __('How much do channel letters cost? See starting rates per inch for 7 lit styles, example sign totals, and what adds to the price.', 'litsign'),
 		),
 		'shop' => array(
 			'title' => __('Shop Custom Signs, Banners & Displays | Prices Online', 'litsign'),
@@ -3992,7 +4013,8 @@ function wholesale_product_schema($product_id, $url, $image = '')
 	$product = array(
 		'@type' => 'Product',
 		'@id' => trailingslashit($url) . '#product',
-		'name' => wholesale_schema_text(get_the_title($product_id)),
+		// The name shoppers see in the page's H1, not the catalog post title.
+		'name' => wholesale_schema_text(wholesale_product_page_heading($product_id)),
 		'url' => $url,
 		'description' => wholesale_seo_description(),
 		'image' => $image ? array($image) : array(),
@@ -4099,6 +4121,22 @@ function wholesale_product_schema($product_id, $url, $image = '')
 }
 
 /**
+ * The product page's H1 (single-product.php): the channel letter heading, the
+ * kit heading, or the name shoppers search for. Structured data uses the same name.
+ */
+function wholesale_product_page_heading($product_id)
+{
+	$seo = function_exists('wholesale_seo_channel_letter_product') ? wholesale_seo_channel_letter_product($product_id) : array();
+	$heading = !empty($seo['heading']) ? $seo['heading'] : (function_exists('wholesale_seo_product_search_name') ? wholesale_seo_product_search_name($product_id) : '');
+	$kit = function_exists('wholesale_product_kit_info') ? wholesale_product_kit_info($product_id) : array();
+	if ($kit && !empty($kit['heading'])) {
+		$heading = $kit['heading'];
+	}
+
+	return '' !== trim((string) $heading) ? $heading : get_the_title($product_id);
+}
+
+/**
  * Plain text for JSON-LD: get_the_title() returns HTML-escaped text
  * ("Terms &amp; Conditions"), which Google reads literally.
  */
@@ -4139,6 +4177,12 @@ function wholesale_seo_head()
 		$image = $GLOBALS['wholesale_page_image'];
 	}
 
+	// Pages and categories with their own hero photo (inc/hero-images.php) share it.
+	if (!$image && function_exists('wholesale_hero_config')) {
+		$hero = wholesale_hero_config();
+		$image = $hero && !empty($hero['share']) ? $hero['share'] : '';
+	}
+
 	// Category pages share their first product's photo instead of the logo.
 	if (!$image && get_query_var('category_slug')) {
 		$first_product = get_posts(array(
@@ -4162,7 +4206,10 @@ function wholesale_seo_head()
 		$image = get_theme_mod('custom_logo') ? wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full') : '';
 	}
 
-	echo '<link rel="canonical" href="' . esc_url($url) . '">' . "\n";
+	// A missing page has no canonical address.
+	if (!is_404()) {
+		echo '<link rel="canonical" href="' . esc_url($url) . '">' . "\n";
+	}
 	echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
 	// Share-preview overrides from SEO in wp-admin (inc/seo-admin/); unchanged by default.
 	$og_title = (string) apply_filters('wholesale_seo_og_title', $title);

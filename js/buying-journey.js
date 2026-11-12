@@ -54,36 +54,41 @@
   if (sent) sent.focus({ preventScroll: false });
 
   // ---- 2. Calculator products: advanced finishing options ----
-  var advanced = ['webbing', 'velcro', 'rope', 'corners', 'reinforced-strip', 'windslit', 'wind-slit'];
-  var rows = [];
-  advanced.forEach(function (name) {
-    var select = document.querySelector('select.dynamic-select[name="' + name + '"]');
-    var row = select && select.closest('.select-row');
-    if (row) rows.push({ row: row, select: select });
-  });
-  if (rows.length >= 2) {
-    // Keep page order.
-    rows.sort(function (a, b) {
-      return a.row.compareDocumentPosition(b.row) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+  // Again after a product group swap (js/product-group-swap.js) brings in another product's options.
+  var finishing = function () {
+    var advanced = ['webbing', 'velcro', 'rope', 'corners', 'reinforced-strip', 'windslit', 'wind-slit'];
+    var rows = [];
+    advanced.forEach(function (name) {
+      var select = document.querySelector('select.dynamic-select[name="' + name + '"]');
+      var row = select && select.closest('.select-row');
+      if (row && !row.closest('.pb-advanced-finishing')) rows.push({ row: row, select: select });
     });
-    var box = document.createElement('details');
-    box.className = 'pb-advanced-finishing';
-    var summary = document.createElement('summary');
-    summary.textContent = 'Advanced finishing options';
-    var note = document.createElement('small');
-    note.className = 'pb-advanced-finishing__note';
-    note.textContent = ' (optional: most orders don’t need these)';
-    summary.appendChild(note);
-    box.appendChild(summary);
-    rows[0].row.parentNode.insertBefore(box, rows[0].row);
-    rows.forEach(function (item) {
-      box.appendChild(item.row);
-      if (item.select.selectedIndex > 0) box.open = true;
-    });
-  }
+    if (rows.length >= 2) {
+      // Keep page order.
+      rows.sort(function (a, b) {
+        return a.row.compareDocumentPosition(b.row) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      });
+      var box = document.createElement('details');
+      box.className = 'pb-advanced-finishing';
+      var summary = document.createElement('summary');
+      summary.textContent = 'Advanced finishing options';
+      var note = document.createElement('small');
+      note.className = 'pb-advanced-finishing__note';
+      note.textContent = ' (optional: most orders don’t need these)';
+      summary.appendChild(note);
+      box.appendChild(summary);
+      rows[0].row.parentNode.insertBefore(box, rows[0].row);
+      rows.forEach(function (item) {
+        box.appendChild(item.row);
+        if (item.select.selectedIndex > 0) box.open = true;
+      });
+    }
 
-  document.querySelectorAll('.pb-attr-help[id^="help-"]').forEach(function (help) {
-    var select = document.getElementById('select-' + help.id.slice(5));
-    if (select) select.setAttribute('aria-describedby', help.id);
-  });
+    document.querySelectorAll('.pb-attr-help[id^="help-"]').forEach(function (help) {
+      var select = document.getElementById('select-' + help.id.slice(5));
+      if (select) select.setAttribute('aria-describedby', help.id);
+    });
+  };
+  finishing();
+  document.addEventListener('wholesale:product-swapped', finishing);
 })();

@@ -538,7 +538,7 @@
           },
           onCancelled: () => {
             setBusy(false);
-            showStatus('Payment cancelled. Your order has not been placed.', 'info');
+            showStatus(kind === 'order' ? 'Payment cancelled. No charge was made.' : 'Payment cancelled. Your order has not been placed.', 'info');
           },
         });
       } catch (error) {
@@ -556,6 +556,9 @@
     if (checkoutForm) setup(checkoutForm, 'cart');
     const ticketForm = document.getElementById('ticketPayForm');
     if (ticketForm) setup(ticketForm, 'ticket');
+    // Payment link for an existing order (/pay/?o=, inc/order-pay-link.php).
+    const orderForm = document.getElementById('orderPayForm');
+    if (orderForm) setup(orderForm, 'order');
   };
 
   if (document.readyState === 'loading') {

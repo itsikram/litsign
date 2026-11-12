@@ -92,7 +92,8 @@
     var context = input.getAttribute("data-async-upload");
     var field = input.getAttribute("data-async-field");
     var form = input.form;
-    if (!context || !field || !form) return;
+    if (!context || !field || !form || input.hasAttribute("data-async-bound")) return;
+    input.setAttribute("data-async-bound", "");
 
     var name = input.name;
     var status = document.createElement("small");
@@ -170,6 +171,10 @@
   }
 
   document.querySelectorAll("input[type=file][data-async-upload]").forEach(bindInput);
+  // A product group swap (js/product-group-swap.js) brings in a new artwork box.
+  document.addEventListener("wholesale:product-swapped", function () {
+    document.querySelectorAll("input[type=file][data-async-upload]").forEach(bindInput);
+  });
 
   window.wholesaleAsyncUpload = Object.assign(config, {
     upload: upload,

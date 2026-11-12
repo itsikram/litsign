@@ -26,7 +26,9 @@ $free_min = wholesale_free_shipping_amount();
 $free_channel_min = wholesale_free_shipping_amount(true);
 // One line for the offers that are switched on, e.g. "... $100 or more (orders with channel letters: $1,000 or more)".
 $free_note = '';
-if ($free_min && $free_channel_min) {
+if ($free_min && $free_channel_min && $free_min === $free_channel_min) {
+	$free_note = sprintf('Free Standard shipping on orders of %s or more', $free_min);
+} elseif ($free_min && $free_channel_min) {
 	$free_note = sprintf('Free Standard shipping on orders of %s or more (orders with channel letters: %s or more)', $free_min, $free_channel_min);
 } elseif ($free_min) {
 	$free_note = sprintf('Free Standard shipping on orders of %s or more (channel letters excluded)', $free_min);

@@ -75,6 +75,7 @@ $example_heights = array(12, 18, 24);
 
 $front_lit = wholesale_seo_product('standard-channel-letter-front-lit');
 $front_lit_url = $front_lit ? get_permalink($front_lit) : home_url('/');
+$front_lit_rate = $front_lit ? wholesale_cl_from_inch_rate($front_lit->ID) : null;
 // Only a dated sale (Settings > Storefront Sign) is described as a discount: "10% sale
 // that ends Nov 30". Prices below come from the checkout, so they include it either way.
 $promotion = $front_lit ? wholesale_product_promotion($front_lit->ID) : null;
@@ -101,12 +102,12 @@ $example_12 = $cl_price('standard-channel-letter-front-lit', 12, $example_name, 
 $example_24 = $cl_price('standard-channel-letter-front-lit', 24, $example_name, true);
 
 wholesale_seo_set_page_faq(array_values(array_filter(array(
-	$cheapest_8 && $example_12 && $example_24 ? array(
+	$front_lit_rate && $cheapest_8 && $example_12 && $example_24 ? array(
 		'q' => 'How much do channel letters cost?',
-		'a' => sprintf('Our channel letters start at %s for one 8 inch front lit letter%s. A typical 8-letter business name in front lit letters costs about %s at 12 inches tall and %s at 24 inches tall, including a standard power supply, before shipping. Halo lit and trimless styles cost more per letter.', $money($cheapest_8), $discount_text ? ' with our ' . $discount_text : '', $money($example_12), $money($example_24)),
+		'a' => sprintf('Front lit channel letter rates start at %s per inch of letter height at %d inches tall%s. A typical 8-letter business name in front lit letters costs about %s at 12 inches tall and %s at 24 inches tall, including a standard power supply, before shipping. Rates vary by height and style.', $money($front_lit_rate['price']), $front_lit_rate['height'], $discount_text ? ' with our ' . $discount_text : '', $money($example_12), $money($example_24)),
 	) : null,
 	array(
-		'q' => 'Why are channel letters priced per letter?',
+		'q' => 'How is the full sign price calculated?',
 		'a' => 'Each letter is built to order as its own lit sign, with its own face, returns and LEDs, so the cost grows with the number of letters and their height. Taller letters use more material and more LEDs, which is why price climbs with height.',
 	),
 	$power_supply_price ? array(
@@ -140,7 +141,7 @@ get_header();
 			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">Channel letter pricing</p>
 			<h1 id="clc-title" class="sf-hero-title">How Much Do Channel Letters Cost?</h1>
-			<p class="sf-hero-lead">Real prices, not estimates. Channel letters are priced per letter by height<?php if ($cheapest_8) : ?>, starting at <strong><?php echo esc_html($money($cheapest_8)); ?></strong> for one 8 inch front lit letter<?php endif; ?>. The tables below come straight from our online pricing, so they match what you pay at checkout.</p>
+			<p class="sf-hero-lead">Real prices, not estimates.<?php if ($front_lit_rate) : ?> Front lit rates start at <strong><?php echo esc_html($money($front_lit_rate['price'])); ?> per inch</strong> of letter height at <?php echo (int) $front_lit_rate['height']; ?> inches tall.<?php endif; ?> Rates vary by height and style. The tables below show example letter prices from our online pricing; the builder shows your full sign total before checkout.</p>
 			<?php wholesale_guide_byline(); ?>
 			<div class="sf-hero-actions">
 				<a class="cl-button" href="<?php echo esc_url($front_lit_url); ?>">Price Your Sign <?php echo wholesale_home_icon('arrow'); ?></a>
@@ -157,7 +158,7 @@ get_header();
 
 	<section class="cl-compare" aria-labelledby="clc-table-title">
 		<div class="container">
-			<p class="cl-kicker">Price per letter</p>
+			<p class="cl-kicker">Full price examples</p>
 			<h2 id="clc-table-title" class="cl-section-title">Channel Letter Prices by Style and Height</h2>
 			<p class="cl-section-lead">Price for one letter<?php echo $discount_text ? ', after the ' . esc_html($discount_text) : ''; ?>, before the power supply, raceway and shipping. Multiply by the number of letters in your sign.</p>
 			<div class="cl-compare-table-wrap">
@@ -233,7 +234,7 @@ get_header();
 			<p class="cl-kicker">What affects the price</p>
 			<h2 id="clc-factors-title" class="cl-section-title">5 Things That Decide Your Channel Letter Cost</h2>
 			<h3>1. Number of letters</h3>
-			<p>You pay per letter, so a short name costs less than a long one. Spaces are free. Shortening &ldquo;Smith Family Dental Care&rdquo; to &ldquo;Smith Dental&rdquo; cuts the letter count, and the price, by about half.</p>
+			<p>A short name costs less than a long one. Spaces are free. Shortening &ldquo;Smith Family Dental Care&rdquo; to &ldquo;Smith Dental&rdquo; cuts the letter count, and the price, by about half.</p>
 			<h3>2. Letter height</h3>
 			<p>Taller letters cost more because they use more aluminum, acrylic and LEDs. Size letters for your viewing distance: a common sign industry rule of thumb is about 1 inch of letter height for every 10 feet, so letters read from a 120-foot parking lot work best at around 12 inches or taller.</p>
 			<h3>3. Lighting style</h3>

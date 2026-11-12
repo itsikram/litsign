@@ -1487,21 +1487,60 @@ function wholesale_cl_from_price($product_id)
 }
 
 /**
- * "Starting at" text for a channel letter, from its real per-letter price:
- * "$133.20 per letter", or "<del>$133.20</del> $119.88 per letter" during a dated
- * sale. Replaces the hand-typed per-inch text, which quoted prices no letter height
- * actually reached.
+ * Lowest effective price per inch of letter height across the available heights.
+ * The displayed rate is rounded up to a cent so it never understates the rate.
+ * This is advertising copy only; the builder still quotes the full design.
+ */
+function wholesale_cl_from_inch_rate($product_id)
+{
+	static $cache = array();
+	$product_id = (int) $product_id;
+	if (array_key_exists($product_id, $cache)) {
+		return $cache[$product_id];
+	}
+	$cache[$product_id] = null;
+	$discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
+	$promotion = wholesale_product_promotion_percent($product_id);
+	foreach (wholesale_product_price_attrs($product_id) as $attr) {
+		if ('height' !== ($attr['name'] ?? '')) {
+			continue;
+		}
+		foreach (wholesale_attr_options($attr) as $option) {
+			$height = (int) $option['label'];
+			$regular = (float) $option['value'];
+			if ($height <= 0 || $regular <= 0) {
+				continue;
+			}
+			$everyday = round($regular * (1 - $discount / 100), 2);
+			$price = round($everyday * (1 - $promotion / 100), 2);
+			$rate = $price / $height;
+			if (null === $cache[$product_id] || $rate < $cache[$product_id]['exact_rate']) {
+				$cache[$product_id] = array(
+					'exact_rate' => $rate,
+					'price' => ceil($rate * 100 - 0.0000001) / 100,
+					'everyday' => ceil($everyday / $height * 100 - 0.0000001) / 100,
+					'height' => $height,
+					'letter_price' => $price,
+				);
+			}
+		}
+	}
+	return $cache[$product_id];
+}
+
+/**
+ * Advertised starting rate per inch of letter height, including dated sales.
  */
 function wholesale_cl_starting_text($product_id)
 {
-	$from = wholesale_cl_from_price($product_id);
+	$from = wholesale_cl_from_inch_rate($product_id);
 	if (!$from) {
 		return '';
 	}
 	$money = static function ($amount) {
 		return '$' . (floor($amount) == $amount ? number_format($amount) : number_format($amount, 2));
 	};
-	$now = $money($from['price']) . ' per letter';
+	$now = $money($from['price']) . ' per inch';
 
 	return $from['price'] < $from['everyday'] ? '<del>' . $money($from['everyday']) . ' </del><span style="color: green">' . $now . '</span>' : $now;
 }
@@ -1536,7 +1575,8 @@ function wholesale_cl_starting_price_note()
 		return '';
 	}
 
-	$note = sprintf('Starting prices are for one %d&Prime; letter, the smallest height, before options. Channel letters are priced per letter, not per inch: each letter height has its own price, and your total is that price times the number of letters, plus options such as a raceway or power supply.', $from['height']);
+	$rate = wholesale_cl_from_inch_rate($product->ID);
+	$note = sprintf('Starting rates are per inch of letter height, before options. The lowest front lit rate is at %d&Prime;. Rates vary by height and style; enter your letters in the builder to see the full sign price, including options such as a raceway or power supply.', $rate ? $rate['height'] : $from['height']);
 
 	$cl_data = json_decode((string) get_post_meta($product->ID, 'product_cl_data', true), true);
 	foreach (is_array($cl_data) ? $cl_data : array() as $group) {

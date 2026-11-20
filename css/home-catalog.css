@@ -2415,3 +2415,16 @@
     transform: none;
   }
 }
+
+/* Speed (Nov 20 2026): sections far below the first screen skip layout and paint
+   until they come near. The first-paint CSS is inline (inc/performance.php), so the
+   page paints before the rest of its 2,900 elements are laid out; without this,
+   that layout ran as long tasks after the paint (lab: Total Blocking Time 623 ms
+   -> 319 ms). "auto" remembers each section's real height once shown. The script
+   at the top of <main> (template-parts/home-catalog.php) marks sections within
+   1,250px of the screen .hc-cv-near, so their photos load as early as before, and
+   sets html.hc-cv-off before any in-page jump so it lands on the exact spot. */
+html:not(.hc-cv-off) .hc-page > section:not(.hc-hero):not(.hc-cv-near) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1500px;
+}

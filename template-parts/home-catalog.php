@@ -598,6 +598,39 @@ if ($pick_cl_from && $pick_cl_product) {
 ?>
 
 <main id="primary" class="site-main hc-page">
+	<script>
+	/* Sections far below the first screen skip layout until they come near
+	   (content-visibility in css/home-catalog.css). Lay them out 1,250px early, so
+	   their photos load as before, and all at once before an in-page jump, so
+	   #channel-letters and the other jumps land on the exact spot. */
+	(function (root) {
+		var off = function () { root.classList.add('hc-cv-off'); };
+		if (location.hash || !('IntersectionObserver' in window)) {
+			off();
+			return;
+		}
+		document.addEventListener('click', function (e) {
+			var a = e.target.closest ? e.target.closest('a[href*="#"]') : null;
+			if (a && a.hash && a.pathname === location.pathname && a.hostname === location.hostname) {
+				off();
+			}
+		}, true);
+		window.addEventListener('hashchange', off);
+		document.addEventListener('DOMContentLoaded', function () {
+			var io = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (entry.isIntersecting) {
+						entry.target.classList.add('hc-cv-near');
+						io.unobserve(entry.target);
+					}
+				});
+			}, { rootMargin: '1250px 0px' });
+			document.querySelectorAll('.hc-page > section:not(.hc-hero)').forEach(function (section) {
+				io.observe(section);
+			});
+		});
+	})(document.documentElement);
+	</script>
 	<section class="bd-hero hc-hero" aria-labelledby="home-hero-title" style="<?php echo esc_attr($hero_background); ?>">
 		<div class="container">
 			<div class="hc-hero-copy">

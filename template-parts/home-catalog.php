@@ -565,9 +565,15 @@ $pick_photos = static function ($products) {
 		if ($product && function_exists('wholesale_product_card_hidden') && wholesale_product_card_hidden($product)) {
 			continue;
 		}
-		$url = $product ? wp_get_attachment_image_url(get_post_thumbnail_id($product), 'medium') : '';
-		if ($url) {
-			$urls[] = $url;
+		$id = $product ? (int) get_post_thumbnail_id($product) : 0;
+		$medium = $id ? wp_get_attachment_image_src($id, 'medium') : false;
+		if ($medium) {
+			$thumb = wp_get_attachment_image_src($id, 'thumbnail');
+			$urls[] = array(
+				'src' => $medium[0],
+				'width' => (int) $medium[1],
+				'thumb' => $thumb && $thumb[0] !== $medium[0] ? $thumb[0] : '',
+			);
 		}
 	}
 	return $urls;
@@ -666,7 +672,15 @@ if ($pick_cl_from && $pick_cl_product) {
 							<a class="hc-hero-pick" href="<?php echo esc_url($pick['url']); ?>">
 								<?php if ($pick['photos']) : ?>
 									<span class="hc-hero-pick-photos" data-count="<?php echo esc_attr(count($pick['photos'])); ?>" aria-hidden="true">
-										<?php foreach ($pick['photos'] as $pick_photo) : ?><img src="<?php echo esc_url(wholesale_webp_url($pick_photo)); ?>" alt="" width="150" height="150" decoding="async" fetchpriority="low"><?php endforeach; ?>
+										<?php
+										// Shown at 72-93px. The 150px copy is enough up to about 1.75x screens
+										// (PageSpeed's phone, desktops); sharper screens still pick the 300px one.
+										foreach ($pick['photos'] as $pick_photo) :
+											$pick_src = wholesale_webp_url($pick_photo['src']);
+											$pick_srcset = $pick_photo['thumb'] ? wholesale_webp_url($pick_photo['thumb']) . ' 150w, ' . $pick_src . ' ' . $pick_photo['width'] . 'w' : '';
+											?><img src="<?php echo esc_url($pick_src); ?>"<?php if ($pick_srcset) : ?> srcset="<?php echo esc_attr($pick_srcset); ?>" sizes="(max-width: 991px) 85px, 72px"<?php endif; ?> alt="" width="150" height="150" decoding="async" fetchpriority="low"><?php
+										endforeach;
+										?>
 									</span>
 								<?php endif; ?>
 								<span class="hc-hero-pick-text"><strong><?php echo esc_html($pick['name']); ?></strong><small>From <?php echo wp_kses($pick['price'], array('sup' => array())); ?></small><?php echo wholesale_home_icon('arrow'); ?></span>

@@ -349,6 +349,27 @@ function wholesale_critical_css_fresh($subset, $source)
 }
 
 /**
+ * A first-paint subset's CSS for an inline <style> block, or '' when it cannot
+ * be inlined safely (the caller then links the file as before).
+ *
+ * The home page prints its subsets inline. As separate files the phone could
+ * neither paint nor read past them until both had arrived, so the hero photos
+ * and scripts were not even requested until then (PageSpeed mobile, Nov 20
+ * 2026: blank screen until 2.8 s, Speed Index 5.5 s, while bootstrap-critical.css
+ * shared the connection with the fonts and the hero photo).
+ */
+function wholesale_critical_css_inline($file)
+{
+	$css = is_readable($file) ? (string) file_get_contents($file) : '';
+	if ('' === trim($css) || false !== stripos($css, '</style')) {
+		return '';
+	}
+
+	// The subset's relative URLs point from css/; inline they would resolve against the page.
+	return (string) preg_replace('#url\(\s*(["\']?)\.\./#', 'url($1' . get_template_directory_uri() . '/', $css);
+}
+
+/**
  * Pages that use css/bootstrap-critical.css instead of the full Bootstrap
  * stylesheet for the first paint: public content and landing pages for
  * logged-out visitors. Product, cart, checkout, account and builder pages,
@@ -395,10 +416,21 @@ function wholesale_critical_bootstrap_tag($tag, $handle, $href)
 	if (function_exists('wholesale_cache_bust_asset_src')) {
 		$critical = wholesale_cache_bust_asset_src($critical);
 	}
+	// Inline on the home page only (see wholesale_critical_css_inline()); other
+	// pages keep the file, which the browser then reuses from its cache.
+	$inline = is_front_page() ? wholesale_critical_css_inline($file) : '';
 
 	ob_start();
-	?>
+	if ('' !== $inline) :
+		?>
+<style id="bootsrap-critical-css"><?php echo $inline; // phpcs:ignore WordPress.Security.EscapeOutput -- theme CSS file. ?></style>
+		<?php
+	else :
+		?>
 <link rel="stylesheet" id="bootsrap-critical-css" href="<?php echo esc_url($critical); ?>" media="all">
+		<?php
+	endif;
+	?>
 <script>
 	window.addEventListener('load', function () {
 		var critical = document.getElementById('bootsrap-critical-css');
@@ -446,10 +478,19 @@ function wholesale_critical_home_style_tag($tag, $handle, $href)
 	if (function_exists('wholesale_cache_bust_asset_src')) {
 		$critical = wholesale_cache_bust_asset_src($critical);
 	}
+	$inline = wholesale_critical_css_inline($dir . 'style-home-critical.css');
 
 	ob_start();
-	?>
+	if ('' !== $inline) :
+		?>
+<style id="custom-style-critical-css"><?php echo $inline; // phpcs:ignore WordPress.Security.EscapeOutput -- theme CSS file. ?></style>
+		<?php
+	else :
+		?>
 <link rel="stylesheet" id="custom-style-critical-css" href="<?php echo esc_url($critical); ?>" media="all">
+		<?php
+	endif;
+	?>
 <script>
 	window.addEventListener('load', function () {
 		var critical = document.getElementById('custom-style-critical-css');

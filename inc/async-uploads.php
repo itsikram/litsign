@@ -40,13 +40,7 @@ function wholesale_async_upload_contexts()
 			'max' => WHOLESALE_QUOTE_FORM_MAX_MB * MB_IN_BYTES,
 		),
 		'artwork' => array(
-			'mimes' => array(
-				'jpg|jpeg|jpe' => 'image/jpeg',
-				'png' => 'image/png',
-				'gif' => 'image/gif',
-				'webp' => 'image/webp',
-				'pdf' => 'application/pdf',
-			),
+			'mimes' => wholesale_artwork_mimes(), // inc/artwork-size-check.php: PDF, JPG, PNG.
 			'max' => wholesale_artwork_max_bytes(), // inc/buying-journey.php
 		),
 	);
@@ -99,7 +93,7 @@ function wholesale_ajax_async_upload()
 	}
 	$checked = wp_check_filetype_and_ext($file['tmp_name'], $file['name'], $rules['mimes']);
 	if (empty($checked['ext']) || empty($checked['type'])) {
-		wholesale_async_upload_fail('That file type isn’t supported.');
+		wholesale_async_upload_fail('artwork' === $context ? 'Artwork must be a ' . wholesale_artwork_types_text() . ' file.' : 'That file type isn’t supported.');
 	}
 
 	$dir = wholesale_async_upload_dir();

@@ -148,94 +148,15 @@ $logo_id = get_theme_mod('custom_logo');
 		<a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e('Skip to content', 'litsign'); ?></a>
 
 		<?php
-		// Free shipping bar, above both headers. Amounts come from Settings > Checkout defaults.
+		// Shipping offer amounts come from Settings > Checkout defaults.
 		$ship_min = wholesale_free_shipping_amount();
 		$ship_cl_min = wholesale_free_shipping_amount(true);
-		if ($ship_min || $ship_cl_min) :
-			?>
-			<style>
-				.sso-ship-bar {
-					background: #e6f6fc;
-					border-bottom: 1px solid #c9eaf7;
-					color: #0d2236;
-					font-size: 14px;
-					line-height: 1.35;
-				}
-
-				.sso-ship-bar__in {
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					flex-wrap: wrap;
-					gap: 4px 10px;
-					max-width: 1320px;
-					margin: 0 auto;
-					padding: 8px 16px;
-					text-align: center;
-				}
-
-				.sso-ship-bar svg {
-					flex: none;
-					color: #0e7aa6;
-				}
-
-				.sso-ship-bar strong {
-					font-weight: 800;
-				}
-
-				.sso-ship-bar__sep {
-					color: #7fb9d2;
-				}
-
-				.sso-ship-bar a {
-					color: #0b6f9c; /* 5:1 on the bar; #0e7aa6 was 4.35:1 at phone size */
-					font-weight: 700;
-					text-decoration: underline;
-					text-underline-offset: 2px;
-				}
-
-				.sso-ship-bar a:hover {
-					color: #0d2236;
-				}
-
-				@media (max-width: 575px) {
-					.sso-ship-bar {
-						font-size: 12.5px;
-					}
-
-					.sso-ship-bar__in {
-						gap: 2px 8px;
-						padding: 6px 12px;
-					}
-
-					.sso-ship-bar svg,
-					.sso-ship-bar__long {
-						display: none;
-					}
-				}
-			</style>
-			<div class="sso-ship-bar" role="note" aria-label="<?php esc_attr_e('Free shipping offer', 'litsign'); ?>">
-				<div class="sso-ship-bar__in">
-					<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1.05a2.5 2.5 0 0 0 4.9 0h6.1a2.5 2.5 0 0 0 4.9 0H21a1 1 0 0 0 1-1v-4.38a1 1 0 0 0-.1-.45l-2-4A1 1 0 0 0 19 6.6h-3V6a1 1 0 0 0-1-1H3Zm13 3.6h2.38L19.9 11.6H16V8.6ZM6.5 15.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm11 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
-					<span>
-						<?php if ($ship_min) : ?>
-							<strong>Free shipping</strong> <span class="sso-ship-bar__long">on orders of </span><?php echo esc_html($ship_min); ?>+
-						<?php else : ?>
-							<strong>Free shipping</strong> on channel letter orders of <?php echo esc_html($ship_cl_min); ?>+
-						<?php endif; ?>
-					</span>
-					<?php if ($ship_min && $ship_cl_min && $ship_cl_min !== $ship_min) : ?>
-						<span class="sso-ship-bar__sep" aria-hidden="true">&middot;</span>
-						<span>Channel letters <?php echo esc_html($ship_cl_min); ?>+</span>
-					<?php endif; ?>
-					<span class="sso-ship-bar__sep" aria-hidden="true">&middot;</span>
-					<a href="<?php echo esc_url(home_url('/shipping-returns/#free-shipping')); ?>">Details</a>
-				</div>
-			</div>
-		<?php endif; ?>
-
-
-		<?php
+		$ship_offer = $ship_min
+			? 'Free shipping on orders of ' . $ship_min . '+'
+			: 'Free shipping on channel letter orders of ' . $ship_cl_min . '+';
+		if ($ship_min && $ship_cl_min && $ship_cl_min !== $ship_min) {
+			$ship_offer .= ' · Channel letters ' . $ship_cl_min . '+';
+		}
 		// Account links differ for signed-in customers. The cart count badge is filled in by
 		// JavaScript from the sso_cart_count cookie, because pages are served from cache.
 		$account_links = is_user_logged_in()
@@ -255,7 +176,165 @@ $logo_id = get_theme_mod('custom_logo');
 			);
 			return '<svg class="sh-svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
 		};
+		$ship_url = home_url('/shipping-returns/#free-shipping');
+		$ship_has = (bool) ($ship_min || $ship_cl_min);
+		// A separate channel-letter minimum makes the offer twice as long; both top bars then drop lower-priority items to stay on one row.
+		$ship_two = $ship_min && $ship_cl_min && $ship_cl_min !== $ship_min;
 		?>
+		<?php // Dark contact bar for phones and tablets (below 992px), matching the desktop top bar: call/text on the left, free shipping on the right. It sits above the sticky header, so it scrolls away. ?>
+		<style>
+			.sso-mbar {
+				display: none;
+			}
+
+			@media (max-width: 991.98px) {
+				.sso-mbar {
+					display: block;
+					background: #0d2236;
+					color: #d3e0ec;
+					font-size: 13px;
+					line-height: 1.2;
+				}
+
+				.sso-mbar .sso-mbar__in {
+					display: flex;
+					flex-wrap: wrap;
+					align-items: center;
+					justify-content: space-between;
+					gap: 6px 16px;
+					min-height: 40px;
+					padding-top: 6px;
+					padding-bottom: 6px;
+				}
+
+				.sso-mbar__contact {
+					display: flex;
+					align-items: center;
+					gap: 18px;
+				}
+
+				.sso-mbar--long-offer .sso-mbar__text {
+					display: none;
+				}
+
+				.sso-mbar a {
+					display: inline-flex;
+					align-items: center;
+					gap: 6px;
+					color: #fff;
+					text-decoration: none;
+					white-space: nowrap;
+				}
+
+				.sso-mbar svg {
+					flex: none;
+					color: #7ccdee;
+				}
+
+				.sso-mbar__label {
+					color: #9fdcf3;
+					font-weight: 600;
+				}
+
+				.sso-mbar__num {
+					font-weight: 800;
+					letter-spacing: .01em;
+				}
+
+				.sso-mbar a.sso-mbar__ship {
+					gap: 7px;
+					height: 28px;
+					padding: 0 11px 0 10px;
+					border: 1px solid rgba(124, 205, 238, .4);
+					border-radius: 999px;
+					background: rgba(31, 168, 222, .14);
+					color: #e4eef6;
+				}
+
+				.sso-mbar__ship strong,
+				.sso-mbar__ship b {
+					color: #fff;
+					font-weight: 800;
+				}
+
+				.sso-mbar__ship-sep {
+					color: #7ccdee;
+				}
+
+				.sso-mbar a:focus-visible {
+					outline: 3px solid #7ccdee;
+					outline-offset: 2px;
+				}
+			}
+
+			@media (max-width: 599.98px) {
+				.sso-mbar .sso-mbar__in {
+					justify-content: center;
+					gap: 6px 12px;
+					min-height: 38px;
+					padding-left: 12px;
+					padding-right: 12px;
+				}
+
+				/* Phones: free shipping first, then the call number; text and labels move to the menu. */
+				.sso-mbar a.sso-mbar__ship {
+					order: -1;
+					height: 26px;
+					padding: 0 10px 0 9px;
+				}
+
+				.sso-mbar__long,
+				.sso-mbar__label,
+				.sso-mbar__text,
+				.sso-mbar--long-offer .sso-mbar__contact {
+					display: none !important;
+				}
+			}
+
+			@media (max-width: 767.98px) {
+				.sso-mbar--long-offer .sso-mbar__long {
+					display: none;
+				}
+			}
+
+			@media (max-width: 359.98px) {
+				.sso-mbar {
+					font-size: 12px;
+				}
+
+				.sso-mbar a.sso-mbar__ship svg {
+					display: none;
+				}
+			}
+		</style>
+		<div class="sso-mbar<?php echo $ship_two ? ' sso-mbar--long-offer' : ''; ?>">
+			<div class="container sso-mbar__in">
+				<div class="sso-mbar__contact">
+					<a class="sso-mbar__call" href="<?php echo esc_url($phone_href); ?>" aria-label="<?php echo esc_attr('Call us toll free at ' . $phone_display); ?>">
+						<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25c1.1.37 2.3.57 3.6.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>
+						<span class="sso-mbar__label">Call:</span>
+						<span class="sso-mbar__num"><?php echo esc_html($phone_display); ?></span>
+					</a>
+					<a class="sso-mbar__text" href="<?php echo esc_url($text_href); ?>" aria-label="<?php echo esc_attr('Text us at ' . $text_display); ?>">
+						<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v11H9l-5 4z"/></svg>
+						<span class="sso-mbar__label">Text:</span>
+						<span class="sso-mbar__num"><?php echo esc_html($text_display); ?></span>
+					</a>
+				</div>
+				<?php if ($ship_has) : ?>
+					<a class="sso-mbar__ship" href="<?php echo esc_url($ship_url); ?>" title="<?php esc_attr_e('See free shipping details', 'litsign'); ?>">
+						<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2.5 6.5h11v9h-11zM13.5 9.5h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/></svg>
+						<span>
+							<?php if ($ship_min) : ?>
+								<strong>Free shipping</strong><span class="sso-mbar__long"> on orders of</span> <b><?php echo esc_html($ship_min); ?>+</b><?php if ($ship_two) : ?> <span class="sso-mbar__ship-sep" aria-hidden="true">&middot;</span> Channel letters <b><?php echo esc_html($ship_cl_min); ?>+</b><?php endif; ?>
+							<?php else : ?>
+								<strong>Free shipping</strong> on channel letters <b><?php echo esc_html($ship_cl_min); ?>+</b>
+							<?php endif; ?>
+						</span>
+					</a>
+				<?php endif; ?>
+			</div>
+		</div>
 		<header class="main-header site-header ssx-legacy">
 			<div class="container">
 				<div class="sh-top">
@@ -371,6 +450,9 @@ $logo_id = get_theme_mod('custom_logo');
 							</a>
 						</div>
 						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PT</p>
+						<?php if ($ship_min || $ship_cl_min) : ?>
+							<a class="sh-shipping-offer" href="<?php echo esc_url(home_url('/shipping-returns/#free-shipping')); ?>"><?php echo esc_html($ship_offer); ?></a>
+						<?php endif; ?>
 					</div>
 				</div>
 
@@ -662,6 +744,7 @@ $logo_id = get_theme_mod('custom_logo');
 				'sms'     => '<path ' . $s . ' stroke-width="2" d="M4 5h16v11H9l-5 4z"/>',
 				'mail'    => '<rect x="3" y="5" width="18" height="14" rx="2" ' . $s . ' stroke-width="2"/><path ' . $s . ' stroke-width="2" d="m3 7 9 6 9-6"/>',
 				'next'    => '<path ' . $s . ' stroke-width="2.4" d="m9 6 6 6-6 6"/>',
+				'truck'   => '<path ' . $s . ' stroke-width="2" d="M2.5 6.5h11v9h-11zM13.5 9.5h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/>',
 			);
 			return '<svg class="ssx-svg" viewBox="0 0 24 24" width="' . (int) $size . '" height="' . (int) $size . '" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
 		};
@@ -876,6 +959,81 @@ $logo_id = get_theme_mod('custom_logo');
 
 			.ssx-tb--muted {
 				color: #cfdbe7;
+			}
+
+			/* Free shipping: a quiet pill on the dark bar that links to the details. */
+			.ssx-topbar__right {
+				gap: 18px;
+			}
+
+			.ssx-topbar .ssx-ship {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				height: 28px;
+				padding: 0 10px 0 11px;
+				border: 1px solid rgba(124, 205, 238, .4);
+				border-radius: 999px;
+				background: rgba(31, 168, 222, .14);
+				color: #e4eef6;
+				font-size: 13.5px;
+				line-height: 1;
+				white-space: nowrap;
+				transition: background-color .15s, border-color .15s;
+			}
+
+			.ssx-topbar .ssx-ship:hover {
+				border-color: rgba(124, 205, 238, .8);
+				background: rgba(31, 168, 222, .26);
+			}
+
+			.ssx-ship .ssx-svg {
+				color: #7ccdee;
+			}
+
+			.ssx-ship strong,
+			.ssx-ship b {
+				color: #fff;
+				font-weight: 800;
+			}
+
+			.ssx-ship__sep {
+				color: #7ccdee;
+			}
+
+			.ssx-ship__go {
+				display: inline-flex;
+				margin-left: -2px;
+				transition: transform .15s;
+			}
+
+			.ssx-ship:hover .ssx-ship__go {
+				transform: translateX(2px);
+			}
+
+			.ssx-tb--hours {
+				padding-left: 18px;
+				border-left: 1px solid rgba(255, 255, 255, .16);
+			}
+
+			/* Narrower desktops keep one row: hours drop first (they're on the Contact page and in the menu). */
+			@media (min-width: 992px) and (max-width: 1299px) {
+				.ssx-tb--hours {
+					display: none;
+				}
+			}
+
+			/* The longer two-minimum offer: hours go below 1500px, the email below 1100px. */
+			@media (min-width: 992px) and (max-width: 1499px) {
+				.ssx-topbar--long-offer .ssx-tb--hours {
+					display: none;
+				}
+			}
+
+			@media (min-width: 992px) and (max-width: 1099px) {
+				.ssx-topbar--long-offer .ssx-tb--email {
+					display: none;
+				}
 			}
 
 			/* ---------- Main row: logo / search / account + cart ---------- */
@@ -1325,6 +1483,10 @@ $logo_id = get_theme_mod('custom_logo');
 				.ssx-topbar__right .ssx-tb {
 					font-size: 13px;
 				}
+
+				.ssx-ship__long {
+					display: none;
+				}
 			}
 
 			@media (prefers-reduced-motion: reduce) {
@@ -1344,7 +1506,7 @@ $logo_id = get_theme_mod('custom_logo');
 		<header class="ssx-header" id="ssxHeader">
 
 			<!-- Top bar: call, text, email, hours -->
-			<div class="ssx-topbar">
+			<div class="ssx-topbar<?php echo $ship_two ? ' ssx-topbar--long-offer' : ''; ?>">
 				<div class="ssx-container ssx-topbar__in">
 					<div class="ssx-topbar__left">
 						<a class="ssx-tb" href="<?php echo esc_url($phone_href); ?>">
@@ -1357,13 +1519,26 @@ $logo_id = get_theme_mod('custom_logo');
 							<span class="ssx-tb__label">Text:</span>
 							<strong><?php echo esc_html($text_display); ?></strong>
 						</a>
-						<a class="ssx-tb" href="<?php echo esc_url('mailto:' . $ssx_email); ?>">
+						<a class="ssx-tb ssx-tb--email" href="<?php echo esc_url('mailto:' . $ssx_email); ?>">
 							<?php echo $ssx_icon('mail', 17); // Static SVG. ?>
 							<strong><?php echo esc_html($ssx_email); ?></strong>
 						</a>
 					</div>
 					<div class="ssx-topbar__right">
-						<span class="ssx-tb ssx-tb--muted">
+						<?php if ($ship_has) : ?>
+							<a class="ssx-ship" href="<?php echo esc_url($ship_url); ?>" title="<?php esc_attr_e('See free shipping details', 'litsign'); ?>">
+								<?php echo $ssx_icon('truck', 18); // Static SVG. ?>
+								<span class="ssx-ship__text">
+									<?php if ($ship_min) : ?>
+										<strong>Free shipping</strong><span class="ssx-ship__long"> on orders of</span> <b><?php echo esc_html($ship_min); ?>+</b><?php if ($ship_two) : ?> <span class="ssx-ship__sep" aria-hidden="true">&middot;</span> Channel letters <b><?php echo esc_html($ship_cl_min); ?>+</b><?php endif; ?>
+									<?php else : ?>
+										<strong>Free shipping</strong> on channel letters <b><?php echo esc_html($ship_cl_min); ?>+</b>
+									<?php endif; ?>
+								</span>
+								<span class="ssx-ship__go"><?php echo $ssx_icon('next', 13); // Static SVG. ?></span>
+							</a>
+						<?php endif; ?>
+						<span class="ssx-tb ssx-tb--muted ssx-tb--hours">
 							<?php echo $ssx_icon('clock', 16); // Static SVG. ?>
 							Mon&ndash;Fri 8am&ndash;5pm PT
 						</span>

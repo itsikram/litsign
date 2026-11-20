@@ -65,23 +65,44 @@ html[data-motion].scroll-effects-enabled .scroll-reveal {
   will-change: auto;
 }
 
-/* 3. Phones and touch: settle, never hidden */
+/* 3. Phones and touch: scroll-linked rise (tagged by js/motion.js) */
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
     @media (max-width: 991.98px), (hover: none) {
-      html[data-motion="full"] :is(.hc-pcard-grid, .hc-shop-cl-grid, .hc-feature, .hc-dir, .sf-type-grid, .cl-steps-list, .cl-journey-steps, .cll-why-grid, .cla-steps, .cla-why-list, .cla-style-grid, .cla-trust-grid, .gd-facts, .gd-family-grid, .gd-link-grid, .related-products-grid, .sc-grid, .product-review-list, .pkg-grid) > *,
-      html[data-motion="full"] :is(.cl-kicker, .cla-kicker, .hc-shop-cl-kicker, .product-section-eyebrow, .contact-eyebrow) + h2 {
-        animation: mo-settle linear backwards;
+      html[data-motion="full"] .mo-sl {
+        animation: mo-sl linear backwards;
         animation-timeline: view();
-        animation-range: entry 0% entry 40%;
+        animation-range: entry calc(var(--mo-lag, 0) * 7vh) entry calc(var(--mo-lag, 0) * 7vh + 20vh);
+      }
+
+      html[data-motion="full"] .mo-sl-c {
+        animation-name: mo-sl-c;
+      }
+
+      html[data-motion="full"] .mo-sl-f {
+        animation-name: mo-show;
+        animation-range: entry 0% entry min(100%, 20vh);
+      }
+
+      html[data-motion="full"] .hc-shop-cl {
+        overflow: clip;
+        display: flow-root;
       }
     }
   }
 }
 
-@keyframes mo-settle {
+@keyframes mo-sl {
   from {
-    transform: translate3d(0, var(--mo-rise-sm), 0) scale(0.985);
+    opacity: 0;
+    transform: translate3d(0, 28px, 0);
+  }
+}
+
+@keyframes mo-sl-c {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 32px, 0) scale(0.94);
   }
 }
 
@@ -116,6 +137,18 @@ html[data-motion].scroll-effects-enabled .scroll-reveal {
 
     html[data-motion="full"] :is(.sc-card, .related-product, .sf-type-card, .gd-family):is(:hover, :focus-within) {
       transform: translateY(-3px);
+    }
+
+    html[data-motion="full"] .related-product-image {
+      overflow: clip;
+    }
+
+    html[data-motion="full"] :is(.related-product-image img, .sf-type-card:not(.bd-card) .sf-type-image img, .product-box .pb-image-top:not(.has-gallery) img) {
+      transition: transform 450ms var(--mo-ease-out);
+    }
+
+    html[data-motion="full"] :is(.hc-pcard:hover .hc-gal-slide img, .related-product:hover .related-product-image img, .sf-type-card:not(.bd-card):hover .sf-type-image img, .product-listing-container:not(.product-listing-container--cl) .product-box:hover :is(.pb-gallery-image.is-active, .pb-image-top:not(.has-gallery) img)) {
+      transform: scale(1.05);
     }
   }
 
@@ -425,6 +458,11 @@ html[data-motion="reduce"] .mo-head > * {
   transition: none !important;
 }
 
+html.mo-failsafe .mo-sl,
+html[data-motion="reduce"] .mo-sl {
+  animation: none !important;
+}
+
 @media print {
   html .mo-progress,
   html .mo-top,
@@ -437,6 +475,10 @@ html[data-motion="reduce"] .mo-head > * {
     opacity: 1 !important;
     transform: none !important;
     transition: none !important;
+  }
+
+  .mo-sl {
+    animation: none !important;
   }
 }
 

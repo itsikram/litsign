@@ -206,6 +206,72 @@ function wholesale_merchant_size_items($product, $title)
 }
 
 /**
+ * Lead feed photo, by product slug, for a product whose featured image is under
+ * 500 px and has no bigger original. Chosen by hand: the first big gallery
+ * images of Front Lit are labelled diagrams, which Merchant Center can treat as
+ * text overlays. The product page keeps its own featured image.
+ */
+function wholesale_merchant_lead_image_overrides()
+{
+	return array(
+		'standard-channel-letter-front-lit' => '2026/10/storefront-sign-online-cl-front-lit-wide.jpg',
+	);
+}
+
+/**
+ * The product's images for the feed, each at least 500 x 500 px: Merchant
+ * Center stops showing smaller images from 2027-01-31. A photo scaled down in
+ * the WordPress image editor ("<name>-e<13 digits>.<ext>") is swapped for its
+ * untouched original; other small images are left out, so a big photo leads.
+ * Never upscales. Returns the images unchanged when none is big enough, so the
+ * product stays in the feed.
+ *
+ * @return string[]
+ */
+function wholesale_merchant_feed_images($product)
+{
+	$images = wholesale_product_sitemap_images($product->ID);
+	$uploads = wp_get_upload_dir();
+	$base_dir = untrailingslashit($uploads['basedir']);
+	$base_url = untrailingslashit($uploads['baseurl']);
+	$big_enough = static function ($relative) use ($base_dir) {
+		$size = @getimagesize($base_dir . rawurldecode($relative));
+		return $size && min($size[0], $size[1]) >= 500;
+	};
+
+	$kept = array();
+	$lead_dropped = false;
+	foreach ($images as $index => $url) {
+		if (0 !== strpos($url, $base_url . '/')) {
+			$kept[] = $url; // Not in uploads: can't measure it, keep it.
+			continue;
+		}
+		$relative = substr($url, strlen($base_url));
+		if ($big_enough($relative)) {
+			$kept[] = $url;
+			continue;
+		}
+		$original = preg_replace('/-e\d{13}(\.[a-z0-9]+)$/i', '$1', $relative);
+		if ($original !== $relative && $big_enough($original)) {
+			$kept[] = $base_url . $original;
+			continue;
+		}
+		if (0 === $index) {
+			$lead_dropped = true;
+		}
+	}
+
+	$overrides = wholesale_merchant_lead_image_overrides();
+	if ($lead_dropped && isset($overrides[$product->post_name]) && $big_enough('/' . $overrides[$product->post_name])) {
+		array_unshift($kept, $base_url . '/' . $overrides[$product->post_name]);
+	}
+
+	$kept = array_values(array_unique($kept));
+
+	return $kept ? $kept : $images;
+}
+
+/**
  * Every feed item (a product and its popular-size items) as plain data, shared
  * by the Google feed (/merchant-feed.xml) and the OpenAI feed
  * (inc/openai-feed.php) so both always list the same IDs, prices and links.
@@ -227,7 +293,7 @@ function wholesale_merchant_feed_rows()
 	foreach ($products as $product) {
 		$offer = wholesale_seo_product_lowest_offer($product->ID);
 		$price = $offer ? $offer['price'] : 0;
-		$images = wholesale_product_sitemap_images($product->ID);
+		$images = wholesale_merchant_feed_images($product);
 		$image = $images ? $images[0] : '';
 		$description = wholesale_merchant_description($product->ID);
 		if ($price <= 0 || !$image || '' === $description) {

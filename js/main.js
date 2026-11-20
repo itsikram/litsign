@@ -669,6 +669,30 @@
           .map((value) => Math.round(value * 100) / 100);
         return fixed[0] >= limit('minWidth') && fixed[1] >= limit('minHeight') && fitsMax(fixed[0], fixed[1]) ? { fixed, both } : null;
       };
+      // The opposite slip on feet-and-inches boxes: inches typed into the feet box. Visitors
+      // on styrene and magnets typed 22 and 40 there and got "Maximum width is 8 ft (96")"
+      // for 264" and 482" (Visitor Insights, Nov 2026). Offer the feet number as inches when
+      // the inch box is empty and that size fits.
+      const inchesFix = (width, height) => {
+        if (!ftin) return null;
+        const feetTyped = (name) => {
+          const group = dimInput(name)?.closest('.dim-group--ftin');
+          const feet = parseFloat(group?.querySelector('input[data-part="ft"]')?.value) || 0;
+          const inches = parseFloat(group?.querySelector('input[data-part="in"]')?.value) || 0;
+          return inches ? 0 : feet;
+        };
+        const short = limit('maxShort');
+        const long = limit('maxLong');
+        const over = (value, other) => (long && value > long) || (short && value > short && other > short);
+        let fixWidth = width;
+        let fixHeight = height;
+        if (over(width, height)) fixWidth = feetTyped('width');
+        if (fixWidth && over(height, fixWidth)) fixHeight = feetTyped('height');
+        if (!fixWidth || !fixHeight || (fixWidth === width && fixHeight === height)) return null;
+        return fixWidth >= limit('minWidth') && fixHeight >= limit('minHeight') && fitsMax(fixWidth, fixHeight)
+          ? { fixed: [fixWidth, fixHeight], inches: true }
+          : null;
+      };
       let lastNote = '';
       // While typing, "24" passes through "2": the too-small notes wait for the change
       // (leaving the box), so they don't flash red after the first digit.
@@ -683,12 +707,14 @@
         if (long && (width > long || height > long)) {
           tooBig = true;
           error = width > long ? `Maximum width is ${len(long)}.` : `Maximum height is ${len(long)}.`;
+          if (!typing) fix = inchesFix(width, height);
         } else if (short && width > short && height > short) {
           tooBig = true;
           // Either side may be the short one: say so, or turning the size looks impossible.
           error = short < long
             ? `One side can be at most ${len(short)}; the other up to ${len(long)}.`
             : (width < height ? `Maximum width is ${len(short)}.` : `Maximum height is ${len(short)}.`);
+          if (!typing) fix = inchesFix(width, height);
         } else if (typing) {
           // Too small or fine: no note until the change.
         } else if (width > 0 && width < limit('minWidth')) {
@@ -714,7 +740,11 @@
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'pb-dim-fix';
-            if (ftin) {
+            if (fix.inches) {
+              button.textContent = fixWidth !== width && fixHeight !== height
+                ? `Use ${fixWidth} in x ${fixHeight} in`
+                : (fixWidth !== width ? `Use ${fixWidth} inches wide` : `Use ${fixHeight} inches high`);
+            } else if (ftin) {
               button.textContent = fix.both
                 ? `Use ${width} ft x ${height} ft`
                 : (fixWidth !== width ? `Use ${width} ft wide` : `Use ${height} ft high`);
@@ -1762,14 +1792,190 @@
       anchor?.after(turnaroundRow);
     }
 
+    // Prices the server has already worked out: this page's earlier quotes, plus the
+    // "variants" each quote brings back (every other choice of every option, and one more /
+    // one less in quantity, priced in the same request by inc/pricing.php). A choice whose
+    // price is here shows it at once instead of waiting for the server. Kept 3 minutes, as a
+    // dated sale or the same-day cut-off can change a price.
+    const quoteCache = new Map();
+    const CACHE_MS = 3 * 60 * 1000;
+    // Fields the price doesn't depend on (filled in by the page itself, or free text).
+    const unpriced = new Set(['action', 'variants', 'custom-artwork', 'total_cost', 'total_sqft', 'turnaround_cost', 'job_name']);
+    const formEntries = () => [...new FormData(form)].filter(([, value]) => typeof value === 'string');
+    const cacheKey = (entries) => entries.filter(([name]) => !unpriced.has(name)).map(([name, value]) => encodeURIComponent(name) + '=' + encodeURIComponent(value)).join('&');
+    const cacheGet = (key) => {
+      const hit = quoteCache.get(key);
+      return hit && Date.now() - hit.at < CACHE_MS ? hit : null;
+    };
+    const cachePut = (key, quote, primed) => {
+      const old = cacheGet(key);
+      if (old && old.primed && !primed) return; // Keep the entry that knows its own variants.
+      if (quoteCache.size > 500) quoteCache.clear();
+      quoteCache.set(key, { quote, primed, at: Date.now() });
+    };
+    // Every other value of each choice on the page (dropdowns, radio choices) and one more /
+    // one less in quantity: the server prices each with the rest of the form unchanged.
+    const variantList = (entries) => {
+      const sent = new Map(entries);
+      const varied = (name) => !!name && sent.has(name) && !unpriced.has(name) && !name.endsWith('[]');
+      const list = [];
+      form.querySelectorAll('select[name]').forEach((select) => {
+        if (select.disabled || select.multiple || !varied(select.name)) return;
+        [...select.options].forEach((option) => {
+          if (!option.disabled && option.value !== sent.get(select.name)) list.push([select.name, option.value]);
+        });
+      });
+      form.querySelectorAll('input[type="radio"][name]:not(:checked):not(:disabled)').forEach((radio) => {
+        if (varied(radio.name)) list.push([radio.name, radio.value]);
+      });
+      const quantity = parseInt(sent.get('product_quantity'), 10);
+      if (quantity > 0) {
+        list.push(['product_quantity', String(quantity + 1)]);
+        if (quantity > 1) list.push(['product_quantity', String(quantity - 1)]);
+      }
+      return list.slice(0, 80);
+    };
+
+    // Shows one quote from the server (fresh or from the cache above).
+    const applyQuote = (quote) => {
+      // Only the size is outside the product's limits: like B2Sign, show its price and
+      // keep Add To Cart clickable (the size guard and the cart still refuse it).
+      form.dataset.sizeError = quote.size_error ? quote.error : '';
+      if (!quote.ok && quote.size_error) {
+        if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
+        message.hidden = true;
+        showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
+        turnaroundRow.hidden = !(quote.turnaround > 0);
+        addButtons.forEach((button) => { button.disabled = false; });
+        return;
+      }
+
+      if (!quote.ok) {
+        // No sign text yet (every channel letter page opens this way):
+        // a prompt rather than an error, and Add To Cart stays enabled so
+        // the browser's required-field check takes the visitor to the box.
+        const letterInput = form.querySelector('#letterInput');
+        const needsText = letterInput && !letterInput.value.trim();
+        message.textContent = needsText ? 'Type your sign text above to see your exact price.' : quote.error;
+        message.classList.toggle('is-hint', !!needsText);
+        message.hidden = false;
+        addButtons.forEach((button) => { button.disabled = !needsText; });
+        return;
+      }
+
+      if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
+
+      message.hidden = true;
+      message.classList.remove('is-hint');
+      // Shown only during a dated sale: the everyday price and what the sale takes off it.
+      showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
+      turnaroundRow.hidden = !(quote.turnaround > 0);
+      turnaroundRow.querySelector('.price-turnaround').textContent = money(quote.turnaround);
+      turnaroundRow.querySelector('.fs-6').textContent = quote.turnaround_label ? quote.turnaround_label + ' production' : 'Same-day production';
+      // Each production-time choice's charge at this price, as B2Sign shows it: "+$8.00" or "Free".
+      if (quote.turnaround_options) {
+        form.querySelectorAll('[data-turnaround-option]').forEach((el) => {
+          const amount = quote.turnaround_options[el.dataset.value];
+          const label = el.querySelector('[data-turnaround-price]');
+          if (label && typeof amount === 'number') label.textContent = amount > 0 ? '+$' + money(amount) : 'Free';
+        });
+      }
+      // The add-to-cart handler applies the discount to this value before submitting.
+      form.querySelectorAll('#totalCost').forEach((input) => { input.value = quote.subtotal.toFixed(2); });
+      addButtons.forEach((button) => { button.disabled = false; });
+    };
+
+    // Channel letters: the text measured in the chosen font as B2Sign measures it, with the same
+    // code as the builder (js/cl-measure.js), and sent as cl_measure, so the server prices every
+    // separate piece of every letter by its own size (a W is wider than tall, a lowercase letter
+    // shorter, the dot of an i a small piece) as the builder and its cart do
+    // (wholesale_cl_request_measure() in inc/pricing.php). Canvas metrics at 200px: the server
+    // scales them to every height it prices, the other heights' prices included.
+    const letterInput = form.querySelector('#letterInput');
+    let measureInput = null;
+    if (letterInput && window.SfsLetterMeasure) {
+      measureInput = form.querySelector('input[name="cl_measure"]');
+      if (!measureInput) {
+        measureInput = document.createElement('input');
+        measureInput.type = 'hidden';
+        measureInput.name = 'cl_measure';
+        form.appendChild(measureInput);
+      }
+    }
+    // This page's font names as the builder codes them (fontData in js/cl.js).
+    const builderFont = (value) => ({ 'arial black': 'arial-black' })[String(value || '').trim().toLowerCase()] || String(value || 'Arial').replace(/"/g, '');
+    let measureFont = '';
+    const measureSignal = scope.signal;
+    // Fills cl_measure and the width shown under the height for the form as it is now; true when it changed.
+    const syncLetterMeasure = () => {
+      if (!measureInput) return false;
+      const before = measureInput.value;
+      const family = builderFont(form.querySelector('select[name="font"]')?.value);
+      const measured = window.SfsLetterMeasure.measure(letterInput.value, family);
+      measureInput.value = window.SfsLetterMeasure.payload(measured);
+      // The sign's width as B2Sign measures it, at the chosen height (the raceway is priced on it).
+      const height = parseFloat(form.querySelector('select[name="height"] option:checked')?.dataset.size) || 0;
+      const sized = window.SfsLetterMeasure.at(measured, height);
+      const widthDisplay = document.getElementById('widthDisplay');
+      if (sized && widthDisplay) {
+        widthDisplay.innerHTML = `Approximate Width: <b> ${sized.width.toFixed(1)} Inches</b>`;
+      }
+      // Measured in a fallback font until the chosen one has downloaded: measured again then.
+      if (document.fonts && family !== measureFont) {
+        measureFont = family;
+        document.fonts.load(`200px "${family}"`).then(() => {
+          if (measureSignal.aborted) return;
+          window.SfsLetterMeasure.clear();
+          if (syncLetterMeasure()) refresh(0);
+        }).catch(() => {});
+      }
+      return measureInput.value !== before;
+    };
+
     let timer;
     let requestId = 0;
+    // Asks the server. In the foreground (no cached price) the box shows it is updating and
+    // Add To Cart waits for the answer; in the background (a cached price is already shown)
+    // it only brings the prices of the choices after this one.
+    const fetchQuote = async (foreground) => {
+      const thisRequest = ++requestId;
+      const entries = formEntries();
+      const key = cacheKey(entries);
+      const data = new FormData(form);
+      data.delete('custom-artwork');
+      data.append('action', 'wholesale_price_quote');
+      data.append('variants', JSON.stringify(variantList(entries)));
+      if (foreground) pricingBox.classList.add('is-updating');
+      try {
+        const response = await fetch(window.wholesaleShop.ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' });
+        const quote = await response.json();
+        // Cached even when the visitor has moved on: these prices are for the form as sent.
+        (quote.variants || []).forEach(([name, value, variantQuote]) => {
+          cachePut(cacheKey(entries.map(([n, v]) => [n, n === name ? value : v])), variantQuote, false);
+        });
+        delete quote.variants;
+        cachePut(key, quote, true);
+        if (thisRequest !== requestId) return;
+        applyQuote(quote);
+      } catch (error) {
+        // Keep the browser-side estimate; the cart still prices the item on the server.
+      } finally {
+        if (thisRequest === requestId) {
+          pricingBox.classList.remove('is-updating');
+          settleQuote();
+        }
+      }
+    };
+
     const refresh = (delay = 250) => {
       clearTimeout(timer);
       form.dataset.quoting = '1';
-      timer = setTimeout(async () => {
-        const thisRequest = ++requestId;
+      // One tick later, so other handlers of the same change (a custom dropdown filling its
+      // hidden select, a choice that resets another) have run before the form is read.
+      timer = setTimeout(() => {
+        syncLetterMeasure();
         if (sizeIsEmpty()) {
+          ++requestId;
           // No size yet (or a box cleared while typing a new one): show the minimum charge,
           // as B2Sign does, without asking the server for a quote that can only fail.
           const minEveryday = parseFloat(sizeSummary.dataset.minEveryday) || 0;
@@ -1789,6 +1995,7 @@
         // visitor sees this prompt. Show it without asking the server.
         const letterInput = form.querySelector('#letterInput');
         if (letterInput && !letterInput.value.trim()) {
+          ++requestId;
           message.textContent = 'Type your sign text above to see your exact price.';
           message.classList.add('is-hint');
           message.hidden = false;
@@ -1797,83 +2004,34 @@
           settleQuote();
           return;
         }
-        const data = new FormData(form);
-        data.delete('custom-artwork');
-        data.append('action', 'wholesale_price_quote');
-        pricingBox.classList.add('is-updating');
-        try {
-          const response = await fetch(window.wholesaleShop.ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' });
-          const quote = await response.json();
-          if (thisRequest !== requestId) return;
-
-          // Only the size is outside the product's limits: like B2Sign, show its price and
-          // keep Add To Cart clickable (the size guard and the cart still refuse it).
-          form.dataset.sizeError = quote.size_error ? quote.error : '';
-          if (!quote.ok && quote.size_error) {
-            if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
-            message.hidden = true;
-            showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
-            turnaroundRow.hidden = !(quote.turnaround > 0);
-            addButtons.forEach((button) => { button.disabled = false; });
-            return;
-          }
-
-          if (!quote.ok) {
-            // No sign text yet (every channel letter page opens this way):
-            // a prompt rather than an error, and Add To Cart stays enabled so
-            // the browser's required-field check takes the visitor to the box.
-            const letterInput = form.querySelector('#letterInput');
-            const needsText = letterInput && !letterInput.value.trim();
-            message.textContent = needsText ? 'Type your sign text above to see your exact price.' : quote.error;
-            message.classList.toggle('is-hint', !!needsText);
-            message.hidden = false;
-            addButtons.forEach((button) => { button.disabled = !needsText; });
-            return;
-          }
-
-          if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
-
-          message.hidden = true;
-          message.classList.remove('is-hint');
-          // Shown only during a dated sale: the everyday price and what the sale takes off it.
-          showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
-          turnaroundRow.hidden = !(quote.turnaround > 0);
-          turnaroundRow.querySelector('.price-turnaround').textContent = money(quote.turnaround);
-          turnaroundRow.querySelector('.fs-6').textContent = quote.turnaround_label ? quote.turnaround_label + ' production' : 'Same-day production';
-          // Each production-time choice's charge at this price, as B2Sign shows it: "+$8.00" or "Free".
-          if (quote.turnaround_options) {
-            form.querySelectorAll('[data-turnaround-option]').forEach((el) => {
-              const amount = quote.turnaround_options[el.dataset.value];
-              const label = el.querySelector('[data-turnaround-price]');
-              if (label && typeof amount === 'number') label.textContent = amount > 0 ? '+$' + money(amount) : 'Free';
-            });
-          }
-          // The add-to-cart handler applies the discount to this value before submitting.
-          form.querySelectorAll('#totalCost').forEach((input) => { input.value = quote.subtotal.toFixed(2); });
-          addButtons.forEach((button) => { button.disabled = false; });
-        } catch (error) {
-          // Keep the browser-side estimate; the cart still prices the item on the server.
-        } finally {
-          if (thisRequest === requestId) {
-            pricingBox.classList.remove('is-updating');
-            settleQuote();
-          }
+        const hit = cacheGet(cacheKey(formEntries()));
+        if (hit) {
+          // Priced already: show it now (the exact server answer) and let Add To Cart go.
+          ++requestId;
+          applyQuote(hit.quote);
+          pricingBox.classList.remove('is-updating');
+          settleQuote();
+          // Fetch the next round of choices unless this answer already brought them.
+          if (!hit.primed) timer = setTimeout(() => fetchQuote(false), delay);
+          return;
         }
-      }, delay);
+        timer = setTimeout(() => fetchQuote(true), delay);
+      }, 0);
     };
 
-    form.addEventListener('change', () => refresh());
+    form.addEventListener('change', () => refresh(60));
     form.addEventListener('input', (event) => {
-      // A number box waits for a typing pause, so "24" isn't first priced (and
+      // A number box waits for a short typing pause, so "24" isn't first priced (and
       // rejected as too small) at "2" on a phone keyboard; leaving the box prices it at once.
-      if (event.target.matches('input[type="number"]')) refresh(700);
-      else if (event.target.matches('#letterInput')) refresh();
+      // A size or quantity priced before shows at once from the cache.
+      if (event.target.matches('input[type="number"]')) refresh(450);
+      else if (event.target.matches('#letterInput')) refresh(250);
     });
     // Custom color pickers update hidden selects without bubbling a native change event.
     document.addEventListener('click', (event) => {
-      if (event.target.closest('.custom-select li')) refresh();
+      if (event.target.closest('.custom-select li')) refresh(60);
     }, { signal: scope.signal });
-    refresh();
+    refresh(0);
   };
 
   if (document.readyState === 'loading') {

@@ -33,7 +33,8 @@ function wholesale_product_kit_special()
  * What a partial product is missing, and its kit.
  *
  * @return array|null kind (graphic, flag, hardware, walls), kit_id, kit_name,
- *                    kit_price, heading, line, kit_link, feed_title, toggle_label.
+ *                    kit_price, heading, line, kit_link, kit_need, kit_short,
+ *                    feed_title, toggle_label.
  *                    Null for complete products.
  */
 function wholesale_product_kit_info($product_id)
@@ -83,6 +84,7 @@ function wholesale_product_kit_info($product_id)
 			$line = 'Flag only. Pole and base not included.';
 			$need = 'Need the pole too?';
 			$with = 'with pole set';
+			$bundle = 'Flag + pole set';
 			$feed = sprintf('Flag Only (No Pole) – %s - Full Color Printed', $name);
 			$toggle = 'Flag only';
 			break;
@@ -91,6 +93,7 @@ function wholesale_product_kit_info($product_id)
 			$line = 'Graphic not included.';
 			$need = 'Need the graphic too?';
 			$with = 'with printed graphic';
+			$bundle = 'Hardware + printed graphic';
 			$feed = sprintf('Hardware Only (No Graphic) – %s', $kit_name);
 			$toggle = 'Hardware only';
 			break;
@@ -99,6 +102,7 @@ function wholesale_product_kit_info($product_id)
 			$line = 'Tent walls only. Tent frame and canopy not included.';
 			$need = 'Need the tent too?';
 			$with = 'with frame and printed canopy';
+			$bundle = 'Complete tent';
 			$feed = sprintf('Tent Walls Only (No Tent) – %s (%s) - Full Color Printed', $name, wholesale_seo_product_variant_label($product_id));
 			$toggle = '';
 			break;
@@ -108,6 +112,7 @@ function wholesale_product_kit_info($product_id)
 			$line = sprintf('%s. %s not included.', $print_label, ucfirst($noun));
 			$need = sprintf('Need the %s too?', $noun);
 			$with = 'with printed graphic';
+			$bundle = sprintf('%s + graphic', ucfirst($noun));
 			$feed = sprintf('Replacement Graphic Only (No %s) – %s - Full Color Printed', ucfirst($noun), $name);
 			$toggle = 'Graphic only';
 	}
@@ -120,6 +125,12 @@ function wholesale_product_kit_info($product_id)
 		'heading' => $heading,
 		'line' => $line,
 		'kit_link' => trim(sprintf('%s %s %s%s', $need, $kit_name, $with, $kit_price > 0 ? ', from $' . number_format($kit_price, 2) : '')),
+		// Short form for the price box under the title: ad clicks for a "$35 retractable
+		// banner stand" landed on the graphic-only page, saw "Stand not included" and left
+		// (Visitor Insights Nov 8-14 2026: ~370 visits to graphic-only stand pages, 0 orders),
+		// while the full-name link above sat below the first screen.
+		'kit_need' => $need,
+		'kit_short' => trim(sprintf('%s%s', $bundle, $kit_price > 0 ? ' from $' . number_format($kit_price, 2) : '')),
 		'feed_title' => $feed,
 		'toggle_label' => $toggle,
 	);

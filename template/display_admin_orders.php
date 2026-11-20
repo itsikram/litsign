@@ -106,10 +106,15 @@ function render_order_attr_meta_box($post)
     }
     ?>
     <ul class="wo-items">
-        <?php foreach ($items as $item) :
+        <?php foreach ($items as $line_index => $item) :
             $qty = max(1, (int) ($item['product_quantity'] ?? 1));
             $subtotal = (float) ($item['product_subtotal'] ?? 0);
             $specs = wholesale_item_specs($item);
+            // Artwork box with Upload / Replace (inc/order-artwork.php); it shows the file links itself.
+            $artwork_box = function_exists('wholesale_order_artwork_box_html') && is_array($item) ? wholesale_order_artwork_box_html($post->ID, $line_index, $item, 'admin') : '';
+            if ('' !== $artwork_box) {
+                unset($specs['My Artwork']);
+            }
             $design_id = absint($item['design_id'] ?? 0);
             $design_raw = $design_id ? (string) get_post_meta($design_id, '_cl_data', true) : '';
             $design = $design_raw !== '' ? json_decode($design_raw, true) : null;
@@ -141,6 +146,7 @@ function render_order_attr_meta_box($post)
                             <?php endforeach; ?>
                         </dl>
                     <?php endif; ?>
+                    <?php echo $artwork_box; // Escaped in wholesale_order_artwork_box_html(). ?>
                     <?php if (is_array($design)) {
                         wholesale_render_cl_breakdown($design);
                     } ?>
@@ -153,7 +159,14 @@ function render_order_attr_meta_box($post)
         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd></div>
         <div><dt>Shipping<?php echo !empty($cost['shipping_method']) ? ' <small>' . esc_html($cost['shipping_method']) . '</small>' : ''; ?></dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
         <div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd></div>
-        <div class="wo-totals__grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+        <?php $net = function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
+        <?php if ($net && $net['has_refund']) : ?>
+            <div><dt>Order total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+            <div class="ont-refund"><dt>Refunded</dt><dd>&minus;<?php echo esc_html($money($net['refunded'])); ?></dd></div>
+            <div class="wo-totals__grand"><dt>Total after refunds</dt><dd><?php echo esc_html($money($net['net'])); ?></dd></div>
+        <?php else : ?>
+            <div class="wo-totals__grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+        <?php endif; ?>
     </dl>
     <?php
 }

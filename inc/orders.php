@@ -257,6 +257,10 @@ function wholesale_customer_order_email_html($post_id)
     };
 
     $payment_line = wholesale_payment_customer_text($post_id, 'Our team will contact you to arrange payment before production starts.');
+    // Ordered without artwork while signed in: it can be uploaded from the order page (inc/order-artwork.php).
+    $artwork_line = get_post_meta($post_id, 'user_id', true) && function_exists('wholesale_order_artwork_missing_lines') && wholesale_order_artwork_missing_lines($post_id)
+        ? '<p style="margin:12px 0 0;padding:14px 16px;background:#fffaf0;border:1px solid #f0c36d;border-radius:8px;font-size:14px;color:#5c3d00;"><strong>No artwork yet?</strong> Sign in and upload it from <a href="' . esc_url(get_permalink($post_id)) . '" style="color:#8a5a00;font-weight:700;">your order page</a>, so we can start on your order.</p>'
+        : '';
 
     return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="margin:0;padding:0;background:#f5f8fb;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f8fb;padding:24px 12px;"><tr><td align="center">'
@@ -271,8 +275,10 @@ function wholesale_customer_order_email_html($post_id)
         . $total_row('Shipping' . (!empty($cost['shipping_method']) ? ' - ' . $cost['shipping_method'] : ''), $money($cost['shipping_cost'] ?? 0))
         . $total_row('Tax', $money($cost['tax'] ?? 0))
         . $total_row('Total', $money($cost['grand_total'] ?? 0), true)
+        . (function_exists('wholesale_order_net_email_rows') ? wholesale_order_net_email_rows($post_id, $font) : '') // After refunds (inc/order-net-total.php).
         . '</table>'
         . '<p style="margin:20px 0 0;padding:14px 16px;background:#eef7fc;border-radius:8px;font-size:14px;color:#0d2e4d;"><strong>Payment:</strong> ' . esc_html($payment_line) . '</p>'
+        . $artwork_line
         . '<h2 style="margin:28px 0 10px;font-size:16px;">What happens next</h2>'
         . '<ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:#34506a;">'
         . '<li>We review your order and contact you if anything needs a closer look.</li>'

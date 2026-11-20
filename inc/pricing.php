@@ -21,8 +21,8 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-// Builder raceway price per foot; matches the product page raceway option ("55/lft").
-const WHOLESALE_RACEWAY_COST_PER_FOOT = 55;
+// Builder raceway price per foot; matches the product page raceway option ("50/lft").
+const WHOLESALE_RACEWAY_COST_PER_FOOT = 50;
 const WHOLESALE_CL_MIN_INCHES = 8;
 const WHOLESALE_CL_MAX_INCHES = 45;
 // Channel letters can carry B2Sign's per-letter option prices: Lexan face (_cl_lexan_percent),
@@ -666,6 +666,10 @@ function wholesale_cl_char_pieces($char)
  */
 function wholesale_cl_text_letters($element, $height)
 {
+	$pieces = wholesale_cl_text_pieces($element, $height);
+	if (null !== $pieces) {
+		return $pieces;
+	}
 	$chars = preg_split('//u', preg_replace('/\s+/u', '', (string) ($element['text'] ?? '')), -1, PREG_SPLIT_NO_EMPTY);
 	$glyphs = isset($element['glyphs']) && is_array($element['glyphs']) ? array_values($element['glyphs']) : array();
 	if (!$chars || count($glyphs) !== count($chars) || $height <= 0) {
@@ -680,6 +684,46 @@ function wholesale_cl_text_letters($element, $height)
 		$w = min(max(0.0, (float) $g[0]), 2.5 * $height);
 		$h = min(max(0.0, (float) $g[1]), 2.5 * $height);
 		$letters[] = array('char' => $char, 'side' => max(max($w, $h), 0.5 * $height), 'raw' => max($w, $h), 'w' => $w, 'h' => $h);
+	}
+	return $letters;
+}
+
+/**
+ * Every separate piece of a text element's letters, as B2Sign prices them (Ug.splitTextByPathes() in its
+ * builder): the dot of an i, the two dots of a colon and the three parts of a % are each a channel letter
+ * of their own, sized by their own outline. From element "pieces": per non-space character, its pieces as
+ * [[width, height], ...] in inches (js/cl-measure.js). Each piece is a letter as wholesale_cl_letter_cost()
+ * reads it, with no character (one piece) and its longer side as the side the rate table prices, as on
+ * B2Sign. Null when missing or not believable: a character that is always two pieces or more (i, j, !, ?,
+ * :, ;, =, ", %) sent as one, or a letter or digit whose largest piece is under 30% of the text height.
+ */
+function wholesale_cl_text_pieces($element, $height)
+{
+	$chars = preg_split('//u', preg_replace('/\s+/u', '', (string) ($element['text'] ?? '')), -1, PREG_SPLIT_NO_EMPTY);
+	$pieces = isset($element['pieces']) && is_array($element['pieces']) ? array_values($element['pieces']) : array();
+	$height = (float) $height;
+	if (!$chars || count($pieces) !== count($chars) || $height <= 0) {
+		return null;
+	}
+	$letters = array();
+	foreach ($chars as $i => $char) {
+		$parts = $pieces[$i];
+		if (!is_array($parts) || !$parts || count($parts) > 8 || (count($parts) < 2 && false !== strpos('ij!?:;="%', $char))) {
+			return null;
+		}
+		$largest = 0.0;
+		foreach (array_values($parts) as $part) {
+			if (!is_array($part) || !isset($part[0], $part[1]) || !is_numeric($part[0]) || !is_numeric($part[1]) || !is_finite((float) $part[0]) || !is_finite((float) $part[1])) {
+				return null;
+			}
+			$w = min(max(0.0, (float) $part[0]), 2.5 * $height);
+			$h = min(max(0.0, (float) $part[1]), 2.5 * $height);
+			$largest = max($largest, $w, $h);
+			$letters[] = array('char' => '', 'side' => max($w, $h), 'raw' => max($w, $h), 'w' => $w, 'h' => $h);
+		}
+		if (preg_match('/^[\p{L}\p{N}]$/u', $char) && $largest < 0.3 * $height) {
+			return null;
+		}
 	}
 	return $letters;
 }
@@ -709,6 +753,97 @@ function wholesale_cl_count_pieces($text)
 }
 
 /**
+ * A channel letter product's rate table (letter height in inches => price of one letter, before the
+ * product discount): the builder's "cost-per-inch" group in product_cl_data. The product page prices
+ * from the same table, so a text costs the same on both.
+ */
+function wholesale_cl_cost_table($product_id)
+{
+	$cl_data = json_decode((string) get_post_meta($product_id, 'product_cl_data', true), true);
+	$table = array();
+	foreach (is_array($cl_data) ? $cl_data : array() as $group) {
+		if (is_array($group) && isset($group['id']) && 'cost-per-inch' === $group['id']) {
+			foreach (wholesale_attr_options($group) as $option) {
+				$table[(int) $option['label']] = (float) $option['value'];
+			}
+		}
+	}
+	return $table;
+}
+
+/**
+ * The product page's channel letter text measured as B2Sign measures it, the same way the builder does
+ * (js/cl-measure.js), from request field cl_measure: the browser's canvas metrics at 200px in the chosen
+ * font, {"v": 2, "c": [[width, ascent, descent, [[piece width, piece height], ...]], ...] per non-space
+ * character, "t": the text's width as B2Sign measures it}. Scaled here to $height (the letters together
+ * are that tall, as on B2Sign), so every height the page asks about is priced from the same metrics.
+ * Returns array('glyphs' => [[width, height], ...] and 'pieces' => [[[width, height], ...], ...] per
+ * character, in inches as the builder sends them, 'width' => the text's width in inches), or null when
+ * missing or not matching the text: then every letter takes the chosen height. Same rounding as
+ * js/cl-measure.js (to 0.1"). Still reads the first version, {"g": [[width, ascent, descent], ...],
+ * "t": width at the font size}, which a page loaded before 2026-11-15 sends.
+ */
+function wholesale_cl_request_measure($request, $height)
+{
+	$raw = isset($request['cl_measure']) && is_string($request['cl_measure']) ? json_decode($request['cl_measure'], true) : null;
+	$chars = preg_split('//u', (string) preg_replace('/\s+/u', '', (string) ($request['letters'] ?? '')), -1, PREG_SPLIT_NO_EMPTY);
+	$height = (float) $height;
+	$v2 = is_array($raw) && 2 === ($raw['v'] ?? null);
+	$list = is_array($raw) ? ($v2 ? ($raw['c'] ?? null) : ($raw['g'] ?? null)) : null;
+	if (!is_array($list) || !$chars || count($list) !== count($chars) || $height <= 0) {
+		return null;
+	}
+	$number = static function ($value) {
+		return (is_int($value) || is_float($value)) && is_finite((float) $value);
+	};
+	$metrics = array();
+	foreach (array_values($list) as $m) {
+		if (!is_array($m) || ($v2 ? 4 : 3) !== count($m)) {
+			return null;
+		}
+		$m = array_values($m);
+		if (!$number($m[0]) || !$number($m[1]) || !$number($m[2])) {
+			return null;
+		}
+		$parts = array();
+		foreach ($v2 && is_array($m[3]) ? array_values($m[3]) : array() as $part) {
+			if (!is_array($part) || 2 !== count($part) || !$number($part[0] ?? null) || !$number($part[1] ?? null)) {
+				return null;
+			}
+			$parts[] = array(max(0.0, (float) $part[0]), max(0.0, (float) $part[1]));
+		}
+		if ($v2 && !$parts) {
+			return null;
+		}
+		$metrics[] = array(max(0.0, (float) $m[0]), (float) $m[1], (float) $m[2], $parts);
+	}
+	$ink = max(array_column($metrics, 1)) + max(0.0, max(array_column($metrics, 2)));
+	if ($ink <= 0) {
+		return null;
+	}
+	$scale = $height / $ink;
+	$round = static function ($inches) {
+		return floor($inches * 10 + 0.5) / 10;
+	};
+	$glyphs = array();
+	$pieces = array();
+	foreach ($metrics as $m) {
+		$glyphs[] = array($round($m[0] * $scale), $round(($m[1] + $m[2]) * $scale));
+		$pieces[] = array_map(static function ($part) use ($round, $scale) {
+			return array($round($part[0] * $scale), $round($part[1] * $scale));
+		}, $m[3]);
+	}
+	// B2Sign: from the left edge of the first letter to the right edge of the last, at the letters' height.
+	// The first version measured the text box at the font size instead.
+	// Kept to a sane range so a changed request can't make the raceway nearly free.
+	$letters = count($chars);
+	$width = isset($raw['t']) && $number($raw['t']) ? $round($v2 ? (float) $raw['t'] * $scale : (float) $raw['t'] / 200 * $height) : $height * $letters;
+	// (The narrowest letters, an i or a period, are about a fifth as wide as they are tall.)
+	$width = min(max($width, 0.15 * $height * $letters), 3 * $height * $letters);
+	return array('glyphs' => $glyphs, 'pieces' => $v2 ? $pieces : null, 'width' => $width);
+}
+
+/**
  * Price of a channel letter builder design, calculated from the product's rate table.
  * Element sizes, text and colors come from the design; every dollar amount comes from
  * the product settings. Returns a WP_Error when the design can't be priced.
@@ -718,14 +853,7 @@ function wholesale_cl_design_quote($product_id, $design)
 	$cl_data = json_decode((string) get_post_meta($product_id, 'product_cl_data', true), true);
 	$cl_data = is_array($cl_data) ? $cl_data : array();
 
-	$cost_table = array();
-	foreach ($cl_data as $group) {
-		if (isset($group['id']) && 'cost-per-inch' === $group['id']) {
-			foreach (wholesale_attr_options($group) as $option) {
-				$cost_table[(int) $option['label']] = (float) $option['value'];
-			}
-		}
-	}
+	$cost_table = wholesale_cl_cost_table($product_id);
 	if (!$cost_table) {
 		return new WP_Error('no_rates', 'This product is not set up for online pricing yet. Please call us for a quote.');
 	}
@@ -878,10 +1006,39 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		if (null === $per_letter) {
 			return $fail('Please choose a letter height.');
 		}
-		// Every separate piece (the dot of an i, an accent) costs a letter, as in the builder and on B2Sign;
-		// per-inch faces and the raceway still go by the letters ($letter_count).
-		$letter_pieces = max($letter_count, wholesale_cl_count_pieces($request['letters'] ?? ''));
-		$running = $letter_pieces * $per_letter;
+		// Priced as the builder prices the same text (wholesale_cl_design_quote()): from its rate table,
+		// each letter by its own size in the chosen font as the page measured it (a W is wider than tall,
+		// a lowercase letter shorter), every separate piece (the dot of an i, an accent) at a letter price,
+		// and B2Sign's piece rules. Without a measurement every letter takes the chosen height.
+		$cost_table = wholesale_cl_cost_table($product_id);
+		if (!isset($cost_table[$letter_height])) {
+			// No builder rate table for this height: the height dropdown's own prices.
+			$cost_table = array();
+			foreach ($attrs as $attr) {
+				if ('height' === ($attr['name'] ?? '')) {
+					foreach (wholesale_attr_options($attr) as $option) {
+						$cost_table[(int) $option['label']] = (float) $option['value'];
+					}
+				}
+			}
+		}
+		$cl_measure = wholesale_cl_request_measure($request, $letter_height);
+		$cl_element = array('text' => (string) ($request['letters'] ?? ''), 'glyphs' => $cl_measure ? $cl_measure['glyphs'] : null, 'pieces' => $cl_measure ? $cl_measure['pieces'] : null);
+		$cl_letters = wholesale_cl_text_letters($cl_element, $letter_height) ?: wholesale_cl_text_letters_unmeasured($cl_element, $letter_height);
+		$cl_option_prices = wholesale_cl_option_prices($product_id);
+		$running = 0.0;
+		// Inches of letter the per-inch faces are charged on, and what a Lexan face adds, letter by letter as in the builder.
+		$cl_face_inches = 0.0;
+		$cl_lexan = 0.0;
+		foreach ($cl_letters as $cl_letter) {
+			$cl_cost = wholesale_cl_letter_cost($cost_table, $cl_option_prices, $cl_letter, array('faceColor' => array('title' => 'Lexan White')));
+			$running += $cl_cost['letter'];
+			$cl_lexan += $cl_cost['lexan'];
+			$cl_face_inches += $cl_letter['side'];
+		}
+		// The raceway runs the width of the text, as B2Sign measures it.
+		$cl_text_width = $cl_measure ? $cl_measure['width'] : $letter_height * $letter_count;
+		$letter_pieces = null !== wholesale_cl_text_pieces($cl_element, $letter_height) ? count($cl_letters) : max($letter_count, wholesale_cl_count_pieces($request['letters'] ?? ''));
 		$lines[] = array('label' => $letter_pieces > $letter_count ? sprintf('%d letters (%d pieces) at %d"', $letter_count, $letter_pieces, $letter_height) : sprintf('%d letters at %d"', $letter_count, $letter_height), 'amount' => $running);
 	} else {
 		$has_calculator = !get_post_meta($product_id, '_hide_calculator', true);
@@ -997,15 +1154,19 @@ function wholesale_price_quote($product_id, $request, $design = null)
 				continue 2;
 			case '%':
 				$amount = $running * $price['amount'] / 100;
+				// A Lexan face on channel letters: what it adds letter by letter, as in the builder.
+				if ($is_cl && isset($cl_lexan) && $cl_option_prices['lexan_percent'] > 0 && false !== stripos($chosen['label'], 'lexan')) {
+					$amount = $cl_lexan;
+				}
 				break;
 			case 'sqft':
 				$amount = ($is_sqft_calc ? $sqft : max($min_sqft, $sqft)) * $price['amount'];
 				break;
 			case 'lft':
-				$amount = $price['amount'] * ($letter_height * $letter_count / 12);
+				$amount = $price['amount'] * ((isset($cl_text_width) ? $cl_text_width : $letter_height * $letter_count) / 12);
 				break;
 			case 'clin':
-				$amount = $price['amount'] * $letter_height * $letter_count;
+				$amount = $price['amount'] * (isset($cl_face_inches) ? $cl_face_inches : $letter_height * $letter_count);
 				break;
 			case 'perim':
 				$amount = $price['amount'] * 2 * ($width_ft + $height_ft);
@@ -1035,6 +1196,11 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			$lines[] = array('label' => wholesale_attr_label($item['attr']['name']) . ': ' . $item['chosen']['label'], 'amount' => $amount);
 		}
 		$running += $amount;
+	}
+	// Channel letters: to the cent before the discount, as a builder design is (wholesale_cl_design_quote()),
+	// so the same sign never differs by a cent between the product page and the builder.
+	if ($is_cl) {
+		$running = round($running, 2);
 	}
 
 	if ($running <= 0) {
@@ -1292,7 +1458,39 @@ function wholesale_ajax_price_quote()
 	$request = map_deep(wp_unslash($_POST), 'sanitize_text_field');
 	$product_id = absint($request['product_id'] ?? 0);
 	$design = wholesale_product_is_channel_letter($product_id) ? wholesale_session_cl_design($product_id) : null;
-	wp_send_json(wholesale_price_quote($product_id, $request, $design));
+	$quote = wholesale_price_quote($product_id, $request, $design);
+
+	// Prices for the page's other choices, in the same request (js/main.js caches them): the
+	// next option the visitor picks shows its price at once, with no wait for the server. The
+	// page lists the fields and values ("variants": [[name, value], ...]); only fields already
+	// in this request are varied, each priced by the same wholesale_price_quote() as above.
+	// Not for a saved builder design, which lives in the session and can change under the page.
+	// Read raw and cleaned value by value below, as each field is when posted normally.
+	$variants = isset($_POST['variants']) && is_string($_POST['variants']) ? json_decode(wp_unslash($_POST['variants']), true) : null;
+	unset($request['variants']);
+	if (is_array($variants) && null === $design) {
+		$quote['variants'] = array();
+		// A quote takes about 1 ms; the time cap only keeps a slow moment from holding up the price shown.
+		$until = microtime(true) + 0.25;
+		foreach (array_slice($variants, 0, 80) as $pair) {
+			if (microtime(true) > $until) {
+				break;
+			}
+			if (!is_array($pair) || 2 !== count($pair) || !is_string($pair[0] ?? null) || !is_scalar($pair[1] ?? null)) {
+				continue;
+			}
+			$name = sanitize_text_field($pair[0]);
+			$value = sanitize_text_field((string) $pair[1]);
+			if (!isset($request[$name]) || is_array($request[$name]) || $value === (string) $request[$name]) {
+				continue;
+			}
+			$variant = wholesale_price_quote($product_id, array_merge($request, array($name => $value)), null);
+			unset($variant['lines']); // The page doesn't show them; keeps the answer small.
+			// The value as the page sent it, so the page can match it to its own form.
+			$quote['variants'][] = array($pair[0], (string) $pair[1], $variant);
+		}
+	}
+	wp_send_json($quote);
 }
 add_action('wp_ajax_wholesale_price_quote', 'wholesale_ajax_price_quote');
 add_action('wp_ajax_nopriv_wholesale_price_quote', 'wholesale_ajax_price_quote');

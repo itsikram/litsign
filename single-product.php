@@ -202,6 +202,10 @@ get_header();
                         <a href="#product-options"><?php echo $product_category_slug === 'channel-letters' ? 'Get your price' : 'Choose size &amp; price'; ?> <span aria-hidden="true">&darr;</span></a>
                     </p>
                 <?php endif; ?>
+                <?php // Graphic-only / flag-only / hardware-only: the complete kit, on the first screen (inc/product-kit.php kit_short). ?>
+                <?php if ($product_kit_info && $product_kit_info['kit_short']) : ?>
+                    <p class="product-kit-link product-kit-link--top"><span class="product-kit-link__need"><?php echo esc_html($product_kit_info['kit_need']); ?></span> <a href="<?php echo esc_url(get_permalink($product_kit_info['kit_id'])); ?>"><?php echo esc_html($product_kit_info['kit_short']); ?> <span aria-hidden="true">&rarr;</span></a></p>
+                <?php endif; ?>
             </div>
             <div class="pd-hero__info">
                 <?php if ($product_kit_info) : ?>
@@ -400,6 +404,8 @@ get_header();
                                     </div>
                                     <input type="text" id="letterInput" name="letters" required placeholder="Enter Your Text Here" class="form-control fw-bold">
                                     <p class="form-text m-0">For an instant quote - under 30 seconds</p>
+                                    <?php // 7 of 8 visitors who started Front Lit options stopped at this box (Visitor Insights, Nov 8-14 2026): many have a logo, not plain text. ?>
+                                    <p class="form-text m-0 cl-logo-quote">Have a logo or a photo of your storefront instead? <a href="<?php echo esc_url(function_exists('wholesale_quote_url') ? wholesale_quote_url('channel-letters', get_post_field('post_name', get_the_ID())) : home_url('/contact/')); ?>">Send it for a free quote</a></p>
                                 </div>
                             </div>
                             <div class="row d-fex align-items-center  mt-2">
@@ -747,6 +753,12 @@ get_header();
                                         <?php endif; ?>
                                         <?php if ($size_presets) :
                                             $custom_size_note = trim(wp_strip_all_tags((string) get_post_meta(get_the_ID(), '_custom_size_note', true)));
+                                            // B2Sign's note "Width over 48" horizontal flutes" can't apply when the largest size
+                                            // is 36" x 48"; a chat visitor read it as "custom sizes only over 48" wide" (Nov 9 2026).
+                                            // Drop a note about sizes over N" when no side can exceed N".
+                                            if ($custom_size_note && !empty($max_sides[1]) && preg_match('/\bover\s+(\d+(?:\.\d+)?)\s*(?:"|in\b|inch)/i', $custom_size_note, $over_m) && (float) $over_m[1] >= (float) $max_sides[1]) {
+                                                $custom_size_note = '';
+                                            }
                                             // One row's text; the button shows the chosen row's (js/main.js copies it).
                                             $size_row = function ($size, $wh, $note) { ?><span class="pb-size-opt__size"><?php echo esc_html($size); ?></span><?php if ($wh) : ?><span class="pb-size-opt__wh">(w x h)</span><?php endif; ?><?php if ('' !== $note) : ?><span class="pb-size-opt__note"><?php echo esc_html($note); ?></span><?php endif; ?><?php };
                                             $size_on = null !== $size_preset_on ? $size_presets[$size_preset_on] : null; ?>
@@ -1055,9 +1067,9 @@ get_header();
                             <div class="col-8 col-md-9">
                                 <div class="row">
                                     <div class="col">
-                                        <input class="form-control" name="custom-artwork" type="file" id="artwork" accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,image/jpeg,image/png,image/gif,image/webp,application/pdf" data-async-upload="artwork" data-async-field="custom-artwork-token" aria-describedby="artworkHint">
+                                        <input class="form-control" name="custom-artwork" type="file" id="artwork" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" data-async-upload="artwork" data-async-field="custom-artwork-token" aria-describedby="artworkHint">
                                         <?php // Not required by the form or utils/Cart.php; visitors without a print file thought it was. ?>
-                                        <small id="artworkHint" class="d-block text-muted mt-1">Optional. JPG, PNG, GIF, WebP or PDF, up to <?php echo esc_html(wholesale_artwork_max_text()); ?>. <?php echo esc_html(wholesale_large_file_help()); ?></small>
+                                        <small id="artworkHint" class="d-block text-muted mt-1">Optional. <?php echo esc_html(wholesale_artwork_types_text()); ?>, up to <?php echo esc_html(wholesale_artwork_max_text()); ?>, made at the size you order (or the same shape). Files that don't match the size are turned away. <?php echo esc_html(wholesale_large_file_help()); ?></small>
                                     </div>
                                 </div>
 

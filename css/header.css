@@ -522,6 +522,17 @@ html.sh-lock body {
   margin-top: 10px;
 }
 
+.site-header .mobile-menu-contact .sh-shipping-offer {
+  display: block;
+  margin-top: 12px;
+  color: #0b6f9c;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ---------- Tablet and phone ---------- */
 @media (max-width: 1199.98px) {
   .site-header .sh-contact,

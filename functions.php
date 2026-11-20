@@ -9,7 +9,9 @@ if (!defined('WHOLESALE_CONVERGE_USER_ID')) {
 }
 
 if (!defined('WHOLESALE_CONVERGE_PIN')) {
-	define('WHOLESALE_CONVERGE_PIN', 'C2UZW43BPDVLYKUS4ZV0V1OUZWUTHGD66BIR65V4UFRFN8N8VB7OJV6CZOSDKHIW');
+	// The PIN is never kept in theme code. It is saved on Settings > Wallet Payments > Card
+	// (option wholesale_gateway_pin), or defined in wp-config.php.
+	define('WHOLESALE_CONVERGE_PIN', '');
 }
 
 if (!defined('WHOLESALE_CONVERGE_TEST_MODE')) {
@@ -76,6 +78,7 @@ require_once(dirname(__FILE__) . '/inc/product-page-content.php');
 require_once(dirname(__FILE__) . '/inc/category-page-content.php');
 require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
 require_once(dirname(__FILE__) . '/inc/openai-feed.php');
+require_once(dirname(__FILE__) . '/inc/google-customer-reviews.php');
 require_once(dirname(__FILE__) . '/inc/product-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/location-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
@@ -84,6 +87,8 @@ require_once(dirname(__FILE__) . '/inc/quote-form.php');
 require_once(dirname(__FILE__) . '/inc/buying-journey.php');
 require_once(dirname(__FILE__) . '/inc/cl-style-grid.php');
 require_once(dirname(__FILE__) . '/inc/async-uploads.php');
+require_once(dirname(__FILE__) . '/inc/artwork-size-check.php');
+require_once(dirname(__FILE__) . '/inc/order-artwork.php');
 require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
 require_once(dirname(__FILE__) . '/inc/exit-survey.php');
 require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
@@ -110,6 +115,8 @@ require_once(dirname(__FILE__) . '/inc/admin-edit-links.php');
 require_once(dirname(__FILE__) . '/inc/admin-mobile.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
 require_once(dirname(__FILE__) . '/inc/order-pay-link.php');
+require_once(dirname(__FILE__) . '/inc/payments-admin.php');
+require_once(dirname(__FILE__) . '/inc/order-partial-refund.php');
 require_once(dirname(__FILE__) . '/ssx-live-search.php');
 
 /**
@@ -3018,6 +3025,10 @@ function litsign_scripts()
 	wp_enqueue_script('bootsrap', $theme_uri . '/js/bootstrap.min.js', array('jquery'), $asset_version('/js/bootstrap.min.js'), true);
 	wp_enqueue_script('custom-script', $theme_uri . '/js/main.js', array('jquery'), $asset_version('/js/main.js'), true);
 	wp_localize_script('custom-script', 'wholesaleShop', array('ajaxUrl' => admin_url('admin-ajax.php')));
+	// Channel letters measured as B2Sign measures them, the same on the product page and in the builder.
+	if (is_singular('product') || is_page('channel-letter-builder')) {
+		wp_enqueue_script('cl-measure', $theme_uri . '/js/cl-measure.js', array(), $asset_version('/js/cl-measure.js'), true);
+	}
 
 	if (is_singular() && comments_open() && get_option('thread_comments')) {
 		wp_enqueue_script('comment-reply');
@@ -3025,7 +3036,7 @@ function litsign_scripts()
 
 
 	if (is_page('channel-letter-builder')) {
-		wp_enqueue_script('cl', $theme_uri . '/js/cl.js', array('jquery', 'redux', 'konva'), $asset_version('/js/cl.js'), true);
+		wp_enqueue_script('cl', $theme_uri . '/js/cl.js', array('jquery', 'redux', 'konva', 'cl-measure'), $asset_version('/js/cl.js'), true);
 		wp_enqueue_script('konva', 'https://cdn.jsdelivr.net/npm/konva@8.3.5/konva.min.js', array(), _S_VERSION, true);
 		wp_enqueue_script('redux', $theme_uri . '/js/redux.min.js', array(), $asset_version('/js/redux.min.js'), true);
 		wp_enqueue_style('cl', $theme_uri . '/css/cl.css', array(), $asset_version('/css/cl.css'));
@@ -3288,11 +3299,21 @@ function wholesale_seo_description()
 		if (!$description) {
 			$description = get_post_field('post_content', $product_id);
 		}
+
+		// Products with no copy yet get a plain sentence, not just the site name.
+		if ('' === trim(wp_strip_all_tags((string) $description))) {
+			$description = sprintf(
+				/* translators: %s: product name. */
+				__('Order %s online from Storefront Sign Online, with instant prices and shipping anywhere in the USA.', 'litsign'),
+				wholesale_schema_text(get_the_title($product_id))
+			);
+		}
 	} elseif (get_query_var('category_slug')) {
 		$term_slug = get_query_var('category_slug');
 		$term_slug = sanitize_title($term_slug);
 		$term = get_term_by('slug', $term_slug, 'product_category');
-		$description = $term && !is_wp_error($term) && $term->description
+		// A one-line note such as "Graphic Not Included" is too short for search results.
+		$description = $term && !is_wp_error($term) && mb_strlen(trim(wp_strip_all_tags((string) $term->description))) >= 50
 			? $term->description
 			: ($term && !is_wp_error($term)
 				? sprintf(__('Shop custom %s from Storefront Sign Online. Signs and print products for retail storefronts and businesses.', 'litsign'), strtolower($term->name))
@@ -5124,6 +5145,15 @@ add_action('cmb2_admin_init', function () {
 			'default' => false,
 		)
 	);
+	// The print size uploaded artwork must match (inc/artwork-size-check.php).
+	$product->add_field(
+		array(
+			'name' => __('Artwork Size', 'tm'),
+			'id' => '_artwork_size',
+			'type' => 'textarea_small',
+			'after_field' => 'wholesale_artwork_size_field_summary',
+		)
+	);
 	$product->add_field(
 		array(
 			'name' => __('Prouduct Turnaround', 'tm'),
@@ -5688,7 +5718,40 @@ function start_session()
 		$_SESSION = array();
 		return;
 	}
+	// Requests that only read the session: read it and let go of the lock at once. Held for the
+	// whole request, the lock made each one wait for the visitor's other requests and those
+	// wait for it.
+	if (wholesale_session_read_only_request()) {
+		session_start(array('read_and_close' => true));
+		return;
+	}
 	session_start();
+}
+
+/**
+ * Requests that never write the session:
+ * - the product page's price quote (reads a saved builder design);
+ * - REST calls (live chat, Visitor Insights, exit survey, search). The chat's AI "add to cart"
+ *   call starts the session again itself before it writes (sfs-live-chat Ai/Controller.php);
+ * - wp-admin screens opened with GET. With the lock held there, WordPress's own loopback
+ *   requests (Site Health's REST check, plugin/theme editor saves), which carry the same
+ *   session cookie, waited for the admin page that sent them and timed out after 10 s, and
+ *   Site Health reported "An active PHP session was detected" and "The REST API encountered
+ *   an error" (live, 2026-11-17).
+ * admin-ajax, admin-post and every front-end page or form post keep the session open as before.
+ */
+function wholesale_session_read_only_request()
+{
+	if (wp_doing_ajax()) {
+		return 'wholesale_price_quote' === ($_POST['action'] ?? '');
+	}
+	$uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+	if (false !== strpos($uri, '/' . rest_get_url_prefix() . '/') || isset($_GET['rest_route'])) {
+		return true;
+	}
+	return is_admin()
+		&& 'admin-post.php' !== ($GLOBALS['pagenow'] ?? '')
+		&& in_array(strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET'), array('GET', 'HEAD'), true);
 }
 
 /**

@@ -315,12 +315,30 @@ add_filter('pre_redirect_guess_404_permalink', function ($pre) {
 	$home_path = trim((string) wp_parse_url(home_url('/'), PHP_URL_PATH), '/');
 	if ('' !== $home_path && 0 === strpos($path, $home_path . '/')) {
 		$path = substr($path, strlen($home_path) + 1);
+	} elseif ('' !== $home_path && $path === $home_path) {
+		$path = ''; // The home page itself, e.g. /?p=445 on a copy installed in a folder.
 	}
 	$path = preg_replace('#/page/\d+$#i', '', strtolower($path));
 	$path = preg_replace('#^(?:product[_-]category|category)/#', '', $path);
 	$original = wholesale_seo_merge_copy_target($path);
 	if ($original) {
 		return $original;
+	}
+	// /?p=445 named a menu item, which has no page of its own (Visitor Insights 404,
+	// Nov 2026): send it where the menu item points.
+	if ('' === $path && isset($_GET['p']) && is_scalar($_GET['p']) && absint($_GET['p'])) {
+		$item = get_post(absint($_GET['p']));
+		if ($item && 'nav_menu_item' === $item->post_type && 'publish' === $item->post_status) {
+			$item = wp_setup_nav_menu_item($item);
+			$url = (string) ($item->url ?? '');
+			// Custom menu links can be site-relative ("/trade-show-products").
+			if ('' !== $url && '/' === $url[0] && '/' !== ($url[1] ?? '')) {
+				$url = home_url($url);
+			}
+			if ('' !== $url && wp_validate_redirect($url, '')) {
+				return $url;
+			}
+		}
 	}
 	if ('' === $path || false !== strpos($path, '/')) {
 		return $pre;
@@ -338,14 +356,16 @@ add_filter('pre_redirect_guess_404_permalink', function ($pre) {
  * The 2026-10-27 merge pull gave every page, product and category a "-2" copy
  * (/shop-2/, /contact-2/, /product/magnets-2/). The copies were live for a day,
  * so links and crawlers still ask for them; they are deleted now and 404ed.
- * Point each one at the original it copied.
+ * Point each one at the original it copied. Deleted pages re-made under the
+ * same name end in -3, -4... (/reviews-3/, Nov 2026), so any -2 to -9 counts.
+ * Only 404 requests get here, so a live page whose slug ends in a number is untouched.
  *
  * @param string $path Request path without slashes at either end, lower case.
  * @return string Original URL, or '' when the path is not a copy of a live item.
  */
 function wholesale_seo_merge_copy_target($path)
 {
-	if (!preg_match('#^(?:(product)/)?([a-z0-9-]+)-2$#', (string) $path, $m)) {
+	if (!preg_match('#^(?:(product)/)?([a-z0-9-]+)-[2-9]$#', (string) $path, $m)) {
 		return '';
 	}
 

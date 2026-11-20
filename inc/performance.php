@@ -321,6 +321,34 @@ function wholesale_logo_srcset($sources, $size_array, $image_src, $image_meta, $
 add_filter('wp_calculate_image_srcset', 'wholesale_logo_srcset', 10, 5);
 
 /**
+ * Whether a first-paint subset built by utils/critical-css still matches the
+ * stylesheet it was cut from. Subsets that record the source's md5 in their
+ * first comment ("source-md5: ...") are checked against it. File times are not
+ * enough for those: a push or pull rewrites files in name order, so
+ * "x-critical.css" is written just before "x.css" and looks older than it.
+ * Subsets without the stamp still compare file times.
+ */
+function wholesale_critical_css_fresh($subset, $source)
+{
+	static $fresh = array();
+	$key = $subset . '|' . $source;
+	if (isset($fresh[$key])) {
+		return $fresh[$key];
+	}
+
+	if (!is_readable($subset) || !is_readable($source)) {
+		return $fresh[$key] = false;
+	}
+
+	$head = (string) file_get_contents($subset, false, null, 0, 600);
+	if (preg_match('/source-md5: ([0-9a-f]{32})/', $head, $match)) {
+		return $fresh[$key] = hash_equals($match[1], (string) md5_file($source));
+	}
+
+	return $fresh[$key] = filemtime($subset) >= filemtime($source);
+}
+
+/**
  * Pages that use css/bootstrap-critical.css instead of the full Bootstrap
  * stylesheet for the first paint: public content and landing pages for
  * logged-out visitors. Product, cart, checkout, account and builder pages,
@@ -335,9 +363,8 @@ function wholesale_use_critical_bootstrap()
 
 	$dir = get_template_directory() . '/css/';
 	$use = !is_admin() && !is_customize_preview() && !is_user_logged_in()
-		&& file_exists($dir . 'bootstrap-critical.css')
-		// A newer bootstrap.min.css means the subset is stale.
-		&& filemtime($dir . 'bootstrap-critical.css') >= filemtime($dir . 'bootstrap.min.css')
+		// A changed bootstrap.min.css means the subset is stale.
+		&& wholesale_critical_css_fresh($dir . 'bootstrap-critical.css', $dir . 'bootstrap.min.css')
 		&& !is_singular(array('product', 'order'))
 		&& !get_query_var('wholesale_thank_you')
 		&& !is_page(array('cart', 'checkout', 'account', 'my-orders', 'track-order', 'login', 'signup', 'payment', 'pay', 'channel-letter-builder'))
@@ -411,7 +438,7 @@ function wholesale_critical_home_style_tag($tag, $handle, $href)
 	}
 
 	$dir = get_template_directory() . '/css/';
-	if (!file_exists($dir . 'style-home-critical.css') || filemtime($dir . 'style-home-critical.css') < filemtime($dir . 'style.css')) {
+	if (!wholesale_critical_css_fresh($dir . 'style-home-critical.css', $dir . 'style.css')) {
 		return $tag;
 	}
 
@@ -441,6 +468,58 @@ function wholesale_critical_home_style_tag($tag, $handle, $href)
 	return ob_get_clean();
 }
 add_filter('style_loader_tag', 'wholesale_critical_home_style_tag', 10, 3);
+
+/**
+ * css/ui-polish.css is 16 KB (gzipped) of render-blocking CSS, but only 18 of
+ * its rules match anything on the home page (header, hero button, steps list,
+ * footer bar). On the front page print just those rules inline
+ * (css/ui-polish-home-critical.css, under 1 KB gzipped), so the first paint no
+ * longer waits for the file, and add the full file in the same cascade
+ * position once the page has loaded.
+ *
+ * Built with utils/critical-css (keep-ui-polish-home.txt). Any later edit to
+ * ui-polish.css changes its md5, and the home page then loads the full file as
+ * before until the subset is rebuilt.
+ */
+function wholesale_critical_home_ui_polish_tag($tag, $handle, $href)
+{
+	if ('wholesale-ui-polish' !== $handle || is_admin() || is_customize_preview() || is_user_logged_in() || !is_front_page()) {
+		return $tag;
+	}
+
+	$dir = get_template_directory() . '/css/';
+	if (!wholesale_critical_css_fresh($dir . 'ui-polish-home-critical.css', $dir . 'ui-polish.css')) {
+		return $tag;
+	}
+
+	$css = (string) file_get_contents($dir . 'ui-polish-home-critical.css');
+	if ('' === trim($css) || false !== stripos($css, '</style')) {
+		return $tag;
+	}
+	// The subset's relative URLs point from css/; inline they would resolve against the page.
+	$css = preg_replace('#url\(\s*(["\']?)\.\./#', 'url($1' . get_template_directory_uri() . '/', $css);
+
+	ob_start();
+	?>
+<style id="wholesale-ui-polish-critical-css"><?php echo $css; // phpcs:ignore WordPress.Security.EscapeOutput -- theme CSS file. ?></style>
+<script>
+	window.addEventListener('load', function () {
+		var critical = document.getElementById('wholesale-ui-polish-critical-css');
+		var full = document.createElement('link');
+		full.rel = 'stylesheet';
+		full.id = 'wholesale-ui-polish-css';
+		full.href = <?php echo wp_json_encode($href); ?>;
+		// media="print" until it has loaded, so it never holds a paint back.
+		full.media = 'print';
+		full.onload = function () { this.media = 'all'; };
+		critical.parentNode.insertBefore(full, critical.nextSibling);
+	});
+</script>
+<noscript><?php echo trim($tag); ?></noscript>
+	<?php
+	return ob_get_clean();
+}
+add_filter('style_loader_tag', 'wholesale_critical_home_ui_polish_tag', 10, 3);
 
 /**
  * Offer AVIF copies of the header logo (about 40% smaller than its WebP; the

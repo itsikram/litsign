@@ -229,12 +229,26 @@ function wholesale_product_turnaround($product_id)
 	// offer) promise the 12 pm Same Day only when it is one of those choices. The 10ft SEG
 	// display offers Next Day and later, yet its notes said "ships same day" (2026-11-09).
 	$spec = function_exists('wholesale_product_turnaround_spec') ? wholesale_product_turnaround_spec($product_id) : array();
+	// Since the production times copy B2Sign (2026-11-11), the 12 pm Same Day choice
+	// usually costs extra (+100%), and an order approved by an early cut-off (6 am)
+	// gets Same Day free. The sentence below must not promise a paid upgrade as standard.
+	$same_day_extra = 0.0;
+	$free_same_day = '';
 	if ($spec) {
 		$same_day = in_array('same_day', array_column($spec, 'value'), true);
+		foreach ($spec as $choice) {
+			if ('same_day' === $choice['value']) {
+				$same_day_extra = (float) $choice['percent'];
+			} elseif (0 === (int) $choice['days'] && $choice['percent'] <= 0 && $choice['choice'] && $choice['cutoff']) {
+				$free_same_day = $choice['cutoff'];
+			}
+		}
 	}
 
 	return array(
 		'same_day' => $same_day,
+		'same_day_extra' => $same_day_extra,
+		'free_same_day' => $free_same_day,
 		// Stock items list only "Order before 12pm PST ships today".
 		'stock' => '' === trim($next) && (bool) preg_match('/ships today/i', $same),
 		'next_days' => preg_match('/ships in (\d+) business days/i', $next, $m) ? (int) $m[1] : 1,
@@ -269,6 +283,16 @@ function wholesale_product_ship_sentence($product_id)
 	}
 
 	$next = 1 === $t['next_days'] ? 'the next business day' : sprintf('in %d business days', $t['next_days']);
+	// Same Day is a paid choice here (Visitor Insights Nov 2026: the page said "by 12 pm it
+	// ships the same business day" while that choice added $77.86).
+	if ($t['same_day'] && $t['same_day_extra'] > 0) {
+		$sentence = sprintf('Order and approve your artwork by 4 pm Pacific time and it ships %s; after 4 pm, allow one more business day. Need it sooner? Choose Same Day under Production Time: order by 12 pm Pacific and it ships the same business day, for an added charge', $next);
+		if ($t['free_same_day']) {
+			$sentence .= sprintf(' (orders approved by %s Pacific ship the same day at no extra charge)', strtolower(wp_date('g a', strtotime('2000-01-01 ' . $t['free_same_day'] . ' UTC'), new DateTimeZone('UTC'))));
+		}
+
+		return $sentence . '.';
+	}
 	if ($t['same_day']) {
 		return sprintf('Order and approve your artwork by 12 pm Pacific time and it ships the same business day. By 4 pm, it ships %s; after 4 pm, allow one more business day.', $next);
 	}
@@ -662,7 +686,7 @@ function wholesale_render_product_details($product_id)
 							<li><?php echo wp_kses_post($rule); ?></li>
 						<?php endforeach; ?>
 					<?php else : ?>
-					<li>Upload a JPEG or a single-page PDF, up to <?php echo esc_html(wholesale_artwork_max_text()); ?> (larger files: email us a download link), built at the exact size you order. Artwork at a different size is scaled to fit.</li>
+					<li>Upload a JPEG or a single-page PDF, up to <?php echo esc_html(wholesale_artwork_max_text()); ?> (larger files: email us a download link), built at the exact size you order (or the same shape at a larger or smaller scale). Artwork with a different shape is turned away at upload, so nothing prints stretched or cut off.</li>
 					<li>Use CMYK color, convert Pantone and spot colors to CMYK, and outline your fonts. Raster images need 150 dpi at full size.</li>
 					<li>Leave off crop marks and bleed. Double sided items take one file per side unless the template says otherwise.</li>
 					<?php endif; ?>

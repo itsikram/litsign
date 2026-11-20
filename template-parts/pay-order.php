@@ -130,14 +130,22 @@ get_header();
 					<div><dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd></div>
 					<div><dt>Shipping<?php echo !empty($cost['shipping_method']) ? ' (' . esc_html($cost['shipping_method']) . ')' : ''; ?></dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
 					<?php if ((float) ($cost['tax'] ?? 0) > 0) : ?><div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'])); ?></dd></div><?php endif; ?>
-					<div class="wpt-invoice__grand"><dt><?php echo $is_paid ? 'Total' : 'Total due'; ?></dt><dd><?php echo esc_html($amount_label); ?></dd></div>
+					<?php // After a refund: the amount left on the order (inc/order-net-total.php). $amount stays the charge. ?>
+					<?php $net = $is_paid && function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($order_id) : null; ?>
+					<?php if ($net && $net['has_refund']) : ?>
+						<div><dt>Order total</dt><dd><?php echo esc_html($amount_label); ?></dd></div>
+						<div><dt>Refunded</dt><dd>&minus;<?php echo esc_html($money($net['refunded'])); ?></dd></div>
+						<div class="wpt-invoice__grand"><dt>Total after refund</dt><dd><?php echo esc_html($money($net['net'])); ?></dd></div>
+					<?php else : ?>
+						<div class="wpt-invoice__grand"><dt><?php echo $is_paid ? 'Total' : 'Total due'; ?></dt><dd><?php echo esc_html($amount_label); ?></dd></div>
+					<?php endif; ?>
 				</dl>
 			</article>
 
 			<aside class="wpt-paybox" id="ticket-pay" aria-labelledby="wpt-paybox-title">
 				<div class="wpt-paybox__amount">
-					<span id="wpt-paybox-title"><?php echo $is_paid ? 'Amount paid' : 'Amount due'; ?></span>
-					<strong><?php echo esc_html($amount_label); ?></strong>
+					<span id="wpt-paybox-title"><?php echo $net && $net['has_refund'] ? 'Paid after refund' : ($is_paid ? 'Amount paid' : 'Amount due'); ?></span>
+					<strong><?php echo esc_html($net && $net['has_refund'] ? $money($net['net']) : $amount_label); ?></strong>
 				</div>
 
 				<?php if ($is_paid) : ?>

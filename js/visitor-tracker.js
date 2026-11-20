@@ -202,7 +202,10 @@
     // DOM the document only sees the host element, so name the inner one.
     const inner = (event.composedPath && event.composedPath()[0]) || event.target;
     const typingBox = inner.matches && inner.matches('input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]), textarea, select');
-    if (event.isTrusted && !typingBox) {
+    // Quantity + / - buttons are meant to be tapped several times in a row (3 taps = 4
+    // pieces): they showed up as rage clicks on "Increase quantity" (Nov 2026).
+    const stepper = inner.closest && inner.closest('[data-qty-step], [data-mc-step]');
+    if (event.isTrusted && !typingBox && !stepper) {
       recentClicks = recentClicks.filter((click) => now - click.at < 800 && Math.abs(click.x - event.clientX) < 40 && Math.abs(click.y - event.clientY) < 40);
       recentClicks.push({ at: now, x: event.clientX, y: event.clientY });
       if (recentClicks.length === 3) {
@@ -415,8 +418,10 @@
         headers: { 'Content-Type': 'text/plain' },
       }))
         // 200 + {chat: 1}: an agent started a chat with this visitor; open it.
+        // 200 + {snap: id}: an admin asked for a screenshot of this page.
         .then((response) => (response && response.status === 200 ? response.json() : null))
         .then((json) => {
+          if (json && json.snap) sendSnap(String(json.snap));
           const chat = window.SFSChatLoader;
           if (!json || !json.chat || !chat || typeof chat.load !== 'function' || chat.widget) return;
           // Desktop: open the chat. Phones: load it and show the agent's message as a bubble
@@ -434,6 +439,49 @@
       // Offline or blocked: drop it.
     }
   };
+
+  // ------------------------------------------------------------------
+  // Screenshots (inc/visitor-snaps.php)
+  // ------------------------------------------------------------------
+
+  // Live Chat's snap.js only copies the page (HTML, typed values, canvas drawings, scroll
+  // spots; password and card fields masked, the chat window left out) in short slices; the
+  // admin's browser draws the picture. So the page never pauses, flashes or scrolls.
+  const snapsAnswered = new Set();
+  let snapScript = null;
+  const loadSnap = () => snapScript || (snapScript = new Promise((resolve, reject) => {
+    if (window.SFSChatSnap) return resolve(window.SFSChatSnap);
+    const script = document.createElement('script');
+    script.src = config.snap;
+    script.async = true;
+    script.onload = () => (window.SFSChatSnap ? resolve(window.SFSChatSnap) : reject(new Error('copier missing')));
+    script.onerror = () => {
+      snapScript = null;
+      reject(new Error('copier blocked'));
+    };
+    document.head.appendChild(script);
+  }));
+  function sendSnap(req) {
+    // A hidden tab is not what's on their screen; the server asks another page later.
+    if (!config.snap || !config.snapEndpoint || !originalFetch || snapsAnswered.has(req) || document.hidden) return;
+    snapsAnswered.add(req);
+    const post = (data) => {
+      try {
+        Promise.resolve(originalFetch(config.snapEndpoint, {
+          method: 'POST',
+          body: JSON.stringify(Object.assign({ s: session, v: visitor, req }, data)),
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'text/plain' },
+        })).catch(() => {});
+      } catch (error) {
+        // Offline or blocked: the admin sees it time out.
+      }
+    };
+    loadSnap()
+      .then((copier) => copier.capture())
+      .then((copy) => post(Object.assign(copy, { page: location.href, title: document.title })))
+      .catch((error) => post({ error: text((error && error.message) || error || 'copy failed', 160) }));
+  }
 
   push('pageview', {
     title: document.title,

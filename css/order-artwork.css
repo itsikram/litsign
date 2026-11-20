@@ -1,0 +1,161 @@
+/* Artwork box under each order item (inc/order-artwork.php, js/order-artwork.js). */
+.order-artwork {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid #d9e2ea;
+  border-radius: 8px;
+  background: #f8fbfd;
+  font-size: 0.9rem;
+}
+
+.order-artwork.is-missing:not(.order-artwork--admin) {
+  border-color: #f0c36d;
+  background: #fffaf0;
+}
+
+.order-artwork__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.order-artwork__label {
+  color: var(--shop-ink, #172027);
+}
+
+.order-artwork__none {
+  color: #8a5a00;
+  font-weight: 600;
+}
+
+.order-artwork--admin .order-artwork__none {
+  color: #646970;
+  font-weight: 400;
+}
+
+.order-artwork__note {
+  flex-basis: 100%;
+  color: var(--shop-muted, #5b6b7b);
+}
+
+.order-artwork__intro {
+  margin: 10px 0 0;
+  color: #34506a;
+}
+
+.order-artwork__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-top: 10px;
+}
+
+.order-artwork__file {
+  flex: 1 1 220px;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 0.88rem;
+}
+
+.order-artwork__button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--shop-brand, #1fa8de);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.order-artwork__button:hover,
+.order-artwork__button:focus-visible {
+  background: var(--shop-brand-dark, #1287b5);
+}
+
+.order-artwork__button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.order-artwork__hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--shop-muted, #5b6b7b);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.order-artwork__progress,
+.order-artwork__status {
+  margin: 8px 0 0;
+  font-weight: 600;
+}
+
+.order-artwork__progress.is-busy {
+  color: #34506a;
+}
+
+.order-artwork__progress.is-error,
+.order-artwork__status.is-error {
+  color: #b42318;
+  font-weight: 500;
+}
+
+.order-artwork__status.is-done {
+  color: #067647;
+}
+
+.order-artwork__force {
+  font-weight: 700;
+}
+
+/* wp-admin order screen: sits under the item's spec grid. */
+.order-artwork--admin {
+  margin-top: 10px;
+  background: #f6f7f7;
+  border-color: #dcdcde;
+  font-size: 13px;
+}
+
+.order-artwork--admin .order-artwork__hint {
+  font-size: 12px;
+}
+
+@media (max-width: 575px) {
+  .order-artwork__row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  /* Stacked: the row's flex basis would become the input's height. */
+  .order-artwork__file {
+    flex: 0 0 auto;
+  }
+
+  .order-artwork__button {
+    justify-content: center;
+  }
+}
+
+/* Order page (top), My orders and the thank-you page: items still waiting for artwork. */
+.order-artwork-alert {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border: 1px solid #f0c36d;
+  border-left-width: 4px;
+  background: #fffaf0;
+  color: #5c3d00;
+  font-size: 0.92rem;
+}
+
+.order-artwork-alert a,
+a.order-artwork-needed {
+  color: #8a5a00;
+  font-weight: 700;
+}

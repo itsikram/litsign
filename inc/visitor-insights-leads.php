@@ -226,7 +226,7 @@ function wholesale_vi_orders_by_email()
 		$map[$email][] = array(
 			'id' => (int) $id,
 			'number' => wholesale_vi_order_number($id),
-			'total' => function_exists('wholesale_order_total') ? (float) wholesale_order_total($id) : 0.0,
+			'total' => function_exists('wholesale_order_net_total') ? wholesale_order_net_total($id) : (function_exists('wholesale_order_total') ? (float) wholesale_order_total($id) : 0.0), // After refunds.
 			'at' => get_post_field('post_date_gmt', $id),
 		);
 	}
@@ -257,7 +257,7 @@ function wholesale_vi_lead_order($lead_id, $email, $at_gmt)
 	$found = get_posts(array('post_type' => 'order', 'post_status' => 'any', 'fields' => 'ids', 'posts_per_page' => 1, 'no_found_rows' => true, 'meta_query' => array(array('key' => 'order_id', 'value' => array($number, strtolower($number), 'order_' . $number, 'order_' . strtolower($number)), 'compare' => 'IN'))));
 
 	return $found
-		? array('id' => (int) $found[0], 'number' => wholesale_vi_order_number($found[0]), 'total' => function_exists('wholesale_order_total') ? (float) wholesale_order_total($found[0]) : 0.0, 'at' => get_post_field('post_date_gmt', $found[0]), 'how' => 'Marked won')
+		? array('id' => (int) $found[0], 'number' => wholesale_vi_order_number($found[0]), 'total' => function_exists('wholesale_order_net_total') ? wholesale_order_net_total($found[0]) : (function_exists('wholesale_order_total') ? (float) wholesale_order_total($found[0]) : 0.0), 'at' => get_post_field('post_date_gmt', $found[0]), 'how' => 'Marked won')
 		: array('id' => 0, 'number' => '#' . strtoupper($number), 'total' => (float) get_post_meta($lead_id, '_lead_quote_amount', true), 'at' => '', 'how' => 'Marked won');
 }
 
@@ -437,7 +437,7 @@ function wholesale_vi_leads($period)
 		if ($later) {
 			$number = preg_replace('/^Order #/', '', $later);
 			$found = get_posts(array('post_type' => 'order', 'post_status' => 'any', 'meta_key' => 'order_id', 'meta_value' => $number, 'fields' => 'ids', 'posts_per_page' => 1, 'no_found_rows' => true));
-			$order = array('id' => $found ? (int) $found[0] : 0, 'number' => '#' . strtoupper(preg_replace('/^order_/i', '', $number)), 'total' => $found && function_exists('wholesale_order_total') ? (float) wholesale_order_total($found[0]) : 0.0, 'at' => '', 'how' => 'Same browser');
+			$order = array('id' => $found ? (int) $found[0] : 0, 'number' => '#' . strtoupper(preg_replace('/^order_/i', '', $number)), 'total' => $found && function_exists('wholesale_order_net_total') ? wholesale_order_net_total($found[0]) : ($found && function_exists('wholesale_order_total') ? (float) wholesale_order_total($found[0]) : 0.0), 'at' => '', 'how' => 'Same browser');
 		}
 		$leads[] = array(
 			'type' => $is_call ? 'call' : 'email',

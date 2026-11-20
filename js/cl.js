@@ -49,6 +49,98 @@ try {
   clPiecePricing = {};
 }
 const clPiece = (key) => Math.max(0, parseFloat(clPiecePricing[key]) || 0);
+// Sign letters drawn at their real size, as B2Sign draws them. A text's height (its Konva fontSize:
+// the height the builder shows, prices and orders) is the height of all its letters together, from
+// the top of the tallest to the bottom of the lowest. A plain Konva.Text draws a font-size line box,
+// where capitals fill only about 70% of the height; this draws a font large enough for the letters
+// to fill that height, moved down so they start at its top, without kerning (B2Sign adds up each
+// letter's advance). Its frame (selection box, size arrows, width shown) is the letters' own
+// outline, B2Sign's width. Measured by js/cl-measure.js, as the prices are.
+class LetterText extends Konva.Text {
+  _letterFit() {
+    const lib = window.SfsLetterMeasure;
+    const height = this.fontSize();
+    const family = this.fontFamily();
+    const key = lib ? `${lib.version()}|${height}|${family}|${this.text()}|${this.lineHeight()}` : "";
+    if (this._letterFitKey === key) {
+      return this._letterFitValue;
+    }
+    this._letterFitKey = key;
+    this._letterFitValue = null;
+    if (!lib || !(height > 0)) {
+      return null;
+    }
+    const measured = lib.measure(this.text(), family, true);
+    if (!measured) {
+      return null;
+    }
+    // Pixels per outline unit: the letters together are `height` tall.
+    const k = height / measured.ink;
+    this._letterFitValue = {
+      font: lib.cssFont(lib.SIZE * k, family),
+      // Konva puts its "middle" baseline halfway down the box; the tallest letter's top goes to the top.
+      dy: (measured.maxA - lib.middle(family)) * k - (height * this.lineHeight()) / 2,
+      x: measured.inkLeft * k,
+      width: measured.width * k,
+    };
+    return this._letterFitValue;
+  }
+
+  _getContextFont() {
+    const fit = this._letterFit();
+    return fit ? fit.font : super._getContextFont();
+  }
+
+  _sceneFunc(context) {
+    const fit = this._letterFit();
+    if (!fit) {
+      super._sceneFunc(context);
+      return;
+    }
+    const native = context._context;
+    const kerning = native && "fontKerning" in native ? native.fontKerning : null;
+    if (kerning !== null) {
+      native.fontKerning = "none";
+    }
+    context.translate(0, fit.dy);
+    super._sceneFunc(context);
+    context.translate(0, -fit.dy);
+    if (kerning !== null) {
+      native.fontKerning = kerning;
+    }
+  }
+
+  getSelfRect() {
+    const fit = this._letterFit();
+    return fit ? { x: fit.x, y: 0, width: fit.width, height: this.height() } : super.getSelfRect();
+  }
+}
+
+// A text node's width as B2Sign measures it (the LetterText frame), in px with the node's scale.
+const textInkWidth = (node) => node.getSelfRect().width * Math.abs(node.scaleX());
+
+// A web font that finishes loading changes the letters' outline: refit their frames and readouts.
+if (document.fonts && document.fonts.addEventListener) {
+  document.fonts.addEventListener("loadingdone", () => {
+    requestAnimationFrame(() => {
+      try {
+        nodeLists.forEach((item) => {
+          if (item && item.node instanceof LetterText && item.node.getAttr("transformer")) {
+            item.node.getAttr("transformer").forceUpdate();
+          }
+        });
+        layer.batchDraw();
+        updateHeightWidthDisplay();
+        if (selectedNode instanceof LetterText) {
+          updateNodeDimensionInputs(selectedNode, "text");
+        }
+      } catch (e) {
+        // The builder isn't set up yet; it measures when it draws.
+      }
+    });
+  });
+}
+
 // Same rate the cart charges (WHOLESALE_RACEWAY_COST_PER_FOOT in inc/pricing.php).
 const racewayPerFoot =
   parseFloat(document.getElementById("racewayPerFoot")?.value) || 55;
@@ -1201,7 +1293,7 @@ function getTextDimensions(node) {
 
 function maintainAspectRatio(newWidth = null, newHeight = null) {
   let defaultHeight = selectedNode.height() * selectedNode.scaleY();
-  let defaultWidth = selectedNode.width() * selectedNode.scaleX();
+  let defaultWidth = selectedNode instanceof LetterText ? textInkWidth(selectedNode) : selectedNode.width() * selectedNode.scaleX();
   // Calculate the aspect ratio
   const aspectRatio = defaultWidth / defaultHeight;
 
@@ -2379,7 +2471,7 @@ let handleChooseItemClick = (
               type: "UPDATE_ELEMENT",
               payload: {
                 id: selectedNode._id,
-                width: pxToIn(selectedNode.width() * selectedNode.scaleX()),
+                width: pxToIn(textInkWidth(selectedNode)),
                 height: singleHeightInch,
                 cost: costPerInch(singleHeightInch) * totalLength,
                 text: selectedNode.text(),
@@ -3303,11 +3395,57 @@ const getGlyphSizes = (element) => {
   return metrics.map((m) => [Math.round(m[0] * scale * 10) / 10, Math.round((m[1] + m[2]) * scale * 10) / 10]);
 };
 
-// Each letter of a text element as wholesale_cl_text_letters() reads it: its measured width w
-// and height h (up to 2.5 times the text height), its longer side raw, and the side the rate table
-// prices (at least half the text height). Without measured sizes, as
-// wholesale_cl_text_letters_unmeasured(): the text height, 80% as wide as it is tall.
+// Every separate piece of a text element's letters, measured as B2Sign measures them
+// (js/cl-measure.js): per non-space character, its pieces as [[width, height], ...] in inches
+// (the dot of an i is its own piece). Sent with the design; null without a canvas.
+const getTextPieces = (element) => {
+  if (!element || element.type !== "Text" || !window.SfsLetterMeasure) {
+    return null;
+  }
+  const family = String((element.font && element.font.code) || "Arial").replace(/"/g, "");
+  const sized = window.SfsLetterMeasure.at(window.SfsLetterMeasure.measure(element.text, family), normalizeCost(element.height));
+  return sized ? sized.pieces : null;
+};
+
+// The pieces as wholesale_cl_text_pieces() reads them, each priced as a letter of its own on its
+// longer side, as on B2Sign; null where the server would not believe them (then the letters below).
+const getPieceLetters = (element) => {
+  const chars = Array.from(String(element.text || "").replace(/\s/g, ""));
+  const height = normalizeCost(element.height);
+  const pieces = getTextPieces(element);
+  if (!pieces || pieces.length !== chars.length || !chars.length || !(height > 0)) {
+    return null;
+  }
+  const letters = [];
+  for (let i = 0; i < chars.length; i++) {
+    const parts = pieces[i];
+    if (!Array.isArray(parts) || !parts.length || parts.length > 8 || (parts.length < 2 && 'ij!?:;="%'.includes(chars[i]))) {
+      return null;
+    }
+    let largest = 0;
+    for (const part of parts) {
+      const w = Math.min(Math.max(0, normalizeCost(part[0])), 2.5 * height);
+      const h = Math.min(Math.max(0, normalizeCost(part[1])), 2.5 * height);
+      largest = Math.max(largest, w, h);
+      letters.push({ ch: "", side: Math.max(w, h), raw: Math.max(w, h), w, h });
+    }
+    if (/^[\p{L}\p{N}]$/u.test(chars[i]) && largest < 0.3 * height) {
+      return null;
+    }
+  }
+  return letters;
+};
+
+// Each letter of a text element as wholesale_cl_text_letters() reads it: every measured piece
+// (getPieceLetters()); else its measured width w and height h (up to 2.5 times the text height),
+// its longer side raw, and the side the rate table prices (at least half the text height).
+// Without measured sizes, as wholesale_cl_text_letters_unmeasured(): the text height, 80% as wide
+// as it is tall.
 const getTextLetters = (element) => {
+  const pieceLetters = getPieceLetters(element);
+  if (pieceLetters) {
+    return pieceLetters;
+  }
   const chars = Array.from(String(element.text || "").replace(/\s/g, ""));
   const height = normalizeCost(element.height);
   const glyphs = getGlyphSizes(element);
@@ -3376,7 +3514,7 @@ const getLetterCosts = (letter, element) => {
 // The design as the cart receives it: text elements carry their measured letter sizes.
 const withLetterSizes = (elements) =>
   (elements || []).map((element) =>
-    element && element.type === "Text" ? { ...element, glyphs: getGlyphSizes(element) || undefined } : element,
+    element && element.type === "Text" ? { ...element, glyphs: getGlyphSizes(element) || undefined, pieces: getTextPieces(element) || undefined } : element,
   );
 
 // One element's prices before the product discount: letters (cost), face (colorCost), Lexan and
@@ -3511,7 +3649,10 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
       continue;
     }
     const elementHeight = normalizeCost(elements[i].height);
-    const elementWidth = normalizeCost(elements[i].width);
+    // Letters: B2Sign's width, measured now (a web font may have loaded since it was stored).
+    const sizedText =
+      elements[i].type === "Text" && elementNode instanceof LetterText ? textInkWidth(elementNode) / dpi : null;
+    const elementWidth = sizedText > 0 ? sizedText : normalizeCost(elements[i].width);
     const elementPrices = getElementPrices(elements[i]);
     const elementCost = elementPrices.cost;
     const elementColorCost = elementPrices.colorCost;
@@ -3526,9 +3667,10 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     const letterText = (elements[i].text || "").trim();
     if (letterText) {
       const letterCount = Array.from(letterText.replace(/\s/g, "")).length;
-      const pieceCount = countPieces(letterText);
+      const pieceLetters = elements[i].type === "Text" ? getPieceLetters(elements[i]) : null;
+      const pieceCount = pieceLetters ? pieceLetters.length : countPieces(letterText);
       const detail = document.createElement("span");
-      // The dot of an i or an accent is its own piece, priced like a letter (as the product page line says).
+      // The dot of an i or an accent is its own piece, priced by its own size as on B2Sign (as the product page line says).
       detail.textContent =
         `“${letterText}” · ${letterCount} ${letterCount == 1 ? "letter" : "letters"}` +
         (pieceCount > letterCount ? ` (${pieceCount} pieces)` : "");
@@ -3815,10 +3957,12 @@ window.addEventListener("load", function (e) {
       };
     }
 
-    const textNode = new Konva.Text(textConfig);
+    const textNode = new LetterText(textConfig);
 
     let changeEvent = new CustomEvent("change", { bubbles: true });
-    textNode.x(x - (textNode.width() * textNode.scaleX()) / 2);
+    // Centred on the letters' own outline (the LetterText frame).
+    const textFrame = textNode.getSelfRect();
+    textNode.x(x - ((textFrame.x + textFrame.width / 2) * textNode.scaleX()));
     textNode.y(y - (textNode.height() * textNode.scaleY()) / 2);
 
     layer.add(textNode);
@@ -3882,7 +4026,7 @@ window.addEventListener("load", function (e) {
     };
 
     let persistTextTransform = () => {
-      let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
+      let widthInInch = pxToIn(textInkWidth(textNode));
       let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
       let textLength = textNode.text().replace(/\s/g, "").length;
 
@@ -3921,7 +4065,7 @@ window.addEventListener("load", function (e) {
     textNode.on("transformend", persistTextTransform);
 
     let persistText = () => {
-      let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
+      let widthInInch = pxToIn(textInkWidth(textNode));
       let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
       let textLength = textNode.text().replace(/\s/g, "").length;
       totalColorCost = heightInInch * textLength * parseFloat(colorCost);
@@ -3976,7 +4120,7 @@ window.addEventListener("load", function (e) {
     updatePreview("text", textNode);
     updateLeftsideBar();
 
-    let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
+    let widthInInch = pxToIn(textInkWidth(textNode));
     let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
     let textLength = textNode.text().replace(/\s/g, "").length;
 
@@ -5345,7 +5489,7 @@ window.addEventListener("load", function (e) {
         cloneNode._id,
       ).faceCostPerInch;
       let clonedNodeHeight = pxToIn(cloneNode.height() * cloneNode.scaleY());
-      let clonedNodeWidth = pxToIn(cloneNode.width() * cloneNode.scaleX());
+      let clonedNodeWidth = pxToIn(cloneNode instanceof LetterText ? textInkWidth(cloneNode) : cloneNode.width() * cloneNode.scaleX());
       let clonedNodeTotalCost = costPerInch(clonedNodeWidth);
       let cloneNodeTotalColorCost =
         parseFloat(currentElementColorCost) * clonedNodeWidth;
@@ -5361,7 +5505,7 @@ window.addEventListener("load", function (e) {
         type: "UPDATE_ELEMENT",
         payload: {
           id: cloneNode._id,
-          width: pxToIn(cloneNode.width() * cloneNode.scaleX()),
+          width: clonedNodeWidth,
           height: pxToIn(cloneNode.height() * cloneNode.scaleY()),
           text: text,
           cost: clonedNodeTotalCost,
@@ -5516,7 +5660,7 @@ window.addEventListener("load", function (e) {
       if (text.length > 0) {
         let heightInInch =
           (selectedNode.height() * selectedNode.scaleY()) / dpi;
-        let widhtInInch = (selectedNode.width() * selectedNode.scaleX()) / dpi;
+        let widhtInInch = textInkWidth(selectedNode) / dpi;
 
         let currentElement = getElementById(selectedNode._id);
         let totalLength = selectedNode.text().replace(/\s/g, "").length;
@@ -5544,6 +5688,8 @@ window.addEventListener("load", function (e) {
       }
 
       updateDimenstionDisplay();
+      // New letters, new width: the size boxes show it at once.
+      updateNodeDimensionInputs(selectedNode, "text");
     }
     fontSize = parseFloat(sizeHeightInput.value) * dpi || 20;
     // The size halves ("activeSecond") are only set once the visitor picks a return
@@ -5659,7 +5805,8 @@ window.addEventListener("load", function (e) {
           selectedNode.width(undefined);
           fontSize = selectedNode.fontSize() * selectedNode.scaleX();
           heightInInch = pxToIn(selectedNode.height() * selectedNode.scaleY());
-          widthInInch = pxToIn(selectedNode.width() * selectedNode.scaleX());
+          widthInInch = pxToIn(textInkWidth(selectedNode));
+          widhtInPx = textInkWidth(selectedNode);
           store.dispatch({
             type: "UPDATE_ELEMENT",
             payload: {
@@ -5972,28 +6119,17 @@ window.addEventListener("load", function (e) {
 
     let text = "";
     switch (selectedNode.getClassName()) {
-      case "Text":
-        let currentWidth = selectedNode.width() * selectedNode.scaleX();
-        let currentHeight = selectedNode.height() * selectedNode.scaleY();
-        let currentFontSize = selectedNode.fontSize();
+      case "Text": {
+        // The letters keep their proportions: the typed width (the letters' own width, as B2Sign
+        // measures it) sets their height, within the product's smallest and largest letters.
+        const currentWidth = textInkWidth(selectedNode);
+        const currentFontSize = selectedNode.fontSize() * Math.abs(selectedNode.scaleY());
+        let newFontSize = currentWidth > 0 ? currentFontSize * (widthInPx / currentWidth) : currentFontSize;
+        newFontSize = Math.min(maxHeight * dpi, Math.max(minHeight * dpi, newFontSize));
 
-        if (pxToIn(currentHeight) > maxHeight) {
-          sizeHeightInput.value = maxHeight;
-          return sizeHeightInput.dispatchEvent(changeEvent);
-        }
-
-        selectedNode.width(widthInPx);
-        layer.batchDraw();
-
-        let updatedHeight = selectedNode.height() * selectedNode.scaleY();
-        let updatedWidth = selectedNode.width() * selectedNode.scaleX();
-
-        let scaleFactor = widthInPx / currentWidth;
-        let newFontSize =
-          getTextFSI(selectedNode._id) == "yes"
-            ? currentFontSize * scaleFactor - 1.3
-            : currentFontSize * scaleFactor;
-
+        selectedNode.scaleX(1);
+        selectedNode.scaleY(1);
+        selectedNode.width(undefined);
         selectedNode.fontSize(newFontSize);
         fontSize = newFontSize;
 
@@ -6001,11 +6137,10 @@ window.addEventListener("load", function (e) {
         tr.update();
 
         triggerTransformEvent();
-        selectedNode.scaleX(1);
-        selectedNode.scaleY(1);
         layer.batchDraw();
 
         break;
+      }
 
       case "Shape":
         if (widthInInch < minWidth) {
@@ -6995,12 +7130,29 @@ window.addEventListener("load", function (e) {
       switch (element.type) {
         case "Text":
           let textNodeId = addText(text, element.x, element.y, true);
+          // Back at the height it was saved (and priced) at: a design resized with the handles keeps
+          // its scale apart from its font size, which the plain font size would lose.
+          const restoredText = getNodeById(textNodeId);
+          const savedHeight = parseFloat(element.height);
+          const restoredSize = {};
+          if (restoredText instanceof LetterText && savedHeight > 0) {
+            restoredText.scale({ x: 1, y: 1 });
+            restoredText.fontSize(savedHeight * dpi);
+            restoredSize.scale = { x: 1, y: 1 };
+            restoredSize.width = pxToIn(textInkWidth(restoredText));
+            const restoredFrame = restoredText.getAttr("transformer");
+            if (restoredFrame) {
+              restoredFrame.forceUpdate();
+            }
+          }
 
           store.dispatch({
             type: "UPDATE_ELEMENT",
             payload: {
-              id: textNodeId,
               ...element,
+              ...restoredSize,
+              // The new node's id last: the saved design's own id would match nothing.
+              id: textNodeId,
               //colorCost : element.colorCost
             },
           });

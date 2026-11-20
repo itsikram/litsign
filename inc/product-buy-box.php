@@ -106,25 +106,91 @@ function wholesale_render_product_actions($stock_status, $initial_cost)
 }
 
 /**
- * Cards accepted at checkout, as text badges (checkout.php lists the same four).
+ * "Secure checkout" and the cards accepted at checkout as small card marks (checkout.php
+ * lists the same four). Under the buy buttons and, when shown, the wallet plugin's
+ * Express checkout panel. Each mark has an accessible name.
  */
 function wholesale_render_product_pay_row()
 {
 	if (wholesale_setting_enabled('payment_disabled')) {
 		return;
 	}
+	$frame = '<rect x=".5" y=".5" width="37" height="23" rx="3.5" fill="#fff" stroke="#d3dbe4"/>';
+	$font = 'font-family="Arial,Helvetica,sans-serif" font-weight="700"';
+	$cards = array(
+		'Visa' => $frame . '<text x="19" y="16" text-anchor="middle" ' . $font . ' font-size="10.5" font-style="italic" fill="#1a1f71" textLength="25" lengthAdjust="spacingAndGlyphs">VISA</text>',
+		'Mastercard' => $frame . '<circle cx="15.5" cy="12" r="6.5" fill="#eb001b"/><circle cx="22.5" cy="12" r="6.5" fill="#f79e1b"/><path fill="#ff5f00" d="M19 6.52a6.5 6.5 0 0 1 0 10.96 6.5 6.5 0 0 1 0-10.96Z"/>',
+		'American Express' => '<rect width="38" height="24" rx="4" fill="#016fd0"/><text x="19" y="15.6" text-anchor="middle" ' . $font . ' font-size="9.5" fill="#fff" textLength="28" lengthAdjust="spacingAndGlyphs">AMEX</text>',
+		'Discover' => $frame . '<text x="3.6" y="14.9" ' . $font . ' font-size="7.4" fill="#231f20" textLength="15" lengthAdjust="spacingAndGlyphs">DISC</text><circle cx="22.4" cy="12.3" r="3.5" fill="#f48120"/><text x="26.4" y="14.9" ' . $font . ' font-size="7.4" fill="#231f20" textLength="9" lengthAdjust="spacingAndGlyphs">VER</text>',
+	);
+	$cards += wholesale_public_wallet_marks($frame, $font);
 	?>
-	<div class="pd-pay" aria-label="Payment methods accepted">
-		<svg class="pd-pay__lock" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>
-		<span class="pd-pay__label">We accept</span>
-		<ul class="pd-pay__cards">
-			<li>Visa</li>
-			<li>Mastercard</li>
-			<li>Amex</li>
-			<li>Discover</li>
-		</ul>
+	<div class="pd-pay">
+		<span class="pd-pay__secure">
+			<svg class="pd-pay__lock" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>
+			Secure checkout
+		</span>
+		<div class="pd-pay__accept">
+			<span class="pd-pay__label" id="pdPayLabel">We accept</span>
+			<ul class="pd-pay__cards" aria-labelledby="pdPayLabel">
+				<?php foreach ($cards as $name => $svg) : ?>
+					<li title="<?php echo esc_attr($name); ?>"><svg viewBox="0 0 38 24" width="38" height="24" role="img" aria-label="<?php echo esc_attr($name); ?>" focusable="false"><?php echo $svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- fixed markup above. ?></svg></li>
+				<?php endforeach; ?>
+			</ul>
+		</div>
 	</div>
 	<?php
+}
+
+/**
+ * Wallets every visitor can really pay with, from the SFS Wallet Payments settings: Apple Pay and
+ * Google Pay when Stripe is on in Live mode, PayPal (and Venmo when its switch is on) when PayPal
+ * is on in Live mode. Empty while the plugin is missing, set to "Only administrators", or in
+ * test/sandbox mode, so the page never lists a wallet a shopper can't use. Static marks: Google's
+ * Merchant Center checks pages for them, and the real Stripe buttons only draw on devices that
+ * have that wallet.
+ *
+ * @return string[] Wallet names, e.g. array('Apple Pay', 'Google Pay', 'PayPal', 'Venmo').
+ */
+function wholesale_public_wallet_names()
+{
+	$settings = '\SFS\WalletPayments\Settings';
+	if (!class_exists($settings) || $settings::get('admins_only')) {
+		return array();
+	}
+	if (!$settings::get('show_product_page') && !$settings::get('show_checkout') && !$settings::get('show_cart_page')) {
+		return array();
+	}
+	$names = array();
+	if ($settings::stripe_ready() && 'live' === $settings::stripe_mode()) {
+		$names[] = 'Apple Pay';
+		$names[] = 'Google Pay';
+	}
+	if ($settings::paypal_ready() && 'live' === $settings::paypal_mode()) {
+		$names[] = 'PayPal';
+		if ($settings::get('paypal_venmo')) {
+			$names[] = 'Venmo';
+		}
+	}
+	return $names;
+}
+
+/**
+ * SVG marks for wholesale_public_wallet_names(), in the same frame as the card marks.
+ */
+function wholesale_public_wallet_marks($frame, $font)
+{
+	$svg = array(
+		'Apple Pay' => $frame . '<path fill="#000" d="M11.6 8.6c.4-.5.7-1.2.6-1.9-.6 0-1.3.4-1.7.9-.4.4-.7 1.1-.6 1.8.7 0 1.3-.3 1.7-.8Zm.6 1c-.9 0-1.7.5-2.1.5-.5 0-1.1-.5-1.9-.5-1 0-1.9.6-2.4 1.5-1 1.8-.3 4.4.7 5.8.5.7 1 1.5 1.8 1.4.7 0 1-.5 1.9-.5s1.1.5 1.9.4c.8 0 1.3-.7 1.7-1.4.5-.8.8-1.6.8-1.6s-1.6-.6-1.6-2.4c0-1.5 1.2-2.2 1.3-2.3-.7-1-1.8-1.1-2.1-1.1Z"/><text x="16" y="16.2" ' . $font . ' font-size="9.5" fill="#000" textLength="17" lengthAdjust="spacingAndGlyphs">Pay</text>',
+		'Google Pay' => $frame . '<text x="4.5" y="16.2" ' . $font . ' font-size="10" fill="#4285f4">G</text><text x="13.5" y="16.2" font-family="Arial,Helvetica,sans-serif" font-size="9.5" fill="#5f6368" textLength="17" lengthAdjust="spacingAndGlyphs">Pay</text>',
+		'PayPal' => $frame . '<text x="19" y="15.6" text-anchor="middle" ' . $font . ' font-size="9" font-style="italic" textLength="30" lengthAdjust="spacingAndGlyphs"><tspan fill="#003087">Pay</tspan><tspan fill="#009cde">Pal</tspan></text>',
+		'Venmo' => '<rect width="38" height="24" rx="4" fill="#008cff"/><text x="19" y="15.6" text-anchor="middle" ' . $font . ' font-size="9.5" font-style="italic" fill="#fff" textLength="28" lengthAdjust="spacingAndGlyphs">venmo</text>',
+	);
+	$out = array();
+	foreach (wholesale_public_wallet_names() as $name) {
+		$out[$name] = $svg[$name];
+	}
+	return $out;
 }
 
 /**

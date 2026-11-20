@@ -1442,6 +1442,34 @@
   color: #b42318;
   font-weight: 600;
 }
+/* Artwork that doesn't match the ordered size (js/artwork-size-check.js). */
+.artwork-size-status:empty { display: none; }
+.artwork-size-status {
+  margin-top: 6px;
+  font-size: .85rem;
+  line-height: 1.4;
+}
+.artwork-size-status.is-done { color: #1d7a3a; }
+.artwork-size-status.is-error {
+  padding: 10px 12px;
+  border: 1px solid #f4b4ad;
+  border-left: 4px solid #b42318;
+  border-radius: 6px;
+  background: #fef3f2;
+  color: #912018;
+  font-weight: 600;
+}
+.artwork-size-status .artwork-size-remove {
+  display: block;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #912018;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
 
 /* 9h. Main product photo opens full size on click or tap (js/main.js). */
 .product-details .product-image-zoom { cursor: zoom-in; }
@@ -1822,39 +1850,59 @@ html.pd-lightbox-open { overflow: hidden; }
   font-size: 13px;
 }
 
+/* "Secure checkout" left, "We accept" + card marks right (inc/product-buy-box.php). */
 .product-details .pd-pay {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  margin: 10px 0 0;
+  justify-content: space-between;
+  gap: 8px 14px;
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #e6ebf0;
   color: #52616f;
   font-size: 12.5px;
 }
 
+.product-details .pd-pay__secure {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #1d3a2b;
+  font-weight: 600;
+}
+
 .product-details .pd-pay__lock {
+  flex: 0 0 auto;
   color: #117a4c;
+}
+
+.product-details .pd-pay__accept {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .product-details .pd-pay__cards {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .product-details .pd-pay__cards li {
-  padding: 2px 7px;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  background: #fff;
-  color: #1e293b;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  display: flex;
+  margin: 0;
+  padding: 0;
+}
+
+.product-details .pd-pay__cards svg {
+  display: block;
+  width: 38px;
+  height: 24px;
 }
 
 @media (max-width: 767.98px) {
@@ -2730,4 +2778,56 @@ html.pd-lightbox-open { overflow: hidden; }
   .contact-form-card.is-sent .contact-sent {
     animation: none;
   }
+}
+
+/* ---------- 20. Visitor Insights fixes (2026-11-15) ----------
+   Graphic-only / flag-only / hardware-only pages: the complete kit right under
+   the price box (single-product.php, inc/product-kit.php kit_short). Ad clicks
+   expecting a whole stand met "Stand not included" and left within seconds. */
+.product-details .product-kit-link--top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin: -10px 0 18px;
+  padding: 9px 14px;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  background: #fff7ed;
+  color: #9a3412;
+  font-size: 0.95rem;
+  text-align: left;
+}
+.product-details .product-kit-link--top .product-kit-link__need {
+  font-weight: 600;
+}
+.product-details .product-kit-link--top a {
+  color: #0a6f9a;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+@media (max-width: 767.98px) {
+  /* The price box above has no bottom margin in the phone hero (section 15). */
+  .product-details .product-kit-link--top {
+    width: 100%;
+    margin: 8px 0 4px;
+  }
+}
+
+/* The home headline scrolls to the products when tapped (js/ui-polish.js 10). */
+#home-hero-title.is-tappable {
+  cursor: pointer;
+}
+
+/* Channel letter text box: a logo / photo quote link for visitors without plain text (single-product.php). */
+.product-details .cl-logo-quote {
+  margin-top: 4px !important;
+}
+.product-details .cl-logo-quote a {
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

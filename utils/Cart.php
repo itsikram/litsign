@@ -186,6 +186,13 @@ class Cart
         $artwork_id = null;
         $attachment_src = null;
 
+        // Artwork must have the shape of the size ordered (inc/artwork-size-check.php). Checked
+        // before the held upload is claimed, so the customer can fix the size and add it again.
+        $artwork_problem = wholesale_artwork_request_problem($product_id, $request);
+        if ('' !== $artwork_problem) {
+            $this->redirect_with_error($product_id, $artwork_problem);
+        }
+
         // Uploaded in the background (inc/async-uploads.php), or posted with the form.
         $file = wholesale_async_upload_take($_POST['custom-artwork-token'] ?? '', 'artwork');
         if (!$file && isset($_FILES['custom-artwork']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['custom-artwork']['error']) {
@@ -196,16 +203,10 @@ class Cart
                 $this->redirect_with_error($product_id, 'Your artwork could not be uploaded. Please try again.');
             }
 
-            $allowed_artwork_types = array(
-                'jpg|jpeg|jpe' => 'image/jpeg',
-                'png' => 'image/png',
-                'gif' => 'image/gif',
-                'webp' => 'image/webp',
-                'pdf' => 'application/pdf',
-            );
+            $allowed_artwork_types = wholesale_artwork_mimes();
             $checked_type = wp_check_filetype_and_ext($file['tmp_name'], $file['name'], $allowed_artwork_types);
             if (empty($checked_type['ext']) || empty($checked_type['type'])) {
-                $this->redirect_with_error($product_id, 'Artwork must be a JPG, PNG, GIF, WebP or PDF file.');
+                $this->redirect_with_error($product_id, 'Artwork must be a ' . wholesale_artwork_types_text() . ' file.');
             }
             if (filesize($file['tmp_name']) > wholesale_artwork_max_bytes()) {
                 $this->redirect_with_error($product_id, 'Artwork files must be under ' . wholesale_artwork_max_text() . '. ' . wholesale_large_file_help());
@@ -464,6 +465,19 @@ class Cart
         // escaped non-ASCII label character (×, ″) into text like "u00d7".
         $cart_items_json = json_encode($cart_item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
+        // The options this line was priced from, so a quantity change in the cart is priced
+        // again with the product's quantity tiers and minimums (update_quantity()). Kept
+        // beside the cart, not in the line, so orders store the same line data as before.
+        if (!$design) {
+            if (!isset($_SESSION['wholesale_cart_requests']) || !is_array($_SESSION['wholesale_cart_requests'])) {
+                $_SESSION['wholesale_cart_requests'] = array();
+            }
+            $_SESSION['wholesale_cart_requests'][(string) $cart_item['cart_id']] = array_diff_key(
+                $request,
+                array_flip(array('action', 'nonce', '_wpnonce', 'total_cost', 'buy_now', 'job_name', 'product_cl_data'))
+            );
+        }
+
         $cart_items = $this->get_items();
         array_push($cart_items, json_decode($cart_items_json));
         $_SESSION['cart_items'] = json_encode($cart_items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -483,14 +497,25 @@ class Cart
         $updated_cart_items = array();
         foreach ($cart_items as $key => $item) {
             if ($item->cart_id == $cart_id) {
-                $current_quanitity = max(1, absint($item->product_quantity));
-                $prodcut_subtotal = floatval($item->product_subtotal);
-                $single_product_cost = $prodcut_subtotal / $current_quanitity;
-                $update_product_cost = $single_product_cost * $quantity;
-
                 $updated_item = $cart_items[$key];
-                $updated_item->product_subtotal = $update_product_cost;
-                $updated_item->product_quantity = $quantity;
+                $quote = $this->quote_for_quantity($item, $quantity);
+                if (is_string($quote)) {
+                    // This quantity can't be ordered with the chosen options: keep the line as it was.
+                    $_SESSION['wholesale_cart_notice'] = $quote;
+                } elseif (is_array($quote)) {
+                    // Priced again like the product page does, so quantity tiers and minimums apply.
+                    $updated_item->product_subtotal = $quote['total'];
+                    $updated_item->unit_price = $quote['unit_price'];
+                    $updated_item->discount = $quote['discount'];
+                    $updated_item->turnaround_cost = $quote['turnaround'];
+                    $updated_item->product_quantity = $quote['quantity'];
+                } else {
+                    // Channel letters, and lines added before the options were kept: same price per piece.
+                    $current_quanitity = max(1, absint($item->product_quantity));
+                    $single_product_cost = floatval($item->product_subtotal) / $current_quanitity;
+                    $updated_item->product_subtotal = $single_product_cost * $quantity;
+                    $updated_item->product_quantity = $quantity;
+                }
                 $updated_cart_items[] = $updated_item;
             } else {
                 $updated_cart_items[] = $item;
@@ -500,6 +525,28 @@ class Cart
         $_SESSION['cart_items'] = json_encode($updated_cart_items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
+
+    /**
+     * The price quote for a cart line at a new quantity, from the options it was added with.
+     *
+     * @return array|string|null The quote; an error message when that quantity can't be
+     *                           ordered; null when the line's options weren't kept.
+     */
+    private function quote_for_quantity($item, $quantity)
+    {
+        $requests = isset($_SESSION['wholesale_cart_requests']) && is_array($_SESSION['wholesale_cart_requests']) ? $_SESSION['wholesale_cart_requests'] : array();
+        $request = $requests[(string) ($item->cart_id ?? '')] ?? null;
+        $product_id = absint($item->product_id ?? 0);
+        if (!is_array($request) || !$product_id || wholesale_product_is_channel_letter($product_id)) {
+            return null;
+        }
+        $request['product_quantity'] = $quantity;
+        $quote = wholesale_price_quote($product_id, $request);
+        if (empty($quote['ok'])) {
+            return sprintf('The quantity of %s was not changed. %s', get_the_title($product_id), $quote['error'] ? $quote['error'] : 'Please remove it and add it again.');
+        }
+        return $quote;
+    }
 
     public function get_items()
     {

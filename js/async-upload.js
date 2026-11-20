@@ -111,10 +111,13 @@
         pending.delete(job);
         job = null;
       }
+      var hadToken = Boolean(hidden.parentNode);
       if (hidden.parentNode) hidden.parentNode.removeChild(hidden);
       input.name = name;
       status.textContent = "";
       status.className = "async-upload-status";
+      // js/artwork-size-check.js clears its size message.
+      if (hadToken) input.dispatchEvent(new CustomEvent("async-upload:cleared", { bubbles: true }));
     }
 
     input.addEventListener("change", function () {
@@ -149,6 +152,8 @@
         input.removeAttribute("name");
         status.textContent = "Uploaded ✓";
         status.className = "async-upload-status is-done";
+        // js/artwork-size-check.js compares the file with the ordered size.
+        input.dispatchEvent(new CustomEvent("async-upload:done", { bubbles: true, detail: { token: token, context: context } }));
       }, function (err) {
         if (job !== current || err.message === "aborted") return;
         if (err.status === 400 && err.message !== "upload_failed") {

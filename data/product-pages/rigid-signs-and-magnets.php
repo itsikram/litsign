@@ -12,7 +12,7 @@ $big = 'Panels larger than 46" x 38" (or 48" x 30") are too big to ship by parce
 return array(
 	'aluminum-sandwich-board' => array(
 		'title' => array('Aluminum Sandwich Board', 'ACM Panels'),
-		'description' => 'Aluminum sandwich board: a 1/8" composite panel with a UV printed face, cut to any size up to 48" x 96" for outdoor use. Ships nationwide. Order online.',
+		'description' => 'Aluminum sandwich board: a 1/8" composite panel with a UV printed face, cut to any size up to 48" x 36" for outdoor use. Ships nationwide. Order online.',
 		'notes' => array($big),
 		'faq' => array(
 			array('q' => 'Will it fit my sign frame?', 'a' => 'At 1/8" (3mm) thick, it fits most display stands and frames made for standard sign panels.'),

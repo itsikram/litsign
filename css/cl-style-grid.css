@@ -806,3 +806,162 @@
 .hc-gal-count svg {
   margin-right: 4px;
 }
+
+/* ------------------------------------------------------------------
+   Phones (2026-11-12): cleaner style cards on /custom-channel-letters/.
+   Shorter section header (the trust strip right above the band already
+   lists the same four points), one badge per photo, two-line
+   descriptions, price and button aligned across a row, and an odd last
+   card spans the row as a horizontal card instead of leaving a gap.
+   ------------------------------------------------------------------ */
+@media (max-width: 575px) {
+  .hc-shop-cl {
+    padding: 36px 0 40px;
+  }
+
+  .hc-shop-cl-head {
+    margin-bottom: 18px;
+  }
+
+  .hc-shop-cl-kicker {
+    margin-bottom: 10px;
+    font-size: 0.7rem;
+  }
+
+  .hc-shop-cl-title {
+    font-size: clamp(1.55rem, 7vw, 1.85rem);
+    line-height: 1.15;
+  }
+
+  .hc-shop-cl-lead {
+    display: -webkit-box;
+    overflow: hidden;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .hc-shop-cl-trust {
+    display: none;
+  }
+
+  .hc-shop-cl-grid {
+    gap: 12px;
+  }
+
+  .hc-shop-cl-card {
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  }
+
+  .hc-shop-cl-card:hover,
+  .hc-shop-cl-card:focus-within {
+    transform: none;
+  }
+
+  /* One badge per photo; the type number stays top left. */
+  .hc-gal-flag + .hc-gal-flag {
+    display: none;
+  }
+
+  .hc-shop-cl-type,
+  .hc-gal-flag {
+    padding: 3px 7px;
+    border-radius: 6px;
+    font-size: 0.62rem;
+    letter-spacing: 0.01em;
+  }
+
+  .hc-shop-cl-body {
+    padding: 11px 12px 12px;
+  }
+
+  .hc-shop-cl-tag {
+    margin-bottom: 6px;
+    padding: 2px 7px;
+    font-size: 0.6rem;
+  }
+
+  .hc-shop-cl-name {
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  .hc-shop-cl-desc {
+    margin-top: 4px;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    -webkit-line-clamp: 2;
+  }
+
+  .hc-shop-cl-price {
+    gap: 0 4px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #eef1f4;
+  }
+
+  .hc-shop-cl-price strong {
+    font-size: 1.2rem;
+  }
+
+  .hc-shop-cl-price small {
+    font-size: 0.7rem;
+  }
+
+  .hc-shop-cl-button {
+    margin-top: 10px;
+    padding: 9px 6px;
+    border-radius: 9px;
+    font-size: 0.84rem;
+  }
+
+  /* Odd last card: full row, photo left, details right. */
+  .hc-shop-cl-card:nth-of-type(odd):last-of-type {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 46%) minmax(0, 1fr);
+  }
+
+  .hc-shop-cl-card:nth-of-type(odd):last-of-type .hc-shop-cl-media {
+    aspect-ratio: auto;
+    min-height: 100%;
+  }
+
+  .hc-shop-cl-card:nth-of-type(odd):last-of-type .hc-gal-track {
+    position: absolute;
+    inset: 0;
+  }
+
+  .hc-shop-cl-card:nth-of-type(odd):last-of-type .hc-shop-cl-body {
+    justify-content: center;
+    padding: 14px;
+  }
+
+  .hc-shop-cl-card:nth-of-type(odd):last-of-type .hc-shop-cl-desc {
+    flex: 0 0 auto;
+    -webkit-line-clamp: 3;
+  }
+
+  .hc-shop-cl-help {
+    grid-column: 1 / -1;
+    gap: 8px;
+    padding: 18px 16px;
+    border-radius: 14px;
+  }
+
+  .hc-shop-cl-help h3 {
+    font-size: 1.15rem;
+  }
+
+  .hc-shop-cl-help p {
+    font-size: 0.86rem;
+  }
+
+  .hc-shop-cl-note {
+    margin-top: 18px;
+    font-size: 0.8rem;
+  }
+}

@@ -465,6 +465,7 @@ function wholesale_order_pay_items_email_html($order_id, $total_label)
 		. $total_row('Shipping' . (!empty($cost['shipping_method']) ? ' - ' . $cost['shipping_method'] : ''), $money($cost['shipping_cost'] ?? 0))
 		. $total_row('Tax', $money($cost['tax'] ?? 0))
 		. $total_row($total_label, $money(wholesale_order_total($order_id)), true)
+		. (function_exists('wholesale_order_net_email_rows') ? wholesale_order_net_email_rows($order_id, $font) : '') // After refunds (inc/order-net-total.php).
 		. '</table>';
 }
 

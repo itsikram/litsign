@@ -299,6 +299,8 @@ get_header();
                             </p>
                         </div>
                         <p class="checkout-cards">We accept Visa, Mastercard, American Express and Discover. Processed by Elavon Converge; we never store your card number.</p>
+                        <?php $wallet_names = function_exists('wholesale_public_wallet_names') ? wholesale_public_wallet_names() : array(); ?>
+                        <?php if ($wallet_names) : ?><p class="checkout-cards checkout-cards--wallets">Also accepted: <?php echo esc_html(implode(', ', $wallet_names)); ?>.</p><?php endif; ?>
                     <?php elseif ($card_enabled) : ?>
                         <div class="checkout-secure">
                             <?php echo $lock_icon; // Static SVG. ?>
@@ -306,6 +308,8 @@ get_header();
                                 <strong>Pay securely by card</strong>
                                 <p>When you click <em>Pay</em>, a secure window from our card processor, Elavon Converge, opens for your card details. Your card number never passes through our website.</p>
                                 <p class="checkout-cards">Visa &middot; Mastercard &middot; American Express &middot; Discover</p>
+                                <?php $wallet_names = function_exists('wholesale_public_wallet_names') ? wholesale_public_wallet_names() : array(); ?>
+                                <?php if ($wallet_names) : ?><p class="checkout-cards checkout-cards--wallets">Also accepted: <?php echo esc_html(implode(', ', $wallet_names)); ?>.</p><?php endif; ?>
                             </div>
                         </div>
                     <?php else : ?>

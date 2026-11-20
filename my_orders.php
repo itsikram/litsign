@@ -73,11 +73,22 @@ get_header();
                             </p>
                         </div>
                         <div class="order-row-side">
-                            <strong><?php echo esc_html('$' . number_format((float) ($cost['grand_total'] ?? 0), 2)); ?></strong>
+                            <?php $net = function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($order->ID) : null; // inc/order-net-total.php ?>
+                            <?php if ($net && $net['has_refund']) : ?>
+                                <strong><?php echo esc_html('$' . number_format($net['net'], 2)); ?></strong>
+                                <small class="order-row-refund" style="color:#1a7f37;"><?php echo esc_html('$' . number_format($net['refunded'], 2) . ' refunded'); ?> &middot; <del style="color:#8a97a5;"><?php echo esc_html('$' . number_format($net['total'], 2)); ?></del></small>
+                            <?php else : ?>
+                                <strong><?php echo esc_html('$' . number_format((float) ($cost['grand_total'] ?? 0), 2)); ?></strong>
+                            <?php endif; ?>
                             <?php if (wholesale_order_on_the_way($order->post_status)) : ?>
                                 <a class="order-write-review" href="<?php echo esc_url(get_permalink($order) . '#shipments'); ?>">Track package</a>
                             <?php endif; ?>
                             <a href="<?php echo esc_url(get_permalink($order)); ?>">View details</a>
+                            <?php // Items ordered without artwork that can still get it (inc/order-artwork.php). ?>
+                            <?php $artwork_missing = function_exists('wholesale_order_artwork_missing_lines') ? wholesale_order_artwork_missing_lines($order->ID) : array(); ?>
+                            <?php if ($artwork_missing) : ?>
+                                <a class="order-artwork-needed" href="<?php echo esc_url(get_permalink($order) . '#artwork-line-' . $artwork_missing[0]); ?>">Upload artwork</a>
+                            <?php endif; ?>
                             <?php // Review prompts wait until the package arrives. ?>
                             <?php $review_links = wholesale_order_on_the_way($order->post_status) ? array() : wholesale_order_unreviewed_products($order->ID); ?>
                             <?php if ($review_links) : ?>

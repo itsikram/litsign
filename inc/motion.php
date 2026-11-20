@@ -15,9 +15,35 @@
  * against its 3 KB budget; PHP comments are never sent to visitors). Reports
  * with the measurements: animation-plan/reports/ at the site root.
  *
- * - Nothing on screen or above it is ever hidden, phones never are (reveals
- *   need min-width 992px and a hovering pointer), and any error adds
+ * - Nothing on screen or above it is ever hidden, and any error adds
  *   html.mo-failsafe and shows everything.
+ * - Two presentations of the same selection (motion v2, 2026-11-15):
+ *   computers (min-width 992px and a hovering pointer) get the timed reveal
+ *   below; phones, tablets and touch screens get a scroll-linked rise instead
+ *   (class mo-sl, CSS view() timeline): opacity and position follow the
+ *   scroll position exactly, over the first 20vh after an element enters at
+ *   the bottom edge, so it can never lag behind a fast scroll or leave a blank
+ *   gap (why main.js used to keep phones still). Grid cards also scale from
+ *   94% (mo-sl-c); footer blocks only fade, over at most their own height
+ *   (mo-sl-f), so even the last block on the page always finishes. --mo-lag
+ *   (the element's x as a share of the screen width, from the observer entry,
+ *   no layout read) starts later columns a little later. Once an element's
+ *   top passes 60% of the screen its classes are removed (reveal once).
+ *   Browsers without scroll-driven animations (Firefox, Safari before 26) get
+ *   no phone tagging at all. Tagging never reads computed styles: a read
+ *   after each class change forced a full style recalc and layout per element
+ *   (up to 180ms of CPU on phones); the QA run checks instead that no tagged
+ *   element has its own animation or transform. The home/CL showcase section (.hc-shop-cl) had
+ *   overflow:hidden, which made it the scroll container of every card in it
+ *   (their timelines never moved); css/motion.css switches it to overflow:clip
+ *   + display:flow-root on these screens, which clips and lays out the same.
+ * - GRIDS is looked up in two idle slices (each getElementsByClassName walks
+ *   the whole DOM; 23 walks in one task took ~45ms at 4x CPU on Shop). v2
+ *   added the category product grid, FAQ lists, product info blocks, the
+ *   category guide blocks, guide steps/checklists and search results, and
+ *   dropped the classes of the removed ad quote page (cla-*) and the type
+ *   rails inside <nav>, which SKIP always excluded anyway (sideways scrollers
+ *   on phones). Worst motion.js task at 4x CPU after v2: 34ms (Shop).
  * - Reveal selection (desktop): children of the GRIDS classes stagger 60ms
  *   apart, counted per parent within one observer callback, capped at 300ms;
  *   only the first 24 per grid (Shop prints 130, most collapsed). A section
@@ -62,10 +88,14 @@
  *    Hidden states have no transition (tagging below the fold never
  *    animates); only .is-in does. .mo-head: kicker first, rest 120ms later.
  *    The old .scroll-reveal is kept inert in case main.js ever runs too.
- * 3. Phones and touch (< 992px or no hover): grid cards and kicker headings
- *    "settle" (10px, 98.5% scale) on a view() timeline; opacity never
- *    changes; fill "backwards" so tap states still work afterwards.
- *    .home-types-list is left out (a sideways scroller on phones).
+ * 3. Phones and touch (< 992px or no hover): the scroll-linked rise for
+ *    elements js/motion.js tagged mo-sl (see above); fill "backwards" so tap
+ *    and hover states work once it has finished. (Replaced the 10px "settle"
+ *    of v1, which visitors could hardly see.)
+ * 4b. Desktop photo zoom (v2): card photos that had no hover zoom yet (home
+ *    product cards, category cards, related products, guide type cards) scale
+ *    to 105% inside their frames; frames that already zoom (Shop, CL cards,
+ *    banners & displays cards) keep their own.
  * 4. Micro-interactions: zero-specificity blue focus ring (theme focus styles
  *    win); button press 0.97 on every level, lift on hover/focus for buttons
  *    that had none; the buy box buttons need their own rule (the theme's
@@ -193,8 +223,46 @@ function wholesale_motion_head_flag()
 		'<script id="wholesale-motion-flag">(function(d,l){try{if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)l="reduce"}catch(e){}d.setAttribute("data-motion",l)})(document.documentElement,%s);</script>' . "\n",
 		wp_json_encode($level)
 	);
+	if ('full' === $level) {
+		echo wholesale_motion_hero_style() . "\n";
+	}
 }
 add_action('wp_head', 'wholesale_motion_head_flag', 0);
+
+/**
+ * Hero entrance (motion v2, 2026-11-15). Inline in <head> because it has to
+ * apply from the very first paint: css/motion.css loads after that, and an
+ * entrance that started late would make the hero jump.
+ *
+ * - The headline, text and buttons only glide up 18px; their opacity never
+ *   changes, so they paint (and count for LCP and FCP) at once. Only the small
+ *   labels around them (breadcrumbs, kickers, trust rows) also fade in.
+ * - Children of the hero copy blocks start 70ms apart, capped at 280ms.
+ * - While the page loader covers the page (a link click; never on the first
+ *   page of a visit, where it is display:none) the entrance waits, so it plays
+ *   as the loader fades away instead of behind it.
+ * - Only on 'full' pages, never under reduced motion (the flag then reads
+ *   "reduce"), and nothing at all with the setting off.
+ */
+function wholesale_motion_hero_style()
+{
+	$kids = ':is(.hc-hero-copy,.home-hero-copy,.bd-hero-copy,.sc-hero-copy,.contact-hero-copy,.pkg-hero,.reviews-page-head,.srp-hero .srp-container,.error-404-content,.sf-hero>.container)>:not(form,[aria-hidden="true"])';
+	$all = $kids . ',.sc-hero-trust,.site-breadcrumbs,.site-main>.container>h1';
+	$fade = ':is(.site-breadcrumbs,.home-hero-breadcrumb,.srp-crumbs,.cl-kicker,.hc-eyebrow,.home-hero-eyebrow,.contact-eyebrow,.error-404-eyebrow,.product-section-eyebrow,.sf-byline,.gd-reviewed)';
+	$p = 'html[data-motion="full"] ';
+	$css = '@media (prefers-reduced-motion:no-preference){'
+		. $p . ':is(' . $all . '){animation:mo-in .8s cubic-bezier(.22,1,.36,1) backwards}'
+		. $p . ':is(' . $all . ')' . $fade . '{animation-name:mo-in-f}'
+		. $p . $kids . ':nth-child(2){animation-delay:70ms}'
+		. $p . $kids . ':nth-child(3){animation-delay:140ms}'
+		. $p . $kids . ':nth-child(4){animation-delay:210ms}'
+		. $p . $kids . ':nth-child(n+5),' . $p . ':is(' . $all . ').sc-hero-trust{animation-delay:280ms}'
+		. 'html[data-motion="full"]:not(.wholesale-page-loader-landing,.wholesale-page-loader-failsafe):has(.wholesale-page-loader:is(.is-intro,.is-idle):not(.is-hidden)) :is(' . $all . '){animation-play-state:paused}'
+		. '}'
+		. '@keyframes mo-in{from{transform:translate3d(0,18px,0)}}'
+		. '@keyframes mo-in-f{from{opacity:0;transform:translate3d(0,10px,0)}}';
+	return '<style id="wholesale-motion-hero">' . $css . '</style>';
+}
 
 function wholesale_motion_assets()
 {

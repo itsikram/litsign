@@ -627,3 +627,17 @@ wholesaleProductSection(() => {
     if (!name.value) name.focus();
   });
 })();
+
+// ---- 10. Home: a tap on the big headline goes to the products (template-parts/home-catalog.php) ----
+// Three visitors tapped "Custom Banners, Displays & Signs for Your Business" again and
+// again, as if it were a link (Visitor Insights, Nov 8-14 2026). It now scrolls to the
+// first product section below the hero.
+(function () {
+  const title = document.getElementById('home-hero-title');
+  const target = document.getElementById('banners-displays') || document.getElementById('shop-by-category');
+  if (!title || !target) return;
+  title.classList.add('is-tappable');
+  title.addEventListener('click', () => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+})();

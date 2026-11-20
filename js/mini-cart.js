@@ -218,7 +218,8 @@
         const json = await post("wholesale_mini_cart_qty", { cart_id: cartId, quantity });
         if (!json.success) return fail(json.data && json.data.message);
         render(json.data);
-        announce(`Quantity updated to ${quantity}. Subtotal ${json.data.subtotal}.`);
+        if (json.data.notice) showAlert("warning", json.data.notice);
+        announce(json.data.notice || `Quantity updated to ${quantity}. Subtotal ${json.data.subtotal}.`);
         refocus(cartId, focusSelector);
       } catch (e) {
         fail();

@@ -38,6 +38,14 @@ get_header();
         <div class="confirmation-grid">
             <section class="checkout-card" aria-labelledby="next-steps">
                 <h2 id="next-steps">What happens next</h2>
+                <?php // Ordered without artwork: it can still be uploaded from the order page (inc/order-artwork.php). ?>
+                <?php $artwork_missing = $order && function_exists('wholesale_order_artwork_is_owner') && wholesale_order_artwork_is_owner($order) ? wholesale_order_artwork_missing_lines($order) : array(); ?>
+                <?php if ($artwork_missing) : ?>
+                    <p class="order-artwork-alert" role="note">
+                        <strong>No artwork yet?</strong> You can upload it from your order page now or later:
+                        <a class="order-artwork-needed" href="<?php echo esc_url(get_permalink($order) . '#artwork-line-' . $artwork_missing[0]); ?>">Upload artwork</a>
+                    </p>
+                <?php endif; ?>
                 <ol class="confirmation-steps">
                     <li><strong>We review your order.</strong> Our team checks your <?php echo esc_html($noun); ?> details and contacts you if anything needs a closer look.</li>
                     <?php if ('sign' === $noun) : ?>
@@ -80,7 +88,14 @@ get_header();
                         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd></div>
                         <div><dt>Shipping</dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
                         <div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd></div>
-                        <div class="checkout-grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+                        <?php $net = $order && function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($order) : null; // inc/order-net-total.php ?>
+                        <?php if ($net && $net['has_refund']) : ?>
+                            <div><dt>Order total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+                            <div class="checkout-refund" style="color:#1a7f37;"><dt>Refunded</dt><dd>&minus;<?php echo esc_html($money($net['refunded'])); ?></dd></div>
+                            <div class="checkout-grand"><dt>Total after refund</dt><dd><?php echo esc_html($money($net['net'])); ?></dd></div>
+                        <?php else : ?>
+                            <div class="checkout-grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+                        <?php endif; ?>
                     </dl>
                     <dl class="confirmation-meta">
                         <div>

@@ -285,6 +285,11 @@ function wholesale_hero_head()
 		. 'body.sfs-hero-on .sc-hero{padding-bottom:48px}'
 		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-hero-title,body.sfs-hero-on .sc-hero-title,body.sfs-hero-on .contact-hero h1{color:#fff}'
 		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-hero-lead,body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-byline,body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .sf-hero-points,body.sfs-hero-on .sc-hero-lead,body.sfs-hero-on .contact-hero-copy>p:not(.contact-eyebrow),body.sfs-hero-on .contact-trust-row,body.sfs-hero-on .contact-trust-row strong{color:rgba(255,255,255,.88)}'
+		// Contact trust pills: style.css gives them a see-through white fill for the light
+		// band, which washed out the white text on the photo (owner, Nov 20 2026). Same
+		// navy glass as the home hero product cards, with the site's light blue.
+		. 'body.sfs-hero-on .contact-trust-row span{border-color:rgba(31,168,222,.55);background:rgba(3,24,53,.78);color:#fff;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}'
+		. 'body.sfs-hero-on .contact-trust-row strong{color:#7fd3f2}'
 		// css/ui-polish.css forces .cl-kicker to dark teal with !important (for white bands).
 		. 'body.sfs-hero-on .sf-hero .cl-kicker{color:#7fd3f2!important}'
 		. 'body.sfs-hero-on .sf-hero:not(.sf-hero--photo) .site-breadcrumbs ol,body.sfs-hero-on .sc-hero .site-breadcrumbs ol{border-color:rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:rgba(255,255,255,.7)}'

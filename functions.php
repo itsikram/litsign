@@ -2992,10 +2992,9 @@ function litsign_scripts()
 	if (is_page_template('landing-page.php')) {
 		wp_enqueue_style('landing-page', $theme_uri . '/css/landing-page.css', array('litsign-style', 'custom-style'), $asset_version('/css/landing-page.css'));
 	}
-	// The quote form styles are shared by both Google Ads landing pages. The home
-	// page no longer uses any of them (0 of 64 rules match there, 2026-11-20), so
-	// it skips the 6 KB that were printed inline in its <head>.
-	if (is_page_template('page-channel-letters.php') || is_page(array('banners-displays', 'window-graphics'))) {
+	// The quote form styles are shared by both Google Ads landing pages. The
+	// home page reuses their help band and hero proof line.
+	if (is_page_template('page-channel-letters.php') || is_page(array('banners-displays', 'window-graphics')) || is_front_page()) {
 		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
 		if (is_page_template('page-channel-letters.php')) {
 			wp_enqueue_style('cl-landing', $theme_uri . '/css/cl-landing.css', array('cl-quote'), $asset_version('/css/cl-landing.css'));

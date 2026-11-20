@@ -280,6 +280,19 @@ function wholesale_dequeue_unused_jquery_ui()
 add_action('wp_enqueue_scripts', 'wholesale_dequeue_unused_jquery_ui', 100);
 
 /**
+ * The home page no longer uses the quote form styles (css/cl-quote.css, printed
+ * inline in the <head>): none of its 64 rules match there (checked 2026-11-20).
+ * Leaving them out makes the home HTML about 1 KB (gzip) smaller.
+ */
+function wholesale_home_skip_quote_styles()
+{
+	if (is_front_page() && !is_admin()) {
+		wp_dequeue_style('cl-quote');
+	}
+}
+add_action('wp_enqueue_scripts', 'wholesale_home_skip_quote_styles', 100);
+
+/**
  * Add a 480px-wide copy of the header logo to its srcset. The logo shows at
  * about 240px on phones, so on 2x screens the browser otherwise picks the
  * 768px file. The copy is made once, next to the uploaded original.

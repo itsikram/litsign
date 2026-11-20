@@ -130,9 +130,12 @@ $photo_tags = static function (array $photos, $sizes) {
 		// Only the first photo loads with the page. Browsers fetch lazy images in a
 		// side-scrolling card as if they were on screen, so the others wait in data
 		// attributes until the visitor reaches the card (warm() in the script below).
-		if ($img && $position > 0) {
+		// The first photo waits too, but only until the page has loaded, the visitor
+		// scrolls or touches, or it is on screen (release() in the script below), so
+		// photos below the first screen do not slow down the hero photo.
+		if ($img) {
 			$img = preg_replace('/\s(srcset|src)="/', ' data-hc-$1="', $img);
-			$img = str_replace('<img ', '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" ', $img);
+			$img = str_replace('<img ', '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" ' . (0 === $position ? 'data-hc-first ' : ''), $img);
 		}
 		if ($img) {
 			$html[] = $img;
@@ -602,10 +605,12 @@ if ($pick_cl_from && $pick_cl_product) {
 	/* Sections far below the first screen skip layout until they come near
 	   (content-visibility in css/home-catalog.css). Lay them out 1,250px early, so
 	   their photos load as before, and all at once before an in-page jump, so
-	   #channel-letters and the other jumps land on the exact spot. */
+	   #channel-letters and the other jumps land on the exact spot. A reload or Back
+	   restores the scroll position, so those load with every section laid out. */
 	(function (root) {
 		var off = function () { root.classList.add('hc-cv-off'); };
-		if (location.hash || !('IntersectionObserver' in window)) {
+		var nav = window.performance && performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+		if (location.hash || !('IntersectionObserver' in window) || (nav && (nav.type === 'reload' || nav.type === 'back_forward'))) {
 			off();
 			return;
 		}
@@ -625,8 +630,26 @@ if ($pick_cl_from && $pick_cl_product) {
 					}
 				});
 			}, { rootMargin: '1250px 0px' });
-			document.querySelectorAll('.hc-page > section:not(.hc-hero)').forEach(function (section) {
+			var sections = [].slice.call(document.querySelectorAll('.hc-page > section:not(.hc-hero)'));
+			sections.forEach(function (section) {
 				io.observe(section);
+			});
+			// Once the page has loaded, lay out the rest one section per idle moment
+			// (no long task), so no section keeps its 1,500px placeholder height.
+			window.addEventListener('load', function () {
+				var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 50); };
+				var next = function () {
+					var section = sections.shift();
+					while (section && section.classList.contains('hc-cv-near')) {
+						section = sections.shift();
+					}
+					if (section) {
+						section.classList.add('hc-cv-near');
+						io.unobserve(section);
+						idle(next, { timeout: 1000 });
+					}
+				};
+				idle(next, { timeout: 1000 });
 			});
 		});
 	})(document.documentElement);
@@ -1040,6 +1063,71 @@ if ($pick_cl_from && $pick_cl_product) {
 	</section>
 
 	<script>
+	/* The first photo of each card waits in data attributes ($photo_tags) until the
+	   page has loaded, the visitor scrolls, touches or types, or the photo is on
+	   screen. Then it loads lazily, as before, so the hero photo comes first. */
+	(function () {
+		var firsts = [].slice.call(document.querySelectorAll('img[data-hc-first]'));
+		var events = ['scroll', 'wheel', 'touchstart', 'pointerdown', 'keydown'];
+		var io = null;
+		var release = function (img) {
+			if (!img.hasAttribute('data-hc-first')) {
+				return;
+			}
+			img.removeAttribute('data-hc-first');
+			if (img.dataset.hcSrcset) {
+				img.srcset = img.dataset.hcSrcset;
+			}
+			img.src = img.dataset.hcSrc;
+			// Back to a plain lazy image, so warm() below leaves it alone.
+			img.removeAttribute('data-hc-srcset');
+			img.removeAttribute('data-hc-src');
+		};
+		var all = function () {
+			events.forEach(function (type) {
+				window.removeEventListener(type, all, 'scroll' !== type);
+			});
+			if (io) {
+				io.disconnect();
+			}
+			firsts.forEach(release);
+		};
+		if (!firsts.length) {
+			return;
+		}
+		if (!('IntersectionObserver' in window)) {
+			all();
+			return;
+		}
+		io = new IntersectionObserver(function (entries) {
+			entries.forEach(function (entry) {
+				if (entry.isIntersecting) {
+					release(entry.target);
+					io.unobserve(entry.target);
+				}
+			});
+		});
+		firsts.forEach(function (img) {
+			io.observe(img);
+		});
+		// Page scrolls only: the reviews carousel scrolling itself is not the visitor.
+		events.forEach(function (type) {
+			window.addEventListener(type, all, { capture: 'scroll' !== type, passive: true });
+		});
+		var later = function () {
+			if (window.requestIdleCallback) {
+				window.requestIdleCallback(all, { timeout: 1000 });
+			} else {
+				setTimeout(all, 50);
+			}
+		};
+		if ('complete' === document.readyState) {
+			later();
+		} else {
+			window.addEventListener('load', later);
+		}
+	})();
+
 	/* Card photo galleries (channel letters and the product grids): swipe on touch screens, arrows on hover, dots and a
 	   1/N counter follow the visible photo. Later photos start loading once the
 	   visitor reaches for the gallery (hover, touch or keyboard focus). */
@@ -1059,7 +1147,7 @@ if ($pick_cl_from && $pick_cl_product) {
 					return;
 				}
 				warmed = true;
-				media.querySelectorAll('img[data-hc-src]').forEach(function (img) {
+				media.querySelectorAll('img[data-hc-src]:not([data-hc-first])').forEach(function (img) {
 					img.loading = 'eager';
 					// "auto" only works on lazy images; left in, browsers size for the full window.
 					img.sizes = img.sizes.replace(/^auto,\s*/, '');

@@ -230,6 +230,41 @@ function retails_product_price_attrs($product_id)
 }
 
 /**
+ * The price of one item of a product with nothing to choose (owner 2026-11-21: "products that don't
+ * have any option can also be added to cart and continue to checkout"): no size calculator, no price
+ * per sq ft and no option that changes the price (Laser Cut Metal Sign). One item costs the amount in
+ * its stored "Starting at" text ("$20.00 per item"), the price its page shows. That amount is the
+ * everyday price (after the product's own discount, before a dated sale), as everywhere else.
+ *
+ * @return float 0 for any other product, and when the text names no amount or another unit (per ft²).
+ */
+function retails_product_fixed_item_price($product_id)
+{
+	$product_id = (int) $product_id;
+	if (!$product_id || retails_product_is_channel_letter($product_id)) {
+		return 0.0;
+	}
+	// All meta at once: a single-key read of _starting_at_text goes through the storefront filter,
+	// which works the "Starting at" text out from this very price.
+	$meta = get_post_meta($product_id);
+	if (empty($meta['_hide_calculator'][0]) || (float) ($meta['_price_per_sqft'][0] ?? 0) > 0) {
+		return 0.0;
+	}
+	foreach (retails_product_price_attrs($product_id) as $attr) {
+		$options = retails_attr_options($attr);
+		if (count($options) > 1 || ($options && 0.0 !== round(retails_parse_option_price($options[0]['value'])['amount'], 2))) {
+			return 0.0;
+		}
+	}
+	$text = trim(wp_strip_all_tags(preg_replace('/<del\b[^>]*>.*?<\/del>/is', '', (string) ($meta['_starting_at_text'][0] ?? ''))));
+	if (preg_match('/per\s*(ft|sq)/i', $text) || !preg_match('/\$\s?([\d,]+(?:\.\d+)?)/', $text, $match)) {
+		return 0.0;
+	}
+
+	return max(0.0, (float) str_replace(',', '', $match[1]));
+}
+
+/**
  * Flattens [{"Label": "value"}, ...] into [['label' => ..., 'value' => ...], ...].
  */
 function retails_attr_options($attr)
@@ -1201,6 +1236,17 @@ function retails_price_quote($product_id, $request, $design = null)
 	// so the same sign never differs by a cent between the product page and the builder.
 	if ($is_cl) {
 		$running = round($running, 2);
+	}
+
+	// Nothing to choose and no price per sq ft (Laser Cut Metal Sign): one item costs its "Starting at"
+	// price (retails_product_fixed_item_price()), so it can be added to the cart and bought.
+	if ($running <= 0 && !$is_cl) {
+		$fixed_item = retails_product_fixed_item_price($product_id);
+		$fixed_keep = (100 - min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)))) / 100;
+		if ($fixed_item > 0 && $fixed_keep > 0) {
+			$running = $fixed_item / $fixed_keep;
+			$lines = array(array('label' => 'Price per item', 'amount' => $running));
+		}
 	}
 
 	if ($running <= 0) {

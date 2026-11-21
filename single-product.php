@@ -1294,7 +1294,8 @@ get_header();
                         // Delivery estimate (filled in by js/ui-polish.js), quantity stepper, Add To Cart
                         // and Buy Now (inc/product-buy-box.php). Guests and signed-in customers get the same buttons.
                         retails_render_product_eta($product_id);
-                        retails_render_product_actions($product_stock_status, $initial_product_cost);
+                        // A product with nothing to choose (retails_product_fixed_item_price()) opens on its item price, so Add To Cart works at once.
+                        retails_render_product_actions($product_stock_status, $initial_product_cost > 0 || retails_product_fixed_item_price($product_id) <= 0 ? $initial_product_cost : retails_product_fixed_item_price($product_id));
                         retails_render_product_pay_row();
                         ?>
 

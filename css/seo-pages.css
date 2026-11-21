@@ -33,7 +33,7 @@
   line-height: 1.65;
 }
 
-/* "Updated <date> · By the ... team" under a guide's lead (wholesale_guide_byline). */
+/* "Updated <date> · By the ... team" under a guide's lead (retails_guide_byline). */
 .sf-byline {
   margin: 14px 0 0;
   color: #52616f;

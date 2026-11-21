@@ -1,6 +1,6 @@
 (function ($) {
   // Product group buttons (js/product-group-swap.js) swap another product into the page
-  // and fire "wholesale:product-swapped"; everything below then runs again on the new
+  // and fire "retails:product-swapped"; everything below then runs again on the new
   // product, except the header, menu and scroll-reveal code (first run only). Each run's
   // document-level product handlers end before the next run binds its own.
   let pageScope = null;
@@ -355,7 +355,7 @@
       );
       updatePrice(subTotalPrice, totalPrice,'updateDisplay');
       // The customer's option choices stay as they are; the live price quote
-      // (wholesale_price_quote) prices the size and every chosen option.
+      // (retails_price_quote) prices the size and every chosen option.
     };
 
     let validateCalcInputs = (e) => {
@@ -633,7 +633,7 @@
 
     // Size limits (B2Sign style): nothing shows until a typed size breaks one, then a
     // red "Maximum width is 1200"" under the boxes and the "Max Size" line. The server
-    // quote rejects the same sizes (wholesale_product_min_sides / _max_sides).
+    // quote rejects the same sizes (retails_product_min_sides / _max_sides).
     const sizeLimits = document.querySelector('.pb-size-summary[data-max-long]');
     if (sizeLimits) {
       const box = sizeLimits.closest('form') || document;
@@ -771,13 +771,13 @@
         if (minLine) minLine.hidden = !error || tooBig;
         // js/visitor-tracker.js logs the note the visitor saw, with the typed size.
         if (error && error !== lastNote) {
-          document.dispatchEvent(new CustomEvent('wholesale:size-note', { detail: { message: error, size: `${width}" x ${height}"` } }));
+          document.dispatchEvent(new CustomEvent('retails:size-note', { detail: { message: error, size: `${width}" x ${height}"` } }));
         }
         lastNote = error;
       };
       box.addEventListener('input', (e) => { if (e.target.matches('.dim-input')) checkSize(true); });
       box.addEventListener('change', (e) => { if (e.target.matches('.dim-input')) checkSize(false); });
-      // The boxes open on a default size (wholesale_product_default_size()): run the size
+      // The boxes open on a default size (retails_product_default_size()): run the size
       // handlers once, after the dimension handler below is bound, so every total matches it.
       const defaultWidth = box.querySelector('input[name="width-in"]');
       if (defaultWidth && parseFloat(defaultWidth.value) > 0) {
@@ -1609,7 +1609,7 @@
     }
   };
   $(document).ready(() => pageInit(true));
-  document.addEventListener('wholesale:product-swapped', () => pageInit(false));
+  document.addEventListener('retails:product-swapped', () => pageInit(false));
 })(jQuery);
 
 // Footer review slider (rendered by inc/reviews.php on every page).
@@ -1702,7 +1702,7 @@
     scope = new AbortController();
     const productIdInput = document.querySelector('form input[name="product_id"]');
     const pricingBox = document.querySelector('.product-pricing-box');
-    if (!productIdInput || !pricingBox || !window.wholesaleShop) return;
+    if (!productIdInput || !pricingBox || !window.retailsShop) return;
 
     const form = productIdInput.closest('form');
     const money = (value) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1772,7 +1772,7 @@
           dimError.textContent = empty ? `Please enter the ${blank && blank.name === 'height-in' ? 'height' : 'width'} of your ${form.dataset.noun || 'product'}.` : form.dataset.sizeError;
           dimError.hidden = false;
           const typed = ['width-in', 'height-in'].map((name) => parseFloat(form.querySelector(`input[name="${name}"]`)?.value) || 0);
-          document.dispatchEvent(new CustomEvent('wholesale:size-note', { detail: { message: dimError.textContent, size: `${typed[0]}" x ${typed[1]}"` } }));
+          document.dispatchEvent(new CustomEvent('retails:size-note', { detail: { message: dimError.textContent, size: `${typed[0]}" x ${typed[1]}"` } }));
         }
         let target = blank || form.querySelector('input[name="width-in"]');
         // Feet-and-inches boxes: the total is hidden, so the feet part takes the focus.
@@ -1889,7 +1889,7 @@
     // code as the builder (js/cl-measure.js), and sent as cl_measure, so the server prices every
     // separate piece of every letter by its own size (a W is wider than tall, a lowercase letter
     // shorter, the dot of an i a small piece) as the builder and its cart do
-    // (wholesale_cl_request_measure() in inc/pricing.php). Canvas metrics at 200px: the server
+    // (retails_cl_request_measure() in inc/pricing.php). Canvas metrics at 200px: the server
     // scales them to every height it prices, the other heights' prices included.
     const letterInput = form.querySelector('#letterInput');
     let measureInput = null;
@@ -1943,11 +1943,11 @@
       const key = cacheKey(entries);
       const data = new FormData(form);
       data.delete('custom-artwork');
-      data.append('action', 'wholesale_price_quote');
+      data.append('action', 'retails_price_quote');
       data.append('variants', JSON.stringify(variantList(entries)));
       if (foreground) pricingBox.classList.add('is-updating');
       try {
-        const response = await fetch(window.wholesaleShop.ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' });
+        const response = await fetch(window.retailsShop.ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' });
         const quote = await response.json();
         // Cached even when the visitor has moved on: these prices are for the form as sent.
         (quote.variants || []).forEach(([name, value, variantQuote]) => {
@@ -2039,7 +2039,7 @@
   } else {
     init();
   }
-  document.addEventListener('wholesale:product-swapped', init);
+  document.addEventListener('retails:product-swapped', init);
 })();
 
 // "Shop by sign type" rail: show prev/next arrows only while there is more to scroll.
@@ -2100,7 +2100,7 @@
 
   document.querySelectorAll(frames).forEach((frame) => sync(frame, false));
   // A product group swap (js/product-group-swap.js) brings in new frames.
-  document.addEventListener('wholesale:product-swapped', () => {
+  document.addEventListener('retails:product-swapped', () => {
     document.querySelectorAll(frames).forEach((frame) => sync(frame, false));
   });
 

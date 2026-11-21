@@ -15,7 +15,7 @@
  */
 
 $cat = static function ($slug, $text) {
-	return '<a href="' . esc_url(wholesale_category_url($slug)) . '">' . esc_html($text) . '</a>';
+	return '<a href="' . esc_url(retails_category_url($slug)) . '">' . esc_html($text) . '</a>';
 };
 $prod = static function ($slug, $text) {
 	return '<a href="' . esc_url(home_url('/product/' . $slug . '/')) . '">' . esc_html($text) . '</a>';

@@ -4,12 +4,12 @@
  *
  * Lists work that shipped in this theme and its version history. Keep it to
  * work that is really on the site; the details of who it credits live in
- * wholesale_developer_profile().
+ * retails_developer_profile().
  *
  * @package litsign
  */
 
-$profile = wholesale_developer_profile();
+$profile = retails_developer_profile();
 $theme = wp_get_theme(get_template());
 $host = wp_parse_url(home_url('/'), PHP_URL_HOST);
 $published = get_the_date('F j, Y', get_queried_object_id());
@@ -17,7 +17,7 @@ $published = get_the_date('F j, Y', get_queried_object_id());
 $work = array(
 	array(
 		'title' => 'Custom WordPress theme',
-		'text' => 'The Wholesale theme renders every page of this site: home, category and product pages, cart, checkout, customer accounts, order tracking and the admin screens behind them.',
+		'text' => 'The Retails theme renders every page of this site: home, category and product pages, cart, checkout, customer accounts, order tracking and the admin screens behind them.',
 	),
 	array(
 		'title' => 'Channel letter sign builder',
@@ -68,7 +68,7 @@ get_header();
 <main id="primary" class="sf-page gd-page dv-page">
 	<section class="sf-hero" aria-labelledby="dv-title">
 		<div class="container">
-			<?php wholesale_breadcrumbs(); ?>
+			<?php retails_breadcrumbs(); ?>
 			<p class="cl-kicker">Website developer</p>
 			<h1 id="dv-title" class="sf-hero-title"><?php echo esc_html(sprintf('This Website Is Built and Maintained by %s', $profile['name'])); ?></h1>
 			<p class="sf-hero-lead"><?php echo esc_html($profile['name']); ?> designed and developed the custom WordPress theme that runs <?php echo esc_html($host); ?>, and maintains the site for <?php echo esc_html(get_bloginfo('name')); ?>.</p>
@@ -78,7 +78,7 @@ get_header();
 				<li><strong>Theme</strong><span><?php echo esc_html(sprintf('%s, version %s', $theme->get('Name'), $theme->get('Version'))); ?></span></li>
 			</ul>
 			<div class="sf-hero-actions">
-				<a class="cl-button" href="<?php echo esc_url(home_url('/')); ?>">Visit the Store <?php echo wholesale_home_icon('arrow'); ?></a>
+				<a class="cl-button" href="<?php echo esc_url(home_url('/')); ?>">Visit the Store <?php echo retails_home_icon('arrow'); ?></a>
 			</div>
 		</div>
 	</section>

@@ -10,7 +10,7 @@
  * - sfs_chat_ai_baseline: the same funnel for all human visits, to compare.
  *
  * Matched by the chat visitor's sso_vid cookie (vi_key), else their account,
- * exactly like the inbox's visitor details (wholesale_vi_chat_visitor_insights).
+ * exactly like the inbox's visitor details (retails_vi_chat_visitor_insights).
  * No IP, location, name, email, campaign id or form contents ever leave here.
  *
  * @package tr-retails
@@ -19,7 +19,7 @@
 defined('ABSPATH') || exit;
 
 /** Prepared WHERE clause for a chat visitor's visits, or '' when there is nothing to match on. */
-function wholesale_vi_ai_match_sql($vi_key, $user_id)
+function retails_vi_ai_match_sql($vi_key, $user_id)
 {
 	global $wpdb;
 	$vi_key = strtolower((string) $vi_key);
@@ -34,7 +34,7 @@ function wholesale_vi_ai_match_sql($vi_key, $user_id)
 }
 
 /** Site path of a recorded URL: no query, fragment or local sub-folder ("/product/13oz-vinyl-banner/"). */
-function wholesale_vi_ai_path($url)
+function retails_vi_ai_path($url)
 {
 	$path = (string) wp_parse_url((string) $url, PHP_URL_PATH);
 	$base = rtrim((string) wp_parse_url(home_url('/'), PHP_URL_PATH), '/');
@@ -46,7 +46,7 @@ function wholesale_vi_ai_path($url)
 }
 
 /** A page title without the site name ("13oz Vinyl Banners – Custom Printed"). */
-function wholesale_vi_ai_title($label)
+function retails_vi_ai_title($label)
 {
 	$title = trim((string) preg_split('/\s+[|]\s+/u', (string) $label)[0]);
 
@@ -54,7 +54,7 @@ function wholesale_vi_ai_title($label)
 }
 
 /** Short plain line from a recorded label (error text, survey answer), or ''. */
-function wholesale_vi_ai_line($text, $length = 140)
+function retails_vi_ai_line($text, $length = 140)
 {
 	$text = trim(preg_replace('/\s+/u', ' ', wp_strip_all_tags((string) $text)));
 
@@ -62,7 +62,7 @@ function wholesale_vi_ai_line($text, $length = 140)
 }
 
 /** Funnel step a recorded event proves (events keep no page type, so pages are told apart by path). */
-function wholesale_vi_ai_event_step($type, $path)
+function retails_vi_ai_event_step($type, $path)
 {
 	switch ($type) {
 		case 'purchase':
@@ -94,23 +94,23 @@ function wholesale_vi_ai_event_step($type, $path)
  * @param object $chat_visitor Chat visitor row (user_id is used when there is no cookie).
  * @return array|mixed
  */
-function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
+function retails_vi_ai_activity($activity, $vi_key, $chat_visitor)
 {
 	global $wpdb;
-	$match = wholesale_vi_ai_match_sql($vi_key, (int) ($chat_visitor->user_id ?? 0));
+	$match = retails_vi_ai_match_sql($vi_key, (int) ($chat_visitor->user_id ?? 0));
 	if ('' === $match) {
 		return $activity;
 	}
-	$sessions = wholesale_vi_table('sessions');
-	$events_table = wholesale_vi_table('events');
-	$visits = $wpdb->get_results("SELECT * FROM {$sessions} WHERE {$match} ORDER BY last_seen DESC LIMIT 8"); // phpcs:ignore WordPress.DB.PreparedSQL -- prepared in wholesale_vi_ai_match_sql().
+	$sessions = retails_vi_table('sessions');
+	$events_table = retails_vi_table('events');
+	$visits = $wpdb->get_results("SELECT * FROM {$sessions} WHERE {$match} ORDER BY last_seen DESC LIMIT 8"); // phpcs:ignore WordPress.DB.PreparedSQL -- prepared in retails_vi_ai_match_sql().
 	if (!$visits) {
 		return $activity;
 	}
 	$visit = $visits[0];
 	$now = time();
-	$stages = wholesale_vi_stages();
-	$channels = wholesale_vi_channels();
+	$stages = retails_vi_stages();
+	$channels = retails_vi_channels();
 	$events = array_reverse($wpdb->get_results($wpdb->prepare("SELECT type, url, label, value, seconds FROM {$events_table} WHERE session_id = %d ORDER BY id DESC LIMIT 200", $visit->id)));
 
 	$products = array();
@@ -124,7 +124,7 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 	$survey = '';
 	$options_started = array();
 	foreach ($events as $event) {
-		$path = wholesale_vi_ai_path($event->url);
+		$path = retails_vi_ai_path($event->url);
 		switch ($event->type) {
 			case 'pageview':
 				if ('404' === (string) $event->value) {
@@ -135,7 +135,7 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 				}
 				if (0 === strpos($path, '/product/')) {
 					if (!isset($products[$path])) {
-						$products[$path] = array('title' => wholesale_vi_ai_title($event->label), 'path' => $path, 'views' => 0, 'seconds' => 0);
+						$products[$path] = array('title' => retails_vi_ai_title($event->label), 'path' => $path, 'views' => 0, 'seconds' => 0);
 					}
 					$products[$path]['views']++;
 					$products[$path]['seconds'] += (int) $event->seconds;
@@ -149,12 +149,12 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 				$priced[$path] = ($priced[$path] ?? 0) + 1;
 				break;
 			case 'configure':
-				if ('' !== ($line = wholesale_vi_ai_line($event->label, 60))) {
+				if ('' !== ($line = retails_vi_ai_line($event->label, 60))) {
 					$options_started[$line] = true;
 				}
 				break;
 			case 'price_error':
-				if ('' !== ($line = wholesale_vi_ai_line($event->label))) {
+				if ('' !== ($line = retails_vi_ai_line($event->label))) {
 					$price_problems[$line] = true;
 				}
 				break;
@@ -163,7 +163,7 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 				$counts[$event->type]++;
 				break;
 			case 'cart_error':
-				if ('' !== ($line = wholesale_vi_ai_line($event->label))) {
+				if ('' !== ($line = retails_vi_ai_line($event->label))) {
 					$cart_problems[$line] = true;
 				}
 				break;
@@ -172,7 +172,7 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 				break;
 			case 'checkout_error':
 			case 'payment_error':
-				if ('' !== ($line = wholesale_vi_ai_line($event->label))) {
+				if ('' !== ($line = retails_vi_ai_line($event->label))) {
 					$pay_problems[$line] = true;
 				}
 				break;
@@ -187,12 +187,12 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 				$flags['contact'] = true;
 				break;
 			case 'rage_click':
-				if ('' !== ($line = wholesale_vi_ai_line($event->label, 40))) {
+				if ('' !== ($line = retails_vi_ai_line($event->label, 40))) {
 					$frustrated[$line] = true;
 				}
 				break;
 			case 'exit_survey':
-				$survey = wholesale_vi_ai_line($event->label);
+				$survey = retails_vi_ai_line($event->label);
 				break;
 		}
 	}
@@ -212,7 +212,7 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 	$stale = $now - $last_seen > 2 * HOUR_IN_SECONDS;
 	$this_visit = array(
 		'arrived_from' => (string) ($channels[$visit->channel] ?? ucfirst((string) $visit->channel)),
-		'landed_on' => wholesale_vi_ai_path($visit->landing_url),
+		'landed_on' => retails_vi_ai_path($visit->landing_url),
 		'minutes_on_site' => max(0, (int) round((($stale ? $last_seen : $now) - $started) / 60)),
 		'active_minutes' => (int) round((int) $visit->engaged_seconds / 60),
 		'pages_viewed' => (int) $visit->pageviews,
@@ -221,7 +221,7 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 	);
 	// The words they searched on Google before an ad click: their own description of what they need.
 	if ('google_ads' === $visit->channel && '' !== trim((string) $visit->term) && !preg_match('/^\{.*\}$/', (string) $visit->term)) {
-		$this_visit['searched_for'] = wholesale_vi_ai_line($visit->term, 80);
+		$this_visit['searched_for'] = retails_vi_ai_line($visit->term, 80);
 	}
 	if ($viewed) {
 		$this_visit['products_viewed'] = $viewed;
@@ -277,7 +277,7 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 	}
 	$out = array($stale ? 'last_visit' : 'this_visit' => $this_visit);
 
-	$totals = $wpdb->get_row("SELECT COUNT(*) AS visits, MIN(started_at) AS first_seen, SUM(order_id > 0) AS orders FROM {$sessions} WHERE {$match}"); // phpcs:ignore WordPress.DB.PreparedSQL -- prepared in wholesale_vi_ai_match_sql().
+	$totals = $wpdb->get_row("SELECT COUNT(*) AS visits, MIN(started_at) AS first_seen, SUM(order_id > 0) AS orders FROM {$sessions} WHERE {$match}"); // phpcs:ignore WordPress.DB.PreparedSQL -- prepared in retails_vi_ai_match_sql().
 	$earlier = array_slice($visits, 1);
 	if ($earlier) {
 		$best = 0;
@@ -288,7 +288,7 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 		$rows = $wpdb->get_results("SELECT url, label FROM {$events_table} WHERE session_id IN (" . implode(',', $ids) . ") AND type = 'pageview' AND url LIKE '%/product/%' ORDER BY id DESC LIMIT 60"); // phpcs:ignore WordPress.DB.PreparedSQL -- integer ids.
 		$seen = array();
 		foreach ($rows as $row) {
-			$title = wholesale_vi_ai_title($row->label);
+			$title = retails_vi_ai_title($row->label);
 			if ('' !== $title && !isset($seen[$title]) && count($seen) < 5) {
 				$seen[$title] = true;
 			}
@@ -311,7 +311,7 @@ function wholesale_vi_ai_activity($activity, $vi_key, $chat_visitor)
 
 	return $out;
 }
-add_filter('sfs_chat_ai_activity', 'wholesale_vi_ai_activity', 10, 3);
+add_filter('sfs_chat_ai_activity', 'retails_vi_ai_activity', 10, 3);
 
 /**
  * sfs_chat_ai_outcome: how far a chat visitor got between two times (the chat
@@ -325,28 +325,28 @@ add_filter('sfs_chat_ai_activity', 'wholesale_vi_ai_activity', 10, 3);
  * @param string $until_gmt Window end, Y-m-d H:i:s UTC.
  * @return array|mixed
  */
-function wholesale_vi_ai_outcome($outcome, $vi_key, $user_id, $since_gmt, $until_gmt)
+function retails_vi_ai_outcome($outcome, $vi_key, $user_id, $since_gmt, $until_gmt)
 {
 	global $wpdb;
-	$match = wholesale_vi_ai_match_sql($vi_key, (int) $user_id);
+	$match = retails_vi_ai_match_sql($vi_key, (int) $user_id);
 	if ('' === $match) {
 		return $outcome;
 	}
-	$sessions = wholesale_vi_table('sessions');
-	$ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$sessions} WHERE {$match} AND last_seen >= %s AND started_at <= %s ORDER BY id DESC LIMIT 30", $since_gmt, $until_gmt)); // phpcs:ignore WordPress.DB.PreparedSQL -- $match prepared in wholesale_vi_ai_match_sql().
+	$sessions = retails_vi_table('sessions');
+	$ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$sessions} WHERE {$match} AND last_seen >= %s AND started_at <= %s ORDER BY id DESC LIMIT 30", $since_gmt, $until_gmt)); // phpcs:ignore WordPress.DB.PreparedSQL -- $match prepared in retails_vi_ai_match_sql().
 	if (!$ids) {
 		return is_array($outcome) ? $outcome : array('matched' => false);
 	}
 	$in = implode(',', array_map('intval', $ids));
-	$events = $wpdb->get_results($wpdb->prepare('SELECT type, url, value FROM ' . wholesale_vi_table('events') . " WHERE session_id IN ({$in}) AND created_at >= %s AND created_at <= %s AND type IN ('pageview','configure','price_quote','design_upload','add_to_cart','payment_start','payment_error','purchase','quote_submit','call_click','email_click') ORDER BY id ASC LIMIT 2000", $since_gmt, $until_gmt)); // phpcs:ignore WordPress.DB.PreparedSQL -- integer ids.
+	$events = $wpdb->get_results($wpdb->prepare('SELECT type, url, value FROM ' . retails_vi_table('events') . " WHERE session_id IN ({$in}) AND created_at >= %s AND created_at <= %s AND type IN ('pageview','configure','price_quote','design_upload','add_to_cart','payment_start','payment_error','purchase','quote_submit','call_click','email_click') ORDER BY id ASC LIMIT 2000", $since_gmt, $until_gmt)); // phpcs:ignore WordPress.DB.PreparedSQL -- integer ids.
 	$step = 1;
 	$cart_adds = 0;
 	$lead = false;
 	$orders = array();
 	$products = array();
 	foreach ($events as $event) {
-		$path = wholesale_vi_ai_path($event->url);
-		$step = max($step, wholesale_vi_ai_event_step($event->type, $path));
+		$path = retails_vi_ai_path($event->url);
+		$step = max($step, retails_vi_ai_event_step($event->type, $path));
 		if ('add_to_cart' === $event->type) {
 			$cart_adds++;
 		} elseif (in_array($event->type, array('quote_submit', 'call_click', 'email_click'), true)) {
@@ -359,14 +359,14 @@ function wholesale_vi_ai_outcome($outcome, $vi_key, $user_id, $since_gmt, $until
 	}
 	$revenue = 0.0;
 	foreach (array_keys($orders) as $order_id) {
-		if (function_exists('wholesale_order_net_total')) { // After refunds (inc/order-net-total.php).
-			$revenue += wholesale_order_net_total($order_id);
+		if (function_exists('retails_order_net_total')) { // After refunds (inc/order-net-total.php).
+			$revenue += retails_order_net_total($order_id);
 			continue;
 		}
 		$cost = json_decode((string) get_post_meta($order_id, 'product_cost', true), true);
 		$revenue += round((float) ($cost['grand_total'] ?? 0), 2);
 	}
-	$stages = wholesale_vi_stages();
+	$stages = retails_vi_stages();
 
 	return array(
 		'matched' => true,
@@ -379,7 +379,7 @@ function wholesale_vi_ai_outcome($outcome, $vi_key, $user_id, $since_gmt, $until
 		'products_viewed' => count($products),
 	);
 }
-add_filter('sfs_chat_ai_outcome', 'wholesale_vi_ai_outcome', 10, 5);
+add_filter('sfs_chat_ai_outcome', 'retails_vi_ai_outcome', 10, 5);
 
 /**
  * sfs_chat_ai_baseline: the funnel for every human visit in a period (robots
@@ -387,9 +387,9 @@ add_filter('sfs_chat_ai_outcome', 'wholesale_vi_ai_outcome', 10, 5);
  *
  * @return array|mixed
  */
-function wholesale_vi_ai_baseline($baseline, $since_gmt, $until_gmt)
+function retails_vi_ai_baseline($baseline, $since_gmt, $until_gmt)
 {
-	$m = wholesale_vi_summary($since_gmt, $until_gmt);
+	$m = retails_vi_summary($since_gmt, $until_gmt);
 	if (!$m || empty($m['sessions'])) {
 		return $baseline;
 	}
@@ -405,4 +405,4 @@ function wholesale_vi_ai_baseline($baseline, $since_gmt, $until_gmt)
 		'revenue' => round((float) $m['revenue'], 2),
 	);
 }
-add_filter('sfs_chat_ai_baseline', 'wholesale_vi_ai_baseline', 10, 3);
+add_filter('sfs_chat_ai_baseline', 'retails_vi_ai_baseline', 10, 3);

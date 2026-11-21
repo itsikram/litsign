@@ -1,7 +1,7 @@
 /*
  * Tablet layer (2026-11-12).
  *
- * Loaded by wholesale_tablet_assets() in functions.php with
+ * Loaded by retails_tablet_assets() in functions.php with
  *   media="(min-width: 768px) and (max-width: 1199.98px)"
  * so NOTHING in this file reaches phones (< 768px) or desktops (>= 1200px).
  * Every rule below therefore only has to tell portrait tablets (768-991px:

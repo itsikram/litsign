@@ -4,11 +4,11 @@
  *
  * Pages are served from the NitroPack cache, so the drawer is printed empty and filled
  * over admin-ajax.php, which is never cached:
- *  - wholesale_mini_cart          returns the drawer contents and a fresh nonce
- *  - wholesale_mini_cart_qty      changes a line's quantity
- *  - wholesale_mini_cart_remove   removes a line (kept in the session so it can be undone)
- *  - wholesale_mini_cart_restore  puts the last removed line back
- *  - wholesale_mini_cart_add      the product page's Add To Cart, without leaving the page
+ *  - retails_mini_cart          returns the drawer contents and a fresh nonce
+ *  - retails_mini_cart_qty      changes a line's quantity
+ *  - retails_mini_cart_remove   removes a line (kept in the session so it can be undone)
+ *  - retails_mini_cart_restore  puts the last removed line back
+ *  - retails_mini_cart_add      the product page's Add To Cart, without leaving the page
  *
  * Every response carries the rendered drawer HTML, the line count and the subtotal, and
  * re-syncs the sso_cart_count cookie used by the header badge.
@@ -23,15 +23,15 @@ if (!defined('ABSPATH')) {
 /**
  * The cart, re-read from the session so changes made in this request are included.
  */
-function wholesale_mini_cart_fresh()
+function retails_mini_cart_fresh()
 {
 	global $cart;
-	wholesale_get_cart();
+	retails_get_cart();
 	$cart = new Cart();
 	return $cart;
 }
 
-function wholesale_mini_cart_money($value)
+function retails_mini_cart_money($value)
 {
 	return '$' . number_format((float) $value, 2);
 }
@@ -39,7 +39,7 @@ function wholesale_mini_cart_money($value)
 /**
  * Drawer body + footer for the current cart.
  */
-function wholesale_mini_cart_html($cart)
+function retails_mini_cart_html($cart)
 {
 	$items = $cart->get_items();
 	$shop_url = home_url('/#banners-displays'); // The home page leads with banners & displays.
@@ -55,7 +55,7 @@ function wholesale_mini_cart_html($cart)
 			<h3 class="mc-empty__title">Your cart is empty</h3>
 			<p class="mc-empty__text">Pick a product and enter your size to see your price instantly.</p>
 			<a class="mc-btn mc-btn--primary" href="<?php echo esc_url($shop_url); ?>" data-mc-close-link>Shop Banners &amp; Displays</a>
-			<a class="mc-btn mc-btn--ghost" href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>">Shop Channel Letters</a>
+			<a class="mc-btn mc-btn--ghost" href="<?php echo esc_url(retails_category_url('channel-letters')); ?>">Shop Channel Letters</a>
 		</div>
 		<?php
 		return array('body' => ob_get_clean(), 'footer' => '');
@@ -74,7 +74,7 @@ function wholesale_mini_cart_html($cart)
 				: '';
 
 			// A short, plain-text summary; the cart page has the full details.
-			$specs = wholesale_item_specs($item);
+			$specs = retails_item_specs($item);
 			unset($specs['Design Url'], $specs['My Artwork']);
 			$spec_lines = array();
 			foreach ($specs as $label => $value) {
@@ -126,9 +126,9 @@ function wholesale_mini_cart_html($cart)
 							</button>
 						</div>
 						<div class="mc-line__price">
-							<strong><?php echo esc_html(wholesale_mini_cart_money($item->product_subtotal)); ?></strong>
+							<strong><?php echo esc_html(retails_mini_cart_money($item->product_subtotal)); ?></strong>
 							<?php if ($quantity > 1) : ?>
-								<span><?php echo esc_html(wholesale_mini_cart_money($item->product_subtotal / $quantity)); ?> each</span>
+								<span><?php echo esc_html(retails_mini_cart_money($item->product_subtotal / $quantity)); ?> each</span>
 							<?php endif; ?>
 						</div>
 					</div>
@@ -144,11 +144,11 @@ function wholesale_mini_cart_html($cart)
 	<dl class="mc-totals">
 		<div>
 			<dt>Subtotal <span>(<?php echo esc_html(count($items) . ' ' . _n('item', 'items', count($items), 'litsign')); ?>)</span></dt>
-			<dd><?php echo esc_html(wholesale_mini_cart_money($cart->sub_total)); ?></dd>
+			<dd><?php echo esc_html(retails_mini_cart_money($cart->sub_total)); ?></dd>
 		</div>
 	</dl>
 	<?php
-	$mc_ship_min = wholesale_free_shipping_threshold($cart);
+	$mc_ship_min = retails_free_shipping_threshold($cart);
 	if ($mc_ship_min > 0) :
 		$mc_ship_left = $mc_ship_min - round((float) $cart->sub_total, 2);
 		?>
@@ -156,7 +156,7 @@ function wholesale_mini_cart_html($cart)
 			<?php if ($mc_ship_left <= 0) : ?>
 				<strong>You&rsquo;ve unlocked free shipping.</strong>
 			<?php else : ?>
-				Add <strong><?php echo esc_html(wholesale_mini_cart_money($mc_ship_left)); ?></strong> more for free shipping.
+				Add <strong><?php echo esc_html(retails_mini_cart_money($mc_ship_left)); ?></strong> more for free shipping.
 			<?php endif; ?>
 			<span class="mc-ship__track" aria-hidden="true"><span style="width: <?php echo esc_attr(min(100, max(4, round(100 - 100 * max(0, $mc_ship_left) / $mc_ship_min)))); ?>%"></span></span>
 		</p>
@@ -164,11 +164,11 @@ function wholesale_mini_cart_html($cart)
 	<?php
 	// Below the free minimum, say what shipping costs before the Checkout button
 	// (Ads shoppers left checkout within seconds of seeing it added).
-	$mc_ship_rates = wholesale_cart_shipping_options($cart);
-	$mc_ship_from = $mc_ship_rates && !wholesale_cart_qualifies_free_shipping($cart) ? min($mc_ship_rates) : 0;
+	$mc_ship_rates = retails_cart_shipping_options($cart);
+	$mc_ship_from = $mc_ship_rates && !retails_cart_qualifies_free_shipping($cart) ? min($mc_ship_rates) : 0;
 	?>
 	<p class="mc-note"><?php echo $mc_ship_from > 0
-		? esc_html(sprintf('Standard shipping %s, tax calculated at checkout.', wholesale_mini_cart_money($mc_ship_from)))
+		? esc_html(sprintf('Standard shipping %s, tax calculated at checkout.', retails_mini_cart_money($mc_ship_from)))
 		: ($mc_ship_min > 0 ? 'Tax is calculated at checkout.' : 'Shipping and tax are calculated at checkout.'); ?></p>
 	<a class="mc-btn mc-btn--primary mc-btn--lg" href="<?php echo esc_url(home_url('/checkout/')); ?>">
 		Checkout
@@ -188,66 +188,66 @@ function wholesale_mini_cart_html($cart)
  *
  * @param array $extra Extra keys (notice, added, undo...).
  */
-function wholesale_mini_cart_send($extra = array())
+function retails_mini_cart_send($extra = array())
 {
-	$cart = wholesale_mini_cart_fresh();
-	wholesale_sync_cart_cookie();
-	$html = wholesale_mini_cart_html($cart);
+	$cart = retails_mini_cart_fresh();
+	retails_sync_cart_cookie();
+	$html = retails_mini_cart_html($cart);
 	$notice = '';
-	if (!empty($_SESSION['wholesale_cart_notice'])) {
-		$notice = (string) $_SESSION['wholesale_cart_notice'];
-		unset($_SESSION['wholesale_cart_notice']);
+	if (!empty($_SESSION['retails_cart_notice'])) {
+		$notice = (string) $_SESSION['retails_cart_notice'];
+		unset($_SESSION['retails_cart_notice']);
 	}
 
 	nocache_headers();
 	wp_send_json_success(array_merge(array(
 		'count' => count($cart->get_items()),
-		'subtotal' => wholesale_mini_cart_money($cart->sub_total),
+		'subtotal' => retails_mini_cart_money($cart->sub_total),
 		'body' => $html['body'],
 		'footer' => $html['footer'],
-		'nonce' => wp_create_nonce('wholesale_mini_cart'),
+		'nonce' => wp_create_nonce('retails_mini_cart'),
 		'notice' => $notice,
 	), $extra));
 }
 
-function wholesale_mini_cart_check_nonce()
+function retails_mini_cart_check_nonce()
 {
-	if (!check_ajax_referer('wholesale_mini_cart', 'nonce', false)) {
+	if (!check_ajax_referer('retails_mini_cart', 'nonce', false)) {
 		// The cached page may hold an old nonce: send a fresh one so the script can retry once.
 		nocache_headers();
 		wp_send_json_error(array(
 			'code' => 'bad_nonce',
 			'message' => 'Your session was refreshed. Please try again.',
-			'nonce' => wp_create_nonce('wholesale_mini_cart'),
+			'nonce' => wp_create_nonce('retails_mini_cart'),
 		), 403);
 	}
 }
 
-function wholesale_ajax_mini_cart()
+function retails_ajax_mini_cart()
 {
-	wholesale_mini_cart_send();
+	retails_mini_cart_send();
 }
-add_action('wp_ajax_wholesale_mini_cart', 'wholesale_ajax_mini_cart');
-add_action('wp_ajax_nopriv_wholesale_mini_cart', 'wholesale_ajax_mini_cart');
+add_action('wp_ajax_retails_mini_cart', 'retails_ajax_mini_cart');
+add_action('wp_ajax_nopriv_retails_mini_cart', 'retails_ajax_mini_cart');
 
-function wholesale_ajax_mini_cart_qty()
+function retails_ajax_mini_cart_qty()
 {
-	wholesale_mini_cart_check_nonce();
+	retails_mini_cart_check_nonce();
 	$cart_id = isset($_POST['cart_id']) ? sanitize_text_field(wp_unslash($_POST['cart_id'])) : '';
 	$quantity = isset($_POST['quantity']) ? min(1000, max(1, absint($_POST['quantity']))) : 1;
 	if ('' !== $cart_id) {
-		wholesale_mini_cart_fresh()->update_quantity($cart_id, $quantity);
+		retails_mini_cart_fresh()->update_quantity($cart_id, $quantity);
 	}
-	wholesale_mini_cart_send();
+	retails_mini_cart_send();
 }
-add_action('wp_ajax_wholesale_mini_cart_qty', 'wholesale_ajax_mini_cart_qty');
-add_action('wp_ajax_nopriv_wholesale_mini_cart_qty', 'wholesale_ajax_mini_cart_qty');
+add_action('wp_ajax_retails_mini_cart_qty', 'retails_ajax_mini_cart_qty');
+add_action('wp_ajax_nopriv_retails_mini_cart_qty', 'retails_ajax_mini_cart_qty');
 
-function wholesale_ajax_mini_cart_remove()
+function retails_ajax_mini_cart_remove()
 {
-	wholesale_mini_cart_check_nonce();
+	retails_mini_cart_check_nonce();
 	$cart_id = isset($_POST['cart_id']) ? sanitize_text_field(wp_unslash($_POST['cart_id'])) : '';
-	$cart = wholesale_mini_cart_fresh();
+	$cart = retails_mini_cart_fresh();
 	$removed = null;
 	foreach ($cart->get_items() as $position => $item) {
 		if ((string) $item->cart_id === $cart_id) {
@@ -256,23 +256,23 @@ function wholesale_ajax_mini_cart_remove()
 		}
 	}
 	if ($removed) {
-		$_SESSION['wholesale_cart_removed'] = wp_json_encode($removed);
+		$_SESSION['retails_cart_removed'] = wp_json_encode($removed);
 		$cart->remove_item($cart_id);
 	}
-	wholesale_mini_cart_send(array(
+	retails_mini_cart_send(array(
 		'removed' => $removed ? (string) $removed['item']->product_title : '',
 	));
 }
-add_action('wp_ajax_wholesale_mini_cart_remove', 'wholesale_ajax_mini_cart_remove');
-add_action('wp_ajax_nopriv_wholesale_mini_cart_remove', 'wholesale_ajax_mini_cart_remove');
+add_action('wp_ajax_retails_mini_cart_remove', 'retails_ajax_mini_cart_remove');
+add_action('wp_ajax_nopriv_retails_mini_cart_remove', 'retails_ajax_mini_cart_remove');
 
-function wholesale_ajax_mini_cart_restore()
+function retails_ajax_mini_cart_restore()
 {
-	wholesale_mini_cart_check_nonce();
-	$removed = !empty($_SESSION['wholesale_cart_removed']) ? json_decode((string) $_SESSION['wholesale_cart_removed']) : null;
-	unset($_SESSION['wholesale_cart_removed']);
+	retails_mini_cart_check_nonce();
+	$removed = !empty($_SESSION['retails_cart_removed']) ? json_decode((string) $_SESSION['retails_cart_removed']) : null;
+	unset($_SESSION['retails_cart_removed']);
 	if ($removed && isset($removed->item->cart_id)) {
-		$items = wholesale_mini_cart_fresh()->get_items();
+		$items = retails_mini_cart_fresh()->get_items();
 		$already_there = false;
 		foreach ($items as $item) {
 			$already_there = $already_there || (string) $item->cart_id === (string) $removed->item->cart_id;
@@ -282,34 +282,34 @@ function wholesale_ajax_mini_cart_restore()
 			$_SESSION['cart_items'] = wp_json_encode(array_values($items), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		}
 	}
-	wholesale_mini_cart_send();
+	retails_mini_cart_send();
 }
-add_action('wp_ajax_wholesale_mini_cart_restore', 'wholesale_ajax_mini_cart_restore');
-add_action('wp_ajax_nopriv_wholesale_mini_cart_restore', 'wholesale_ajax_mini_cart_restore');
+add_action('wp_ajax_retails_mini_cart_restore', 'retails_ajax_mini_cart_restore');
+add_action('wp_ajax_nopriv_retails_mini_cart_restore', 'retails_ajax_mini_cart_restore');
 
 /**
  * Add To Cart from the product page. Cart::add_item() answers with JSON errors when
  * called over AJAX and returns instead of redirecting on success.
  */
-function wholesale_ajax_mini_cart_add()
+function retails_ajax_mini_cart_add()
 {
-	$before_items = wholesale_mini_cart_fresh()->get_items();
+	$before_items = retails_mini_cart_fresh()->get_items();
 	$before = count($before_items);
-	wholesale_mini_cart_fresh()->add_item();
-	$items = wholesale_mini_cart_fresh()->get_items();
+	retails_mini_cart_fresh()->add_item();
+	$items = retails_mini_cart_fresh()->get_items();
 	$added = count($items) > $before ? end($items) : null;
 	// Buy Now (js/mini-cart.js) for an item already in the cart exactly as configured, e.g.
 	// back from checkout and Buy Now again: keep one line and go to checkout. Lines with
 	// uploaded artwork are always kept (each upload is its own file).
 	$existing = null;
 	if ($added && !empty($_POST['buy_now']) && empty($added->artwork_id)) {
-		$existing = wholesale_cart_same_item($before_items, $added);
+		$existing = retails_cart_same_item($before_items, $added);
 		if ($existing) {
-			wholesale_mini_cart_fresh()->remove_item($added->cart_id);
+			retails_mini_cart_fresh()->remove_item($added->cart_id);
 			$added = null;
 		}
 	}
-	wholesale_mini_cart_send(array(
+	retails_mini_cart_send(array(
 		'existing' => $existing ? (string) $existing->cart_id : '',
 		'added' => $added ? array(
 			'cart_id' => (string) $added->cart_id,
@@ -322,21 +322,21 @@ function wholesale_ajax_mini_cart_add()
 		) : null,
 	));
 }
-add_action('wp_ajax_wholesale_mini_cart_add', 'wholesale_ajax_mini_cart_add');
-add_action('wp_ajax_nopriv_wholesale_mini_cart_add', 'wholesale_ajax_mini_cart_add');
+add_action('wp_ajax_retails_mini_cart_add', 'retails_ajax_mini_cart_add');
+add_action('wp_ajax_nopriv_retails_mini_cart_add', 'retails_ajax_mini_cart_add');
 
 /**
  * Add To Cart from the channel letter builder: saves the design (uploaded first through
- * wholesale_upload_design) as the product's session design, then adds it like the
+ * retails_upload_design) as the product's session design, then adds it like the
  * product page does. The design image is the nonce-protected, session-owned part.
  */
-function wholesale_ajax_cl_builder_add()
+function retails_ajax_cl_builder_add()
 {
 	$product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
-	if (!$product_id || !wholesale_product_is_channel_letter($product_id) || 'publish' !== get_post_status($product_id)) {
+	if (!$product_id || !retails_product_is_channel_letter($product_id) || 'publish' !== get_post_status($product_id)) {
 		wp_send_json_error(array('message' => 'This product is no longer available.'));
 	}
-	$design = wholesale_store_session_cl_design(
+	$design = retails_store_session_cl_design(
 		$product_id,
 		isset($_POST['design_id']) ? $_POST['design_id'] : 0,
 		isset($_POST['design_data']) ? $_POST['design_data'] : '' // The helper strips WordPress's slashes.
@@ -345,43 +345,43 @@ function wholesale_ajax_cl_builder_add()
 		wp_send_json_error(array('message' => $design->get_error_message()));
 	}
 	$_REQUEST['design_id'] = $design['design_id'];
-	wholesale_ajax_mini_cart_add();
+	retails_ajax_mini_cart_add();
 }
-add_action('wp_ajax_wholesale_cl_builder_add', 'wholesale_ajax_cl_builder_add');
-add_action('wp_ajax_nopriv_wholesale_cl_builder_add', 'wholesale_ajax_cl_builder_add');
+add_action('wp_ajax_retails_cl_builder_add', 'retails_ajax_cl_builder_add');
+add_action('wp_ajax_nopriv_retails_cl_builder_add', 'retails_ajax_cl_builder_add');
 
 /**
  * The cart and checkout pages show the cart themselves, so the header icon stays a link there.
  */
-function wholesale_mini_cart_enabled()
+function retails_mini_cart_enabled()
 {
-	return !is_admin() && !is_page(array('cart', 'checkout', 'payment', 'pay')) && !get_query_var('wholesale_thank_you');
+	return !is_admin() && !is_page(array('cart', 'checkout', 'payment', 'pay')) && !get_query_var('retails_thank_you');
 }
 
-function wholesale_mini_cart_assets()
+function retails_mini_cart_assets()
 {
-	if (!wholesale_mini_cart_enabled()) {
+	if (!retails_mini_cart_enabled()) {
 		return;
 	}
 	$dir = get_template_directory();
 	$uri = get_template_directory_uri();
-	wp_enqueue_style('wholesale-mini-cart', $uri . '/css/mini-cart.css', array('wholesale-header'), (string) filemtime($dir . '/css/mini-cart.css'));
-	wp_enqueue_script('wholesale-mini-cart', $uri . '/js/mini-cart.js', array('custom-script'), (string) filemtime($dir . '/js/mini-cart.js'), true);
-	wp_script_add_data('wholesale-mini-cart', 'strategy', 'defer');
-	wp_localize_script('wholesale-mini-cart', 'wholesaleMiniCart', array(
+	wp_enqueue_style('retails-mini-cart', $uri . '/css/mini-cart.css', array('retails-header'), (string) filemtime($dir . '/css/mini-cart.css'));
+	wp_enqueue_script('retails-mini-cart', $uri . '/js/mini-cart.js', array('custom-script'), (string) filemtime($dir . '/js/mini-cart.js'), true);
+	wp_script_add_data('retails-mini-cart', 'strategy', 'defer');
+	wp_localize_script('retails-mini-cart', 'retailsMiniCart', array(
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'cartUrl' => home_url('/cart/'),
 		'checkoutUrl' => home_url('/checkout/'), // Buy Now.
 	));
 }
-add_action('wp_enqueue_scripts', 'wholesale_mini_cart_assets', 20);
+add_action('wp_enqueue_scripts', 'retails_mini_cart_assets', 20);
 
 /**
  * Empty drawer shell; js/mini-cart.js fills it.
  */
-function wholesale_mini_cart_markup()
+function retails_mini_cart_markup()
 {
-	if (!wholesale_mini_cart_enabled()) {
+	if (!retails_mini_cart_enabled()) {
 		return;
 	}
 	?>
@@ -410,4 +410,4 @@ function wholesale_mini_cart_markup()
 	</div>
 	<?php
 }
-add_action('wp_footer', 'wholesale_mini_cart_markup', 5);
+add_action('wp_footer', 'retails_mini_cart_markup', 5);

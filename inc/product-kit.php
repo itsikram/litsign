@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
  *
  * @return array slug => array(kind, kit slug)
  */
-function wholesale_product_kit_special()
+function retails_product_kit_special()
 {
 	return array(
 		'tension-fabric-stand-hardware-only' => array('hardware', 'tension-fabric-stand-graphic-frame'),
@@ -37,7 +37,7 @@ function wholesale_product_kit_special()
  *                    feed_title, toggle_label.
  *                    Null for complete products.
  */
-function wholesale_product_kit_info($product_id)
+function retails_product_kit_info($product_id)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
@@ -47,23 +47,23 @@ function wholesale_product_kit_info($product_id)
 	$cache[$product_id] = null;
 
 	$slug = (string) get_post_field('post_name', $product_id);
-	$special = wholesale_product_kit_special();
+	$special = retails_product_kit_special();
 	if (isset($special[$slug])) {
 		$kind = $special[$slug][0];
 		$kit = get_page_by_path($special[$slug][1], OBJECT, 'product');
 		$kit_id = $kit && 'publish' === $kit->post_status ? (int) $kit->ID : 0;
 	} else {
 		$kinds = array('Graphic Only' => 'graphic', 'Banner Only' => 'graphic', 'Flag Only' => 'flag');
-		$label = wholesale_seo_product_variant_label($product_id);
+		$label = retails_seo_product_variant_label($product_id);
 		$kind = isset($kinds[$label]) ? $kinds[$label] : '';
-		$kit_id = $kind ? (int) wholesale_seo_product_variant_primary_of($product_id) : 0;
+		$kit_id = $kind ? (int) retails_seo_product_variant_primary_of($product_id) : 0;
 	}
 	if (!$kit_id) {
 		return null;
 	}
 
-	$kit_name = wholesale_seo_product_search_name($kit_id);
-	$name = 'hardware' === $kind ? $kit_name : wholesale_seo_product_search_name($product_id);
+	$kit_name = retails_seo_product_search_name($kit_id);
+	$name = 'hardware' === $kind ? $kit_name : retails_seo_product_search_name($product_id);
 	// What the kit adds, from the kit's own variant label.
 	$nouns = array(
 		'Graphic & Stand' => 'stand',
@@ -73,9 +73,9 @@ function wholesale_product_kit_info($product_id)
 		'Banner & Hardware' => 'hardware',
 		'Flag & Pole Set' => 'pole',
 	);
-	$kit_label = wholesale_seo_product_variant_label($kit_id);
+	$kit_label = retails_seo_product_variant_label($kit_id);
 	$noun = isset($nouns[$kit_label]) ? $nouns[$kit_label] : 'stand';
-	$offer = wholesale_seo_product_lowest_offer($kit_id);
+	$offer = retails_seo_product_lowest_offer($kit_id);
 	$kit_price = !empty($offer['price']) ? (float) $offer['price'] : 0.0;
 
 	switch ($kind) {
@@ -103,7 +103,7 @@ function wholesale_product_kit_info($product_id)
 			$need = 'Need the tent too?';
 			$with = 'with frame and printed canopy';
 			$bundle = 'Complete tent';
-			$feed = sprintf('Tent Walls Only (No Tent) – %s (%s) - Full Color Printed', $name, wholesale_seo_product_variant_label($product_id));
+			$feed = sprintf('Tent Walls Only (No Tent) – %s (%s) - Full Color Printed', $name, retails_seo_product_variant_label($product_id));
 			$toggle = '';
 			break;
 		default:
@@ -142,9 +142,9 @@ function wholesale_product_kit_info($product_id)
  * Intro bullets for a partial product: only the ones about the print. Bullets
  * about hardware, feet, poles, bases, frames and bags describe the kit.
  */
-function wholesale_product_kit_partial_intro($html, $product_id)
+function retails_product_kit_partial_intro($html, $product_id)
 {
-	$info = wholesale_product_kit_info($product_id);
+	$info = retails_product_kit_info($product_id);
 	if (!$info || !preg_match_all('/<li\b[^>]*>.*?<\/li>/is', (string) $html, $items)) {
 		return $html;
 	}
@@ -167,7 +167,7 @@ function wholesale_product_kit_partial_intro($html, $product_id)
  *
  * @return string[]
  */
-function wholesale_product_kit_included($product_id)
+function retails_product_kit_included($product_id)
 {
 	$lists = array(
 		'standard-retractable-insert-stand' => array('UV printed fabric graphic', 'Aluminum retractable stand with two stabilizing feet', 'Travel bag'),
@@ -212,16 +212,16 @@ function wholesale_product_kit_included($product_id)
  *
  * @return array label, price (0 when unknown), is_kit
  */
-function wholesale_product_kit_toggle_option($product_id, $title)
+function retails_product_kit_toggle_option($product_id, $title)
 {
-	$info = wholesale_product_kit_info($product_id);
-	$offer = wholesale_seo_product_lowest_offer($product_id);
+	$info = retails_product_kit_info($product_id);
+	$offer = retails_seo_product_lowest_offer($product_id);
 	$partial = array('Graphic Only', 'Flag Only', 'Banner Only', 'Hardware Only', 'Sign Only', 'Full Wall', 'Half Wall');
 
 	return array(
 		'label' => wp_strip_all_tags((string) $title),
 		'price' => !empty($offer['price']) ? (float) $offer['price'] : 0.0,
-		'is_kit' => !$info && !in_array(wholesale_seo_product_variant_label($product_id), $partial, true),
+		'is_kit' => !$info && !in_array(retails_seo_product_variant_label($product_id), $partial, true),
 	);
 }
 
@@ -229,10 +229,10 @@ function wholesale_product_kit_toggle_option($product_id, $title)
  * The delivered-price line under the total: the price plus standard shipping
  * below the free shipping minimum. Tax is not included.
  */
-function wholesale_product_delivered_text($total, $channel_letters = false)
+function retails_product_delivered_text($total, $channel_letters = false)
 {
-	$min = (float) wholesale_get_setting($channel_letters ? 'free_shipping_channel_min' : 'free_shipping_min');
-	$rates = array_filter(array_map('floatval', explode(',', (string) wholesale_get_setting($channel_letters ? 'channel_shipping_options' : 'standard_shipping_options'))));
+	$min = (float) retails_get_setting($channel_letters ? 'free_shipping_channel_min' : 'free_shipping_min');
+	$rates = array_filter(array_map('floatval', explode(',', (string) retails_get_setting($channel_letters ? 'channel_shipping_options' : 'standard_shipping_options'))));
 	$ship = $rates ? min($rates) : 0.0;
 	$total = (float) $total;
 	if ($total <= 0) {

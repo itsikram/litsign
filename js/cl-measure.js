@@ -14,7 +14,7 @@
  * the font the customer chose: each letter is drawn three times as large and its pieces and
  * edges are read from the ink, and its advance comes from the font. The builder (js/cl.js) and the
  * product page (js/main.js) both use this file, so the same text, font and height measure the
- * same on both, and the cart prices those numbers (wholesale_cl_text_letters() in inc/pricing.php).
+ * same on both, and the cart prices those numbers (retails_cl_text_letters() in inc/pricing.php).
  */
 (function () {
   'use strict';
@@ -287,7 +287,7 @@
   };
 
   /**
-   * The measurement the product page sends (field cl_measure, read by wholesale_cl_request_measure()):
+   * The measurement the product page sends (field cl_measure, read by retails_cl_request_measure()):
    * {"v": 2, "c": [[w, a, d, [[w, h], ...]], ...] per letter, "t": width}, outline units at SIZE px.
    */
   var payload = function (measured) {

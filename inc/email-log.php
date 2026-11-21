@@ -3,7 +3,7 @@
  * Emails admin menu: a log of every email the site sends (with its delivery
  * result), and the SMTP settings used to send them.
  *
- * SMTP settings are saved in the `wholesale_mail_settings` option; until they are
+ * SMTP settings are saved in the `retails_mail_settings` option; until they are
  * saved once, the WHOLESALE_SMTP_* constants in wp-config.php are used.
  *
  * @package litsign
@@ -13,16 +13,16 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('WHOLESALE_EMAIL_LOG_DB_VERSION', '2');
+define('RETAILS_EMAIL_LOG_DB_VERSION', '2');
 
 // A failed email is tried again after each of these delays, then given up on.
-define('WHOLESALE_EMAIL_RETRY_DELAYS', array(5 * MINUTE_IN_SECONDS, 30 * MINUTE_IN_SECONDS, 2 * HOUR_IN_SECONDS));
+define('RETAILS_EMAIL_RETRY_DELAYS', array(5 * MINUTE_IN_SECONDS, 30 * MINUTE_IN_SECONDS, 2 * HOUR_IN_SECONDS));
 
 /* ---------------------------------------------------------------------------
  * SMTP settings
  * ------------------------------------------------------------------------ */
 
-function wholesale_smtp_providers()
+function retails_smtp_providers()
 {
 	return array(
 		'gmail' => array('label' => 'Gmail / Google Workspace', 'host' => 'smtp.gmail.com', 'port' => 465, 'encryption' => 'ssl', 'hint' => 'Use a Google app password, not the account password (Google Account → Security → App passwords).'),
@@ -36,7 +36,7 @@ function wholesale_smtp_providers()
 	);
 }
 
-function wholesale_mail_settings_defaults()
+function retails_mail_settings_defaults()
 {
 	return array(
 		'enabled' => true,
@@ -61,12 +61,12 @@ function wholesale_mail_settings_defaults()
  * The key used to encrypt the saved SMTP password, derived from the site's
  * security keys so a database dump alone does not reveal it.
  */
-function wholesale_smtp_crypto_key()
+function retails_smtp_crypto_key()
 {
-	return hash('sha256', wp_salt('secure_auth') . '|wholesale-smtp', true);
+	return hash('sha256', wp_salt('secure_auth') . '|retails-smtp', true);
 }
 
-function wholesale_smtp_encrypt($plain)
+function retails_smtp_encrypt($plain)
 {
 	if ('' === (string) $plain) {
 		return '';
@@ -76,7 +76,7 @@ function wholesale_smtp_encrypt($plain)
 	}
 	$iv = random_bytes(12);
 	$tag = '';
-	$cipher = openssl_encrypt($plain, 'aes-256-gcm', wholesale_smtp_crypto_key(), OPENSSL_RAW_DATA, $iv, $tag);
+	$cipher = openssl_encrypt($plain, 'aes-256-gcm', retails_smtp_crypto_key(), OPENSSL_RAW_DATA, $iv, $tag);
 
 	return 'v1:' . base64_encode($iv . $tag . $cipher);
 }
@@ -85,7 +85,7 @@ function wholesale_smtp_encrypt($plain)
  * @return string|false The password, or false when it can no longer be decrypted
  *                      (for example after the wp-config.php security keys changed).
  */
-function wholesale_smtp_decrypt($stored)
+function retails_smtp_decrypt($stored)
 {
 	$stored = (string) $stored;
 	if ('' === $stored) {
@@ -102,7 +102,7 @@ function wholesale_smtp_decrypt($stored)
 		return false;
 	}
 
-	return openssl_decrypt(substr($raw, 28), 'aes-256-gcm', wholesale_smtp_crypto_key(), OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16));
+	return openssl_decrypt(substr($raw, 28), 'aes-256-gcm', retails_smtp_crypto_key(), OPENSSL_RAW_DATA, substr($raw, 0, 12), substr($raw, 12, 16));
 }
 
 /**
@@ -111,19 +111,19 @@ function wholesale_smtp_decrypt($stored)
  *
  * `password` is decrypted; `password_unreadable` is true when a saved one could not be.
  */
-function wholesale_mail_settings()
+function retails_mail_settings()
 {
 	static $settings = null;
 	if (null !== $settings) {
 		return $settings;
 	}
 
-	$defaults = wholesale_mail_settings_defaults();
-	$saved = get_option('wholesale_mail_settings', null);
+	$defaults = retails_mail_settings_defaults();
+	$saved = get_option('retails_mail_settings', null);
 
 	if (is_array($saved)) {
 		$settings = array_merge($defaults, $saved);
-		$password = wholesale_smtp_decrypt($settings['password']);
+		$password = retails_smtp_decrypt($settings['password']);
 		$settings['password_unreadable'] = false === $password;
 		$settings['password'] = false === $password ? '' : $password;
 		$settings['source'] = 'admin';
@@ -146,16 +146,16 @@ function wholesale_mail_settings()
 	return $settings;
 }
 
-function wholesale_mail_from_email()
+function retails_mail_from_email()
 {
-	$settings = wholesale_mail_settings();
+	$settings = retails_mail_settings();
 
 	return is_email($settings['from_email']) ? $settings['from_email'] : get_option('admin_email');
 }
 
-function wholesale_mail_from_name()
+function retails_mail_from_name()
 {
-	$settings = wholesale_mail_settings();
+	$settings = retails_mail_settings();
 
 	return '' !== trim($settings['from_name']) ? $settings['from_name'] : get_bloginfo('name');
 }
@@ -167,9 +167,9 @@ function wholesale_mail_from_name()
  *               mailer; 'php_mail' when SMTP is chosen but incomplete), host, username,
  *               from, source, and a problem string explaining a 'php_mail' fallback.
  */
-function wholesale_mail_status()
+function retails_mail_status()
 {
-	$settings = wholesale_mail_settings();
+	$settings = retails_mail_settings();
 	$problem = '';
 
 	if (!$settings['enabled']) {
@@ -177,7 +177,7 @@ function wholesale_mail_status()
 			'mode' => 'default',
 			'host' => '',
 			'username' => '',
-			'from' => wholesale_mail_from_email(),
+			'from' => retails_mail_from_email(),
 			'source' => $settings['source'],
 			'problem' => '',
 		);
@@ -195,7 +195,7 @@ function wholesale_mail_status()
 		'mode' => $problem ? 'php_mail' : 'smtp',
 		'host' => $settings['host'],
 		'username' => $settings['username'],
-		'from' => wholesale_mail_from_email(),
+		'from' => retails_mail_from_email(),
 		'source' => $settings['source'],
 		'problem' => $problem,
 	);
@@ -204,7 +204,7 @@ function wholesale_mail_status()
 /**
  * Point a PHPMailer instance at the configured SMTP server.
  */
-function wholesale_apply_smtp($phpmailer, $settings)
+function retails_apply_smtp($phpmailer, $settings)
 {
 	$phpmailer->isSMTP();
 	$phpmailer->Host = $settings['host'];
@@ -218,48 +218,48 @@ function wholesale_apply_smtp($phpmailer, $settings)
 	}
 }
 
-function wholesale_configure_smtp_mailer($phpmailer)
+function retails_configure_smtp_mailer($phpmailer)
 {
-	if ('smtp' !== wholesale_mail_status()['mode']) {
+	if ('smtp' !== retails_mail_status()['mode']) {
 		return;
 	}
 
-	wholesale_apply_smtp($phpmailer, wholesale_mail_settings());
-	$phpmailer->From = wholesale_mail_from_email();
-	$phpmailer->FromName = wholesale_mail_from_name();
+	retails_apply_smtp($phpmailer, retails_mail_settings());
+	$phpmailer->From = retails_mail_from_email();
+	$phpmailer->FromName = retails_mail_from_name();
 	$phpmailer->Sender = $phpmailer->From;
 }
-add_action('phpmailer_init', 'wholesale_configure_smtp_mailer');
+add_action('phpmailer_init', 'retails_configure_smtp_mailer');
 
 add_filter('wp_mail_from', function ($from_email) {
-	$settings = wholesale_mail_settings();
+	$settings = retails_mail_settings();
 
 	return is_email($settings['from_email']) ? $settings['from_email'] : $from_email;
 });
 
 add_filter('wp_mail_from_name', function () {
-	return wholesale_mail_from_name();
+	return retails_mail_from_name();
 });
 
 /* ---------------------------------------------------------------------------
  * Log storage
  * ------------------------------------------------------------------------ */
 
-function wholesale_email_log_table()
+function retails_email_log_table()
 {
 	global $wpdb;
 
-	return $wpdb->prefix . 'wholesale_email_log';
+	return $wpdb->prefix . 'retails_email_log';
 }
 
-function wholesale_email_log_install()
+function retails_email_log_install()
 {
-	if (WHOLESALE_EMAIL_LOG_DB_VERSION === get_option('wholesale_email_log_db_version')) {
+	if (RETAILS_EMAIL_LOG_DB_VERSION === get_option('retails_email_log_db_version')) {
 		return;
 	}
 
 	global $wpdb;
-	$table = wholesale_email_log_table();
+	$table = retails_email_log_table();
 	$charset_collate = $wpdb->get_charset_collate();
 
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -285,17 +285,17 @@ function wholesale_email_log_install()
 		KEY next_retry (next_retry)
 	) {$charset_collate};");
 
-	update_option('wholesale_email_log_db_version', WHOLESALE_EMAIL_LOG_DB_VERSION);
+	update_option('retails_email_log_db_version', RETAILS_EMAIL_LOG_DB_VERSION);
 }
-add_action('init', 'wholesale_email_log_install');
+add_action('init', 'retails_email_log_install');
 
 /**
  * The theme file and function that called wp_mail(), so the log says which
  * feature sent each email.
  */
-function wholesale_email_log_source()
+function retails_email_log_source()
 {
-	$skip = array('wp_mail', 'wholesale_send_html_mail', 'wholesale_mail_team');
+	$skip = array('wp_mail', 'retails_send_html_mail', 'retails_mail_team');
 	$frames = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
 	$file = '';
 	$line = 0;
@@ -323,22 +323,22 @@ function wholesale_email_log_source()
 /**
  * Record each email before it is sent; the result is filled in by the hooks below.
  */
-function wholesale_email_log_start($atts)
+function retails_email_log_start($atts)
 {
 	global $wpdb;
-	$GLOBALS['wholesale_email_log_current'] = 0;
+	$GLOBALS['retails_email_log_current'] = 0;
 
 	// An automatic retry updates its original row instead of adding a new one.
-	if (!empty($GLOBALS['wholesale_email_log_retry_id'])) {
-		$id = (int) $GLOBALS['wholesale_email_log_retry_id'];
-		$GLOBALS['wholesale_email_log_retry_id'] = 0;
-		$table = wholesale_email_log_table();
+	if (!empty($GLOBALS['retails_email_log_retry_id'])) {
+		$id = (int) $GLOBALS['retails_email_log_retry_id'];
+		$GLOBALS['retails_email_log_retry_id'] = 0;
+		$table = retails_email_log_table();
 		$wpdb->query($wpdb->prepare("UPDATE {$table} SET status = 'pending', attempts = attempts + 1, next_retry = NULL WHERE id = %d", $id));
-		$GLOBALS['wholesale_email_log_current'] = $id;
+		$GLOBALS['retails_email_log_current'] = $id;
 		return $atts;
 	}
 
-	if (!wholesale_mail_settings()['log_enabled']) {
+	if (!retails_mail_settings()['log_enabled']) {
 		return $atts;
 	}
 
@@ -347,7 +347,7 @@ function wholesale_email_log_start($atts)
 	$attachments = isset($atts['attachments']) ? (array) $atts['attachments'] : array();
 	$message = isset($atts['message']) ? (string) $atts['message'] : '';
 
-	$inserted = $wpdb->insert(wholesale_email_log_table(), array(
+	$inserted = $wpdb->insert(retails_email_log_table(), array(
 		'created_at' => current_time('mysql', true),
 		'to_email' => is_array($to) ? implode(', ', $to) : (string) $to,
 		'subject' => mb_substr(isset($atts['subject']) ? (string) $atts['subject'] : '', 0, 255),
@@ -356,29 +356,29 @@ function wholesale_email_log_start($atts)
 		'headers' => is_array($headers) ? implode("\n", $headers) : (string) $headers,
 		// Full paths, so retries can attach the files again.
 		'attachments' => implode("\n", array_filter(array_map('strval', $attachments))),
-		'source' => wholesale_email_log_source(),
+		'source' => retails_email_log_source(),
 		'status' => 'pending',
 	));
 	if ($inserted) {
-		$GLOBALS['wholesale_email_log_current'] = (int) $wpdb->insert_id;
+		$GLOBALS['retails_email_log_current'] = (int) $wpdb->insert_id;
 	}
 
 	return $atts;
 }
-add_filter('wp_mail', 'wholesale_email_log_start', 9999);
+add_filter('wp_mail', 'retails_email_log_start', 9999);
 
-function wholesale_email_log_update($data)
+function retails_email_log_update($data)
 {
-	$id = isset($GLOBALS['wholesale_email_log_current']) ? (int) $GLOBALS['wholesale_email_log_current'] : 0;
+	$id = isset($GLOBALS['retails_email_log_current']) ? (int) $GLOBALS['retails_email_log_current'] : 0;
 	if ($id) {
 		global $wpdb;
-		$wpdb->update(wholesale_email_log_table(), $data, array('id' => $id));
+		$wpdb->update(retails_email_log_table(), $data, array('id' => $id));
 	}
 }
 
 // Last on phpmailer_init, so it sees the final sender and transport.
 add_action('phpmailer_init', function ($phpmailer) {
-	wholesale_email_log_update(array(
+	retails_email_log_update(array(
 		'content_type' => substr((string) $phpmailer->ContentType, 0, 50),
 		'from_email' => substr((string) $phpmailer->From, 0, 190),
 		'mailer' => 'smtp' === $phpmailer->Mailer ? substr('SMTP · ' . $phpmailer->Host, 0, 190) : 'PHP mail()',
@@ -386,16 +386,16 @@ add_action('phpmailer_init', function ($phpmailer) {
 }, 9999);
 
 add_action('wp_mail_succeeded', function () {
-	wholesale_email_log_update(array('status' => 'sent', 'error' => null, 'next_retry' => null));
-	$GLOBALS['wholesale_email_log_current'] = 0;
+	retails_email_log_update(array('status' => 'sent', 'error' => null, 'next_retry' => null));
+	$GLOBALS['retails_email_log_current'] = 0;
 });
 
 add_action('wp_mail_failed', function ($error) {
-	$id = isset($GLOBALS['wholesale_email_log_current']) ? (int) $GLOBALS['wholesale_email_log_current'] : 0;
-	wholesale_email_log_update(array('status' => 'failed', 'error' => $error->get_error_message()));
-	$GLOBALS['wholesale_email_log_current'] = 0;
+	$id = isset($GLOBALS['retails_email_log_current']) ? (int) $GLOBALS['retails_email_log_current'] : 0;
+	retails_email_log_update(array('status' => 'failed', 'error' => $error->get_error_message()));
+	$GLOBALS['retails_email_log_current'] = 0;
 	if ($id) {
-		wholesale_email_schedule_retry($id);
+		retails_email_schedule_retry($id);
 	}
 });
 
@@ -403,13 +403,13 @@ add_action('wp_mail_failed', function ($error) {
  * Queue a failed email to be tried again, unless retries are off, it has used
  * them all, or it has no valid recipient (trying again cannot fix that).
  */
-function wholesale_email_schedule_retry($id)
+function retails_email_schedule_retry($id)
 {
-	if (!wholesale_mail_settings()['auto_retry']) {
+	if (!retails_mail_settings()['auto_retry']) {
 		return;
 	}
-	$row = wholesale_email_log_get($id);
-	$delays = WHOLESALE_EMAIL_RETRY_DELAYS;
+	$row = retails_email_log_get($id);
+	$delays = RETAILS_EMAIL_RETRY_DELAYS;
 	if (!$row || (int) $row['attempts'] > count($delays)) {
 		return;
 	}
@@ -421,18 +421,18 @@ function wholesale_email_schedule_retry($id)
 	}
 
 	global $wpdb;
-	$wpdb->update(wholesale_email_log_table(), array('next_retry' => gmdate('Y-m-d H:i:s', time() + $delays[(int) $row['attempts'] - 1])), array('id' => $id));
+	$wpdb->update(retails_email_log_table(), array('next_retry' => gmdate('Y-m-d H:i:s', time() + $delays[(int) $row['attempts'] - 1])), array('id' => $id));
 }
 
 /**
  * Send a logged email again. With $in_place, the attempt updates the same log
  * row (automatic retries); otherwise it is logged as a new email.
  */
-function wholesale_email_log_send_row($row, $in_place)
+function retails_email_log_send_row($row, $in_place)
 {
 	$headers = array_filter(array_map('trim', explode("\n", (string) $row['headers'])));
 	$has_type = (bool) preg_grep('/^content-type:/i', $headers);
-	if (!$has_type && wholesale_email_log_is_html($row)) {
+	if (!$has_type && retails_email_log_is_html($row)) {
 		$headers[] = 'Content-Type: text/html; charset=UTF-8';
 	}
 
@@ -443,16 +443,16 @@ function wholesale_email_log_send_row($row, $in_place)
 		return $real && 0 === strpos(wp_normalize_path($real), $uploads) && is_file($real);
 	});
 
-	$GLOBALS['wholesale_email_log_retry_id'] = $in_place ? (int) $row['id'] : 0;
+	$GLOBALS['retails_email_log_retry_id'] = $in_place ? (int) $row['id'] : 0;
 	$sent = wp_mail($row['to_email'], $row['subject'], $row['message'], $headers, array_values($attachments));
-	$GLOBALS['wholesale_email_log_retry_id'] = 0;
+	$GLOBALS['retails_email_log_retry_id'] = 0;
 
 	if ($sent && $in_place) {
 		/**
 		 * A failed email was delivered by an automatic retry, so features that
 		 * recorded the failure (tickets, quote replies) can mark it as sent.
 		 */
-		do_action('wholesale_email_retry_succeeded', $row);
+		do_action('retails_email_retry_succeeded', $row);
 	}
 
 	return $sent;
@@ -461,59 +461,59 @@ function wholesale_email_log_send_row($row, $in_place)
 /**
  * Try again every failed email whose retry time has come.
  */
-function wholesale_email_process_retries()
+function retails_email_process_retries()
 {
 	global $wpdb;
-	$table = wholesale_email_log_table();
+	$table = retails_email_log_table();
 	$ids = $wpdb->get_col($wpdb->prepare("SELECT id FROM {$table} WHERE status = 'failed' AND next_retry IS NOT NULL AND next_retry <= %s ORDER BY next_retry ASC LIMIT 20", current_time('mysql', true)));
 
 	foreach ($ids as $id) {
 		// Claim the row first so an overlapping cron run cannot send it twice.
 		$claimed = $wpdb->query($wpdb->prepare("UPDATE {$table} SET next_retry = NULL WHERE id = %d AND next_retry IS NOT NULL", $id));
-		$row = $claimed ? wholesale_email_log_get($id) : null;
+		$row = $claimed ? retails_email_log_get($id) : null;
 		if ($row) {
-			wholesale_email_log_send_row($row, true);
+			retails_email_log_send_row($row, true);
 		}
 	}
 }
-add_action('wholesale_email_process_retries', 'wholesale_email_process_retries');
+add_action('retails_email_process_retries', 'retails_email_process_retries');
 
 add_filter('cron_schedules', function ($schedules) {
-	$schedules['wholesale_five_minutes'] = array('interval' => 5 * MINUTE_IN_SECONDS, 'display' => 'Every five minutes');
+	$schedules['retails_five_minutes'] = array('interval' => 5 * MINUTE_IN_SECONDS, 'display' => 'Every five minutes');
 	return $schedules;
 });
 
-function wholesale_email_log_prune()
+function retails_email_log_prune()
 {
-	$days = (int) wholesale_mail_settings()['log_retention'];
+	$days = (int) retails_mail_settings()['log_retention'];
 	if ($days < 1) {
 		return;
 	}
 
 	global $wpdb;
-	$table = wholesale_email_log_table();
+	$table = retails_email_log_table();
 	$wpdb->query($wpdb->prepare("DELETE FROM {$table} WHERE created_at < %s", gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS)));
 }
-add_action('wholesale_email_log_prune', 'wholesale_email_log_prune');
+add_action('retails_email_log_prune', 'retails_email_log_prune');
 
 add_action('init', function () {
-	if (!wp_next_scheduled('wholesale_email_log_prune')) {
-		wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'wholesale_email_log_prune');
+	if (!wp_next_scheduled('retails_email_log_prune')) {
+		wp_schedule_event(time() + HOUR_IN_SECONDS, 'daily', 'retails_email_log_prune');
 	}
-	if (!wp_next_scheduled('wholesale_email_process_retries')) {
-		wp_schedule_event(time() + MINUTE_IN_SECONDS, 'wholesale_five_minutes', 'wholesale_email_process_retries');
+	if (!wp_next_scheduled('retails_email_process_retries')) {
+		wp_schedule_event(time() + MINUTE_IN_SECONDS, 'retails_five_minutes', 'retails_email_process_retries');
 	}
 });
 
-function wholesale_email_log_get($id)
+function retails_email_log_get($id)
 {
 	global $wpdb;
-	$table = wholesale_email_log_table();
+	$table = retails_email_log_table();
 
 	return $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id), ARRAY_A);
 }
 
-function wholesale_email_log_is_html($row)
+function retails_email_log_is_html($row)
 {
 	return false !== stripos((string) $row['content_type'], 'html')
 		|| preg_match('/content-type:\s*text\/html/i', (string) $row['headers'])
@@ -524,55 +524,55 @@ function wholesale_email_log_is_html($row)
  * Manual "Resend": logged as a new email, and any automatic retry of the original
  * is cancelled so the recipient does not get it twice.
  */
-function wholesale_email_log_resend($id)
+function retails_email_log_resend($id)
 {
-	$row = wholesale_email_log_get($id);
+	$row = retails_email_log_get($id);
 	if (!$row) {
 		return false;
 	}
 
 	global $wpdb;
-	$wpdb->update(wholesale_email_log_table(), array('next_retry' => null), array('id' => (int) $id));
+	$wpdb->update(retails_email_log_table(), array('next_retry' => null), array('id' => (int) $id));
 
-	return wholesale_email_log_send_row($row, false);
+	return retails_email_log_send_row($row, false);
 }
 
 /* ---------------------------------------------------------------------------
  * Admin menu
  * ------------------------------------------------------------------------ */
 
-function wholesale_email_admin_url($tab = 'log', $args = array())
+function retails_email_admin_url($tab = 'log', $args = array())
 {
-	$pages = array('smtp' => 'wholesale-emails-smtp', 'compose' => 'wholesale-emails-compose');
+	$pages = array('smtp' => 'retails-emails-smtp', 'compose' => 'retails-emails-compose');
 
-	return add_query_arg($args, admin_url('admin.php?page=' . (isset($pages[$tab]) ? $pages[$tab] : 'wholesale-emails')));
+	return add_query_arg($args, admin_url('admin.php?page=' . (isset($pages[$tab]) ? $pages[$tab] : 'retails-emails')));
 }
 
-function wholesale_email_failed_recent_count()
+function retails_email_failed_recent_count()
 {
 	global $wpdb;
-	$table = wholesale_email_log_table();
+	$table = retails_email_log_table();
 
 	return (int) $wpdb->get_var($wpdb->prepare("SELECT COUNT(*) FROM {$table} WHERE status = 'failed' AND created_at >= %s", gmdate('Y-m-d H:i:s', time() - DAY_IN_SECONDS)));
 }
 
-function wholesale_email_add_admin_menu()
+function retails_email_add_admin_menu()
 {
-	$failed = wholesale_email_failed_recent_count();
+	$failed = retails_email_failed_recent_count();
 	$badge = $failed ? ' <span class="awaiting-mod count-' . $failed . '"><span class="pending-count">' . number_format_i18n($failed) . '</span></span>' : '';
 
-	add_menu_page('Email Log', 'Emails' . $badge, 'manage_options', 'wholesale-emails', 'wholesale_email_admin_page', 'dashicons-email', 27);
-	add_submenu_page('wholesale-emails', 'Email Log', 'Email Log', 'manage_options', 'wholesale-emails', 'wholesale_email_admin_page');
-	add_submenu_page('wholesale-emails', 'Send Email', 'Send Email', 'manage_options', 'wholesale-emails-compose', 'wholesale_email_admin_page');
-	add_submenu_page('wholesale-emails', 'SMTP Settings', 'SMTP Settings', 'manage_options', 'wholesale-emails-smtp', 'wholesale_email_admin_page');
+	add_menu_page('Email Log', 'Emails' . $badge, 'manage_options', 'retails-emails', 'retails_email_admin_page', 'dashicons-email', 27);
+	add_submenu_page('retails-emails', 'Email Log', 'Email Log', 'manage_options', 'retails-emails', 'retails_email_admin_page');
+	add_submenu_page('retails-emails', 'Send Email', 'Send Email', 'manage_options', 'retails-emails-compose', 'retails_email_admin_page');
+	add_submenu_page('retails-emails', 'SMTP Settings', 'SMTP Settings', 'manage_options', 'retails-emails-smtp', 'retails_email_admin_page');
 }
-add_action('admin_menu', 'wholesale_email_add_admin_menu');
+add_action('admin_menu', 'retails_email_add_admin_menu');
 
 /* ---------------------------------------------------------------------------
  * Admin actions
  * ------------------------------------------------------------------------ */
 
-function wholesale_email_require_admin($nonce_action)
+function retails_email_require_admin($nonce_action)
 {
 	if (!current_user_can('manage_options')) {
 		wp_die(esc_html__('You are not allowed to do this.', 'litsign'), '', array('response' => 403));
@@ -580,11 +580,11 @@ function wholesale_email_require_admin($nonce_action)
 	check_admin_referer($nonce_action);
 }
 
-function wholesale_email_redirect($tab, $notice, $type = 'success', $extra = array())
+function retails_email_redirect($tab, $notice, $type = 'success', $extra = array())
 {
-	set_transient('wholesale_email_notice_' . get_current_user_id(), array('type' => $type, 'message' => $notice), MINUTE_IN_SECONDS);
+	set_transient('retails_email_notice_' . get_current_user_id(), array('type' => $type, 'message' => $notice), MINUTE_IN_SECONDS);
 	$back = wp_get_referer();
-	$target = wholesale_email_admin_url($tab);
+	$target = retails_email_admin_url($tab);
 	parse_str((string) wp_parse_url($target, PHP_URL_QUERY), $target_query);
 	parse_str((string) wp_parse_url((string) $back, PHP_URL_QUERY), $back_query);
 	$same_page = $back && isset($back_query['page'], $target_query['page']) && $back_query['page'] === $target_query['page'];
@@ -593,13 +593,13 @@ function wholesale_email_redirect($tab, $notice, $type = 'success', $extra = arr
 	exit;
 }
 
-function wholesale_handle_save_smtp_settings()
+function retails_handle_save_smtp_settings()
 {
-	wholesale_email_require_admin('wholesale_save_smtp');
+	retails_email_require_admin('retails_save_smtp');
 
 	$post = wp_unslash($_POST);
-	$current = wholesale_mail_settings();
-	$providers = wholesale_smtp_providers();
+	$current = retails_mail_settings();
+	$providers = retails_smtp_providers();
 
 	$host = trim(sanitize_text_field(isset($post['host']) ? $post['host'] : ''));
 	$host = preg_replace('#^[a-z]+://#i', '', $host);
@@ -624,7 +624,7 @@ function wholesale_handle_save_smtp_settings()
 		'encryption' => $encryption,
 		'auth' => !empty($post['auth']),
 		'username' => trim(sanitize_text_field(isset($post['username']) ? $post['username'] : '')),
-		'password' => wholesale_smtp_encrypt($password),
+		'password' => retails_smtp_encrypt($password),
 		'from_email' => $from_email,
 		'from_name' => sanitize_text_field(isset($post['from_name']) ? $post['from_name'] : ''),
 		'log_enabled' => !empty($post['log_enabled']),
@@ -633,32 +633,32 @@ function wholesale_handle_save_smtp_settings()
 		'notify_recipients' => implode(', ', $recipients),
 	);
 
-	update_option('wholesale_mail_settings', $settings, false);
+	update_option('retails_mail_settings', $settings, false);
 
 	$message = 'SMTP settings saved.';
 	if ($settings['enabled'] && '' === $host) {
-		wholesale_email_redirect('smtp', 'Settings saved, but SMTP stays off until you enter an SMTP host.', 'warning');
+		retails_email_redirect('smtp', 'Settings saved, but SMTP stays off until you enter an SMTP host.', 'warning');
 	}
 	if (count($recipients) < count(array_unique($recipient_input))) {
-		wholesale_email_redirect('smtp', 'Settings saved, but some notification recipients were not valid email addresses and were left out.', 'warning');
+		retails_email_redirect('smtp', 'Settings saved, but some notification recipients were not valid email addresses and were left out.', 'warning');
 	}
 	if (isset($post['from_email']) && '' !== trim($post['from_email']) && '' === $from_email) {
-		wholesale_email_redirect('smtp', 'Settings saved, but the From email address was not valid, so the site admin email is used.', 'warning');
+		retails_email_redirect('smtp', 'Settings saved, but the From email address was not valid, so the site admin email is used.', 'warning');
 	}
-	wholesale_email_redirect('smtp', $message . ' Send a test email to confirm delivery.');
+	retails_email_redirect('smtp', $message . ' Send a test email to confirm delivery.');
 }
-add_action('admin_post_wholesale_save_smtp', 'wholesale_handle_save_smtp_settings');
+add_action('admin_post_retails_save_smtp', 'retails_handle_save_smtp_settings');
 
-function wholesale_handle_test_email()
+function retails_handle_test_email()
 {
-	wholesale_email_require_admin('wholesale_send_test_email');
+	retails_email_require_admin('retails_send_test_email');
 
-	$to = isset($_POST['wholesale_test_email_to']) ? sanitize_email(wp_unslash($_POST['wholesale_test_email_to'])) : '';
+	$to = isset($_POST['retails_test_email_to']) ? sanitize_email(wp_unslash($_POST['retails_test_email_to'])) : '';
 	if (!is_email($to)) {
-		wholesale_email_redirect('smtp', 'Enter a valid email address to send the test to.', 'error');
+		retails_email_redirect('smtp', 'Enter a valid email address to send the test to.', 'error');
 	}
 
-	$status = wholesale_mail_status();
+	$status = retails_mail_status();
 	$html = '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1d2327;">'
 		. '<h2 style="margin:0 0 12px;font-size:20px;">Email delivery is working</h2>'
 		. '<p>This is a test email from <strong>' . esc_html(get_bloginfo('name')) . '</strong>. If you are reading this, payment requests and order emails can reach this inbox.</p>'
@@ -667,26 +667,26 @@ function wholesale_handle_test_email()
 		. '<tr><td style="padding:4px 12px 4px 0;">From</td><td>' . esc_html($status['from']) . '</td></tr>'
 		. '<tr><td style="padding:4px 12px 4px 0;">Time</td><td>' . esc_html(wp_date(get_option('date_format') . ' ' . get_option('time_format'))) . '</td></tr>'
 		. '</table></div>';
-	$result = wholesale_send_html_mail($to, 'Test email from ' . get_bloginfo('name'), $html, array('Content-Type: text/html; charset=UTF-8'));
+	$result = retails_send_html_mail($to, 'Test email from ' . get_bloginfo('name'), $html, array('Content-Type: text/html; charset=UTF-8'));
 
 	if (true === $result) {
-		wholesale_email_redirect('smtp', sprintf('Test email accepted for delivery to %s. If it does not arrive within a few minutes, check the spam folder.', $to), 'success', array('test_to' => rawurlencode($to)));
+		retails_email_redirect('smtp', sprintf('Test email accepted for delivery to %s. If it does not arrive within a few minutes, check the spam folder.', $to), 'success', array('test_to' => rawurlencode($to)));
 	}
-	wholesale_email_redirect('smtp', 'Test email failed: ' . $result, 'error', array('test_to' => rawurlencode($to)));
+	retails_email_redirect('smtp', 'Test email failed: ' . $result, 'error', array('test_to' => rawurlencode($to)));
 }
-add_action('admin_post_wholesale_send_test_email', 'wholesale_handle_test_email');
+add_action('admin_post_retails_send_test_email', 'retails_handle_test_email');
 
 /**
  * Connect and log in to the SMTP server without sending anything, and keep the
  * conversation (with credentials hidden) to show on the settings page.
  */
-function wholesale_handle_test_smtp_connection()
+function retails_handle_test_smtp_connection()
 {
-	wholesale_email_require_admin('wholesale_test_smtp');
+	retails_email_require_admin('retails_test_smtp');
 
-	$settings = wholesale_mail_settings();
+	$settings = retails_mail_settings();
 	if (!$settings['enabled'] || '' === $settings['host']) {
-		wholesale_email_redirect('smtp', 'Choose Custom SMTP and save an SMTP host first.', 'error');
+		retails_email_redirect('smtp', 'Choose Custom SMTP and save an SMTP host first.', 'error');
 	}
 
 	require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
@@ -695,7 +695,7 @@ function wholesale_handle_test_smtp_connection()
 
 	$transcript = array();
 	$mail = new PHPMailer\PHPMailer\PHPMailer(true);
-	wholesale_apply_smtp($mail, $settings);
+	retails_apply_smtp($mail, $settings);
 	$mail->Timeout = 15;
 	$mail->SMTPDebug = 2;
 	$mail->Debugoutput = static function ($line) use (&$transcript) {
@@ -723,20 +723,20 @@ function wholesale_handle_test_smtp_connection()
 	}
 	$mail->smtpClose();
 
-	set_transient('wholesale_smtp_transcript_' . get_current_user_id(), array_slice($transcript, -60), 10 * MINUTE_IN_SECONDS);
+	set_transient('retails_smtp_transcript_' . get_current_user_id(), array_slice($transcript, -60), 10 * MINUTE_IN_SECONDS);
 	if ($ok) {
-		wholesale_email_redirect('smtp', sprintf('Connected and logged in to %s:%d successfully.', $settings['host'], $settings['port']));
+		retails_email_redirect('smtp', sprintf('Connected and logged in to %s:%d successfully.', $settings['host'], $settings['port']));
 	}
-	wholesale_email_redirect('smtp', 'Could not connect to the SMTP server: ' . ($error ? $error : 'unknown error') . ' See the connection log below.', 'error');
+	retails_email_redirect('smtp', 'Could not connect to the SMTP server: ' . ($error ? $error : 'unknown error') . ' See the connection log below.', 'error');
 }
-add_action('admin_post_wholesale_test_smtp', 'wholesale_handle_test_smtp_connection');
+add_action('admin_post_retails_test_smtp', 'retails_handle_test_smtp_connection');
 
-function wholesale_handle_email_log_action()
+function retails_handle_email_log_action()
 {
-	wholesale_email_require_admin('wholesale_email_log');
+	retails_email_require_admin('retails_email_log');
 
 	global $wpdb;
-	$table = wholesale_email_log_table();
+	$table = retails_email_log_table();
 	$request = wp_unslash($_REQUEST);
 	$op = isset($request['op']) ? sanitize_key($request['op']) : '';
 	if ('' === $op && isset($request['bulk_op'])) {
@@ -746,39 +746,39 @@ function wholesale_handle_email_log_action()
 
 	if ('clear' === $op) {
 		$wpdb->query("TRUNCATE TABLE {$table}");
-		wholesale_email_redirect('log', 'The email log was cleared.');
+		retails_email_redirect('log', 'The email log was cleared.');
 	}
 	if (!$ids) {
-		wholesale_email_redirect('log', 'Select at least one email first.', 'warning');
+		retails_email_redirect('log', 'Select at least one email first.', 'warning');
 	}
 
 	if ('delete' === $op) {
 		$wpdb->query("DELETE FROM {$table} WHERE id IN (" . implode(',', $ids) . ')');
-		wholesale_email_redirect('log', sprintf(_n('%d email deleted from the log.', '%d emails deleted from the log.', count($ids), 'litsign'), count($ids)));
+		retails_email_redirect('log', sprintf(_n('%d email deleted from the log.', '%d emails deleted from the log.', count($ids), 'litsign'), count($ids)));
 	}
 
 	if ('resend' === $op) {
 		$sent = 0;
 		foreach (array_slice($ids, 0, 50) as $id) {
-			$sent += wholesale_email_log_resend($id) ? 1 : 0;
+			$sent += retails_email_log_resend($id) ? 1 : 0;
 		}
 		$failed = min(50, count($ids)) - $sent;
 		if ($failed) {
-			wholesale_email_redirect('log', sprintf('%d resent, %d failed. The new attempts are at the top of the log.', $sent, $failed), $sent ? 'warning' : 'error');
+			retails_email_redirect('log', sprintf('%d resent, %d failed. The new attempts are at the top of the log.', $sent, $failed), $sent ? 'warning' : 'error');
 		}
-		wholesale_email_redirect('log', sprintf(_n('%d email resent. The new attempt is at the top of the log.', '%d emails resent. The new attempts are at the top of the log.', $sent, 'litsign'), $sent));
+		retails_email_redirect('log', sprintf(_n('%d email resent. The new attempt is at the top of the log.', '%d emails resent. The new attempts are at the top of the log.', $sent, 'litsign'), $sent));
 	}
 
-	wholesale_email_redirect('log', 'Choose an action.', 'warning');
+	retails_email_redirect('log', 'Choose an action.', 'warning');
 }
-add_action('admin_post_wholesale_email_log', 'wholesale_handle_email_log_action');
+add_action('admin_post_retails_email_log', 'retails_handle_email_log_action');
 
-function wholesale_ajax_email_log_view()
+function retails_ajax_email_log_view()
 {
-	if (!current_user_can('manage_options') || !check_ajax_referer('wholesale_email_log', 'nonce', false)) {
+	if (!current_user_can('manage_options') || !check_ajax_referer('retails_email_log', 'nonce', false)) {
 		wp_send_json_error('Not allowed.', 403);
 	}
-	$row = wholesale_email_log_get(isset($_POST['id']) ? absint($_POST['id']) : 0);
+	$row = retails_email_log_get(isset($_POST['id']) ? absint($_POST['id']) : 0);
 	if (!$row) {
 		wp_send_json_error('This email is no longer in the log.', 404);
 	}
@@ -792,22 +792,22 @@ function wholesale_ajax_email_log_view()
 		'from' => $row['from_email'],
 		'mailer' => $row['mailer'],
 		'source' => $row['source'],
-		'status' => wholesale_email_status_meta($row['status'], $row)['key'],
+		'status' => retails_email_status_meta($row['status'], $row)['key'],
 		'error' => (string) $row['error'] . (!empty($row['next_retry']) ? ' Will try again ' . get_date_from_gmt($row['next_retry'], 'M j, g:i a') . '.' : ''),
 		'headers' => (string) $row['headers'],
 		'attachments' => implode(', ', array_map('basename', array_filter(explode("\n", (string) $row['attachments'])))),
-		'is_html' => (bool) wholesale_email_log_is_html($row),
+		'is_html' => (bool) retails_email_log_is_html($row),
 		'message' => (string) $row['message'],
-		'resend_url' => wp_nonce_url(admin_url('admin-post.php?action=wholesale_email_log&op=resend&id=' . (int) $row['id']), 'wholesale_email_log'),
+		'resend_url' => wp_nonce_url(admin_url('admin-post.php?action=retails_email_log&op=resend&id=' . (int) $row['id']), 'retails_email_log'),
 	));
 }
-add_action('wp_ajax_wholesale_email_log_view', 'wholesale_ajax_email_log_view');
+add_action('wp_ajax_retails_email_log_view', 'retails_ajax_email_log_view');
 
 /* ---------------------------------------------------------------------------
  * Admin page
  * ------------------------------------------------------------------------ */
 
-function wholesale_email_status_meta($status, $row = array())
+function retails_email_status_meta($status, $row = array())
 {
 	if ('failed' === $status && !empty($row['next_retry'])) {
 		return array('key' => 'retrying', 'label' => 'Retrying', 'title' => sprintf('Attempt %d failed. Trying again %s.', (int) $row['attempts'], get_date_from_gmt($row['next_retry'], 'M j, g:i a')));
@@ -826,21 +826,21 @@ function wholesale_email_status_meta($status, $row = array())
 	return $meta;
 }
 
-function wholesale_email_admin_page()
+function retails_email_admin_page()
 {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
 
 	$page_slug = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
-	$tab = 'wholesale-emails-smtp' === $page_slug ? 'smtp' : ('wholesale-emails-compose' === $page_slug ? 'compose' : 'log');
-	$notice_key = 'wholesale_email_notice_' . get_current_user_id();
+	$tab = 'retails-emails-smtp' === $page_slug ? 'smtp' : ('retails-emails-compose' === $page_slug ? 'compose' : 'log');
+	$notice_key = 'retails_email_notice_' . get_current_user_id();
 	$notice = get_transient($notice_key);
 	delete_transient($notice_key);
-	$status = wholesale_mail_status();
+	$status = retails_mail_status();
 	?>
 	<div class="wrap wsm">
-		<?php wholesale_email_admin_styles(); ?>
+		<?php retails_email_admin_styles(); ?>
 		<header class="wsm-header">
 			<div>
 				<h1 class="wsm-title"><span class="dashicons dashicons-email"></span> Emails</h1>
@@ -859,9 +859,9 @@ function wholesale_email_admin_page()
 		</header>
 
 		<nav class="wsm-tabs">
-			<a href="<?php echo esc_url(wholesale_email_admin_url('log')); ?>" class="<?php echo 'log' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-list-view"></span> Email Log</a>
-			<a href="<?php echo esc_url(wholesale_email_admin_url('compose')); ?>" class="<?php echo 'compose' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-edit"></span> Send Email</a>
-			<a href="<?php echo esc_url(wholesale_email_admin_url('smtp')); ?>" class="<?php echo 'smtp' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-admin-generic"></span> SMTP Settings</a>
+			<a href="<?php echo esc_url(retails_email_admin_url('log')); ?>" class="<?php echo 'log' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-list-view"></span> Email Log</a>
+			<a href="<?php echo esc_url(retails_email_admin_url('compose')); ?>" class="<?php echo 'compose' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-edit"></span> Send Email</a>
+			<a href="<?php echo esc_url(retails_email_admin_url('smtp')); ?>" class="<?php echo 'smtp' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-admin-generic"></span> SMTP Settings</a>
 		</nav>
 
 		<?php if (is_array($notice)) : ?>
@@ -872,27 +872,27 @@ function wholesale_email_admin_page()
 			<div class="wsm-alert is-warning">
 				<strong>Emails are not going through SMTP.</strong> <?php echo esc_html($status['problem']); ?>
 				Without SMTP, Gmail and Outlook often reject these emails or put them in spam.
-				<?php if ('log' === $tab) : ?><a href="<?php echo esc_url(wholesale_email_admin_url('smtp')); ?>">Set up SMTP →</a><?php endif; ?>
+				<?php if ('log' === $tab) : ?><a href="<?php echo esc_url(retails_email_admin_url('smtp')); ?>">Set up SMTP →</a><?php endif; ?>
 			</div>
 		<?php endif; ?>
 
 		<?php
 		if ('smtp' === $tab) {
-			wholesale_email_smtp_tab($status);
+			retails_email_smtp_tab($status);
 		} elseif ('compose' === $tab) {
-			wholesale_email_compose_tab();
+			retails_email_compose_tab();
 		} else {
-			wholesale_email_log_tab();
+			retails_email_log_tab();
 		}
 		?>
 	</div>
 	<?php
 }
 
-function wholesale_email_log_tab()
+function retails_email_log_tab()
 {
 	global $wpdb;
-	$table = wholesale_email_log_table();
+	$table = retails_email_log_table();
 
 	$filter_status = isset($_GET['status']) ? sanitize_key(wp_unslash($_GET['status'])) : '';
 	$search = isset($_GET['s']) ? trim(sanitize_text_field(wp_unslash($_GET['s']))) : '';
@@ -935,8 +935,8 @@ function wholesale_email_log_tab()
 	$finished = $counts['sent'] + $counts['failed'];
 	$rate = $finished ? round($counts['sent'] / $finished * 100, 1) : null;
 	$format = get_option('date_format') . ' ' . get_option('time_format');
-	$nonce = wp_create_nonce('wholesale_email_log');
-	$base = wholesale_email_admin_url('log');
+	$nonce = wp_create_nonce('retails_email_log');
+	$base = retails_email_admin_url('log');
 	$filter_url = static function ($args) use ($base, $search, $period) {
 		return add_query_arg(array_filter(array_merge(array('s' => $search, 'period' => $period), $args), 'strlen'), $base);
 	};
@@ -962,7 +962,7 @@ function wholesale_email_log_tab()
 
 	<section class="wsm-card">
 		<form class="wsm-toolbar" method="get" action="<?php echo esc_url(admin_url('admin.php')); ?>">
-			<input type="hidden" name="page" value="wholesale-emails">
+			<input type="hidden" name="page" value="retails-emails">
 			<div class="wsm-segments" role="tablist">
 				<?php foreach (array('' => 'All', 'sent' => 'Sent', 'failed' => 'Failed', 'pending' => 'No result') as $key => $label) : ?>
 					<a href="<?php echo esc_url($filter_url(array('status' => $key))); ?>" class="<?php echo $key === $filter_status ? 'is-active' : ''; ?>">
@@ -987,8 +987,8 @@ function wholesale_email_log_tab()
 		</form>
 
 		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" id="wsm-bulk-form">
-			<input type="hidden" name="action" value="wholesale_email_log">
-			<?php wp_nonce_field('wholesale_email_log'); ?>
+			<input type="hidden" name="action" value="retails_email_log">
+			<?php wp_nonce_field('retails_email_log'); ?>
 			<div class="wsm-bulkbar">
 				<select name="bulk_op">
 					<option value="">Bulk actions</option>
@@ -1026,7 +1026,7 @@ function wholesale_email_log_tab()
 							</td></tr>
 						<?php endif; ?>
 						<?php foreach ($rows as $row) :
-							$meta = wholesale_email_status_meta($row['status'], $row);
+							$meta = retails_email_status_meta($row['status'], $row);
 							$time = strtotime($row['created_at'] . ' UTC');
 							?>
 							<tr class="is-<?php echo esc_attr($row['status']); ?>">
@@ -1052,8 +1052,8 @@ function wholesale_email_log_tab()
 								<td class="wsm-col-actions">
 									<div class="wsm-actions">
 										<button type="button" class="wsm-icon-btn" data-view="<?php echo (int) $row['id']; ?>" title="View email"><span class="dashicons dashicons-visibility"></span></button>
-										<a class="wsm-icon-btn" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=wholesale_email_log&op=resend&id=' . (int) $row['id']), 'wholesale_email_log')); ?>" data-confirm="Send this email again to <?php echo esc_attr($row['to_email']); ?>?" title="Resend"><span class="dashicons dashicons-controls-repeat"></span></a>
-										<a class="wsm-icon-btn is-danger" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=wholesale_email_log&op=delete&id=' . (int) $row['id']), 'wholesale_email_log')); ?>" data-confirm="Delete this email from the log?" title="Delete"><span class="dashicons dashicons-trash"></span></a>
+										<a class="wsm-icon-btn" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=retails_email_log&op=resend&id=' . (int) $row['id']), 'retails_email_log')); ?>" data-confirm="Send this email again to <?php echo esc_attr($row['to_email']); ?>?" title="Resend"><span class="dashicons dashicons-controls-repeat"></span></a>
+										<a class="wsm-icon-btn is-danger" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=retails_email_log&op=delete&id=' . (int) $row['id']), 'retails_email_log')); ?>" data-confirm="Delete this email from the log?" title="Delete"><span class="dashicons dashicons-trash"></span></a>
 									</div>
 								</td>
 							</tr>
@@ -1155,7 +1155,7 @@ function wholesale_email_log_tab()
 
 		function open(id) {
 			var body = new FormData();
-			body.append('action', 'wholesale_email_log_view');
+			body.append('action', 'retails_email_log_view');
 			body.append('nonce', nonce);
 			body.append('id', id);
 			modal.hidden = false;
@@ -1207,9 +1207,9 @@ function wholesale_email_log_tab()
  * Send a custom email to chosen people. Each recipient gets their own copy so
  * nobody sees the other addresses.
  */
-function wholesale_handle_compose_email()
+function retails_handle_compose_email()
 {
-	wholesale_email_require_admin('wholesale_compose_email');
+	retails_email_require_admin('retails_compose_email');
 
 	$post = wp_unslash($_POST);
 	$input = preg_split('/[\s,;]+/', isset($post['to']) ? (string) $post['to'] : '', -1, PREG_SPLIT_NO_EMPTY);
@@ -1219,16 +1219,16 @@ function wholesale_handle_compose_email()
 	$reply_to = sanitize_email(isset($post['reply_to']) ? $post['reply_to'] : '');
 
 	// Keep what was typed so a mistake does not lose the message.
-	set_transient('wholesale_email_compose_' . get_current_user_id(), array('to' => isset($post['to']) ? (string) $post['to'] : '', 'subject' => $subject, 'message' => $body, 'reply_to' => $reply_to), 10 * MINUTE_IN_SECONDS);
+	set_transient('retails_email_compose_' . get_current_user_id(), array('to' => isset($post['to']) ? (string) $post['to'] : '', 'subject' => $subject, 'message' => $body, 'reply_to' => $reply_to), 10 * MINUTE_IN_SECONDS);
 
 	if (!$recipients) {
-		wholesale_email_redirect('compose', 'Enter at least one valid recipient email address.', 'error');
+		retails_email_redirect('compose', 'Enter at least one valid recipient email address.', 'error');
 	}
 	if (count($recipients) > 50) {
-		wholesale_email_redirect('compose', 'Send to 50 addresses or fewer at a time.', 'error');
+		retails_email_redirect('compose', 'Send to 50 addresses or fewer at a time.', 'error');
 	}
 	if ('' === $subject || '' === trim(wp_strip_all_tags($body))) {
-		wholesale_email_redirect('compose', 'Add a subject and a message.', 'error');
+		retails_email_redirect('compose', 'Add a subject and a message.', 'error');
 	}
 
 	$headers = array('Content-Type: text/html; charset=UTF-8');
@@ -1240,7 +1240,7 @@ function wholesale_handle_compose_email()
 	$sent = 0;
 	$errors = array();
 	foreach ($recipients as $to) {
-		$result = wholesale_send_html_mail($to, $subject, $html, $headers);
+		$result = retails_send_html_mail($to, $subject, $html, $headers);
 		if (true === $result) {
 			$sent++;
 		} else {
@@ -1249,24 +1249,24 @@ function wholesale_handle_compose_email()
 	}
 
 	if (!$errors) {
-		delete_transient('wholesale_email_compose_' . get_current_user_id());
-		wholesale_email_redirect('log', sprintf(_n('Email sent to %d recipient.', 'Email sent to %d recipients.', $sent, 'litsign'), $sent));
+		delete_transient('retails_email_compose_' . get_current_user_id());
+		retails_email_redirect('log', sprintf(_n('Email sent to %d recipient.', 'Email sent to %d recipients.', $sent, 'litsign'), $sent));
 	}
-	wholesale_email_redirect('compose', sprintf('%d sent, %d failed: %s', $sent, count($errors), implode('; ', $errors)), $sent ? 'warning' : 'error');
+	retails_email_redirect('compose', sprintf('%d sent, %d failed: %s', $sent, count($errors), implode('; ', $errors)), $sent ? 'warning' : 'error');
 }
-add_action('admin_post_wholesale_compose_email', 'wholesale_handle_compose_email');
+add_action('admin_post_retails_compose_email', 'retails_handle_compose_email');
 
-function wholesale_email_compose_tab()
+function retails_email_compose_tab()
 {
-	$key = 'wholesale_email_compose_' . get_current_user_id();
+	$key = 'retails_email_compose_' . get_current_user_id();
 	$saved = get_transient($key);
 	delete_transient($key);
 	$saved = is_array($saved) ? $saved : array('to' => '', 'subject' => '', 'message' => '', 'reply_to' => '');
-	$status = wholesale_mail_status();
+	$status = retails_mail_status();
 	?>
 	<form class="wsm-card wsm-form wsm-compose" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-		<input type="hidden" name="action" value="wholesale_compose_email">
-		<?php wp_nonce_field('wholesale_compose_email'); ?>
+		<input type="hidden" name="action" value="retails_compose_email">
+		<?php wp_nonce_field('retails_compose_email'); ?>
 		<div class="wsm-section">
 			<div class="wsm-section-head">
 				<div>
@@ -1298,12 +1298,12 @@ function wholesale_email_compose_tab()
 	<?php
 }
 
-function wholesale_email_smtp_tab($status)
+function retails_email_smtp_tab($status)
 {
-	$settings = wholesale_mail_settings();
-	$providers = wholesale_smtp_providers();
+	$settings = retails_mail_settings();
+	$providers = retails_smtp_providers();
 	$provider = isset($providers[$settings['provider']]) ? $settings['provider'] : 'custom';
-	$transcript_key = 'wholesale_smtp_transcript_' . get_current_user_id();
+	$transcript_key = 'retails_smtp_transcript_' . get_current_user_id();
 	$transcript = get_transient($transcript_key);
 	delete_transient($transcript_key);
 	$test_to = isset($_GET['test_to']) ? sanitize_email(rawurldecode(wp_unslash($_GET['test_to']))) : '';
@@ -1314,8 +1314,8 @@ function wholesale_email_smtp_tab($status)
 	?>
 	<div class="wsm-grid">
 		<form class="wsm-card wsm-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" autocomplete="off">
-			<input type="hidden" name="action" value="wholesale_save_smtp">
-			<?php wp_nonce_field('wholesale_save_smtp'); ?>
+			<input type="hidden" name="action" value="retails_save_smtp">
+			<?php wp_nonce_field('retails_save_smtp'); ?>
 
 			<?php if ('wp-config' === $settings['source']) : ?>
 				<div class="wsm-alert is-info">These values come from <code>wp-config.php</code>. Once you save here, this page's settings are used instead.</div>
@@ -1462,7 +1462,7 @@ function wholesale_email_smtp_tab($status)
 					</div>
 				</div>
 				<label class="wsm-label" for="wsm-recipients">Notification recipients</label>
-				<textarea id="wsm-recipients" name="notify_recipients" rows="3" class="wsm-textarea" spellcheck="false"><?php echo esc_textarea(implode("\n", wholesale_contact_admin_recipients())); ?></textarea>
+				<textarea id="wsm-recipients" name="notify_recipients" rows="3" class="wsm-textarea" spellcheck="false"><?php echo esc_textarea(implode("\n", retails_contact_admin_recipients())); ?></textarea>
 				<p class="wsm-muted">One email address per line (or separated by commas). Contact forms and quote requests send each address its own copy, so each one shows as its own row in the Email Log.</p>
 			</div>
 
@@ -1490,12 +1490,12 @@ function wholesale_email_smtp_tab($status)
 					</div>
 				</div>
 				<dl class="wsm-kv">
-					<div><dt>From</dt><dd><?php echo esc_html(wholesale_mail_from_name() . ' <' . $status['from'] . '>'); ?></dd></div>
+					<div><dt>From</dt><dd><?php echo esc_html(retails_mail_from_name() . ' <' . $status['from'] . '>'); ?></dd></div>
 					<div><dt>Settings from</dt><dd><?php echo 'admin' === $status['source'] ? 'This page' : 'wp-config.php'; ?></dd></div>
 				</dl>
 				<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-					<input type="hidden" name="action" value="wholesale_test_smtp">
-					<?php wp_nonce_field('wholesale_test_smtp'); ?>
+					<input type="hidden" name="action" value="retails_test_smtp">
+					<?php wp_nonce_field('retails_test_smtp'); ?>
 					<button type="submit" class="button wsm-block" <?php disabled(!$settings['enabled'] || '' === $settings['host']); ?>><span class="dashicons dashicons-admin-plugins"></span> Test connection</button>
 				</form>
 				<p class="wsm-muted">Logs in to the saved SMTP server without sending an email (Custom SMTP only).</p>
@@ -1504,10 +1504,10 @@ function wholesale_email_smtp_tab($status)
 			<div class="wsm-card">
 				<h3>Send a test email</h3>
 				<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-					<input type="hidden" name="action" value="wholesale_send_test_email">
-					<?php wp_nonce_field('wholesale_send_test_email'); ?>
-					<label class="wsm-label" for="wholesale_test_email_to">Recipient</label>
-					<input type="email" id="wholesale_test_email_to" name="wholesale_test_email_to" value="<?php echo esc_attr($test_to); ?>" required>
+					<input type="hidden" name="action" value="retails_send_test_email">
+					<?php wp_nonce_field('retails_send_test_email'); ?>
+					<label class="wsm-label" for="retails_test_email_to">Recipient</label>
+					<input type="email" id="retails_test_email_to" name="retails_test_email_to" value="<?php echo esc_attr($test_to); ?>" required>
 					<button type="submit" class="button button-primary wsm-block"><span class="dashicons dashicons-email-alt"></span> Send test email</button>
 				</form>
 				<p class="wsm-muted">Use an address outside your own domain (for example a personal Gmail) to see what customers receive. Save your settings first.</p>
@@ -1566,7 +1566,7 @@ function wholesale_email_smtp_tab($status)
 	<?php
 }
 
-function wholesale_email_admin_styles()
+function retails_email_admin_styles()
 {
 	?>
 	<style>

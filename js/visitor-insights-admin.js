@@ -221,16 +221,16 @@
     }
 
     const chat = event.target.closest('[data-chat-visitor]');
-    if (chat && window.wholesaleVIAdmin) {
+    if (chat && window.retailsVIAdmin) {
       const text = window.prompt('Message to send through Live Chat:', 'Hi! 👋 Can I help you find the right sign?');
       if (!text || !text.trim()) return;
       chat.disabled = true;
       const form = new FormData();
-      form.append('action', 'wholesale_vi_chat_message');
-      form.append('nonce', window.wholesaleVIAdmin.nonce);
+      form.append('action', 'retails_vi_chat_message');
+      form.append('nonce', window.retailsVIAdmin.nonce);
       form.append('visitor', chat.dataset.chatVisitor);
       form.append('body', text.trim());
-      fetch(window.wholesaleVIAdmin.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: form })
+      fetch(window.retailsVIAdmin.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: form })
         .then((response) => response.json())
         .then((result) => {
           chat.textContent = result && result.success ? 'Sent ✓' : 'Failed';
@@ -261,7 +261,7 @@
   // ------------------------------------------------------------------
 
   const body = document.querySelector('[data-live-body]');
-  const settings = window.wholesaleVIAdmin;
+  const settings = window.retailsVIAdmin;
   const status = document.querySelector('[data-live-status]');
   if (!body || !settings || !status) return;
 
@@ -335,7 +335,7 @@
     if (busy || paused || expired || document.hidden) return;
     busy = true;
     const data = new FormData();
-    data.append('action', 'wholesale_vi_refresh');
+    data.append('action', 'retails_vi_refresh');
     data.append('nonce', settings.nonce);
     data.append('query', window.location.search.replace(/^\?/, ''));
     data.append('version', force ? '' : version);

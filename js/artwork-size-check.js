@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  var config = window.wholesaleAsyncUpload || {};
+  var config = window.retailsAsyncUpload || {};
   if (!config.ajaxUrl || !window.FormData || !window.fetch || !window.WeakMap) return;
 
   var states = new WeakMap(); // artwork input => { token, key, result, pending, box }
@@ -102,7 +102,7 @@
 
     var data = new FormData();
     fields.forEach(function (pair) { data.append(pair[0], pair[1]); });
-    data.set("action", "wholesale_artwork_check");
+    data.set("action", "retails_artwork_check");
     data.set("token", state.token);
 
     var request = fetch(config.ajaxUrl, { method: "POST", body: data, credentials: "same-origin" })

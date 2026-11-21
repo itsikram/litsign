@@ -18,15 +18,15 @@ $signup_error = static function ($message) {
 // (this page is never page-cached: inc/performance.php lists it).
 $signup_opened = static function () {
     $t = (string) time();
-    return $t . '.' . substr(wp_hash('wholesale_signup_t' . $t), 0, 12);
+    return $t . '.' . substr(wp_hash('retails_signup_t' . $t), 0, 12);
 };
 
 if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['email'])) {
-    check_admin_referer('wholesale_signup', 'wholesale_signup_nonce');
+    check_admin_referer('retails_signup', 'retails_signup_nonce');
 
     $opened = explode('.', isset($_POST['sso_signup_t']) ? (string) wp_unslash($_POST['sso_signup_t']) : '');
     $opened_ok = 2 === count($opened) && ctype_digit($opened[0])
-        && hash_equals(substr(wp_hash('wholesale_signup_t' . $opened[0]), 0, 12), $opened[1])
+        && hash_equals(substr(wp_hash('retails_signup_t' . $opened[0]), 0, 12), $opened[1])
         && time() - (int) $opened[0] >= 2;
     if (!$opened_ok || '' !== trim((string) ($_POST['sso_signup_note'] ?? ''))) {
         $signup_error('Please wait a moment, then press Sign Up again.');
@@ -104,7 +104,7 @@ get_header();
                 </div>
                 <div class="card-body">
                     <form method="POST">
-                        <?php wp_nonce_field('wholesale_signup', 'wholesale_signup_nonce'); ?>
+                        <?php wp_nonce_field('retails_signup', 'retails_signup_nonce'); ?>
                         <input type="hidden" name="sso_signup_t" value="<?php echo esc_attr($signup_opened()); ?>">
                         <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
                             <label>Leave this empty <input type="text" name="sso_signup_note" value="" tabindex="-1" autocomplete="off"></label>

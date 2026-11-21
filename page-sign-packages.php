@@ -1,20 +1,20 @@
 <?php
 /**
  * Sign packages (/sign-packages/): quote-based project bundles from inc/buying-journey.php
- * (wholesale_packages()). Each item links to its real product page; the quote button
+ * (retails_packages()). Each item links to its real product page; the quote button
  * passes the package to /contact/ (?interest=mixed&item=<package>). No bundle discount
  * and no package price are shown: every item is quoted at its normal price.
  *
  * @package litsign
  */
 
-$packages = wholesale_packages();
+$packages = retails_packages();
 get_header();
 ?>
 
 <main id="primary" class="site-main pkg-page">
 	<div class="container">
-		<?php wholesale_breadcrumbs(); ?>
+		<?php retails_breadcrumbs(); ?>
 
 		<header class="pkg-hero">
 			<h1>Sign Packages for Openings, Events &amp; New Storefronts</h1>
@@ -29,7 +29,7 @@ get_header();
 					<h3>What’s in it</h3>
 					<ul class="pkg-items">
 						<?php foreach ($package['contents'] as $item) :
-							$product = wholesale_package_product($item[0]);
+							$product = retails_package_product($item[0]);
 							$image = $product ? get_the_post_thumbnail_url($product, 'thumbnail') : '';
 							?>
 							<li class="pkg-item">
@@ -56,12 +56,12 @@ get_header();
 							<li><?php echo esc_html($exclude); ?></li>
 						<?php endforeach; ?>
 					</ul>
-					<a class="pkg-cta" href="<?php echo esc_url(wholesale_quote_url('mixed', $key)); ?>">Get a quote for this package</a>
+					<a class="pkg-cta" href="<?php echo esc_url(retails_quote_url('mixed', $key)); ?>">Get a quote for this package</a>
 				</section>
 			<?php endforeach; ?>
 		</div>
 
-		<p class="pkg-note">Need only some of the items, or something else? <a href="<?php echo esc_url(wholesale_quote_url('mixed')); ?>">Describe your project</a> or call <a href="tel:+18664362101">866-436-2101</a>. Shipping is quoted with your items and sales tax is added at checkout. We build and ship; we don’t install.</p>
+		<p class="pkg-note">Need only some of the items, or something else? <a href="<?php echo esc_url(retails_quote_url('mixed')); ?>">Describe your project</a> or call <a href="tel:+18664362101">866-436-2101</a>. Shipping is quoted with your items and sales tax is added at checkout. We build and ship; we don’t install.</p>
 	</div>
 </main>
 

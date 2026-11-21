@@ -90,5 +90,5 @@
     });
   };
   finishing();
-  document.addEventListener('wholesale:product-swapped', finishing);
+  document.addEventListener('retails:product-swapped', finishing);
 })();

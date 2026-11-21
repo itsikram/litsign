@@ -18,10 +18,10 @@ if (!defined('ABSPATH')) {
 /**
  * Product IDs in an order, in order of appearance.
  */
-function wholesale_order_product_ids($order_id)
+function retails_order_product_ids($order_id)
 {
 	$ids = array();
-	foreach (wholesale_decode_order_meta_array(get_post_meta($order_id, 'product_json', true)) as $item) {
+	foreach (retails_decode_order_meta_array(get_post_meta($order_id, 'product_json', true)) as $item) {
 		$details = isset($item['product_details']) && is_array($item['product_details']) ? $item['product_details'] : array();
 		$product_id = absint($item['product_id'] ?? ($details['Product Id'] ?? 0));
 		if ($product_id) {
@@ -31,34 +31,34 @@ function wholesale_order_product_ids($order_id)
 	return array_values(array_unique($ids));
 }
 
-function wholesale_order_review_token($order_id, $product_id)
+function retails_order_review_token($order_id, $product_id)
 {
 	return substr(hash_hmac('sha256', 'order-review|' . absint($order_id) . '|' . absint($product_id), wp_salt('auth')), 0, 24);
 }
 
-function wholesale_order_review_url($order_id, $product_id)
+function retails_order_review_url($order_id, $product_id)
 {
 	return add_query_arg(array(
 		'review_order' => absint($order_id),
-		'review_token' => wholesale_order_review_token($order_id, $product_id),
+		'review_token' => retails_order_review_token($order_id, $product_id),
 	), get_permalink($product_id)) . '#write-review';
 }
 
 /**
  * Completed order that contains a product that is still on the site.
  */
-function wholesale_order_can_be_reviewed($order_id, $product_id)
+function retails_order_can_be_reviewed($order_id, $product_id)
 {
 	return 'order' === get_post_type($order_id)
-		&& wholesale_order_is_shipped(get_post_status($order_id))
+		&& retails_order_is_shipped(get_post_status($order_id))
 		&& 'publish' === get_post_status($product_id)
-		&& in_array(absint($product_id), wholesale_order_product_ids($order_id), true);
+		&& in_array(absint($product_id), retails_order_product_ids($order_id), true);
 }
 
 /**
  * The review already written for this order item (any status but trash), or 0.
  */
-function wholesale_order_review_id($order_id, $product_id)
+function retails_order_review_id($order_id, $product_id)
 {
 	$ids = get_posts(array(
 		'post_type' => 'review_submission',
@@ -77,7 +77,7 @@ function wholesale_order_review_id($order_id, $product_id)
  * A customer's completed orders: placed while signed in, or checked out as a guest with
  * the account's email address.
  */
-function wholesale_user_completed_order_ids($user_id)
+function retails_user_completed_order_ids($user_id)
 {
 	$user = get_userdata($user_id);
 	if (!$user) {
@@ -86,7 +86,7 @@ function wholesale_user_completed_order_ids($user_id)
 
 	$ids = get_posts(array(
 		'post_type' => 'order',
-		'post_status' => wholesale_order_shipped_statuses(),
+		'post_status' => retails_order_shipped_statuses(),
 		'posts_per_page' => -1,
 		'fields' => 'ids',
 		'meta_key' => 'user_id',
@@ -97,13 +97,13 @@ function wholesale_user_completed_order_ids($user_id)
 	if (is_email($email)) {
 		$guest_ids = get_posts(array(
 			'post_type' => 'order',
-			'post_status' => wholesale_order_shipped_statuses(),
+			'post_status' => retails_order_shipped_statuses(),
 			'posts_per_page' => -1,
 			'fields' => 'ids',
 			'meta_query' => array(array('key' => 'billing_address', 'value' => $email, 'compare' => 'LIKE')),
 		));
 		foreach ($guest_ids as $order_id) {
-			$billing = wholesale_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true));
+			$billing = retails_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true));
 			if (strtolower((string) ($billing['billing_email'] ?? '')) === $email) {
 				$ids[] = $order_id;
 			}
@@ -121,17 +121,17 @@ function wholesale_user_completed_order_ids($user_id)
  *
  * @return array{order:int, reason:string} reason is 'ok', 'reviewed' or 'none'.
  */
-function wholesale_review_eligibility($product_id, $order_id = 0, $token = '')
+function retails_review_eligibility($product_id, $order_id = 0, $token = '')
 {
 	$product_id = absint($product_id);
 	$order_id = absint($order_id);
 	$token = (string) $token;
 
 	if ($order_id && '' !== $token) {
-		if (!hash_equals(wholesale_order_review_token($order_id, $product_id), $token) || !wholesale_order_can_be_reviewed($order_id, $product_id)) {
+		if (!hash_equals(retails_order_review_token($order_id, $product_id), $token) || !retails_order_can_be_reviewed($order_id, $product_id)) {
 			return array('order' => 0, 'reason' => 'none');
 		}
-		return wholesale_order_review_id($order_id, $product_id)
+		return retails_order_review_id($order_id, $product_id)
 			? array('order' => 0, 'reason' => 'reviewed')
 			: array('order' => $order_id, 'reason' => 'ok');
 	}
@@ -141,11 +141,11 @@ function wholesale_review_eligibility($product_id, $order_id = 0, $token = '')
 	}
 
 	$reason = 'none';
-	foreach (wholesale_user_completed_order_ids(get_current_user_id()) as $candidate) {
-		if (!wholesale_order_can_be_reviewed($candidate, $product_id)) {
+	foreach (retails_user_completed_order_ids(get_current_user_id()) as $candidate) {
+		if (!retails_order_can_be_reviewed($candidate, $product_id)) {
 			continue;
 		}
-		if (!wholesale_order_review_id($candidate, $product_id)) {
+		if (!retails_order_review_id($candidate, $product_id)) {
 			return array('order' => $candidate, 'reason' => 'ok');
 		}
 		$reason = 'reviewed';
@@ -157,25 +157,25 @@ function wholesale_review_eligibility($product_id, $order_id = 0, $token = '')
 /**
  * Eligibility for the current product page request (review link in the query string, if any).
  */
-function wholesale_review_eligibility_from_request($product_id)
+function retails_review_eligibility_from_request($product_id)
 {
 	$order_id = isset($_GET['review_order']) ? absint($_GET['review_order']) : 0;
 	$token = isset($_GET['review_token']) ? sanitize_text_field(wp_unslash($_GET['review_token'])) : '';
-	return wholesale_review_eligibility($product_id, $order_id, $token);
+	return retails_review_eligibility($product_id, $order_id, $token);
 }
 
 /**
  * Items in a completed order that can still be reviewed, as product_id => review URL.
  */
-function wholesale_order_unreviewed_products($order_id)
+function retails_order_unreviewed_products($order_id)
 {
-	if (!wholesale_order_is_shipped(get_post_status($order_id)) || !wholesale_setting_enabled('allow_verified_reviews')) {
+	if (!retails_order_is_shipped(get_post_status($order_id)) || !retails_setting_enabled('allow_verified_reviews')) {
 		return array();
 	}
 	$links = array();
-	foreach (wholesale_order_product_ids($order_id) as $product_id) {
-		if (wholesale_order_can_be_reviewed($order_id, $product_id) && !wholesale_order_review_id($order_id, $product_id)) {
-			$links[$product_id] = wholesale_order_review_url($order_id, $product_id);
+	foreach (retails_order_product_ids($order_id) as $product_id) {
+		if (retails_order_can_be_reviewed($order_id, $product_id) && !retails_order_review_id($order_id, $product_id)) {
+			$links[$product_id] = retails_order_review_url($order_id, $product_id);
 		}
 	}
 	return $links;
@@ -185,26 +185,26 @@ function wholesale_order_unreviewed_products($order_id)
  * Google review link for a shipped (completed) order, or ''. Google reviews are for the
  * business as a whole, so the order only has to be shipped; no per-product check.
  */
-function wholesale_order_google_review_url($order_id)
+function retails_order_google_review_url($order_id)
 {
-	if (!wholesale_order_is_shipped(get_post_status($order_id)) || !function_exists('wholesale_google_write_review_url')) {
+	if (!retails_order_is_shipped(get_post_status($order_id)) || !function_exists('retails_google_write_review_url')) {
 		return '';
 	}
-	return wholesale_google_write_review_url();
+	return retails_google_write_review_url();
 }
 
 /**
  * "How did it turn out?" block for the shipped email. Already escaped.
  */
-function wholesale_order_review_email_html($order_id)
+function retails_order_review_email_html($order_id)
 {
-	$links = wholesale_order_unreviewed_products($order_id);
-	$google_url = wholesale_order_google_review_url($order_id);
+	$links = retails_order_unreviewed_products($order_id);
+	$google_url = retails_order_google_review_url($order_id);
 	if (!$links && !$google_url) {
 		return '';
 	}
 
-	$noun = wholesale_order_noun($order_id);
+	$noun = retails_order_noun($order_id);
 	$heading = 'sign' === $noun ? 'Once your sign is up, tell us how it turned out' : "Once your {$noun} arrives, tell us how it turned out";
 	$choose = 'order' === $noun ? 'what to order' : "the right {$noun}";
 	$html = '<div style="margin:20px 0 0;padding:16px 18px;border:1px solid #e3e9ef;border-radius:8px;background:#fbfdff;">'
@@ -225,7 +225,7 @@ function wholesale_order_review_email_html($order_id)
 
 // Creates the page once so it exists wherever the theme is deployed.
 add_action('init', function () {
-	$page_id = (int) get_option('wholesale_reviews_page_id');
+	$page_id = (int) get_option('retails_reviews_page_id');
 	if ($page_id && get_post($page_id)) {
 		return;
 	}
@@ -244,12 +244,12 @@ add_action('init', function () {
 	} else {
 		$page_id = $page->ID;
 	}
-	update_option('wholesale_reviews_page_id', (int) $page_id);
+	update_option('retails_reviews_page_id', (int) $page_id);
 }, 20);
 
-function wholesale_reviews_page_url($args = array())
+function retails_reviews_page_url($args = array())
 {
-	$page_id = (int) get_option('wholesale_reviews_page_id');
+	$page_id = (int) get_option('retails_reviews_page_id');
 	$url = $page_id && 'publish' === get_post_status($page_id) ? get_permalink($page_id) : home_url('/reviews/');
 	return $args ? add_query_arg($args, $url) : $url;
 }
@@ -259,7 +259,7 @@ function wholesale_reviews_page_url($args = array())
  *
  * @return array{reviews:WP_Post[], total:int, pages:int}
  */
-function wholesale_reviews_page_query($product_id = 0, $rating = 0, $page = 1, $per_page = 12)
+function retails_reviews_page_query($product_id = 0, $rating = 0, $page = 1, $per_page = 12)
 {
 	$meta_query = array();
 	if ($product_id) {
@@ -272,8 +272,8 @@ function wholesale_reviews_page_query($product_id = 0, $rating = 0, $page = 1, $
 	$query = new WP_Query(array(
 		'post_type' => 'review_submission',
 		'post_status' => 'publish',
-		// Reviews hidden on public pages (inc/reviews.php wholesale_review_text_hidden()).
-		'post__not_in' => function_exists('wholesale_hidden_review_ids') ? wholesale_hidden_review_ids() : array(),
+		// Reviews hidden on public pages (inc/reviews.php retails_review_text_hidden()).
+		'post__not_in' => function_exists('retails_hidden_review_ids') ? retails_hidden_review_ids() : array(),
 		'posts_per_page' => $per_page,
 		'paged' => max(1, absint($page)),
 		'orderby' => 'date',
@@ -292,13 +292,13 @@ function wholesale_reviews_page_query($product_id = 0, $rating = 0, $page = 1, $
 /**
  * Totals across all approved reviews: average, count, count per star, and products reviewed.
  */
-function wholesale_reviews_page_summary()
+function retails_reviews_page_summary()
 {
 	$ids = get_posts(array(
 		'post_type' => 'review_submission',
 		'post_status' => 'publish',
 		'posts_per_page' => -1,
-		'post__not_in' => function_exists('wholesale_hidden_review_ids') ? wholesale_hidden_review_ids() : array(),
+		'post__not_in' => function_exists('retails_hidden_review_ids') ? retails_hidden_review_ids() : array(),
 		'fields' => 'ids',
 	));
 
@@ -335,5 +335,5 @@ add_action('wp_enqueue_scripts', function () {
 		return;
 	}
 	$path = '/css/reviews.css';
-	wp_enqueue_style('wholesale-reviews', get_template_directory_uri() . $path, array('custom-style'), (string) filemtime(get_template_directory() . $path));
+	wp_enqueue_style('retails-reviews', get_template_directory_uri() . $path, array('custom-style'), (string) filemtime(get_template_directory() . $path));
 }, 20);

@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
  * Style slug => array(name, lighting tag, how it lights, floating tags, page anchor).
  * Copy matches the style comparison table on /custom-channel-letters/.
  */
-function wholesale_cl_style_grid_styles()
+function retails_cl_style_grid_styles()
 {
 	return array(
 		'standard-channel-letter-front-lit' => array('Front Lit', 'Face lit', 'Bright, colored acrylic face. The easiest to read at night.', array('Best seller' => 'best'), 'front-lit'),
@@ -39,7 +39,7 @@ function wholesale_cl_style_grid_styles()
  * of the same file are dropped. Returns <img> tags; only the first loads with the
  * page, the rest wait in data attributes until the visitor reaches for the card.
  */
-function wholesale_cl_style_grid_photos($product, $name, $sizes, $max = 6)
+function retails_cl_style_grid_photos($product, $name, $sizes, $max = 6)
 {
 	if (!$product) {
 		return array();
@@ -55,7 +55,7 @@ function wholesale_cl_style_grid_photos($product, $name, $sizes, $max = 6)
 	$featured = has_post_thumbnail($product) ? (int) get_post_thumbnail_id($product) : 0;
 	$gallery = get_post_meta($product->ID, '_product_gallery', true);
 	$gallery = is_array($gallery) ? array_values(array_filter($gallery, 'is_string')) : array();
-	$ids = $gallery && function_exists('wholesale_product_image_alt_attachment_ids_by_url') ? wholesale_product_image_alt_attachment_ids_by_url($gallery) : array();
+	$ids = $gallery && function_exists('retails_product_image_alt_attachment_ids_by_url') ? retails_product_image_alt_attachment_ids_by_url($gallery) : array();
 
 	$seen = array();
 	$photos = array();
@@ -79,7 +79,7 @@ function wholesale_cl_style_grid_photos($product, $name, $sizes, $max = 6)
 	$html = array();
 	foreach ($photos as $position => $photo) {
 		$src = $photo['id'] ? (string) wp_get_attachment_image_url($photo['id'], 'full') : $photo['url'];
-		$alt = function_exists('wholesale_product_photo_alt') ? wholesale_product_photo_alt($src, '') : '';
+		$alt = function_exists('retails_product_photo_alt') ? retails_product_photo_alt($src, '') : '';
 		$alt = $alt ? $alt : $photo['alt'];
 		if ($photo['id']) {
 			$img = wp_get_attachment_image($photo['id'], 'medium_large', false, array(
@@ -90,7 +90,7 @@ function wholesale_cl_style_grid_photos($product, $name, $sizes, $max = 6)
 				'alt' => $alt,
 			));
 		} else {
-			$img = sprintf('<img class="hc-gal-photo" src="%s" alt="%s" loading="lazy" decoding="async">', esc_url(wholesale_webp_url($photo['url'])), esc_attr($alt));
+			$img = sprintf('<img class="hc-gal-photo" src="%s" alt="%s" loading="lazy" decoding="async">', esc_url(retails_webp_url($photo['url'])), esc_attr($alt));
 		}
 		if ($img && $position > 0) {
 			$img = preg_replace('/\s(srcset|src)="/', ' data-hc-$1="', $img);
@@ -113,12 +113,12 @@ function wholesale_cl_style_grid_photos($product, $name, $sizes, $max = 6)
  * 'title_accent', 'lead' (all plain text except the two title parts, which are
  * escaped here), 'notice_html' (printed under the lead, already escaped).
  */
-function wholesale_render_cl_style_grid(array $args = array())
+function retails_render_cl_style_grid(array $args = array())
 {
 	$args = wp_parse_args($args, array(
 		'slugs' => array(),
 		'section_id' => 'product-box-container',
-		'quote_url' => function_exists('wholesale_quote_url') ? wholesale_quote_url('channel-letters') : home_url('/contact/'),
+		'quote_url' => function_exists('retails_quote_url') ? retails_quote_url('channel-letters') : home_url('/contact/'),
 		'compare_url' => '',
 		'kicker' => 'LED storefront signs',
 		'title' => 'Channel Letter Styles',
@@ -129,16 +129,16 @@ function wholesale_render_cl_style_grid(array $args = array())
 	$builder_url = home_url('/channel-letter-builder/');
 
 	$cards = array();
-	foreach (wholesale_cl_style_grid_styles() as $slug => $style) {
+	foreach (retails_cl_style_grid_styles() as $slug => $style) {
 		if ($args['slugs'] && !in_array($slug, (array) $args['slugs'], true)) {
 			continue;
 		}
-		$product = function_exists('wholesale_seo_product') ? wholesale_seo_product($slug) : null;
+		$product = function_exists('retails_seo_product') ? retails_seo_product($slug) : null;
 		if (!$product) {
 			continue;
 		}
 		$price = null;
-		$from = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($product->ID) : null;
+		$from = function_exists('retails_cl_from_inch_rate') ? retails_cl_from_inch_rate($product->ID) : null;
 		if ($from && $from['price'] > 0) {
 			$now = '$' . number_format($from['price'], 2);
 			$was = '$' . number_format($from['everyday'], 2);
@@ -175,10 +175,10 @@ function wholesale_render_cl_style_grid(array $args = array())
 					<?php echo $args['notice_html']; // Escaped by the caller. ?>
 				</div>
 				<ul class="hc-shop-cl-trust">
-					<li><?php echo wholesale_home_icon('shield'); ?> UL listed for outdoor use</li>
-					<li><?php echo wholesale_home_icon('badge'); ?> 5-year warranty</li>
-					<li><?php echo wholesale_home_icon('plug'); ?> Ships tested with wiring diagram</li>
-					<li><?php echo wholesale_home_icon('flag'); ?> Ships to all 50 states</li>
+					<li><?php echo retails_home_icon('shield'); ?> UL listed for outdoor use</li>
+					<li><?php echo retails_home_icon('badge'); ?> 5-year warranty</li>
+					<li><?php echo retails_home_icon('plug'); ?> Ships tested with wiring diagram</li>
+					<li><?php echo retails_home_icon('flag'); ?> Ships to all 50 states</li>
 				</ul>
 			</div>
 
@@ -191,7 +191,7 @@ function wholesale_render_cl_style_grid(array $args = array())
 					if ($is_lowest) {
 						$flags['Lowest price'] = 'price';
 					}
-					$photos = wholesale_cl_style_grid_photos($card['product'], $style_name . ' channel letters', '(max-width: 575px) 46vw, (max-width: 991px) 31vw, 280px');
+					$photos = retails_cl_style_grid_photos($card['product'], $style_name . ' channel letters', '(max-width: 575px) 46vw, (max-width: 991px) 31vw, 280px');
 					$photo_count = count($photos);
 					?>
 					<article class="hc-shop-cl-card" id="<?php echo esc_attr($card['style'][4]); ?>">
@@ -230,24 +230,24 @@ function wholesale_render_cl_style_grid(array $args = array())
 									<small>/ inch</small>
 								</span>
 							<?php endif; ?>
-							<span class="hc-shop-cl-button"><span class="hc-shop-cl-button-long">Customize &amp; Order</span><span class="hc-shop-cl-button-short" aria-hidden="true">Order Now</span> <?php echo wholesale_home_icon('arrow'); ?></span>
+							<span class="hc-shop-cl-button"><span class="hc-shop-cl-button-long">Customize &amp; Order</span><span class="hc-shop-cl-button-short" aria-hidden="true">Order Now</span> <?php echo retails_home_icon('arrow'); ?></span>
 						</a>
 					</article>
 				<?php endforeach; ?>
 
 				<div class="hc-shop-cl-help">
-					<span class="hc-shop-cl-help-icon" aria-hidden="true"><?php echo wholesale_home_icon('upload'); ?></span>
+					<span class="hc-shop-cl-help-icon" aria-hidden="true"><?php echo retails_home_icon('upload'); ?></span>
 					<h3>Have a logo or custom shape?</h3>
 					<p>Send it with your size and a sign specialist will quote it, usually within one business day.</p>
-					<a class="hc-shop-cl-help-primary" href="<?php echo esc_url($args['quote_url']); ?>">Get a Free Logo Quote <?php echo wholesale_home_icon('arrow'); ?></a>
-					<a class="hc-shop-cl-help-link" href="<?php echo esc_url($builder_url); ?>"><?php echo wholesale_home_icon('pen'); ?> Design your sign online</a>
-					<a class="hc-shop-cl-help-link" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> 866-436-2101</a>
+					<a class="hc-shop-cl-help-primary" href="<?php echo esc_url($args['quote_url']); ?>">Get a Free Logo Quote <?php echo retails_home_icon('arrow'); ?></a>
+					<a class="hc-shop-cl-help-link" href="<?php echo esc_url($builder_url); ?>"><?php echo retails_home_icon('pen'); ?> Design your sign online</a>
+					<a class="hc-shop-cl-help-link" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?> 866-436-2101</a>
 				</div>
 			</div>
 
 			<p class="hc-shop-cl-note">
 				Rates are per inch of letter height and vary with height and style. Enter your design to see the full price before checkout.
-				<?php if ($args['compare_url']) : ?><a href="<?php echo esc_url($args['compare_url']); ?>">Compare all 7 styles, heights &amp; warranty <?php echo wholesale_home_icon('arrow'); ?></a><?php endif; ?>
+				<?php if ($args['compare_url']) : ?><a href="<?php echo esc_url($args['compare_url']); ?>">Compare all 7 styles, heights &amp; warranty <?php echo retails_home_icon('arrow'); ?></a><?php endif; ?>
 			</p>
 		</div>
 	</section>

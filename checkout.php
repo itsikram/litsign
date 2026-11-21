@@ -1,19 +1,25 @@
 <?php
 // Template Name: Checkout
 
-$cart = wholesale_get_cart();
+$cart = retails_get_cart();
 
 if (empty($cart->get_items())) {
     wp_safe_redirect(home_url('/cart/?type=warning&message=' . rawurlencode('Your cart is currently empty.')));
     exit;
 }
 
-$shipping_options = wholesale_cart_shipping_options($cart);
+$shipping_options = retails_cart_shipping_options($cart);
 $sub_total = round((float) $cart->sub_total, 2);
-$tax_rate = (float) wholesale_get_setting('tax_rate');
+$tax_rate = (float) retails_get_setting('tax_rate');
 $tax = round($sub_total * $tax_rate / 100, 2);
-$free_shipping_min = wholesale_free_shipping_threshold($cart);
-$free_shipping = wholesale_cart_qualifies_free_shipping($cart);
+$free_shipping_min = retails_free_shipping_threshold($cart);
+$free_shipping = retails_cart_qualifies_free_shipping($cart);
+// Free shipping promo code (inc/payments.php): the box in the order summary applies it
+// (?promo_code=), and ?promo= says how that went.
+$promo_live = retails_ship_code_window();
+$promo_applied = retails_applied_ship_code();
+$promo_by_code = retails_cart_ship_code($cart);
+$promo_result = isset($_GET['promo']) ? sanitize_key(wp_unslash($_GET['promo'])) : '';
 // The checked speed: Free Shipping when the cart qualifies, else Standard. A speed the customer picked in the live
 // chat (cookie sfs_ship from the chat widget: 0-3 or "free", 2 hours) is checked instead when this cart offers it.
 $ship_pick = $free_shipping ? 'free' : 0;
@@ -24,9 +30,9 @@ if ('free' === $chat_ship && $free_shipping) {
     $ship_pick = (int) $chat_ship;
 }
 $first_shipping = 'free' === $ship_pick || !$shipping_options ? 0 : $shipping_options[$ship_pick];
-$card_enabled = !wholesale_setting_enabled('payment_disabled');
-$direct_card = $card_enabled && 'direct' === wholesale_payment_method();
-$noun = wholesale_items_noun($cart->get_items());
+$card_enabled = !retails_setting_enabled('payment_disabled');
+$direct_card = $card_enabled && 'direct' === retails_payment_method();
+$noun = retails_items_noun($cart->get_items());
 $message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
 
 // Prefill for signed-in customers.
@@ -99,7 +105,7 @@ get_header();
         <?php endif; ?>
 
         <form action="<?php echo esc_url(home_url('/payment/')); ?>" method="post" id="checkoutForm" class="checkout-layout" novalidate>
-            <?php wp_nonce_field('wholesale_place_order', 'wholesale_order_nonce'); ?>
+            <?php wp_nonce_field('retails_place_order', 'retails_order_nonce'); ?>
 
             <div class="checkout-main">
                 <details class="checkout-mobile-summary">
@@ -239,17 +245,17 @@ get_header();
 
                 <section class="checkout-card" aria-labelledby="checkout-shipping">
                     <h2 id="checkout-shipping"><span class="checkout-step-number">2</span> Shipping Options</h2>
-                    <p class="checkout-muted">Every <?php echo esc_html('order' === $noun ? 'item' : $noun); ?> is made to order and ships by <?php echo esc_html(wholesale_estimated_ship_date($cart)); ?>. Delivery dates include production time.</p>
+                    <p class="checkout-muted">Every <?php echo esc_html('order' === $noun ? 'item' : $noun); ?> is made to order and ships by <?php echo esc_html(retails_estimated_ship_date($cart)); ?>. Delivery dates include production time.</p>
                     <div class="checkout-options" role="radiogroup" aria-labelledby="checkout-shipping">
-                        <?php if ($free_shipping_min > 0) : ?>
+                        <?php if ($free_shipping_min > 0 || $free_shipping) : ?>
                             <label class="checkout-option<?php echo $free_shipping ? '' : ' is-disabled'; ?>">
                                 <input type="radio" name="shipping_method" value="free" <?php checked('free' === $ship_pick); ?> <?php disabled(!$free_shipping); ?> required data-shipping-amount="0">
                                 <span class="checkout-option-body">
-                                    <strong><?php echo esc_html(wholesale_free_shipping_label()); ?></strong>
+                                    <strong><?php echo esc_html(retails_free_shipping_label($cart)); ?></strong>
                                     <?php if ($free_shipping) : ?>
-                                        <small>Est. delivery <?php echo esc_html(wholesale_estimated_delivery_date($cart, 0)); ?></small>
+                                        <small>Est. delivery <?php echo esc_html(retails_estimated_delivery_date($cart, 0)); ?></small>
                                     <?php else : ?>
-                                        <small><?php echo esc_html(sprintf('Free on orders of %s or more. Add %s more to unlock it.', $money($free_shipping_min), $money($free_shipping_min - $sub_total))); ?></small>
+                                        <small><?php echo esc_html(sprintf('Free on orders of %s or more. Add %s more to unlock it%s.', $money($free_shipping_min), $money($free_shipping_min - $sub_total), $promo_live ? ', or use a promo code' : '')); ?></small>
                                     <?php endif; ?>
                                 </span>
                                 <span class="checkout-option-price">FREE</span>
@@ -262,8 +268,8 @@ get_header();
                             <label class="checkout-option">
                                 <input type="radio" name="shipping_method" value="<?php echo esc_attr($amount); ?>" <?php checked($ship_pick === $index); ?> required data-shipping-amount="<?php echo esc_attr($amount); ?>">
                                 <span class="checkout-option-body">
-                                    <strong><?php echo esc_html(wholesale_shipping_label($index)); ?></strong>
-                                    <small>Est. delivery <?php echo esc_html(wholesale_estimated_delivery_date($cart, $index)); ?></small>
+                                    <strong><?php echo esc_html(retails_shipping_label($index)); ?></strong>
+                                    <small>Est. delivery <?php echo esc_html(retails_estimated_delivery_date($cart, $index)); ?></small>
                                 </span>
                                 <span class="checkout-option-price"><?php echo esc_html($money($amount)); ?></span>
                             </label>
@@ -299,7 +305,7 @@ get_header();
                             </p>
                         </div>
                         <p class="checkout-cards">We accept Visa, Mastercard, American Express and Discover. Processed by Elavon Converge; we never store your card number.</p>
-                        <?php $wallet_names = function_exists('wholesale_public_wallet_names') ? wholesale_public_wallet_names() : array(); ?>
+                        <?php $wallet_names = function_exists('retails_public_wallet_names') ? retails_public_wallet_names() : array(); ?>
                         <?php if ($wallet_names) : ?><p class="checkout-cards checkout-cards--wallets">Also accepted: <?php echo esc_html(implode(', ', $wallet_names)); ?>.</p><?php endif; ?>
                     <?php elseif ($card_enabled) : ?>
                         <div class="checkout-secure">
@@ -308,7 +314,7 @@ get_header();
                                 <strong>Pay securely by card</strong>
                                 <p>When you click <em>Pay</em>, a secure window from our card processor, Elavon Converge, opens for your card details. Your card number never passes through our website.</p>
                                 <p class="checkout-cards">Visa &middot; Mastercard &middot; American Express &middot; Discover</p>
-                                <?php $wallet_names = function_exists('wholesale_public_wallet_names') ? wholesale_public_wallet_names() : array(); ?>
+                                <?php $wallet_names = function_exists('retails_public_wallet_names') ? retails_public_wallet_names() : array(); ?>
                                 <?php if ($wallet_names) : ?><p class="checkout-cards checkout-cards--wallets">Also accepted: <?php echo esc_html(implode(', ', $wallet_names)); ?>.</p><?php endif; ?>
                             </div>
                         </div>
@@ -364,6 +370,29 @@ get_header();
                         <?php endforeach; ?>
                     </ul>
 
+                    <?php if ($promo_live || $promo_result) : ?>
+                        <div class="checkout-promo">
+                            <?php if ($promo_applied) : ?>
+                                <p class="checkout-promo__applied" role="status">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+                                    <span>Code <strong><?php echo esc_html($promo_applied); ?></strong> applied: <?php echo $promo_by_code ? 'free standard shipping' : 'this order already ships free'; ?>.</span>
+                                    <button type="submit" form="promoForm" name="promo_code" value="" class="checkout-promo__remove">Remove</button>
+                                </p>
+                            <?php elseif ($promo_live) : ?>
+                                <label class="checkout-promo__label" for="promoCode">Promo code</label>
+                                <span class="checkout-promo__row">
+                                    <input type="text" id="promoCode" name="promo_code" form="promoForm" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30" placeholder="Enter code"<?php echo 'invalid' === $promo_result ? ' aria-invalid="true" aria-describedby="promoMessage"' : ''; ?>>
+                                    <button type="submit" form="promoForm" class="checkout-promo__apply">Apply</button>
+                                </span>
+                            <?php endif; ?>
+                            <?php if ('invalid' === $promo_result && !$promo_applied) : ?>
+                                <p class="checkout-promo__message is-error" id="promoMessage" role="alert">That code isn't valid. Check the spelling and try again.</p>
+                            <?php elseif ('removed' === $promo_result && !$promo_applied) : ?>
+                                <p class="checkout-promo__message" role="status">Promo code removed.</p>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+
                     <dl class="checkout-totals" data-subtotal="<?php echo esc_attr($sub_total); ?>" data-tax="<?php echo esc_attr($tax); ?>">
                         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($sub_total)); ?></dd></div>
                         <div><dt>Shipping</dt><dd data-shipping-total><?php echo esc_html($first_shipping > 0 ? $money($first_shipping) : 'FREE'); ?></dd></div>
@@ -391,6 +420,8 @@ get_header();
                 </div>
             </aside>
         </form>
+        <?php // The promo code box's own form (its fields sit in the order summary with form="promoForm"). ?>
+        <form id="promoForm" method="get" action="<?php echo esc_url(home_url('/checkout/')); ?>" hidden></form>
     </div>
 </main>
 

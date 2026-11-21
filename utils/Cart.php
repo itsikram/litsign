@@ -75,9 +75,9 @@ class Cart
     {
         $design_id = absint($design_id);
         return $design_id > 0
-            && isset($_SESSION['wholesale_design_uploads'])
-            && is_array($_SESSION['wholesale_design_uploads'])
-            && in_array($design_id, array_map('absint', $_SESSION['wholesale_design_uploads']), true);
+            && isset($_SESSION['retails_design_uploads'])
+            && is_array($_SESSION['retails_design_uploads'])
+            && in_array($design_id, array_map('absint', $_SESSION['retails_design_uploads']), true);
     }
 
     private function redirect_with_error($product_id, $message)
@@ -98,18 +98,19 @@ class Cart
         if (!$product_id || 'product' !== get_post_type($product_id) || 'publish' !== get_post_status($product_id)) {
             $this->redirect_with_error(0, 'This product is no longer available.');
         }
-        if ('outofstock' === wholesale_product_stock_status($product_id)) {
+        if ('outofstock' === retails_product_stock_status($product_id)) {
             $this->redirect_with_error($product_id, sprintf('%s is out of stock right now.', get_the_title($product_id)));
         }
 
         $design_id = isset($request['design_id']) && self::is_session_design($request['design_id']) ? absint($request['design_id']) : '';
-        $product_title = get_the_title($product_id);
+        // Grouped products get their own name ("Yard Sign Only (No H-Stake)"), inc/product-group-swap.php.
+        $product_title = function_exists('retails_product_cart_title') ? retails_product_cart_title($product_id) : get_the_title($product_id);
         $thumbnail_src = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'single-post-thumbnail');
         $product_thumbnail = $thumbnail_src ? $thumbnail_src[0] : '';
         // The price is calculated on the server from the product settings; the browser's
         // total_cost is only used to tell the customer if the price they saw was out of date.
-        $design = wholesale_product_is_channel_letter($product_id) ? wholesale_session_cl_design($product_id) : null;
-        $quote = wholesale_price_quote($product_id, $request, $design);
+        $design = retails_product_is_channel_letter($product_id) ? retails_session_cl_design($product_id) : null;
+        $quote = retails_price_quote($product_id, $request, $design);
         if (!$quote['ok']) {
             $this->redirect_with_error($product_id, $quote['error']);
         }
@@ -117,7 +118,7 @@ class Cart
         $turnaround_cost = $quote['turnaround'];
         $shown_price = isset($request['total_cost']) ? floatval($request['total_cost']) : 0;
         if ($shown_price > 0 && abs($shown_price - ($quote['total'] - $turnaround_cost)) > 0.01) {
-            $_SESSION['wholesale_cart_notice'] = sprintf('The price for %s was updated to $%s based on the options you chose.', get_the_title($product_id), number_format($quote['total'], 2));
+            $_SESSION['retails_cart_notice'] = sprintf('The price for %s was updated to $%s based on the options you chose.', get_the_title($product_id), number_format($quote['total'], 2));
         }
         $job_name = isset($request['job_name']) ? $request['job_name'] : '';
         // chennel letter details
@@ -188,13 +189,13 @@ class Cart
 
         // Artwork must have the shape of the size ordered (inc/artwork-size-check.php). Checked
         // before the held upload is claimed, so the customer can fix the size and add it again.
-        $artwork_problem = wholesale_artwork_request_problem($product_id, $request);
+        $artwork_problem = retails_artwork_request_problem($product_id, $request);
         if ('' !== $artwork_problem) {
             $this->redirect_with_error($product_id, $artwork_problem);
         }
 
         // Uploaded in the background (inc/async-uploads.php), or posted with the form.
-        $file = wholesale_async_upload_take($_POST['custom-artwork-token'] ?? '', 'artwork');
+        $file = retails_async_upload_take($_POST['custom-artwork-token'] ?? '', 'artwork');
         if (!$file && isset($_FILES['custom-artwork']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['custom-artwork']['error']) {
             $file = $_FILES['custom-artwork'];
         }
@@ -203,20 +204,20 @@ class Cart
                 $this->redirect_with_error($product_id, 'Your artwork could not be uploaded. Please try again.');
             }
 
-            $allowed_artwork_types = wholesale_artwork_mimes();
+            $allowed_artwork_types = retails_artwork_mimes();
             $checked_type = wp_check_filetype_and_ext($file['tmp_name'], $file['name'], $allowed_artwork_types);
             if (empty($checked_type['ext']) || empty($checked_type['type'])) {
-                $this->redirect_with_error($product_id, 'Artwork must be a ' . wholesale_artwork_types_text() . ' file.');
+                $this->redirect_with_error($product_id, 'Artwork must be a ' . retails_artwork_types_text() . ' file.');
             }
-            if (filesize($file['tmp_name']) > wholesale_artwork_max_bytes()) {
-                $this->redirect_with_error($product_id, 'Artwork files must be under ' . wholesale_artwork_max_text() . '. ' . wholesale_large_file_help());
+            if (filesize($file['tmp_name']) > retails_artwork_max_bytes()) {
+                $this->redirect_with_error($product_id, 'Artwork files must be under ' . retails_artwork_max_text() . '. ' . retails_large_file_help());
             }
 
             $file_ext = $checked_type['ext'];
             $file_name = 'custom-artwork-'.$product_id.'-'.uniqid();
             // Move the temp file into uploads instead of reading it into memory and writing it back.
             $file['name'] = $file_name.'.'.$file_ext;
-            $upload_artwork = wholesale_async_upload_store($file, array('mimes' => $allowed_artwork_types));
+            $upload_artwork = retails_async_upload_store($file, array('mimes' => $allowed_artwork_types));
             if (!empty($upload_artwork['error'])) {
                 $this->redirect_with_error($product_id, 'Your artwork could not be saved. Please try again.');
             }
@@ -433,13 +434,13 @@ class Cart
         // recorded too, so every choice that sets the price reaches the order. A fixed
         // single-choice option isn't posted by the form, so its only label is used.
         $cart_item = json_decode($cart_items_json, true);
-        foreach (wholesale_product_price_attrs($product_id) as $attr) {
+        foreach (retails_product_price_attrs($product_id) as $attr) {
             $label = ucwords(str_replace('-', ' ', (string) ($attr['name'] ?? '')));
             if ('' === $label || array_key_exists($label, $cart_item['product_details'])) {
                 continue;
             }
-            $options = wholesale_attr_options($attr);
-            $submitted = wholesale_request_attr_value($request, $attr['name']);
+            $options = retails_attr_options($attr);
+            $submitted = retails_request_attr_value($request, $attr['name']);
             if (null !== $submitted && '' !== $submitted) {
                 $cart_item['product_details'][$label] = $this->getTitleByValue($product_id, $submitted);
             } elseif (1 === count($options)) {
@@ -469,10 +470,10 @@ class Cart
         // again with the product's quantity tiers and minimums (update_quantity()). Kept
         // beside the cart, not in the line, so orders store the same line data as before.
         if (!$design) {
-            if (!isset($_SESSION['wholesale_cart_requests']) || !is_array($_SESSION['wholesale_cart_requests'])) {
-                $_SESSION['wholesale_cart_requests'] = array();
+            if (!isset($_SESSION['retails_cart_requests']) || !is_array($_SESSION['retails_cart_requests'])) {
+                $_SESSION['retails_cart_requests'] = array();
             }
-            $_SESSION['wholesale_cart_requests'][(string) $cart_item['cart_id']] = array_diff_key(
+            $_SESSION['retails_cart_requests'][(string) $cart_item['cart_id']] = array_diff_key(
                 $request,
                 array_flip(array('action', 'nonce', '_wpnonce', 'total_cost', 'buy_now', 'job_name', 'product_cl_data'))
             );
@@ -501,7 +502,7 @@ class Cart
                 $quote = $this->quote_for_quantity($item, $quantity);
                 if (is_string($quote)) {
                     // This quantity can't be ordered with the chosen options: keep the line as it was.
-                    $_SESSION['wholesale_cart_notice'] = $quote;
+                    $_SESSION['retails_cart_notice'] = $quote;
                 } elseif (is_array($quote)) {
                     // Priced again like the product page does, so quantity tiers and minimums apply.
                     $updated_item->product_subtotal = $quote['total'];
@@ -534,14 +535,14 @@ class Cart
      */
     private function quote_for_quantity($item, $quantity)
     {
-        $requests = isset($_SESSION['wholesale_cart_requests']) && is_array($_SESSION['wholesale_cart_requests']) ? $_SESSION['wholesale_cart_requests'] : array();
+        $requests = isset($_SESSION['retails_cart_requests']) && is_array($_SESSION['retails_cart_requests']) ? $_SESSION['retails_cart_requests'] : array();
         $request = $requests[(string) ($item->cart_id ?? '')] ?? null;
         $product_id = absint($item->product_id ?? 0);
-        if (!is_array($request) || !$product_id || wholesale_product_is_channel_letter($product_id)) {
+        if (!is_array($request) || !$product_id || retails_product_is_channel_letter($product_id)) {
             return null;
         }
         $request['product_quantity'] = $quantity;
-        $quote = wholesale_price_quote($product_id, $request);
+        $quote = retails_price_quote($product_id, $request);
         if (empty($quote['ok'])) {
             return sprintf('The quantity of %s was not changed. %s', get_the_title($product_id), $quote['error'] ? $quote['error'] : 'Please remove it and add it again.');
         }
@@ -570,8 +571,8 @@ class Cart
 
     public function empty() {
         $_SESSION['cart_items']  = json_encode(array());
-        if (function_exists('wholesale_sync_cart_cookie')) {
-            wholesale_sync_cart_cookie();
+        if (function_exists('retails_sync_cart_cookie')) {
+            retails_sync_cart_cookie();
         }
     }
 }

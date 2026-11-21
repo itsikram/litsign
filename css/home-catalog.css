@@ -307,7 +307,8 @@
       linear-gradient(180deg, rgba(5, 21, 38, 0.62), rgba(5, 21, 38, 0.34) 62%, rgba(5, 21, 38, 0.1)),
       linear-gradient(90deg, rgba(5, 21, 38, 0.66), rgba(5, 21, 38, 0.2) 78%, transparent),
       var(--hc-hero-mobile);
-    background-position: 65% 66%;
+    /* A Media Library phone photo (Settings > Images) sets its own framing. */
+    background-position: var(--hc-hero-mobile-pos, 65% 66%);
   }
 
   @supports (background-image: image-set(url("a.avif") type("image/avif"))) {
@@ -334,9 +335,12 @@
     width: 16px;
   }
 
+  /* Phones: heading ~42px and lead 17px on a 393px screen (Nov 21 2026, owner asked for
+     bigger hero text). Kept to a modest step so the first row of product cards stays
+     above the sticky bottom bar; the lead's wider measure keeps it at three lines. */
   .hc-hero .bd-hero-title {
     max-width: 15ch;
-    font-size: clamp(2rem, 9.4vw, 2.85rem);
+    font-size: clamp(2rem, 10.8vw, 3rem);
     letter-spacing: -0.04em;
     line-height: 1.07;
     text-wrap: initial;
@@ -348,10 +352,10 @@
   }
 
   .hc-hero .home-hero-lead {
-    max-width: 33ch;
+    max-width: 36ch;
     margin: 14px 0 22px;
-    font-size: 0.98rem;
-    line-height: 1.55;
+    font-size: 1.0625rem;
+    line-height: 1.5;
     text-shadow: 0 1px 12px rgba(3, 14, 26, 0.5);
   }
 
@@ -1563,7 +1567,7 @@
 }
 
 .hc-gal-flag--sale {
-  background: #b91c1c;
+  background: #E95402;
 }
 
 .hc-pcard-chip {
@@ -1647,6 +1651,10 @@
   line-height: 1.3;
 }
 
+.hc-pcard-meta .hc-meta-short {
+  display: none;
+}
+
 .hc-pcard-meta svg {
   width: 15px;
   height: 15px;
@@ -1719,6 +1727,57 @@
   transition: transform 0.2s ease;
 }
 
+/* Button label (Nov 21 2026): "Customize & Order" needs about 200px of button and was
+   clipped on both sides on phones, where a card is 112-170px wide. The label now
+   follows the card's own width (a container query, so 2-, 3- and 4-column grids all
+   work): narrow cards show the short label ("Order Now", as on the channel letter
+   cards), and the rem thresholds keep a 12% margin for wider font rendering and larger
+   text settings. If a label still can't fit, it wraps onto two centered lines instead
+   of being cut off. */
+.hc-pcard-foot {
+  container: hc-pcard-foot / inline-size;
+}
+
+.hc-pcard-button {
+  min-width: 0;
+  text-align: center;
+}
+
+.hc-pcard-button-text {
+  min-width: 0;
+  text-wrap: balance;
+}
+
+.hc-pcard-button-short {
+  display: none;
+}
+
+@container hc-pcard-foot (max-width: 13.74rem) {
+  .hc-pcard-button-long {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .hc-pcard-button-short {
+    display: block;
+  }
+}
+
+/* The smallest phones (320px): drop the arrow so the words keep the room. */
+@container hc-pcard-foot (max-width: 7.99rem) {
+  .hc-pcard-foot .hc-pcard-button {
+    padding-inline: 4px;
+  }
+
+  .hc-pcard-button svg {
+    display: none;
+  }
+}
+
 .hc-pcard:hover .hc-pcard-button,
 .hc-pcard-body:focus-visible .hc-pcard-button {
   background: #0b74a3;
@@ -1786,17 +1845,33 @@
     font-size: 0.95rem;
   }
 
+  /* No short description on phone grid cards (Nov 21 2026). */
   .hc-pcard-desc {
-    display: -webkit-box;
-    overflow: hidden;
-    font-size: 0.8rem;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
+    display: none;
   }
 
+  /* Turnaround stays on one line; the short wording is swapped in. */
   .hc-pcard-meta {
-    align-items: flex-start;
+    align-items: center;
     font-size: 0.74rem;
+    white-space: nowrap;
+  }
+
+  .hc-pcard-meta .hc-meta-long {
+    display: none;
+  }
+
+  .hc-pcard-meta .hc-meta-short {
+    display: inline;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Line break after the regular (struck) price. */
+  .hc-pcard-price del::after {
+    content: "";
+    display: block;
   }
 
   .hc-pcard-meta svg {
@@ -1821,15 +1896,50 @@
 
   .hc-pcard-button {
     min-height: 44px;
-    padding: 9px 6px;
-    gap: 5px;
+    padding: 9px 8px;
+    gap: 6px;
     font-size: 0.86rem;
-    white-space: nowrap;
   }
 
   .hc-pcard-button svg {
     width: 15px;
     height: 15px;
+  }
+}
+
+/* Quick picks on phones (Nov 21 2026): match the other product cards. The kicker
+   box wrapped onto two lines in a 170px card and the filled button set these cards
+   apart, so the kicker becomes the grey line under the name (like .hc-pcard-desc)
+   and the button is the same outline button as the cards above. */
+@media (max-width: 767px) {
+  .hc-order-picks .hc-pcard-name {
+    order: -1;
+  }
+
+  .hc-order-picks .hc-pcard-kicker {
+    align-self: stretch;
+    margin: 6px 0 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    color: #4b5a6b;
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.45;
+    text-transform: none;
+  }
+
+  .hc-order-picks .hc-pcard-button {
+    border-color: #0b74a3;
+    background: #ffffff;
+    color: #0b74a3;
+  }
+
+  .hc-order-picks .hc-pcard-body:is(:hover, :focus-visible) .hc-pcard-button {
+    border-color: #0b74a3;
+    background: #0b74a3;
+    color: #ffffff;
   }
 }
 

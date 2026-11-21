@@ -2,9 +2,9 @@
 /**
  * Google reviews on product pages (2026-11-12).
  *
- * The business's Google reviews are kept in one list (option wholesale_google_review_list).
+ * The business's Google reviews are kept in one list (option retails_google_review_list).
  * Google's Places API returns only five of them, so those five are added on their own
- * whenever the review slider refreshes them (wholesale_fetch_google_reviews()), and the
+ * whenever the review slider refreshes them (retails_fetch_google_reviews()), and the
  * owner adds the others by hand in wp-admin > Reviews > Google reviews. Each review is
  * linked to products and/or whole categories; a product page shows the ones linked to it
  * in its reviews section.
@@ -12,7 +12,7 @@
  * These are Google reviews of the business, not reviews of the product collected on this
  * site, so they never go into the Product structured data (aggregateRating / review):
  * Google's review snippet rules do not allow ratings taken from another site. Reviews that
- * say we installed the sign stay hidden (wholesale_review_text_hidden()), and the minimum
+ * say we installed the sign stay hidden (retails_review_text_hidden()), and the minimum
  * star rating in Settings applies, as in the slider.
  *
  * @package litsign
@@ -22,9 +22,9 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const WHOLESALE_GOOGLE_REVIEW_LIST = 'wholesale_google_review_list';
-const WHOLESALE_GOOGLE_REVIEW_PAGE = 'wholesale-google-reviews';
-const WHOLESALE_GOOGLE_REVIEW_CAP = 'edit_others_posts';
+const RETAILS_GOOGLE_REVIEW_LIST = 'retails_google_review_list';
+const RETAILS_GOOGLE_REVIEW_PAGE = 'retails-google-reviews';
+const RETAILS_GOOGLE_REVIEW_CAP = 'edit_others_posts';
 
 /**
  * Every Google review on the site, links included.
@@ -35,27 +35,27 @@ const WHOLESALE_GOOGLE_REVIEW_CAP = 'edit_others_posts';
  *
  * @return array[]
  */
-function wholesale_google_review_list()
+function retails_google_review_list()
 {
-	$list = get_option(WHOLESALE_GOOGLE_REVIEW_LIST, null);
+	$list = get_option(RETAILS_GOOGLE_REVIEW_LIST, null);
 	if (is_array($list)) {
 		return $list;
 	}
 
 	// First use: start from the reviews the slider already has.
 	$list = array();
-	$backup = defined('WHOLESALE_GOOGLE_REVIEWS_BACKUP') ? get_option(WHOLESALE_GOOGLE_REVIEWS_BACKUP) : null;
+	$backup = defined('RETAILS_GOOGLE_REVIEWS_BACKUP') ? get_option(RETAILS_GOOGLE_REVIEWS_BACKUP) : null;
 	if (is_array($backup) && !empty($backup['reviews'])) {
-		$list = wholesale_google_review_list_merge($list, $backup['reviews']);
+		$list = retails_google_review_list_merge($list, $backup['reviews']);
 	}
-	update_option(WHOLESALE_GOOGLE_REVIEW_LIST, $list, false);
+	update_option(RETAILS_GOOGLE_REVIEW_LIST, $list, false);
 
 	return $list;
 }
 
-function wholesale_google_review_list_save($list)
+function retails_google_review_list_save($list)
 {
-	update_option(WHOLESALE_GOOGLE_REVIEW_LIST, array_values($list), false);
+	update_option(RETAILS_GOOGLE_REVIEW_LIST, array_values($list), false);
 	// Product pages are served from the static page cache.
 	if (function_exists('sfs_page_cache_purge')) {
 		sfs_page_cache_purge();
@@ -65,7 +65,7 @@ function wholesale_google_review_list_save($list)
 /**
  * Matches the same review across API refreshes and hand-typed copies.
  */
-function wholesale_google_review_key($author, $text)
+function retails_google_review_key($author, $text)
 {
 	$text = mb_strtolower(mb_substr(preg_replace('/\s+/u', ' ', trim((string) $text)), 0, 80));
 	return 'g' . substr(md5(mb_strtolower(trim((string) $author)) . '|' . $text), 0, 12);
@@ -74,7 +74,7 @@ function wholesale_google_review_key($author, $text)
 /**
  * "2 weeks ago" / "a year ago" (the Places API's relative time) -> approximate Y-m-d.
  */
-function wholesale_google_review_date_from_relative($when)
+function retails_google_review_date_from_relative($when)
 {
 	$when = preg_replace('/^(a|an)\s+/i', '1 ', trim((string) $when));
 	$time = '' !== $when ? strtotime($when) : false;
@@ -85,7 +85,7 @@ function wholesale_google_review_date_from_relative($when)
  * Adds reviews from the Places API to the list, or refreshes ones already in it.
  * Google's copy wins for text and rating (the reviewer may have edited it); links stay.
  */
-function wholesale_google_review_list_merge($list, $reviews)
+function retails_google_review_list_merge($list, $reviews)
 {
 	foreach ((array) $reviews as $review) {
 		$text = isset($review['text']) ? trim((string) $review['text']) : '';
@@ -93,7 +93,7 @@ function wholesale_google_review_list_merge($list, $reviews)
 			continue;
 		}
 		$author = isset($review['author']) ? (string) $review['author'] : 'Google user';
-		$key = wholesale_google_review_key($author, $text);
+		$key = retails_google_review_key($author, $text);
 		$google_id = isset($review['id']) ? (string) $review['id'] : '';
 
 		$found = null;
@@ -109,7 +109,7 @@ function wholesale_google_review_list_merge($list, $reviews)
 			'author' => $author,
 			'author_url' => isset($review['author_url']) ? (string) $review['author_url'] : '',
 			'photo' => isset($review['photo']) ? (string) $review['photo'] : '',
-			'rating' => wholesale_sanitize_star_rating(isset($review['rating']) ? $review['rating'] : 5),
+			'rating' => retails_sanitize_star_rating(isset($review['rating']) ? $review['rating'] : 5),
 			'text' => $text,
 			'url' => isset($review['url']) ? (string) $review['url'] : '',
 		);
@@ -123,7 +123,7 @@ function wholesale_google_review_list_merge($list, $reviews)
 				'id' => $key,
 				'key' => $key,
 				'google_id' => $google_id,
-				'date' => $date ? $date : wholesale_google_review_date_from_relative(isset($review['when']) ? $review['when'] : ''),
+				'date' => $date ? $date : retails_google_review_date_from_relative(isset($review['when']) ? $review['when'] : ''),
 				'products' => array(),
 				'categories' => array(),
 				'added' => time(),
@@ -140,28 +140,28 @@ function wholesale_google_review_list_merge($list, $reviews)
 }
 
 // Each successful Places API refresh adds new reviews to the list.
-add_action('wholesale_google_reviews_fetched', function ($data) {
-	$list = wholesale_google_review_list();
-	$merged = wholesale_google_review_list_merge($list, isset($data['reviews']) ? $data['reviews'] : array());
+add_action('retails_google_reviews_fetched', function ($data) {
+	$list = retails_google_review_list();
+	$merged = retails_google_review_list_merge($list, isset($data['reviews']) ? $data['reviews'] : array());
 	if ($merged !== $list) {
-		wholesale_google_review_list_save($merged);
+		retails_google_review_list_save($merged);
 	}
 });
 
 /**
  * Whether a review is shown on public pages at all.
  */
-function wholesale_google_review_is_public($entry)
+function retails_google_review_is_public($entry)
 {
-	$min_rating = wholesale_sanitize_star_rating(wholesale_get_setting('google_reviews_min_rating'));
-	return (int) $entry['rating'] >= $min_rating && !wholesale_review_text_hidden($entry['text']);
+	$min_rating = retails_sanitize_star_rating(retails_get_setting('google_reviews_min_rating'));
+	return (int) $entry['rating'] >= $min_rating && !retails_review_text_hidden($entry['text']);
 }
 
 /**
  * Google reviews linked to a product, directly or through one of its categories.
  * Direct links come first, newest first within each group.
  */
-function wholesale_product_google_reviews($product_id, $limit = 6)
+function retails_product_google_reviews($product_id, $limit = 6)
 {
 	$product_id = absint($product_id);
 	$terms = get_the_terms($product_id, 'product_category');
@@ -169,8 +169,8 @@ function wholesale_product_google_reviews($product_id, $limit = 6)
 
 	$direct = array();
 	$by_category = array();
-	foreach (wholesale_google_review_list() as $entry) {
-		if (!wholesale_google_review_is_public($entry)) {
+	foreach (retails_google_review_list() as $entry) {
+		if (!retails_google_review_is_public($entry)) {
 			continue;
 		}
 		if (in_array($product_id, array_map('absint', (array) $entry['products']), true)) {
@@ -192,36 +192,36 @@ function wholesale_product_google_reviews($product_id, $limit = 6)
 /**
  * The product page block (single-product.php), or '' when no Google review is linked.
  */
-function wholesale_product_google_reviews_html($product_id)
+function retails_product_google_reviews_html($product_id)
 {
-	$reviews = wholesale_product_google_reviews($product_id);
+	$reviews = retails_product_google_reviews($product_id);
 	if (!$reviews) {
 		return '';
 	}
-	$google = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
+	$google = function_exists('retails_google_reviews') ? retails_google_reviews() : null;
 
 	ob_start();
 	?>
 	<div class="product-google-reviews">
 		<div class="product-google-reviews-head">
-			<h3><?php echo wholesale_google_logo_svg(20); ?> From our Google reviews</h3>
+			<h3><?php echo retails_google_logo_svg(20); ?> From our Google reviews</h3>
 			<?php if ($google && $google['rating'] > 0 && $google['url']) : ?>
 				<a class="product-google-summary" href="<?php echo esc_url($google['url']); ?>" target="_blank" rel="noopener">
 					<strong><?php echo esc_html(number_format($google['rating'], 1)); ?></strong>
-					<?php echo wholesale_review_stars($google['rating']); ?>
+					<?php echo retails_review_stars($google['rating']); ?>
 					<span><?php echo esc_html(sprintf(_n('%s Google review', '%s Google reviews', $google['count'], 'litsign'), number_format_i18n($google['count']))); ?></span>
 				</a>
 			<?php endif; ?>
 		</div>
 		<div class="product-review-list">
 			<?php foreach ($reviews as $review) :
-				$rating = wholesale_sanitize_star_rating($review['rating']);
+				$rating = retails_sanitize_star_rating($review['rating']);
 				$time = $review['date'] ? strtotime($review['date']) : 0;
 			?>
 				<article class="product-review-card product-review-card--google">
 					<div class="product-review-card-header">
 						<span class="product-review-stars" aria-label="<?php echo esc_attr($rating . ' out of 5 stars'); ?>"><?php echo esc_html(str_repeat('★', $rating) . str_repeat('☆', 5 - $rating)); ?></span>
-						<span class="product-review-google-badge"><?php echo wholesale_google_logo_svg(14); ?> Google</span>
+						<span class="product-review-google-badge"><?php echo retails_google_logo_svg(14); ?> Google</span>
 					</div>
 					<p><?php echo esc_html($review['text']); ?></p>
 					<div class="product-review-author">
@@ -254,15 +254,15 @@ add_action('admin_menu', function () {
 		'edit.php?post_type=review_submission',
 		'Google reviews',
 		'Google reviews',
-		WHOLESALE_GOOGLE_REVIEW_CAP,
-		WHOLESALE_GOOGLE_REVIEW_PAGE,
-		'wholesale_google_review_admin_page'
+		RETAILS_GOOGLE_REVIEW_CAP,
+		RETAILS_GOOGLE_REVIEW_PAGE,
+		'retails_google_review_admin_page'
 	);
 });
 
-function wholesale_google_review_admin_url($args = array())
+function retails_google_review_admin_url($args = array())
 {
-	return add_query_arg($args, admin_url('edit.php?post_type=review_submission&page=' . WHOLESALE_GOOGLE_REVIEW_PAGE));
+	return add_query_arg($args, admin_url('edit.php?post_type=review_submission&page=' . RETAILS_GOOGLE_REVIEW_PAGE));
 }
 
 /**
@@ -270,7 +270,7 @@ function wholesale_google_review_admin_url($args = array())
  *
  * @return array{categories: WP_Term[], groups: array<string, array{name: string, products: array<int, string>}>}
  */
-function wholesale_google_review_product_choices()
+function retails_google_review_product_choices()
 {
 	$categories = get_terms(array('taxonomy' => 'product_category', 'hide_empty' => true, 'orderby' => 'name'));
 	$categories = is_wp_error($categories) ? array() : $categories;
@@ -289,9 +289,9 @@ function wholesale_google_review_product_choices()
 		$term = $terms && !is_wp_error($terms) ? $terms[0] : null;
 		$slug = $term ? $term->slug : '';
 		if (!isset($groups[$slug])) {
-			$groups[$slug] = array('name' => $term ? wholesale_schema_text($term->name) : 'No category', 'products' => array());
+			$groups[$slug] = array('name' => $term ? retails_schema_text($term->name) : 'No category', 'products' => array());
 		}
-		$groups[$slug]['products'][$product->ID] = wholesale_schema_text(get_the_title($product));
+		$groups[$slug]['products'][$product->ID] = retails_schema_text(get_the_title($product));
 	}
 	uasort($groups, static function ($a, $b) {
 		return strcasecmp($a['name'], $b['name']);
@@ -303,17 +303,17 @@ function wholesale_google_review_product_choices()
 /**
  * "Channel Letters (all), Backlit Film Prints, +3 more" for the list table.
  */
-function wholesale_google_review_links_label($entry)
+function retails_google_review_links_label($entry)
 {
 	$names = array();
 	foreach ((array) $entry['categories'] as $slug) {
 		$term = get_term_by('slug', $slug, 'product_category');
-		$names[] = ($term ? wholesale_schema_text($term->name) : $slug) . ' (all)';
+		$names[] = ($term ? retails_schema_text($term->name) : $slug) . ' (all)';
 	}
 	foreach ((array) $entry['products'] as $product_id) {
 		$title = get_the_title(absint($product_id));
 		if ('' !== $title) {
-			$names[] = wholesale_schema_text($title);
+			$names[] = retails_schema_text($title);
 		}
 	}
 	if (!$names) {
@@ -324,14 +324,14 @@ function wholesale_google_review_links_label($entry)
 	return implode(', ', $shown) . ($more > 0 ? sprintf(', +%d more', $more) : '');
 }
 
-function wholesale_google_review_admin_page()
+function retails_google_review_admin_page()
 {
-	if (!current_user_can(WHOLESALE_GOOGLE_REVIEW_CAP)) {
+	if (!current_user_can(RETAILS_GOOGLE_REVIEW_CAP)) {
 		wp_die('Not allowed.');
 	}
 
-	$list = wholesale_google_review_list();
-	$google = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
+	$list = retails_google_review_list();
+	$google = function_exists('retails_google_reviews') ? retails_google_reviews() : null;
 	$editing = isset($_GET['edit']) ? sanitize_key(wp_unslash($_GET['edit'])) : '';
 	$adding = isset($_GET['add']);
 	$entry = null;
@@ -340,12 +340,12 @@ function wholesale_google_review_admin_page()
 			$entry = $item;
 		}
 	}
-	$min_rating = wholesale_sanitize_star_rating(wholesale_get_setting('google_reviews_min_rating'));
+	$min_rating = retails_sanitize_star_rating(retails_get_setting('google_reviews_min_rating'));
 	$notice = isset($_GET['gr_notice']) ? sanitize_text_field(wp_unslash($_GET['gr_notice'])) : '';
 	?>
-	<div class="wrap wholesale-google-reviews-admin">
+	<div class="wrap retails-google-reviews-admin">
 		<h1 class="wp-heading-inline">Google reviews on product pages</h1>
-		<a class="page-title-action" href="<?php echo esc_url(wholesale_google_review_admin_url(array('add' => 1))); ?>#gr-form">Add a Google review by hand</a>
+		<a class="page-title-action" href="<?php echo esc_url(retails_google_review_admin_url(array('add' => 1))); ?>#gr-form">Add a Google review by hand</a>
 		<hr class="wp-header-end">
 
 		<?php if ($notice) : ?>
@@ -362,8 +362,8 @@ function wholesale_google_review_admin_page()
 		</p>
 
 		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin:12px 0 18px">
-			<input type="hidden" name="action" value="wholesale_google_review_sync">
-			<?php wp_nonce_field('wholesale_google_review_sync'); ?>
+			<input type="hidden" name="action" value="retails_google_review_sync">
+			<?php wp_nonce_field('retails_google_review_sync'); ?>
 			<button type="submit" class="button">Check Google for new reviews</button>
 		</form>
 
@@ -383,8 +383,8 @@ function wholesale_google_review_admin_page()
 					<tr><td colspan="6">No Google reviews yet. Click <em>Check Google for new reviews</em>, or add one by hand.</td></tr>
 				<?php endif; ?>
 				<?php foreach ($list as $item) :
-					$links = wholesale_google_review_links_label($item);
-					$public = wholesale_google_review_is_public($item);
+					$links = retails_google_review_links_label($item);
+					$public = retails_google_review_is_public($item);
 				?>
 					<tr>
 						<td style="color:#f5ad27;white-space:nowrap"><?php echo esc_html(str_repeat('★', (int) $item['rating']) . str_repeat('☆', 5 - (int) $item['rating'])); ?></td>
@@ -396,12 +396,12 @@ function wholesale_google_review_admin_page()
 						<td>
 							<?php echo esc_html(wp_trim_words($item['text'], 30)); ?>
 							<?php if (!$public) : ?>
-								<br><span style="color:#b32d2e"><?php echo wholesale_review_text_hidden($item['text']) ? 'Not shown: mentions installing.' : esc_html(sprintf('Not shown: below %d stars.', $min_rating)); ?></span>
+								<br><span style="color:#b32d2e"><?php echo retails_review_text_hidden($item['text']) ? 'Not shown: mentions installing.' : esc_html(sprintf('Not shown: below %d stars.', $min_rating)); ?></span>
 							<?php endif; ?>
 						</td>
 						<td><?php echo $links ? esc_html($links) : '<em>Not linked yet</em>'; ?></td>
 						<td>
-							<a class="button button-small" href="<?php echo esc_url(wholesale_google_review_admin_url(array('edit' => $item['id']))); ?>#gr-form"><?php echo $links ? 'Edit links' : 'Link to products'; ?></a>
+							<a class="button button-small" href="<?php echo esc_url(retails_google_review_admin_url(array('edit' => $item['id']))); ?>#gr-form"><?php echo $links ? 'Edit links' : 'Link to products'; ?></a>
 						</td>
 					</tr>
 				<?php endforeach; ?>
@@ -409,26 +409,26 @@ function wholesale_google_review_admin_page()
 		</table>
 
 		<?php if ($entry || $adding) :
-			wholesale_google_review_admin_form($entry);
+			retails_google_review_admin_form($entry);
 		endif; ?>
 	</div>
 	<?php
 }
 
-function wholesale_google_review_admin_form($entry)
+function retails_google_review_admin_form($entry)
 {
 	$is_new = null === $entry;
 	$is_google = !$is_new && 'google' === $entry['source'];
 	$entry = $entry ? $entry : array('id' => '', 'author' => '', 'rating' => 5, 'date' => '', 'text' => '', 'url' => '', 'products' => array(), 'categories' => array());
-	$choices = wholesale_google_review_product_choices();
+	$choices = retails_google_review_product_choices();
 	$linked_products = array_map('absint', (array) $entry['products']);
 	?>
 	<div id="gr-form" class="card" style="max-width:980px;margin-top:22px;padding:16px 20px">
 		<h2 style="margin-top:0"><?php echo $is_new ? 'Add a Google review by hand' : esc_html('Review by ' . $entry['author']); ?></h2>
 		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-			<input type="hidden" name="action" value="wholesale_google_review_save">
+			<input type="hidden" name="action" value="retails_google_review_save">
 			<input type="hidden" name="review_id" value="<?php echo esc_attr($entry['id']); ?>">
-			<?php wp_nonce_field('wholesale_google_review_save'); ?>
+			<?php wp_nonce_field('retails_google_review_save'); ?>
 
 			<?php if ($is_google) : ?>
 				<p><span style="color:#f5ad27"><?php echo esc_html(str_repeat('★', (int) $entry['rating'])); ?></span>
@@ -450,7 +450,7 @@ function wholesale_google_review_admin_form($entry)
 			<p class="description">Pick whole categories (every product in them) and/or single products.</p>
 			<fieldset style="columns:3 220px;margin:8px 0 14px">
 				<?php foreach ($choices['categories'] as $term) : ?>
-					<label style="display:block;break-inside:avoid;margin:2px 0"><input type="checkbox" name="categories[]" value="<?php echo esc_attr($term->slug); ?>" <?php checked(in_array($term->slug, (array) $entry['categories'], true)); ?>> <?php echo esc_html(wholesale_schema_text($term->name)); ?> <span style="color:#787c82">(all <?php echo esc_html($term->count); ?>)</span></label>
+					<label style="display:block;break-inside:avoid;margin:2px 0"><input type="checkbox" name="categories[]" value="<?php echo esc_attr($term->slug); ?>" <?php checked(in_array($term->slug, (array) $entry['categories'], true)); ?>> <?php echo esc_html(retails_schema_text($term->name)); ?> <span style="color:#787c82">(all <?php echo esc_html($term->count); ?>)</span></label>
 				<?php endforeach; ?>
 			</fieldset>
 
@@ -468,15 +468,15 @@ function wholesale_google_review_admin_form($entry)
 
 			<p class="submit" style="display:flex;gap:10px;align-items:center">
 				<button type="submit" class="button button-primary"><?php echo $is_new ? 'Add review' : 'Save'; ?></button>
-				<a class="button" href="<?php echo esc_url(wholesale_google_review_admin_url()); ?>">Cancel</a>
+				<a class="button" href="<?php echo esc_url(retails_google_review_admin_url()); ?>">Cancel</a>
 			</p>
 		</form>
 
 		<?php if (!$is_new && !$is_google) : ?>
 			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="margin-top:-6px">
-				<input type="hidden" name="action" value="wholesale_google_review_delete">
+				<input type="hidden" name="action" value="retails_google_review_delete">
 				<input type="hidden" name="review_id" value="<?php echo esc_attr($entry['id']); ?>">
-				<?php wp_nonce_field('wholesale_google_review_delete'); ?>
+				<?php wp_nonce_field('retails_google_review_delete'); ?>
 				<button type="submit" class="button-link button-link-delete">Remove this review from the site</button>
 			</form>
 		<?php endif; ?>
@@ -508,13 +508,13 @@ function wholesale_google_review_admin_form($entry)
 	<?php
 }
 
-add_action('admin_post_wholesale_google_review_save', function () {
-	if (!current_user_can(WHOLESALE_GOOGLE_REVIEW_CAP)) {
+add_action('admin_post_retails_google_review_save', function () {
+	if (!current_user_can(RETAILS_GOOGLE_REVIEW_CAP)) {
 		wp_die('Not allowed.');
 	}
-	check_admin_referer('wholesale_google_review_save');
+	check_admin_referer('retails_google_review_save');
 
-	$list = wholesale_google_review_list();
+	$list = retails_google_review_list();
 	$id = isset($_POST['review_id']) ? sanitize_key(wp_unslash($_POST['review_id'])) : '';
 	$index = null;
 	foreach ($list as $i => $item) {
@@ -535,13 +535,13 @@ add_action('admin_post_wholesale_google_review_save', function () {
 		$author = sanitize_text_field(wp_unslash(isset($_POST['author']) ? $_POST['author'] : ''));
 		$text = sanitize_textarea_field(wp_unslash(isset($_POST['text']) ? $_POST['text'] : ''));
 		if ('' === $author || '' === $text) {
-			wp_safe_redirect(wholesale_google_review_admin_url(array('gr_notice' => 'Please fill in the reviewer name and the review.')));
+			wp_safe_redirect(retails_google_review_admin_url(array('gr_notice' => 'Please fill in the reviewer name and the review.')));
 			exit;
 		}
 		$date = sanitize_text_field(wp_unslash(isset($_POST['date']) ? $_POST['date'] : ''));
 		$fields = array(
 			'author' => $author,
-			'rating' => wholesale_sanitize_star_rating(isset($_POST['rating']) ? $_POST['rating'] : 5),
+			'rating' => retails_sanitize_star_rating(isset($_POST['rating']) ? $_POST['rating'] : 5),
 			'date' => preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) ? $date : '',
 			'text' => $text,
 			'url' => esc_url_raw(wp_unslash(isset($_POST['url']) ? $_POST['url'] : '')),
@@ -553,7 +553,7 @@ add_action('admin_post_wholesale_google_review_save', function () {
 	$fields['categories'] = $categories;
 
 	if (null === $index) {
-		$key = wholesale_google_review_key($fields['author'], $fields['text']);
+		$key = retails_google_review_key($fields['author'], $fields['text']);
 		$list[] = $fields + array(
 			'id' => 'm' . substr(md5($key . microtime()), 0, 12),
 			'key' => $key,
@@ -567,44 +567,44 @@ add_action('admin_post_wholesale_google_review_save', function () {
 	} else {
 		$list[$index] = array_merge($list[$index], $fields);
 		if (!$is_google) {
-			$list[$index]['key'] = wholesale_google_review_key($fields['author'], $fields['text']);
+			$list[$index]['key'] = retails_google_review_key($fields['author'], $fields['text']);
 		}
 		$message = 'Saved.';
 	}
 
-	wholesale_google_review_list_save($list);
-	wp_safe_redirect(wholesale_google_review_admin_url(array('gr_notice' => $message)));
+	retails_google_review_list_save($list);
+	wp_safe_redirect(retails_google_review_admin_url(array('gr_notice' => $message)));
 	exit;
 });
 
-add_action('admin_post_wholesale_google_review_delete', function () {
-	if (!current_user_can(WHOLESALE_GOOGLE_REVIEW_CAP)) {
+add_action('admin_post_retails_google_review_delete', function () {
+	if (!current_user_can(RETAILS_GOOGLE_REVIEW_CAP)) {
 		wp_die('Not allowed.');
 	}
-	check_admin_referer('wholesale_google_review_delete');
+	check_admin_referer('retails_google_review_delete');
 	$id = isset($_POST['review_id']) ? sanitize_key(wp_unslash($_POST['review_id'])) : '';
 	// Only hand-typed reviews can be removed; Google's own come back on the next refresh.
-	$list = array_filter(wholesale_google_review_list(), static function ($item) use ($id) {
+	$list = array_filter(retails_google_review_list(), static function ($item) use ($id) {
 		return !($item['id'] === $id && 'manual' === $item['source']);
 	});
-	wholesale_google_review_list_save($list);
-	wp_safe_redirect(wholesale_google_review_admin_url(array('gr_notice' => 'Review removed.')));
+	retails_google_review_list_save($list);
+	wp_safe_redirect(retails_google_review_admin_url(array('gr_notice' => 'Review removed.')));
 	exit;
 });
 
-add_action('admin_post_wholesale_google_review_sync', function () {
-	if (!current_user_can(WHOLESALE_GOOGLE_REVIEW_CAP)) {
+add_action('admin_post_retails_google_review_sync', function () {
+	if (!current_user_can(RETAILS_GOOGLE_REVIEW_CAP)) {
 		wp_die('Not allowed.');
 	}
-	check_admin_referer('wholesale_google_review_sync');
-	$before = count(wholesale_google_review_list());
-	$data = function_exists('wholesale_fetch_google_reviews') ? wholesale_fetch_google_reviews(true) : null;
-	$added = count(wholesale_google_review_list()) - $before;
+	check_admin_referer('retails_google_review_sync');
+	$before = count(retails_google_review_list());
+	$data = function_exists('retails_fetch_google_reviews') ? retails_fetch_google_reviews(true) : null;
+	$added = count(retails_google_review_list()) - $before;
 	if (!$data || !empty($data['error'])) {
 		$message = 'Could not reach Google: ' . ($data && !empty($data['error']) ? $data['error'] : 'check the Place ID and API key in Settings.');
 	} else {
 		$message = sprintf('Google returned %d reviews; %d new.', count($data['reviews']), max(0, $added));
 	}
-	wp_safe_redirect(wholesale_google_review_admin_url(array('gr_notice' => $message)));
+	wp_safe_redirect(retails_google_review_admin_url(array('gr_notice' => $message)));
 	exit;
 });

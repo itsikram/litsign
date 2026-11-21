@@ -1,7 +1,7 @@
 <?php
 /**
  * Review request email: one "How did it turn out?" email per order, a few days after it
- * arrives, with a signed review link for each item (wholesale_order_review_url(), so guest
+ * arrives, with a signed review link for each item (retails_order_review_url(), so guest
  * checkouts can review too) and the Google review link.
  *
  * The shipped email already carries review links, but it arrives before the product does.
@@ -26,38 +26,38 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const WHOLESALE_REVIEW_REQUEST_TRANSIT_DAYS = 7;
-const WHOLESALE_REVIEW_REQUEST_INSTALL_DAYS = 7;
+const RETAILS_REVIEW_REQUEST_TRANSIT_DAYS = 7;
+const RETAILS_REVIEW_REQUEST_INSTALL_DAYS = 7;
 // Never ask about an order that arrived longer ago than this.
-const WHOLESALE_REVIEW_REQUEST_MAX_AGE_DAYS = 45;
+const RETAILS_REVIEW_REQUEST_MAX_AGE_DAYS = 45;
 // On first run, orders that arrived up to this long before it still get an email.
-const WHOLESALE_REVIEW_REQUEST_LOOKBACK_DAYS = 14;
+const RETAILS_REVIEW_REQUEST_LOOKBACK_DAYS = 14;
 
 /**
  * Only the live site emails customers. A local or staging copy has the same orders and
  * customer addresses, and marking orders there would stop live from sending after a push.
  */
-function wholesale_review_requests_can_send()
+function retails_review_requests_can_send()
 {
 	$host = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));
-	return (bool) apply_filters('wholesale_review_requests_can_send', in_array($host, array('storefrontsignonline.com', 'www.storefrontsignonline.com'), true));
+	return (bool) apply_filters('retails_review_requests_can_send', in_array($host, array('storefrontsignonline.com', 'www.storefrontsignonline.com'), true));
 }
 
-function wholesale_review_requests_enabled()
+function retails_review_requests_enabled()
 {
-	return wholesale_setting_enabled('review_request_email') && wholesale_setting_enabled('allow_verified_reviews');
+	return retails_setting_enabled('review_request_email') && retails_setting_enabled('allow_verified_reviews');
 }
 
 /**
  * The earliest arrival time that still gets an email: set once, the first time this runs,
  * so turning the feature on never emails customers about old orders.
  */
-function wholesale_review_requests_since()
+function retails_review_requests_since()
 {
-	$since = (int) get_option('wholesale_review_request_since', 0);
+	$since = (int) get_option('retails_review_request_since', 0);
 	if (!$since) {
-		$since = time() - WHOLESALE_REVIEW_REQUEST_LOOKBACK_DAYS * DAY_IN_SECONDS;
-		update_option('wholesale_review_request_since', $since, false);
+		$since = time() - RETAILS_REVIEW_REQUEST_LOOKBACK_DAYS * DAY_IN_SECONDS;
+		update_option('retails_review_request_since', $since, false);
 	}
 	return $since;
 }
@@ -65,7 +65,7 @@ function wholesale_review_requests_since()
 /**
  * When the order arrived (or is assumed to have), as a timestamp, or 0 if unknown.
  */
-function wholesale_review_request_arrival_time($order_id)
+function retails_review_request_arrival_time($order_id)
 {
 	$status = (string) get_post_status($order_id);
 	$shipped = 0;
@@ -76,7 +76,7 @@ function wholesale_review_request_arrival_time($order_id)
 		}
 		$to = (string) ($entry['to'] ?? '');
 		$time = (int) $entry['time'];
-		if (!$shipped && wholesale_order_is_shipped($to)) {
+		if (!$shipped && retails_order_is_shipped($to)) {
 			$shipped = $time;
 		}
 		if ('delivered' === $to) {
@@ -85,10 +85,10 @@ function wholesale_review_request_arrival_time($order_id)
 	}
 
 	if ('delivered' === $status) {
-		return $delivered ?: ($shipped ? $shipped + WHOLESALE_REVIEW_REQUEST_TRANSIT_DAYS * DAY_IN_SECONDS : 0);
+		return $delivered ?: ($shipped ? $shipped + RETAILS_REVIEW_REQUEST_TRANSIT_DAYS * DAY_IN_SECONDS : 0);
 	}
 	if ('completed' === $status && $shipped) {
-		return $shipped + WHOLESALE_REVIEW_REQUEST_TRANSIT_DAYS * DAY_IN_SECONDS;
+		return $shipped + RETAILS_REVIEW_REQUEST_TRANSIT_DAYS * DAY_IN_SECONDS;
 	}
 	return 0;
 }
@@ -96,15 +96,15 @@ function wholesale_review_request_arrival_time($order_id)
 /**
  * When the review request for this order is due, or 0 if it never will be.
  */
-function wholesale_review_request_due_time($order_id)
+function retails_review_request_due_time($order_id)
 {
-	$arrived = wholesale_review_request_arrival_time($order_id);
+	$arrived = retails_review_request_arrival_time($order_id);
 	if (!$arrived) {
 		return 0;
 	}
-	$days = max(1, absint(wholesale_get_setting('review_request_days')));
-	if ('sign' === wholesale_order_noun($order_id)) {
-		$days += WHOLESALE_REVIEW_REQUEST_INSTALL_DAYS;
+	$days = max(1, absint(retails_get_setting('review_request_days')));
+	if ('sign' === retails_order_noun($order_id)) {
+		$days += RETAILS_REVIEW_REQUEST_INSTALL_DAYS;
 	}
 	return $arrived + $days * DAY_IN_SECONDS;
 }
@@ -112,7 +112,7 @@ function wholesale_review_request_due_time($order_id)
 /**
  * Why an order would not get a review request now ('' when it is due).
  */
-function wholesale_review_request_skip_reason($order_id, $now = null)
+function retails_review_request_skip_reason($order_id, $now = null)
 {
 	$now = null === $now ? time() : (int) $now;
 	if (get_post_meta($order_id, '_review_request_sent', true)) {
@@ -122,34 +122,34 @@ function wholesale_review_request_skip_reason($order_id, $now = null)
 	if (!in_array($status, array('delivered', 'completed'), true)) {
 		return 'status';
 	}
-	$arrived = wholesale_review_request_arrival_time($order_id);
+	$arrived = retails_review_request_arrival_time($order_id);
 	if (!$arrived) {
 		return 'no-ship-date';
 	}
-	if ($arrived < wholesale_review_requests_since() || $arrived < $now - WHOLESALE_REVIEW_REQUEST_MAX_AGE_DAYS * DAY_IN_SECONDS) {
+	if ($arrived < retails_review_requests_since() || $arrived < $now - RETAILS_REVIEW_REQUEST_MAX_AGE_DAYS * DAY_IN_SECONDS) {
 		return 'too-old';
 	}
-	if (wholesale_review_request_due_time($order_id) > $now) {
+	if (retails_review_request_due_time($order_id) > $now) {
 		return 'not-yet';
 	}
-	$billing = wholesale_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true));
+	$billing = retails_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true));
 	if (!is_email($billing['billing_email'] ?? '')) {
 		return 'no-email';
 	}
-	if (!wholesale_order_unreviewed_products($order_id)) {
+	if (!retails_order_unreviewed_products($order_id)) {
 		return 'reviewed';
 	}
 	return '';
 }
 
 /**
- * The email body (already escaped) for wholesale_send_order_email().
+ * The email body (already escaped) for retails_send_order_email().
  */
-function wholesale_review_request_email_body($order_id)
+function retails_review_request_email_body($order_id)
 {
-	$links = wholesale_order_unreviewed_products($order_id);
-	$google_url = function_exists('wholesale_order_google_review_url') ? wholesale_order_google_review_url($order_id) : '';
-	$noun = wholesale_order_noun($order_id);
+	$links = retails_order_unreviewed_products($order_id);
+	$google_url = function_exists('retails_order_google_review_url') ? retails_order_google_review_url($order_id) : '';
+	$noun = retails_order_noun($order_id);
 	$thing = 'order' === $noun ? 'your order' : 'your ' . $noun;
 	$choose = 'order' === $noun ? 'what to order' : "the right {$noun}";
 
@@ -174,13 +174,13 @@ function wholesale_review_request_email_body($order_id)
 /**
  * Sends the review request for one order. Returns true when sent.
  */
-function wholesale_send_review_request($order_id)
+function retails_send_review_request($order_id)
 {
-	$number = wholesale_order_number($order_id);
-	$noun = wholesale_order_noun($order_id);
+	$number = retails_order_number($order_id);
+	$noun = retails_order_noun($order_id);
 	$subject = 'sign' === $noun ? sprintf('How does your new sign look? (order #%s)', $number) : sprintf('How did your order #%s turn out?', $number);
 
-	$sent = wholesale_send_order_email($order_id, $subject, wholesale_review_request_email_body($order_id));
+	$sent = retails_send_order_email($order_id, $subject, retails_review_request_email_body($order_id));
 	// Marked even when the send fails: the email log retries it, so it is never sent twice.
 	update_post_meta($order_id, '_review_request_sent', time());
 	add_post_meta($order_id, '_status_email_log', current_time('mysql') . ' review-request' . ($sent ? '' : ' (send failed, will retry)'));
@@ -190,7 +190,7 @@ function wholesale_send_review_request($order_id)
 /**
  * Shipped orders that may still need a review request (cheap pre-filter; the skip check decides).
  */
-function wholesale_review_request_candidate_ids()
+function retails_review_request_candidate_ids()
 {
 	return get_posts(array(
 		'post_type' => 'order',
@@ -199,14 +199,14 @@ function wholesale_review_request_candidate_ids()
 		'fields' => 'ids',
 		'orderby' => 'modified',
 		'order' => 'DESC',
-		'date_query' => array(array('after' => gmdate('Y-m-d', time() - (WHOLESALE_REVIEW_REQUEST_MAX_AGE_DAYS + 120) * DAY_IN_SECONDS), 'column' => 'post_date_gmt')),
+		'date_query' => array(array('after' => gmdate('Y-m-d', time() - (RETAILS_REVIEW_REQUEST_MAX_AGE_DAYS + 120) * DAY_IN_SECONDS), 'column' => 'post_date_gmt')),
 		'meta_query' => array(array('key' => '_review_request_sent', 'compare' => 'NOT EXISTS')),
 	));
 }
 
-function wholesale_process_review_requests()
+function retails_process_review_requests()
 {
-	if (!wholesale_review_requests_enabled() || !wholesale_review_requests_can_send()) {
+	if (!retails_review_requests_enabled() || !retails_review_requests_can_send()) {
 		return;
 	}
 	$hour = (int) wp_date('G');
@@ -214,28 +214,28 @@ function wholesale_process_review_requests()
 		return;
 	}
 	$sent = 0;
-	foreach (wholesale_review_request_candidate_ids() as $order_id) {
+	foreach (retails_review_request_candidate_ids() as $order_id) {
 		if ($sent >= 20) {
 			break;
 		}
-		if ('' === wholesale_review_request_skip_reason($order_id)) {
-			wholesale_send_review_request($order_id);
+		if ('' === retails_review_request_skip_reason($order_id)) {
+			retails_send_review_request($order_id);
 			$sent++;
 		}
 	}
 }
-add_action('wholesale_review_requests', 'wholesale_process_review_requests');
+add_action('retails_review_requests', 'retails_process_review_requests');
 
 add_action('init', function () {
-	if (!wp_next_scheduled('wholesale_review_requests')) {
-		wp_schedule_event(time() + 10 * MINUTE_IN_SECONDS, 'hourly', 'wholesale_review_requests');
+	if (!wp_next_scheduled('retails_review_requests')) {
+		wp_schedule_event(time() + 10 * MINUTE_IN_SECONDS, 'hourly', 'retails_review_requests');
 	}
 });
 
 /**
  * Settings page summary: what was sent and what is coming up.
  */
-function wholesale_review_request_summary()
+function retails_review_request_summary()
 {
 	$sent_30 = get_posts(array(
 		'post_type' => 'order',
@@ -247,13 +247,13 @@ function wholesale_review_request_summary()
 	$due_now = 0;
 	$upcoming = 0;
 	$next = 0;
-	foreach (wholesale_review_request_candidate_ids() as $order_id) {
-		$reason = wholesale_review_request_skip_reason($order_id);
+	foreach (retails_review_request_candidate_ids() as $order_id) {
+		$reason = retails_review_request_skip_reason($order_id);
 		if ('' === $reason) {
 			$due_now++;
 		} elseif ('not-yet' === $reason) {
 			$upcoming++;
-			$due = wholesale_review_request_due_time($order_id);
+			$due = retails_review_request_due_time($order_id);
 			$next = $next ? min($next, $due) : $due;
 		}
 	}
@@ -261,7 +261,7 @@ function wholesale_review_request_summary()
 }
 
 /** Days after delivery: 1 to 60. */
-function wholesale_sanitize_review_request_days($value)
+function retails_sanitize_review_request_days($value)
 {
 	return max(1, min(60, absint($value)));
 }

@@ -10,7 +10,7 @@
  * @package litsign
  */
 
-$banners_url = wholesale_category_url('banners');
+$banners_url = retails_category_url('banners');
 
 // Google Ads landing page: an on-page quote form (#quote) that saves the ad
 // click and fires the lead conversion (inc/quote-form.php).
@@ -20,19 +20,19 @@ $quote_form = array(
 	'project_label' => 'Banners & displays',
 	'interests' => array('Vinyl banners', 'Mesh banners', 'Pole banners', 'Banner stands', 'Feather/teardrop flags', 'Trade show display', 'Event tent', 'Table covers'),
 );
-wholesale_quote_form_handle($quote_form);
-wholesale_track_quote_lead('banners_displays_page');
+retails_quote_form_handle($quote_form);
+retails_track_quote_lead('banners_displays_page');
 // Quote links on this page jump to the form instead of leaving for /contact/.
 $contact_url = '#quote';
 
 $product_url = static function ($slug, $fallback = '') {
-	$product = wholesale_seo_product($slug);
+	$product = retails_seo_product($slug);
 	return $product ? get_permalink($product) : $fallback;
 };
 
 // $eager: 'high' for the page's main image, true for other above-the-fold images.
 $product_image = static function ($slug, $alt, $sizes, $eager = false) {
-	$product = wholesale_seo_product($slug);
+	$product = retails_seo_product($slug);
 	if (!$product || !has_post_thumbnail($product)) {
 		return '';
 	}
@@ -49,7 +49,7 @@ $product_image = static function ($slug, $alt, $sizes, $eager = false) {
 // Card prices are whole dollars, except per-ftÂ² prices: rounding $3.30 up to $4 would
 // overstate the price the ads quote, so those keep their cents.
 $card_price = static function ($html) {
-	return preg_match('/per ft/i', wp_strip_all_tags((string) $html)) ? $html : wholesale_price_no_cents($html);
+	return preg_match('/per ft/i', wp_strip_all_tags((string) $html)) ? $html : retails_price_no_cents($html);
 };
 
 // Product lines: category slug, product whose photo and price represent it, name, summary,
@@ -78,8 +78,8 @@ $best_sellers = array(
 );
 // The X-stand's photos all carry sample sale artwork: the table top stand fills its place
 // until it has a new photo (inc/product-photo-overrides.php).
-if (function_exists('wholesale_card_picks')) {
-	$best_sellers = wholesale_card_picks($best_sellers, array('table-top-banner-stand' => 'Counters &amp; check-in desks'));
+if (function_exists('retails_card_picks')) {
+	$best_sellers = retails_card_picks($best_sellers, array('table-top-banner-stand' => 'Counters &amp; check-in desks'));
 }
 
 // Picks by occasion: id, heading, intro, array(product slug => label).
@@ -107,7 +107,7 @@ $occasions = array(
 );
 
 // Banner materials: product slug, material, best for, outdoors, and an optional "from"
-// label for products sold as a fixed-price set (priced by wholesale_product_default_total()).
+// label for products sold as a fixed-price set (priced by retails_product_default_total()).
 $materials = array(
 	array('13oz-vinyl-banner', '13oz Vinyl', 'Storefronts, sales and everyday outdoor use', 'Yes'),
 	array('18oz-blockout-banner', '18oz Blockout Vinyl', 'Double-sided banners and long outdoor runs', 'Yes'),
@@ -128,7 +128,7 @@ $stands = array(
 );
 
 // One query for every product this page shows (instead of one lookup per slug).
-wholesale_seo_prime_products(array_merge(
+retails_seo_prime_products(array_merge(
 	array_column($lines, 1),
 	array_keys($best_sellers),
 	array_merge(...array_map(static function ($occasion) {
@@ -140,7 +140,7 @@ wholesale_seo_prime_products(array_merge(
 ));
 
 // Whole dollars like the cards: since 2026-11-12 Starting at is the cheapest real order ("$28.00 per item"), not a per ft² rate.
-$vinyl_price = $card_price(wholesale_seo_product_starting_text('13oz-vinyl-banner'));
+$vinyl_price = $card_price(retails_seo_product_starting_text('13oz-vinyl-banner'));
 
 // Ad group headlines (?type=key): headline, lead, the product the hero button opens,
 // and the product line card (anchor id) shown first. Anything else shows the default
@@ -165,12 +165,12 @@ if ($type) {
 }
 
 // The best sellers are this page's item list in structured data.
-$GLOBALS['wholesale_page_items'] = array_values(array_filter(array_map(static function ($slug) {
-	return wholesale_seo_product($slug);
+$GLOBALS['retails_page_items'] = array_values(array_filter(array_map(static function ($slug) {
+	return retails_seo_product($slug);
 }, array_keys($best_sellers))));
-$GLOBALS['wholesale_page_image'] = ($hero = wholesale_seo_product('13oz-vinyl-banner')) ? get_the_post_thumbnail_url($hero, 'large') : '';
+$GLOBALS['retails_page_image'] = ($hero = retails_seo_product('13oz-vinyl-banner')) ? get_the_post_thumbnail_url($hero, 'large') : '';
 
-wholesale_seo_set_page_faq(array(
+retails_seo_set_page_faq(array(
 	array(
 		'q' => 'How much does a custom banner cost?',
 		'a' => 'Banners are priced per square foot, so the price depends on size and material' . ($vinyl_price ? ': 13oz vinyl starts at ' . $vinyl_price : '') . '. Enter your width and height on any banner and your price, including finishing options, updates before you add it to the cart.',
@@ -206,23 +206,23 @@ wholesale_seo_set_page_faq(array(
 ));
 
 // Register the matching image before the header prints its preload links.
-list($page_hero_image, $page_hero_mobile) = wholesale_landing_page_hero_images('banners');
-$GLOBALS['wholesale_hero_image'] = $page_hero_image;
-$GLOBALS['wholesale_hero_mobile_image'] = $page_hero_mobile;
+list($page_hero_image, $page_hero_mobile) = retails_landing_page_hero_images('banners');
+$GLOBALS['retails_hero_image'] = $page_hero_image;
+$GLOBALS['retails_hero_mobile_image'] = $page_hero_mobile;
 $page_hero_background = "--lp-desktop: url('" . esc_url($page_hero_image) . "'); --lp-mobile: url('" . esc_url($page_hero_mobile) . "');";
 
 get_header();
 
 // Hero proof point: the Google rating, linked to the reviews page (this page has no reviews section).
-$google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
+$google_reviews = function_exists('retails_google_reviews') ? retails_google_reviews() : null;
 $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_reviews : null;
-$reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews_page_url() : home_url('/reviews/');
+$reviews_url = function_exists('retails_reviews_page_url') ? retails_reviews_page_url() : home_url('/reviews/');
 ?>
 
 <main id="primary" class="sf-page bd-page">
 	<section class="bd-hero" aria-labelledby="bd-title" style="<?php echo esc_attr($page_hero_background); ?>">
 		<div class="container">
-			<?php wholesale_breadcrumbs(); ?>
+			<?php retails_breadcrumbs(); ?>
 			<div class="bd-hero-grid">
 				<div class="bd-hero-copy">
 					<p class="home-hero-eyebrow">Full color &middot; Printed to order &middot; Next-day options</p>
@@ -233,11 +233,11 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					<?php endif; ?>
 					<?php if ($google_rating) : ?>
 						<p class="home-hero-proof">
-							<a class="home-hero-rating" href="<?php echo esc_url($reviews_url); ?>"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
+							<a class="home-hero-rating" href="<?php echo esc_url($reviews_url); ?>"><?php echo retails_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
 						</p>
 					<?php endif; ?>
 					<?php if ($type) : ?>
-						<?php $type_price = $card_price(wholesale_seo_product_starting_text($types[$type][2])); ?>
+						<?php $type_price = $card_price(retails_seo_product_starting_text($types[$type][2])); ?>
 						<p class="home-hero-lead"><?php echo wp_kses_post($types[$type][1]); ?> Enter your size and see your price before you check out.</p>
 						<div class="home-hero-actions home-hero-actions--cl">
 							<a class="home-hero-shop-button" href="<?php echo esc_url($product_url($types[$type][2], '#products')); ?>"><span class="home-hero-button-text">See Sizes &amp; Prices<?php if ($type_price) : ?><small>From <?php echo wp_kses_post($type_price); ?></small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
@@ -246,10 +246,10 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 						<div class="home-hero-actions home-hero-actions--cl">
 							<a class="home-hero-shop-button" href="<?php echo esc_url($banners_url); ?>"><span class="home-hero-button-text">Shop Banners<?php if ($vinyl_price) : ?><small>From <?php echo wp_kses_post($vinyl_price); ?></small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
 					<?php endif; ?>
-						<a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
+						<a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo retails_home_icon('message'); ?> Get a Free Quote</a>
 					</div>
 					<p class="home-hero-help">
-						<?php echo wholesale_home_icon('phone'); ?>
+						<?php echo retails_home_icon('phone'); ?>
 						Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
 						<span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT</span>
 					</p>
@@ -262,19 +262,19 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 	<div class="home-hero-features bd-features" aria-label="Why order from us">
 		<div class="container home-hero-feature-grid">
 			<div class="home-hero-feature">
-				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('check'); ?></span>
+				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo retails_home_icon('check'); ?></span>
 				<span><strong>See Your Price Online</strong><small>No waiting on a quote.</small></span>
 			</div>
 			<div class="home-hero-feature">
-				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('clock'); ?></span>
+				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo retails_home_icon('clock'); ?></span>
 				<span><strong>Ships to All 50 States</strong><small>Next-day turnaround on many products.</small></span>
 			</div>
 			<div class="home-hero-feature">
-				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('badge'); ?></span>
+				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo retails_home_icon('badge'); ?></span>
 				<span><strong>Sign Makers Since 2002</strong><small>Help from real specialists.</small></span>
 			</div>
 			<div class="home-hero-feature">
-				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('flag'); ?></span>
+				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo retails_home_icon('flag'); ?></span>
 				<span><strong>Graphic-Only Refills</strong><small>Keep the hardware you own.</small></span>
 			</div>
 		</div>
@@ -299,9 +299,9 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 			<div class="sf-type-grid">
 				<?php foreach ($lines as $line) : ?>
 					<?php
-					$line_url = wholesale_category_url($line[0]);
+					$line_url = retails_category_url($line[0]);
 					// The category's cheapest Starting at, as on every category card.
-					$line_price = $card_price(wholesale_seo_category_starting_text($line[0]));
+					$line_price = $card_price(retails_seo_category_starting_text($line[0]));
 					$line_name = wp_strip_all_tags(html_entity_decode($line[2], ENT_QUOTES, 'UTF-8'));
 					?>
 					<article class="sf-type-card bd-card<?php echo $type && $types[$type][3] === $line[4] ? ' is-highlighted' : ''; ?>" id="<?php echo esc_attr($line[4]); ?>">
@@ -320,10 +320,11 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 						<div class="sf-type-body">
 							<h3><a href="<?php echo esc_url($line_url); ?>"><?php echo wp_kses_post($line[2]); ?></a></h3>
 							<p><?php echo wp_kses_post($line[3]); ?></p>
+							<?php echo function_exists('retails_card_trust') ? retails_card_trust(0, 'ship') : ''; // Category card. Escaped in helper. ?>
 							<?php if ($line_price) : ?>
 								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($line_price); ?></p>
 							<?php endif; ?>
-							<a class="lp-order" href="<?php echo esc_url($line_url); ?>">See Sizes &amp; Prices <?php echo wholesale_home_icon('arrow'); ?></a>
+							<a class="lp-order" href="<?php echo esc_url($line_url); ?>">See Sizes &amp; Prices <?php echo retails_home_icon('arrow'); ?></a>
 						</div>
 					</article>
 				<?php endforeach; ?>
@@ -338,21 +339,22 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 			<div class="bd-product-grid">
 				<?php foreach ($best_sellers as $slug => $label) : ?>
 					<?php
-					$product = wholesale_seo_product($slug);
+					$product = retails_seo_product($slug);
 					if (!$product) {
 						continue;
 					}
 					$name = wp_strip_all_tags(get_the_title($product));
-					$price = $card_price(wholesale_seo_product_starting_text($slug));
+					$price = $card_price(retails_seo_product_starting_text($slug));
 					?>
 					<a class="bd-product" href="<?php echo esc_url(get_permalink($product)); ?>">
 						<span class="bd-product-image"><?php echo $product_image($slug, $name, '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 25vw'); ?></span>
 						<span class="bd-product-tag"><?php echo wp_kses_post($label); ?></span>
 						<span class="bd-product-name"><?php echo esc_html($name); ?></span>
+						<?php echo function_exists('retails_card_trust') ? retails_card_trust($product->ID) : ''; // Escaped in helper. ?>
 						<?php if ($price) : ?>
 							<span class="bd-product-price"><small>From</small> <?php echo wp_kses_post($price); ?></span>
 						<?php endif; ?>
-						<span class="lp-order">Customize &amp; Order <?php echo wholesale_home_icon('arrow'); ?></span>
+						<span class="lp-order">Customize &amp; Order <?php echo retails_home_icon('arrow'); ?></span>
 					</a>
 				<?php endforeach; ?>
 			</div>
@@ -376,7 +378,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 									<li>
 										<a href="<?php echo esc_url($url); ?>">
 											<span><?php echo wp_kses_post($label); ?></span>
-											<?php $price = wholesale_seo_product_starting_text($slug); ?>
+											<?php $price = retails_seo_product_starting_text($slug); ?>
 											<?php if ($price) : ?><small><?php echo wp_kses_post($price); ?></small><?php endif; ?>
 										</a>
 									</li>
@@ -397,7 +399,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 			</div>
 			<div class="bd-cta-actions">
 				<a class="home-hero-shop-button" href="<?php echo esc_url($contact_url); ?>">Request a Free Quote <span aria-hidden="true">&rarr;</span></a>
-				<a class="home-hero-secondary-button" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> 866-436-2101</a>
+				<a class="home-hero-secondary-button" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?> 866-436-2101</a>
 			</div>
 		</div>
 	</section>
@@ -420,13 +422,13 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					<tbody>
 						<?php foreach ($materials as $material) : ?>
 							<?php $url = $product_url($material[0]); ?>
-							<?php $set_total = isset($material[4]) ? wholesale_product_default_total($material[0]) : null; ?>
+							<?php $set_total = isset($material[4]) ? retails_product_default_total($material[0]) : null; ?>
 							<?php if ($url) : ?>
 								<tr>
 									<th scope="row"><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($material[1]); ?></a></th>
 									<td><?php echo esc_html($material[2]); ?></td>
 									<td><?php echo esc_html($material[3]); ?></td>
-									<td class="cl-compare-price"><?php echo null !== $set_total ? esc_html($material[4] . ' $' . number_format($set_total, 2)) : wp_kses_post(wholesale_seo_product_starting_text($material[0])); ?></td>
+									<td class="cl-compare-price"><?php echo null !== $set_total ? esc_html($material[4] . ' $' . number_format($set_total, 2)) : wp_kses_post(retails_seo_product_starting_text($material[0])); ?></td>
 								</tr>
 							<?php endif; ?>
 						<?php endforeach; ?>
@@ -459,7 +461,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 									<th scope="row"><a href="<?php echo esc_url($url); ?>"><?php echo wp_kses_post($stand[1]); ?></a></th>
 									<td><?php echo esc_html($stand[2]); ?></td>
 									<td><?php echo esc_html($stand[3]); ?></td>
-									<td class="cl-compare-price"><?php echo wp_kses_post(wholesale_seo_product_starting_text($stand[0])); ?></td>
+									<td class="cl-compare-price"><?php echo wp_kses_post(retails_seo_product_starting_text($stand[0])); ?></td>
 								</tr>
 							<?php endif; ?>
 						<?php endforeach; ?>
@@ -487,8 +489,8 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 			<p>Every banner is hemmed on all sides. Add grommets every 2 feet to tie it to a fence or wall, pole pockets to slide it onto a pole, webbing with D-rings for large banners under tension, and reinforced corners for windy locations. Choosing finishing on the product page updates your price straight away.</p>
 
 			<h3>5. Plan for reuse</h3>
-			<p>If you run promotions often, invest in hardware once and swap the print. <a href="<?php echo esc_url(wholesale_category_url('banner-stands')); ?>">Banner stands</a>, <a href="<?php echo esc_url(wholesale_category_url('advertising-flags')); ?>">flags</a> and <a href="<?php echo esc_url(wholesale_category_url('a-frame-and-sign-holders')); ?>">A-frames</a> are available as graphic-only refills, and you&rsquo;ll find replacement parts in <a href="<?php echo esc_url(wholesale_category_url('hardware-only')); ?>">hardware only</a>.</p>
-			<?php if ($locations_guide_url = wholesale_guide_url('locations', true)) : ?>
+			<p>If you run promotions often, invest in hardware once and swap the print. <a href="<?php echo esc_url(retails_category_url('banner-stands')); ?>">Banner stands</a>, <a href="<?php echo esc_url(retails_category_url('advertising-flags')); ?>">flags</a> and <a href="<?php echo esc_url(retails_category_url('a-frame-and-sign-holders')); ?>">A-frames</a> are available as graphic-only refills, and you&rsquo;ll find replacement parts in <a href="<?php echo esc_url(retails_category_url('hardware-only')); ?>">hardware only</a>.</p>
+			<?php if ($locations_guide_url = retails_guide_url('locations', true)) : ?>
 				<p>Some cities require a permit for a banner on a building and limit how long it can stay up. We ship banners to every state, and our <a href="<?php echo esc_url($locations_guide_url); ?>">sign permit guides by state and city</a> link to the local rules.</p>
 			<?php endif; ?>
 		</div>
@@ -528,7 +530,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 			<p class="cl-kicker">Before you order</p>
 			<h2 id="bd-faq-title" class="cl-section-title">Banners &amp; Displays FAQ</h2>
 			<div class="cl-faq-list">
-				<?php wholesale_seo_render_faq(true); ?>
+				<?php retails_seo_render_faq(true); ?>
 			</div>
 		</div>
 	</section>
@@ -540,21 +542,21 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 				<h2 id="bd-help-title">Get a Free Banner &amp; Display Quote</h2>
 				<p>Tell us what you need, the sizes and how many, and attach your artwork or logo if you have it. A sign specialist will price your order and help you choose the right material or stand.</p>
 				<ul class="cl-help-details">
-					<li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
-					<li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
+					<li><?php echo retails_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+					<li><?php echo retails_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
 				</ul>
 				<div class="clq-contact">
-					<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-					<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-					<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+					<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+					<a class="cl-help-action" href="sms:+12066186543"><?php echo retails_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+					<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo retails_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
 				</div>
 			</div>
-			<?php wholesale_quote_form_render($quote_form); ?>
+			<?php retails_quote_form_render($quote_form); ?>
 		</div>
 	</section>
 
 	<nav class="cl-mobile-bar" aria-label="Quick actions">
-		<button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo wholesale_home_icon('grid'); ?> All Products</button>
+		<button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo retails_home_icon('grid'); ?> All Products</button>
 		<a class="cl-mobile-bar-quote" href="#quote">Free Quote</a>
 		<?php // Banner shoppers go to the product cards with prices, not the channel letter builder. ?>
 		<a class="cl-mobile-bar-shop" href="#products">See Prices</a>

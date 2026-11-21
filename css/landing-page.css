@@ -563,7 +563,7 @@
       rgba(7, 16, 24, 0.18) 68%,
       rgba(7, 16, 24, 0.08) 100%
     ),
-    /* Set in Settings > Storefront Sign > Images (wholesale_landing_hero_style()). */
+    /* Set in Settings > Storefront Sign > Images (retails_landing_hero_style()). */
     var(--landing-hero-wide, none) center center / cover no-repeat;
 }
 

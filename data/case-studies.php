@@ -1,6 +1,6 @@
 <?php
 /**
- * Customer project case studies (2026-11-05), rendered by wholesale_render_case_studies()
+ * Customer project case studies (2026-11-05), rendered by retails_render_case_studies()
  * in inc/buying-journey.php. An entry shows on the site ONLY when:
  *   'published' => true, 'permission' => true (written OK from the customer to show
  *   their business, photos and quote), and at least one real photo attachment ID.

@@ -23,7 +23,7 @@ if (!defined('ABSPATH')) {
 }
 
 /** Tab id => label shown in the popup. */
-function wholesale_media_source_tabs()
+function retails_media_source_tabs()
 {
 	return array(
 		'designs' => 'Channel letter designs',
@@ -32,24 +32,24 @@ function wholesale_media_source_tabs()
 	);
 }
 
-function wholesale_media_source_allowed()
+function retails_media_source_allowed()
 {
 	return is_admin() && current_user_can('manage_options');
 }
 
-function wholesale_media_source_enqueue()
+function retails_media_source_enqueue()
 {
-	if (!wholesale_media_source_allowed()) {
+	if (!retails_media_source_allowed()) {
 		return;
 	}
 	$file = get_template_directory() . '/js/media-source-tabs.js';
-	wp_enqueue_script('wholesale-media-source-tabs', get_template_directory_uri() . '/js/media-source-tabs.js', array('media-views'), file_exists($file) ? (string) filemtime($file) : '1', true);
+	wp_enqueue_script('retails-media-source-tabs', get_template_directory_uri() . '/js/media-source-tabs.js', array('media-views'), file_exists($file) ? (string) filemtime($file) : '1', true);
 	$tabs = array();
-	foreach (wholesale_media_source_tabs() as $source => $label) {
+	foreach (retails_media_source_tabs() as $source => $label) {
 		$tabs[] = array('source' => $source, 'mode' => 'sfs_' . $source, 'label' => $label);
 	}
 	wp_add_inline_style('media-views', '.sfs-source-buttons{display:inline-flex;flex-wrap:wrap;gap:4px;margin:0 8px 0 0;vertical-align:middle}.sfs-source-buttons .button{min-height:28px;line-height:26px;padding:0 10px}.media-toolbar.sfs-has-sources{height:auto;min-height:50px;overflow:visible;padding-bottom:6px}.media-toolbar.sfs-has-sources .media-toolbar-secondary{float:none;max-width:none;display:flex;flex-wrap:wrap;align-items:center;gap:4px 0}.media-toolbar.sfs-has-sources .media-toolbar-primary{float:none;position:absolute;right:10px;top:10px}');
-	wp_localize_script('wholesale-media-source-tabs', 'sfsMediaSources', array(
+	wp_localize_script('retails-media-source-tabs', 'sfsMediaSources', array(
 		'tabs' => $tabs,
 		'empty' => array(
 			'designs' => 'No channel letter designs saved yet.',
@@ -58,19 +58,19 @@ function wholesale_media_source_enqueue()
 		),
 	));
 }
-add_action('wp_enqueue_media', 'wholesale_media_source_enqueue');
+add_action('wp_enqueue_media', 'retails_media_source_enqueue');
 
 /**
  * Orders that carry attachments: attachment id => list of array(order post id, item).
  */
-function wholesale_media_source_order_links()
+function retails_media_source_order_links()
 {
 	static $links = null;
 	if (null !== $links) {
 		return $links;
 	}
 	$links = array('artwork' => array(), 'design' => array());
-	if (!function_exists('wholesale_decode_order_meta_array')) {
+	if (!function_exists('retails_decode_order_meta_array')) {
 		return $links;
 	}
 	$order_ids = get_posts(array(
@@ -84,7 +84,7 @@ function wholesale_media_source_order_links()
 		'update_post_term_cache' => false,
 	));
 	foreach ($order_ids as $order_id) {
-		$items = wholesale_decode_order_meta_array(get_post_meta($order_id, 'product_json', true));
+		$items = retails_decode_order_meta_array(get_post_meta($order_id, 'product_json', true));
 		if (!is_array($items)) {
 			continue;
 		}
@@ -107,13 +107,13 @@ function wholesale_media_source_order_links()
 }
 
 /** Label lines for one order item. */
-function wholesale_media_source_order_info($order_id, $item)
+function retails_media_source_order_info($order_id, $item)
 {
-	$billing = function_exists('wholesale_decode_order_meta_array') ? wholesale_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true)) : array();
+	$billing = function_exists('retails_decode_order_meta_array') ? retails_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true)) : array();
 	$billing = is_array($billing) ? $billing : array();
 	$name = trim(($billing['billing_fname'] ?? '') . ' ' . ($billing['billing_lname'] ?? ''));
 	$company = trim((string) ($billing['billing_company'] ?? ''));
-	$number = function_exists('wholesale_order_number') ? wholesale_order_number($order_id) : (string) $order_id;
+	$number = function_exists('retails_order_number') ? retails_order_number($order_id) : (string) $order_id;
 	$status = get_post_status_object(get_post_status($order_id));
 	$details = isset($item['product_details']) && is_array($item['product_details']) ? $item['product_details'] : array();
 
@@ -169,7 +169,7 @@ function wholesale_media_source_order_info($order_id, $item)
  * Make sure every image/PDF sent through the quote and contact forms is in the
  * Media Library. Returns attachment id => info.
  */
-function wholesale_media_source_customer_uploads()
+function retails_media_source_customer_uploads()
 {
 	$out = array();
 	$submissions = get_posts(array(
@@ -253,7 +253,7 @@ function wholesale_media_source_customer_uploads()
  * Ids of the files that live only in the extra tabs: builder design previews, files
  * attached to orders/carts, and imported form uploads. Cheap title/URL match.
  */
-function wholesale_media_source_hidden_ids()
+function retails_media_source_hidden_ids()
 {
 	static $ids = null;
 	if (null === $ids) {
@@ -264,7 +264,7 @@ function wholesale_media_source_hidden_ids()
 }
 
 /** Info for the tab being queried, keyed by attachment id (shared with the JS response filter). */
-function wholesale_media_source_info($set = null)
+function retails_media_source_info($set = null)
 {
 	static $info = null;
 	if (null !== $set) {
@@ -276,35 +276,35 @@ function wholesale_media_source_info($set = null)
 /**
  * Narrow the media query to the files of the tab that sent it.
  */
-function wholesale_media_source_query_args($args)
+function retails_media_source_query_args($args)
 {
 	$query = isset($_REQUEST['query']) && is_array($_REQUEST['query']) ? wp_unslash($_REQUEST['query']) : array();
 	$source = isset($query['sfs_source']) ? sanitize_key($query['sfs_source']) : '';
-	if ('' === $source || !isset(wholesale_media_source_tabs()[$source]) || !wholesale_media_source_allowed()) {
+	if ('' === $source || !isset(retails_media_source_tabs()[$source]) || !retails_media_source_allowed()) {
 		// Media Library / "All files": keep customer designs and artwork out of it.
 		if (empty($args['post__in'])) {
-			$args['post__not_in'] = array_merge((array) ($args['post__not_in'] ?? array()), wholesale_media_source_hidden_ids());
+			$args['post__not_in'] = array_merge((array) ($args['post__not_in'] ?? array()), retails_media_source_hidden_ids());
 		}
 		return $args;
 	}
 
 	$search = isset($query['s']) ? (string) $query['s'] : '';
-	$resolved = wholesale_media_source_resolve($source, $search);
+	$resolved = retails_media_source_resolve($source, $search);
 	if ('' !== trim($search)) {
 		unset($args['s']);
 	}
-	wholesale_media_source_info($resolved['info']);
+	retails_media_source_info($resolved['info']);
 	$args['post__in'] = $resolved['ids'] ? $resolved['ids'] : array(0);
 	return $args;
 }
-add_filter('ajax_query_attachments_args', 'wholesale_media_source_query_args');
+add_filter('ajax_query_attachments_args', 'retails_media_source_query_args');
 
 /**
  * Attachment ids (and their label info) for one tab, optionally narrowed by a search text.
  *
  * @return array{ids:int[],info:array}
  */
-function wholesale_media_source_resolve($source, $search = '')
+function retails_media_source_resolve($source, $search = '')
 {
 	global $wpdb;
 	$info = array();
@@ -312,11 +312,11 @@ function wholesale_media_source_resolve($source, $search = '')
 
 	if ('designs' === $source) {
 		$ids = array_map('intval', $wpdb->get_col("SELECT ID FROM {$wpdb->posts} WHERE post_type = 'attachment' AND (post_title LIKE 'clDesign%' OR guid LIKE '%/guest-design-%')"));
-		$links = wholesale_media_source_order_links();
+		$links = retails_media_source_order_links();
 		foreach ($ids as $id) {
 			if (!empty($links['design'][$id])) {
 				list($order_id, $item) = $links['design'][$id][0];
-				$info[$id] = wholesale_media_source_order_info($order_id, $item);
+				$info[$id] = retails_media_source_order_info($order_id, $item);
 			} else {
 				$info[$id] = array(
 					'title' => 'Design · ' . get_the_date('M j, Y', $id),
@@ -327,10 +327,10 @@ function wholesale_media_source_resolve($source, $search = '')
 			}
 		}
 	} elseif ('artwork' === $source) {
-		$links = wholesale_media_source_order_links();
+		$links = retails_media_source_order_links();
 		foreach ($links['artwork'] as $id => $orders) {
 			list($order_id, $item) = $orders[0];
-			$info[$id] = wholesale_media_source_order_info($order_id, $item);
+			$info[$id] = retails_media_source_order_info($order_id, $item);
 		}
 		$ids = $info ? array_map('intval', $wpdb->get_col("SELECT ID FROM {$wpdb->posts} WHERE post_type = 'attachment' AND ID IN (" . implode(',', array_map('intval', array_keys($info))) . ')')) : array();
 		// Artwork uploaded on a product page but never ordered (abandoned cart) is hidden from
@@ -346,7 +346,7 @@ function wholesale_media_source_resolve($source, $search = '')
 			);
 		}
 	} else {
-		$info = wholesale_media_source_customer_uploads();
+		$info = retails_media_source_customer_uploads();
 		$ids = array_keys($info);
 	}
 
@@ -366,48 +366,48 @@ function wholesale_media_source_resolve($source, $search = '')
  * List view of Media > Library (upload.php?mode=list): a "Source" drop-down next to
  * the type and date filters. Its value (?sfs_source=) limits the table.
  */
-function wholesale_media_source_list_filter($post_type, $which = 'top')
+function retails_media_source_list_filter($post_type, $which = 'top')
 {
 	global $pagenow;
-	if ('upload.php' !== $pagenow || 'bar' !== $which || !wholesale_media_source_allowed()) {
+	if ('upload.php' !== $pagenow || 'bar' !== $which || !retails_media_source_allowed()) {
 		return;
 	}
 	$current = isset($_GET['sfs_source']) ? sanitize_key(wp_unslash($_GET['sfs_source'])) : '';
 	echo '<label for="sfs-source-filter" class="screen-reader-text">Filter by source</label><select name="sfs_source" id="sfs-source-filter"><option value="">All files</option>';
-	foreach (wholesale_media_source_tabs() as $source => $label) {
+	foreach (retails_media_source_tabs() as $source => $label) {
 		printf('<option value="%s"%s>%s</option>', esc_attr($source), selected($current, $source, false), esc_html($label));
 	}
 	echo '</select>';
 }
-add_action('restrict_manage_posts', 'wholesale_media_source_list_filter', 10, 2);
+add_action('restrict_manage_posts', 'retails_media_source_list_filter', 10, 2);
 
-function wholesale_media_source_list_query($query)
+function retails_media_source_list_query($query)
 {
 	global $pagenow;
 	if (!is_admin() || 'upload.php' !== $pagenow || !$query->is_main_query()) {
 		return;
 	}
 	$source = isset($_GET['sfs_source']) ? sanitize_key(wp_unslash($_GET['sfs_source'])) : '';
-	if ('' === $source || !isset(wholesale_media_source_tabs()[$source]) || !wholesale_media_source_allowed()) {
+	if ('' === $source || !isset(retails_media_source_tabs()[$source]) || !retails_media_source_allowed()) {
 		// List view "All files": keep customer designs and artwork out of it.
-		$query->set('post__not_in', array_merge((array) $query->get('post__not_in'), wholesale_media_source_hidden_ids()));
+		$query->set('post__not_in', array_merge((array) $query->get('post__not_in'), retails_media_source_hidden_ids()));
 		return;
 	}
 	$search = (string) $query->get('s');
-	$resolved = wholesale_media_source_resolve($source, $search);
+	$resolved = retails_media_source_resolve($source, $search);
 	if ('' !== trim($search)) {
 		$query->set('s', '');
 	}
 	$query->set('post__in', $resolved['ids'] ? $resolved['ids'] : array(0));
 }
-add_action('pre_get_posts', 'wholesale_media_source_list_query');
+add_action('pre_get_posts', 'retails_media_source_list_query');
 
 /**
  * Show the order / sender details on the grid tile and in the details sidebar.
  */
-function wholesale_media_source_prepare($response, $attachment)
+function retails_media_source_prepare($response, $attachment)
 {
-	$info = wholesale_media_source_info();
+	$info = retails_media_source_info();
 	if (!$info || !isset($info[$attachment->ID])) {
 		return $response;
 	}
@@ -418,4 +418,4 @@ function wholesale_media_source_prepare($response, $attachment)
 	$response['sfsLink'] = $entry['link'];
 	return $response;
 }
-add_filter('wp_prepare_attachment_for_js', 'wholesale_media_source_prepare', 10, 2);
+add_filter('wp_prepare_attachment_for_js', 'retails_media_source_prepare', 10, 2);

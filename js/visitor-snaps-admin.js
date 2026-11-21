@@ -8,8 +8,8 @@
  * details" stamps those details under the picture.
  */
 (() => {
-  const cfg = window.wholesaleVISnaps;
-  const admin = window.wholesaleVIAdmin;
+  const cfg = window.retailsVISnaps;
+  const admin = window.retailsVIAdmin;
   if (!cfg || !admin) return;
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -150,7 +150,7 @@
       onclick: async () => {
         if (!window.confirm('Delete this screenshot? This cannot be undone.')) return;
         try {
-          await ajax('wholesale_vi_snap_delete', { session: snap.session, name: snap.id });
+          await ajax('retails_vi_snap_delete', { session: snap.session, name: snap.id });
           document.querySelectorAll(`[data-snap-id="${snap.id}"]`).forEach((node) => node.remove());
           closeView();
         } catch (error) {
@@ -169,7 +169,7 @@
   /** Rebuild the copy inside the viewer (scaled to fit), draw it, save it. */
   const drawInView = async (v, snap) => {
     setStatus(v, "Drawing the visitor's screen…");
-    const [R, copy] = await Promise.all([loadRenderer(), ajax('wholesale_vi_snap_copy', { session: snap.session, name: snap.id })]);
+    const [R, copy] = await Promise.all([loadRenderer(), ajax('retails_vi_snap_copy', { session: snap.session, name: snap.id })]);
     if (v.closed) return null;
     const room = Math.max(280, v.stage.clientWidth || 800);
     const k = Math.min(1, room / snap.w, Math.max(240, window.innerHeight - 240) / snap.h);
@@ -177,7 +177,7 @@
     v.stage.replaceChildren(el('div', { class: 'wvi-snap-frame', style: `width:${Math.round(snap.w * k)}px;height:${Math.round(snap.h * k)}px` }, inner));
     const shown = await R.show({ ...snap, html: copy.html, home: cfg.home }, inner);
     const image = await R.draw(shown, snap);
-    const saved = await ajax('wholesale_vi_snap_save', { session: snap.session, name: snap.id, image });
+    const saved = await ajax('retails_vi_snap_save', { session: snap.session, name: snap.id, image });
     markDrawn(saved);
     if (!v.closed) {
       showPicture(v, saved);
@@ -220,14 +220,14 @@
     v.details.replaceChildren(el('dd', { class: 'wvi-muted' }, 'Saved with the screenshot when it arrives.'));
     if (button) button.disabled = true;
     try {
-      const { req, online } = await ajax('wholesale_vi_snap_request', { session: sessionId });
+      const { req, online } = await ajax('retails_vi_snap_request', { session: sessionId });
       const started = Date.now();
       let state = { state: 'waiting' };
       setStatus(v, waitText('waiting', online, 0));
       while (!v.closed) {
         await sleep(2000);
         if (v.closed) break;
-        state = await ajax('wholesale_vi_snap_status', { req });
+        state = await ajax('retails_vi_snap_status', { req });
         if (state.state === 'captured') break;
         if (state.state === 'failed') throw new Error(state.error || "The visitor's browser could not copy the page.");
         if (state.state === 'expired') throw new Error('The visitor did not come back to the page in time. Try again while they are active.');
@@ -274,10 +274,10 @@
       const mount = el('div', { class: 'wvi-snap-offscreen', style: `width:${snap.w}px;height:${snap.h}px`, 'aria-hidden': 'true' });
       document.body.appendChild(mount);
       try {
-        const [R, copy] = await Promise.all([loadRenderer(), ajax('wholesale_vi_snap_copy', { session: snap.session, name: snap.id })]);
+        const [R, copy] = await Promise.all([loadRenderer(), ajax('retails_vi_snap_copy', { session: snap.session, name: snap.id })]);
         const shown = await R.show({ ...snap, html: copy.html, home: cfg.home }, mount);
         const image = await R.draw(shown, snap);
-        markDrawn(await ajax('wholesale_vi_snap_save', { session: snap.session, name: snap.id, image }));
+        markDrawn(await ajax('retails_vi_snap_save', { session: snap.session, name: snap.id, image }));
       } catch (error) {
         document.querySelectorAll(`[data-snap-id="${snap.id}"] .wvi-snap-ph`).forEach((ph) => {
           ph.lastChild.textContent = 'Click to draw';

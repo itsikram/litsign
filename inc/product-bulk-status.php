@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 /**
  * Post statuses offered, bulk action key => array(post status, label).
  */
-function wholesale_product_bulk_post_statuses()
+function retails_product_bulk_post_statuses()
 {
 	return array(
 		'sfs_status_publish' => array('publish', 'Published'),
@@ -33,7 +33,7 @@ function wholesale_product_bulk_post_statuses()
 /**
  * Stock statuses offered, bulk action key => array(stored _stock_status value, label).
  */
-function wholesale_product_bulk_stock_statuses()
+function retails_product_bulk_stock_statuses()
 {
 	return array(
 		'sfs_stock_instock' => array('', 'In stock'),
@@ -48,14 +48,14 @@ add_filter('bulk_actions-edit-product', function ($actions) {
 		return $actions;
 	}
 	$status_group = array();
-	foreach (wholesale_product_bulk_post_statuses() as $key => $info) {
+	foreach (retails_product_bulk_post_statuses() as $key => $info) {
 		if ('publish' === $info[0] && !current_user_can(get_post_type_object('product')->cap->publish_posts)) {
 			continue;
 		}
 		$status_group[$key] = 'Status: ' . $info[1];
 	}
 	$stock_group = array();
-	foreach (wholesale_product_bulk_stock_statuses() as $key => $info) {
+	foreach (retails_product_bulk_stock_statuses() as $key => $info) {
 		$stock_group[$key] = 'Stock: ' . $info[1];
 	}
 	// Arrays become <optgroup>s in the dropdown (WordPress 5.6+).
@@ -65,8 +65,8 @@ add_filter('bulk_actions-edit-product', function ($actions) {
 });
 
 add_filter('handle_bulk_actions-edit-product', function ($redirect_to, $doaction, $post_ids) {
-	$post_statuses = wholesale_product_bulk_post_statuses();
-	$stock_statuses = wholesale_product_bulk_stock_statuses();
+	$post_statuses = retails_product_bulk_post_statuses();
+	$stock_statuses = retails_product_bulk_stock_statuses();
 	if (!isset($post_statuses[$doaction]) && !isset($stock_statuses[$doaction])) {
 		return $redirect_to;
 	}

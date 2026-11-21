@@ -10,8 +10,8 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const WHOLESALE_GOOGLE_REVIEWS_TRANSIENT = 'wholesale_google_reviews';
-const WHOLESALE_GOOGLE_REVIEWS_BACKUP = 'wholesale_google_reviews_last_good';
+const RETAILS_GOOGLE_REVIEWS_TRANSIENT = 'retails_google_reviews';
+const RETAILS_GOOGLE_REVIEWS_BACKUP = 'retails_google_reviews_last_good';
 
 /**
  * Fetches the business rating and up to five reviews from the Google Places API (New).
@@ -19,18 +19,18 @@ const WHOLESALE_GOOGLE_REVIEWS_BACKUP = 'wholesale_google_reviews_last_good';
  * Results are cached so page views never wait on Google. When a refresh fails, the
  * last good response keeps the slider populated and the error is shown in wp-admin.
  */
-function wholesale_google_reviews($force_refresh = false)
+function retails_google_reviews($force_refresh = false)
 {
-	$data = wholesale_fetch_google_reviews($force_refresh);
+	$data = retails_fetch_google_reviews($force_refresh);
 	if (!$data) {
 		return $data;
 	}
 
 	// Only show reviews at or above the minimum star rating set in Settings. The
 	// overall rating and review count still come straight from Google.
-	$min_rating = wholesale_sanitize_star_rating(wholesale_get_setting('google_reviews_min_rating'));
+	$min_rating = retails_sanitize_star_rating(retails_get_setting('google_reviews_min_rating'));
 	$data['reviews'] = array_values(array_filter($data['reviews'], static function ($review) use ($min_rating) {
-		return $review['rating'] >= $min_rating && !wholesale_review_text_hidden($review['text']);
+		return $review['rating'] >= $min_rating && !retails_review_text_hidden($review['text']);
 	}));
 
 	return $data;
@@ -46,18 +46,18 @@ function wholesale_google_reviews($force_refresh = false)
  * the Google rating and review count are unchanged. To show them again, make this
  * function return false.
  */
-function wholesale_review_text_hidden($text)
+function retails_review_text_hidden($text)
 {
 	return (bool) preg_match('/\binstall(?:s|ed|er|ers|ing|ation|ations)?\b/i', (string) $text);
 }
 
 /**
- * IDs of published site reviews hidden by wholesale_review_text_hidden(), for
+ * IDs of published site reviews hidden by retails_review_text_hidden(), for
  * post__not_in. Empty in wp-admin, where the owner manages every review.
  *
  * @return int[]
  */
-function wholesale_hidden_review_ids()
+function retails_hidden_review_ids()
 {
 	static $ids = null;
 	if (is_admin() && !wp_doing_ajax()) {
@@ -67,7 +67,7 @@ function wholesale_hidden_review_ids()
 		global $wpdb;
 		$ids = array();
 		foreach ((array) $wpdb->get_results("SELECT ID, post_content FROM {$wpdb->posts} WHERE post_type = 'review_submission' AND post_status = 'publish'") as $row) {
-			if (wholesale_review_text_hidden(wp_strip_all_tags((string) $row->post_content))) {
+			if (retails_review_text_hidden(wp_strip_all_tags((string) $row->post_content))) {
 				$ids[] = (int) $row->ID;
 			}
 		}
@@ -76,20 +76,20 @@ function wholesale_hidden_review_ids()
 }
 
 /**
- * Raw Places API response (all reviews), cached. Use wholesale_google_reviews().
+ * Raw Places API response (all reviews), cached. Use retails_google_reviews().
  */
-function wholesale_fetch_google_reviews($force_refresh = false)
+function retails_fetch_google_reviews($force_refresh = false)
 {
-	// Only a real Google key is ever sent (see wholesale_sanitize_google_api_key()).
-	$api_key = wholesale_sanitize_google_api_key(wholesale_get_setting('google_places_api_key'));
-	$place_id = trim((string) wholesale_get_setting('google_place_id'));
+	// Only a real Google key is ever sent (see retails_sanitize_google_api_key()).
+	$api_key = retails_sanitize_google_api_key(retails_get_setting('google_places_api_key'));
+	$place_id = trim((string) retails_get_setting('google_place_id'));
 
 	if (!$api_key || !$place_id) {
 		return null;
 	}
 
 	if (!$force_refresh) {
-		$cached = get_transient(WHOLESALE_GOOGLE_REVIEWS_TRANSIENT);
+		$cached = get_transient(RETAILS_GOOGLE_REVIEWS_TRANSIENT);
 		if (is_array($cached)) {
 			return $cached;
 		}
@@ -116,12 +116,12 @@ function wholesale_fetch_google_reviews($force_refresh = false)
 			$error = isset($body['error']['message']) ? $body['error']['message'] : 'Google returned HTTP ' . $code . '.';
 		}
 
-		$fallback = get_option(WHOLESALE_GOOGLE_REVIEWS_BACKUP);
+		$fallback = get_option(RETAILS_GOOGLE_REVIEWS_BACKUP);
 		$fallback = is_array($fallback) ? $fallback : array('rating' => 0, 'count' => 0, 'url' => '', 'reviews' => array());
 		$fallback['error'] = $error;
 		$fallback['checked'] = time();
 		// Retry in 30 minutes rather than on every page view.
-		set_transient(WHOLESALE_GOOGLE_REVIEWS_TRANSIENT, $fallback, 30 * MINUTE_IN_SECONDS);
+		set_transient(RETAILS_GOOGLE_REVIEWS_TRANSIENT, $fallback, 30 * MINUTE_IN_SECONDS);
 		return $fallback;
 	}
 
@@ -155,9 +155,9 @@ function wholesale_fetch_google_reviews($force_refresh = false)
 		'checked' => time(),
 	);
 
-	set_transient(WHOLESALE_GOOGLE_REVIEWS_TRANSIENT, $data, 12 * HOUR_IN_SECONDS);
-	update_option(WHOLESALE_GOOGLE_REVIEWS_BACKUP, $data, false);
-	do_action('wholesale_google_reviews_fetched', $data);
+	set_transient(RETAILS_GOOGLE_REVIEWS_TRANSIENT, $data, 12 * HOUR_IN_SECONDS);
+	update_option(RETAILS_GOOGLE_REVIEWS_BACKUP, $data, false);
+	do_action('retails_google_reviews_fetched', $data);
 
 	return $data;
 }
@@ -165,13 +165,13 @@ function wholesale_fetch_google_reviews($force_refresh = false)
 /**
  * Approved (published) reviews customers sent through the site.
  */
-function wholesale_site_reviews($limit = 12)
+function retails_site_reviews($limit = 12)
 {
 	$posts = get_posts(array(
 		'post_type' => 'review_submission',
 		'post_status' => 'publish',
 		'posts_per_page' => $limit,
-		'post__not_in' => wholesale_hidden_review_ids(),
+		'post__not_in' => retails_hidden_review_ids(),
 		'orderby' => 'date',
 		'order' => 'DESC',
 	));
@@ -187,14 +187,14 @@ function wholesale_site_reviews($limit = 12)
 			'source' => 'site',
 			'rating' => min(5, max(1, absint(get_post_meta($post->ID, '_review_rating', true)))),
 			'text' => $text,
-			'author' => wholesale_review_display_name(get_post_meta($post->ID, '_review_name', true)),
+			'author' => retails_review_display_name(get_post_meta($post->ID, '_review_name', true)),
 			'author_url' => '',
 			'photo' => '',
 			'when' => sprintf('%s ago', human_time_diff(get_post_time('U', true, $post), time())),
 			'url' => '',
 			// Product reviews sent through the site are only accepted from customers with a
 			// completed order. Reviews an admin added or imported have a _review_source.
-			'verified' => wholesale_review_is_verified($post->ID),
+			'verified' => retails_review_is_verified($post->ID),
 			'product' => $product_id ? get_the_title($product_id) : '',
 			'product_id' => $product_id,
 		);
@@ -208,7 +208,7 @@ function wholesale_site_reviews($limit = 12)
  * force it: _review_verified '1' = always, '0' = never. Otherwise it is automatic: a
  * product review sent through the customer form (no _review_source) is verified.
  */
-function wholesale_review_is_verified($review_id)
+function retails_review_is_verified($review_id)
 {
 	$override = (string) get_post_meta($review_id, '_review_verified', true);
 	if ('1' === $override) {
@@ -217,10 +217,10 @@ function wholesale_review_is_verified($review_id)
 	if ('0' === $override) {
 		return false;
 	}
-	return wholesale_review_is_verified_auto($review_id);
+	return retails_review_is_verified_auto($review_id);
 }
 
-function wholesale_review_is_verified_auto($review_id)
+function retails_review_is_verified_auto($review_id)
 {
 	return absint(get_post_meta($review_id, '_review_product_id', true)) > 0 && '' === get_post_meta($review_id, '_review_source', true);
 }
@@ -228,7 +228,7 @@ function wholesale_review_is_verified_auto($review_id)
 /**
  * "Michael Roberts" -> "Michael R." so full customer names aren't published.
  */
-function wholesale_review_display_name($name)
+function retails_review_display_name($name)
 {
 	$parts = preg_split('/\s+/', trim((string) $name));
 	if (empty($parts[0])) {
@@ -244,15 +244,15 @@ function wholesale_review_display_name($name)
 /**
  * Everything the footer slider needs, Google and site reviews interleaved.
  */
-function wholesale_review_slider_data()
+function retails_review_slider_data()
 {
-	$google = wholesale_google_reviews();
+	$google = retails_google_reviews();
 	$google_reviews = $google ? $google['reviews'] : array();
-	$site_reviews = wholesale_site_reviews();
+	$site_reviews = retails_site_reviews();
 	// The banners & displays ads landing page shows only reviews of those products, not channel letters.
 	if (is_page('banners-displays')) {
 		$site_reviews = array_values(array_filter($site_reviews, static function ($review) {
-			return $review['product_id'] && !wholesale_product_is_channel_letter($review['product_id']);
+			return $review['product_id'] && !retails_product_is_channel_letter($review['product_id']);
 		}));
 	}
 
@@ -272,7 +272,7 @@ function wholesale_review_slider_data()
 		'google_rating' => $google ? $google['rating'] : 0,
 		'google_count' => $google ? $google['count'] : 0,
 		'google_url' => $google ? $google['url'] : '',
-		'google_write_url' => $google ? wholesale_google_write_review_url() : '',
+		'google_write_url' => $google ? retails_google_write_review_url() : '',
 	);
 }
 
@@ -280,13 +280,13 @@ function wholesale_review_slider_data()
  * Google "write a review" link for the business, or '' when no Place ID is set.
  * Needs only the Place ID (no API call), so it works in emails and order pages.
  */
-function wholesale_google_write_review_url()
+function retails_google_write_review_url()
 {
-	$place_id = trim((string) wholesale_get_setting('google_place_id'));
+	$place_id = trim((string) retails_get_setting('google_place_id'));
 	return '' === $place_id ? '' : 'https://search.google.com/local/writereview?placeid=' . rawurlencode($place_id);
 }
 
-function wholesale_google_logo_svg($size = 20)
+function retails_google_logo_svg($size = 20)
 {
 	return '<svg class="review-google-logo" width="' . absint($size) . '" height="' . absint($size) . '" viewBox="0 0 48 48" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">'
 		. '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>'
@@ -296,7 +296,7 @@ function wholesale_google_logo_svg($size = 20)
 		. '</svg>';
 }
 
-function wholesale_review_stars($rating, $class = 'review-stars')
+function retails_review_stars($rating, $class = 'review-stars')
 {
 	$rating = max(0, min(5, (float) $rating));
 	$html = '<span class="' . esc_attr($class) . '" role="img" aria-label="' . esc_attr(sprintf('%s out of 5 stars', rtrim(rtrim(number_format($rating, 1), '0'), '.'))) . '">';
@@ -312,7 +312,7 @@ function wholesale_review_stars($rating, $class = 'review-stars')
  * Prints once per page: the home page shows it mid-page, so the footer's
  * call is skipped there.
  */
-function wholesale_render_review_slider()
+function retails_render_review_slider()
 {
 	static $rendered = false;
 	if ($rendered) {
@@ -320,7 +320,7 @@ function wholesale_render_review_slider()
 	}
 	$rendered = true;
 
-	$data = wholesale_review_slider_data();
+	$data = retails_review_slider_data();
 	if (empty($data['reviews'])) {
 		return;
 	}
@@ -331,9 +331,9 @@ function wholesale_render_review_slider()
 				<h2 id="customer-review-title">What Our Customers Say</h2>
 				<?php if ($data['google_rating'] > 0) : ?>
 					<a class="review-summary" href="<?php echo esc_url($data['google_url']); ?>" target="_blank" rel="noopener">
-						<?php echo wholesale_google_logo_svg(22); ?>
+						<?php echo retails_google_logo_svg(22); ?>
 						<strong><?php echo esc_html(number_format($data['google_rating'], 1)); ?></strong>
-						<?php echo wholesale_review_stars($data['google_rating']); ?>
+						<?php echo retails_review_stars($data['google_rating']); ?>
 						<span><?php echo esc_html(sprintf(_n('%s Google review', '%s Google reviews', $data['google_count'], 'litsign'), number_format_i18n($data['google_count']))); ?></span>
 					</a>
 				<?php else : ?>
@@ -349,9 +349,9 @@ function wholesale_render_review_slider()
 					<?php foreach ($data['reviews'] as $index => $review) : ?>
 						<li class="review-card review-card--<?php echo esc_attr($review['source']); ?>" aria-label="<?php echo esc_attr(sprintf('Review %d of %d', $index + 1, count($data['reviews']))); ?>">
 							<div class="review-card-top">
-								<?php echo wholesale_review_stars($review['rating']); ?>
+								<?php echo retails_review_stars($review['rating']); ?>
 								<?php if ('google' === $review['source']) : ?>
-									<span class="review-source"><?php echo wholesale_google_logo_svg(16); ?> Google</span>
+									<span class="review-source"><?php echo retails_google_logo_svg(16); ?> Google</span>
 								<?php elseif (!empty($review['verified'])) : ?>
 									<span class="review-source review-source--verified">Verified buyer</span>
 								<?php else : ?>
@@ -393,14 +393,14 @@ function wholesale_render_review_slider()
 			<div class="review-dots" data-review-dots aria-hidden="true"></div>
 
 			<div class="review-actions">
-				<?php if (function_exists('wholesale_reviews_page_url')) : ?>
-					<a class="review-action" href="<?php echo esc_url(wholesale_reviews_page_url()); ?>">See all customer reviews</a>
+				<?php if (function_exists('retails_reviews_page_url')) : ?>
+					<a class="review-action" href="<?php echo esc_url(retails_reviews_page_url()); ?>">See all customer reviews</a>
 				<?php endif; ?>
 				<?php if ($data['google_url']) : ?>
 					<a class="review-action" href="<?php echo esc_url($data['google_url']); ?>" target="_blank" rel="noopener">See all reviews on Google</a>
 				<?php endif; ?>
 				<?php if ($data['google_write_url']) : ?>
-					<a class="review-action review-action--primary" href="<?php echo esc_url($data['google_write_url']); ?>" target="_blank" rel="noopener"><?php echo wholesale_google_logo_svg(16); ?> Review us on Google</a>
+					<a class="review-action review-action--primary" href="<?php echo esc_url($data['google_write_url']); ?>" target="_blank" rel="noopener"><?php echo retails_google_logo_svg(16); ?> Review us on Google</a>
 				<?php else : ?>
 					<button type="button" class="review-action review-action--primary" data-bs-toggle="modal" data-bs-target="#feedbackModal">Leave a review</button>
 				<?php endif; ?>
@@ -413,23 +413,23 @@ function wholesale_render_review_slider()
 /**
  * wp-admin: refresh Google reviews on demand from the settings page.
  */
-function wholesale_handle_refresh_google_reviews()
+function retails_handle_refresh_google_reviews()
 {
 	if (!current_user_can('manage_options')) {
 		wp_die('Not allowed.');
 	}
-	check_admin_referer('wholesale_refresh_google_reviews');
-	wholesale_fetch_google_reviews(true);
-	wp_safe_redirect(add_query_arg('google_reviews_refreshed', '1', admin_url('options-general.php?page=wholesale-settings')) . '#google-reviews');
+	check_admin_referer('retails_refresh_google_reviews');
+	retails_fetch_google_reviews(true);
+	wp_safe_redirect(add_query_arg('google_reviews_refreshed', '1', admin_url('admin.php?page=retails-settings')) . '#google-reviews');
 	exit;
 }
-add_action('admin_post_wholesale_refresh_google_reviews', 'wholesale_handle_refresh_google_reviews');
+add_action('admin_post_retails_refresh_google_reviews', 'retails_handle_refresh_google_reviews');
 
 // Settings changes should take effect immediately rather than after the cache expires.
-function wholesale_clear_google_reviews_cache()
+function retails_clear_google_reviews_cache()
 {
-	delete_transient(WHOLESALE_GOOGLE_REVIEWS_TRANSIENT);
+	delete_transient(RETAILS_GOOGLE_REVIEWS_TRANSIENT);
 }
-add_action('update_option_wholesale_google_places_api_key', 'wholesale_clear_google_reviews_cache');
-add_action('update_option_wholesale_google_place_id', 'wholesale_clear_google_reviews_cache');
+add_action('update_option_retails_google_places_api_key', 'retails_clear_google_reviews_cache');
+add_action('update_option_retails_google_place_id', 'retails_clear_google_reviews_cache');
 

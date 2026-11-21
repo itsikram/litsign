@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
  * A short fingerprint of everything the order list shows. It changes when an order is added, removed,
  * moves status, or its payment, tracking or shipment data changes.
  */
-function wholesale_orders_live_signature()
+function retails_orders_live_signature()
 {
 	global $wpdb;
 	$posts = $wpdb->get_row(
@@ -33,25 +33,25 @@ function wholesale_orders_live_signature()
 	return md5(wp_json_encode(array($posts, $meta)));
 }
 
-add_action('wp_ajax_wholesale_orders_signature', function () {
-	check_ajax_referer('wholesale_orders_live', 'nonce');
+add_action('wp_ajax_retails_orders_signature', function () {
+	check_ajax_referer('retails_orders_live', 'nonce');
 	if (!current_user_can('edit_posts')) {
 		wp_send_json_error(null, 403);
 	}
-	wp_send_json_success(array('signature' => wholesale_orders_live_signature()));
+	wp_send_json_success(array('signature' => retails_orders_live_signature()));
 });
 
 /**
  * True on the admin Orders list screen.
  */
-function wholesale_orders_live_screen()
+function retails_orders_live_screen()
 {
 	$screen = function_exists('get_current_screen') ? get_current_screen() : null;
 	return $screen && 'edit-order' === $screen->id;
 }
 
 add_action('admin_head-edit.php', function () {
-	if (!wholesale_orders_live_screen()) {
+	if (!retails_orders_live_screen()) {
 		return;
 	}
 	?>
@@ -74,14 +74,14 @@ add_action('admin_head-edit.php', function () {
 });
 
 add_action('admin_footer-edit.php', function () {
-	if (!wholesale_orders_live_screen()) {
+	if (!retails_orders_live_screen()) {
 		return;
 	}
 	$config = array(
 		'ajax' => admin_url('admin-ajax.php'),
-		'nonce' => wp_create_nonce('wholesale_orders_live'),
-		'signature' => wholesale_orders_live_signature(),
-		'interval' => (int) apply_filters('wholesale_orders_live_interval', 20) * 1000,
+		'nonce' => wp_create_nonce('retails_orders_live'),
+		'signature' => retails_orders_live_signature(),
+		'interval' => (int) apply_filters('retails_orders_live_interval', 20) * 1000,
 	);
 	?>
 	<script>
@@ -176,7 +176,7 @@ add_action('admin_footer-edit.php', function () {
 								if (row) { row.classList.add('sfs-row-new'); }
 							});
 						}
-						document.dispatchEvent(new CustomEvent('wholesale-orders-refreshed'));
+						document.dispatchEvent(new CustomEvent('retails-orders-refreshed'));
 						idle(added.length && before.length ? added.length + (added.length === 1 ? ' new order · ' : ' new orders · ') + clock() : '');
 						return true;
 					})
@@ -194,7 +194,7 @@ add_action('admin_footer-edit.php', function () {
 
 			function poll() {
 				if (!autoOn || document.hidden || busy) { return; }
-				var body = new URLSearchParams({ action: 'wholesale_orders_signature', nonce: config.nonce });
+				var body = new URLSearchParams({ action: 'retails_orders_signature', nonce: config.nonce });
 				fetch(config.ajax, { method: 'POST', credentials: 'same-origin', body: body })
 					.then(function (response) { return response.json(); })
 					.then(function (payload) {
@@ -214,7 +214,7 @@ add_action('admin_footer-edit.php', function () {
 			}
 
 			button.addEventListener('click', function () {
-				var body = new URLSearchParams({ action: 'wholesale_orders_signature', nonce: config.nonce });
+				var body = new URLSearchParams({ action: 'retails_orders_signature', nonce: config.nonce });
 				reload(true);
 				fetch(config.ajax, { method: 'POST', credentials: 'same-origin', body: body })
 					.then(function (response) { return response.json(); })

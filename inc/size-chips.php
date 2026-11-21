@@ -7,7 +7,7 @@
  * inches" on the 13oz banner). A chip fills width and height in one tap, with
  * its price. The same sizes are Shopping items (inc/merchant-feed.php), whose
  * links open the product on that size with that size's price in the HTML.
- * Prices always come from wholesale_price_quote() with the page's default options.
+ * Prices always come from retails_price_quote() with the page's default options.
  */
 
 if (!defined('ABSPATH')) {
@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
  *
  * @return array slug => list of array(width, height)
  */
-function wholesale_size_chip_map()
+function retails_size_chip_map()
 {
 	$banners = array(array(24, 48), array(36, 72), array(48, 96));
 
@@ -40,11 +40,11 @@ function wholesale_size_chip_map()
 /**
  * The quote request for a size with the options the page opens on.
  */
-function wholesale_size_chip_request($product_id, $width, $height)
+function retails_size_chip_request($product_id, $width, $height)
 {
 	$request = array('product_quantity' => 1, 'width-in' => $width, 'height-in' => $height);
-	foreach (wholesale_product_price_attrs($product_id) as $attr) {
-		$options = wholesale_attr_options($attr);
+	foreach (retails_product_price_attrs($product_id) as $attr) {
+		$options = retails_attr_options($attr);
 		if ($options && !empty($attr['name'])) {
 			$request[$attr['name']] = $options[0]['value'];
 		}
@@ -57,7 +57,7 @@ function wholesale_size_chip_request($product_id, $width, $height)
  * Display label for a size: feet when both sides are whole feet ("3 x 6 ft"),
  * otherwise inches ('24" x 36"').
  */
-function wholesale_size_chip_label($width, $height)
+function retails_size_chip_label($width, $height)
 {
 	if ($width >= 24 && $height >= 24 && 0 == fmod($width, 12) && 0 == fmod($height, 12)) {
 		return sprintf('%s × %s ft', $width / 12, $height / 12);
@@ -72,7 +72,7 @@ function wholesale_size_chip_label($width, $height)
  *
  * @return array list of array(width, height, label, price)
  */
-function wholesale_size_chips($product_id)
+function retails_size_chips($product_id)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
@@ -81,28 +81,28 @@ function wholesale_size_chips($product_id)
 	}
 	$cache[$product_id] = array();
 
-	$min = wholesale_product_min_sides($product_id);
+	$min = retails_product_min_sides($product_id);
 	if (!$min) {
 		return array();
 	}
-	$map = wholesale_size_chip_map();
+	$map = retails_size_chip_map();
 	$slug = (string) get_post_field('post_name', $product_id);
 	// Preset sizes: the first six as chips (one phone screen); the dropdown keeps them all.
-	$sizes = isset($map[$slug]) ? $map[$slug] : array_slice(wholesale_size_chip_presets($product_id), 0, 6);
+	$sizes = isset($map[$slug]) ? $map[$slug] : array_slice(retails_size_chip_presets($product_id), 0, 6);
 
 	foreach ($sizes as $size) {
 		list($width, $height) = $size;
-		if (!wholesale_size_fits_product($product_id, $width, $height)) {
+		if (!retails_size_fits_product($product_id, $width, $height)) {
 			continue;
 		}
-		$quote = wholesale_price_quote($product_id, wholesale_size_chip_request($product_id, $width, $height));
+		$quote = retails_price_quote($product_id, retails_size_chip_request($product_id, $width, $height));
 		if (empty($quote['ok']) || $quote['total'] <= 0) {
 			continue;
 		}
 		$cache[$product_id][] = array(
 			'width' => $width + 0,
 			'height' => $height + 0,
-			'label' => wholesale_size_chip_label($width, $height),
+			'label' => retails_size_chip_label($width, $height),
 			'price' => (float) $quote['total'],
 		);
 	}
@@ -114,13 +114,13 @@ function wholesale_size_chips($product_id)
  * Whether the product's size calculator takes this size (its minimum width and
  * height, and its maximum size either way round).
  */
-function wholesale_size_fits_product($product_id, $width, $height)
+function retails_size_fits_product($product_id, $width, $height)
 {
-	$min = wholesale_product_min_sides($product_id);
+	$min = retails_product_min_sides($product_id);
 	if (!$min || $width < $min[0] || $height < $min[1]) {
 		return false;
 	}
-	$max = wholesale_product_max_sides($product_id);
+	$max = retails_product_max_sides($product_id);
 	$sides = array($width, $height);
 	sort($sides);
 
@@ -138,7 +138,7 @@ function wholesale_size_fits_product($product_id, $width, $height)
  *
  * @return array list of array('width', 'height', 'note', 'default')
  */
-function wholesale_size_presets($product_id)
+function retails_size_presets($product_id)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
@@ -155,7 +155,7 @@ function wholesale_size_presets($product_id)
 		$width = (float) $width;
 		$height = (float) $height;
 		$key = $width . 'x' . $height;
-		if (isset($presets[$key]) || !wholesale_size_fits_product($product_id, $width, $height)) {
+		if (isset($presets[$key]) || !retails_size_fits_product($product_id, $width, $height)) {
 			return;
 		}
 		$presets[$key] = array('width' => $width + 0, 'height' => $height + 0, 'note' => $note, 'default' => $default);
@@ -172,7 +172,7 @@ function wholesale_size_presets($product_id)
 
 	if (!$presets) {
 		foreach ((array) json_decode((string) get_post_meta($product_id, 'product_attr', true)) as $attr) {
-			if (!wholesale_attr_is_preset_size((array) $attr) || empty($attr->options)) {
+			if (!retails_attr_is_preset_size((array) $attr) || empty($attr->options)) {
 				continue;
 			}
 			foreach ($attr->options as $option) {
@@ -194,11 +194,11 @@ function wholesale_size_presets($product_id)
  * The preset the Size selector opens on: the size the boxes open on when it is a
  * preset (a ?size= link), else the one marked "*", else the smallest.
  *
- * @param array $presets wholesale_size_presets()
+ * @param array $presets retails_size_presets()
  * @param array $size    array('width', 'height') the boxes would open on
  * @return int|null index into $presets
  */
-function wholesale_size_preset_default($presets, $size, $from_link = false)
+function retails_size_preset_default($presets, $size, $from_link = false)
 {
 	if (!$presets) {
 		return null;
@@ -231,18 +231,18 @@ function wholesale_size_preset_default($presets, $size, $from_link = false)
  *
  * @return array list of array(width, height)
  */
-function wholesale_size_chip_presets($product_id)
+function retails_size_chip_presets($product_id)
 {
 	return array_map(function ($preset) {
 		return array($preset['width'], $preset['height']);
-	}, wholesale_size_presets($product_id));
+	}, retails_size_presets($product_id));
 }
 
 /**
  * The chip a size link (?size=36x72) asks for on the current product page, or null.
  * Only listed chip sizes count, so the price shown is one the feed also lists.
  */
-function wholesale_size_link($product_id)
+function retails_size_link($product_id)
 {
 	if (empty($_GET['size']) || !is_singular('product') || (int) get_queried_object_id() !== (int) $product_id) {
 		return null;
@@ -250,7 +250,7 @@ function wholesale_size_link($product_id)
 	if (!preg_match('/^(\d{1,4}(?:\.\d+)?)x(\d{1,4}(?:\.\d+)?)$/', sanitize_text_field(wp_unslash($_GET['size'])), $m)) {
 		return null;
 	}
-	foreach (wholesale_size_chips($product_id) as $chip) {
+	foreach (retails_size_chips($product_id) as $chip) {
 		if ((float) $chip['width'] === (float) $m[1] && (float) $chip['height'] === (float) $m[2]) {
 			return $chip;
 		}
@@ -265,20 +265,20 @@ function wholesale_size_link($product_id)
  *
  * @return array list of array(value, label, price); empty when not a stand size.
  */
-function wholesale_size_option_chips($product_id, $attr_name)
+function retails_size_option_chips($product_id, $attr_name)
 {
 	if ('size' !== $attr_name || !has_term('banner-stands', 'product_category', $product_id)) {
 		return array();
 	}
-	$base = wholesale_size_chip_request($product_id, 0, 0);
+	$base = retails_size_chip_request($product_id, 0, 0);
 	unset($base['width-in'], $base['height-in']);
 	$chips = array();
-	foreach (wholesale_product_price_attrs($product_id) as $attr) {
+	foreach (retails_product_price_attrs($product_id) as $attr) {
 		if ('size' !== ($attr['name'] ?? '')) {
 			continue;
 		}
-		foreach (wholesale_attr_options($attr) as $option) {
-			$quote = wholesale_price_quote($product_id, array_merge($base, array('size' => $option['value'])));
+		foreach (retails_attr_options($attr) as $option) {
+			$quote = retails_price_quote($product_id, array_merge($base, array('size' => $option['value'])));
 			if (!empty($quote['ok']) && $quote['total'] > 0) {
 				$chips[] = array('value' => $option['value'], 'label' => wp_strip_all_tags((string) $option['label']), 'price' => (float) $quote['total']);
 			}

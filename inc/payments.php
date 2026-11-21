@@ -1,6 +1,6 @@
 <?php
 /**
- * Checkout: the form check against the cart (wholesale_checkout_build), shipping options and
+ * Checkout: the form check against the cart (retails_checkout_build), shipping options and
  * dates, order creation, checkout accounts, the thank-you page and the purchase conversion tag.
  * Also used by the SFS Wallet Payments plugin (Apple Pay, Google Pay, PayPal and, since
  * 2026-11-12, the Converge card payments that used to be in this file).
@@ -21,7 +21,7 @@ if (!defined('ABSPATH')) {
  * order screen working, answers card payments with "please call us" and tells staff.
  */
 add_action('after_setup_theme', static function () {
-	if (!function_exists('wholesale_converge_credentials')) {
+	if (!function_exists('retails_converge_credentials')) {
 		require_once __DIR__ . '/payment-gateway-missing.php';
 	}
 }, 20);
@@ -30,7 +30,7 @@ add_action('after_setup_theme', static function () {
  * The session cart. utils/Cart.php creates it on include; AJAX requests don't load a
  * template, so load it here.
  */
-function wholesale_get_cart()
+function retails_get_cart()
 {
 	global $cart;
 	if (!class_exists('Cart', false)) {
@@ -47,7 +47,7 @@ function wholesale_get_cart()
  *
  * @return array|WP_Error Everything needed to create the order.
  */
-function wholesale_checkout_build($post, $cart)
+function retails_checkout_build($post, $cart)
 {
 	$field = static function ($key) use ($post) {
 		return isset($post[$key]) && !is_array($post[$key]) ? sanitize_text_field(wp_unslash($post[$key])) : '';
@@ -100,28 +100,28 @@ function wholesale_checkout_build($post, $cart)
 		}
 	}
 
-	$shipping_options = wholesale_cart_shipping_options($cart);
+	$shipping_options = retails_cart_shipping_options($cart);
 	$shipping_choice = isset($post['shipping_method']) ? sanitize_text_field(wp_unslash($post['shipping_method'])) : '';
 	if ('free' === $shipping_choice) {
 		// Free shipping travels like Standard: same transit, delivery and ship date.
-		if (!wholesale_cart_qualifies_free_shipping($cart)) {
+		if (!retails_cart_qualifies_free_shipping($cart)) {
 			return new WP_Error('shipping_method', 'Your order no longer qualifies for free shipping. Please choose a shipping method.');
 		}
 		$requested_shipping = 0.0;
 		$shipping_index = 0;
-		$shipping_label = wholesale_free_shipping_label();
+		$shipping_label = retails_free_shipping_label($cart);
 	} else {
 		$requested_shipping = is_numeric($shipping_choice) ? (float) $shipping_choice : -1;
 		$shipping_index = array_search($requested_shipping, $shipping_options, true);
 		// Standard isn't offered once Free Shipping applies.
-		if (false === $shipping_index || (0 === $shipping_index && wholesale_cart_qualifies_free_shipping($cart))) {
+		if (false === $shipping_index || (0 === $shipping_index && retails_cart_qualifies_free_shipping($cart))) {
 			return new WP_Error('shipping_method', 'Please choose a shipping method.');
 		}
-		$shipping_label = wholesale_shipping_label($shipping_index);
+		$shipping_label = retails_shipping_label($shipping_index);
 	}
 
 	$sub_total = round((float) $cart->sub_total, 2);
-	$tax = round($sub_total * (float) wholesale_get_setting('tax_rate') / 100, 2);
+	$tax = round($sub_total * (float) retails_get_setting('tax_rate') / 100, 2);
 	$grand_total = round($sub_total + $requested_shipping + $tax, 2);
 
 	$shipping['shipping_cost'] = $requested_shipping;
@@ -136,12 +136,12 @@ function wholesale_checkout_build($post, $cart)
 		'tax' => $tax,
 		'grand_total' => $grand_total,
 		'comment' => isset($post['comment']) ? sanitize_textarea_field(wp_unslash($post['comment'])) : '',
-		'estimate_delivery_time' => wholesale_estimated_ship_date($cart, $shipping_index),
+		'estimate_delivery_time' => retails_estimated_ship_date($cart, $shipping_index),
 		'create_account' => !is_user_logged_in() && '1' === $field('create_account'),
 	);
 }
 
-function wholesale_cart_has_channel_letters($cart)
+function retails_cart_has_channel_letters($cart)
 {
 	foreach ($cart->get_items() as $item) {
 		if (has_term('channel-letters', 'product_category', absint($item->product_id))) {
@@ -154,39 +154,131 @@ function wholesale_cart_has_channel_letters($cart)
 /**
  * Shipping rates for the cart, fastest-last (standard, 3-day, 2-day, overnight).
  */
-function wholesale_cart_shipping_options($cart)
+function retails_cart_shipping_options($cart)
 {
-	$setting = wholesale_cart_has_channel_letters($cart) ? 'channel_shipping_options' : 'standard_shipping_options';
-	return array_values(array_map('floatval', array_filter(explode(',', (string) wholesale_get_setting($setting)), 'is_numeric')));
+	$setting = retails_cart_has_channel_letters($cart) ? 'channel_shipping_options' : 'standard_shipping_options';
+	return array_values(array_map('floatval', array_filter(explode(',', (string) retails_get_setting($setting)), 'is_numeric')));
 }
 
 /**
  * Subtotal at which the Free Shipping option appears for this cart, or 0 when
  * the offer is off. Carts with channel letters have their own, higher minimum.
  */
-function wholesale_free_shipping_threshold($cart)
+function retails_free_shipping_threshold($cart)
 {
-	$setting = wholesale_cart_has_channel_letters($cart) ? 'free_shipping_channel_min' : 'free_shipping_min';
-	return max(0.0, (float) wholesale_get_setting($setting));
+	$setting = retails_cart_has_channel_letters($cart) ? 'free_shipping_channel_min' : 'free_shipping_min';
+	return max(0.0, (float) retails_get_setting($setting));
 }
 
 /**
  * Whether checkout offers Free Shipping, listed above the paid options and
  * delivered on Standard's schedule.
  */
-function wholesale_cart_qualifies_free_shipping($cart)
+function retails_cart_qualifies_free_shipping($cart)
 {
-	$threshold = wholesale_free_shipping_threshold($cart);
-	return $threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold;
+	$threshold = retails_free_shipping_threshold($cart);
+	return ($threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold) || '' !== retails_applied_ship_code();
 }
+
+/**
+ * The free shipping promo code (Settings > Storefront Sign > Sales) when today is within
+ * its Pacific dates, else ''. An empty start means it already runs; an empty end, that it
+ * has no last day.
+ */
+function retails_ship_code_window()
+{
+	$code = retails_sanitize_ship_code(retails_get_setting('ship_code'));
+	if ('' === $code) {
+		return '';
+	}
+	$zone = new DateTimeZone('America/Los_Angeles');
+	$start = DateTime::createFromFormat('!Y-m-d', (string) retails_get_setting('ship_code_start'), $zone);
+	$end = DateTime::createFromFormat('!Y-m-d', (string) retails_get_setting('ship_code_end'), $zone);
+	if ($start && time() < $start->getTimestamp()) {
+		return '';
+	}
+	if ($end && time() > $end->modify('+1 day')->getTimestamp() - 1) {
+		return '';
+	}
+	return $code;
+}
+
+/**
+ * The promo code this visitor applied at checkout (cookie sfs_promo), while it runs, else ''.
+ * With it, every cart gets Free Shipping (standard speed): checkout, the cart page, the mini
+ * cart and the wallet window all ask retails_cart_qualifies_free_shipping().
+ */
+function retails_applied_ship_code()
+{
+	$code = retails_ship_code_window();
+	$typed = isset($_COOKIE['sfs_promo']) ? retails_sanitize_ship_code(wp_unslash($_COOKIE['sfs_promo'])) : '';
+	return '' !== $code && '' !== $typed && hash_equals($code, $typed) ? $code : '';
+}
+
+/**
+ * The applied code when it is what makes this cart ship free (below the minimum), else ''.
+ */
+function retails_cart_ship_code($cart)
+{
+	$threshold = retails_free_shipping_threshold($cart);
+	if ($threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold) {
+		return '';
+	}
+	return retails_applied_ship_code();
+}
+
+/**
+ * Merchant Center promotion id for the code ("freeship_blackfriday") from the day it is set
+ * until its last day (the promotion is reviewed before it starts), else ''. The feed puts it
+ * on items that don't already ship free (inc/merchant-feed.php).
+ */
+function retails_ship_code_promotion_id()
+{
+	$code = retails_sanitize_ship_code(retails_get_setting('ship_code'));
+	if ('' === $code) {
+		return '';
+	}
+	$end = DateTime::createFromFormat('!Y-m-d', (string) retails_get_setting('ship_code_end'), new DateTimeZone('America/Los_Angeles'));
+	if ($end && time() > $end->modify('+1 day')->getTimestamp() - 1) {
+		return '';
+	}
+	return 'freeship_' . strtolower($code);
+}
+
+/**
+ * ?promo_code=BLACKFRIDAY on the checkout or cart page (the promo code box) stores a valid
+ * code in the sfs_promo cookie; an empty one removes it. Redirects back without the code,
+ * with promo=applied|invalid|removed for the message.
+ */
+function retails_handle_promo_code()
+{
+	if (!isset($_GET['promo_code']) || is_admin()) {
+		return;
+	}
+	$typed = retails_sanitize_ship_code(wp_unslash($_GET['promo_code']));
+	$code = retails_ship_code_window();
+	$path = COOKIEPATH ? COOKIEPATH : '/';
+	if ('' === $typed) {
+		setcookie('sfs_promo', '', time() - 3600, $path, COOKIE_DOMAIN, is_ssl(), true);
+		$result = 'removed';
+	} elseif ('' !== $code && hash_equals($code, $typed)) {
+		setcookie('sfs_promo', $code, time() + 30 * DAY_IN_SECONDS, $path, COOKIE_DOMAIN, is_ssl(), true);
+		$result = 'applied';
+	} else {
+		$result = 'invalid';
+	}
+	wp_safe_redirect(add_query_arg('promo', $result, remove_query_arg(array('promo_code', 'promo'))));
+	exit;
+}
+add_action('template_redirect', 'retails_handle_promo_code', 1);
 
 /**
  * A free shipping minimum for display ("$100", "$1,000"; cents only when
  * set), or '' when that offer is off.
  */
-function wholesale_free_shipping_amount($channel_letters = false)
+function retails_free_shipping_amount($channel_letters = false)
 {
-	$amount = max(0.0, (float) wholesale_get_setting($channel_letters ? 'free_shipping_channel_min' : 'free_shipping_min'));
+	$amount = max(0.0, (float) retails_get_setting($channel_letters ? 'free_shipping_channel_min' : 'free_shipping_min'));
 	return $amount > 0 ? '$' . number_format($amount, floor($amount) == $amount ? 0 : 2) : '';
 }
 
@@ -194,9 +286,9 @@ function wholesale_free_shipping_amount($channel_letters = false)
  * The cheapest paid shipping rate for display ("$18", "$50"), or '' when none
  * is set, so pages can say what shipping costs below the free shipping minimum.
  */
-function wholesale_shipping_from_amount($channel_letters = false)
+function retails_shipping_from_amount($channel_letters = false)
 {
-	$rates = array_filter(array_map('floatval', explode(',', (string) wholesale_get_setting($channel_letters ? 'channel_shipping_options' : 'standard_shipping_options'))));
+	$rates = array_filter(array_map('floatval', explode(',', (string) retails_get_setting($channel_letters ? 'channel_shipping_options' : 'standard_shipping_options'))));
 	if (!$rates) {
 		return '';
 	}
@@ -204,12 +296,14 @@ function wholesale_shipping_from_amount($channel_letters = false)
 	return '$' . number_format($amount, floor($amount) == $amount ? 0 : 2);
 }
 
-function wholesale_free_shipping_label()
+function retails_free_shipping_label($cart = null)
 {
-	return 'Free Shipping (3–6 business days)';
+	// "Free Shipping, code BLACKFRIDAY": the order and its emails show which code made it free.
+	$code = $cart ? retails_cart_ship_code($cart) : '';
+	return '' !== $code ? 'Free Shipping, code ' . $code . ' (3–6 business days)' : 'Free Shipping (3–6 business days)';
 }
 
-function wholesale_shipping_label($index)
+function retails_shipping_label($index)
 {
 	$labels = array('Standard (3–6 business days)', '3-Day', '2-Day', 'Overnight');
 	return isset($labels[$index]) ? $labels[$index] : 'Shipping option ' . ((int) $index + 1);
@@ -218,7 +312,7 @@ function wholesale_shipping_label($index)
 /**
  * $date plus $days business days (Saturdays and Sundays skipped).
  */
-function wholesale_add_business_days(DateTime $date, $days)
+function retails_add_business_days(DateTime $date, $days)
 {
 	$date = clone $date;
 	while ($days > 0) {
@@ -234,13 +328,13 @@ function wholesale_add_business_days(DateTime $date, $days)
  * Production business days for the cart: the longest product turnaround, and
  * at least 4 for channel letters, whose product pages say 2-4 business days.
  */
-function wholesale_cart_production_days($cart)
+function retails_cart_production_days($cart)
 {
 	$turnaround = 1;
 	foreach ($cart->get_items() as $item) {
 		$turnaround = max($turnaround, (int) get_post_meta(absint($item->product_id), '_product_turnaround', true));
 	}
-	return wholesale_cart_has_channel_letters($cart) ? max($turnaround, 4) : $turnaround;
+	return retails_cart_has_channel_letters($cart) ? max($turnaround, 4) : $turnaround;
 }
 
 /**
@@ -250,15 +344,15 @@ function wholesale_cart_production_days($cart)
  * next business day. The old version added calendar days plus transit, so
  * "Ships by" dates landed on weekends and included delivery time.
  */
-function wholesale_estimated_ship_datetime($cart, ?DateTime $now = null)
+function retails_estimated_ship_datetime($cart, ?DateTime $now = null)
 {
 	$now = $now ? clone $now : new DateTime('now', new DateTimeZone('America/Los_Angeles'));
 	$order_day = clone $now;
 	$order_day->setTime(0, 0);
 	if ($now->format('N') >= 6 || (int) $now->format('G') >= 16) {
-		$order_day = wholesale_add_business_days($order_day, 1);
+		$order_day = retails_add_business_days($order_day, 1);
 	}
-	return wholesale_add_business_days($order_day, wholesale_cart_production_days($cart));
+	return retails_add_business_days($order_day, retails_cart_production_days($cart));
 }
 
 /**
@@ -266,9 +360,9 @@ function wholesale_estimated_ship_datetime($cart, ?DateTime $now = null)
  * ship by" on the thank-you page, order emails and order tracking. The ship
  * date doesn't depend on the shipping speed; the argument is kept for callers.
  */
-function wholesale_estimated_ship_date($cart, $shipping_index = 0)
+function retails_estimated_ship_date($cart, $shipping_index = 0)
 {
-	return wholesale_estimated_ship_datetime($cart)->format('D M. j');
+	return retails_estimated_ship_datetime($cart)->format('D M. j');
 }
 
 /**
@@ -276,16 +370,16 @@ function wholesale_estimated_ship_date($cart, $shipping_index = 0)
  * the ship date plus that speed's transit business days, using the slow end
  * of standard shipping's 3-6 days.
  */
-function wholesale_estimated_delivery_date($cart, $shipping_index = 0)
+function retails_estimated_delivery_date($cart, $shipping_index = 0)
 {
 	$transit = array(6, 3, 2, 1);
-	return wholesale_add_business_days(wholesale_estimated_ship_datetime($cart), $transit[(int) $shipping_index] ?? 6)->format('D M. j');
+	return retails_add_business_days(retails_estimated_ship_datetime($cart), $transit[(int) $shipping_index] ?? 6)->format('D M. j');
 }
 
 /**
  * Creates the order for a validated checkout and empties the cart.
  */
-function wholesale_checkout_create_order($checkout, $cart, $extra_meta = array())
+function retails_checkout_create_order($checkout, $cart, $extra_meta = array())
 {
 	$order_cost = wp_json_encode(array(
 		'grand_total' => $checkout['grand_total'],
@@ -295,7 +389,7 @@ function wholesale_checkout_create_order($checkout, $cart, $extra_meta = array()
 		'tax' => $checkout['tax'],
 	));
 
-	$order = wholesale_insert_order(
+	$order = retails_insert_order(
 		wp_slash(wp_json_encode($checkout['items'])),
 		wp_slash($order_cost),
 		wp_slash(wp_json_encode($checkout['billing'])),
@@ -307,14 +401,14 @@ function wholesale_checkout_create_order($checkout, $cart, $extra_meta = array()
 
 	if ($order) {
 		$cart->empty();
-		wholesale_send_new_order_admin_email($order);
-		do_action('wholesale_order_created', $order);
+		retails_send_new_order_admin_email($order);
+		do_action('retails_order_created', $order);
 	}
 
 	return $order;
 }
 
-function wholesale_create_checkout_account($email, $password, $first_name, $last_name, $telephone)
+function retails_create_checkout_account($email, $password, $first_name, $last_name, $telephone)
 {
 	$username = sanitize_user(strstr($email, '@', true), true) ?: 'customer';
 	while (username_exists($username)) {
@@ -342,7 +436,7 @@ function wholesale_create_checkout_account($email, $password, $first_name, $last
 /**
  * Checks the optional "create an account" fields before anything is charged.
  */
-function wholesale_checkout_account_error($checkout, $password)
+function retails_checkout_account_error($checkout, $password)
 {
 	if (!$checkout['create_account']) {
 		return '';
@@ -356,13 +450,13 @@ function wholesale_checkout_account_error($checkout, $password)
 	return '';
 }
 
-function wholesale_checkout_attach_account($order, $checkout, $password)
+function retails_checkout_attach_account($order, $checkout, $password)
 {
 	if (!$order || !$checkout['create_account']) {
 		return;
 	}
 	$billing = $checkout['billing'];
-	$user_id = wholesale_create_checkout_account($billing['billing_email'], $password, $billing['billing_fname'], $billing['billing_lname'], $billing['billing_tel']);
+	$user_id = retails_create_checkout_account($billing['billing_email'], $password, $billing['billing_fname'], $billing['billing_lname'], $billing['billing_tel']);
 	if (!is_wp_error($user_id)) {
 		update_post_meta($order, 'user_id', $user_id);
 	}
@@ -371,12 +465,12 @@ function wholesale_checkout_attach_account($order, $checkout, $password)
 /**
  * Thank-you page link that can show this order's summary to the visitor who placed it.
  */
-function wholesale_thank_you_url($order)
+function retails_thank_you_url($order)
 {
 	$key = wp_generate_password(20, false, false);
 	update_post_meta($order, '_order_view_key', $key);
 	if (isset($_SESSION)) {
-		$_SESSION['wholesale_last_order'] = (int) $order;
+		$_SESSION['retails_last_order'] = (int) $order;
 	}
 	return add_query_arg(array('order' => get_post_meta($order, 'order_id', true), 'key' => $key), home_url('/thank-you/'));
 }
@@ -384,27 +478,27 @@ function wholesale_thank_you_url($order)
 /**
  * Checkout / pay pages: load the checkout script with its settings.
  */
-function wholesale_enqueue_payment_script()
+function retails_enqueue_payment_script()
 {
 	if (!is_page(array('checkout', 'pay'))) {
 		return;
 	}
 	$path = '/js/checkout.js';
-	wp_enqueue_script('wholesale-checkout', get_template_directory_uri() . $path, array(), (string) filemtime(get_template_directory() . $path), true);
-	wp_localize_script('wholesale-checkout', 'wholesalePayment', array(
+	wp_enqueue_script('retails-checkout', get_template_directory_uri() . $path, array(), (string) filemtime(get_template_directory() . $path), true);
+	wp_localize_script('retails-checkout', 'retailsPayment', array(
 		'ajaxUrl' => admin_url('admin-ajax.php'),
-		'nonce' => wp_create_nonce('wholesale_payment'),
+		'nonce' => wp_create_nonce('retails_payment'),
 		// Order payment links (/pay/?o=) always take cards; the setting only covers checkout.
-		'cardEnabled' => !wholesale_setting_enabled('payment_disabled') || (is_page('pay') && isset($_GET['o'])),
-		'method' => wholesale_payment_method(),
+		'cardEnabled' => !retails_setting_enabled('payment_disabled') || (is_page('pay') && isset($_GET['o'])),
+		'method' => retails_payment_method(),
 	));
 }
-add_action('wp_enqueue_scripts', 'wholesale_enqueue_payment_script');
+add_action('wp_enqueue_scripts', 'retails_enqueue_payment_script');
 
 /**
  * The order the visitor just placed, when the thank-you link matches it.
  */
-function wholesale_thank_you_order()
+function retails_thank_you_order()
 {
 	$order_number = isset($_GET['order']) ? sanitize_text_field(wp_unslash($_GET['order'])) : '';
 	$key = isset($_GET['key']) ? sanitize_text_field(wp_unslash($_GET['key'])) : '';
@@ -425,24 +519,24 @@ function wholesale_thank_you_order()
 
 /**
  * Google Ads purchase conversion with the real order value, sent once per order.
- * Runs after the deferred gtag config in wholesale_deferred_conversion_tracking().
+ * Runs after the deferred gtag config in retails_deferred_conversion_tracking().
  */
-function wholesale_purchase_conversion()
+function retails_purchase_conversion()
 {
-	if (!get_query_var('wholesale_thank_you')) {
+	if (!get_query_var('retails_thank_you')) {
 		return;
 	}
-	$order = wholesale_thank_you_order();
+	$order = retails_thank_you_order();
 	if (!$order || get_post_meta($order, '_conversion_tracked', true)) {
 		return;
 	}
 	update_post_meta($order, '_conversion_tracked', current_time('mysql'));
 
-	$cost = wholesale_decode_order_meta_array(get_post_meta($order, 'product_cost', true));
+	$cost = retails_decode_order_meta_array(get_post_meta($order, 'product_cost', true));
 	$value = isset($cost['grand_total']) ? (float) $cost['grand_total'] : 0;
 	$transaction_id = (string) get_post_meta($order, 'order_id', true);
-	$user_data = wholesale_ads_order_user_data($order);
-	$items = wholesale_ads_order_items($order);
+	$user_data = retails_ads_order_user_data($order);
+	$items = retails_ads_order_items($order);
 	// Google Ads cart data: the products sold, by feed item ID.
 	$cart_items = array_map(static function ($item) {
 		return array(
@@ -463,7 +557,7 @@ function wholesale_purchase_conversion()
 			window.gtag('set', 'user_data', <?php echo wp_json_encode($user_data); ?>);
 			<?php endif; ?>
 			window.gtag('event', 'conversion', {
-				send_to: <?php echo wp_json_encode('AW-18454059893/' . WHOLESALE_ADS_PURCHASE_LABEL); ?>,
+				send_to: <?php echo wp_json_encode('AW-18454059893/' . RETAILS_ADS_PURCHASE_LABEL); ?>,
 				value: <?php echo wp_json_encode(round($value, 2)); ?>,
 				currency: 'USD',
 				transaction_id: <?php echo wp_json_encode($transaction_id); ?><?php if (defined('WHOLESALE_MERCHANT_CENTER_ID')) : ?>,
@@ -486,14 +580,14 @@ function wholesale_purchase_conversion()
 	</script>
 	<?php
 }
-add_action('wp_footer', 'wholesale_purchase_conversion', 21);
+add_action('wp_footer', 'retails_purchase_conversion', 21);
 
 // The confirmation page is private to the customer who placed the order.
 add_filter('pre_get_document_title', function ($title) {
-	return get_query_var('wholesale_thank_you') ? 'Order confirmed | ' . get_bloginfo('name') : $title;
+	return get_query_var('retails_thank_you') ? 'Order confirmed | ' . get_bloginfo('name') : $title;
 }, 99);
 add_filter('wp_robots', function ($robots) {
-	if (get_query_var('wholesale_thank_you')) {
+	if (get_query_var('retails_thank_you')) {
 		$robots['noindex'] = true;
 		$robots['nofollow'] = true;
 	}

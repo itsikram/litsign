@@ -34,7 +34,7 @@ const eightFtcableCost = parseFloat(
 );
 // Lexan face (percent of the letter price), 1" trimcap ([[up to inches, $ per piece]]) and
 // B2Sign's piece rules (large letters by sq ft, small lit letters), the same as
-// wholesale_cl_option_prices() and wholesale_cl_letter_cost() in inc/pricing.php.
+// retails_cl_option_prices() and retails_cl_letter_cost() in inc/pricing.php.
 const clLexanPercent = Math.max(0, parseFloat(document.getElementById("clLexanPercent")?.value) || 0);
 let clTrimcap1in = [];
 try {
@@ -141,7 +141,7 @@ if (document.fonts && document.fonts.addEventListener) {
   });
 }
 
-// Same rate the cart charges (WHOLESALE_RACEWAY_COST_PER_FOOT in inc/pricing.php).
+// Same rate the cart charges (RETAILS_RACEWAY_COST_PER_FOOT in inc/pricing.php).
 const racewayPerFoot =
   parseFloat(document.getElementById("racewayPerFoot")?.value) || 55;
 // The product's own discount gives its everyday price: the cart takes it off the whole
@@ -2066,7 +2066,8 @@ function syncCanvasBackground() {
 // Function to zoom the stage with center focus
 function zoomStage(scaleFactor) {
   const oldScale = stage.scaleX();
-  const newScale = Math.min(3, Math.max(0.3, oldScale * scaleFactor));
+  // Auto zoom-out may go below the buttons' 30% floor; Zoom out then stays put there.
+  const newScale = Math.min(3, Math.max(Math.min(0.3, oldScale), oldScale * scaleFactor));
   const scaleRatio = newScale / oldScale;
   const oldPos = stage.position();
   const center = {
@@ -2095,6 +2096,266 @@ function zoomStage(scaleFactor) {
 
   updateHeightWidthDisplay();
 }
+
+// Auto zoom-out. When an element (or a Select-all group) gets wider or taller than the visible
+// canvas (dragging a resize handle, typing more letters, a bigger size in the size boxes, a
+// duplicate, a restored design), the canvas zooms out just enough to show all of it with its
+// handles; while it still fits, the view only slides so a dragged handle never leaves the
+// canvas. It never zooms in, so the zoom buttons work as before.
+const clAutoZoom = {
+  frame: null,
+  ids: new Set(), // elements that grew since the last check (store / node ids)
+  sizes: new Map(), // store element id -> { width, height } in inches, as last seen
+  minScale: 0.05,
+  movedView: false, // auto zoom moved the view (an emptied design then gets the start view back)
+};
+
+function getAutoZoomMargin() {
+  // Room for the size arrows along the top and left edges and for the handles.
+  return window.matchMedia("(max-width: 767.98px)").matches ? 24 : 44;
+}
+
+// Box around the nodes in canvas pixels, trimcap and return included.
+function getScreenBoundsOfNodes(nodes) {
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  nodes.forEach((node) => {
+    if (!node || !node.getLayer() || !node.isVisible()) {
+      return;
+    }
+    const box = node.getClientRect();
+    if (![box.x, box.y, box.width, box.height].every(Number.isFinite)) {
+      return;
+    }
+    left = Math.min(left, box.x);
+    top = Math.min(top, box.y);
+    right = Math.max(right, box.x + box.width);
+    bottom = Math.max(bottom, box.y + box.height);
+  });
+  return left === Infinity
+    ? null
+    : { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+function getActiveTransformer() {
+  return stage.find("Transformer").find((transformer) => transformer.isTransforming()) || null;
+}
+
+// A resize handle can follow a zoom mid-drag only when Konva's drag state is there to re-measure.
+function canZoomDuringTransform(transformer) {
+  return !!(
+    transformer._movingAnchorName &&
+    transformer._movingAnchorName !== "rotater" &&
+    transformer._anchorDragOffset
+  );
+}
+
+// Konva moves the dragged handle to "pointer minus a fixed offset"; after a zoom the handle sits
+// somewhere else on screen, so measure the offset again. The size then carries on from where it
+// is instead of jumping.
+function syncTransformerDragOffset(transformer) {
+  const anchor = transformer.findOne("." + transformer._movingAnchorName);
+  const pointer = stage.getPointerPosition();
+  if (!anchor || !pointer) {
+    return;
+  }
+  const position = anchor.getAbsolutePosition();
+  transformer._anchorDragOffset = {
+    x: pointer.x - position.x,
+    y: pointer.y - position.y,
+  };
+}
+
+function autoZoomToFit(nodes, transformer = null) {
+  const width = stage.width();
+  const height = stage.height();
+  const margin = getAutoZoomMargin();
+  const roomWidth = width - margin * 2;
+  const roomHeight = height - margin * 2;
+  if (roomWidth < 60 || roomHeight < 60) {
+    return false;
+  }
+  const box = getScreenBoundsOfNodes(nodes);
+  if (!box) {
+    return false;
+  }
+  const fitsSize = box.width <= roomWidth + 1 && box.height <= roomHeight + 1;
+  // While a handle is dragged the element is kept inside the margin (so the handle never goes
+  // off the canvas); after other changes only when part of it is actually cut off.
+  const edge = transformer ? margin : 4;
+  const inView =
+    box.x >= edge - 1 &&
+    box.y >= edge - 1 &&
+    box.x + box.width <= width - edge + 1 &&
+    box.y + box.height <= height - edge + 1;
+  if (fitsSize && inView) {
+    return false;
+  }
+
+  const oldScale = stage.scaleX() || 1;
+  let newScale = oldScale;
+  if (!fitsSize) {
+    const fit = Math.min(
+      roomWidth / Math.max(1, box.width),
+      roomHeight / Math.max(1, box.height),
+    );
+    // While a handle is dragged the zoom follows it frame by frame; otherwise leave a little room.
+    newScale = Math.min(
+      oldScale,
+      Math.max(clAutoZoom.minScale, oldScale * fit * (transformer ? 1 : 0.95)),
+    );
+  }
+  const ratio = newScale / oldScale;
+
+  // Zoom around the finger or mouse while dragging, so the handle stays under it; otherwise
+  // around the element. Then slide the element fully into view.
+  const pointer = transformer ? stage.getPointerPosition() : null;
+  const focus = {
+    x: Math.min(width - margin, Math.max(margin, pointer ? pointer.x : box.x + box.width / 2)),
+    y: Math.min(height - margin, Math.max(margin, pointer ? pointer.y : box.y + box.height / 2)),
+  };
+  const oldPosition = stage.position();
+  const position = {
+    x: focus.x - (focus.x - oldPosition.x) * ratio,
+    y: focus.y - (focus.y - oldPosition.y) * ratio,
+  };
+  const slideIntoView = (start, size, view) => {
+    if (size > view - margin * 2 + 1) {
+      return (view - size) / 2 - start;
+    }
+    if (start < margin) {
+      return margin - start;
+    }
+    if (start + size > view - margin) {
+      return view - margin - (start + size);
+    }
+    return 0;
+  };
+  position.x += slideIntoView(focus.x + (box.x - focus.x) * ratio, box.width * ratio, width);
+  position.y += slideIntoView(focus.y + (box.y - focus.y) * ratio, box.height * ratio, height);
+  if (
+    ratio > 0.999 &&
+    Math.abs(position.x - oldPosition.x) < 0.5 &&
+    Math.abs(position.y - oldPosition.y) < 0.5
+  ) {
+    return false;
+  }
+
+  stage.scale({ x: newScale, y: newScale });
+  stage.position(position);
+  clAutoZoom.movedView = true;
+  syncCanvasBackground();
+  stage.find("Transformer").forEach((item) => item.update());
+  if (transformer) {
+    syncTransformerDragOffset(transformer);
+  }
+  updateHeightWidthDisplay(true);
+  stage.batchDraw();
+  return true;
+}
+
+// The middle of what the canvas shows, in design coordinates; new elements go there. It is the
+// stage middle until auto zoom moves the view, so the starting view places them as before.
+function getVisibleStageCenter() {
+  const scale = stage.scaleX() || 1;
+  return {
+    x: (stage.width() / 2 - stage.x()) / scale,
+    y: (stage.height() / 2 - stage.y()) / scale,
+  };
+}
+
+// An emptied design gets the starting view back, if auto zoom had moved it.
+function resetAutoZoomView() {
+  if (!clAutoZoom.movedView) {
+    return;
+  }
+  clAutoZoom.movedView = false;
+  const scale = window.matchMedia("(max-width: 767.98px)").matches ? mobileDefaultZoom : 1;
+  stage.scale({ x: scale, y: scale });
+  stage.position({
+    x: (stage.width() * (1 - scale)) / 2,
+    y: (stage.height() * (1 - scale)) / 2,
+  });
+  syncCanvasBackground();
+  updateHeightWidthDisplay(true);
+  stage.batchDraw();
+}
+
+// Checks once per frame. `nodes` are elements that just grew (optional).
+function scheduleAutoZoom(nodes = null) {
+  if (nodes) {
+    nodes.forEach((node) => {
+      if (node) {
+        clAutoZoom.ids.add(String(node._id));
+      }
+    });
+  }
+  if (clAutoZoom.frame !== null) {
+    return;
+  }
+  clAutoZoom.frame = requestAnimationFrame(() => {
+    clAutoZoom.frame = null;
+    const ids = new Set(clAutoZoom.ids);
+    clAutoZoom.ids.clear();
+    if (!nodeLists.length) {
+      resetAutoZoomView();
+      return;
+    }
+    const transformer = getActiveTransformer();
+    if (transformer) {
+      // Rotating waits for the release (transformend checks again).
+      if (canZoomDuringTransform(transformer)) {
+        autoZoomToFit(transformer.nodes(), transformer);
+      }
+      return;
+    }
+    const grown = nodeLists
+      .map((item) => item.node)
+      .filter((node) => node && ids.has(String(node._id)));
+    if (grown.length) {
+      autoZoomToFit(grown);
+    }
+  });
+}
+
+// Each resize handle set (letters, shapes, raceways, duplicates, Select all) calls this.
+function watchTransformerForAutoZoom(transformer) {
+  transformer.on("transform", () => scheduleAutoZoom());
+  transformer.on("transformend", () => scheduleAutoZoom(transformer.nodes()));
+}
+
+// Growth that does not come from a handle: letters typed, size boxes, font, duplicate, restore.
+store.subscribe(() => {
+  const elements = store.getState().elements || [];
+  const seen = new Set();
+  const grown = [];
+  elements.forEach((element) => {
+    const id = String(element.id);
+    const size = {
+      width: parseFloat(element.width) || 0,
+      height: parseFloat(element.height) || 0,
+    };
+    const last = clAutoZoom.sizes.get(id);
+    seen.add(id);
+    clAutoZoom.sizes.set(id, size);
+    if (!last || size.width > last.width + 0.05 || size.height > last.height + 0.05) {
+      grown.push(id);
+    }
+  });
+  clAutoZoom.sizes.forEach((size, id) => {
+    if (!seen.has(id)) {
+      clAutoZoom.sizes.delete(id);
+    }
+  });
+  if (grown.length) {
+    grown.forEach((id) => clAutoZoom.ids.add(id));
+    scheduleAutoZoom();
+  } else if (!elements.length) {
+    scheduleAutoZoom();
+  }
+});
 
 function triggerTransformEvent() {
   if (selectedNode == null) {
@@ -2209,6 +2470,10 @@ function updateNodeDimensionInputs(node, type = null) {
           ? "raceway"
           : null);
   updateHeightWidthInput(bounds.height, bounds.width, inputType);
+  // The "W x H" under Selected element follows resizing too, not only selection.
+  if (node === selectedNode && elementDimenstionContainer && !isMultiSelectActive()) {
+    elementDimenstionContainer.innerHTML = getTextDimensions(node);
+  }
 }
 
 let heightWidthDisplayFrame = null;
@@ -3288,7 +3553,7 @@ const formatMoney = (amount) =>
     maximumFractionDigits: 2,
   });
 
-// An amount at the everyday price, and after any dated sale, worked out as wholesale_price_quote()
+// An amount at the everyday price, and after any dated sale, worked out as retails_price_quote()
 // does: the product discount taken off the amount, then the sale off the everyday price in cents.
 const everydayPrice = (amount) =>
   normalizeCost(amount) - (normalizeCost(amount) * everydayPercent) / 100;
@@ -3297,10 +3562,10 @@ const salePrice = (amount) =>
     ? phpRound(phpRound(everydayPrice(amount), 2) * (1 - discountPercent / 100), 2)
     : everydayPrice(amount);
 
-// Design totals, matching wholesale_cl_design_quote() and wholesale_price_quote():
+// Design totals, matching retails_cl_design_quote() and retails_price_quote():
 // power supply, lighting and cable are only charged once there is something to
 // power, and the product discount, then any dated sale, come off the whole total.
-// The face color's per-inch rate from the current product data, as wholesale_cl_face_rate():
+// The face color's per-inch rate from the current product data, as retails_cl_face_rate():
 // the group holding that name and color code, else the first group holding the name.
 const getFaceRate = (faceColor, fallback) => {
   const title = String((faceColor && faceColor.title) || "").trim();
@@ -3331,10 +3596,10 @@ const getFaceRate = (faceColor, fallback) => {
 };
 
 // An element's letter price and face price from the current rate table, the same way
-// wholesale_cl_design_quote() prices it, so a restored draft or an element re-priced with
+// retails_cl_design_quote() prices it, so a restored draft or an element re-priced with
 // another element's face rate never shows a different total from the cart.
 // B2Sign prices each letter by its own longer side, rounded up to the next inch, within the
-// product's height table; same as wholesale_cl_rate_for_side() in inc/pricing.php.
+// product's height table; same as retails_cl_rate_for_side() in inc/pricing.php.
 const rateHeights = () =>
   ((getDataById(["cost-per-inch"], productClData)[0] || {}).options || [])
     .map((o) => parseInt(Object.keys(o)[0], 10))
@@ -3350,7 +3615,7 @@ const rateForSide = (side) => {
 };
 
 // Separate pieces in one character (the dot of an i, an accent): B2Sign prices each piece.
-// Same list as wholesale_cl_char_pieces().
+// Same list as retails_cl_char_pieces().
 const charPieces = (ch) =>
   'ij!?:;="%'.includes(ch) ||
   /^[À-ÅÇ-ÏÑ-ÖÙ-Ýà-åç-ïñ-öù-ýÿ]$/.test(ch)
@@ -3359,7 +3624,7 @@ const charPieces = (ch) =>
 
 // Each letter's measured size in inches ([width, height] per non-space character), with the
 // text's height taken as the height of all its letters together, as on B2Sign. Sent with the
-// design so the cart prices the same letters (wholesale_cl_text_letters()).
+// design so the cart prices the same letters (retails_cl_text_letters()).
 const glyphCanvas = document.createElement("canvas").getContext("2d");
 const glyphCache = new Map();
 if (document.fonts && document.fonts.addEventListener) {
@@ -3407,7 +3672,7 @@ const getTextPieces = (element) => {
   return sized ? sized.pieces : null;
 };
 
-// The pieces as wholesale_cl_text_pieces() reads them, each priced as a letter of its own on its
+// The pieces as retails_cl_text_pieces() reads them, each priced as a letter of its own on its
 // longer side, as on B2Sign; null where the server would not believe them (then the letters below).
 const getPieceLetters = (element) => {
   const chars = Array.from(String(element.text || "").replace(/\s/g, ""));
@@ -3436,10 +3701,10 @@ const getPieceLetters = (element) => {
   return letters;
 };
 
-// Each letter of a text element as wholesale_cl_text_letters() reads it: every measured piece
+// Each letter of a text element as retails_cl_text_letters() reads it: every measured piece
 // (getPieceLetters()); else its measured width w and height h (up to 2.5 times the text height),
 // its longer side raw, and the side the rate table prices (at least half the text height).
-// Without measured sizes, as wholesale_cl_text_letters_unmeasured(): the text height, 80% as wide
+// Without measured sizes, as retails_cl_text_letters_unmeasured(): the text height, 80% as wide
 // as it is tall.
 const getTextLetters = (element) => {
   const pieceLetters = getPieceLetters(element);
@@ -3459,12 +3724,12 @@ const getTextLetters = (element) => {
   });
 };
 
-// Pieces in a text (the dot of an i is its own piece), as wholesale_cl_count_pieces().
+// Pieces in a text (the dot of an i is its own piece), as retails_cl_count_pieces().
 const countPieces = (text) =>
   Array.from(String(text || "").replace(/\s/g, "")).reduce((sum, ch) => sum + charPieces(ch), 0);
 
 // One letter (a text character, or a whole shape) priced as B2Sign prices its pieces, before the
-// product discount; same as wholesale_cl_letter_cost() in inc/pricing.php.
+// product discount; same as retails_cl_letter_cost() in inc/pricing.php.
 const getLetterCosts = (letter, element) => {
   const heights = rateHeights();
   const pieces = letter.ch === "" ? 1 : charPieces(letter.ch);
@@ -3518,7 +3783,7 @@ const withLetterSizes = (elements) =>
   );
 
 // One element's prices before the product discount: letters (cost), face (colorCost), Lexan and
-// 1" trimcap, and each letter's total in the order wholesale_cl_design_quote() adds them (parts).
+// 1" trimcap, and each letter's total in the order retails_cl_design_quote() adds them (parts).
 const getElementCosts = (element) => {
   const costs = { cost: 0, colorCost: 0, lexan: 0, trimcap: 0, parts: [] };
   if (!element) {
@@ -3584,8 +3849,8 @@ const getDesignTotals = (elements, extras) => {
   const lit = (elementTotal * litPercent) / 100;
   const cable =
     hasElements && extras.cable && extras.cable.qty > 0 ? normalizeCost(extras.cable.cost) : 0;
-  // Rounded to cents before the discount, as wholesale_cl_design_quote() does, then the
-  // everyday and sale prices to cents as wholesale_price_quote() does.
+  // Rounded to cents before the discount, as retails_cl_design_quote() does, then the
+  // everyday and sale prices to cents as retails_price_quote() does.
   const listed = hasElements ? phpRound(elementTotal + (powerSupply + lit + cable), 2) : 0;
   const regular = phpRound(everydayPrice(listed), 2);
   const sale = discountPercent > 0 ? salePrice(listed) : regular;
@@ -3907,8 +4172,8 @@ window.addEventListener("load", function (e) {
   //   });
   function addText(
     text,
-    x = stage.width() / 2,
-    y = stage.height() / 2,
+    x = getVisibleStageCenter().x,
+    y = getVisibleStageCenter().y,
     isUpdateId = false,
   ) {
     dualColorBg =
@@ -4005,6 +4270,7 @@ window.addEventListener("load", function (e) {
     layer.add(tr);
 
     textNode.setAttr("transformer", tr);
+    watchTransformerForAutoZoom(tr);
 
     let textTransformFrame = null;
     let scheduleTextTransformUpdate = () => {
@@ -4324,11 +4590,12 @@ window.addEventListener("load", function (e) {
 
     // Center each new shape using the current stage size, including on mobile.
     const shapeBounds = shape.getClientRect({ skipTransform: true });
+    const viewCenter = getVisibleStageCenter();
     shape.x(
-      shape.x() + stage.width() / 2 - (shapeBounds.x + shapeBounds.width / 2),
+      shape.x() + viewCenter.x - (shapeBounds.x + shapeBounds.width / 2),
     );
     shape.y(
-      shape.y() + stage.height() / 2 - (shapeBounds.y + shapeBounds.height / 2),
+      shape.y() + viewCenter.y - (shapeBounds.y + shapeBounds.height / 2),
     );
 
     selectedNodeType = shape.getClassName();
@@ -4391,6 +4658,7 @@ window.addEventListener("load", function (e) {
     });
     layer.add(tr);
     shape.setAttr("transformer", tr);
+    watchTransformerForAutoZoom(tr);
     selectedNode = shape;
 
     let persistShape = () => {
@@ -4782,9 +5050,10 @@ window.addEventListener("load", function (e) {
     // Create the rectangle
     var rectWidth = Math.min(600, Math.max(80, stage.width() - 24));
     var rectHeight = 80;
+    var racewayCenter = getVisibleStageCenter();
     var raceway = new Konva.Rect({
-      x: (stage.width() - rectWidth) / 2,
-      y: (stage.height() - rectHeight) / 2,
+      x: racewayCenter.x - rectWidth / 2,
+      y: racewayCenter.y - rectHeight / 2,
       width: rectWidth,
       height: rectHeight,
       fill: "#D3D3D3",
@@ -4816,6 +5085,7 @@ window.addEventListener("load", function (e) {
     });
 
     raceway.setAttr("transformer", tr);
+    watchTransformerForAutoZoom(tr);
 
     layer.add(tr);
     layer.add(raceway);
@@ -5317,6 +5587,11 @@ window.addEventListener("load", function (e) {
       x: selectedNode.x() + 100, // Adjust position of the cloned arrow
       y: selectedNode.y() + 100, // Adjust position of the cloned arrow
     });
+    // Konva's clone() also copies the original's handlers, and those act on the original: while
+    // the copy was resized or tapped they selected the original and showed its colors and size
+    // (and saved it with the copy's position). The copy gets its own handlers below. Konva's
+    // internal listeners are kept by off().
+    cloneNode.off();
 
     let enabledAnchors = undefined;
 
@@ -5347,32 +5622,25 @@ window.addEventListener("load", function (e) {
       keepRatio: true,
       rotationSnaps: false,
       boundBoxFunc: function (oldBoundBox, newBoundBox) {
-        // Set minimum and maximum size constraints
-        var minWidth = 82;
-        var minHeight = 82;
-        var maxWidth = 455;
-        var maxHeight = 455;
-
-        if (cloneNode.getClassName() == "Text") {
-          // Constrain height
-          if (newBoundBox.height < minHeight) {
-            oldBoundBox.height = minHeight;
-
-            return oldBoundBox;
-          } else if (newBoundBox.height > maxHeight) {
-            oldBoundBox.height = maxHeight;
-
-            return oldBoundBox;
-          }
-        } else {
-          // Constrain width
-          if (newBoundBox.width < minWidth) {
-            oldBoundBox.width = minWidth;
-            return oldBoundBox;
-          } else if (newBoundBox.width > maxWidth) {
-            oldBoundBox.width = maxWidth;
-            return oldBoundBox;
-          }
+        // The original element's limits, in inches at any zoom (the boxes are screen pixels):
+        // letters by height, shapes by height and width, raceways unlimited here (their height is
+        // clamped in the transform handler). At a limit the copy stops at its last size.
+        if (cloneNode.getAttr("textIndex")) {
+          return newBoundBox;
+        }
+        const zoom = stage.scaleX() || 1;
+        const reduction =
+          cloneNode.getClassName() == "RegularPolygon" ? triangleReduction : 1;
+        const heightInch = (newBoundBox.height / zoom / dpi) * reduction;
+        const widthInch = (newBoundBox.width / zoom / dpi) * reduction;
+        if (heightInch > maxHeight || heightInch < minHeight) {
+          return oldBoundBox;
+        }
+        if (
+          cloneNode.getClassName() != "Text" &&
+          (widthInch > maxWidth || widthInch < minWidth)
+        ) {
+          return oldBoundBox;
         }
         return newBoundBox;
       },
@@ -5387,6 +5655,7 @@ window.addEventListener("load", function (e) {
     });
 
     cloneNode.setAttr("transformer", tr);
+    watchTransformerForAutoZoom(tr);
 
     layer.add(cloneNode);
 
@@ -5440,6 +5709,10 @@ window.addEventListener("load", function (e) {
     cloneNode.on("dragmove", () => {
       updateNodeDimensionInputs(cloneNode);
       scheduleHeightWidthDisplayUpdate();
+      // A raceway copy's label follows while dragging, not only on release.
+      if (clonedRacewayText) {
+        scheduleCloneUpdate();
+      }
     });
 
     cloneNode.on("dragend", () => {
@@ -5529,6 +5802,19 @@ window.addEventListener("load", function (e) {
 
     cloneNode.on("click tap", (e) => {
       selectedNode = cloneNode;
+      selectedNodeType = cloneNode.getClassName();
+      if (selectedNodeType === "Text") {
+        textInput.value = cloneNode.text();
+      }
+      updatePreview(
+        cloneNode.getAttr("textIndex")
+          ? "raceway"
+          : selectedNodeType === "Text"
+            ? "text"
+            : "shape",
+        cloneNode,
+      );
+      updateLeftsideBar();
       updateFocusedTransformer(cloneNode);
       updateNodeDimensionInputs(cloneNode);
     });
@@ -5852,6 +6138,8 @@ window.addEventListener("load", function (e) {
             return sizeHeightInput.dispatchEvent(changeEvent);
           }
 
+          // Keep the current width when the scale is folded back to 1 (mid-drag it is not 1).
+          selectedNode.width(widhtInPx);
           selectedNode.scaleX(1);
           selectedNode.scaleY(1);
           selectedNode.height(heightInPx);
@@ -6233,10 +6521,10 @@ window.addEventListener("load", function (e) {
             totalRectColorCost = heightInInch * parseFloat(colorCost);
           }
 
-          selectedNode.width(widthInPx * selectedNode.scaleX());
-          selectedNode.height(
-            sizeHeightInput.value * dpi * selectedNode.scaleY(),
-          );
+          // The typed width and height at scale 1. (Multiplying by the current scale made a
+          // drag that reached the largest width jump past it, e.g. 45" to 98.5".)
+          selectedNode.width(widthInPx);
+          selectedNode.height(heightInPx);
           selectedNode.scaleX(1);
           //selectedNode.height(newSizeByHeight.height);
           updateHeightWidthInput(selectedNode.height(), selectedNode.width());
@@ -6766,7 +7054,7 @@ window.addEventListener("load", function (e) {
     layer.draw();
   });
 
-  // Uploads a PNG of the canvas (selection handles hidden) through wholesale_upload_design
+  // Uploads a PNG of the canvas (selection handles hidden) through retails_upload_design
   // and returns the attachment id with the design JSON the product page and cart expect.
   async function uploadDesignSnapshot() {
     exitMultiSelection();
@@ -6779,6 +7067,8 @@ window.addEventListener("load", function (e) {
       }
     });
     stage.height(container.clientHeight);
+    // The picture is what the canvas shows: bring the whole design into view first.
+    autoZoomToFit(nodeLists.map((item) => item.node));
     layer.draw();
     const dataURL = stage.toDataURL({ mimeType: "image/png" });
     transformers.forEach((transformer) => transformer.visible(true));
@@ -6786,7 +7076,7 @@ window.addEventListener("load", function (e) {
 
     const formData = new FormData();
     formData.append("file", dataURLtoBlob(dataURL), "clDesign-" + Math.random() + ".png");
-    formData.append("action", "wholesale_upload_design");
+    formData.append("action", "retails_upload_design");
     formData.append("nonce", window.mediaUploadData.upload_nonce);
 
     const response = await fetch(window.mediaUploadData.upload_url, {
@@ -6838,7 +7128,7 @@ window.addEventListener("load", function (e) {
       try {
         const snapshot = await uploadDesignSnapshot();
         const body = new FormData();
-        body.append("action", "wholesale_cl_builder_add");
+        body.append("action", "retails_cl_builder_add");
         body.append("product_id", addToCartBtn.getAttribute("data-product-id"));
         body.append("design_id", snapshot.id);
         body.append("design_data", snapshot.designData);
@@ -6861,7 +7151,7 @@ window.addEventListener("load", function (e) {
         clearBuilderDraft();
         if (document.getElementById("miniCart")) {
           // js/mini-cart.js renders the drawer and opens it.
-          document.dispatchEvent(new CustomEvent("wholesale:minicart-added", { detail: json }));
+          document.dispatchEvent(new CustomEvent("retails:minicart-added", { detail: json }));
         } else {
           window.location.href = addToCartBtn.getAttribute("data-cart-url");
           return;
@@ -6911,6 +7201,8 @@ window.addEventListener("load", function (e) {
     });
 
     stage.height(container.clientHeight);
+    // The picture is what the canvas shows: bring the whole design into view first.
+    autoZoomToFit(nodeLists.map((item) => item.node));
 
     var dataURL = stage.toDataURL({ mimeType: "image/png" });
     let imageBlob = dataURLtoBlob(dataURL);
@@ -6918,7 +7210,7 @@ window.addEventListener("load", function (e) {
     // Prepare the form data
     var formData = new FormData();
     formData.append("file", imageBlob, "clDesign-" + Math.random() + ".png");
-    formData.append("action", "wholesale_upload_design");
+    formData.append("action", "retails_upload_design");
     formData.append("nonce", window.mediaUploadData.upload_nonce);
 
     try {
@@ -8118,7 +8410,7 @@ function renderMultiSelectionSize() {
 function renderMultiSelectionHeading() {
   const box = getMultiSelectionBounds();
   elementIndexContainer.textContent = clMultiSelect.nodes.length + " items";
-  elementDimenstionContainer.textContent = "H:" + pxToIn(box.height) + " x W:" + pxToIn(box.width);
+  elementDimenstionContainer.textContent = "W:" + pxToIn(box.width) + " x H:" + pxToIn(box.height);
 }
 
 // Shows the shared choice on an option row, or "Mixed" when the elements differ.
@@ -8232,6 +8524,7 @@ function selectAllElements() {
     },
   });
   layer.add(transformer);
+  watchTransformerForAutoZoom(transformer);
   transformer.on("transformstart", () => {
     clMultiSelect.transforming = true;
   });

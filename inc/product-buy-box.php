@@ -11,7 +11,7 @@
  * - Pages are served from the static page cache for up to 8 hours, so the delivery
  *   estimate is worked out in the browser (js/ui-polish.js section 6) from the
  *   production days printed here, with the same rules as checkout
- *   (wholesale_estimated_ship_datetime(), wholesale_estimated_delivery_date()).
+ *   (retails_estimated_ship_datetime(), retails_estimated_delivery_date()).
  *
  * @package litsign
  */
@@ -21,13 +21,13 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Production business days for one product, as wholesale_cart_production_days() counts
+ * Production business days for one product, as retails_cart_production_days() counts
  * them for a cart: the product's turnaround (at least 1), and at least 4 for channel letters.
  */
-function wholesale_product_production_days($product_id)
+function retails_product_production_days($product_id)
 {
 	$days = max(1, (int) get_post_meta($product_id, '_product_turnaround', true));
-	return wholesale_product_is_channel_letter($product_id) ? max($days, 4) : $days;
+	return retails_product_is_channel_letter($product_id) ? max($days, 4) : $days;
 }
 
 /**
@@ -35,19 +35,19 @@ function wholesale_product_production_days($product_id)
  * fills it in Pacific time and shows it, so a cached page never shows a stale date.
  * Not for out of stock or backordered products (single-product.php shows the backorder date).
  */
-function wholesale_render_product_eta($product_id)
+function retails_render_product_eta($product_id)
 {
-	if (in_array(wholesale_product_stock_status($product_id), array('outofstock', 'backorder'), true)) {
+	if (in_array(retails_product_stock_status($product_id), array('outofstock', 'backorder'), true)) {
 		return;
 	}
-	$is_cl = wholesale_product_is_channel_letter($product_id);
-	$rates = array_filter(array_map('floatval', explode(',', (string) wholesale_get_setting($is_cl ? 'channel_shipping_options' : 'standard_shipping_options'))));
-	// Transit business days per checkout speed (wholesale_estimated_delivery_date()).
+	$is_cl = retails_product_is_channel_letter($product_id);
+	$rates = array_filter(array_map('floatval', explode(',', (string) retails_get_setting($is_cl ? 'channel_shipping_options' : 'standard_shipping_options'))));
+	// Transit business days per checkout speed (retails_estimated_delivery_date()).
 	$transit = array_slice(array(6, 3, 2, 1), 0, max(1, count($rates)));
 	$speed_names = array('standard', '3-day', '2-day', 'overnight');
-	$cutoffs = wholesale_product_cutoff_hours($product_id);
+	$cutoffs = retails_product_cutoff_hours($product_id);
 	?>
-	<div class="pd-eta" data-production-days="<?php echo esc_attr(wholesale_product_production_days($product_id)); ?>" data-cutoff="<?php echo esc_attr($cutoffs['next']); ?>" data-same-day-cutoff="<?php echo esc_attr($cutoffs['same']); ?>" data-fastest-days="<?php echo esc_attr(end($transit)); ?>" data-fastest-name="<?php echo esc_attr($speed_names[count($transit) - 1]); ?>" hidden>
+	<div class="pd-eta" data-production-days="<?php echo esc_attr(retails_product_production_days($product_id)); ?>" data-cutoff="<?php echo esc_attr($cutoffs['next']); ?>" data-same-day-cutoff="<?php echo esc_attr($cutoffs['same']); ?>" data-fastest-days="<?php echo esc_attr(end($transit)); ?>" data-fastest-name="<?php echo esc_attr($speed_names[count($transit) - 1]); ?>" hidden>
 		<svg class="pd-eta__icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M1 4h13v11H1zM14 8h4l3 3.5V15h-7M5.5 18.5a1.5 1.5 0 1 0 0-.01M17.5 18.5a1.5 1.5 0 1 0 0-.01"/></svg>
 		<div class="pd-eta__text">
 			<p class="pd-eta__ship" aria-live="polite"></p>
@@ -61,16 +61,16 @@ function wholesale_render_product_eta($product_id)
  * Quantity stepper, Add To Cart and Buy Now. Keeps the ids js/main.js and
  * js/ui-polish.js use (#productQuantity, #addToCartBtn).
  *
- * @param string $stock_status wholesale_product_stock_status().
+ * @param string $stock_status retails_product_stock_status().
  * @param float  $initial_cost The price the page opens on; 0 disables the buttons until a price shows.
  */
-function wholesale_render_product_actions($stock_status, $initial_cost)
+function retails_render_product_actions($stock_status, $initial_cost)
 {
 	$disabled = $initial_cost <= 0 ? ' disabled' : '';
 	// B2Sign quantity pricing (SFS B2Sign Sync): the price above already follows the quantity.
 	// The note gets its own row under the buttons (css/ui-polish.css section 14): inside the
 	// quantity column it widened the stepper and squeezed Add To Cart onto two lines on phones.
-	$qty_pricing = 'outofstock' !== $stock_status && function_exists('wholesale_product_qty_pricing') ? wholesale_product_qty_pricing(get_the_ID()) : null;
+	$qty_pricing = 'outofstock' !== $stock_status && function_exists('retails_product_qty_pricing') ? retails_product_qty_pricing(get_the_ID()) : null;
 	?>
 	<div class="pd-actions<?php echo $qty_pricing ? ' pd-actions--note' : ''; ?>">
 		<div class="pd-qty">
@@ -110,9 +110,9 @@ function wholesale_render_product_actions($stock_status, $initial_cost)
  * lists the same four). Under the buy buttons and, when shown, the wallet plugin's
  * Express checkout panel. Each mark has an accessible name.
  */
-function wholesale_render_product_pay_row()
+function retails_render_product_pay_row()
 {
-	if (wholesale_setting_enabled('payment_disabled')) {
+	if (retails_setting_enabled('payment_disabled')) {
 		return;
 	}
 	$frame = '<rect x=".5" y=".5" width="37" height="23" rx="3.5" fill="#fff" stroke="#d3dbe4"/>';
@@ -123,7 +123,7 @@ function wholesale_render_product_pay_row()
 		'American Express' => '<rect width="38" height="24" rx="4" fill="#016fd0"/><text x="19" y="15.6" text-anchor="middle" ' . $font . ' font-size="9.5" fill="#fff" textLength="28" lengthAdjust="spacingAndGlyphs">AMEX</text>',
 		'Discover' => $frame . '<text x="3.6" y="14.9" ' . $font . ' font-size="7.4" fill="#231f20" textLength="15" lengthAdjust="spacingAndGlyphs">DISC</text><circle cx="22.4" cy="12.3" r="3.5" fill="#f48120"/><text x="26.4" y="14.9" ' . $font . ' font-size="7.4" fill="#231f20" textLength="9" lengthAdjust="spacingAndGlyphs">VER</text>',
 	);
-	$cards += wholesale_public_wallet_marks($frame, $font);
+	$cards += retails_public_wallet_marks($frame, $font);
 	?>
 	<div class="pd-pay">
 		<span class="pd-pay__secure">
@@ -152,7 +152,7 @@ function wholesale_render_product_pay_row()
  *
  * @return string[] Wallet names, e.g. array('Apple Pay', 'Google Pay', 'PayPal', 'Venmo').
  */
-function wholesale_public_wallet_names()
+function retails_public_wallet_names()
 {
 	$settings = '\SFS\WalletPayments\Settings';
 	if (!class_exists($settings) || $settings::get('admins_only')) {
@@ -176,9 +176,9 @@ function wholesale_public_wallet_names()
 }
 
 /**
- * SVG marks for wholesale_public_wallet_names(), in the same frame as the card marks.
+ * SVG marks for retails_public_wallet_names(), in the same frame as the card marks.
  */
-function wholesale_public_wallet_marks($frame, $font)
+function retails_public_wallet_marks($frame, $font)
 {
 	$svg = array(
 		'Apple Pay' => $frame . '<path fill="#000" d="M11.6 8.6c.4-.5.7-1.2.6-1.9-.6 0-1.3.4-1.7.9-.4.4-.7 1.1-.6 1.8.7 0 1.3-.3 1.7-.8Zm.6 1c-.9 0-1.7.5-2.1.5-.5 0-1.1-.5-1.9-.5-1 0-1.9.6-2.4 1.5-1 1.8-.3 4.4.7 5.8.5.7 1 1.5 1.8 1.4.7 0 1-.5 1.9-.5s1.1.5 1.9.4c.8 0 1.3-.7 1.7-1.4.5-.8.8-1.6.8-1.6s-1.6-.6-1.6-2.4c0-1.5 1.2-2.2 1.3-2.3-.7-1-1.8-1.1-2.1-1.1Z"/><text x="16" y="16.2" ' . $font . ' font-size="9.5" fill="#000" textLength="17" lengthAdjust="spacingAndGlyphs">Pay</text>',
@@ -187,7 +187,7 @@ function wholesale_public_wallet_marks($frame, $font)
 		'Venmo' => '<rect width="38" height="24" rx="4" fill="#008cff"/><text x="19" y="15.6" text-anchor="middle" ' . $font . ' font-size="9.5" font-style="italic" fill="#fff" textLength="28" lengthAdjust="spacingAndGlyphs">venmo</text>',
 	);
 	$out = array();
-	foreach (wholesale_public_wallet_names() as $name) {
+	foreach (retails_public_wallet_names() as $name) {
 		$out[$name] = $svg[$name];
 	}
 	return $out;
@@ -201,7 +201,7 @@ function wholesale_public_wallet_marks($frame, $font)
  * @param object[] $items Cart lines.
  * @param object   $item  The line just added.
  */
-function wholesale_cart_same_item($items, $item)
+function retails_cart_same_item($items, $item)
 {
 	$signature = static function ($line) {
 		$copy = json_decode(wp_json_encode($line), true);
@@ -224,10 +224,10 @@ function wholesale_cart_same_item($items, $item)
  * Cut-off hours (Pacific) for the "Order within ... to ship ..." box: the product's own Next Day and
  * Same Day choices when SFS B2Sign Sync mirrored them, else the site's 4pm / 12pm.
  */
-function wholesale_product_cutoff_hours($product_id)
+function retails_product_cutoff_hours($product_id)
 {
 	$out = array('next' => 16, 'same' => 12);
-	foreach (function_exists('wholesale_product_turnaround_spec') ? wholesale_product_turnaround_spec($product_id) : array() as $o) {
+	foreach (function_exists('retails_product_turnaround_spec') ? retails_product_turnaround_spec($product_id) : array() as $o) {
 		if ('' === $o['cutoff'] || $o['automatic']) {
 			continue;
 		}
@@ -243,7 +243,7 @@ function wholesale_product_cutoff_hours($product_id)
 /**
  * "12:00" → "12pm", "23:59" → "11:59pm", "06:00" → "6am" (as B2Sign prints its cut-off times).
  */
-function wholesale_turnaround_clock($hhmm)
+function retails_turnaround_clock($hhmm)
 {
 	$t = strtotime('2000-01-01 ' . $hhmm);
 	return $t ? date('i', $t) === '00' ? date('ga', $t) : date('g:ia', $t) : '';
@@ -255,7 +255,7 @@ function wholesale_turnaround_clock($hhmm)
  * fills in the dollars from each price quote). B2Sign's default (Next Day) is checked. js/ui-polish.js greys out
  * choices closed by the Pacific clock or the size, and hides those the quantity rules out.
  */
-function wholesale_render_turnaround_choices($spec)
+function retails_render_turnaround_choices($spec)
 {
 	$choices = array_values(array_filter($spec, static function ($o) {
 		return $o['choice'];
@@ -289,7 +289,7 @@ function wholesale_render_turnaround_choices($spec)
 					<div class="pb-turn-title"><?php echo esc_html($title); ?></div>
 					<?php foreach ($rows as $o) :
 						$id = 'next_day' === $o['value'] ? 'turnaroundNextDay' : 'turnaround_' . $o['value'];
-						$cut = '' !== $o['cutoff_label'] ? wholesale_turnaround_clock($o['cutoff_label']) : '';
+						$cut = '' !== $o['cutoff_label'] ? retails_turnaround_clock($o['cutoff_label']) : '';
 						$percent = rtrim(rtrim(number_format($o['percent'], 2), '0'), '.');
 						?>
 						<div class="form-check pb-turn-choice" data-turnaround-option data-value="<?php echo esc_attr($o['value']); ?>" data-min-qty="<?php echo esc_attr($o['min_qty']); ?>" data-max-qty="<?php echo esc_attr(null === $o['max_qty'] ? '' : $o['max_qty']); ?>" data-time-gate="<?php echo esc_attr($o['time_gate']); ?>" data-reopen-at="<?php echo esc_attr($o['reopen_at']); ?>" data-open-off-days="<?php echo $o['open_off_days'] ? '1' : ''; ?>" data-max-both="<?php echo esc_attr(null === $o['max_both_sides'] ? '' : $o['max_both_sides']); ?>" data-percent="<?php echo esc_attr($percent); ?>"<?php echo $o['default'] ? ' data-default' : ''; ?><?php echo 0 === $o['days'] ? ' data-same-day-option' : ''; ?>>

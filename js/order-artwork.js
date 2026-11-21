@@ -8,7 +8,7 @@
 (function () {
   "use strict";
 
-  var config = window.wholesaleOrderArtwork || {};
+  var config = window.retailsOrderArtwork || {};
   if (!config.ajaxUrl || !window.FormData || !window.XMLHttpRequest) return;
 
   function sizeText(bytes) {
@@ -47,7 +47,7 @@
     var stale = box.querySelector(".order-artwork__status");
     if (stale) stale.remove();
     var data = new FormData();
-    data.append("action", "wholesale_order_artwork");
+    data.append("action", "retails_order_artwork");
     data.append("order_id", box.getAttribute("data-order"));
     data.append("line", box.getAttribute("data-line"));
     data.append("cart_id", box.getAttribute("data-cart") || "");

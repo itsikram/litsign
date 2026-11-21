@@ -20,9 +20,9 @@ if (!defined('ABSPATH')) {
  * @param string $content  Body HTML (already escaped).
  * @param array  $button   Optional array('url' => ..., 'label' => ...).
  */
-function wholesale_branded_email_html($eyebrow, $title, $content, $button = array())
+function retails_branded_email_html($eyebrow, $title, $content, $button = array())
 {
-	$business = wholesale_ticket_business();
+	$business = retails_ticket_business();
 	$color = $business['color'] ? $business['color'] : '#1fa8de';
 
 	return '<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#f3f5f8;font-family:Arial,Helvetica,sans-serif;color:#1d2733;">'
@@ -47,9 +47,9 @@ function wholesale_branded_email_html($eyebrow, $title, $content, $button = arra
 /**
  * Headers for emails to customers: HTML, replies go to the business inbox.
  */
-function wholesale_customer_email_headers($extra = array())
+function retails_customer_email_headers($extra = array())
 {
-	$business = wholesale_ticket_business();
+	$business = retails_ticket_business();
 	// wp_mail() splits Reply-To on commas, so a name like "Lit Sign, LLC" must lose them.
 	$reply_name = trim(str_replace(array(',', '"', '<', '>'), '', $business['name']));
 
@@ -59,7 +59,7 @@ function wholesale_customer_email_headers($extra = array())
 	), $extra);
 }
 
-function wholesale_email_paragraphs($text)
+function retails_email_paragraphs($text)
 {
 	$html = '';
 	foreach (preg_split("/\n\s*\n/", trim((string) $text)) as $paragraph) {
@@ -74,7 +74,7 @@ function wholesale_email_paragraphs($text)
  * Quote request data
  * ------------------------------------------------------------------------ */
 
-function wholesale_quote_request($post_id)
+function retails_quote_request($post_id)
 {
 	$meta = static function ($key) use ($post_id) {
 		return (string) get_post_meta($post_id, $key, true);
@@ -108,7 +108,7 @@ function wholesale_quote_request($post_id)
 /**
  * A copy of what the customer sent, for the bottom of confirmations and replies.
  */
-function wholesale_quote_request_summary_html($quote, $heading)
+function retails_quote_request_summary_html($quote, $heading)
 {
 	$rows = array(
 		'Project' => $quote['project_type'],
@@ -134,7 +134,7 @@ function wholesale_quote_request_summary_html($quote, $heading)
 /**
  * @param array $entry type (confirmation|reply), subject, message, ok, error.
  */
-function wholesale_quote_record_email($post_id, $entry)
+function retails_quote_record_email($post_id, $entry)
 {
 	$emails = get_post_meta($post_id, '_contact_emails', true);
 	$emails = is_array($emails) ? $emails : array();
@@ -150,11 +150,11 @@ function wholesale_quote_record_email($post_id, $entry)
  * Sending
  * ------------------------------------------------------------------------ */
 
-function wholesale_quote_placeholders($text, $quote)
+function retails_quote_placeholders($text, $quote)
 {
 	return strtr((string) $text, array(
 		'{name}' => $quote['first_name'],
-		'{store}' => wholesale_ticket_business()['name'],
+		'{store}' => retails_ticket_business()['name'],
 		'{project}' => $quote['project_type'],
 	));
 }
@@ -164,30 +164,30 @@ function wholesale_quote_placeholders($text, $quote)
  *
  * @return true|string|null True when sent, the error when it failed, null when turned off.
  */
-function wholesale_send_quote_confirmation($post_id)
+function retails_send_quote_confirmation($post_id)
 {
-	$quote = wholesale_quote_request($post_id);
-	if (!wholesale_setting_enabled('quote_autoreply') || !is_email($quote['email']) || get_post_meta($post_id, '_contact_confirmation_sent', true)) {
+	$quote = retails_quote_request($post_id);
+	if (!retails_setting_enabled('quote_autoreply') || !is_email($quote['email']) || get_post_meta($post_id, '_contact_confirmation_sent', true)) {
 		return null;
 	}
 
-	$defaults = wholesale_setting_defaults();
-	$subject = trim((string) wholesale_get_setting('quote_autoreply_subject'));
-	$message = trim((string) wholesale_get_setting('quote_autoreply_message'));
-	$subject = wholesale_quote_placeholders('' !== $subject ? $subject : $defaults['quote_autoreply_subject'], $quote);
-	$message = wholesale_quote_placeholders('' !== $message ? $message : $defaults['quote_autoreply_message'], $quote);
+	$defaults = retails_setting_defaults();
+	$subject = trim((string) retails_get_setting('quote_autoreply_subject'));
+	$message = trim((string) retails_get_setting('quote_autoreply_message'));
+	$subject = retails_quote_placeholders('' !== $subject ? $subject : $defaults['quote_autoreply_subject'], $quote);
+	$message = retails_quote_placeholders('' !== $message ? $message : $defaults['quote_autoreply_message'], $quote);
 
-	$html = wholesale_branded_email_html(
+	$html = retails_branded_email_html(
 		'Quote request received',
 		'Thanks' . ($quote['first_name'] ? ', ' . $quote['first_name'] : '') . '! We have your request.',
-		wholesale_email_paragraphs($message) . wholesale_quote_request_summary_html($quote, 'What you sent us (' . $quote['date'] . ')')
+		retails_email_paragraphs($message) . retails_quote_request_summary_html($quote, 'What you sent us (' . $quote['date'] . ')')
 	);
 
-	$result = wholesale_send_html_mail($quote['email'], $subject, $html, wholesale_customer_email_headers(array('X-Wholesale-Quote: ' . (int) $post_id)), wholesale_ticket_business()['name']);
+	$result = retails_send_html_mail($quote['email'], $subject, $html, retails_customer_email_headers(array('X-Retails-Quote: ' . (int) $post_id)), retails_ticket_business()['name']);
 	if (true === $result) {
 		update_post_meta($post_id, '_contact_confirmation_sent', current_time('mysql'));
 	}
-	wholesale_quote_record_email($post_id, array(
+	retails_quote_record_email($post_id, array(
 		'type' => 'confirmation',
 		'subject' => $subject,
 		'message' => $message,
@@ -204,24 +204,24 @@ function wholesale_send_quote_confirmation($post_id)
  *
  * @return true|string True when sent, otherwise the reason it failed.
  */
-function wholesale_send_quote_reply($post_id, $subject, $message, $include_request)
+function retails_send_quote_reply($post_id, $subject, $message, $include_request)
 {
-	$quote = wholesale_quote_request($post_id);
+	$quote = retails_quote_request($post_id);
 	if (!is_email($quote['email'])) {
 		return 'This quote request has no valid customer email address.';
 	}
 
 	$user = wp_get_current_user();
-	$business = wholesale_ticket_business();
+	$business = retails_ticket_business();
 	$content = '<p style="margin:0 0 16px;line-height:1.6;">Hi' . ($quote['first_name'] ? ' ' . esc_html($quote['first_name']) : '') . ',</p>'
-		. wholesale_email_paragraphs($message)
+		. retails_email_paragraphs($message)
 		. '<p style="margin:0 0 20px;line-height:1.6;">' . esc_html($user->display_name) . '<br><span style="color:#5b6573;">' . esc_html($business['name']) . ' · ' . esc_html($business['phone']) . '</span></p>'
-		. ($include_request ? wholesale_quote_request_summary_html($quote, 'Your request from ' . $quote['date']) : '');
+		. ($include_request ? retails_quote_request_summary_html($quote, 'Your request from ' . $quote['date']) : '');
 
-	$html = wholesale_branded_email_html('Your quote request', $subject, $content);
-	$result = wholesale_send_html_mail($quote['email'], $subject, $html, wholesale_customer_email_headers(array('X-Wholesale-Quote: ' . (int) $post_id)), $business['name']);
+	$html = retails_branded_email_html('Your quote request', $subject, $content);
+	$result = retails_send_html_mail($quote['email'], $subject, $html, retails_customer_email_headers(array('X-Retails-Quote: ' . (int) $post_id)), $business['name']);
 
-	wholesale_quote_record_email($post_id, array(
+	retails_quote_record_email($post_id, array(
 		'type' => 'reply',
 		'subject' => $subject,
 		'message' => $message,
@@ -239,8 +239,8 @@ function wholesale_send_quote_reply($post_id, $subject, $message, $include_reque
  * A failed confirmation or reply delivered later by the automatic retry
  * (inc/email-log.php) is marked as sent on the quote request.
  */
-add_action('wholesale_email_retry_succeeded', function ($row) {
-	if (!preg_match('/^X-Wholesale-Quote:\s*(\d+)/mi', (string) $row['headers'], $m)) {
+add_action('retails_email_retry_succeeded', function ($row) {
+	if (!preg_match('/^X-Retails-Quote:\s*(\d+)/mi', (string) $row['headers'], $m)) {
 		return;
 	}
 	$post_id = (int) $m[1];
@@ -269,16 +269,16 @@ add_action('wholesale_email_retry_succeeded', function ($row) {
  * ------------------------------------------------------------------------ */
 
 add_action('add_meta_boxes_contact_submission', function () {
-	add_meta_box('contact-submission-reply', 'Reply to customer', 'wholesale_quote_reply_meta_box', 'contact_submission', 'normal', 'high');
+	add_meta_box('contact-submission-reply', 'Reply to customer', 'retails_quote_reply_meta_box', 'contact_submission', 'normal', 'high');
 }, 20);
 
-function wholesale_quote_reply_meta_box($post)
+function retails_quote_reply_meta_box($post)
 {
-	$quote = wholesale_quote_request($post->ID);
+	$quote = retails_quote_request($post->ID);
 	$emails = get_post_meta($post->ID, '_contact_emails', true);
 	$emails = is_array($emails) ? $emails : array();
 	$default_subject = 'Re: Your ' . ($quote['project_type'] ? $quote['project_type'] . ' ' : '') . 'quote request';
-	wp_nonce_field('wholesale_quote_reply', 'wholesale_quote_reply_nonce');
+	wp_nonce_field('retails_quote_reply', 'retails_quote_reply_nonce');
 	?>
 	<style>
 		.wqr-thread{margin:0 0 16px;padding:0;list-style:none}
@@ -333,17 +333,17 @@ function wholesale_quote_reply_meta_box($post)
 		</div>
 		<div class="wqr-row">
 			<label for="wqr-subject">Subject</label>
-			<input type="text" id="wqr-subject" name="wholesale_quote_reply_subject" value="<?php echo esc_attr($default_subject); ?>">
+			<input type="text" id="wqr-subject" name="retails_quote_reply_subject" value="<?php echo esc_attr($default_subject); ?>">
 		</div>
 		<div class="wqr-row">
 			<label for="wqr-message">Message</label>
-			<textarea id="wqr-message" name="wholesale_quote_reply_message" placeholder="<?php echo esc_attr('Write your reply. It starts with "Hi ' . ($quote['first_name'] ? $quote['first_name'] : 'there') . '," and ends with your name automatically.'); ?>"></textarea>
+			<textarea id="wqr-message" name="retails_quote_reply_message" placeholder="<?php echo esc_attr('Write your reply. It starts with "Hi ' . ($quote['first_name'] ? $quote['first_name'] : 'there') . '," and ends with your name automatically.'); ?>"></textarea>
 		</div>
 		<div class="wqr-actions">
-			<label style="font-weight:normal;"><input type="checkbox" name="wholesale_quote_reply_include" value="1" checked> Include a copy of their original request</label>
-			<button type="submit" class="button button-primary button-large" name="wholesale_quote_reply_send" value="1" data-wqr-send><span class="dashicons dashicons-email-alt" style="margin-top:4px;"></span> Send reply</button>
+			<label style="font-weight:normal;"><input type="checkbox" name="retails_quote_reply_include" value="1" checked> Include a copy of their original request</label>
+			<button type="submit" class="button button-primary button-large" name="retails_quote_reply_send" value="1" data-wqr-send><span class="dashicons dashicons-email-alt" style="margin-top:4px;"></span> Send reply</button>
 		</div>
-		<p class="wqr-meta">Replies come from <?php echo esc_html(wholesale_mail_from_email()); ?>; the customer's answer goes to <?php echo esc_html(wholesale_ticket_business()['email']); ?>.</p>
+		<p class="wqr-meta">Replies come from <?php echo esc_html(retails_mail_from_email()); ?>; the customer's answer goes to <?php echo esc_html(retails_ticket_business()['email']); ?>.</p>
 	</div>
 	<script>
 	(function () {
@@ -359,12 +359,12 @@ function wholesale_quote_reply_meta_box($post)
 	<?php
 }
 
-function wholesale_quote_handle_reply_save($post_id)
+function retails_quote_handle_reply_save($post_id)
 {
-	if (empty($_POST['wholesale_quote_reply_send']) || empty($_POST['wholesale_quote_reply_nonce'])) {
+	if (empty($_POST['retails_quote_reply_send']) || empty($_POST['retails_quote_reply_nonce'])) {
 		return;
 	}
-	if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['wholesale_quote_reply_nonce'])), 'wholesale_quote_reply') || !current_user_can('edit_post', $post_id)) {
+	if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['retails_quote_reply_nonce'])), 'retails_quote_reply') || !current_user_can('edit_post', $post_id)) {
 		return;
 	}
 	if ((defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || wp_is_post_revision($post_id)) {
@@ -377,26 +377,26 @@ function wholesale_quote_handle_reply_save($post_id)
 	}
 	$done = true;
 
-	$subject = isset($_POST['wholesale_quote_reply_subject']) ? sanitize_text_field(wp_unslash($_POST['wholesale_quote_reply_subject'])) : '';
-	$message = isset($_POST['wholesale_quote_reply_message']) ? sanitize_textarea_field(wp_unslash($_POST['wholesale_quote_reply_message'])) : '';
+	$subject = isset($_POST['retails_quote_reply_subject']) ? sanitize_text_field(wp_unslash($_POST['retails_quote_reply_subject'])) : '';
+	$message = isset($_POST['retails_quote_reply_message']) ? sanitize_textarea_field(wp_unslash($_POST['retails_quote_reply_message'])) : '';
 	if ('' === trim($message)) {
-		set_transient('wholesale_quote_reply_notice_' . get_current_user_id(), array('error', 'The reply was not sent: the message was empty.'), MINUTE_IN_SECONDS);
+		set_transient('retails_quote_reply_notice_' . get_current_user_id(), array('error', 'The reply was not sent: the message was empty.'), MINUTE_IN_SECONDS);
 		return;
 	}
 
-	$result = wholesale_send_quote_reply($post_id, '' !== $subject ? $subject : 'Re: Your quote request', $message, !empty($_POST['wholesale_quote_reply_include']));
-	set_transient('wholesale_quote_reply_notice_' . get_current_user_id(), true === $result
+	$result = retails_send_quote_reply($post_id, '' !== $subject ? $subject : 'Re: Your quote request', $message, !empty($_POST['retails_quote_reply_include']));
+	set_transient('retails_quote_reply_notice_' . get_current_user_id(), true === $result
 		? array('success', 'Reply sent to ' . get_post_meta($post_id, '_contact_email', true) . '.')
 		: array('error', 'The reply could not be sent: ' . $result . ' It will be retried automatically; see Emails → Email Log.'), MINUTE_IN_SECONDS);
 }
-add_action('save_post_contact_submission', 'wholesale_quote_handle_reply_save');
+add_action('save_post_contact_submission', 'retails_quote_handle_reply_save');
 
 add_action('admin_notices', function () {
 	$screen = function_exists('get_current_screen') ? get_current_screen() : null;
 	if (!$screen || 'contact_submission' !== $screen->post_type) {
 		return;
 	}
-	$key = 'wholesale_quote_reply_notice_' . get_current_user_id();
+	$key = 'retails_quote_reply_notice_' . get_current_user_id();
 	$notice = get_transient($key);
 	if (!is_array($notice)) {
 		return;

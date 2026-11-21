@@ -23,7 +23,7 @@ if (!defined('ABSPATH')) {
  * zooming in when a field under 16px is tapped (and staying zoomed); iOS still
  * allows pinch zoom, so nothing is lost.
  */
-function wholesale_admin_mobile_viewport($content)
+function retails_admin_mobile_viewport($content)
 {
 	$content = 'width=device-width,initial-scale=1.0,viewport-fit=cover';
 	$agent = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
@@ -32,9 +32,9 @@ function wholesale_admin_mobile_viewport($content)
 	}
 	return $content;
 }
-add_filter('admin_viewport_meta', 'wholesale_admin_mobile_viewport', 20);
+add_filter('admin_viewport_meta', 'retails_admin_mobile_viewport', 20);
 
-function wholesale_admin_mobile_assets()
+function retails_admin_mobile_assets()
 {
 	$dir = get_template_directory();
 	$uri = get_template_directory_uri();
@@ -42,11 +42,37 @@ function wholesale_admin_mobile_assets()
 	$js = $dir . '/js/admin-mobile.js';
 
 	if (is_file($css)) {
-		wp_enqueue_style('wholesale-admin-mobile', $uri . '/css/admin-mobile.css', array(), (string) filemtime($css));
+		wp_enqueue_style('retails-admin-mobile', $uri . '/css/admin-mobile.css', array(), (string) filemtime($css));
 	}
 	if (is_file($js)) {
-		wp_enqueue_script('wholesale-admin-mobile', $uri . '/js/admin-mobile.js', array(), (string) filemtime($js), true);
+		wp_enqueue_script('retails-admin-mobile', $uri . '/js/admin-mobile.js', array(), (string) filemtime($js), true);
 	}
 }
 // Late so these rules load after plugin and theme admin styles.
-add_action('admin_enqueue_scripts', 'wholesale_admin_mobile_assets', 999);
+add_action('admin_enqueue_scripts', 'retails_admin_mobile_assets', 999);
+
+/**
+ * Toolbar (admin bar) on phones, 2026-11-21: every item shown, wraps to a second
+ * row, dropdowns stay on screen. Loads on wp-admin AND on store pages, but only
+ * for signed-in users who see the toolbar, so visitors never download it.
+ * Files: css/admin-bar-mobile.css + js/admin-bar-mobile.js.
+ */
+function retails_admin_bar_mobile_assets()
+{
+	if (!is_admin_bar_showing()) {
+		return;
+	}
+	$dir = get_template_directory();
+	$uri = get_template_directory_uri();
+	$css = $dir . '/css/admin-bar-mobile.css';
+	$js = $dir . '/js/admin-bar-mobile.js';
+
+	if (is_file($css)) {
+		wp_enqueue_style('retails-admin-bar-mobile', $uri . '/css/admin-bar-mobile.css', array('admin-bar'), (string) filemtime($css));
+	}
+	if (is_file($js)) {
+		wp_enqueue_script('retails-admin-bar-mobile', $uri . '/js/admin-bar-mobile.js', array(), (string) filemtime($js), true);
+	}
+}
+add_action('admin_enqueue_scripts', 'retails_admin_bar_mobile_assets', 999);
+add_action('wp_enqueue_scripts', 'retails_admin_bar_mobile_assets', 999);

@@ -4120,7 +4120,7 @@ a.review-author-name:hover {
     /* margin: 14px 0 24px; */
     margin: 0 !important;
     padding: 8px;
-    border-radius: 8px;
+    border-radius: 0 0 8px 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
   }
 
@@ -7025,7 +7025,7 @@ a.review-author-name:hover {
   display: none;
 }
 
-/* Related products under a product page (wholesale_seo_render_related_products). */
+/* Related products under a product page (retails_seo_render_related_products). */
 .related-products {
   margin: 44px 0 12px;
 }
@@ -7104,8 +7104,30 @@ a.review-author-name:hover {
 }
 
 /* Category hero: breadcrumb, category H1 and description replace the old shop header card. */
+/* Same container as the home page hero (.hc-hero-copy: min(55%, 640px) on desktop, full
+   width at 991px and below); the lead and intro fill it instead of stopping at 600px. */
 .home-hero--category .home-hero-copy {
+  width: min(55%, 640px);
   max-width: 640px;
+}
+
+.home-hero--category .home-hero-lead,
+.home-hero--category .home-hero-intro {
+  max-width: 100%;
+}
+
+@media only screen and (max-width: 991px) {
+  .home-hero--category .home-hero-copy {
+    width: 100%;
+    max-width: 100%;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .home-hero--category .home-hero-copy .home-hero-title,
+  .home-hero--category .home-hero-lead {
+    max-width: 560px;
+  }
 }
 
 .home-hero-breadcrumb ol {
@@ -7143,7 +7165,6 @@ a.review-author-name:hover {
 }
 
 .home-hero--category .home-hero-lead {
-  max-width: 600px;
   margin-bottom: 12px;
 }
 
@@ -7178,7 +7199,7 @@ a.review-author-name:hover {
   }
 
   .home-hero--category .home-hero-copy {
-    padding: 40px 16px 44px;
+    padding: 40px 0 44px;
   }
 
   .home-hero--category .home-hero-copy .home-hero-title {
@@ -7476,7 +7497,7 @@ a.review-author-name:hover {
   }
 }
 
-/* Sale badge on discounted product images (wholesale_render_sale_badge). */
+/* Sale badge on discounted product images (retails_render_sale_badge). Logo orange #f96005; #b54100 = readable orange text on white. */
 .sale-badge {
   position: absolute;
   top: 12px;
@@ -7495,7 +7516,7 @@ a.review-author-name:hover {
   white-space: nowrap;
   pointer-events: none;
   box-shadow:
-    0 4px 12px rgba(185, 28, 28, 0.28),
+    0 4px 12px rgba(233, 84, 2, 0.3),
     0 1px 2px rgba(15, 23, 42, 0.12);
 }
 .sale-badge__label,
@@ -7506,12 +7527,12 @@ a.review-author-name:hover {
   padding: 6px 9px;
 }
 .sale-badge__label {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: #E95402;
   color: #fff;
 }
 .sale-badge__value {
   background: #fff;
-  color: #b91c1c;
+  color: #b54100;
 }
 .sale-badge--out-of-stock {
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
@@ -7546,7 +7567,7 @@ a.review-author-name:hover {
   }
 }
 
-/* Hero photo set per page by wholesale_hero_background_style() as --hero-image.
+/* Hero photo set per page by retails_hero_background_style() as --hero-image.
    Desktop darkens the left side behind the copy; phones, where the copy spans
    the full width, darken from the top down. */
 .home-hero-content[style*="--hero-image"],
@@ -7646,7 +7667,7 @@ a.review-author-name:hover {
 }
 
 /* Phones: a crop of just the part of a wide hero photo they show
-   (wholesale_hero_phone_avif_url()), centred, so they download a fraction of
+   (retails_hero_phone_avif_url()), centred, so they download a fraction of
    the file. Same overlay as the phone rule above. */
 @supports (background-image: image-set(url("a.avif") type("image/avif"))) {
   @media only screen and (max-width: 767px) {

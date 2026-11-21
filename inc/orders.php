@@ -6,7 +6,7 @@
  * @package litsign
  */
 
-function wholesale_generate_order_id()
+function retails_generate_order_id()
 {
     do {
         $order_id = 'order_' . strtoupper(wp_generate_password(10, false, false));
@@ -30,15 +30,15 @@ function wholesale_generate_order_id()
  *
  * @return int|false The new order post ID.
  */
-function wholesale_insert_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $extra_meta = array())
+function retails_insert_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $extra_meta = array())
 {
-   $order_id = wholesale_generate_order_id();
+   $order_id = retails_generate_order_id();
    $user_id = is_user_logged_in() ? get_current_user_id() : null;
 
    $date = new DateTime();
    $formatted_date = $date->format('D M. j');
 
-   $billing_data_array = wholesale_decode_order_meta_array($billing_data);
+   $billing_data_array = retails_decode_order_meta_array($billing_data);
 
    $b_first_name = isset($billing_data_array['billing_fname']) ? sanitize_text_field((string) $billing_data_array['billing_fname']) : '';
    $b_last_name = isset($billing_data_array['billing_lname']) ? sanitize_text_field((string) $billing_data_array['billing_lname']) : '';
@@ -85,25 +85,25 @@ add_action('init', function () {
 
 function place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart)
 {
-   $new_order = wholesale_insert_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time);
+   $new_order = retails_insert_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time);
    if (!$new_order) {
        return false;
    }
 
    $cart->empty();
-   wholesale_send_new_order_admin_email($new_order);
+   retails_send_new_order_admin_email($new_order);
 
    return $new_order;
 }
 
 /**
  * Price of a channel letter builder design from the product's rate table
- * (see wholesale_cl_design_quote() in inc/pricing.php). Returns 0 when the design
+ * (see retails_cl_design_quote() in inc/pricing.php). Returns 0 when the design
  * can't be priced.
  */
-function wholesale_cl_design_total($design, $product_id)
+function retails_cl_design_total($design, $product_id)
 {
-    $total = wholesale_cl_design_quote($product_id, is_array($design) ? $design : array());
+    $total = retails_cl_design_quote($product_id, is_array($design) ? $design : array());
     return is_wp_error($total) ? 0.0 : (float) $total;
 }
 
@@ -113,7 +113,7 @@ function wholesale_cl_design_total($design, $product_id)
  *
  * @return string[]
  */
-function wholesale_cl_design_summary($design)
+function retails_cl_design_summary($design)
 {
     $types = array('Text' => 'Letters', 'Circle' => 'Oval', 'Star' => 'Starburst', 'RegularPolygon' => 'Triangle', 'Line' => 'Arrow', 'Rect' => 'Rectangle');
     $elements = isset($design['elements']) && is_array($design['elements']) ? $design['elements'] : array();
@@ -159,7 +159,7 @@ function wholesale_cl_design_summary($design)
  * @param array $details product_details of a cart/order line.
  * @return array
  */
-function wholesale_width_first($details)
+function retails_width_first($details)
 {
     $details = (array) $details;
     if (!array_key_exists('Width', $details) || !array_key_exists('Height', $details)) {
@@ -185,10 +185,10 @@ function wholesale_width_first($details)
  * @param object|array $item Cart item (object) or decoded order item (array).
  * @return array<string,string>
  */
-function wholesale_item_specs($item)
+function retails_item_specs($item)
 {
     $item = (array) $item;
-    $details = isset($item['product_details']) ? wholesale_width_first($item['product_details']) : array();
+    $details = isset($item['product_details']) ? retails_width_first($item['product_details']) : array();
     $skip = array('Product Id', 'Shipping Type', 'Turnaround Option');
     $specs = array();
 
@@ -199,7 +199,7 @@ function wholesale_item_specs($item)
         if (in_array($label, $skip, true) || null === $value || '' === $value || !is_scalar($value)) {
             continue;
         }
-        $specs[$label] = wholesale_format_order_detail_value($label, $value);
+        $specs[$label] = retails_format_order_detail_value($label, $value);
     }
     if (!empty($details['Turnaround Option']) && 'Same Day' === $details['Turnaround Option']) {
         $specs['Turnaround'] = 'Same-day production';
@@ -213,7 +213,7 @@ function wholesale_item_specs($item)
 /**
  * Customer-facing order number: "order_SN6LTHF5IA" -> "SN6LTHF5IA".
  */
-function wholesale_order_number($order_post_id)
+function retails_order_number($order_post_id)
 {
     $order_id = (string) get_post_meta($order_post_id, 'order_id', true);
     return strtoupper(preg_replace('/^order_/i', '', $order_id ?: (string) $order_post_id));
@@ -222,23 +222,23 @@ function wholesale_order_number($order_post_id)
 /**
  * Branded HTML confirmation email for the customer.
  */
-function wholesale_customer_order_email_html($post_id)
+function retails_customer_order_email_html($post_id)
 {
-    $items = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
-    $cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
-    $billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+    $items = retails_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
+    $cost = retails_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
+    $billing = retails_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
     $ship_by = get_post_meta($post_id, 'estimate_delivery_time', true);
-    $number = wholesale_order_number($post_id);
+    $number = retails_order_number($post_id);
     $money = static function ($value) {
         return '$' . number_format((float) $value, 2);
     };
     $font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
-    $noun = wholesale_items_noun($items);
+    $noun = retails_items_noun($items);
     $build_line = 'sign' === $noun ? 'We build your sign and test it before it ships.' : "We make your {$noun} and check it before it ships.";
 
     $rows = '';
     foreach ($items as $item) {
-        $specs = wholesale_item_specs($item);
+        $specs = retails_item_specs($item);
         unset($specs['Design Url'], $specs['My Artwork']);
         $spec_text = array();
         foreach (array_slice($specs, 0, 12, true) as $label => $value) {
@@ -256,9 +256,9 @@ function wholesale_customer_order_email_html($post_id)
         return '<tr><td style="' . $style . '">' . esc_html($label) . '</td><td align="right" style="' . $style . '">' . esc_html($value) . '</td></tr>';
     };
 
-    $payment_line = wholesale_payment_customer_text($post_id, 'Our team will contact you to arrange payment before production starts.');
+    $payment_line = retails_payment_customer_text($post_id, 'Our team will contact you to arrange payment before production starts.');
     // Ordered without artwork while signed in: it can be uploaded from the order page (inc/order-artwork.php).
-    $artwork_line = get_post_meta($post_id, 'user_id', true) && function_exists('wholesale_order_artwork_missing_lines') && wholesale_order_artwork_missing_lines($post_id)
+    $artwork_line = get_post_meta($post_id, 'user_id', true) && function_exists('retails_order_artwork_missing_lines') && retails_order_artwork_missing_lines($post_id)
         ? '<p style="margin:12px 0 0;padding:14px 16px;background:#fffaf0;border:1px solid #f0c36d;border-radius:8px;font-size:14px;color:#5c3d00;"><strong>No artwork yet?</strong> Sign in and upload it from <a href="' . esc_url(get_permalink($post_id)) . '" style="color:#8a5a00;font-weight:700;">your order page</a>, so we can start on your order.</p>'
         : '';
 
@@ -275,7 +275,7 @@ function wholesale_customer_order_email_html($post_id)
         . $total_row('Shipping' . (!empty($cost['shipping_method']) ? ' - ' . $cost['shipping_method'] : ''), $money($cost['shipping_cost'] ?? 0))
         . $total_row('Tax', $money($cost['tax'] ?? 0))
         . $total_row('Total', $money($cost['grand_total'] ?? 0), true)
-        . (function_exists('wholesale_order_net_email_rows') ? wholesale_order_net_email_rows($post_id, $font) : '') // After refunds (inc/order-net-total.php).
+        . (function_exists('retails_order_net_email_rows') ? retails_order_net_email_rows($post_id, $font) : '') // After refunds (inc/order-net-total.php).
         . '</table>'
         . '<p style="margin:20px 0 0;padding:14px 16px;background:#eef7fc;border-radius:8px;font-size:14px;color:#0d2e4d;"><strong>Payment:</strong> ' . esc_html($payment_line) . '</p>'
         . $artwork_line
@@ -285,7 +285,7 @@ function wholesale_customer_order_email_html($post_id)
         . '<li>' . esc_html($build_line) . '</li>'
         . '<li>You receive tracking details by email when it ships.</li>'
         . '</ol>'
-        . '<p style="margin:20px 0 0;"><a href="' . esc_url(wholesale_track_order_url($post_id)) . '" style="display:inline-block;padding:12px 22px;background:#1fa8de;border-radius:8px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Track your order</a></p>'
+        . '<p style="margin:20px 0 0;"><a href="' . esc_url(retails_track_order_url($post_id)) . '" style="display:inline-block;padding:12px 22px;background:#1fa8de;border-radius:8px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Track your order</a></p>'
         . '<p style="margin:24px 0 0;font-size:14px;color:#5b6b7b;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT) or reply to this email with your order number.</p>'
         . '</td></tr>'
         . '<tr><td style="padding:18px 28px;border-top:1px solid #e3e9ef;' . $font . 'font-size:12px;color:#8a97a5;">Storefront Sign Online &middot; 2601 NE 12th St, Renton, WA 98056</td></tr>'
@@ -298,10 +298,10 @@ function wholesale_customer_order_email_html($post_id)
  * @param int $order_post_id Optional order, so notes can name what was ordered.
  * @return array<string,array{label:string,tone:string,step:int,note:string}>
  */
-function wholesale_order_status_info($order_post_id = 0)
+function retails_order_status_info($order_post_id = 0)
 {
     // Notes name what was ordered ("Your banner is being made."); without an order it is just "order".
-    $noun = $order_post_id ? wholesale_order_noun($order_post_id) : 'order';
+    $noun = $order_post_id ? retails_order_noun($order_post_id) : 'order';
     return array(
         'in-review' => array('label' => 'Review in progress', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are checking the details before production.'),
         // Legacy duplicate of "in-review" (core WordPress status: hides the order page from customers).
@@ -326,9 +326,9 @@ function wholesale_order_status_info($order_post_id = 0)
 /**
  * How an order's payment is described to the customer. $unpaid is shown while payment is still owed.
  */
-function wholesale_payment_customer_text($post_id, $unpaid = 'To be arranged with our team')
+function retails_payment_customer_text($post_id, $unpaid = 'To be arranged with our team')
 {
-    $status = wholesale_get_payment_status($post_id);
+    $status = retails_get_payment_status($post_id);
     $last4 = get_post_meta($post_id, '_payment_card_last4', true);
     if (in_array($status, array('paid', 'needs_review'), true)) {
         return 'Paid by card' . ($last4 ? ' ending ' . $last4 : '');
@@ -351,20 +351,20 @@ function wholesale_payment_customer_text($post_id, $unpaid = 'To be arranged wit
  *
  * @return string[]
  */
-function wholesale_order_shipped_statuses()
+function retails_order_shipped_statuses()
 {
     return array('completed', 'in-transit', 'out-for-delivery', 'delivered', 'delivery-issue', 'returned');
 }
 
-function wholesale_order_is_shipped($status)
+function retails_order_is_shipped($status)
 {
-    return in_array((string) $status, wholesale_order_shipped_statuses(), true);
+    return in_array((string) $status, retails_order_shipped_statuses(), true);
 }
 
 /**
  * Shipped but not delivered yet: customer pages lead with tracking and hold review prompts until it arrives.
  */
-function wholesale_order_on_the_way($status)
+function retails_order_on_the_way($status)
 {
     return in_array((string) $status, array('in-transit', 'out-for-delivery', 'delivery-issue', 'returned'), true);
 }
@@ -372,12 +372,12 @@ function wholesale_order_on_the_way($status)
 /**
  * Status pill. With an order id, the tracking sync plugin may add detail such as "1/2 delivered".
  */
-function wholesale_order_status_badge($status, $post_id = 0)
+function retails_order_status_badge($status, $post_id = 0)
 {
-    $info = wholesale_order_status_info();
+    $info = retails_order_status_info();
     $item = isset($info[$status]) ? $info[$status] : array('label' => ucwords(str_replace(array('-', '_'), ' ', (string) $status)), 'tone' => 'muted');
     if ($post_id) {
-        $item = apply_filters('wholesale_order_status_badge_item', $item, $status, (int) $post_id);
+        $item = apply_filters('retails_order_status_badge_item', $item, $status, (int) $post_id);
     }
     return '<span class="order-badge order-badge--' . esc_attr($item['tone']) . '">' . esc_html($item['label']) . '</span>';
 }
@@ -385,7 +385,7 @@ function wholesale_order_status_badge($status, $post_id = 0)
 /**
  * Tracking link for common carriers.
  */
-function wholesale_tracking_url($carrier, $number)
+function retails_tracking_url($carrier, $number)
 {
     $number = rawurlencode(trim((string) $number));
     switch (strtolower((string) $carrier)) {
@@ -403,16 +403,16 @@ function wholesale_tracking_url($carrier, $number)
 /**
  * Public order tracking page URL, optionally prefilled with an order number.
  */
-function wholesale_track_order_url($order_post_id = 0)
+function retails_track_order_url($order_post_id = 0)
 {
     $url = home_url('/track-order/');
-    return $order_post_id ? add_query_arg('order', wholesale_order_number($order_post_id), $url) : $url;
+    return $order_post_id ? add_query_arg('order', retails_order_number($order_post_id), $url) : $url;
 }
 
 /**
  * Normalize what a customer types as an order number: "#sn6lthf5ia", "order_SN6LTHF5IA" -> "SN6LTHF5IA".
  */
-function wholesale_normalize_order_number($input)
+function retails_normalize_order_number($input)
 {
     $number = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string) $input));
     if (strlen($number) > 10 && 0 === strpos($number, 'ORDER')) {
@@ -427,9 +427,9 @@ function wholesale_normalize_order_number($input)
  *
  * @return int Order post ID, or 0 when there is no match.
  */
-function wholesale_find_order_for_tracking($number, $email)
+function retails_find_order_for_tracking($number, $email)
 {
-    $number = wholesale_normalize_order_number($number);
+    $number = retails_normalize_order_number($number);
     $email = strtolower(trim((string) $email));
     if ('' === $number || !is_email($email)) {
         return 0;
@@ -437,7 +437,7 @@ function wholesale_find_order_for_tracking($number, $email)
 
     $ids = get_posts(array(
         'post_type' => 'order',
-        'post_status' => array_keys(wholesale_order_status_info()),
+        'post_status' => array_keys(retails_order_status_info()),
         'meta_key' => 'order_id',
         'meta_value' => 'order_' . $number,
         'posts_per_page' => 1,
@@ -448,8 +448,8 @@ function wholesale_find_order_for_tracking($number, $email)
         return 0;
     }
 
-    $billing = wholesale_decode_order_meta_array(get_post_meta($ids[0], 'billing_address', true));
-    $shipping = wholesale_decode_order_meta_array(get_post_meta($ids[0], 'shipping_address', true));
+    $billing = retails_decode_order_meta_array(get_post_meta($ids[0], 'billing_address', true));
+    $shipping = retails_decode_order_meta_array(get_post_meta($ids[0], 'shipping_address', true));
     foreach (array($billing['billing_email'] ?? '', $shipping['shipping_email'] ?? '') as $order_email) {
         if ('' !== $order_email && hash_equals(strtolower(trim((string) $order_email)), $email)) {
             return (int) $ids[0];
@@ -463,9 +463,9 @@ function wholesale_find_order_for_tracking($number, $email)
  *
  * @return array<int,array{time:int,status:string,label:string,note:string}>
  */
-function wholesale_order_timeline($order_post_id)
+function retails_order_timeline($order_post_id)
 {
-    $info = wholesale_order_status_info($order_post_id);
+    $info = retails_order_status_info($order_post_id);
     $events = array(array(
         'time' => (int) get_post_time('U', true, $order_post_id),
         'status' => 'placed',
@@ -496,11 +496,11 @@ function wholesale_order_timeline($order_post_id)
  * Every stage of an order as steps, for the step-by-step tracker on the order and tracking pages: Order received,
  * In production, Finishing, Shipped, In transit, Out for delivery, Delivered (pickup orders end at Ready for pickup).
  * On hold, Delivery issue and Returned are shown on the step where they happened. Dates come from the status log;
- * the tracking sync plugin adds the delivered date and delivery estimate (filter wholesale_order_steps).
+ * the tracking sync plugin adds the delivered date and delivery estimate (filter retails_order_steps).
  *
  * @return array<string,array{label:string,state:string,here:bool,date:int,note:string,warn:bool}> Empty for closed orders.
  */
-function wholesale_order_steps($order_post_id)
+function retails_order_steps($order_post_id)
 {
     $status = (string) get_post_status($order_post_id);
     if (in_array($status, array('cancelled', 'refunded', 'failed'), true)) {
@@ -529,7 +529,7 @@ function wholesale_order_steps($order_post_id)
     // First time each step was reached, and the furthest step reached (where an on-hold order stopped).
     $dates = array();
     $furthest = 0;
-    foreach (wholesale_order_timeline($order_post_id) as $event) {
+    foreach (retails_order_timeline($order_post_id) as $event) {
         $key = 'placed' === $event['status'] ? 'received' : ($at[$event['status']] ?? '');
         $index = array_search($key, $keys, true);
         if (false === $index) {
@@ -584,15 +584,15 @@ function wholesale_order_steps($order_post_id)
     if ($ship_by && isset($steps['shipped']) && 'todo' === $steps['shipped']['state']) {
         $steps['shipped']['note'] = 'Est. ' . $ship_by;
     }
-    return (array) apply_filters('wholesale_order_steps', $steps, (int) $order_post_id);
+    return (array) apply_filters('retails_order_steps', $steps, (int) $order_post_id);
 }
 
 /**
  * The step-by-step tracker. Already escaped.
  */
-function wholesale_order_steps_html($order_post_id)
+function retails_order_steps_html($order_post_id)
 {
-    $steps = wholesale_order_steps($order_post_id);
+    $steps = retails_order_steps($order_post_id);
     if (!$steps) {
         return '';
     }
@@ -613,5 +613,5 @@ function wholesale_order_steps_html($order_post_id)
 
 // Browser tab title for an order page: "Order #SN6LTHF5IA" instead of the internal post title.
 add_filter('pre_get_document_title', function ($title) {
-    return is_singular('order') ? 'Order #' . wholesale_order_number(get_queried_object_id()) . ' | ' . get_bloginfo('name') : $title;
+    return is_singular('order') ? 'Order #' . retails_order_number(get_queried_object_id()) . ' | ' . get_bloginfo('name') : $title;
 }, 99);

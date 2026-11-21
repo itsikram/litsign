@@ -8,8 +8,8 @@
  * @package litsign
  */
 
-$token = wholesale_order_pay_clean_token($_GET['o'] ?? '');
-$order_id = wholesale_find_order_by_pay_token($token);
+$token = retails_order_pay_clean_token($_GET['o'] ?? '');
+$order_id = retails_find_order_by_pay_token($token);
 
 if (!$order_id) {
 	status_header(404);
@@ -19,26 +19,26 @@ if (!$order_id) {
 }
 
 nocache_headers();
-wholesale_order_pay_mark_viewed($order_id);
+retails_order_pay_mark_viewed($order_id);
 
-$business = wholesale_ticket_business();
-$number = wholesale_order_number($order_id);
-$items = wholesale_decode_order_meta_array(get_post_meta($order_id, 'product_json', true));
-$cost = wholesale_decode_order_meta_array(get_post_meta($order_id, 'product_cost', true));
-$billing = wholesale_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true));
-$amount = wholesale_order_total($order_id);
+$business = retails_ticket_business();
+$number = retails_order_number($order_id);
+$items = retails_decode_order_meta_array(get_post_meta($order_id, 'product_json', true));
+$cost = retails_decode_order_meta_array(get_post_meta($order_id, 'product_cost', true));
+$billing = retails_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true));
+$amount = retails_order_total($order_id);
 $amount_label = '$' . number_format($amount, 2);
 $money = static function ($value) {
 	return '$' . number_format((float) $value, 2);
 };
-$payment_status = wholesale_get_payment_status($order_id);
+$payment_status = retails_get_payment_status($order_id);
 $is_preview = current_user_can('edit_post', $order_id);
 $is_cancelled = in_array(get_post_status($order_id), array('cancelled', 'refunded', 'failed', 'trash'), true);
 $is_paid = !$is_cancelled && in_array($payment_status, array('paid', 'paid_offline', 'needs_review', 'partially_refunded'), true);
-$can_pay = wholesale_order_pay_is_open($order_id);
+$can_pay = retails_order_pay_is_open($order_id);
 $paid_at = get_post_meta($order_id, '_pay_link_paid_at', true);
-$card_ready = (bool) wholesale_converge_credentials();
-$direct = 'direct' === wholesale_payment_method();
+$card_ready = (bool) retails_converge_credentials();
+$direct = 'direct' === retails_payment_method();
 $placed = get_post_time('U', true, $order_id);
 $field = static function ($key) use ($billing) {
 	return isset($billing[$key]) && is_scalar($billing[$key]) ? (string) $billing[$key] : '';
@@ -104,7 +104,7 @@ get_header();
 						$qty = max(1, (int) ($item['product_quantity'] ?? 1));
 						$line = (float) ($item['product_subtotal'] ?? 0);
 						$thumb = isset($item['product_thumbnail']) && is_string($item['product_thumbnail']) ? $item['product_thumbnail'] : '';
-						$specs = wholesale_item_specs($item);
+						$specs = retails_item_specs($item);
 						unset($specs['Design Url'], $specs['My Artwork'], $specs['Payment Ticket']);
 						?>
 						<div class="wpt-invoice__row" role="row">
@@ -131,7 +131,7 @@ get_header();
 					<div><dt>Shipping<?php echo !empty($cost['shipping_method']) ? ' (' . esc_html($cost['shipping_method']) . ')' : ''; ?></dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
 					<?php if ((float) ($cost['tax'] ?? 0) > 0) : ?><div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'])); ?></dd></div><?php endif; ?>
 					<?php // After a refund: the amount left on the order (inc/order-net-total.php). $amount stays the charge. ?>
-					<?php $net = $is_paid && function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($order_id) : null; ?>
+					<?php $net = $is_paid && function_exists('retails_order_net_amounts') ? retails_order_net_amounts($order_id) : null; ?>
 					<?php if ($net && $net['has_refund']) : ?>
 						<div><dt>Order total</dt><dd><?php echo esc_html($amount_label); ?></dd></div>
 						<div><dt>Refunded</dt><dd>&minus;<?php echo esc_html($money($net['refunded'])); ?></dd></div>

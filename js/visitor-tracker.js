@@ -5,7 +5,7 @@
  * field a visitor was on, never what they typed.
  */
 (() => {
-  const config = window.wholesaleVI;
+  const config = window.retailsVI;
   if (!config || !config.endpoint || navigator.webdriver || !window.JSON) return;
   if (/(?:^|;\s*)sso_vi_off=1/.test(document.cookie)) return;
 
@@ -77,7 +77,14 @@
 
   const push = (type, data) => {
     queue.push(Object.assign({ t: type, at: Date.now() }, data || {}));
+    // Problems the visitor ran into also get a screenshot (js/vi-page-copy.js).
+    try {
+      if (shotProblemTypes[type]) shotProblem(type, data && data.label, data && data.value);
+    } catch (error) {
+      // Never let screenshots get in the way of the stats.
+    }
   };
+  const shotProblemTypes = { js_error: 1, price_error: 1, upload_error: 1, cart_error: 1, checkout_error: 1, payment_error: 1 };
 
   const text = (value, max) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, max || 80);
 
@@ -275,19 +282,19 @@
 
   // action => [event on success, event on failure]
   const ajaxEvents = {
-    wholesale_price_quote: ['price_quote', 'price_error'],
-    wholesale_upload_design: ['design_upload', 'upload_error'],
-    wholesale_mini_cart_add: ['add_to_cart', 'cart_error'],
-    wholesale_mini_cart_remove: ['cart_remove', ''],
-    wholesale_payment_start: ['payment_start', 'checkout_error'],
-    wholesale_payment_complete: ['', 'payment_error'],
+    retails_price_quote: ['price_quote', 'price_error'],
+    retails_upload_design: ['design_upload', 'upload_error'],
+    retails_mini_cart_add: ['add_to_cart', 'cart_error'],
+    retails_mini_cart_remove: ['cart_remove', ''],
+    retails_payment_start: ['payment_start', 'checkout_error'],
+    retails_payment_complete: ['', 'payment_error'],
   };
   const seenOnce = new Set();
 
   const recordAjax = (action, json, body) => {
     const events = ajaxEvents[action];
     const ok = !!json && (json.ok === true || json.success === true || (json.ok === undefined && json.success === undefined && !json.error));
-    if (action === 'wholesale_payment_start') push('payment_start');
+    if (action === 'retails_payment_start') push('payment_start');
 
     if (ok) {
       const type = events[0];
@@ -312,7 +319,7 @@
     // is typed) fails quietly and the visitor never sees it.
     if (events[1] === 'price_error' && !configured) return;
     // A size outside the limits: the page shows no quote error, only its own size note
-    // once the box is left ("wholesale:size-note" below). The quote answers 700 ms into
+    // once the box is left ("retails:size-note" below). The quote answers 700 ms into
     // typing, so "36" was logged as a "6 x 6 minimum" error at "3".
     if (events[1] === 'price_error' && json && json.size_error) return;
     const data = json && json.data;
@@ -328,7 +335,7 @@
   };
 
   // The size note under a product's size box (js/main.js), with the size typed.
-  document.addEventListener('wholesale:size-note', (event) => {
+  document.addEventListener('retails:size-note', (event) => {
     const detail = event.detail || {};
     const key = 'price_error' + detail.message;
     if (!detail.message || seenOnce.has(key)) return;
@@ -481,6 +488,64 @@
       .then((copier) => copier.capture())
       .then((copy) => post(Object.assign(copy, { page: location.href, title: document.title })))
       .catch((error) => post({ error: text((error && error.message) || error || 'copy failed', 160) }));
+  }
+
+  // ------------------------------------------------------------------
+  // Automatic screenshots: errors and leaving (inc/screenshots.php)
+  // ------------------------------------------------------------------
+
+  // js/vi-page-copy.js copies the page when the visitor runs into a problem or leaves.
+  // It loads after their first move, scroll or tap, or right after a problem, so it never
+  // costs the page load anything.
+  const shots = config.shots && config.shots.js ? config.shots : null;
+  const shotApi = { config: shots, session, visitor, page: pageKey, fetch: originalFetch, problems: [], report: null };
+  let shotScript = null;
+  const loadShots = () => {
+    if (shotScript || !shots) return;
+    shotScript = document.createElement('script');
+    shotScript.src = shots.js;
+    shotScript.async = true;
+    shotScript.onload = () => {
+      try {
+        if (window.retailsShots) window.retailsShots.start(shotApi);
+      } catch (error) {
+        // Never get in the page's way.
+      }
+    };
+    document.head.appendChild(shotScript);
+  };
+  function shotProblem(type, label, where) {
+    if (!shots || !shots.err || shotApi.problems.length >= 20) return;
+    shotApi.problems.push({ type, label: text(label, 300), where: text(where, 160) });
+    if (shotApi.report) shotApi.report();
+    else loadShots();
+  }
+
+  // The last page in this tab said the visitor left the site, yet here they are: take
+  // that screenshot back.
+  try {
+    const left = JSON.parse(window.sessionStorage.getItem('wsh_exit') || 'null');
+    if (left) {
+      window.sessionStorage.removeItem('wsh_exit');
+      if (left.ref && left.url && left.s === session && navigator.sendBeacon) {
+        navigator.sendBeacon(left.url, new Blob([JSON.stringify({ s: left.s, v: left.v, ref: left.ref })], { type: 'text/plain' }));
+      }
+    }
+  } catch (error) {
+    // No storage (private mode): the server's own check takes it back.
+  }
+
+  if (shots) {
+    if (config.ptype === '404') shotProblem('page_404', 'Page not found: ' + location.pathname, document.referrer ? 'from ' + document.referrer.slice(0, 140) : '');
+    if (shots.exit) {
+      const firstMove = ['pointermove', 'pointerdown', 'keydown', 'scroll', 'touchstart'];
+      const onFirstMove = () => {
+        firstMove.forEach((name) => window.removeEventListener(name, onFirstMove, true));
+        if (window.requestIdleCallback) window.requestIdleCallback(loadShots, { timeout: 3000 });
+        else setTimeout(loadShots, 1200);
+      };
+      firstMove.forEach((name) => window.addEventListener(name, onFirstMove, { capture: true, passive: true }));
+    }
   }
 
   push('pageview', {

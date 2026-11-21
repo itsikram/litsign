@@ -5,7 +5,7 @@
  * The products stay separate (own price, options, cart line, feed item, URL). The button's
  * link is the group's first product with ?graphic_only=true etc. (inc/product-group-swap.php);
  * this script puts that product's block in place of this one, and the page scripts set
- * themselves up again on "wholesale:product-swapped" (js/main.js, js/ui-polish.js,
+ * themselves up again on "retails:product-swapped" (js/main.js, js/ui-polish.js,
  * js/buying-journey.js, js/async-upload.js). The address bar shows the link, so a refresh,
  * a shared link or Back shows the same product. Anything unexpected opens the link instead.
  *
@@ -208,7 +208,7 @@
         // first product), url (the address bar). B2Sign Sync's admin panel listens too.
         var shownId = parseInt(fresh.getAttribute('data-product-page'), 10) || 0;
         var shownLink = fresh.querySelector('.product-group-item.current ' + LINK);
-        document.dispatchEvent(new CustomEvent('wholesale:product-swapped', {
+        document.dispatchEvent(new CustomEvent('retails:product-swapped', {
           detail: { id: shownId, productId: shownId, key: shownLink ? shownLink.getAttribute('data-group-key') || '' : '', url: url },
         }));
         if (hadFocus && shownLink) shownLink.focus({ preventScroll: true });

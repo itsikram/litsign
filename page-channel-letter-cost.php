@@ -3,7 +3,7 @@
  * Channel Letter Cost guide (/channel-letter-cost/).
  *
  * Answers "how much do channel letters cost" with the store's real prices.
- * Every dollar amount is calculated by wholesale_price_quote(), the same
+ * Every dollar amount is calculated by retails_price_quote(), the same
  * function the cart uses, so the guide always matches checkout.
  *
  * @package litsign
@@ -12,7 +12,7 @@
 $builder_url = home_url('/channel-letter-builder/');
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
-$storefront_signs_url = function_exists('wholesale_seo_storefront_signs_url') ? wholesale_seo_storefront_signs_url() : '';
+$storefront_signs_url = function_exists('retails_seo_storefront_signs_url') ? retails_seo_storefront_signs_url() : '';
 
 $styles = array(
 	'standard-channel-letter-front-lit' => 'Front lit',
@@ -30,15 +30,15 @@ $styles = array(
  * Returns 0 when the style doesn't offer that height.
  */
 $cl_price = static function ($slug, $height, $text = 'A', $power_supply = false) {
-	$product = wholesale_seo_product($slug);
+	$product = retails_seo_product($slug);
 	if (!$product) {
 		return 0.0;
 	}
 
 	$request = array('letters' => $text, 'product_quantity' => 1);
 	$has_height = false;
-	foreach (wholesale_product_price_attrs($product->ID) as $attr) {
-		$options = wholesale_attr_options($attr);
+	foreach (retails_product_price_attrs($product->ID) as $attr) {
+		$options = retails_attr_options($attr);
 		if (empty($attr['name']) || !$options) {
 			continue;
 		}
@@ -60,7 +60,7 @@ $cl_price = static function ($slug, $height, $text = 'A', $power_supply = false)
 		return 0.0;
 	}
 
-	$quote = wholesale_price_quote($product->ID, $request);
+	$quote = retails_price_quote($product->ID, $request);
 
 	return !empty($quote['ok']) ? (float) $quote['total'] : 0.0;
 };
@@ -73,35 +73,35 @@ $heights = array(8, 12, 15, 18, 24, 30, 36);
 $example_name = 'YOURSHOP'; // 8 letters, a typical short business name.
 $example_heights = array(12, 18, 24);
 
-$front_lit = wholesale_seo_product('standard-channel-letter-front-lit');
+$front_lit = retails_seo_product('standard-channel-letter-front-lit');
 $front_lit_url = $front_lit ? get_permalink($front_lit) : home_url('/');
-$front_lit_rate = $front_lit ? wholesale_cl_from_inch_rate($front_lit->ID) : null;
+$front_lit_rate = $front_lit ? retails_cl_from_inch_rate($front_lit->ID) : null;
 // Only a dated sale (Settings > Storefront Sign) is described as a discount: "10% sale
 // that ends Nov 30". Prices below come from the checkout, so they include it either way.
-$promotion = $front_lit ? wholesale_product_promotion($front_lit->ID) : null;
-$discount_text = $promotion ? sprintf('%s%% sale that ends %s', rtrim(rtrim(number_format($promotion['percent'], 2), '0'), '.'), wholesale_promotion_end_text($promotion)) : '';
-$front_lit_heights = wholesale_seo_letter_height_range('standard-channel-letter-front-lit');
+$promotion = $front_lit ? retails_product_promotion($front_lit->ID) : null;
+$discount_text = $promotion ? sprintf('%s%% sale that ends %s', rtrim(rtrim(number_format($promotion['percent'], 2), '0'), '.'), retails_promotion_end_text($promotion)) : '';
+$front_lit_heights = retails_seo_letter_height_range('standard-channel-letter-front-lit');
 
 // Option prices straight from the product and checkout settings.
 $power_supply_price = 0.0;
 $raceway_rate = 0.0;
-foreach ($front_lit ? wholesale_product_price_attrs($front_lit->ID) : array() as $attr) {
-	$options = wholesale_attr_options($attr);
+foreach ($front_lit ? retails_product_price_attrs($front_lit->ID) : array() as $attr) {
+	$options = retails_attr_options($attr);
 	if ('power-supply' === ($attr['name'] ?? '') && isset($options[1])) {
-		$power_supply_price = wholesale_parse_option_price($options[1]['value'])['amount'];
+		$power_supply_price = retails_parse_option_price($options[1]['value'])['amount'];
 	}
 	if ('raceway' === ($attr['name'] ?? '') && isset($options[1])) {
-		$raceway_rate = wholesale_parse_option_price($options[1]['value'])['amount'];
+		$raceway_rate = retails_parse_option_price($options[1]['value'])['amount'];
 	}
 }
-$cl_shipping = array_values(array_filter(explode(',', (string) wholesale_get_setting('channel_shipping_options')), 'is_numeric'));
+$cl_shipping = array_values(array_filter(explode(',', (string) retails_get_setting('channel_shipping_options')), 'is_numeric'));
 $shipping_price = $cl_shipping ? (float) $cl_shipping[0] : 0.0;
 
 $cheapest_8 = $cl_price('standard-channel-letter-front-lit', 8);
 $example_12 = $cl_price('standard-channel-letter-front-lit', 12, $example_name, true);
 $example_24 = $cl_price('standard-channel-letter-front-lit', 24, $example_name, true);
 
-wholesale_seo_set_page_faq(array_values(array_filter(array(
+retails_seo_set_page_faq(array_values(array_filter(array(
 	$front_lit_rate && $cheapest_8 && $example_12 && $example_24 ? array(
 		'q' => 'How much do channel letters cost?',
 		'a' => sprintf('Front lit channel letter rates start at %s per inch of letter height at %d inches tall%s. A typical 8-letter business name in front lit letters costs about %s at 12 inches tall and %s at 24 inches tall, including a standard power supply, before shipping. Rates vary by height and style.', $money($front_lit_rate['price']), $front_lit_rate['height'], $discount_text ? ' with our ' . $discount_text : '', $money($example_12), $money($example_24)),
@@ -138,13 +138,13 @@ get_header();
 <main id="primary" class="sf-page">
 	<section class="sf-hero" aria-labelledby="clc-title">
 		<div class="container">
-			<?php wholesale_breadcrumbs(); ?>
+			<?php retails_breadcrumbs(); ?>
 			<p class="cl-kicker">Channel letter pricing</p>
 			<h1 id="clc-title" class="sf-hero-title">How Much Do Channel Letters Cost?</h1>
 			<p class="sf-hero-lead">Real prices, not estimates.<?php if ($front_lit_rate) : ?> Front lit rates start at <strong><?php echo esc_html($money($front_lit_rate['price'])); ?> per inch</strong> of letter height at <?php echo (int) $front_lit_rate['height']; ?> inches tall.<?php endif; ?> Rates vary by height and style. The tables below show example letter prices from our online pricing; the builder shows your full sign total before checkout.</p>
-			<?php wholesale_guide_byline(); ?>
+			<?php retails_guide_byline(); ?>
 			<div class="sf-hero-actions">
-				<a class="cl-button" href="<?php echo esc_url($front_lit_url); ?>">Price Your Sign <?php echo wholesale_home_icon('arrow'); ?></a>
+				<a class="cl-button" href="<?php echo esc_url($front_lit_url); ?>">Price Your Sign <?php echo retails_home_icon('arrow'); ?></a>
 				<a class="sf-button-outline" href="<?php echo esc_url($contact_url); ?>">Get a Free Quote</a>
 			</div>
 			<ul class="sf-hero-points">
@@ -167,7 +167,7 @@ get_header();
 						<tr>
 							<th scope="col">Letter height</th>
 							<?php foreach ($styles as $slug => $label) : ?>
-								<?php $style_product = wholesale_seo_product($slug); ?>
+								<?php $style_product = retails_seo_product($slug); ?>
 								<?php if ($style_product) : ?>
 									<th scope="col"><a href="<?php echo esc_url(get_permalink($style_product)); ?>"><?php echo wp_kses_post($label); ?></a></th>
 								<?php endif; ?>
@@ -179,7 +179,7 @@ get_header();
 							<tr>
 								<th scope="row"><?php echo esc_html($height); ?>&Prime;</th>
 								<?php foreach ($styles as $slug => $label) : ?>
-									<?php if (wholesale_seo_product($slug)) : ?>
+									<?php if (retails_seo_product($slug)) : ?>
 										<?php $price = $cl_price($slug, $height); ?>
 										<td class="cl-compare-price"><?php echo $price ? esc_html($money($price)) : '&mdash;'; ?></td>
 									<?php endif; ?>
@@ -254,7 +254,7 @@ get_header();
 			<p class="cl-kicker">Pricing questions</p>
 			<h2 id="clc-faq-title" class="cl-section-title">Channel Letter Cost FAQ</h2>
 			<div class="cl-faq-list">
-				<?php wholesale_seo_render_faq(true); ?>
+				<?php retails_seo_render_faq(true); ?>
 			</div>
 		</div>
 	</section>
@@ -265,15 +265,15 @@ get_header();
 				<h2 id="clc-help-title">Get an Exact Price for Your Sign</h2>
 				<p>Send your logo and storefront photo and a sign specialist will price the letters, height and options that fit your building.</p>
 				<ul class="cl-help-details">
-					<li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
-					<li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
+					<li><?php echo retails_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+					<li><?php echo retails_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
 				</ul>
 			</div>
 			<div class="cl-help-actions">
-				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-				<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
-				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
+				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+				<a class="cl-help-action" href="sms:+12066186543"><?php echo retails_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo retails_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo retails_home_icon('arrow'); ?></a>
 			</div>
 		</div>
 	</section>

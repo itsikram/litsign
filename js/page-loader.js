@@ -1,21 +1,21 @@
 ( function() {
 	'use strict';
 
-	const loader = document.querySelector( '.wholesale-page-loader' );
+	const loader = document.querySelector( '.retails-page-loader' );
 
 	if ( ! loader ) {
 		return;
 	}
 
 	const root = document.documentElement;
-	const storageKey = 'wholesale-page-loader-handoff';
+	const storageKey = 'retails-page-loader-handoff';
 	// When the loader markup was parsed (set by the inline script after it).
-	const shownAt = Number( window.wholesalePageLoaderShownAt ) || Number( window.wholesalePageLoaderStartedAt ) || Date.now();
+	const shownAt = Number( window.retailsPageLoaderShownAt ) || Number( window.retailsPageLoaderStartedAt ) || Date.now();
 	const reducedMotion = window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
-	const isHandoff = root.classList.contains( 'wholesale-page-loader-handoff' );
+	const isHandoff = root.classList.contains( 'retails-page-loader-handoff' );
 	// First page of a visit: the head script hid the loader (display:none), so
 	// it is only shown again for a link click.
-	const isLanding = root.classList.contains( 'wholesale-page-loader-landing' );
+	const isLanding = root.classList.contains( 'retails-page-loader-landing' );
 	const introDuration = reducedMotion || isHandoff ? 0 : 1700;
 	// Hard cap, counted from now: this deferred script runs once the whole HTML
 	// has arrived, so a slow connection no longer eats into it. Normally the
@@ -28,7 +28,7 @@
 	let initialExitTimer = 0;
 	let navigationTimer = 0;
 	let navigating = false;
-	let initialHidden = root.classList.contains( 'wholesale-page-loader-failsafe' );
+	let initialHidden = root.classList.contains( 'retails-page-loader-failsafe' );
 	let loadHandled = false;
 
 	function clearTimer( timer ) {
@@ -80,8 +80,8 @@
 		clearTimer( introTimer );
 		clearTimer( navigationTimer );
 		navigating = true;
-		window.wholesalePageLoaderNavigating = true;
-		root.classList.remove( 'wholesale-page-loader-failsafe', 'wholesale-page-loader-landing' );
+		window.retailsPageLoaderNavigating = true;
+		root.classList.remove( 'retails-page-loader-failsafe', 'retails-page-loader-landing' );
 		loader.classList.remove( 'is-hidden', 'is-intro', 'is-idle', 'is-exiting' );
 		loader.classList.add( 'is-idle' );
 		setHidden( false );
@@ -96,10 +96,10 @@
 		// Long enough for a slow server to start sending the next page.
 		navigationTimer = window.setTimeout( function() {
 			navigating = false;
-			window.wholesalePageLoaderNavigating = false;
+			window.retailsPageLoaderNavigating = false;
 			loader.classList.remove( 'is-idle', 'is-intro' );
 			loader.classList.add( 'is-exiting' );
-			root.classList.add( 'wholesale-page-loader-failsafe' );
+			root.classList.add( 'retails-page-loader-failsafe' );
 			clearNavigationFlag();
 			setHidden( true );
 		}, 15000 );
@@ -235,14 +235,14 @@
 		return Promise.all( waits );
 	}
 
-	window.wholesalePageLoaderReady = true;
+	window.retailsPageLoaderReady = true;
 
 	// The inline script after the markup already started the intro (or the
 	// idle loop on a hand-off); this only covers a missing inline script.
 	if ( ! loader.classList.contains( 'is-intro' ) && ! loader.classList.contains( 'is-idle' ) ) {
 		loader.classList.add( 'is-idle' );
 	}
-	root.classList.remove( 'wholesale-page-loader-handoff' );
+	root.classList.remove( 'retails-page-loader-handoff' );
 
 	if ( isLanding ) {
 		initialHidden = true;
@@ -318,10 +318,10 @@
 		clearTimer( initialExitTimer );
 		clearTimer( introTimer );
 		navigating = false;
-		window.wholesalePageLoaderNavigating = false;
+		window.retailsPageLoaderNavigating = false;
 		initialHidden = true;
 		loader.classList.remove( 'is-exiting', 'is-intro', 'is-idle' );
-		root.classList.add( 'wholesale-page-loader-failsafe' );
+		root.classList.add( 'retails-page-loader-failsafe' );
 		clearNavigationFlag();
 		setHidden( true );
 	} );

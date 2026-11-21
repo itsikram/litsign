@@ -68,13 +68,25 @@
  *   the fold get a span.mo-glow (veil + warm glow; a span because some frames
  *   already use ::after). It powers up once the photo is 25% into the screen
  *   and its image has loaded, otherwise it is removed and the photo shows lit.
+ * - Product card shine (setupShine, 2026-11-21, owner: "products should
+ *   glow on scroll ... attractive"): every other product card photo frame
+ *   (Shop, category listing, home cards, related products, B&D/WG, search,
+ *   guide/location/storefront type cards; not heroes, nav rails or CL frames,
+ *   which keep the light-up) gets a span.mo-shine once 12% into the screen:
+ *   a white gloss band sweeps across (::before, translate) while a blue inner
+ *   ring + soft light fades in and out (::after, opacity). Composited only,
+ *   no layout change; cards in one row stagger 110ms; before window load it
+ *   waits 400ms; plays after the image loads. Runs on 'full' pages without
+ *   reduced motion, independent of the reveals (so phones without view()
+ *   timelines get it too). Desktop hover replays the sweep and the card gets
+ *   a blue glow shadow (css/motion.css 6b).
  * - Loops ([data-motion=loop], the green live dot, card flags) pause off
  *   screen and while the tab is hidden; css/motion.css limits them to 3 runs.
  * - html.mo-loaded is set on load; hero effects in css/motion.css wait for it
  *   so they never touch LCP.
  * - Feedback (setupFeedback): price total ease-in (MutationObserver on
  *   .price-total, only when its text really changed; the text is never
- *   touched), quantity nudge, add-to-cart check on wholesale:cart-added (fired
+ *   touched), quantity nudge, add-to-cart check on retails:cart-added (fired
  *   by js/mini-cart.js only after a successful add), one nudge per field that
  *   fires "invalid" (only on submit checks). Web Animations, skipped under
  *   reduced motion.
@@ -122,7 +134,7 @@
  *    pause off screen or in hidden tabs.
  * 7. Failsafe, print and reduced-motion overrides, last on purpose.
  *
- * @package wholesale
+ * @package retails
  */
 
 defined('ABSPATH') || exit;
@@ -130,19 +142,19 @@ defined('ABSPATH') || exit;
 /**
  * Settings > Storefront Sign > Motion effects. On unless saved as 0.
  */
-function wholesale_motion_enabled()
+function retails_motion_enabled()
 {
-	$value = get_option('wholesale_motion_enabled', null);
+	$value = get_option('retails_motion_enabled', null);
 	return null === $value || '' === $value ? true : (bool) (int) $value;
 }
 
 /**
  * Registered here, like the exit survey switch, so the toggle needs no edit to
- * wholesale_setting_defaults() in functions.php.
+ * retails_setting_defaults() in functions.php.
  */
-function wholesale_motion_register_setting()
+function retails_motion_register_setting()
 {
-	register_setting('wholesale_settings', 'wholesale_motion_enabled', array(
+	register_setting('retails_settings', 'retails_motion_enabled', array(
 		'type' => 'integer',
 		'default' => 1,
 		'sanitize_callback' => static function ($value) {
@@ -150,21 +162,21 @@ function wholesale_motion_register_setting()
 		},
 	));
 }
-add_action('admin_init', 'wholesale_motion_register_setting');
+add_action('admin_init', 'retails_motion_register_setting');
 
 /**
  * Cached pages carry the head flag, so they must be rebuilt when the switch
- * changes. (The page cache also purges on wholesale_* saves; this covers a
+ * changes. (The page cache also purges on retails_* saves; this covers a
  * change made any other way.)
  */
-function wholesale_motion_purge_cache()
+function retails_motion_purge_cache()
 {
 	if (function_exists('sfs_page_cache_purge')) {
 		sfs_page_cache_purge();
 	}
 }
-add_action('update_option_wholesale_motion_enabled', 'wholesale_motion_purge_cache');
-add_action('add_option_wholesale_motion_enabled', 'wholesale_motion_purge_cache');
+add_action('update_option_retails_motion_enabled', 'retails_motion_purge_cache');
+add_action('add_option_retails_motion_enabled', 'retails_motion_purge_cache');
 
 /**
  * How much motion this request gets:
@@ -176,14 +188,14 @@ add_action('add_option_wholesale_motion_enabled', 'wholesale_motion_purge_cache'
  *
  * Needs the main query, so call it from wp_head / wp_enqueue_scripts or later.
  */
-function wholesale_motion_level()
+function retails_motion_level()
 {
 	static $level = null;
 	if (null !== $level) {
 		return $level;
 	}
 
-	if (!wholesale_motion_enabled()
+	if (!retails_motion_enabled()
 		|| is_admin()
 		|| wp_doing_ajax()
 		|| (defined('REST_REQUEST') && REST_REQUEST)
@@ -195,13 +207,13 @@ function wholesale_motion_level()
 	} elseif (is_page(array('cart', 'checkout', 'account', 'my-orders', 'track-order', 'login', 'signup', 'pay'))
 		|| is_page_template('payment.php')
 		|| is_singular('order')
-		|| get_query_var('wholesale_thank_you')) {
+		|| get_query_var('retails_thank_you')) {
 		$level = 'calm';
 	} else {
 		$level = 'full';
 	}
 
-	$level = (string) apply_filters('wholesale_motion_level', $level);
+	$level = (string) apply_filters('retails_motion_level', $level);
 	if (!in_array($level, array('full', 'calm', 'off'), true)) {
 		$level = 'off';
 	}
@@ -213,21 +225,21 @@ function wholesale_motion_level()
  * reads it to leave reveals to js/motion.js, and css/motion.css keys its hidden
  * states on it, so nothing is ever hidden without this flag.
  */
-function wholesale_motion_head_flag()
+function retails_motion_head_flag()
 {
-	$level = wholesale_motion_level();
+	$level = retails_motion_level();
 	if ('off' === $level) {
 		return;
 	}
 	printf(
-		'<script id="wholesale-motion-flag">(function(d,l){try{if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)l="reduce"}catch(e){}d.setAttribute("data-motion",l)})(document.documentElement,%s);</script>' . "\n",
+		'<script id="retails-motion-flag">(function(d,l){try{if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches)l="reduce"}catch(e){}d.setAttribute("data-motion",l)})(document.documentElement,%s);</script>' . "\n",
 		wp_json_encode($level)
 	);
 	if ('full' === $level) {
-		echo wholesale_motion_hero_style() . "\n";
+		echo retails_motion_hero_style() . "\n";
 	}
 }
-add_action('wp_head', 'wholesale_motion_head_flag', 0);
+add_action('wp_head', 'retails_motion_head_flag', 0);
 
 /**
  * Hero entrance (motion v2, 2026-11-15). Inline in <head> because it has to
@@ -244,7 +256,7 @@ add_action('wp_head', 'wholesale_motion_head_flag', 0);
  * - Only on 'full' pages, never under reduced motion (the flag then reads
  *   "reduce"), and nothing at all with the setting off.
  */
-function wholesale_motion_hero_style()
+function retails_motion_hero_style()
 {
 	$kids = ':is(.hc-hero-copy,.home-hero-copy,.bd-hero-copy,.sc-hero-copy,.contact-hero-copy,.pkg-hero,.reviews-page-head,.srp-hero .srp-container,.error-404-content,.sf-hero>.container)>:not(form,[aria-hidden="true"])';
 	$all = $kids . ',.sc-hero-trust,.site-breadcrumbs,.site-main>.container>h1';
@@ -257,59 +269,59 @@ function wholesale_motion_hero_style()
 		. $p . $kids . ':nth-child(3){animation-delay:140ms}'
 		. $p . $kids . ':nth-child(4){animation-delay:210ms}'
 		. $p . $kids . ':nth-child(n+5),' . $p . ':is(' . $all . ').sc-hero-trust{animation-delay:280ms}'
-		. 'html[data-motion="full"]:not(.wholesale-page-loader-landing,.wholesale-page-loader-failsafe):has(.wholesale-page-loader:is(.is-intro,.is-idle):not(.is-hidden)) :is(' . $all . '){animation-play-state:paused}'
+		. 'html[data-motion="full"]:not(.retails-page-loader-landing,.retails-page-loader-failsafe):has(.retails-page-loader:is(.is-intro,.is-idle):not(.is-hidden)) :is(' . $all . '){animation-play-state:paused}'
 		. '}'
 		. '@keyframes mo-in{from{transform:translate3d(0,18px,0)}}'
 		. '@keyframes mo-in-f{from{opacity:0;transform:translate3d(0,10px,0)}}';
-	return '<style id="wholesale-motion-hero">' . $css . '</style>';
+	return '<style id="retails-motion-hero">' . $css . '</style>';
 }
 
-function wholesale_motion_assets()
+function retails_motion_assets()
 {
-	if ('off' === wholesale_motion_level()) {
+	if ('off' === retails_motion_level()) {
 		return;
 	}
 	$dir = get_template_directory();
 	$uri = get_template_directory_uri();
-	wp_enqueue_style('wholesale-motion', $uri . '/css/motion.css', array(), (string) filemtime($dir . '/css/motion.css'));
-	wp_enqueue_script('wholesale-motion', $uri . '/js/motion.js', array(), (string) filemtime($dir . '/js/motion.js'), array('in_footer' => true, 'strategy' => 'defer'));
+	wp_enqueue_style('retails-motion', $uri . '/css/motion.css', array(), (string) filemtime($dir . '/css/motion.css'));
+	wp_enqueue_script('retails-motion', $uri . '/js/motion.js', array(), (string) filemtime($dir . '/js/motion.js'), array('in_footer' => true, 'strategy' => 'defer'));
 }
-// After wholesale_ui_polish_assets (100), so motion.css prints after ui-polish.css.
-add_action('wp_enqueue_scripts', 'wholesale_motion_assets', 101);
+// After retails_ui_polish_assets (100), so motion.css prints after ui-polish.css.
+add_action('wp_enqueue_scripts', 'retails_motion_assets', 101);
 
 /**
  * motion.css never holds the first paint back: it only adds effects, and its
  * hidden states need the flag plus js/motion.js anyway. Same swap the theme
  * uses for the home guide styles in inc/performance.php.
  */
-function wholesale_motion_async_style($tag, $handle)
+function retails_motion_async_style($tag, $handle)
 {
-	if ('wholesale-motion' !== $handle) {
+	if ('retails-motion' !== $handle) {
 		return $tag;
 	}
 	$async = str_replace("media='all'", "media='print' onload=\"this.media='all'\"", $tag);
 	return $async . '<noscript>' . preg_replace("/ id='[^']*'/", '', $tag, 1) . '</noscript>';
 }
-add_filter('style_loader_tag', 'wholesale_motion_async_style', 10, 2);
+add_filter('style_loader_tag', 'retails_motion_async_style', 10, 2);
 
-function wholesale_motion_body_class($classes)
+function retails_motion_body_class($classes)
 {
-	$level = wholesale_motion_level();
+	$level = retails_motion_level();
 	if ('off' !== $level) {
 		$classes[] = 'mo-level-' . $level;
 	}
 	return $classes;
 }
-add_filter('body_class', 'wholesale_motion_body_class');
+add_filter('body_class', 'retails_motion_body_class');
 
 /**
  * Long reading pages that get the reading progress bar: guide, location and
  * industry pages (inc/guide-pages.php), plus the long content pages. Not the
  * home page, Shop, product, category, cart or checkout pages.
  */
-function wholesale_motion_is_long_page()
+function retails_motion_is_long_page()
 {
-	if (function_exists('wholesale_guide_current') && wholesale_guide_current()) {
+	if (function_exists('retails_guide_current') && retails_guide_current()) {
 		return true;
 	}
 	return is_page(array('how-to-install-channel-letters', 'warranty', 'shipping-returns', 'channel-letter-cost', 'storefront-signs'));
@@ -323,15 +335,18 @@ function wholesale_motion_is_long_page()
  * it scrolls up (instantly under reduced motion) and moves keyboard focus to
  * <main> (the skip link would pop up visibly after a mouse click).
  */
-function wholesale_motion_scroll_ui()
+function retails_motion_scroll_ui()
 {
-	if ('full' !== wholesale_motion_level()) {
+	if ('full' !== retails_motion_level()) {
 		return;
 	}
-	if (wholesale_motion_is_long_page()) {
+	if (retails_motion_is_long_page()) {
 		echo '<div class="mo-progress" aria-hidden="true"></div>' . "\n";
 	}
 	echo '<button type="button" class="mo-top" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:matchMedia(\'(prefers-reduced-motion: reduce)\').matches?\'instant\':\'smooth\'});var t=document.querySelector(\'main\')||document.querySelector(\'.skip-link\');if(t){t.matches(\'a,[tabindex]\')||t.setAttribute(\'tabindex\',\'-1\');t.focus({preventScroll:true})}">'
 		. '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' . "\n";
 }
-add_action('wp_footer', 'wholesale_motion_scroll_ui', 5);
+add_action('wp_footer', 'retails_motion_scroll_ui', 5);
+
+// Animated header logo. Loaded from here so functions.php needs no change.
+require_once __DIR__ . '/logo-motion.php';

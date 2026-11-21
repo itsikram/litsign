@@ -1,5 +1,5 @@
 /*
- * Site-wide typography (loaded last, see wholesale_typography_assets()).
+ * Site-wide typography (loaded last, see retails_typography_assets()).
  *
  * Inter for reading text and UI, Plus Jakarta Sans for headings. Element
  * selectors only, so component classes keep their own sizes and spacing;
@@ -7,7 +7,7 @@
  * Sign-preview fonts (builder, product customizer) are not affected.
  */
 
-/* Self-hosted variable fonts, latin subset (preloaded in wholesale_preload_typography_fonts()). */
+/* Self-hosted variable fonts, latin subset (preloaded in retails_preload_typography_fonts()). */
 @font-face {
   font-family: "Inter";
   font-style: normal;

@@ -3,7 +3,7 @@
  * Contact page template: the product-aware quote form (2026-11-05).
  *
  * Buttons pass context as /contact/?interest=banners&item=13oz-vinyl-banner (see
- * wholesale_quote_url()); both are re-validated here (wholesale_quote_context()).
+ * retails_quote_url()); both are re-validated here (retails_quote_context()).
  * The form asks for contact details first, then shows only the questions for the
  * chosen product (inc/buying-journey.php, js/buying-journey.js). Submissions are saved
  * as contact_submission posts with the lead pipeline stage "new".
@@ -13,8 +13,8 @@
 
 $contact_url = get_permalink();
 $quote_status = isset($_GET['quote_status']) ? sanitize_key(wp_unslash($_GET['quote_status'])) : '';
-$quote_interests = wholesale_quote_interests();
-$quote_spec_fields = wholesale_quote_spec_fields();
+$quote_interests = retails_quote_interests();
+$quote_spec_fields = retails_quote_spec_fields();
 
 // Photos and artwork customers can attach to a quote request.
 $quote_file_mimes = array(
@@ -57,7 +57,7 @@ $contact_sent_html = static function ($next_steps) use ($contact_url) {
 	<div class="contact-sent" role="status" tabindex="-1" data-contact-sent>
 		<p class="contact-eyebrow">Request received</p>
 		<h2 id="contact-form-title">Thanks, we have your request</h2>
-		<p>A sign specialist will reply <?php echo esc_html(wholesale_quote_response_text()); ?>. We sent a copy to your email. Nothing is made or charged until you approve a quote.</p>
+		<p>A sign specialist will reply <?php echo esc_html(retails_quote_response_text()); ?>. We sent a copy to your email. Nothing is made or charged until you approve a quote.</p>
 		<h3>What happens next</h3>
 		<ol class="contact-next-steps">
 			<?php foreach ($next_steps as $step) : ?>
@@ -72,14 +72,14 @@ $contact_sent_html = static function ($next_steps) use ($contact_url) {
 };
 
 // Success answer for the background post. The Google Ads lead conversion is sent by the
-// page itself (same data as wholesale_track_quote_lead()), once per lead.
+// page itself (same data as retails_track_quote_lead()), once per lead.
 $contact_async_sent = static function ($lead_id, $interest) use ($contact_url, $quote_interests, $contact_sent_html) {
 	$conversion = null;
 	if (!get_post_meta($lead_id, '_conversion_tracked', true)) {
 		update_post_meta($lead_id, '_conversion_tracked', current_time('mysql'));
 		$digits = preg_replace('/\D/', '', (string) get_post_meta($lead_id, '_contact_phone', true));
 		$conversion = array(
-			'send_to' => 'AW-18454059893/' . wholesale_ads_lead_label(),
+			'send_to' => 'AW-18454059893/' . retails_ads_lead_label(),
 			'transaction_id' => 'lead-' . $lead_id,
 			'user_data' => (object) array_filter(array(
 				'email' => (string) get_post_meta($lead_id, '_contact_email', true),
@@ -93,7 +93,7 @@ $contact_async_sent = static function ($lead_id, $interest) use ($contact_url, $
 		'ok' => true,
 		'lead' => (int) $lead_id,
 		// Shown in the address bar, so a reload shows the thank-you panel again.
-		'url' => add_query_arg(array_merge(wholesale_quote_lead_args($lead_id), array('interest' => $interest)), $contact_url) . '#contact-form',
+		'url' => add_query_arg(array_merge(retails_quote_lead_args($lead_id), array('interest' => $interest)), $contact_url) . '#contact-form',
 		'html' => $contact_sent_html($next),
 		'conversion' => $conversion,
 	));
@@ -119,7 +119,7 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 	};
 
 	// Keep the context on error redirects so the visitor sees the same form again.
-	$context = wholesale_quote_context($post_text('contact_interest'), $post_text('contact_item'));
+	$context = retails_quote_context($post_text('contact_interest'), $post_text('contact_item'));
 	$redirect_url = add_query_arg(array_filter(array(
 		'interest' => $context['interest'],
 		'item' => $context['item'] ? $context['item']['key'] : '',
@@ -153,13 +153,13 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 	// returns the first submission instead of saving a second one.
 	$form_key = preg_replace('/[^A-Za-z0-9-]/', '', $post_text('contact_form_key'));
 	$fingerprint = md5(strtolower($email) . '|' . $interest . '|' . $message);
-	foreach (array_filter(array($form_key ? 'wholesale_qkey_' . md5($form_key) : '', 'wholesale_qfp_' . $fingerprint)) as $dupe_key) {
+	foreach (array_filter(array($form_key ? 'retails_qkey_' . md5($form_key) : '', 'retails_qfp_' . $fingerprint)) as $dupe_key) {
 		$existing = (int) get_transient($dupe_key);
 		if ($existing && 'contact_submission' === get_post_type($existing)) {
 			if ($contact_async) {
 				$contact_async_sent($existing, $interest);
 			}
-			wp_safe_redirect(add_query_arg(array_merge(wholesale_quote_lead_args($existing), array('interest' => $interest)), $contact_url) . '#contact-form');
+			wp_safe_redirect(add_query_arg(array_merge(retails_quote_lead_args($existing), array('interest' => $interest)), $contact_url) . '#contact-form');
 			exit;
 		}
 	}
@@ -233,7 +233,7 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 	}
 
 	// Files already uploaded in the background (inc/async-uploads.php) arrive as tokens.
-	$incoming_files = array_merge(wholesale_async_upload_take_posted('contact_file_tokens', 'contact'), $incoming_files);
+	$incoming_files = array_merge(retails_async_upload_take_posted('contact_file_tokens', 'contact'), $incoming_files);
 
 	if (count($incoming_files) > $quote_file_max_count || array_sum(wp_list_pluck($incoming_files, 'size')) > $quote_file_max_total) {
 		$fail('file_error');
@@ -258,7 +258,7 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 		foreach ($incoming_files as $file) {
 			$original_name = sanitize_file_name(wp_basename($file['name']));
 			$file['name'] = wp_generate_password(12, false) . '-' . $original_name;
-			$upload = wholesale_async_upload_store($file, array(
+			$upload = retails_async_upload_store($file, array(
 				'mimes' => $quote_file_mimes,
 			));
 
@@ -337,9 +337,9 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 		$fail();
 	}
 	if ($form_key) {
-		set_transient('wholesale_qkey_' . md5($form_key), $submission_id, DAY_IN_SECONDS);
+		set_transient('retails_qkey_' . md5($form_key), $submission_id, DAY_IN_SECONDS);
 	}
-	set_transient('wholesale_qfp_' . $fingerprint, $submission_id, 10 * MINUTE_IN_SECONDS);
+	set_transient('retails_qfp_' . $fingerprint, $submission_id, 10 * MINUTE_IN_SECONDS);
 
 	$attachments = array_sum(wp_list_pluck($uploaded_files, 'size')) <= $quote_file_attach_limit
 		? wp_list_pluck($uploaded_files, 'file')
@@ -347,21 +347,21 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['contact_quote_submit'
 
 	// No From header here: the site's sender (Emails → SMTP Settings) is used, like every other
 	// store email. A From of the Gmail admin address, sent from this server, fails Gmail's checks.
-	list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
-	wholesale_mail_team($subject, $body, $headers, $attachments);
-	wholesale_send_quote_confirmation($submission_id);
+	list($subject, $body) = retails_contact_mail_tag($subject, $body);
+	retails_mail_team($subject, $body, $headers, $attachments);
+	retails_send_quote_confirmation($submission_id);
 	// The request is saved and a failed email is retried automatically, so the visitor sees success.
 	if ($contact_async) {
 		$contact_async_sent($submission_id, $interest);
 	}
-	wp_safe_redirect(add_query_arg(array_merge(wholesale_quote_lead_args($submission_id), array('interest' => $interest)), $contact_url) . '#contact-form');
+	wp_safe_redirect(add_query_arg(array_merge(retails_quote_lead_args($submission_id), array('interest' => $interest)), $contact_url) . '#contact-form');
 	exit;
 }
 
-wholesale_track_quote_lead('contact_page');
+retails_track_quote_lead('contact_page');
 
-$quote_sent = 'sent' === $quote_status && wholesale_quote_form_sent();
-$quote_context = wholesale_quote_context(
+$quote_sent = 'sent' === $quote_status && retails_quote_form_sent();
+$quote_context = retails_quote_context(
 	isset($_GET['interest']) ? wp_unslash($_GET['interest']) : '',
 	isset($_GET['item']) ? wp_unslash($_GET['item']) : ''
 );
@@ -378,7 +378,7 @@ get_header();
 
 <main id="primary" class="site-main contact-page">
 	<div class="container">
-		<?php wholesale_breadcrumbs(); ?>
+		<?php retails_breadcrumbs(); ?>
 
 		<section class="contact-hero" aria-labelledby="contact-page-title">
 			<div class="contact-hero-copy">
@@ -529,7 +529,7 @@ get_header();
 					<p class="contact-form-errors" role="alert" data-contact-errors hidden></p>
 					<p class="contact-submit-hint" id="contact-submit-hint">All done? Press <strong>Submit</strong> to send your request to our team.</p>
 					<button class="contact-submit" type="submit" aria-describedby="contact-submit-hint" name="contact_quote_submit" value="1" data-contact-submit><span class="contact-submit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/></svg></span>Submit</button>
-					<p class="contact-form-note">We reply <?php echo esc_html(wholesale_quote_response_text()); ?>. We use your details only to answer this request.</p>
+					<p class="contact-form-note">We reply <?php echo esc_html(retails_quote_response_text()); ?>. We use your details only to answer this request.</p>
 				</form>
 				<?php endif; ?>
 			</section>
@@ -563,7 +563,7 @@ get_header();
 				</details>
 				<details>
 					<summary>How quickly will someone respond?</summary>
-					<p>A sign specialist replies <?php echo esc_html(wholesale_quote_response_text()); ?>.</p>
+					<p>A sign specialist replies <?php echo esc_html(retails_quote_response_text()); ?>.</p>
 				</details>
 				<details>
 					<summary>Do you install?</summary>
@@ -637,7 +637,7 @@ get_header();
 
 		function startUpload(file) {
 			// Looked up now: the uploader script loads after this inline script.
-			var asyncApi = window.wholesaleAsyncUpload;
+			var asyncApi = window.retailsAsyncUpload;
 			if (!asyncApi || !asyncApi.upload) {
 				return;
 			}
@@ -845,7 +845,7 @@ get_header();
 			}
 		}
 
-		// Same events wholesale_track_quote_lead() prints on the "quote sent" page view.
+		// Same events retails_track_quote_lead() prints on the "quote sent" page view.
 		function sendConversion(conversion) {
 			if (!conversion || !conversion.send_to) {
 				return;

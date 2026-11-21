@@ -9,13 +9,13 @@
  * - JPG / PNG: the pixel width and height (shape only; pixels carry no reliable inches).
  *
  * The file may be the exact size or the same shape at another scale (36" x 24" for an
- * 18" x 12" order), with up to WHOLESALE_ARTWORK_BLEED_IN of bleed per side and a
- * WHOLESALE_ARTWORK_SHAPE_TOLERANCE margin. A file turned on its side (12" x 18" for
+ * 18" x 12" order), with up to RETAILS_ARTWORK_BLEED_IN of bleed per side and a
+ * RETAILS_ARTWORK_SHAPE_TOLERANCE margin. A file turned on its side (12" x 18" for
  * 18" x 12") is refused. Products whose ordered size can't be read (channel letters,
  * flags, tents, table covers, hardware) are not checked.
  *
  * Used by utils/Cart.php (the final say, before a held upload is claimed) and the
- * wholesale_artwork_check AJAX action, which js/artwork-size-check.js calls as soon as
+ * retails_artwork_check AJAX action, which js/artwork-size-check.js calls as soon as
  * a file is uploaded and again when the size changes.
  */
 
@@ -23,13 +23,13 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const WHOLESALE_ARTWORK_SHAPE_TOLERANCE = 0.02; // 2% either way.
-const WHOLESALE_ARTWORK_BLEED_IN = 0.25;        // Per side.
+const RETAILS_ARTWORK_SHAPE_TOLERANCE = 0.02; // 2% either way.
+const RETAILS_ARTWORK_BLEED_IN = 0.25;        // Per side.
 
 /**
  * The print file types the product page takes.
  */
-function wholesale_artwork_mimes()
+function retails_artwork_mimes()
 {
 	return array(
 		'jpg|jpeg|jpe' => 'image/jpeg',
@@ -38,7 +38,7 @@ function wholesale_artwork_mimes()
 	);
 }
 
-function wholesale_artwork_types_text()
+function retails_artwork_types_text()
 {
 	return 'PDF, JPG or PNG';
 }
@@ -50,7 +50,7 @@ function wholesale_artwork_types_text()
 /**
  * Lowercase, straight quotes, single spaces: for matching option labels.
  */
-function wholesale_artwork_norm($text)
+function retails_artwork_norm($text)
 {
 	$text = html_entity_decode((string) $text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 	$text = str_replace(array('”', '“', '″', '’', '‘', '′', '×'), array('"', '"', '"', "'", "'", "'", 'x'), $text);
@@ -60,11 +60,11 @@ function wholesale_artwork_norm($text)
 /**
  * "29.5 x 139.5 or 59 x 139.5" => [[29.5, 139.5], [59, 139.5]], or null when a part isn't a size.
  */
-function wholesale_artwork_parse_size_list($text)
+function retails_artwork_parse_size_list($text)
 {
 	$sizes = array();
 	foreach (preg_split('/\s+or\s+/i', trim((string) $text)) as $part) {
-		$size = wholesale_artwork_parse_size_label($part);
+		$size = retails_artwork_parse_size_label($part);
 		if (!$size) {
 			return null;
 		}
@@ -83,7 +83,7 @@ function wholesale_artwork_parse_size_list($text)
  *                                both sides in one file as in the double-sided template)
  *   off                          no check for this product
  */
-function wholesale_artwork_size_rules($product_id, $raw = null)
+function retails_artwork_size_rules($product_id, $raw = null)
 {
 	$raw = null === $raw ? (string) get_post_meta($product_id, '_artwork_size', true) : (string) $raw;
 	$rules = array('off' => false, 'size' => null, 'options' => array(), 'invalid' => array());
@@ -98,8 +98,8 @@ function wholesale_artwork_size_rules($product_id, $raw = null)
 		}
 		$equals = strrpos($line, '=');
 		if (false !== $equals) {
-			$option = wholesale_artwork_norm(substr($line, 0, $equals));
-			$sizes = wholesale_artwork_parse_size_list(substr($line, $equals + 1));
+			$option = retails_artwork_norm(substr($line, 0, $equals));
+			$sizes = retails_artwork_parse_size_list(substr($line, $equals + 1));
 			if ('' !== $option && $sizes) {
 				$rules['options'][] = array($option, $sizes, trim(substr($line, 0, $equals)));
 			} else {
@@ -107,7 +107,7 @@ function wholesale_artwork_size_rules($product_id, $raw = null)
 			}
 			continue;
 		}
-		$sizes = wholesale_artwork_parse_size_list($line);
+		$sizes = retails_artwork_parse_size_list($line);
 		if ($sizes) {
 			$rules['size'] = $sizes;
 		} else {
@@ -120,12 +120,12 @@ function wholesale_artwork_size_rules($product_id, $raw = null)
 /**
  * The labels of the options chosen on the form (a fixed single choice counts as chosen).
  */
-function wholesale_artwork_chosen_labels(array $attrs, array $request)
+function retails_artwork_chosen_labels(array $attrs, array $request)
 {
 	$labels = array();
 	foreach ($attrs as $attr) {
-		$options = wholesale_attr_options($attr);
-		$chosen = wholesale_request_attr_value($request, $attr['name'] ?? '');
+		$options = retails_attr_options($attr);
+		$chosen = retails_request_attr_value($request, $attr['name'] ?? '');
 		if (null === $chosen && 1 === count($options)) {
 			$labels[] = $options[0]['label'];
 			continue;
@@ -135,7 +135,7 @@ function wholesale_artwork_chosen_labels(array $attrs, array $request)
 			// The option's value, or its label: product group tabs (e.g. Tent Walls'
 			// "Half Wall") post the label text instead of the stored value.
 			if (null !== $chosen && (trim($option['value']) === trim($chosen) || sanitize_text_field($option['value']) === trim($chosen)
-				|| wholesale_artwork_norm($option['label']) === wholesale_artwork_norm($chosen))) {
+				|| retails_artwork_norm($option['label']) === retails_artwork_norm($chosen))) {
 				$labels[] = $option['label'];
 				$found = true;
 				break;
@@ -153,14 +153,14 @@ function wholesale_artwork_chosen_labels(array $attrs, array $request)
  * The accepted print sizes from the "Artwork size" field for these choices: [[w, h], ...],
  * false for "off", or null when the field doesn't say.
  */
-function wholesale_artwork_field_size($product_id, array $attrs, array $request, $has_calculator)
+function retails_artwork_field_size($product_id, array $attrs, array $request, $has_calculator)
 {
-	$rules = wholesale_artwork_size_rules($product_id);
+	$rules = retails_artwork_size_rules($product_id);
 	if ($rules['off']) {
 		return false;
 	}
 	if ($rules['options']) {
-		$labels = array_map('wholesale_artwork_norm', wholesale_artwork_chosen_labels($attrs, $request));
+		$labels = array_map('retails_artwork_norm', retails_artwork_chosen_labels($attrs, $request));
 		foreach ($rules['options'] as [$option, $size]) {
 			foreach ($labels as $label) {
 				if ($label === $option || preg_match('/(^|[^a-z0-9])' . preg_quote($option, '/') . '($|[^a-z0-9])/', $label)) {
@@ -179,19 +179,19 @@ function wholesale_artwork_field_size($product_id, array $attrs, array $request,
  * and height boxes), 'option' (a size option), 'field' (the product's "Artwork size"
  * field, which can accept more than one size: [[w, h], ...], the first being width, height).
  */
-function wholesale_artwork_ordered_size($product_id, array $request)
+function retails_artwork_ordered_size($product_id, array $request)
 {
 	$product_id = absint($product_id);
-	if (!$product_id || !apply_filters('wholesale_artwork_size_check_enabled', true, $product_id)) {
+	if (!$product_id || !apply_filters('retails_artwork_size_check_enabled', true, $product_id)) {
 		return null;
 	}
-	if (wholesale_product_is_channel_letter($product_id)) {
+	if (retails_product_is_channel_letter($product_id)) {
 		return null;
 	}
-	$attrs = wholesale_product_price_attrs($product_id);
+	$attrs = retails_product_price_attrs($product_id);
 	$has_calculator = !get_post_meta($product_id, '_hide_calculator', true);
 
-	$field_size = wholesale_artwork_field_size($product_id, $attrs, $request, $has_calculator);
+	$field_size = retails_artwork_field_size($product_id, $attrs, $request, $has_calculator);
 	if (false === $field_size) {
 		return null;
 	}
@@ -205,10 +205,10 @@ function wholesale_artwork_ordered_size($product_id, array $request)
 	foreach ($attrs as $attr) {
 		$css = (string) ($attr['cssClass'] ?? '');
 		if (false !== strpos($css, 'size-width-inch')) {
-			$width = wholesale_request_attr_value($request, $attr['name']);
+			$width = retails_request_attr_value($request, $attr['name']);
 		}
 		if (false !== strpos($css, 'size-height-inch')) {
-			$height = wholesale_request_attr_value($request, $attr['name']);
+			$height = retails_request_attr_value($request, $attr['name']);
 		}
 	}
 	if (null !== $width && null !== $height) {
@@ -233,8 +233,8 @@ function wholesale_artwork_ordered_size($product_id, array $request)
 		}
 	}
 	foreach ($candidates as $attr) {
-		$options = wholesale_attr_options($attr);
-		$chosen = wholesale_request_attr_value($request, $attr['name']);
+		$options = retails_attr_options($attr);
+		$chosen = retails_request_attr_value($request, $attr['name']);
 		$label = null;
 		if (null === $chosen && 1 === count($options)) {
 			$label = $options[0]['label']; // A fixed single choice isn't posted by the form.
@@ -246,7 +246,7 @@ function wholesale_artwork_ordered_size($product_id, array $request)
 				}
 			}
 		}
-		$size = null !== $label ? wholesale_artwork_parse_size_label($label) : null;
+		$size = null !== $label ? retails_artwork_parse_size_label($label) : null;
 		if ($size) {
 			return array($size[0], $size[1], 'option');
 		}
@@ -257,7 +257,7 @@ function wholesale_artwork_ordered_size($product_id, array $request)
 /**
  * "24\" x 36\"", "17.5\"W x 24\"H", "10' W x 8' H", "12\" x 18\" (Portrait)" => array(w, h) in inches.
  */
-function wholesale_artwork_parse_size_label($label)
+function retails_artwork_parse_size_label($label)
 {
 	$text = html_entity_decode((string) $label, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 	$text = str_replace('×', 'x', $text);
@@ -293,13 +293,13 @@ function wholesale_artwork_parse_size_label($label)
  * array('kind' => 'pdf', 'pages' => [[w_in, h_in], ...]) or array('kind' => 'image', 'w' => px, 'h' => px),
  * or null when the file can't be read.
  */
-function wholesale_artwork_measure($path, $mime)
+function retails_artwork_measure($path, $mime)
 {
 	if (!is_string($path) || !is_file($path)) {
 		return null;
 	}
 	if ('application/pdf' === $mime) {
-		$pages = wholesale_artwork_pdf_pages($path);
+		$pages = retails_artwork_pdf_pages($path);
 		return $pages ? array('kind' => 'pdf', 'pages' => $pages) : null;
 	}
 	$info = @getimagesize($path);
@@ -327,7 +327,7 @@ function wholesale_artwork_measure($path, $mime)
  * each page's TrimBox / CropBox / MediaBox, following /Parent for inherited boxes,
  * /Rotate and /UserUnit (used by large-format PDFs over 200 inches).
  */
-function wholesale_artwork_pdf_pages($path, $max_pages = 50)
+function retails_artwork_pdf_pages($path, $max_pages = 50)
 {
 	$bytes = @filesize($path);
 	if (!$bytes || $bytes > 64 * MB_IN_BYTES) {
@@ -338,7 +338,7 @@ function wholesale_artwork_pdf_pages($path, $max_pages = 50)
 		return null;
 	}
 
-	$objects = wholesale_artwork_pdf_objects($data);
+	$objects = retails_artwork_pdf_objects($data);
 	if (!$objects) {
 		return null;
 	}
@@ -357,10 +357,10 @@ function wholesale_artwork_pdf_pages($path, $max_pages = 50)
 				}
 				$seen[$id] = true;
 				$dict = $objects[$id];
-				$kids = wholesale_artwork_pdf_kids($objects, $dict);
+				$kids = retails_artwork_pdf_kids($objects, $dict);
 				if (null !== $kids) {
 					$queue = array_merge($kids, $queue); // Depth first keeps the page order.
-				} elseif (wholesale_artwork_pdf_is_page($dict)) {
+				} elseif (retails_artwork_pdf_is_page($dict)) {
 					$page_ids[] = $id;
 				}
 			}
@@ -369,7 +369,7 @@ function wholesale_artwork_pdf_pages($path, $max_pages = 50)
 	// No usable tree (damaged file): every page object in the file.
 	if (!$page_ids) {
 		foreach ($objects as $id => $dict) {
-			if (wholesale_artwork_pdf_is_page($dict) && null === wholesale_artwork_pdf_kids($objects, $dict)) {
+			if (retails_artwork_pdf_is_page($dict) && null === retails_artwork_pdf_kids($objects, $dict)) {
 				$page_ids[] = $id;
 				if (count($page_ids) >= $max_pages) {
 					break;
@@ -380,7 +380,7 @@ function wholesale_artwork_pdf_pages($path, $max_pages = 50)
 
 	$pages = array();
 	foreach ($page_ids as $id) {
-		$size = wholesale_artwork_pdf_page_size($objects, $id);
+		$size = retails_artwork_pdf_page_size($objects, $id);
 		if ($size) {
 			$pages[] = $size;
 		}
@@ -391,7 +391,7 @@ function wholesale_artwork_pdf_pages($path, $max_pages = 50)
 /**
  * Object number => dictionary text (stream data left out), later definitions winning.
  */
-function wholesale_artwork_pdf_objects($data)
+function retails_artwork_pdf_objects($data)
 {
 	if (!preg_match_all('/(?<![\d.])(\d{1,7})\s+\d{1,5}\s+obj\b/', $data, $found, PREG_OFFSET_CAPTURE)) {
 		return array();
@@ -442,7 +442,7 @@ function wholesale_artwork_pdf_objects($data)
 		$skip_until = $data_end;
 
 		if (preg_match('/\/Type\s*\/ObjStm\b/', $dict)) {
-			foreach (wholesale_artwork_pdf_object_stream($dict, substr($data, $data_start, $data_end - $data_start)) as $inner_num => $inner) {
+			foreach (retails_artwork_pdf_object_stream($dict, substr($data, $data_start, $data_end - $data_start)) as $inner_num => $inner) {
 				$objects[$inner_num] = $inner;
 			}
 		}
@@ -453,7 +453,7 @@ function wholesale_artwork_pdf_objects($data)
 /**
  * The objects packed in a compressed object stream (PDF 1.5+).
  */
-function wholesale_artwork_pdf_object_stream($dict, $raw)
+function retails_artwork_pdf_object_stream($dict, $raw)
 {
 	if (preg_match('/\/DecodeParms/', $dict) && preg_match('/\/Predictor\s+(\d+)/', $dict, $predictor) && (int) $predictor[1] > 1) {
 		return array();
@@ -494,7 +494,7 @@ function wholesale_artwork_pdf_object_stream($dict, $raw)
 	return $objects;
 }
 
-function wholesale_artwork_pdf_is_page($dict)
+function retails_artwork_pdf_is_page($dict)
 {
 	return (bool) preg_match('/\/Type\s*\/Page(?![A-Za-z0-9])/', $dict);
 }
@@ -502,7 +502,7 @@ function wholesale_artwork_pdf_is_page($dict)
 /**
  * A Pages node's kids as object numbers, or null when the object has no /Kids.
  */
-function wholesale_artwork_pdf_kids(array $objects, $dict)
+function retails_artwork_pdf_kids(array $objects, $dict)
 {
 	if (preg_match('/\/Kids\s*\[([^\]]*)\]/', $dict, $kids)) {
 		$list = $kids[1];
@@ -518,7 +518,7 @@ function wholesale_artwork_pdf_kids(array $objects, $dict)
 /**
  * A page key's value, looked up on the page and then (when $inherit) its parents.
  */
-function wholesale_artwork_pdf_page_value(array $objects, $id, $key, $inherit)
+function retails_artwork_pdf_page_value(array $objects, $id, $key, $inherit)
 {
 	$pattern_array = '/\/' . $key . '\s*\[([^\]]*)\]/';
 	$pattern_number = '/\/' . $key . '\s+(-?\d++(?:\.\d++)?)(?!\s+\d+\s+R)/';
@@ -548,11 +548,11 @@ function wholesale_artwork_pdf_page_value(array $objects, $id, $key, $inherit)
 /**
  * array(width_in, height_in) of one page as it is viewed, or null.
  */
-function wholesale_artwork_pdf_page_size(array $objects, $id)
+function retails_artwork_pdf_page_size(array $objects, $id)
 {
 	$box = null;
 	foreach (array('TrimBox' => false, 'CropBox' => true, 'MediaBox' => true) as $key => $inherit) {
-		$value = wholesale_artwork_pdf_page_value($objects, $id, $key, $inherit);
+		$value = retails_artwork_pdf_page_value($objects, $id, $key, $inherit);
 		if (null === $value || !preg_match_all('/-?\d+(?:\.\d+)?|-?\.\d+/', $value, $numbers) || count($numbers[0]) < 4) {
 			continue;
 		}
@@ -567,9 +567,9 @@ function wholesale_artwork_pdf_page_size(array $objects, $id)
 	if (!$box) {
 		return null;
 	}
-	$unit = (float) (wholesale_artwork_pdf_page_value($objects, $id, 'UserUnit', false) ?? 1);
+	$unit = (float) (retails_artwork_pdf_page_value($objects, $id, 'UserUnit', false) ?? 1);
 	$unit = $unit > 0 ? $unit : 1;
-	$rotate = ((int) (wholesale_artwork_pdf_page_value($objects, $id, 'Rotate', true) ?? 0) % 360 + 360) % 360;
+	$rotate = ((int) (retails_artwork_pdf_page_value($objects, $id, 'Rotate', true) ?? 0) % 360 + 360) % 360;
 	$width = $box[0] * $unit / 72;
 	$height = $box[1] * $unit / 72;
 	if (90 === $rotate || 270 === $rotate) {
@@ -586,12 +586,12 @@ function wholesale_artwork_pdf_page_size(array $objects, $id)
  * True when a file of $file_w x $file_h has the shape of an $order_w x $order_h order
  * (any scale, up to the bleed allowance per side, within the tolerance).
  */
-function wholesale_artwork_shape_matches($file_w, $file_h, $order_w, $order_h, $bleed_per_side = WHOLESALE_ARTWORK_BLEED_IN)
+function retails_artwork_shape_matches($file_w, $file_h, $order_w, $order_h, $bleed_per_side = RETAILS_ARTWORK_BLEED_IN)
 {
 	if ($file_w <= 0 || $file_h <= 0 || $order_w <= 0 || $order_h <= 0) {
 		return false;
 	}
-	$tolerance = (float) apply_filters('wholesale_artwork_shape_tolerance', WHOLESALE_ARTWORK_SHAPE_TOLERANCE);
+	$tolerance = (float) apply_filters('retails_artwork_shape_tolerance', RETAILS_ARTWORK_SHAPE_TOLERANCE);
 	$bleed = 2 * max(0, (float) $bleed_per_side);
 	$ratio = $file_w / $file_h;
 	$exact = $order_w / $order_h;
@@ -603,30 +603,30 @@ function wholesale_artwork_shape_matches($file_w, $file_h, $order_w, $order_h, $
  * Extra artwork allowed on each side, in inches. Canvas is wrapped around its frame, so
  * the file may carry about 2" more per side than the face size ordered.
  */
-function wholesale_artwork_bleed_for($product_id)
+function retails_artwork_bleed_for($product_id)
 {
-	$bleed = WHOLESALE_ARTWORK_BLEED_IN;
+	$bleed = RETAILS_ARTWORK_BLEED_IN;
 	if (false !== stripos((string) get_the_title($product_id), 'canvas')) {
 		$bleed = 2.0;
 	}
-	foreach (wholesale_product_price_attrs($product_id) as $attr) {
+	foreach (retails_product_price_attrs($product_id) as $attr) {
 		if ('edge-option' === strtolower(trim((string) ($attr['name'] ?? '')))) {
 			$bleed = 2.0;
 		}
 	}
-	return (float) apply_filters('wholesale_artwork_bleed_in', $bleed, $product_id);
+	return (float) apply_filters('retails_artwork_bleed_in', $bleed, $product_id);
 }
 
-function wholesale_artwork_inches_text($inches)
+function retails_artwork_inches_text($inches)
 {
 	$text = number_format((float) $inches, 2, '.', '');
 	return rtrim(rtrim($text, '0'), '.') . '"';
 }
 
-function wholesale_artwork_shape_word($width, $height)
+function retails_artwork_shape_word($width, $height)
 {
 	$ratio = $width / $height;
-	if (abs($ratio - 1) <= WHOLESALE_ARTWORK_SHAPE_TOLERANCE) {
+	if (abs($ratio - 1) <= RETAILS_ARTWORK_SHAPE_TOLERANCE) {
 		return 'square';
 	}
 	return $ratio > 1 ? 'wide' : 'tall';
@@ -635,14 +635,14 @@ function wholesale_artwork_shape_word($width, $height)
 /**
  * '' when the measured file fits the ordered size, else the message for the customer.
  */
-function wholesale_artwork_size_problem($measure, array $ordered, $bleed_per_side = WHOLESALE_ARTWORK_BLEED_IN)
+function retails_artwork_size_problem($measure, array $ordered, $bleed_per_side = RETAILS_ARTWORK_BLEED_IN)
 {
 	[$order_w, $order_h] = $ordered;
 	// Every size this order accepts (the "Artwork size" field may list more than one).
 	$accepted = !empty($ordered[3]) && is_array($ordered[3]) ? $ordered[3] : array(array($order_w, $order_h));
-	$ordered_text = wholesale_artwork_inches_text($order_w) . ' W × ' . wholesale_artwork_inches_text($order_h) . ' H';
+	$ordered_text = retails_artwork_inches_text($order_w) . ' W × ' . retails_artwork_inches_text($order_h) . ' H';
 	$size_text = implode(' or ', array_map(static function ($size) {
-		return wholesale_artwork_inches_text($size[0]) . ' × ' . wholesale_artwork_inches_text($size[1]);
+		return retails_artwork_inches_text($size[0]) . ' × ' . retails_artwork_inches_text($size[1]);
 	}, $accepted));
 
 	if (!is_array($measure)) {
@@ -653,23 +653,23 @@ function wholesale_artwork_size_problem($measure, array $ordered, $bleed_per_sid
 	foreach ($files as $index => $file) {
 		[$file_w, $file_h] = $file;
 		foreach ($accepted as $size) {
-			if (wholesale_artwork_shape_matches($file_w, $file_h, $size[0], $size[1], $bleed_per_side)) {
+			if (retails_artwork_shape_matches($file_w, $file_h, $size[0], $size[1], $bleed_per_side)) {
 				continue 2;
 			}
 		}
 		if ('pdf' === $measure['kind']) {
-			$file_text = wholesale_artwork_inches_text($file_w) . ' W × ' . wholesale_artwork_inches_text($file_h) . ' H';
+			$file_text = retails_artwork_inches_text($file_w) . ' W × ' . retails_artwork_inches_text($file_h) . ' H';
 			$scale = max($order_w, $order_h) > 48 ? 0.5 : 2;
-			$example = wholesale_artwork_inches_text($order_w * $scale) . ' × ' . wholesale_artwork_inches_text($order_h * $scale);
+			$example = retails_artwork_inches_text($order_w * $scale) . ' × ' . retails_artwork_inches_text($order_h * $scale);
 		} else {
 			$file_text = number_format($file_w) . ' × ' . number_format($file_h) . ' pixels';
 			$per_inch = min(150, 6000 / max($order_w, $order_h));
 			$example = number_format(round($order_w * $per_inch)) . ' × ' . number_format(round($order_h * $per_inch)) . ' pixels';
 		}
-		$order_shape = wholesale_artwork_shape_word($order_w, $order_h);
-		$file_shape = wholesale_artwork_shape_word($file_w, $file_h);
+		$order_shape = retails_artwork_shape_word($order_w, $order_h);
+		$file_shape = retails_artwork_shape_word($file_w, $file_h);
 		$which = count($files) > 1 ? sprintf('page %d of your file', $index + 1) : 'your file';
-		// Worded for where the size came from (wholesale_artwork_ordered_size()).
+		// Worded for where the size came from (retails_artwork_ordered_size()).
 		$source = $ordered[2] ?? 'typed';
 		$intro = array(
 			'typed' => 'You ordered %1$s (%2$s)',
@@ -698,7 +698,7 @@ function wholesale_artwork_size_problem($measure, array $ordered, $bleed_per_sid
 /**
  * Product editor: under the "Artwork size" field, what the saved value means for uploads.
  */
-function wholesale_artwork_size_field_summary($field_args, $field)
+function retails_artwork_size_field_summary($field_args, $field)
 {
 	$product_id = is_object($field) ? (int) $field->object_id : 0;
 	if (!$product_id || 'product' !== get_post_type($product_id)) {
@@ -708,16 +708,16 @@ function wholesale_artwork_size_field_summary($field_args, $field)
 	$size_text = static function ($sizes) {
 		$sizes = is_array($sizes[0] ?? null) ? $sizes : array($sizes);
 		return implode(' or ', array_map(static function ($size) {
-			return wholesale_artwork_inches_text($size[0]) . ' W × ' . wholesale_artwork_inches_text($size[1]) . ' H';
+			return retails_artwork_inches_text($size[0]) . ' W × ' . retails_artwork_inches_text($size[1]) . ' H';
 		}, $sizes));
 	};
-	$rules = wholesale_artwork_size_rules($product_id);
+	$rules = retails_artwork_size_rules($product_id);
 	$has_calculator = !get_post_meta($product_id, '_hide_calculator', true);
 	$lines = array();
 	if ($rules['invalid']) {
 		$lines[] = '<strong style="color:#b42318">' . esc_html('Not understood, ignored: ' . implode(' · ', $rules['invalid'])) . '</strong>';
 	}
-	if (wholesale_product_is_channel_letter($product_id)) {
+	if (retails_product_is_channel_letter($product_id)) {
 		$lines[] = esc_html('Channel letters: uploads are not checked.');
 	} elseif ($rules['off']) {
 		$lines[] = esc_html('Off: uploads for this product are not checked.');
@@ -731,15 +731,15 @@ function wholesale_artwork_size_field_summary($field_args, $field)
 			$lines[] = esc_html(($rules['options'] ? 'Any other choice: c' : 'C') . 'hecked against the width × height the customer types.' . ($rules['size'] ? ' (A single size is ignored on size-calculator products.)' : ''));
 		} else {
 			// No size in the field for other choices: the size option, if there is one.
-			$attrs = wholesale_product_price_attrs($product_id);
+			$attrs = retails_product_price_attrs($product_id);
 			$request = array();
 			foreach ($attrs as $attr) {
-				$options = wholesale_attr_options($attr);
+				$options = retails_attr_options($attr);
 				if ($options) {
 					$request[$attr['name']] = $options[0]['value'];
 				}
 			}
-			$auto = wholesale_artwork_ordered_size($product_id, $request);
+			$auto = retails_artwork_ordered_size($product_id, $request);
 			if ($auto && 'field' !== $auto[2]) {
 				$lines[] = esc_html(($rules['options'] ? 'Any other choice: c' : 'C') . 'hecked against the size option the customer picks (the first choice reads as ' . $size_text($auto) . ').');
 			} else {
@@ -747,7 +747,7 @@ function wholesale_artwork_size_field_summary($field_args, $field)
 			}
 		}
 	}
-	return '<p class="cmb2-metabox-description wholesale-artwork-size-summary" style="margin-top:6px"><strong>Upload check:</strong> ' . implode('<br>', $lines) . '</p>';
+	return '<p class="cmb2-metabox-description retails-artwork-size-summary" style="margin-top:6px"><strong>Upload check:</strong> ' . implode('<br>', $lines) . '</p>';
 }
 
 /* ---------------------------------------------------------------------------------------
@@ -758,13 +758,13 @@ function wholesale_artwork_size_field_summary($field_args, $field)
  * A background upload (inc/async-uploads.php) without claiming it:
  * array('path', 'type', 'measure') or null. The measurement is kept with the token.
  */
-function wholesale_artwork_held_file($token)
+function retails_artwork_held_file($token)
 {
 	$token = is_string($token) ? $token : '';
 	if (!preg_match('/^[A-Za-z0-9]{32}$/', $token)) {
 		return null;
 	}
-	$dir = wholesale_async_upload_dir();
+	$dir = retails_async_upload_dir();
 	$meta_path = $dir . '/' . $token . '.json';
 	$path = $dir . '/' . $token . '.bin';
 	if (!is_file($meta_path) || !is_file($path)) {
@@ -775,7 +775,7 @@ function wholesale_artwork_held_file($token)
 		return null;
 	}
 	if (!array_key_exists('measure', $meta)) {
-		$meta['measure'] = wholesale_artwork_measure($path, (string) ($meta['type'] ?? ''));
+		$meta['measure'] = retails_artwork_measure($path, (string) ($meta['type'] ?? ''));
 		@file_put_contents($meta_path, wp_json_encode($meta));
 	}
 	return array('path' => $path, 'type' => (string) ($meta['type'] ?? ''), 'measure' => $meta['measure']);
@@ -785,9 +785,9 @@ function wholesale_artwork_held_file($token)
  * The artwork posted with an Add To Cart (held token or plain file), measured, or null.
  * 'measure' is null when the file can't be read.
  */
-function wholesale_artwork_posted_file()
+function retails_artwork_posted_file()
 {
-	$held = wholesale_artwork_held_file(isset($_POST['custom-artwork-token']) ? wp_unslash($_POST['custom-artwork-token']) : '');
+	$held = retails_artwork_held_file(isset($_POST['custom-artwork-token']) ? wp_unslash($_POST['custom-artwork-token']) : '');
 	if ($held) {
 		return $held;
 	}
@@ -795,58 +795,58 @@ function wholesale_artwork_posted_file()
 	if (!is_array($file) || UPLOAD_ERR_OK !== (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) || !is_uploaded_file($file['tmp_name'])) {
 		return null;
 	}
-	$checked = wp_check_filetype_and_ext($file['tmp_name'], $file['name'], wholesale_artwork_mimes());
+	$checked = wp_check_filetype_and_ext($file['tmp_name'], $file['name'], retails_artwork_mimes());
 	if (empty($checked['type'])) {
 		return null; // utils/Cart.php turns the type down with its own message.
 	}
-	return array('path' => $file['tmp_name'], 'type' => $checked['type'], 'measure' => wholesale_artwork_measure($file['tmp_name'], $checked['type']));
+	return array('path' => $file['tmp_name'], 'type' => $checked['type'], 'measure' => retails_artwork_measure($file['tmp_name'], $checked['type']));
 }
 
 /**
  * For utils/Cart.php: '' or the message that stops this Add To Cart.
  */
-function wholesale_artwork_request_problem($product_id, array $request)
+function retails_artwork_request_problem($product_id, array $request)
 {
-	$file = wholesale_artwork_posted_file();
+	$file = retails_artwork_posted_file();
 	if (!$file) {
 		return '';
 	}
-	$ordered = wholesale_artwork_ordered_size($product_id, $request);
-	return $ordered ? wholesale_artwork_size_problem($file['measure'], $ordered, wholesale_artwork_bleed_for($product_id)) : '';
+	$ordered = retails_artwork_ordered_size($product_id, $request);
+	return $ordered ? retails_artwork_size_problem($file['measure'], $ordered, retails_artwork_bleed_for($product_id)) : '';
 }
 
 /**
  * POST product_id, token and the product form's fields:
  * {checked, ok, message, ordered}. checked is false when there is nothing to compare.
  */
-function wholesale_ajax_artwork_check()
+function retails_ajax_artwork_check()
 {
 	nocache_headers();
 	$request = map_deep(wp_unslash($_POST), 'sanitize_text_field');
 	$product_id = absint($request['product_id'] ?? 0);
-	$held = wholesale_artwork_held_file($request['token'] ?? '');
-	$ordered = $product_id && $held && 'product' === get_post_type($product_id) ? wholesale_artwork_ordered_size($product_id, $request) : null;
+	$held = retails_artwork_held_file($request['token'] ?? '');
+	$ordered = $product_id && $held && 'product' === get_post_type($product_id) ? retails_artwork_ordered_size($product_id, $request) : null;
 	if (!$held || !$ordered) {
 		wp_send_json_success(array('checked' => false, 'ok' => true, 'message' => ''));
 	}
-	$problem = wholesale_artwork_size_problem($held['measure'], $ordered, wholesale_artwork_bleed_for($product_id));
+	$problem = retails_artwork_size_problem($held['measure'], $ordered, retails_artwork_bleed_for($product_id));
 	wp_send_json_success(array(
 		'checked' => true,
 		'ok' => '' === $problem,
 		'message' => $problem,
-		'ordered' => wholesale_artwork_inches_text($ordered[0]) . ' × ' . wholesale_artwork_inches_text($ordered[1]),
+		'ordered' => retails_artwork_inches_text($ordered[0]) . ' × ' . retails_artwork_inches_text($ordered[1]),
 	));
 }
-add_action('wp_ajax_wholesale_artwork_check', 'wholesale_ajax_artwork_check');
-add_action('wp_ajax_nopriv_wholesale_artwork_check', 'wholesale_ajax_artwork_check');
+add_action('wp_ajax_retails_artwork_check', 'retails_ajax_artwork_check');
+add_action('wp_ajax_nopriv_retails_artwork_check', 'retails_ajax_artwork_check');
 
-function wholesale_artwork_size_check_script()
+function retails_artwork_size_check_script()
 {
 	if (is_admin() || !is_singular('product')) {
 		return;
 	}
 	$file = get_template_directory() . '/js/artwork-size-check.js';
-	wp_enqueue_script('wholesale-artwork-size-check', get_template_directory_uri() . '/js/artwork-size-check.js', array('wholesale-async-upload'), (string) filemtime($file), true);
-	wp_script_add_data('wholesale-artwork-size-check', 'strategy', 'defer');
+	wp_enqueue_script('retails-artwork-size-check', get_template_directory_uri() . '/js/artwork-size-check.js', array('retails-async-upload'), (string) filemtime($file), true);
+	wp_script_add_data('retails-artwork-size-check', 'strategy', 'defer');
 }
-add_action('wp_enqueue_scripts', 'wholesale_artwork_size_check_script', 20);
+add_action('wp_enqueue_scripts', 'retails_artwork_size_check_script', 20);

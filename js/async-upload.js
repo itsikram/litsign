@@ -8,12 +8,12 @@
  *   <input type="file" name="x" data-async-upload="artwork" data-async-field="x_token">
  *
  * Single-file inputs marked like that are handled here. The contact page's multi-file
- * picker uses window.wholesaleAsyncUpload.upload() directly.
+ * picker uses window.retailsAsyncUpload.upload() directly.
  */
 (function () {
   "use strict";
 
-  var config = window.wholesaleAsyncUpload || {};
+  var config = window.retailsAsyncUpload || {};
   if (!config.ajaxUrl || !window.FormData || !window.XMLHttpRequest) return;
 
   // Resolves to the token; rejects with an Error whose message can be shown.
@@ -21,7 +21,7 @@
     var xhr = new XMLHttpRequest();
     var promise = new Promise(function (resolve, reject) {
       var data = new FormData();
-      data.append("action", "wholesale_async_upload");
+      data.append("action", "retails_async_upload");
       data.append("context", context);
       data.append("file", file);
       xhr.open("POST", config.ajaxUrl);
@@ -177,11 +177,11 @@
 
   document.querySelectorAll("input[type=file][data-async-upload]").forEach(bindInput);
   // A product group swap (js/product-group-swap.js) brings in a new artwork box.
-  document.addEventListener("wholesale:product-swapped", function () {
+  document.addEventListener("retails:product-swapped", function () {
     document.querySelectorAll("input[type=file][data-async-upload]").forEach(bindInput);
   });
 
-  window.wholesaleAsyncUpload = Object.assign(config, {
+  window.retailsAsyncUpload = Object.assign(config, {
     upload: upload,
     track: function (job, form) {
       job.form = form;

@@ -1,7 +1,7 @@
 <?php
 /**
  * Product page copy: the 7 channel letter styles, printed by
- * wholesale_render_channel_letter_details() in place of the supplier's
+ * retails_render_channel_letter_details() in place of the supplier's
  * Description / Components / Warranty / FAQ tabs, which repeated the same
  * parts lists and warranty text on every style.
  *

@@ -4,7 +4,7 @@
  *
  * A separate export next to the Google Merchant Center feed
  * (inc/merchant-feed.php), built from the same rows
- * (wholesale_merchant_feed_rows()) so IDs, prices, links and images always
+ * (retails_merchant_feed_rows()) so IDs, prices, links and images always
  * agree with the Google feed, the product pages and the cart. Fields follow
  * OpenAI's product feed spec (developers.openai.com/commerce/specs/feed):
  * JSONL, one product per line.
@@ -14,37 +14,37 @@
  * checkout (is_eligible_checkout is false: orders are placed on this site).
  *
  * The finished file is cached for 6 hours and cleared when a product, or any
- * "wholesale_" setting, is saved, so ordinary page requests never build it.
+ * "retails_" setting, is saved, so ordinary page requests never build it.
  *
  * @package litsign
  */
 
 // v2 (2026-11-12): product group options as variants. A new name drops the old cached file.
 // v3 (2026-11-12): exchanges, privacy/terms URLs, is_digital, size dimensions.
-const WHOLESALE_OPENAI_FEED_CACHE = 'wholesale_openai_feed_v3';
+const RETAILS_OPENAI_FEED_CACHE = 'retails_openai_feed_v3';
 
-function wholesale_openai_feed_rewrite()
+function retails_openai_feed_rewrite()
 {
-	add_rewrite_rule('^openai-feed\.jsonl$', 'index.php?wholesale_openai_feed=1', 'top');
+	add_rewrite_rule('^openai-feed\.jsonl$', 'index.php?retails_openai_feed=1', 'top');
 }
-add_action('init', 'wholesale_openai_feed_rewrite', 20);
+add_action('init', 'retails_openai_feed_rewrite', 20);
 
 add_action('init', function () {
-	if ('1' !== get_option('wholesale_openai_feed_rewrite_version')) {
+	if ('1' !== get_option('retails_openai_feed_rewrite_version')) {
 		flush_rewrite_rules(false);
-		update_option('wholesale_openai_feed_rewrite_version', '1');
+		update_option('retails_openai_feed_rewrite_version', '1');
 	}
 }, 99);
 
 add_filter('query_vars', function ($vars) {
-	$vars[] = 'wholesale_openai_feed';
+	$vars[] = 'retails_openai_feed';
 	return $vars;
 });
 
 /**
  * One feed line (an array) for a shared feed row.
  */
-function wholesale_openai_feed_record($row)
+function retails_openai_feed_record($row)
 {
 	$offer = $row['offer'];
 	$price = (float) $row['price'];
@@ -126,12 +126,12 @@ function wholesale_openai_feed_record($row)
  * is in one variant group only), and the option names are distinct. The group ID is the
  * first product's item ID plus "-options", so it never equals an item ID.
  *
- * @param array[] $rows wholesale_merchant_feed_rows().
+ * @param array[] $rows retails_merchant_feed_rows().
  * @return array
  */
-function wholesale_openai_feed_option_groups(array $rows)
+function retails_openai_feed_option_groups(array $rows)
 {
-	if (!function_exists('wholesale_product_group')) {
+	if (!function_exists('retails_product_group')) {
 		return array();
 	}
 	$items = array();
@@ -147,7 +147,7 @@ function wholesale_openai_feed_option_groups(array $rows)
 	$map = array();
 	$done = array();
 	foreach (array_keys($items) as $product_id) {
-		$members = wholesale_product_group($product_id);
+		$members = retails_product_group($product_id);
 		if (!$members) {
 			continue;
 		}
@@ -171,7 +171,7 @@ function wholesale_openai_feed_option_groups(array $rows)
 		if (count($options) < 2 || in_array('', $options, true) || count(array_unique($options)) !== count($options)) {
 			continue;
 		}
-		$group = wholesale_merchant_feed_id($ids[0]) . '-options';
+		$group = retails_merchant_feed_id($ids[0]) . '-options';
 		foreach ($options as $id => $option) {
 			// A product listed in two groups keeps the first.
 			if (!isset($map[$id])) {
@@ -186,38 +186,38 @@ function wholesale_openai_feed_option_groups(array $rows)
 /**
  * The whole JSONL file (built once, then cached).
  */
-function wholesale_openai_feed_body()
+function retails_openai_feed_body()
 {
-	$cached = get_transient(WHOLESALE_OPENAI_FEED_CACHE);
+	$cached = get_transient(RETAILS_OPENAI_FEED_CACHE);
 	if (is_string($cached) && '' !== $cached) {
 		return $cached;
 	}
 
 	$lines = array();
-	$rows = wholesale_merchant_feed_rows();
-	$option_groups = wholesale_openai_feed_option_groups($rows);
+	$rows = retails_merchant_feed_rows();
+	$option_groups = retails_openai_feed_option_groups($rows);
 	foreach ($rows as $row) {
 		if (!$row['size'] && isset($option_groups[(int) $row['product_id']])) {
 			$row['option_group'] = $option_groups[(int) $row['product_id']]['group'];
 			$row['option'] = $option_groups[(int) $row['product_id']]['option'];
 		}
-		$lines[] = wp_json_encode(wholesale_openai_feed_record($row), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+		$lines[] = wp_json_encode(retails_openai_feed_record($row), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 	}
 	$body = $lines ? implode("\n", $lines) . "\n" : '';
 	if ('' !== $body) {
-		set_transient(WHOLESALE_OPENAI_FEED_CACHE, $body, 6 * HOUR_IN_SECONDS);
+		set_transient(RETAILS_OPENAI_FEED_CACHE, $body, 6 * HOUR_IN_SECONDS);
 	}
 
 	return $body;
 }
 
-function wholesale_render_openai_feed()
+function retails_render_openai_feed()
 {
-	if ('1' !== get_query_var('wholesale_openai_feed')) {
+	if ('1' !== get_query_var('retails_openai_feed')) {
 		return;
 	}
 
-	$body = wholesale_openai_feed_body();
+	$body = retails_openai_feed_body();
 
 	// Same headers as the Google feed. An explicit Expires also stops the host adding its
 	// one-year default for file types it does not know (seen live 11-11), which would let
@@ -229,28 +229,28 @@ function wholesale_render_openai_feed()
 	echo $body;
 	exit;
 }
-add_action('template_redirect', 'wholesale_render_openai_feed', 0);
+add_action('template_redirect', 'retails_render_openai_feed', 0);
 
-function wholesale_openai_feed_clear()
+function retails_openai_feed_clear()
 {
-	delete_transient(WHOLESALE_OPENAI_FEED_CACHE);
+	delete_transient(RETAILS_OPENAI_FEED_CACHE);
 }
-add_action('save_post_product', 'wholesale_openai_feed_clear');
-add_action('deleted_post', 'wholesale_openai_feed_clear');
-add_action('trashed_post', 'wholesale_openai_feed_clear');
+add_action('save_post_product', 'retails_openai_feed_clear');
+add_action('deleted_post', 'retails_openai_feed_clear');
+add_action('trashed_post', 'retails_openai_feed_clear');
 // Group buttons changed outside a product save (the options are feed variants).
-foreach (array('added_post_meta', 'updated_post_meta', 'deleted_post_meta') as $wholesale_openai_hook) {
-	add_action($wholesale_openai_hook, function ($meta_id, $object_id, $meta_key) {
+foreach (array('added_post_meta', 'updated_post_meta', 'deleted_post_meta') as $retails_openai_hook) {
+	add_action($retails_openai_hook, function ($meta_id, $object_id, $meta_key) {
 		if ('_product_group_data' === $meta_key) {
-			wholesale_openai_feed_clear();
+			retails_openai_feed_clear();
 		}
 	}, 10, 3);
 }
-foreach (array('updated_option', 'added_option', 'deleted_option') as $wholesale_openai_hook) {
-	add_action($wholesale_openai_hook, function ($option) {
-		if (0 === strpos((string) $option, 'wholesale_') && WHOLESALE_OPENAI_FEED_CACHE !== $option) {
-			wholesale_openai_feed_clear();
+foreach (array('updated_option', 'added_option', 'deleted_option') as $retails_openai_hook) {
+	add_action($retails_openai_hook, function ($option) {
+		if (0 === strpos((string) $option, 'retails_') && RETAILS_OPENAI_FEED_CACHE !== $option) {
+			retails_openai_feed_clear();
 		}
 	});
 }
-unset($wholesale_openai_hook);
+unset($retails_openai_hook);

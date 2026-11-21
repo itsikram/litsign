@@ -14,16 +14,16 @@ $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $terms_page = get_page_by_path('terms-conditions');
 $terms_url = $terms_page ? get_permalink($terms_page) : home_url('/terms-conditions/');
-$warranty_url = wholesale_guide_url('warranty');
-$locations_url = wholesale_guide_url('locations');
+$warranty_url = retails_guide_url('warranty');
+$locations_url = retails_guide_url('locations');
 
 $rate_list = static function ($setting) {
-	return array_values(array_map('floatval', array_filter(explode(',', (string) wholesale_get_setting($setting)), 'is_numeric')));
+	return array_values(array_map('floatval', array_filter(explode(',', (string) retails_get_setting($setting)), 'is_numeric')));
 };
 $standard_rates = $rate_list('standard_shipping_options');
 $channel_rates = $rate_list('channel_shipping_options');
-$free_min = wholesale_free_shipping_amount();
-$free_channel_min = wholesale_free_shipping_amount(true);
+$free_min = retails_free_shipping_amount();
+$free_channel_min = retails_free_shipping_amount(true);
 // One line for the offers that are switched on, e.g. "... $100 or more (orders with channel letters: $1,000 or more)".
 $free_note = '';
 if ($free_min && $free_channel_min && $free_min === $free_channel_min) {
@@ -39,7 +39,7 @@ $money = static function ($rates, $index) {
 	return isset($rates[$index]) ? '$' . number_format($rates[$index], 2) : '&ndash;';
 };
 
-wholesale_seo_set_page_faq(array(
+retails_seo_set_page_faq(array(
 	array(
 		'q' => 'Do you ship to all 50 states?',
 		'a' => 'Yes. Every order is made to order and shipped from Washington or California to your address anywhere in the United States. Pickup isn&rsquo;t available.',
@@ -72,7 +72,7 @@ get_header();
 <main id="primary" class="sf-page gd-page">
 	<section class="sf-hero" aria-labelledby="gd-title">
 		<div class="container">
-			<?php wholesale_breadcrumbs(); ?>
+			<?php retails_breadcrumbs(); ?>
 			<p class="cl-kicker">Shipping &amp; returns</p>
 			<h1 id="gd-title" class="sf-hero-title">Shipping &amp; Returns</h1>
 			<p class="sf-hero-lead">Every sign is made to order and shipped from Washington or California to all 50 states. Choose standard, 3-day, 2-day or overnight shipping at checkout; the dates you see there include production time.</p>
@@ -158,12 +158,12 @@ get_header();
 			<p class="cl-kicker">Questions</p>
 			<h2 id="gd-faq-title" class="cl-section-title">Shipping FAQ</h2>
 			<div class="cl-faq-list">
-				<?php wholesale_seo_render_faq(); ?>
+				<?php retails_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>
 
-	<?php wholesale_guide_render_help('Questions About Your Delivery?', 'Call or email with your order number and we&rsquo;ll check its production and shipping status.'); ?>
+	<?php retails_guide_render_help('Questions About Your Delivery?', 'Call or email with your order number and we&rsquo;ll check its production and shipping status.'); ?>
 </main>
 
 <?php

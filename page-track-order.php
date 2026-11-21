@@ -9,16 +9,16 @@
  * @package litsign
  */
 
-$track_number = isset($_GET['order']) ? wholesale_normalize_order_number(wp_unslash($_GET['order'])) : '';
+$track_number = isset($_GET['order']) ? retails_normalize_order_number(wp_unslash($_GET['order'])) : '';
 $track_email = '';
 $track_error = '';
 $order_post_id = 0;
 
 // Lookups are read-only, so no nonce (it would go stale behind page caching); failed attempts are rate limited per IP.
 if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? '') && isset($_POST['track_order_number'])) {
-    $track_number = wholesale_normalize_order_number(wp_unslash($_POST['track_order_number']));
+    $track_number = retails_normalize_order_number(wp_unslash($_POST['track_order_number']));
     $track_email = sanitize_email(wp_unslash($_POST['track_order_email'] ?? ''));
-    $limit_key = 'wholesale_track_fail_' . md5((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+    $limit_key = 'retails_track_fail_' . md5((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
     $failures = (int) get_transient($limit_key);
 
     if ($failures >= 10) {
@@ -26,7 +26,7 @@ if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? '') && isset($_POST['track_order_n
     } elseif ('' === $track_number || !is_email($track_email)) {
         $track_error = 'Enter your order number and the email address you used at checkout.';
     } else {
-        $order_post_id = wholesale_find_order_for_tracking($track_number, $track_email);
+        $order_post_id = retails_find_order_for_tracking($track_number, $track_email);
         if (!$order_post_id) {
             set_transient($limit_key, $failures + 1, 15 * MINUTE_IN_SECONDS);
             $track_error = 'We couldn\'t find an order with that number and email. Check your order confirmation email and try again.';
@@ -36,25 +36,25 @@ if ('POST' === ($_SERVER['REQUEST_METHOD'] ?? '') && isset($_POST['track_order_n
 
 if ($order_post_id) {
     $status = get_post_status($order_post_id);
-    $status_info = wholesale_order_status_info($order_post_id);
+    $status_info = retails_order_status_info($order_post_id);
     $current = $status_info[$status] ?? array('label' => ucwords(str_replace(array('-', '_'), ' ', (string) $status)), 'tone' => 'muted', 'step' => 1, 'note' => '');
     $step = (int) $current['step'];
-    $timeline = wholesale_order_timeline($order_post_id);
-    $items = wholesale_decode_order_meta_array(get_post_meta($order_post_id, 'product_json', true));
-    $cost = wholesale_decode_order_meta_array(get_post_meta($order_post_id, 'product_cost', true));
-    $shipping = wholesale_decode_order_meta_array(get_post_meta($order_post_id, 'shipping_address', true));
+    $timeline = retails_order_timeline($order_post_id);
+    $items = retails_decode_order_meta_array(get_post_meta($order_post_id, 'product_json', true));
+    $cost = retails_decode_order_meta_array(get_post_meta($order_post_id, 'product_cost', true));
+    $shipping = retails_decode_order_meta_array(get_post_meta($order_post_id, 'shipping_address', true));
     $ship_prefix = isset($shipping['shipping_fname']) ? 'shipping_' : 'billing_';
     if ('billing_' === $ship_prefix) {
-        $shipping = wholesale_decode_order_meta_array(get_post_meta($order_post_id, 'billing_address', true));
+        $shipping = retails_decode_order_meta_array(get_post_meta($order_post_id, 'billing_address', true));
     }
     $ship_place = trim(($shipping[$ship_prefix . 'city'] ?? '') . ', ' . ($shipping[$ship_prefix . 'state'] ?? ''), ', ');
     $ship_by = get_post_meta($order_post_id, 'estimate_delivery_time', true);
     $tracking = get_post_meta($order_post_id, '_tracking_number', true);
     $carrier = get_post_meta($order_post_id, '_tracking_carrier', true);
-    $tracking_url = $tracking ? wholesale_tracking_url($carrier, $tracking) : '';
+    $tracking_url = $tracking ? retails_tracking_url($carrier, $tracking) : '';
     $carrier_names = array('ups' => 'UPS', 'fedex' => 'FedEx', 'usps' => 'USPS');
     $carrier_label = $carrier_names[strtolower((string) $carrier)] ?? ($carrier ? strtoupper($carrier) : '');
-    $order_number = wholesale_order_number($order_post_id);
+    $order_number = retails_order_number($order_post_id);
     $owner = absint(get_post_meta($order_post_id, 'user_id', true));
     $can_view_full = current_user_can('edit_post', $order_post_id) || ($owner && get_current_user_id() === $owner);
 
@@ -117,12 +117,12 @@ get_header();
                                 <p class="track-note"><?php echo esc_html($current['note']); ?></p>
                             <?php endif; ?>
                         </div>
-                        <?php echo wholesale_order_status_badge($status, $order_post_id); // Escaped in the helper. ?>
+                        <?php echo retails_order_status_badge($status, $order_post_id); // Escaped in the helper. ?>
                     </div>
 
-                    <?php echo wholesale_order_steps_html($order_post_id); // Every stage, step by step; escaped in the helper. ?>
+                    <?php echo retails_order_steps_html($order_post_id); // Every stage, step by step; escaped in the helper. ?>
 
-                    <?php $shipments_html = (string) apply_filters('wholesale_order_shipments_html', '', $order_post_id, 'track'); ?>
+                    <?php $shipments_html = (string) apply_filters('retails_order_shipments_html', '', $order_post_id, 'track'); ?>
                     <?php if ('' !== $shipments_html) : ?>
                         <?php echo $shipments_html; // Every package with live status, escaped by the tracking sync plugin. ?>
                     <?php elseif ($tracking) : ?>
@@ -186,7 +186,7 @@ get_header();
                             // The tracking number goes with the first shipped event only, not every delivery stage after it.
                             $first_shipped = null;
                             foreach ($timeline as $index => $event) {
-                                if (null === $first_shipped && wholesale_order_is_shipped($event['status'])) {
+                                if (null === $first_shipped && retails_order_is_shipped($event['status'])) {
                                     $first_shipped = count($timeline) - 1 - $index;
                                 }
                             }

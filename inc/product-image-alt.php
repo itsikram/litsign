@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
  * @param string $alt Raw alt text.
  * @return bool
  */
-function wholesale_product_image_alt_is_auto_generated($alt)
+function retails_product_image_alt_is_auto_generated($alt)
 {
 	$alt = trim((string) $alt);
 	if ('' === $alt) {
@@ -53,7 +53,7 @@ function wholesale_product_image_alt_is_auto_generated($alt)
  * @param int $product_id Product ID.
  * @return string
  */
-function wholesale_product_image_alt_product_title($product_id)
+function retails_product_image_alt_product_title($product_id)
 {
 	$product_id = (int) $product_id;
 	if (!$product_id) {
@@ -61,15 +61,15 @@ function wholesale_product_image_alt_product_title($product_id)
 	}
 
 	$heading = '';
-	if (function_exists('wholesale_seo_channel_letter_product')) {
-		$seo = wholesale_seo_channel_letter_product($product_id);
+	if (function_exists('retails_seo_channel_letter_product')) {
+		$seo = retails_seo_channel_letter_product($product_id);
 		if (!empty($seo['heading'])) {
 			$heading = trim((string) $seo['heading']);
 		}
 	}
 
-	if ('' === $heading && function_exists('wholesale_seo_product_name')) {
-		$heading = wholesale_seo_product_name($product_id);
+	if ('' === $heading && function_exists('retails_seo_product_name')) {
+		$heading = retails_seo_product_name($product_id);
 	}
 
 	if ('' === $heading) {
@@ -85,7 +85,7 @@ function wholesale_product_image_alt_product_title($product_id)
  * @param int $product_id Product ID.
  * @return string
  */
-function wholesale_product_image_alt_category_name($product_id)
+function retails_product_image_alt_category_name($product_id)
 {
 	$product_id = (int) $product_id;
 	if (!$product_id) {
@@ -115,7 +115,7 @@ function wholesale_product_image_alt_category_name($product_id)
  * @param string $url Optional image URL.
  * @return int
  */
-function wholesale_product_image_alt_resolve_attachment_id($product_id, $attachment_id = 0, $url = '')
+function retails_product_image_alt_resolve_attachment_id($product_id, $attachment_id = 0, $url = '')
 {
 	$product_id = (int) $product_id;
 	$attachment_id = (int) $attachment_id;
@@ -149,7 +149,7 @@ function wholesale_product_image_alt_resolve_attachment_id($product_id, $attachm
  * @param int $index Gallery index.
  * @return string
  */
-function wholesale_product_image_alt_view_label($attachment_id, $index)
+function retails_product_image_alt_view_label($attachment_id, $index)
 {
 	$attachment_id = (int) $attachment_id;
 	$attachment_title = $attachment_id ? (string) get_the_title($attachment_id) : '';
@@ -186,7 +186,7 @@ function wholesale_product_image_alt_view_label($attachment_id, $index)
  * @param int $product_id Product ID.
  * @return string
  */
-function wholesale_product_image_alt_product_detail($product_id)
+function retails_product_image_alt_product_detail($product_id)
 {
 	$product_id = (int) $product_id;
 	if (!$product_id) {
@@ -254,7 +254,7 @@ function wholesale_product_image_alt_product_detail($product_id)
  * @param int $index Gallery index.
  * @return string
  */
-function wholesale_product_image_alt($product_id, $attachment_id = 0, $index = 0)
+function retails_product_image_alt($product_id, $attachment_id = 0, $index = 0)
 {
 	$product_id = (int) $product_id;
 	$attachment_id = (int) $attachment_id;
@@ -266,14 +266,14 @@ function wholesale_product_image_alt($product_id, $attachment_id = 0, $index = 0
 
 	if ($attachment_id) {
 		$existing = trim((string) get_post_meta($attachment_id, '_wp_attachment_image_alt', true));
-		if ('' !== $existing && !wholesale_product_image_alt_is_auto_generated($existing)) {
+		if ('' !== $existing && !retails_product_image_alt_is_auto_generated($existing)) {
 			return $existing;
 		}
 	}
 
-	$product_name = wholesale_product_image_alt_product_title($product_id);
-	$category_name = wholesale_product_image_alt_category_name($product_id);
-	$detail = wholesale_product_image_alt_product_detail($product_id);
+	$product_name = retails_product_image_alt_product_title($product_id);
+	$category_name = retails_product_image_alt_category_name($product_id);
+	$detail = retails_product_image_alt_product_detail($product_id);
 	$detail = preg_replace('/\s+/', ' ', (string) $detail);
 	$detail = trim($detail, " .");
 
@@ -282,7 +282,7 @@ function wholesale_product_image_alt($product_id, $attachment_id = 0, $index = 0
 		$category = $category_name ? $category_name : 'sign';
 		$text = sprintf('%s – %s by Storefront Sign Online', $base, $category);
 	} else {
-		$view = wholesale_product_image_alt_view_label($attachment_id, $index);
+		$view = retails_product_image_alt_view_label($attachment_id, $index);
 		$prefix = $detail ? $detail : $category_name;
 		$prefix = $prefix ? $prefix : 'product';
 		$text = sprintf('%s %s', $product_name ? $product_name : 'Product', $view);
@@ -322,7 +322,7 @@ function wholesale_product_image_alt($product_id, $attachment_id = 0, $index = 0
  * @param int|WP_Post $attachment Attachment ID or object.
  * @return array
  */
-function wholesale_product_image_alt_attachment_attributes($attr, $attachment)
+function retails_product_image_alt_attachment_attributes($attr, $attachment)
 {
 	if (is_admin()) {
 		return $attr;
@@ -345,14 +345,14 @@ function wholesale_product_image_alt_attachment_attributes($attr, $attachment)
 	// Product photos described one by one in data/image-alts.php win over the
 	// product name the templates pass in.
 	$file = (string) get_post_meta($attachment_id, '_wp_attached_file', true);
-	$photo_alt = $file && function_exists('wholesale_product_photo_alt') ? wholesale_product_photo_alt($file) : '';
+	$photo_alt = $file && function_exists('retails_product_photo_alt') ? retails_product_photo_alt($file) : '';
 	if ('' !== $photo_alt) {
 		$attr['alt'] = $photo_alt;
 		return $attr;
 	}
 
 	$alt = isset($attr['alt']) ? trim((string) $attr['alt']) : '';
-	if ('' !== $alt && !wholesale_product_image_alt_is_auto_generated($alt)) {
+	if ('' !== $alt && !retails_product_image_alt_is_auto_generated($alt)) {
 		return $attr;
 	}
 
@@ -363,16 +363,16 @@ function wholesale_product_image_alt_attachment_attributes($attr, $attachment)
 	}
 
 	if (!$product_id) {
-		$product_id = wholesale_product_image_alt_find_product_id_by_attachment($attachment_id);
+		$product_id = retails_product_image_alt_find_product_id_by_attachment($attachment_id);
 	}
 
 	if ($product_id) {
-		$attr['alt'] = wholesale_product_image_alt($product_id, $attachment_id, !empty($attr['data-gallery-index']) ? (int) $attr['data-gallery-index'] : 0);
+		$attr['alt'] = retails_product_image_alt($product_id, $attachment_id, !empty($attr['data-gallery-index']) ? (int) $attr['data-gallery-index'] : 0);
 	}
 
 	return $attr;
 }
-add_filter('wp_get_attachment_image_attributes', 'wholesale_product_image_alt_attachment_attributes', 20, 2);
+add_filter('wp_get_attachment_image_attributes', 'retails_product_image_alt_attachment_attributes', 20, 2);
 
 /**
  * Find the product that uses an attachment, whether featured or gallery.
@@ -380,14 +380,14 @@ add_filter('wp_get_attachment_image_attributes', 'wholesale_product_image_alt_at
  * @param int $attachment_id Attachment ID.
  * @return int
  */
-function wholesale_product_image_alt_find_product_id_by_attachment($attachment_id)
+function retails_product_image_alt_find_product_id_by_attachment($attachment_id)
 {
 	$attachment_id = (int) $attachment_id;
 	if (!$attachment_id) {
 		return 0;
 	}
 
-	$map = wholesale_product_image_alt_attachment_product_map();
+	$map = retails_product_image_alt_attachment_product_map();
 
 	return isset($map[$attachment_id]) ? $map[$attachment_id] : 0;
 }
@@ -399,7 +399,7 @@ function wholesale_product_image_alt_find_product_id_by_attachment($attachment_i
  *
  * @return array
  */
-function wholesale_product_image_alt_attachment_product_map()
+function retails_product_image_alt_attachment_product_map()
 {
 	static $map = null;
 	if (null !== $map) {
@@ -432,7 +432,7 @@ function wholesale_product_image_alt_attachment_product_map()
 			}
 		}
 	}
-	$url_ids = wholesale_product_image_alt_attachment_ids_by_url(array_keys($urls));
+	$url_ids = retails_product_image_alt_attachment_ids_by_url(array_keys($urls));
 
 	foreach ($products as $product_id) {
 		$used = array((int) get_post_thumbnail_id($product_id));
@@ -460,7 +460,7 @@ function wholesale_product_image_alt_attachment_product_map()
  * @param string[] $urls Image URLs.
  * @return array URL => attachment ID (0 when not found).
  */
-function wholesale_product_image_alt_attachment_ids_by_url($urls)
+function retails_product_image_alt_attachment_ids_by_url($urls)
 {
 	global $wpdb;
 
@@ -530,7 +530,7 @@ function wholesale_product_image_alt_attachment_ids_by_url($urls)
  *
  * @param int $post_id Product ID.
  */
-function wholesale_product_image_alt_backfill_product($post_id)
+function retails_product_image_alt_backfill_product($post_id)
 {
 	$post_id = (int) $post_id;
 	if (!$post_id || 'product' !== get_post_type($post_id)) {
@@ -540,8 +540,8 @@ function wholesale_product_image_alt_backfill_product($post_id)
 	$featured_id = (int) get_post_thumbnail_id($post_id);
 	if ($featured_id) {
 		$alt = trim((string) get_post_meta($featured_id, '_wp_attachment_image_alt', true));
-		if ('' === $alt || wholesale_product_image_alt_is_auto_generated($alt)) {
-			$generated = wholesale_product_image_alt($post_id, $featured_id, 0);
+		if ('' === $alt || retails_product_image_alt_is_auto_generated($alt)) {
+			$generated = retails_product_image_alt($post_id, $featured_id, 0);
 			if ('' !== $generated) {
 				update_post_meta($featured_id, '_wp_attachment_image_alt', wp_slash($generated));
 			}
@@ -559,21 +559,21 @@ function wholesale_product_image_alt_backfill_product($post_id)
 			continue;
 		}
 		$alt = trim((string) get_post_meta($attachment_id, '_wp_attachment_image_alt', true));
-		if ('' === $alt || wholesale_product_image_alt_is_auto_generated($alt)) {
-			$generated = wholesale_product_image_alt($post_id, $attachment_id, 1);
+		if ('' === $alt || retails_product_image_alt_is_auto_generated($alt)) {
+			$generated = retails_product_image_alt($post_id, $attachment_id, 1);
 			if ('' !== $generated) {
 				update_post_meta($attachment_id, '_wp_attachment_image_alt', wp_slash($generated));
 			}
 		}
 	}
 }
-add_action('save_post_product', 'wholesale_product_image_alt_backfill_product', 20);
+add_action('save_post_product', 'retails_product_image_alt_backfill_product', 20);
 
 /**
  * WP-CLI command for previewing and writing product image alt text.
  */
 if (defined('WP_CLI') && WP_CLI) {
-	class WP_CLI_Wholesale_Product_Image_Alt extends WP_CLI_Command
+	class WP_CLI_Retails_Product_Image_Alt extends WP_CLI_Command
 	{
 		/**
 		 * Preview or generate product image alt text.
@@ -615,8 +615,8 @@ if (defined('WP_CLI') && WP_CLI) {
 				$featured = get_post_thumbnail_id($id);
 				if ($featured) {
 					$alt = trim((string) get_post_meta($featured, '_wp_attachment_image_alt', true));
-					$would = wholesale_product_image_alt($id, $featured, 0);
-					if ('' !== $would && (!$force || '' === $alt || wholesale_product_image_alt_is_auto_generated($alt))) {
+					$would = retails_product_image_alt($id, $featured, 0);
+					if ('' !== $would && (!$force || '' === $alt || retails_product_image_alt_is_auto_generated($alt))) {
 						$rows[] = array($id, $featured, $alt, $would, 'featured');
 					}
 				}
@@ -630,8 +630,8 @@ if (defined('WP_CLI') && WP_CLI) {
 							continue;
 						}
 						$alt = trim((string) get_post_meta($attachment_id, '_wp_attachment_image_alt', true));
-						$would = wholesale_product_image_alt($id, $attachment_id, $i);
-						if ('' !== $would && (!$force || '' === $alt || wholesale_product_image_alt_is_auto_generated($alt))) {
+						$would = retails_product_image_alt($id, $attachment_id, $i);
+						if ('' !== $would && (!$force || '' === $alt || retails_product_image_alt_is_auto_generated($alt))) {
 							$rows[] = array($id, $attachment_id, $alt, $would, 'gallery');
 						}
 						$i++;
@@ -661,5 +661,5 @@ if (defined('WP_CLI') && WP_CLI) {
 		}
 	}
 
-	WP_CLI::add_command('wholesale product-alt', 'WP_CLI_Wholesale_Product_Image_Alt');
+	WP_CLI::add_command('retails product-alt', 'WP_CLI_Retails_Product_Image_Alt');
 }

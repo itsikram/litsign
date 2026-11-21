@@ -13,7 +13,7 @@
 (function () {
 	'use strict';
 
-	var cfg = window.wholesaleOrderRefund;
+	var cfg = window.retailsOrderRefund;
 	if (!cfg) {
 		return;
 	}
@@ -345,7 +345,7 @@
 			yes.disabled = true;
 			back.disabled = true;
 			yes.textContent = 'Scheduling…';
-			schedPost('wholesale_refund_schedule', {
+			schedPost('retails_refund_schedule', {
 				amount: value().toFixed(2),
 				reason: reason.value.trim(),
 				notify: notify.checked ? '1' : ''
@@ -400,7 +400,7 @@
 	 */
 	var setupScheduleCard = function (actionsRow) {
 		var s = cfg.schedule;
-		var payBox = document.querySelector('.wholesale-fulfillment');
+		var payBox = document.querySelector('.retails-fulfillment');
 		if (!s || !payBox) {
 			return;
 		}
@@ -469,7 +469,7 @@
 				check.addEventListener('click', function () {
 					busy(true);
 					say('Checking with Converge…');
-					schedPost('wholesale_refund_schedule_run').then(function (response) {
+					schedPost('retails_refund_schedule_run').then(function (response) {
 						busy(false);
 						if (!response.ok) {
 							say(response.error || 'The check failed.');
@@ -485,7 +485,7 @@
 				var cancel = el('button', { type: 'button', class: 'button button-small opr-sched__cancel', text: cancelLabel });
 				arm(cancel, cancelLabel, state === 'waiting' ? 'Yes, cancel it' : 'Yes, dismiss', function () {
 					busy(true);
-					schedPost('wholesale_refund_schedule_cancel').then(function (response) {
+					schedPost('retails_refund_schedule_cancel').then(function (response) {
 						busy(false);
 						say(response.ok ? response.message : (response.error || 'It could not be cancelled.'), !!response.ok);
 					});
@@ -498,7 +498,7 @@
 		}
 		card.appendChild(message);
 
-		var statusSelect = document.getElementById('wholesale_payment_status');
+		var statusSelect = document.getElementById('retails_payment_status');
 		var statusRow = statusSelect && statusSelect.closest('p');
 		if (actionsRow) {
 			actionsRow.insertAdjacentElement('beforebegin', card);
@@ -693,7 +693,7 @@
 		if (!cfg.record) {
 			return;
 		}
-		var payBox = document.querySelector('.wholesale-fulfillment');
+		var payBox = document.querySelector('.retails-fulfillment');
 		if (!payBox || document.querySelector('.opr-dialog')) {
 			return;
 		}
@@ -701,7 +701,7 @@
 		var trigger = cfg.kind === 'none'
 			? el('button', { type: 'button', class: 'button opr-record-main', 'aria-haspopup': 'dialog' }, [icon('undo'), ' Record a refund'])
 			: el('button', { type: 'button', class: 'opr-record-link', 'aria-haspopup': 'dialog', text: 'Refunded outside the site? Record it' });
-		var statusSelect = document.getElementById('wholesale_payment_status');
+		var statusSelect = document.getElementById('retails_payment_status');
 		var statusRow = statusSelect && statusSelect.closest('p');
 		if (actionsRow) {
 			actionsRow.insertAdjacentElement('afterend', trigger);
@@ -866,7 +866,7 @@
 			state.busy = true;
 			showAlert('');
 			var body = new FormData();
-			body.append('action', 'wholesale_pa_action');
+			body.append('action', 'retails_pa_action');
 			body.append('nonce', cfg.record.nonce);
 			body.append('do', 'record_refund');
 			body.append('id', cfg.postId);
@@ -1031,7 +1031,7 @@
 		if (cfg.kind === 'wallet') {
 			return;
 		}
-		var payBox = document.querySelector('.wholesale-fulfillment');
+		var payBox = document.querySelector('.retails-fulfillment');
 		if (!payBox) {
 			return;
 		}
@@ -1053,7 +1053,7 @@
 			list,
 			el('p', { class: 'opr-net' }, [el('span', { text: 'Net payment' }), el('strong', { text: money(cfg.remaining) })])
 		]);
-		var statusSelect = document.getElementById('wholesale_payment_status');
+		var statusSelect = document.getElementById('retails_payment_status');
 		var statusRow = statusSelect && statusSelect.closest('p');
 		if (statusRow && payBox.contains(statusRow)) {
 			statusRow.parentNode.insertBefore(wrap, statusRow);

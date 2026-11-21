@@ -2,7 +2,7 @@
 /**
  * Descriptive alt text for product photos, keyed by the file's path under
  * wp-content/uploads/ (the full-size file; resized and converted copies are
- * matched by wholesale_product_photo_alt()). Written from the photos
+ * matched by retails_product_photo_alt()). Written from the photos
  * themselves on 2026-10-25. Add a line when a new product photo is uploaded.
  *
  * @package litsign

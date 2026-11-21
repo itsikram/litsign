@@ -16,7 +16,7 @@
  * @package litsign
  */
 
-$category_url = wholesale_category_url('adhesive-products');
+$category_url = retails_category_url('adhesive-products');
 
 // Google Ads landing page: an on-page quote form (#quote) that saves the ad
 // click and fires the lead conversion (inc/quote-form.php).
@@ -26,19 +26,19 @@ $quote_form = array(
 	'project_label' => 'Window graphics & vinyl',
 	'interests' => array('Window perf (one-way vision)', 'Frosted window film', 'Clear window vinyl', 'Window clings', 'Printed vinyl decals', 'Wall graphics', 'Floor graphics', 'Not sure yet'),
 );
-wholesale_quote_form_handle($quote_form);
-wholesale_track_quote_lead('window_graphics_page');
+retails_quote_form_handle($quote_form);
+retails_track_quote_lead('window_graphics_page');
 // Quote links on this page jump to the form instead of leaving for /contact/.
 $contact_url = '#quote';
 
 $product_url = static function ($slug, $fallback = '') {
-	$product = wholesale_seo_product($slug);
+	$product = retails_seo_product($slug);
 	return $product ? get_permalink($product) : $fallback;
 };
 
 // $eager: 'high' for the page's main image, true for other above-the-fold images.
 $product_image = static function ($slug, $alt, $sizes, $eager = false) {
-	$product = wholesale_seo_product($slug);
+	$product = retails_seo_product($slug);
 	if (!$product || !has_post_thumbnail($product)) {
 		return '';
 	}
@@ -114,7 +114,7 @@ $businesses = array(
 );
 
 // One query for every product this page shows (instead of one lookup per slug).
-wholesale_seo_prime_products(array_merge(
+retails_seo_prime_products(array_merge(
 	array_column($films, 1),
 	array_column($compare, 0),
 	array_merge(...array_map(static function ($business) {
@@ -122,18 +122,18 @@ wholesale_seo_prime_products(array_merge(
 	}, $businesses))
 ));
 
-$perf_price = wholesale_seo_product_starting_text('adhesive-window-perf');
-$decal_price = wholesale_seo_product_starting_text('adhesive-products');
+$perf_price = retails_seo_product_starting_text('adhesive-window-perf');
+$decal_price = retails_seo_product_starting_text('adhesive-products');
 
 
 
 // The films are this page's item list in structured data.
-$GLOBALS['wholesale_page_items'] = array_values(array_filter(array_map(static function ($film) {
-	return wholesale_seo_product($film[1]);
+$GLOBALS['retails_page_items'] = array_values(array_filter(array_map(static function ($film) {
+	return retails_seo_product($film[1]);
 }, $films)));
-$GLOBALS['wholesale_page_image'] = ($hero = wholesale_seo_product('adhesive-window-perf')) ? get_the_post_thumbnail_url($hero, 'large') : '';
+$GLOBALS['retails_page_image'] = ($hero = retails_seo_product('adhesive-window-perf')) ? get_the_post_thumbnail_url($hero, 'large') : '';
 
-wholesale_seo_set_page_faq(array(
+retails_seo_set_page_faq(array(
 	array(
 		'q' => 'How much do custom window graphics cost?',
 		'a' => 'Window graphics are priced per square foot, so the price depends on the film and the size' . ($perf_price ? ': window perf starts at ' . $perf_price : '') . ($decal_price ? ' and printed vinyl decals at ' . $decal_price : '') . '. Enter your width and height on any product and your price updates before you add it to the cart.',
@@ -173,23 +173,23 @@ wholesale_seo_set_page_faq(array(
 ));
 
 // Register the matching image before the header prints its preload links.
-list($page_hero_image, $page_hero_mobile) = wholesale_landing_page_hero_images('windows');
-$GLOBALS['wholesale_hero_image'] = $page_hero_image;
-$GLOBALS['wholesale_hero_mobile_image'] = $page_hero_mobile;
+list($page_hero_image, $page_hero_mobile) = retails_landing_page_hero_images('windows');
+$GLOBALS['retails_hero_image'] = $page_hero_image;
+$GLOBALS['retails_hero_mobile_image'] = $page_hero_mobile;
 $page_hero_background = "--lp-desktop: url('" . esc_url($page_hero_image) . "'); --lp-mobile: url('" . esc_url($page_hero_mobile) . "');";
 
 get_header();
 
 // Hero proof point: the Google rating, linked to the reviews page.
-$google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
+$google_reviews = function_exists('retails_google_reviews') ? retails_google_reviews() : null;
 $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_reviews : null;
-$reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews_page_url() : home_url('/reviews/');
+$reviews_url = function_exists('retails_reviews_page_url') ? retails_reviews_page_url() : home_url('/reviews/');
 ?>
 
 <main id="primary" class="sf-page bd-page wg-page">
 	<section class="bd-hero" aria-labelledby="wg-title" style="<?php echo esc_attr($page_hero_background); ?>">
 		<div class="container">
-			<?php wholesale_breadcrumbs(); ?>
+			<?php retails_breadcrumbs(); ?>
 			<div class="bd-hero-grid">
 				<div class="bd-hero-copy">
 					<p class="home-hero-eyebrow">UV printed &middot; Made in Renton, WA &middot; Ships to all 50 states</p>
@@ -200,16 +200,16 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					<?php endif; ?>
 					<?php if ($google_rating) : ?>
 						<p class="home-hero-proof">
-							<a class="home-hero-rating" href="<?php echo esc_url($reviews_url); ?>"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
+							<a class="home-hero-rating" href="<?php echo esc_url($reviews_url); ?>"><?php echo retails_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
 						</p>
 					<?php endif; ?>
 					<p class="home-hero-lead"><?php echo $type ? wp_kses_post($types[$type][1]) : 'Turn your windows into a display for your business. Choose see-through, privacy or removable graphics, printed to your size.'; ?> See your price before checkout.</p>
 					<div class="home-hero-actions home-hero-actions--cl">
 						<a class="home-hero-shop-button" href="<?php echo esc_url($type ? '#' . $type : '#films'); ?>"><span class="home-hero-button-text">See Films &amp; Prices<?php if ($decal_price) : ?><small>From <?php echo wp_kses_post($decal_price); ?></small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
-						<a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
+						<a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo retails_home_icon('message'); ?> Get a Free Quote</a>
 					</div>
 					<p class="home-hero-help">
-						<?php echo wholesale_home_icon('phone'); ?>
+						<?php echo retails_home_icon('phone'); ?>
 						Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
 						<span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT</span>
 					</p>
@@ -222,19 +222,19 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 	<div class="home-hero-features bd-features" aria-label="Why order from us">
 		<div class="container home-hero-feature-grid">
 			<div class="home-hero-feature">
-				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('check'); ?></span>
+				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo retails_home_icon('check'); ?></span>
 				<span><strong>See Your Price Online</strong><small>Priced per square foot.</small></span>
 			</div>
 			<div class="home-hero-feature">
-				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('clock'); ?></span>
+				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo retails_home_icon('clock'); ?></span>
 				<span><strong>Ships Next Business Day</strong><small>Order with artwork by 4pm PST.</small></span>
 			</div>
 			<div class="home-hero-feature">
-				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('badge'); ?></span>
+				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo retails_home_icon('badge'); ?></span>
 				<span><strong>Sign Makers Since 2002</strong><small>Help from real specialists.</small></span>
 			</div>
 			<div class="home-hero-feature">
-				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo wholesale_home_icon('pin'); ?></span>
+				<span class="home-hero-feature-icon" aria-hidden="true"><?php echo retails_home_icon('pin'); ?></span>
 				<span><strong>Made in Renton, WA</strong><small>Shipped to all 50 states.</small></span>
 			</div>
 		</div>
@@ -263,7 +263,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					if (!$url) {
 						continue;
 					}
-					$price = wholesale_seo_product_starting_text($film[1]);
+					$price = retails_seo_product_starting_text($film[1]);
 					$name = wp_strip_all_tags(html_entity_decode($film[2], ENT_QUOTES, 'UTF-8'));
 					?>
 					<article class="sf-type-card bd-card wg-card<?php echo $type === $film[0] ? ' is-highlighted' : ''; ?>" id="<?php echo esc_attr($film[0]); ?>">
@@ -283,6 +283,8 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 							<span class="wg-card-tag"><?php echo wp_kses_post($film[4]); ?></span>
 							<h3><a href="<?php echo esc_url($url); ?>"><?php echo wp_kses_post($film[2]); ?></a></h3>
 							<p><?php echo wp_kses_post($film[3]); ?></p>
+							<?php $film_product = retails_seo_product($film[1]); ?>
+							<?php echo function_exists('retails_card_trust') ? retails_card_trust($film_product ? $film_product->ID : 0, $film_product ? '' : 'ship') : ''; // Escaped in helper. ?>
 							<?php if ($price) : ?>
 								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($price); ?></p>
 							<?php endif; ?>
@@ -311,7 +313,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 									<li>
 										<a href="<?php echo esc_url($url); ?>">
 											<span><?php echo wp_kses_post($label); ?></span>
-											<?php $price = wholesale_seo_product_starting_text($slug); ?>
+											<?php $price = retails_seo_product_starting_text($slug); ?>
 											<?php if ($price) : ?><small><?php echo wp_kses_post($price); ?></small><?php endif; ?>
 										</a>
 									</li>
@@ -349,7 +351,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 									<td><?php echo esc_html($row[2]); ?></td>
 									<td><?php echo esc_html($row[3]); ?></td>
 									<td><?php echo esc_html($row[4]); ?></td>
-									<td class="cl-compare-price"><?php echo wp_kses_post(wholesale_seo_product_starting_text($row[0])); ?></td>
+									<td class="cl-compare-price"><?php echo wp_kses_post(retails_seo_product_starting_text($row[0])); ?></td>
 								</tr>
 							<?php endif; ?>
 						<?php endforeach; ?>
@@ -367,7 +369,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 			</div>
 			<div class="bd-cta-actions">
 				<a class="home-hero-shop-button" href="<?php echo esc_url($contact_url); ?>">Request a Free Quote <span aria-hidden="true">&rarr;</span></a>
-				<a class="home-hero-secondary-button" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> 866-436-2101</a>
+				<a class="home-hero-secondary-button" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?> 866-436-2101</a>
 			</div>
 		</div>
 	</section>
@@ -391,7 +393,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 
 			<h3>5. Applying your graphics</h3>
 			<p>We print and ship; we don&rsquo;t install. Clean the glass, peel a few inches of backing, and work from the center out with a squeegee. Clings and air release vinyl make bubble free installs easy for one or two people, and large storefronts can be handed to a local sign installer.</p>
-			<?php if ($locations_guide_url = wholesale_guide_url('locations', true)) : ?>
+			<?php if ($locations_guide_url = retails_guide_url('locations', true)) : ?>
 				<p>Some cities limit how much of a storefront window may carry advertising. We ship to every state, and our <a href="<?php echo esc_url($locations_guide_url); ?>">state and city sign permit guides</a> link to the official rules for your area.</p>
 			<?php endif; ?>
 		</div>
@@ -431,7 +433,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 			<p class="cl-kicker">Before you order</p>
 			<h2 id="wg-faq-title" class="cl-section-title">Window Graphics FAQ</h2>
 			<div class="cl-faq-list">
-				<?php wholesale_seo_render_faq(true); ?>
+				<?php retails_seo_render_faq(true); ?>
 			</div>
 		</div>
 	</section>
@@ -443,21 +445,21 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 				<h2 id="wg-help-title">Get a Free Window Graphics Quote</h2>
 				<p>Tell us about the windows, walls or floors, the sizes and how many, and attach your logo or a photo of the space. A sign specialist will recommend the right film and price your order.</p>
 				<ul class="cl-help-details">
-					<li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
-					<li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
+					<li><?php echo retails_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+					<li><?php echo retails_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
 				</ul>
 				<div class="clq-contact">
-					<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-					<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-					<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+					<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+					<a class="cl-help-action" href="sms:+12066186543"><?php echo retails_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+					<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo retails_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
 				</div>
 			</div>
-			<?php wholesale_quote_form_render($quote_form); ?>
+			<?php retails_quote_form_render($quote_form); ?>
 		</div>
 	</section>
 
 	<nav class="cl-mobile-bar" aria-label="Quick actions">
-		<button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo wholesale_home_icon('grid'); ?> All Products</button>
+		<button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo retails_home_icon('grid'); ?> All Products</button>
 		<a class="cl-mobile-bar-quote" href="#quote">Free Quote</a>
 		<a class="cl-mobile-bar-shop" href="#films">Shop Films</a>
 	</nav>

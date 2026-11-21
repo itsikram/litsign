@@ -12,13 +12,13 @@
 
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
-$install_url = wholesale_guide_url('how-to-install-channel-letters');
-$shipping_url = wholesale_guide_url('shipping-returns');
+$install_url = retails_guide_url('how-to-install-channel-letters');
+$shipping_url = retails_guide_url('shipping-returns');
 $terms_page = get_page_by_path('terms-conditions');
 $terms_url = $terms_page ? get_permalink($terms_page) : home_url('/terms-conditions/');
-$ul_number = wholesale_guide_ul_file_number();
+$ul_number = retails_guide_ul_file_number();
 
-wholesale_seo_set_page_faq(array(
+retails_seo_set_page_faq(array(
 	array(
 		'q' => 'How long is the channel letter warranty?',
 		'a' => 'Five years from the date your sign ships, on all 7 channel letter styles, against defects in materials and workmanship.',
@@ -47,7 +47,7 @@ get_header();
 <main id="primary" class="sf-page gd-page">
 	<section class="sf-hero" aria-labelledby="gd-title">
 		<div class="container">
-			<?php wholesale_breadcrumbs(); ?>
+			<?php retails_breadcrumbs(); ?>
 			<p class="cl-kicker">Warranty</p>
 			<h1 id="gd-title" class="sf-hero-title">Our 5-Year Channel Letter Warranty</h1>
 			<p class="sf-hero-lead">Every lit sign is tested before it ships, and our channel letters are backed for five years against defects in materials and workmanship. Here&rsquo;s what that means, in plain language.</p>
@@ -137,12 +137,12 @@ get_header();
 			<p class="cl-kicker">Questions</p>
 			<h2 id="gd-faq-title" class="cl-section-title">Warranty FAQ</h2>
 			<div class="cl-faq-list">
-				<?php wholesale_seo_render_faq(); ?>
+				<?php retails_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>
 
-	<?php wholesale_guide_render_help('Need Help With Your Sign?', 'Call or email with your order number and photos. We&rsquo;ll work through it with you or your electrician.'); ?>
+	<?php retails_guide_render_help('Need Help With Your Sign?', 'Call or email with your order number and photos. We&rsquo;ll work through it with you or your electrician.'); ?>
 </main>
 
 <?php

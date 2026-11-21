@@ -9,7 +9,7 @@
 (function () {
   "use strict";
 
-  const config = window.wholesaleMiniCart || {};
+  const config = window.retailsMiniCart || {};
   const root = document.querySelector("[data-mini-cart]");
   if (!root || !config.ajaxUrl || !window.fetch) return;
 
@@ -110,7 +110,7 @@
     body.removeAttribute("aria-busy");
     updateBadges(parseInt(data.count, 10) || 0);
     loaded = true;
-    document.dispatchEvent(new CustomEvent("wholesale:cart-updated"));
+    document.dispatchEvent(new CustomEvent("retails:cart-updated"));
   };
 
   const lineOf = (el) => el.closest("[data-mc-line]");
@@ -139,7 +139,7 @@
   const refresh = () =>
     enqueue(async () => {
       try {
-        const json = await post("wholesale_mini_cart");
+        const json = await post("retails_mini_cart");
         if (json.success) render(json.data);
         else fail();
       } catch (e) {
@@ -155,7 +155,7 @@
       document.documentElement.classList.add("mc-locked");
       void root.offsetWidth;
       root.classList.add("is-open");
-      document.dispatchEvent(new CustomEvent("wholesale:minicart-open"));
+      document.dispatchEvent(new CustomEvent("retails:minicart-open"));
     }
     panel.focus({ preventScroll: true });
     if (!options.skipRefresh) refresh();
@@ -192,7 +192,7 @@
       hideToast();
       enqueue(async () => {
         try {
-          const json = await post("wholesale_mini_cart_restore");
+          const json = await post("retails_mini_cart_restore");
           if (!json.success) return fail();
           render(json.data);
           announce(`${title} is back in your cart.`);
@@ -215,7 +215,7 @@
     showAlert("", "");
     enqueue(async () => {
       try {
-        const json = await post("wholesale_mini_cart_qty", { cart_id: cartId, quantity });
+        const json = await post("retails_mini_cart_qty", { cart_id: cartId, quantity });
         if (!json.success) return fail(json.data && json.data.message);
         render(json.data);
         if (json.data.notice) showAlert("warning", json.data.notice);
@@ -233,7 +233,7 @@
     showAlert("", "");
     enqueue(async () => {
       try {
-        const json = await post("wholesale_mini_cart_remove", { cart_id: cartId });
+        const json = await post("retails_mini_cart_remove", { cart_id: cartId });
         if (!json.success) return fail(json.data && json.data.message);
         render(json.data);
         panel.focus();
@@ -332,7 +332,7 @@
   });
 
   // Close the slide-in menu if it is open when the drawer opens.
-  document.addEventListener("wholesale:minicart-open", () => {
+  document.addEventListener("retails:minicart-open", () => {
     const menuClose = document.querySelector(".main-header.mobile-menu-open .mobile-menu-close");
     if (menuClose) menuClose.click();
   });
@@ -425,7 +425,7 @@
     enqueue(async () => {
       let json;
       try {
-        json = await post("wholesale_mini_cart_add", data);
+        json = await post("retails_mini_cart_add", data);
       } catch (err) {
         // Couldn't talk to the server the AJAX way: use the regular form post
         // (utils/Cart.php sends Buy Now on to checkout).
@@ -464,7 +464,7 @@
     const added = json.data.added;
     // inc/ads-tracking.php sends the add_to_cart conversion from this. Not for an item
     // that was already in the cart (inc/mini-cart.php keeps one line).
-    if (added) document.dispatchEvent(new CustomEvent("wholesale:cart-added", { detail: added }));
+    if (added) document.dispatchEvent(new CustomEvent("retails:cart-added", { detail: added }));
     form.dataset.adding = "1"; // No more adds while the checkout page loads.
     if (button) {
       button.classList.add("is-adding");
@@ -493,9 +493,9 @@
     });
   });
 
-  // The channel letter builder posts its own add (wholesale_cl_builder_add) and hands the
-  // response here: document.dispatchEvent(new CustomEvent("wholesale:minicart-added", { detail: json })).
-  document.addEventListener("wholesale:minicart-added", (e) => {
+  // The channel letter builder posts its own add (retails_cl_builder_add) and hands the
+  // response here: document.dispatchEvent(new CustomEvent("retails:minicart-added", { detail: json })).
+  document.addEventListener("retails:minicart-added", (e) => {
     if (e.detail) showAddResult(e.detail);
   });
 
@@ -512,7 +512,7 @@
     open({ skipRefresh: true });
     const added = json.data.added;
     // inc/ads-tracking.php sends the add_to_cart conversion from this.
-    if (added) document.dispatchEvent(new CustomEvent("wholesale:cart-added", { detail: added }));
+    if (added) document.dispatchEvent(new CustomEvent("retails:cart-added", { detail: added }));
     if (json.data.notice) showAlert("warning", json.data.notice);
     else showAlert("success", added ? `${added.title} was added to your cart.` : "Added to your cart.");
     announce(json.data.notice || (added ? `${added.title} added to your cart.` : "Added to your cart."));

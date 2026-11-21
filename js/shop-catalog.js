@@ -220,6 +220,7 @@
 			fragment.appendChild(item.el);
 		});
 		grid.appendChild(fragment);
+		syncGalleries();
 
 		const total = matches.length;
 		const shown = Math.min(total, visibleLimit);
@@ -339,7 +340,7 @@
 		visibleLimit += pageSize;
 		update({ resetPage: false, url: false });
 		if (firstNew) {
-			const link = firstNew.querySelector('a');
+			const link = firstNew.querySelector('.sc-card-title a');
 			if (link) link.focus({ preventScroll: true });
 		}
 	});
@@ -457,6 +458,74 @@
 		}
 	});
 	drawerQuery.addEventListener('change', (event) => { if (!event.matches) closeDrawer(); });
+
+	/* ---------- Card photo galleries ---------- */
+
+	// Swipe on touch screens, arrows on hover, a 1/N counter that follows the
+	// photo in view. Later photos wait in data-sc-src/srcset (inc/shop-catalog.php)
+	// and load once the visitor reaches for the gallery: hover, touch or focus.
+	const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+	const galleries = [];
+	grid.querySelectorAll('[data-sc-gallery]').forEach((media) => {
+		const track = media.querySelector('.sc-gal-track');
+		const counter = media.querySelector('[data-sc-index]');
+		const total = track ? track.children.length : 0;
+		if (!track || total < 2) return;
+
+		let current = 0;
+		let warmed = false;
+		const warm = () => {
+			if (warmed) return;
+			warmed = true;
+			track.querySelectorAll('img[data-sc-src]').forEach((img) => {
+				img.loading = 'eager';
+				// "auto" only works on lazy images; left in, browsers size for the full window.
+				img.sizes = img.sizes.replace(/^auto,\s*/, '');
+				if (img.dataset.scSrcset) img.srcset = img.dataset.scSrcset;
+				img.src = img.dataset.scSrc;
+				img.removeAttribute('data-sc-src');
+				img.removeAttribute('data-sc-srcset');
+			});
+		};
+		const show = (index) => {
+			current = index;
+			if (counter) counter.textContent = String(index + 1);
+		};
+		const sync = () => {
+			const index = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+			if (index !== current && index >= 0 && index < total) show(index);
+		};
+		const go = (step) => {
+			warm();
+			const next = (current + step + total) % total;
+			track.scrollTo({ left: next * track.clientWidth, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+		};
+
+		let ticking = false;
+		track.addEventListener('scroll', () => {
+			if (ticking) return;
+			ticking = true;
+			requestAnimationFrame(() => {
+				ticking = false;
+				sync();
+			});
+		}, { passive: true });
+		media.addEventListener('pointerenter', warm);
+		media.addEventListener('touchstart', warm, { passive: true });
+		media.addEventListener('focusin', warm);
+		media.querySelector('[data-sc-prev]').addEventListener('click', () => go(-1));
+		media.querySelector('[data-sc-next]').addEventListener('click', () => go(1));
+
+		galleries.push({ moved: () => current !== 0, sync });
+	});
+
+	// Filtering and sorting re-insert the cards, which can reset a gallery's
+	// scroll position; put the counter back in step with the photo in view.
+	function syncGalleries() {
+		galleries.forEach((gallery) => {
+			if (gallery.moved()) gallery.sync();
+		});
+	}
 
 	/* ---------- Init ---------- */
 

@@ -27,16 +27,16 @@ $price_per_sqft = floatval(get_post_meta(get_the_ID(), '_price_per_sqft', true))
 $product_min_price = round(floatval($product_min_sqft) * floatval($price_per_sqft), 2);
 $product_discount_percent = (float) get_post_meta(get_the_ID(), '_discount_percent', true);
 // The everyday price is the price after $product_discount_percent; only a dated sale
-// (wholesale_product_promotion()) is shown as a discount.
-$product_promotion = wholesale_product_promotion(get_the_ID());
+// (retails_product_promotion()) is shown as a discount.
+$product_promotion = retails_product_promotion(get_the_ID());
 $product_promo_percent = $product_promotion ? (float) $product_promotion['percent'] : 0;
-$product_stock_status = wholesale_product_stock_status(get_the_ID());
+$product_stock_status = retails_product_stock_status(get_the_ID());
 // A size link (?size=36x72, from ads and Shopping) opens on that size, with its price in the HTML (inc/size-chips.php).
-$size_link = wholesale_size_link(get_the_ID());
+$size_link = retails_size_link(get_the_ID());
 
 // Group buttons ("Graphic + Frame" / "Graphic Only"), inc/product-group-swap.php: the group of
 // the product the URL names (?graphic_only=true shows another member on that URL).
-$product_group_members = wholesale_product_group_for_page();
+$product_group_members = retails_product_group_for_page();
 $product_has_group = count($product_group_members) > 1;
 $product_attr_json = get_post_meta(get_the_ID(), 'product_attr', true);
 $product_attr_array = json_decode((string) $product_attr_json);
@@ -102,7 +102,7 @@ if (
     isset($_REQUEST['save_design'], $_REQUEST['design_id'], $_REQUEST['design_data'])
     && Cart::is_session_design($_REQUEST['design_id'])
 ) {
-    wholesale_store_session_cl_design($product_id, $_REQUEST['design_id'], $_REQUEST['design_data']);
+    retails_store_session_cl_design($product_id, $_REQUEST['design_id'], $_REQUEST['design_data']);
 
     wp_redirect(get_permalink());
 }
@@ -114,8 +114,8 @@ if (isset($_SESSION['design_data_' . $product_id])) {
     $design_data = stripslashes($_SESSION['design_data_' . $product_id]);
     $design_data_array = json_decode($design_data, true);
     // Re-price the saved design: its stored total goes stale when the price table changes.
-    if (is_array($design_data_array) && function_exists('wholesale_cl_design_total')) {
-        $fresh_total = wholesale_cl_design_total($design_data_array, $product_id);
+    if (is_array($design_data_array) && function_exists('retails_cl_design_total')) {
+        $fresh_total = retails_cl_design_total($design_data_array, $product_id);
         if ($fresh_total > 0) {
             $design_data_array['total_cost'] = $fresh_total;
         }
@@ -154,31 +154,33 @@ get_header();
 
 <?php // data-product-page: the block a product group button swaps (js/product-group-swap.js). ?>
 <div class="container  product-details" data-product-page="<?php echo (int) get_the_ID(); ?>">
-    <?php wholesale_breadcrumbs(); ?>
+    <?php retails_breadcrumbs(); ?>
     <main id="primary">
     <article <?php post_class('product-article'); ?>>
-    <?php $product_seo = wholesale_seo_channel_letter_product(get_the_ID()); ?>
+    <?php $product_seo = retails_seo_channel_letter_product(get_the_ID()); ?>
     <?php
     // The H1 is the name shoppers search for ("Window Perf Vinyl"); a catalog code
     // ("AV 6 – Adhesive Window Perf", "Type 1 – ...") shows above it for repeat buyers.
-    $product_heading = !empty($product_seo['heading']) ? $product_seo['heading'] : wholesale_seo_product_search_name(get_the_ID());
+    $product_heading = !empty($product_seo['heading']) ? $product_seo['heading'] : retails_seo_product_search_name(get_the_ID());
     // Graphic-only, flag-only and hardware-only items say so in the H1 (inc/product-kit.php).
-    $product_kit_info = wholesale_product_kit_info(get_the_ID());
+    $product_kit_info = retails_product_kit_info(get_the_ID());
     if ($product_kit_info && $product_kit_info['heading']) {
         $product_heading = $product_kit_info['heading'];
     }
+    // Each product of a group has its own title ("Real Estate A-Frame (Sign Only)"), inc/product-group-swap.php.
+    $product_heading = retails_product_group_title(get_the_ID(), $product_heading);
     $product_image_label = $product_heading;
-    $product_catalog_name = wholesale_seo_product_name(get_the_ID());
+    $product_catalog_name = retails_seo_product_name(get_the_ID());
     ?>
     <?php
-    $product_intro = trim((string) wholesale_product_kit_partial_intro($short_desc, get_the_ID()));
+    $product_intro = trim((string) retails_product_kit_partial_intro($short_desc, get_the_ID()));
     if (!$product_intro && $terms && !is_wp_error($terms)) {
         $product_intro = trim((string) $terms[0]->description);
     }
     // Channel letters show their feature list under the gallery instead of under the title.
     $product_intro_below_gallery = $product_category_slug === 'channel-letters';
     ?>
-    <form action="<?php echo site_url() . '/cart'; ?>" method="POST" enctype="multipart/form-data" class="needs-validation" data-noun="<?php echo esc_attr(wholesale_product_noun($product_id)); ?>">
+    <form action="<?php echo site_url() . '/cart'; ?>" method="POST" enctype="multipart/form-data" class="needs-validation" data-noun="<?php echo esc_attr(retails_product_noun($product_id)); ?>">
         <input type="hidden" name="product_id" value="<?php echo get_the_ID(); ?>">
         <?php // .pd-hero: phones stack title, photo, highlights, options; 768px+ puts the photo column beside the rest (css/ui-polish.css section 15). ?>
         <div class="row pd-hero">
@@ -188,16 +190,20 @@ get_header();
                 <?php endif; ?>
                 <h1 class="fs-2 product-title my-3">
                     <?php echo esc_html($product_heading); ?>
-                    <?php echo wholesale_admin_edit_product_link(get_the_ID(), 'page'); // Escaped in helper. ?>
+                    <?php echo retails_admin_edit_product_link(get_the_ID(), 'page'); // Escaped in helper. ?>
                 </h1>
-                <?php wholesale_render_product_proof(get_the_ID()); ?>
+                <?php // "Graphic only. Frame not included." sits above the rating line (owner request 2026-11-20). ?>
+                <?php if ($product_kit_info) : ?>
+                    <p class="product-kit-note"><?php echo esc_html($product_kit_info['line']); ?></p>
+                <?php endif; ?>
+                <?php retails_render_product_proof(get_the_ID()); ?>
                 <?php // On a phone the price box sits under the photo, so ad visitors would otherwise see no price on the first screen. ?>
                 <?php if (trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
                     <p class="product-mobile-price">
                         <?php if ($size_link) : ?>
                             <span><span class="product-price-label"><?php echo esc_html($size_link['label']); ?></span> <strong>$<?php echo esc_html(number_format($size_link['price'], 2)); ?></strong></span>
                         <?php else : ?>
-                        <span><span class="product-price-label">Starting at</span> <?php echo wholesale_emphasize_price($starting_at_text); ?></span>
+                        <span><span class="product-price-label">Starting at</span> <?php echo retails_emphasize_price($starting_at_text); ?></span>
                         <?php endif; ?>
                         <a href="#product-options"><?php echo $product_category_slug === 'channel-letters' ? 'Get your price' : 'Choose size &amp; price'; ?> <span aria-hidden="true">&darr;</span></a>
                     </p>
@@ -208,20 +214,17 @@ get_header();
                 <?php endif; ?>
             </div>
             <div class="pd-hero__info">
-                <?php if ($product_kit_info) : ?>
-                    <p class="product-kit-note"><?php echo esc_html($product_kit_info['line']); ?></p>
-                <?php endif; ?>
                 <?php if (!empty($product_seo['intro'])) : ?>
                     <p class="product-seo-intro"><?php echo esc_html($product_seo['intro']); ?></p>
                 <?php endif; ?>
                 <?php if ($product_intro && !$product_intro_below_gallery) : ?>
                     <div class="product-intro mb-4"><?php echo wp_kses_post($product_intro); ?></div>
                 <?php endif; ?>
-                <?php wholesale_render_product_uses(get_the_ID()); ?>
+                <?php retails_render_product_uses(get_the_ID()); ?>
             </div>
             <div class="col-md-4">
                 <div class="thumbnail-container">
-                    <?php wholesale_render_sale_badge(get_the_ID()); ?>
+                    <?php retails_render_sale_badge(get_the_ID()); ?>
                     <?php
                     // The photo frame keeps the main photo's shape, so gallery photos of a
                     // different shape fit inside it (css: object-fit) instead of resizing it.
@@ -232,7 +235,7 @@ get_header();
                         <?php
                         the_post_thumbnail('', array(
                             'class' => 'single-product-thumbnail',
-                            'alt' => wholesale_product_photo_alt(get_the_post_thumbnail_url(get_the_ID(), 'full'), $product_heading),
+                            'alt' => retails_product_photo_alt(get_the_post_thumbnail_url(get_the_ID(), 'full'), $product_heading),
                             'loading' => 'eager',
                             'fetchpriority' => 'high',
                             'decoding' => 'async',
@@ -247,14 +250,14 @@ get_header();
                         <?php
                         // Thumbnails are at most 120px wide, so they load a small size;
                         // data-image keeps the full photo for the main image swap.
-                        $gallery_ids = function_exists('wholesale_product_image_alt_attachment_ids_by_url') ? wholesale_product_image_alt_attachment_ids_by_url($product_gallery_images) : array();
+                        $gallery_ids = function_exists('retails_product_image_alt_attachment_ids_by_url') ? retails_product_image_alt_attachment_ids_by_url($product_gallery_images) : array();
                         $gallery_number = 0;
                         foreach ($product_gallery_images as $image) {
                             $thumb = !empty($gallery_ids[$image]) ? wp_get_attachment_image_src($gallery_ids[$image], 'medium') : false;
                             $thumb_srcset = $thumb ? wp_get_attachment_image_srcset($gallery_ids[$image], 'medium') : '';
                             $gallery_number++;
                             // Each photo's own description (data/image-alts.php), else "Name, photo 2".
-                            $thumb_alt = wholesale_product_photo_alt($image, sprintf('%s, photo %d', $product_heading, $gallery_number));
+                            $thumb_alt = retails_product_photo_alt($image, sprintf('%s, photo %d', $product_heading, $gallery_number));
                         ?>
                             <div data-image="<?php echo $image; ?>" class="gallery-image-item">
 
@@ -282,16 +285,16 @@ get_header();
                         <?php if (trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
                             <span class="product-price-label">Starting at</span>
                         <?php endif; ?>
-                        <span class="product-price-value"><?php echo wholesale_emphasize_price($starting_at_text); ?></span>
+                        <span class="product-price-value"><?php echo retails_emphasize_price($starting_at_text); ?></span>
                         <?php endif; ?>
                         <?php
                         // Size calculator products: the smallest order the cart accepts, the
                         // configuration the structured data and Merchant feed advertise.
-                        $smallest = $price_per_sqft > 0 && !$is_hide_calculator ? wholesale_seo_product_lowest_offer(get_the_ID()) : array();
+                        $smallest = $price_per_sqft > 0 && !$is_hide_calculator ? retails_seo_product_lowest_offer(get_the_ID()) : array();
                         // The price box opens on that price; other products (preset sizes, options) on
                         // the default choice's price, the same structured data and feed price, until
                         // the live quote replaces it (the Table Runner opened on $9.53, not $68.92).
-                        $initial_box = $smallest ? $smallest : ('channel-letters' !== $product_category_slug ? wholesale_seo_product_lowest_offer(get_the_ID()) : array());
+                        $initial_box = $smallest ? $smallest : ('channel-letters' !== $product_category_slug ? retails_seo_product_lowest_offer(get_the_ID()) : array());
                         if (!empty($smallest['request']['width-ft']) && !empty($smallest['request']['height-ft'])) :
                             $inches = static function ($feet) {
                                 return rtrim(rtrim(number_format($feet * 12, 1, '.', ''), '0'), '.');
@@ -308,7 +311,7 @@ get_header();
                     </div>
                     <?php if ($product_kit_info) : ?>
                         <p class="product-kit-link"><a href="<?php echo esc_url(get_permalink($product_kit_info['kit_id'])); ?>"><?php echo esc_html($product_kit_info['kit_link']); ?> <span aria-hidden="true">&rarr;</span></a></p>
-                    <?php elseif ($product_kit_included = wholesale_product_kit_included(get_the_ID())) : ?>
+                    <?php elseif ($product_kit_included = retails_product_kit_included(get_the_ID())) : ?>
                         <div class="product-kit-included">
                             <p class="product-kit-included__title">What&rsquo;s included</p>
                             <ul>
@@ -322,11 +325,11 @@ get_header();
                 <?php } elseif (trim(wp_strip_all_tags((string) $starting_at_text)) !== '') {
 					// Channel letters: the computed per-inch starting rate, so visitors
                     // arriving from an ad see a price before they type their sign text.
-					$cl_from = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate(get_the_ID()) : null;
+					$cl_from = function_exists('retails_cl_from_inch_rate') ? retails_cl_from_inch_rate(get_the_ID()) : null;
                     ?>
                     <div class="product-price-per-sqft text-end py-2 text-secondary">
                         <span class="product-price-label">Starting at</span>
-                        <span class="product-price-value"><?php echo wholesale_emphasize_price($starting_at_text); ?></span>
+                        <span class="product-price-value"><?php echo retails_emphasize_price($starting_at_text); ?></span>
                         <?php if (!empty($cl_from['height'])) : ?>
 							<small class="d-block"><?php echo esc_html(sprintf('Effective rate at %d inch letter height. Enter your design for the full price.', $cl_from['height'])); ?></small>
                         <?php endif; ?>
@@ -335,8 +338,10 @@ get_header();
                 <?php if ('outofstock' === $product_stock_status) : ?>
                     <p class="product-stock product-stock--out text-end">Out of stock</p>
                 <?php elseif ('backorder' === $product_stock_status) : ?>
-                    <p class="product-stock product-stock--backorder text-end">Backordered: ships around <?php echo esc_html((new DateTimeImmutable(wholesale_product_backorder_date(get_the_ID()), wp_timezone()))->format('F j')); ?></p>
+                    <p class="product-stock product-stock--backorder text-end">Backordered: ships around <?php echo esc_html((new DateTimeImmutable(retails_product_backorder_date(get_the_ID()), wp_timezone()))->format('F j')); ?></p>
                 <?php endif; ?>
+                <?php // How it works, a Google review, help and store facts under the photos (inc/product-hero.php; 768px and up). ?>
+                <?php retails_render_product_aside(get_the_ID()); ?>
             </div>
             <div class="col-md-8" id="product-options">
 
@@ -405,7 +410,7 @@ get_header();
                                     <input type="text" id="letterInput" name="letters" required placeholder="Enter Your Text Here" class="form-control fw-bold">
                                     <p class="form-text m-0">For an instant quote - under 30 seconds</p>
                                     <?php // 7 of 8 visitors who started Front Lit options stopped at this box (Visitor Insights, Nov 8-14 2026): many have a logo, not plain text. ?>
-                                    <p class="form-text m-0 cl-logo-quote">Have a logo or a photo of your storefront instead? <a href="<?php echo esc_url(function_exists('wholesale_quote_url') ? wholesale_quote_url('channel-letters', get_post_field('post_name', get_the_ID())) : home_url('/contact/')); ?>">Send it for a free quote</a></p>
+                                    <p class="form-text m-0 cl-logo-quote">Have a logo or a photo of your storefront instead? <a href="<?php echo esc_url(function_exists('retails_quote_url') ? retails_quote_url('channel-letters', get_post_field('post_name', get_the_ID())) : home_url('/contact/')); ?>">Send it for a free quote</a></p>
                                 </div>
                             </div>
                             <div class="row d-fex align-items-center  mt-2">
@@ -566,7 +571,7 @@ get_header();
 
                                     <div class="row d-fex align-items-center select-row mt-2">
                                         <div class="col-md-3 col-4">
-                                            <label for="select-<?php echo $attr_name; ?>" class="text-capitalize"><?php echo $attr_name == 'height' ? 'Size - ' : ''; ?><?php echo esc_html(wholesale_attr_label($attr_name)); ?></label><?php $attr_help = wholesale_attr_help($attr_name, isset($single_attr->options) ? $single_attr->options : array()); if ($attr_help) : ?><small class="pb-attr-help" id="help-<?php echo esc_attr($attr_name); ?>"><?php echo esc_html($attr_help); ?></small><?php endif; ?>
+                                            <label for="select-<?php echo $attr_name; ?>" class="text-capitalize"><?php echo $attr_name == 'height' ? 'Size - ' : ''; ?><?php echo esc_html(retails_attr_label($attr_name)); ?></label><?php $attr_help = retails_attr_help($attr_name, isset($single_attr->options) ? $single_attr->options : array()); if ($attr_help) : ?><small class="pb-attr-help" id="help-<?php echo esc_attr($attr_name); ?>"><?php echo esc_html($attr_help); ?></small><?php endif; ?>
                                         </div>
                                         <div class="col-8 col-md-9">
                                             <div class="row">
@@ -643,9 +648,9 @@ get_header();
 
                                     <?php
                                     // Kit / partial toggles (Stand + Graphic vs Graphic only) get labels and prices.
-                                    $group_is_kit_toggle = (bool) wholesale_product_kit_info($product_id);
+                                    $group_is_kit_toggle = (bool) retails_product_kit_info($product_id);
                                     foreach ($product_group_members as $group_member) {
-                                        if (wholesale_product_kit_info($group_member['id'])) {
+                                        if (retails_product_kit_info($group_member['id'])) {
                                             $group_is_kit_toggle = true;
                                         }
                                     }
@@ -655,20 +660,20 @@ get_header();
                                     // with ?graphic_only=true etc. for the others; opened directly, that
                                     // link shows the same product (inc/product-group-swap.php).
                                     // A duplicate page (e.g. straight-velcro-...-graphic-frame-only) marks the product it copies.
-                                    $group_current_id = function_exists('wholesale_seo_product_duplicate_of') && !in_array((int) $product_id, wp_list_pluck($product_group_members, 'id'), true)
-                                        ? (int) wholesale_seo_product_duplicate_of($product_id)
+                                    $group_current_id = function_exists('retails_seo_product_duplicate_of') && !in_array((int) $product_id, wp_list_pluck($product_group_members, 'id'), true)
+                                        ? (int) retails_seo_product_duplicate_of($product_id)
                                         : 0;
                                     foreach ($product_group_members as $group_member) {
                                         $group_product_id = $group_member['id'];
                                         $is_current_product = $group_product_id == $product_id || $group_product_id == $group_current_id ? 'current' : '';
                                         // Each option shows what it is and its starting price; the complete kit is the primary option.
                                         $group_option = $group_is_kit_toggle
-                                            ? wholesale_product_kit_toggle_option($group_product_id, $group_member['title'])
+                                            ? retails_product_kit_toggle_option($group_product_id, $group_member['title'])
                                             : array('label' => wp_strip_all_tags((string) $group_member['title']), 'price' => 0, 'is_kit' => false);
                                     ?>
 
                                         <div class="product-group-item <?php echo $is_current_product; ?><?php echo $group_option['is_kit'] ? ' product-group-item--kit' : ''; ?>">
-                                            <a href="<?php echo esc_url($group_member['url']); ?>" class="product-group-item-link" data-group-key="<?php echo esc_attr($group_member['key']); ?>" data-product-id="<?php echo (int) $group_product_id; ?>" data-fetch-url="<?php echo esc_url(wholesale_product_group_fetch_url($group_member, $product_group_members)); ?>"<?php echo $is_current_product ? ' aria-current="page"' : ''; ?>><?php echo esc_html($group_option['label']); ?><?php if ($group_option['price'] > 0) : ?> <span class="product-group-item-price">$<?php echo esc_html(number_format($group_option['price'], 2)); ?></span><?php endif; ?></a>
+                                            <a href="<?php echo esc_url($group_member['url']); ?>" class="product-group-item-link" data-group-key="<?php echo esc_attr($group_member['key']); ?>" data-product-id="<?php echo (int) $group_product_id; ?>" data-fetch-url="<?php echo esc_url(retails_product_group_fetch_url($group_member, $product_group_members)); ?>"<?php echo $is_current_product ? ' aria-current="page"' : ''; ?>><?php echo esc_html($group_option['label']); ?><?php if ($group_option['price'] > 0) : ?> <span class="product-group-item-price">$<?php echo esc_html(number_format($group_option['price'], 2)); ?></span><?php endif; ?></a>
                                         </div>
 
 
@@ -696,28 +701,28 @@ get_header();
                             <input type="hidden" name="price_per_sqft" value="<?php echo $price_per_sqft; ?>" id="pricePerSqft">
 
                             <?php
-                            $min_area = wholesale_product_min_area(get_the_ID());
+                            $min_area = retails_product_min_area(get_the_ID());
                             // Every size calculator product: B2Sign-style size box. Width then height, in inches.
                             // Products with preset sizes (_size_presets) get B2Sign's Size selector instead: preset
                             // sizes with a grey note, then "More Sizes > Custom Sizes", which shows the boxes
-                            // (inc/size-chips.php wholesale_size_presets(), js/main.js).
-                                $size_presets = wholesale_size_presets(get_the_ID());
+                            // (inc/size-chips.php retails_size_presets(), js/main.js).
+                                $size_presets = retails_size_presets(get_the_ID());
                                 $rate_shown = $price_per_sqft * (100 - min(100, max(0, $product_discount_percent))) / 100;
-                                $min_charge = wholesale_product_min_order(get_the_ID());
+                                $min_charge = retails_product_min_order(get_the_ID());
                                 // Like B2Sign, the size box shows what the customer pays (after any
                                 // dated sale), and the page opens on the minimum charge.
-                                $rate_pay = wholesale_promotion_price(get_the_ID(), round($rate_shown, 2));
-                                $min_charge_pay = wholesale_promotion_price(get_the_ID(), $min_charge);
+                                $rate_pay = retails_promotion_price(get_the_ID(), round($rate_shown, 2));
+                                $min_charge_pay = retails_promotion_price(get_the_ID(), $min_charge);
                                 // The B2Sign Sync margin floor can make the smallest order cost more than
                                 // _min_order_price ($28 vs $14 on banners): show what the smallest order costs.
                                 if (!empty($smallest['price']) && $smallest['price'] > $min_charge_pay) {
                                     $min_charge_pay = (float) $smallest['price'];
                                     $min_charge = max($min_charge, (float) (isset($smallest['regular']) ? $smallest['regular'] : $smallest['price']));
                                 }
-                                $min_sides = wholesale_product_min_sides(get_the_ID());
-                                $max_sides = wholesale_product_max_sides(get_the_ID());
+                                $min_sides = retails_product_min_sides(get_the_ID());
+                                $max_sides = retails_product_max_sides(get_the_ID());
                                 // The boxes open on the largest size that still costs the minimum charge.
-                                $default_size = wholesale_product_default_size(get_the_ID()) ?: array(0, 0);
+                                $default_size = retails_product_default_size(get_the_ID()) ?: array(0, 0);
                                 // Feet-and-inches boxes open on whole feet (17" -> 1 ft 0 in, still the minimum
                                 // charge): with "1 ft 5 in" a visitor who typed 5 in the feet box got 5 ft 5 in,
                                 // or 5" after clearing it (Visitor Insights, Nov 8 2026).
@@ -731,11 +736,11 @@ get_header();
                                     $default_sizes = array('width' => $size_link['width'], 'height' => $size_link['height']);
                                 }
                                 // The Size selector opens on a preset (the boxes then hold its size), or on Custom Sizes.
-                                $size_preset_on = wholesale_size_preset_default($size_presets, $default_sizes, (bool) $size_link);
+                                $size_preset_on = retails_size_preset_default($size_presets, $default_sizes, (bool) $size_link);
                                 if (null !== $size_preset_on) {
                                     $default_sizes = array('width' => $size_presets[$size_preset_on]['width'], 'height' => $size_presets[$size_preset_on]['height']);
                                 }
-                                $size_chips = $size_presets ? array() : wholesale_size_chips(get_the_ID());
+                                $size_chips = $size_presets ? array() : retails_size_chips(get_the_ID());
                             ?>
                                 <div class="row d-fex align-items-center mt-2 dimenstion-calculator dim-row pb-size-b2<?php echo null !== $size_preset_on ? ' is-preset' : ''; ?>">
                                     <div class="col-md-3 col-4">
@@ -806,7 +811,7 @@ get_header();
                                             <?php endforeach; ?>
                                         </div>
                                         <?php // data-quote-url: the "Need a bigger size?" link js/main.js adds under a too-big size. ?>
-                                        <small class="pb-dim-error" role="alert" data-quote-url="<?php echo esc_url(function_exists('wholesale_quote_url') ? wholesale_quote_url('', get_post_field('post_name', get_the_ID())) : home_url('/contact/')); ?>" hidden></small>
+                                        <small class="pb-dim-error" role="alert" data-quote-url="<?php echo esc_url(function_exists('retails_quote_url') ? retails_quote_url('', get_post_field('post_name', get_the_ID())) : home_url('/contact/')); ?>" hidden></small>
                                     </div>
                                 </div>
 
@@ -847,7 +852,7 @@ get_header();
                             foreach ($product_attr_array as $single_attr) {
                                 $attr_name = $single_attr->name;
                                 // The width/height calculator above replaces a preset size dropdown.
-                                if ($is_hide_calculator != 'on' && wholesale_attr_is_preset_size((array) $single_attr)) {
+                                if ($is_hide_calculator != 'on' && retails_attr_is_preset_size((array) $single_attr)) {
                                     continue;
                                 }
 
@@ -964,7 +969,7 @@ get_header();
 
                                 <div class="row d-fex align-items-center select-row mt-2">
                                     <div class="col-md-3 col-4">
-                                        <label for="select-<?php echo $attr_name; ?>" class="text-capitalize"><?php echo $attr_name == 'height' ? 'Size - ' : ''; ?><?php echo esc_html(wholesale_attr_label($attr_name)); ?></label><?php $attr_help = wholesale_attr_help($attr_name, isset($single_attr->options) ? $single_attr->options : array()); if ($attr_help) : ?><small class="pb-attr-help" id="help-<?php echo esc_attr($attr_name); ?>"><?php echo esc_html($attr_help); ?></small><?php endif; ?>
+                                        <label for="select-<?php echo $attr_name; ?>" class="text-capitalize"><?php echo $attr_name == 'height' ? 'Size - ' : ''; ?><?php echo esc_html(retails_attr_label($attr_name)); ?></label><?php $attr_help = retails_attr_help($attr_name, isset($single_attr->options) ? $single_attr->options : array()); if ($attr_help) : ?><small class="pb-attr-help" id="help-<?php echo esc_attr($attr_name); ?>"><?php echo esc_html($attr_help); ?></small><?php endif; ?>
                                     </div>
                                     <div class="col-8 col-md-9">
                                         <div class="row">
@@ -979,7 +984,7 @@ get_header();
                                                         }; ?>
                                                     </select>
                                                     <?php // Banner stands: on phones the sizes are tap chips with their prices; the select above stays in the form (js/ui-polish.js).
-                                                    $option_chips = wholesale_size_option_chips(get_the_ID(), $attr_name);
+                                                    $option_chips = retails_size_option_chips(get_the_ID(), $attr_name);
                                                     if ($option_chips) : ?>
                                                         <div class="pb-option-chips" role="group" aria-label="<?php echo esc_attr(ucfirst($attr_name)); ?>" data-for="select-<?php echo esc_attr($attr_name); ?>">
                                                             <?php foreach ($option_chips as $chip_index => $chip) : ?>
@@ -1069,7 +1074,7 @@ get_header();
                                     <div class="col">
                                         <input class="form-control" name="custom-artwork" type="file" id="artwork" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" data-async-upload="artwork" data-async-field="custom-artwork-token" aria-describedby="artworkHint">
                                         <?php // Not required by the form or utils/Cart.php; visitors without a print file thought it was. ?>
-                                        <small id="artworkHint" class="d-block text-muted mt-1">Optional. <?php echo esc_html(wholesale_artwork_types_text()); ?>, up to <?php echo esc_html(wholesale_artwork_max_text()); ?>, made at the size you order (or the same shape). Files that don't match the size are turned away. <?php echo esc_html(wholesale_large_file_help()); ?></small>
+                                        <small id="artworkHint" class="d-block text-muted mt-1">Optional. <?php echo esc_html(retails_artwork_types_text()); ?>, up to <?php echo esc_html(retails_artwork_max_text()); ?>, made at the size you order (or the same shape). Files that don't match the size are turned away. <?php echo esc_html(retails_large_file_help()); ?></small>
                                     </div>
                                 </div>
 
@@ -1095,8 +1100,8 @@ get_header();
                     </div> -->
                     <?php if ($product_category_slug  != 'channel-letters') { ?>
                     <?php // Production times mirrored from B2Sign (SFS B2Sign Sync) replace the default Next Day / Same Day choices.
-                    $sfs_turnaround = function_exists('wholesale_product_turnaround_spec') ? wholesale_product_turnaround_spec(get_the_ID()) : array();
-                    if ($sfs_turnaround) { wholesale_render_turnaround_choices($sfs_turnaround); } elseif (function_exists('wholesale_product_turnaround_none') && wholesale_product_turnaround_none(get_the_ID())) { /* B2Sign offers no production-time choice (hardware): none here either. */ } else { ?>
+                    $sfs_turnaround = function_exists('retails_product_turnaround_spec') ? retails_product_turnaround_spec(get_the_ID()) : array();
+                    if ($sfs_turnaround) { retails_render_turnaround_choices($sfs_turnaround); } elseif (function_exists('retails_product_turnaround_none') && retails_product_turnaround_none(get_the_ID())) { /* B2Sign offers no production-time choice (hardware): none here either. */ } else { ?>
 
                         <div class="row d-fex align-items-center  my-2 mt-3">
                             <div class="col-md-3 col-4">
@@ -1200,11 +1205,19 @@ get_header();
                 // Channel letters have no price until the sign text is typed; the Grand Total
                 // row shows the starting price instead of $0.00 (js/ui-polish.js keeps the class in step).
                 $total_from_text = ($product_category_slug == 'channel-letters' && trim(wp_strip_all_tags((string) $starting_at_text)) !== '') ? $starting_at_text : '';
+                // A dated sale's name, percent and last day, for the sale row below and the
+                // phone buy bar (js/ui-polish.js section 3 reads the data-sale-* attributes).
+                $sale_name = $product_promo_percent > 0 ? retails_promotion_label($product_promotion) : '';
+                $sale_percent_text = $product_promo_percent > 0 ? rtrim(rtrim(number_format($product_promo_percent, 2, '.', ''), '0'), '.') : '';
+                $sale_ends_text = $product_promo_percent > 0 ? retails_promotion_end_text($product_promotion) : '';
                 ?>
-                <div class="product-pricing-box<?php echo $total_from_text && !$has_cl_design ? ' pd-total-empty' : ''; ?>">
+                <div class="product-pricing-box<?php echo $total_from_text && !$has_cl_design ? ' pd-total-empty' : ''; ?>"<?php if ($product_promo_percent > 0) : ?> data-sale-name="<?php echo esc_attr($sale_name); ?>" data-sale-percent="<?php echo esc_attr($sale_percent_text); ?>" data-sale-ends="<?php echo esc_attr($sale_ends_text); ?>"<?php endif; ?>>
                     <div class="container">
-                        <?php // The everyday price only shows (as "Regular price") during a dated sale. ?>
-                        <div class="row subtotal-container"<?php echo $product_promo_percent > 0 ? '' : ' hidden'; ?>>
+                        <?php if ($product_promo_percent > 0) : ?>
+                            <p class="pd-sale-head"><span class="pd-sale-chip"><span class="pd-sale-chip__name"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor"/></svg><?php echo esc_html($sale_name); ?></span><span class="pd-sale-chip__pct"><?php echo esc_html($sale_percent_text . '% off'); ?></span></span><span class="pd-sale-ends"><?php echo esc_html('Ends ' . $sale_ends_text); ?></span></p>
+                        <?php endif; ?>
+                        <?php // The everyday price only shows (as "Regular price", struck through) during a dated sale. ?>
+                        <div class="row subtotal-container<?php echo $product_promo_percent > 0 ? ' pd-sale-was' : ''; ?>"<?php echo $product_promo_percent > 0 ? '' : ' hidden'; ?>>
                             <div class="col-6">
                                 <span class="fs-6"><?php echo $product_promo_percent > 0 ? 'Regular price' : 'Total'; ?></span>
                             </div>
@@ -1229,12 +1242,12 @@ get_header();
                             </div>
                         </div>
                         <?php if ($product_promo_percent > 0) { ?>
-                            <div class="row totalSaving-container" style="color: gray">
-                                <div class="col-6">
-                                    <span class="fs-6"><?php echo esc_html(sprintf('Sale: %s%% off, ends %s', rtrim(rtrim(number_format($product_promo_percent, 2, '.', ''), '0'), '.'), wholesale_promotion_end_text($product_promotion))); ?></span>
+                            <div class="row totalSaving-container pd-sale-row">
+                                <div class="col">
+                                    <span class="fs-6"><?php echo esc_html('You save ' . $sale_percent_text . '%'); ?></span>
                                 </div>
-                                <div class="col-6 price-subtotal-container">
-                                    <span class="fs-6 d-block "><span>You save $</span><span class="price-saving"><?php echo format_price(!$size_link && !empty($initial_box['price']) ? max(0, (isset($initial_box['regular']) ? $initial_box['regular'] : $initial_box['price']) - $initial_box['price']) : get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>
+                                <div class="col-auto price-subtotal-container">
+                                    <span class="fs-6 d-block"><span>−$</span><span class="price-saving"><?php echo format_price(!$size_link && !empty($initial_box['price']) ? max(0, (isset($initial_box['regular']) ? $initial_box['regular'] : $initial_box['price']) - $initial_box['price']) : get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>
                                 </div>
                             </div>
                         <?php } ?>
@@ -1264,30 +1277,30 @@ get_header();
                                                                                                     ?>
                                     </span></span>
                                 <?php if ($total_from_text) : ?>
-                                    <span class="price-total-from">Starting at <?php echo wholesale_emphasize_price($total_from_text); ?></span>
+                                    <span class="price-total-from">Starting at <?php echo retails_emphasize_price($total_from_text); ?></span>
                                 <?php endif; ?>
                             </div>
                         </div>
                         <?php
                         // Price plus standard shipping below the free minimum (js/ui-polish.js keeps it in step with the total).
                         $delivered_cl = 'channel-letters' === $product_category_slug;
-                        $delivered_rates = array_filter(array_map('floatval', explode(',', (string) wholesale_get_setting($delivered_cl ? 'channel_shipping_options' : 'standard_shipping_options'))));
+                        $delivered_rates = array_filter(array_map('floatval', explode(',', (string) retails_get_setting($delivered_cl ? 'channel_shipping_options' : 'standard_shipping_options'))));
                         $delivered_initial = $delivered_cl && !$has_cl_design ? 0 : ($size_link ? $size_link['price'] : (!empty($initial_box['price']) ? $initial_box['price'] : get_discount_amount($product_min_price > 0 ? $product_min_price : $product_price)));
-                        $delivered_text = wholesale_product_delivered_text($delivered_initial, $delivered_cl);
+                        $delivered_text = retails_product_delivered_text($delivered_initial, $delivered_cl);
                         ?>
-                        <p class="pd-delivered" data-free-min="<?php echo esc_attr((float) wholesale_get_setting($delivered_cl ? 'free_shipping_channel_min' : 'free_shipping_min')); ?>" data-ship="<?php echo esc_attr($delivered_rates ? min($delivered_rates) : 0); ?>"<?php echo $delivered_text ? '' : ' hidden'; ?>><?php echo esc_html($delivered_text); ?></p>
+                        <p class="pd-delivered" data-free-min="<?php echo esc_attr((float) retails_get_setting($delivered_cl ? 'free_shipping_channel_min' : 'free_shipping_min')); ?>" data-ship="<?php echo esc_attr($delivered_rates ? min($delivered_rates) : 0); ?>"<?php echo $delivered_text ? '' : ' hidden'; ?>><?php echo esc_html($delivered_text); ?></p>
 
                         <?php
                         // Delivery estimate (filled in by js/ui-polish.js), quantity stepper, Add To Cart
                         // and Buy Now (inc/product-buy-box.php). Guests and signed-in customers get the same buttons.
-                        wholesale_render_product_eta($product_id);
-                        wholesale_render_product_actions($product_stock_status, $initial_product_cost);
-                        wholesale_render_product_pay_row();
+                        retails_render_product_eta($product_id);
+                        retails_render_product_actions($product_stock_status, $initial_product_cost);
+                        retails_render_product_pay_row();
                         ?>
 
                         <ul class="product-assurance">
-                            <?php $product_ship_min = wholesale_free_shipping_amount('channel-letters' === $product_category_slug); ?>
-                            <?php $product_ship_from = wholesale_shipping_from_amount('channel-letters' === $product_category_slug); ?>
+                            <?php $product_ship_min = retails_free_shipping_amount('channel-letters' === $product_category_slug); ?>
+                            <?php $product_ship_from = retails_shipping_from_amount('channel-letters' === $product_category_slug); ?>
                             <?php // Say what shipping costs below the free minimum: checkout adds it, and a $15 banner reaching checkout as $34.55 was read as a hidden fee. ?>
                             <?php if ($product_ship_min) : ?>
                                 <li class="product-assurance__ship"><strong>Free shipping</strong> on orders of <?php echo esc_html($product_ship_min); ?> or more<?php echo $product_ship_from ? esc_html(', ' . $product_ship_from . ' standard shipping below that') : ''; ?> &middot; <a href="<?php echo esc_url(home_url('/shipping-returns/#free-shipping')); ?>">details</a></li>
@@ -1295,8 +1308,8 @@ get_header();
                                 <li>Standard shipping from <?php echo esc_html($product_ship_from); ?></li>
                             <?php endif; ?>
                             <li>Order online 24/7 &mdash; your price is shown before checkout</li>
-                            <li>Checkout adds only shipping<?php echo (float) wholesale_get_setting('tax_rate') > 0 ? ' and sales tax' : ''; ?> &mdash; no other fees</li>
-                            <li>Secure checkout<?php echo wholesale_setting_enabled('payment_disabled') ? '' : ' by Elavon Converge'; ?></li>
+                            <li>Checkout adds only shipping<?php echo (float) retails_get_setting('tax_rate') > 0 ? ' and sales tax' : ''; ?> &mdash; no other fees</li>
+                            <li>Secure checkout<?php echo retails_setting_enabled('payment_disabled') ? '' : ' by Elavon Converge'; ?></li>
                             <?php if ('channel-letters' === $product_category_slug) : ?>
                                 <li>UL listed, tested before shipping, 5-year LED warranty</li>
                             <?php endif; ?>
@@ -1307,15 +1320,15 @@ get_header();
             </div>
         </div>
 
-        <?php wholesale_seo_render_channel_letter_guide(get_the_ID()); ?>
-        <?php wholesale_render_product_guide(get_the_ID()); ?>
+        <?php retails_seo_render_channel_letter_guide(get_the_ID()); ?>
+        <?php retails_render_product_guide(get_the_ID()); ?>
 
         <?php
         // Our own specifications, shipping, artwork and FAQ sections replace the
         // supplier's stored description (inc/product-page-content.php).
         $product_details_shown = 'channel-letters' === $product_category_slug
-            ? wholesale_render_channel_letter_details(get_the_ID())
-            : wholesale_render_product_details(get_the_ID());
+            ? retails_render_channel_letter_details(get_the_ID())
+            : retails_render_product_details(get_the_ID());
         ?>
         <?php if (!$product_details_shown) : ?>
         <!-- product description -->
@@ -1352,21 +1365,21 @@ get_header();
                             <!-- description -->
                             <div class="tab-pane fade show active" id="desc" role="tabpanel" aria-labelledby="desc-tab">
 
-                                <?php echo wholesale_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_description', true), $product_image_label); ?>
+                                <?php echo retails_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_description', true), $product_image_label); ?>
                             </div>
 
                             <!-- Components -->
                             <div class="tab-pane fade" id="component" role="tabpanel" aria-labelledby="component-tab">
-                                <?php echo wholesale_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_component', true), $product_image_label . ' component'); ?>
+                                <?php echo retails_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_component', true), $product_image_label . ' component'); ?>
                             </div>
                             <!-- Warrenty -->
                             <div class="tab-pane fade" id="warrenty" role="tabpanel" aria-labelledby="warrenty-tab">
-                                <?php echo wholesale_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_warrenty', true), $product_image_label . ' warranty'); ?>
+                                <?php echo retails_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_warrenty', true), $product_image_label . ' warranty'); ?>
 
                             </div>
                             <!-- FAQ -->
                             <div class="tab-pane fade" id="faq" role="tabpanel" aria-labelledby="faq-tab">
-                                <?php echo wholesale_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_faq', true), $product_image_label); ?>
+                                <?php echo retails_seo_fill_missing_alt(get_post_meta(get_the_ID(), '_product_faq', true), $product_image_label); ?>
 
                             </div>
                             <!-- Manual -->
@@ -1381,7 +1394,7 @@ get_header();
 
                     <?php
                     } else {
-                        echo wholesale_seo_fill_missing_alt(wholesale_fix_upload_limit_text(wholesale_seo_clean_product_content(get_the_content())), $product_image_label);
+                        echo retails_seo_fill_missing_alt(retails_fix_upload_limit_text(retails_seo_clean_product_content(get_the_content())), $product_image_label);
                     }
 
                     ?>
@@ -1391,20 +1404,20 @@ get_header();
         </div>
         <?php endif; ?>
     </form>
-    <?php wholesale_seo_render_related_products($product_id); ?>
+    <?php retails_seo_render_related_products($product_id); ?>
     <?php
-    $product_review_data = wholesale_product_review_data($product_id);
-    $show_product_reviews = wholesale_setting_enabled('show_product_reviews');
-    $product_reviews = wholesale_product_reviews($product_id, 6);
+    $product_review_data = retails_product_review_data($product_id);
+    $show_product_reviews = retails_setting_enabled('show_product_reviews');
+    $product_reviews = retails_product_reviews($product_id, 6);
     // Google reviews the owner linked to this product (inc/google-review-links.php); never in the schema.
-    $product_google_reviews_html = function_exists('wholesale_product_google_reviews_html') ? wholesale_product_google_reviews_html($product_id) : '';
-    $review_eligibility = wholesale_setting_enabled('allow_verified_reviews') ? wholesale_review_eligibility_from_request($product_id) : array('order' => 0, 'reason' => 'none');
+    $product_google_reviews_html = function_exists('retails_product_google_reviews_html') ? retails_product_google_reviews_html($product_id) : '';
+    $review_eligibility = retails_setting_enabled('allow_verified_reviews') ? retails_review_eligibility_from_request($product_id) : array('order' => 0, 'reason' => 'none');
     $can_review_product = $review_eligibility['order'] > 0;
     $review_status = isset($_GET['review_status']) ? sanitize_key(wp_unslash($_GET['review_status'])) : '';
     // Guests arriving from a review link get the name and email from their order.
     $review_defaults = array('name' => '', 'email' => '');
     if ($can_review_product) {
-        $review_billing = wholesale_decode_order_meta_array(get_post_meta($review_eligibility['order'], 'billing_address', true));
+        $review_billing = retails_decode_order_meta_array(get_post_meta($review_eligibility['order'], 'billing_address', true));
         $review_user = wp_get_current_user();
         $review_defaults = array(
             'name' => $review_user->exists() ? $review_user->display_name : trim(($review_billing['billing_fname'] ?? '') . ' ' . ($review_billing['billing_lname'] ?? '')),
@@ -1414,11 +1427,11 @@ get_header();
     ?>
     <?php if ($show_product_reviews) : ?>
     <section class="product-reviews" id="product-reviews" aria-labelledby="product-reviews-title">
-        <?php $google_review_url = in_array($review_status, array('sent', 'already_reviewed'), true) ? wholesale_google_write_review_url() : ''; ?>
+        <?php $google_review_url = in_array($review_status, array('sent', 'already_reviewed'), true) ? retails_google_write_review_url() : ''; ?>
         <?php if ('sent' === $review_status) : ?>
-            <div class="product-review-alert" role="status">Thank you! Your review has been submitted and will appear here once our team approves it.<?php if ($google_review_url) : ?> <a class="product-review-google" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo wholesale_google_logo_svg(16); ?> Share it on Google too</a><?php endif; ?></div>
+            <div class="product-review-alert" role="status">Thank you! Your review has been submitted and will appear here once our team approves it.<?php if ($google_review_url) : ?> <a class="product-review-google" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo retails_google_logo_svg(16); ?> Share it on Google too</a><?php endif; ?></div>
         <?php elseif ('already_reviewed' === $review_status) : ?>
-            <div class="product-review-alert" role="status">You have already reviewed this product for this order. Thank you!<?php if ($google_review_url) : ?> <a class="product-review-google" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo wholesale_google_logo_svg(16); ?> Review us on Google</a><?php endif; ?></div>
+            <div class="product-review-alert" role="status">You have already reviewed this product for this order. Thank you!<?php if ($google_review_url) : ?> <a class="product-review-google" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo retails_google_logo_svg(16); ?> Review us on Google</a><?php endif; ?></div>
         <?php elseif ('not_eligible' === $review_status) : ?>
             <div class="product-review-alert product-review-alert-error" role="alert">Reviews are available once your order for this product is complete.</div>
         <?php elseif ('disabled' === $review_status) : ?>
@@ -1431,7 +1444,7 @@ get_header();
                 <p class="product-section-eyebrow">Customer feedback</p>
                 <h2 id="product-reviews-title">Reviews for <?php echo esc_html($product_heading); ?></h2>
             </div>
-            <?php wholesale_render_product_rating($product_id, 'product-reviews-summary'); ?>
+            <?php retails_render_product_rating($product_id, 'product-reviews-summary'); ?>
         </div>
         <?php if ($product_review_data['text']) : ?>
             <blockquote class="product-featured-review">
@@ -1451,7 +1464,7 @@ get_header();
                     )));
                 ?>
                     <article class="product-review-card">
-                        <?php if (wholesale_review_is_sample($product_review->ID)) : ?>
+                        <?php if (retails_review_is_sample($product_review->ID)) : ?>
                             <span class="product-review-sample">Sample review · preview only</span>
                         <?php endif; ?>
                         <div class="product-review-card-header">
@@ -1474,21 +1487,21 @@ get_header();
                 <?php endforeach; ?>
             </div>
             <?php if ($product_review_data['count'] > count($product_reviews)) : ?>
-                <p class="product-review-more"><a href="<?php echo esc_url(wholesale_reviews_page_url(array('review_product' => $product_id))); ?>">See all <?php echo esc_html(number_format_i18n($product_review_data['count'])); ?> reviews for this product &rarr;</a></p>
+                <p class="product-review-more"><a href="<?php echo esc_url(retails_reviews_page_url(array('review_product' => $product_id))); ?>">See all <?php echo esc_html(number_format_i18n($product_review_data['count'])); ?> reviews for this product &rarr;</a></p>
             <?php endif; ?>
         <?php elseif (!$product_google_reviews_html) : ?>
             <p class="product-review-note">No reviews for this product yet.</p>
         <?php endif; ?>
-        <?php echo $product_google_reviews_html; // Escaped in wholesale_product_google_reviews_html(). ?>
+        <?php echo $product_google_reviews_html; // Escaped in retails_product_google_reviews_html(). ?>
         <?php if ($can_review_product) : ?>
             <div class="product-review-form-card" id="write-review">
                 <h3>Share your experience</h3>
-                <p>Thanks for your order #<?php echo esc_html(wholesale_order_number($review_eligibility['order'])); ?>. Tell other customers how your <?php echo esc_html(wholesale_product_noun($product_id)); ?> turned out. Reviews appear after a quick check by our team.</p>
+                <p>Thanks for your order #<?php echo esc_html(retails_order_number($review_eligibility['order'])); ?>. Tell other customers how your <?php echo esc_html(retails_product_noun($product_id)); ?> turned out. Reviews appear after a quick check by our team.</p>
                 <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                     <input type="hidden" name="action" value="submit_review">
                     <input type="hidden" name="review_product_id" value="<?php echo esc_attr($product_id); ?>">
                     <input type="hidden" name="review_order" value="<?php echo esc_attr($review_eligibility['order']); ?>">
-                    <input type="hidden" name="review_token" value="<?php echo esc_attr(wholesale_order_review_token($review_eligibility['order'], $product_id)); ?>">
+                    <input type="hidden" name="review_token" value="<?php echo esc_attr(retails_order_review_token($review_eligibility['order'], $product_id)); ?>">
                     <?php wp_nonce_field('submit_review', 'review_nonce'); ?>
                     <fieldset class="review-star-input">
                         <legend>Your rating</legend>
@@ -1503,7 +1516,7 @@ get_header();
                         <label>Name<input type="text" name="review_name" required autocomplete="name" value="<?php echo esc_attr($review_defaults['name']); ?>"></label>
                         <label><span>Email <small>(not published)</small></span><input type="email" name="review_email" required autocomplete="email" value="<?php echo esc_attr($review_defaults['email']); ?>"></label>
                     </div>
-                    <label>Your review<textarea name="review_message" rows="4" required placeholder="<?php echo esc_attr(wholesale_product_is_channel_letter($product_id) ? "How did the sign look once it was installed? How was the ordering process?" : "How did the " . wholesale_product_noun($product_id) . " look when it arrived? How was the ordering process?"); ?>"></textarea></label>
+                    <label>Your review<textarea name="review_message" rows="4" required placeholder="<?php echo esc_attr(retails_product_is_channel_letter($product_id) ? "How did the sign look once it was installed? How was the ordering process?" : "How did the " . retails_product_noun($product_id) . " look when it arrived? How was the ordering process?"); ?>"></textarea></label>
                     <button type="submit" class="btn btn-primary">Submit review</button>
                 </form>
             </div>
@@ -1541,7 +1554,7 @@ get_header();
         <?php elseif ('reviewed' === $review_eligibility['reason'] && 'sent' !== $review_status && 'already_reviewed' !== $review_status) : ?>
             <p class="product-review-note">Thanks, you have already reviewed this product. It appears here once approved.</p>
         <?php elseif (!is_user_logged_in()) : ?>
-            <p class="product-review-note">Bought this <?php echo esc_html(wholesale_product_noun($product_id)); ?>? Use the review link in your shipping email, or <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink() . '#product-reviews'), home_url('/login/'))); ?>" rel="nofollow">sign in</a> with the account used for your order.</p>
+            <p class="product-review-note">Bought this <?php echo esc_html(retails_product_noun($product_id)); ?>? Use the review link in your shipping email, or <a href="<?php echo esc_url(add_query_arg('redirect_ulr', rawurlencode(get_permalink() . '#product-reviews'), home_url('/login/'))); ?>" rel="nofollow">sign in</a> with the account used for your order.</p>
         <?php endif; ?>
     </section>
     <?php endif; ?>

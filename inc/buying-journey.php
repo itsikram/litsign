@@ -16,29 +16,29 @@
  * Whether quote replies for signs include a design mockup to approve. Off until the owner
  * confirms it; the copy then says "a price" instead of "a price and a mockup".
  */
-const WHOLESALE_QUOTE_MOCKUP = false;
+const RETAILS_QUOTE_MOCKUP = false;
 
-/** $with when mockups are confirmed (WHOLESALE_QUOTE_MOCKUP), else $without. */
-function wholesale_quote_mockup($with, $without)
+/** $with when mockups are confirmed (RETAILS_QUOTE_MOCKUP), else $without. */
+function retails_quote_mockup($with, $without)
 {
-	return WHOLESALE_QUOTE_MOCKUP ? $with : $without;
+	return RETAILS_QUOTE_MOCKUP ? $with : $without;
 }
 
 /** Largest product-page artwork file (utils/Cart.php and inc/async-uploads.php enforce it). */
-const WHOLESALE_ARTWORK_MAX_MB = 25;
+const RETAILS_ARTWORK_MAX_MB = 25;
 
-function wholesale_artwork_max_bytes()
+function retails_artwork_max_bytes()
 {
-	return WHOLESALE_ARTWORK_MAX_MB * MB_IN_BYTES;
+	return RETAILS_ARTWORK_MAX_MB * MB_IN_BYTES;
 }
 
-function wholesale_artwork_max_text()
+function retails_artwork_max_text()
 {
-	return WHOLESALE_ARTWORK_MAX_MB . ' MB';
+	return RETAILS_ARTWORK_MAX_MB . ' MB';
 }
 
 /** What to do with a file over the limit (email attachments are capped too, so ask for a link). */
-function wholesale_large_file_help()
+function retails_large_file_help()
 {
 	return 'Larger file? Email a download link (Google Drive, Dropbox or WeTransfer) to TR@StorefrontSignOnline.com with your order number or name.';
 }
@@ -47,18 +47,18 @@ function wholesale_large_file_help()
  * The response time the site states after a quote request. This is the wording the
  * contact page already used; change it here only after the owner confirms a new target.
  */
-function wholesale_quote_response_text()
+function retails_quote_response_text()
 {
 	return 'usually within one business day (Mon–Fri, 8am–5pm Pacific)';
 }
 
 /**
- * Supplier copy says "Max File Upload Size: 300MB"; the site accepts WHOLESALE_ARTWORK_MAX_MB.
+ * Supplier copy says "Max File Upload Size: 300MB"; the site accepts RETAILS_ARTWORK_MAX_MB.
  * Rewrites the statement at render time so post_content stays untouched.
  */
-function wholesale_fix_upload_limit_text($html)
+function retails_fix_upload_limit_text($html)
 {
-	$limit = wholesale_artwork_max_text();
+	$limit = retails_artwork_max_text();
 	$html = preg_replace('/(Max(?:imum)?\s+File\s+Upload\s+Size:?\s*)300\s?MB/i', '${1}' . $limit . ' (larger files: email us a download link)', (string) $html);
 	return preg_replace('/\bup to 300\s?MB\b/i', 'up to ' . $limit, $html);
 }
@@ -71,7 +71,7 @@ function wholesale_fix_upload_limit_text($html)
  * Customer-facing label for a product_attr name. Unknown names keep the old
  * "dashes to spaces" label, so nothing else changes.
  */
-function wholesale_attr_label($attr_name)
+function retails_attr_label($attr_name)
 {
 	$labels = array(
 		'of-side' => 'Printed sides',
@@ -101,7 +101,7 @@ function wholesale_attr_label($attr_name)
  * @param array  $options   The option's choices (product_attr), when known: the sides help
  *                          is left out for table covers, whose choices are 3 or 4 sided.
  */
-function wholesale_attr_help($attr_name, $options = array())
+function retails_attr_help($attr_name, $options = array())
 {
 	if (in_array(strtolower((string) $attr_name), array('of-side', 'of-sides'), true)) {
 		foreach ((array) $options as $option) {
@@ -133,7 +133,7 @@ function wholesale_attr_help($attr_name, $options = array())
 }
 
 /** Finishing options grouped under "Advanced finishing options" on calculator products (js/ui-polish.js). */
-function wholesale_advanced_finishing_attrs()
+function retails_advanced_finishing_attrs()
 {
 	return array('webbing', 'velcro', 'rope', 'corners', 'reinforced-strip', 'windslit', 'wind-slit');
 }
@@ -145,23 +145,23 @@ function wholesale_advanced_finishing_attrs()
 /**
  * Shipping line for a channel letter example total: "ships free (orders $1,000+)"
  * when the total reaches the channel letter free-shipping minimum (the same test as
- * wholesale_cart_qualifies_free_shipping()), otherwise "+ $50 shipping".
+ * retails_cart_qualifies_free_shipping()), otherwise "+ $50 shipping".
  */
-function wholesale_cl_example_shipping_text($total)
+function retails_cl_example_shipping_text($total)
 {
-	$threshold = max(0.0, (float) wholesale_get_setting('free_shipping_channel_min'));
+	$threshold = max(0.0, (float) retails_get_setting('free_shipping_channel_min'));
 	if ($threshold > 0 && round((float) $total, 2) >= $threshold) {
-		return sprintf(' &middot; ships free (channel letter orders %s+)', wholesale_free_shipping_amount(true));
+		return sprintf(' &middot; ships free (channel letter orders %s+)', retails_free_shipping_amount(true));
 	}
-	$from = wholesale_shipping_from_amount(true);
+	$from = retails_shipping_from_amount(true);
 	return $from ? ' + ' . $from . ' shipping' : '';
 }
 
 /** "Channel letter orders of $1,000 or more ship free; below that, shipping starts at $50." */
-function wholesale_cl_shipping_rule_text()
+function retails_cl_shipping_rule_text()
 {
-	$free = wholesale_free_shipping_amount(true);
-	$from = wholesale_shipping_from_amount(true);
+	$free = retails_free_shipping_amount(true);
+	$from = retails_shipping_from_amount(true);
 	if ($free && $from) {
 		return sprintf('Channel letter orders of %s or more ship free (3–6 business days); below that, shipping starts at %s.', $free, $from);
 	}
@@ -174,17 +174,17 @@ function wholesale_cl_shipping_rule_text()
 
 /**
  * What a quote request can be about. 'fields' names the conditional question
- * groups the form shows for it (see wholesale_quote_spec_fields()).
+ * groups the form shows for it (see retails_quote_spec_fields()).
  */
-function wholesale_quote_interests()
+function retails_quote_interests()
 {
 	return array(
 		'channel-letters' => array(
 			'label' => 'Channel letters / storefront sign',
 			'heading' => 'Get a Free Channel Letter Quote',
-			'intro' => wholesale_quote_mockup('Send your logo or a storefront photo and rough size. A sign specialist replies with a price and a mockup to approve before anything is made.', 'Send your logo or a storefront photo and rough size. A sign specialist replies with a price and answers your questions before anything is made.'),
+			'intro' => retails_quote_mockup('Send your logo or a storefront photo and rough size. A sign specialist replies with a price and a mockup to approve before anything is made.', 'Send your logo or a storefront photo and rough size. A sign specialist replies with a price and answers your questions before anything is made.'),
 			'fields' => array('cl'),
-			'next' => array('We check your logo, wall size and lighting style.', wholesale_quote_mockup('You get a price and a mockup by email.', 'You get a price by email.'), wholesale_quote_mockup('You approve the mockup, then we build, test and ship.', 'You approve the quote, then we build, test and ship.')),
+			'next' => array('We check your logo, wall size and lighting style.', retails_quote_mockup('You get a price and a mockup by email.', 'You get a price by email.'), retails_quote_mockup('You approve the mockup, then we build, test and ship.', 'You approve the quote, then we build, test and ship.')),
 		),
 		'banners' => array(
 			'label' => 'Banners',
@@ -232,7 +232,7 @@ function wholesale_quote_interests()
 }
 
 /** Maps product categories and old project-type values to an interest key. */
-function wholesale_quote_interest_from_text($text)
+function retails_quote_interest_from_text($text)
 {
 	$text = strtolower((string) $text);
 	$map = array(
@@ -251,7 +251,7 @@ function wholesale_quote_interest_from_text($text)
 }
 
 /** Channel letter lighting choices shown on the quote form. */
-function wholesale_quote_cl_styles()
+function retails_quote_cl_styles()
 {
 	return array(
 		'not-sure' => 'Not sure – help me choose',
@@ -266,11 +266,11 @@ function wholesale_quote_cl_styles()
  * Conditional question groups. Each field: name => [label, type, extra].
  * All are optional; the form only shows the groups for the chosen interest.
  */
-function wholesale_quote_spec_fields()
+function retails_quote_spec_fields()
 {
 	return array(
 		'cl' => array(
-			'cl_style' => array('Lighting style', 'select', wholesale_quote_cl_styles()),
+			'cl_style' => array('Lighting style', 'select', retails_quote_cl_styles()),
 			'cl_width' => array('Approximate sign width', 'text', 'e.g. 10 ft, or the width of your sign band'),
 			'cl_height' => array('Letter height, if known', 'text', 'e.g. 18 in'),
 			'cl_wording' => array('Wording on the sign', 'text', 'e.g. ACME DENTAL'),
@@ -294,10 +294,10 @@ function wholesale_quote_spec_fields()
 }
 
 /**
- * Quote URL with context, e.g. wholesale_quote_url('banners', '13oz-vinyl-banner').
+ * Quote URL with context, e.g. retails_quote_url('banners', '13oz-vinyl-banner').
  * $item is a product slug or a package key; both are re-validated on /contact/.
  */
-function wholesale_quote_url($interest = '', $item = '', $anchor = true)
+function retails_quote_url($interest = '', $item = '', $anchor = true)
 {
 	$page = get_page_by_path('contact');
 	$url = $page ? get_permalink($page) : home_url('/contact/');
@@ -312,15 +312,15 @@ function wholesale_quote_url($interest = '', $item = '', $anchor = true)
  * The validated context for the contact form: array('interest' => key|'' , 'item' => array|null).
  * item = array('type' => 'product'|'package', 'key', 'title', 'url').
  */
-function wholesale_quote_context($interest_raw, $item_raw)
+function retails_quote_context($interest_raw, $item_raw)
 {
-	$interests = wholesale_quote_interests();
+	$interests = retails_quote_interests();
 	$interest = sanitize_key((string) $interest_raw);
 	$interest = isset($interests[$interest]) ? $interest : '';
 	$item = null;
 	$slug = sanitize_title((string) $item_raw);
 	if ($slug) {
-		$packages = wholesale_packages();
+		$packages = retails_packages();
 		if (isset($packages[$slug])) {
 			$item = array('type' => 'package', 'key' => $slug, 'title' => $packages[$slug]['title'] . ' package', 'url' => home_url('/sign-packages/#' . $slug));
 			$interest = $interest ? $interest : 'mixed';
@@ -330,7 +330,7 @@ function wholesale_quote_context($interest_raw, $item_raw)
 				$item = array('type' => 'product', 'key' => $slug, 'title' => html_entity_decode(get_the_title($product), ENT_QUOTES), 'url' => get_permalink($product));
 				if (!$interest) {
 					$terms = wp_get_post_terms($product->ID, 'product_category', array('fields' => 'names'));
-					$interest = wholesale_quote_interest_from_text(get_the_title($product) . ' ' . (is_array($terms) ? implode(' ', $terms) : ''));
+					$interest = retails_quote_interest_from_text(get_the_title($product) . ' ' . (is_array($terms) ? implode(' ', $terms) : ''));
 				}
 			}
 		}
@@ -347,7 +347,7 @@ function wholesale_quote_context($interest_raw, $item_raw)
  * fixed package price: each item is priced at its normal price in the quote.
  * 'products' are product slugs (checked at render; missing ones are skipped).
  */
-function wholesale_packages()
+function retails_packages()
 {
 	return array(
 		'grand-opening' => array(
@@ -387,7 +387,7 @@ function wholesale_packages()
 }
 
 /** Package item product, or null when that slug isn't a published product. */
-function wholesale_package_product($slug)
+function retails_package_product($slug)
 {
 	$product = get_page_by_path($slug, OBJECT, 'product');
 	return $product && 'publish' === $product->post_status ? $product : null;
@@ -397,26 +397,26 @@ function wholesale_package_product($slug)
  * Lead pipeline on Contact Submissions
  * ------------------------------------------------------------------------- */
 
-function wholesale_lead_stages()
+function retails_lead_stages()
 {
 	return array('new' => 'New', 'contacted' => 'Contacted', 'quoted' => 'Quoted', 'won' => 'Won', 'lost' => 'Lost');
 }
 
-function wholesale_lead_lost_reasons()
+function retails_lead_lost_reasons()
 {
 	return array('' => '—', 'price' => 'Price', 'timing' => 'Timing', 'installation' => 'Installation', 'no-response' => 'No response', 'other' => 'Other');
 }
 
-function wholesale_lead_stage($post_id)
+function retails_lead_stage($post_id)
 {
 	$stage = (string) get_post_meta($post_id, '_lead_stage', true);
-	return isset(wholesale_lead_stages()[$stage]) ? $stage : 'new';
+	return isset(retails_lead_stages()[$stage]) ? $stage : 'new';
 }
 
 /** Open (not won/lost) lead whose next follow-up date has passed, or New with no reply after 1 day. */
-function wholesale_lead_is_overdue($post_id)
+function retails_lead_is_overdue($post_id)
 {
-	$stage = wholesale_lead_stage($post_id);
+	$stage = retails_lead_stage($post_id);
 	if (in_array($stage, array('won', 'lost'), true)) {
 		return false;
 	}
@@ -433,7 +433,7 @@ function wholesale_lead_is_overdue($post_id)
  * Follow-up email drafts for staff to copy into the existing "Reply to customer" box.
  * Nothing sends these automatically.
  */
-function wholesale_lead_templates()
+function retails_lead_templates()
 {
 	return array(
 		'ack' => array('Acknowledgment (already sent automatically)', 'The theme already emails the customer a confirmation when the form is sent (Settings → Quote auto-reply). No change.'),
@@ -448,24 +448,24 @@ function wholesale_lead_templates()
  * Assets, attribution, packages page
  * ------------------------------------------------------------------------- */
 
-function wholesale_buying_journey_assets()
+function retails_buying_journey_assets()
 {
-	if (!is_page(array('contact', 'sign-packages')) && !is_singular('product') && !(!is_front_page() && function_exists('wholesale_is_channel_letters_page') && wholesale_is_channel_letters_page())) {
+	if (!is_page(array('contact', 'sign-packages')) && !is_singular('product') && !(!is_front_page() && function_exists('retails_is_channel_letters_page') && retails_is_channel_letters_page())) {
 		return;
 	}
 	$css = '/css/buying-journey.css';
 	$js = '/js/buying-journey.js';
-	wp_enqueue_style('wholesale-buying-journey', get_template_directory_uri() . $css, array(), (string) filemtime(get_template_directory() . $css));
-	wp_enqueue_script('wholesale-buying-journey', get_template_directory_uri() . $js, array(), (string) filemtime(get_template_directory() . $js), array('in_footer' => true, 'strategy' => 'defer'));
+	wp_enqueue_style('retails-buying-journey', get_template_directory_uri() . $css, array(), (string) filemtime(get_template_directory() . $css));
+	wp_enqueue_script('retails-buying-journey', get_template_directory_uri() . $js, array(), (string) filemtime(get_template_directory() . $js), array('in_footer' => true, 'strategy' => 'defer'));
 }
-add_action('wp_enqueue_scripts', 'wholesale_buying_journey_assets', 30);
+add_action('wp_enqueue_scripts', 'retails_buying_journey_assets', 30);
 
 /**
  * First-touch attribution for quote forms: the first page of the visit and its URL tags
  * (utm_*, gclid), kept in sessionStorage (this tab only, cleared when it closes) and copied
  * into the quote form's hidden fields. First-party only; nothing is sent anywhere else.
  */
-function wholesale_buying_journey_attribution_script()
+function retails_buying_journey_attribution_script()
 {
 	if (is_admin() || is_feed()) {
 		return;
@@ -474,12 +474,12 @@ function wholesale_buying_journey_attribution_script()
 	<script>(function(){try{var s=window.sessionStorage;if(s.getItem('sfsAttribution'))return;var p=new URLSearchParams(location.search),o={landing:location.origin+location.pathname};['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid'].forEach(function(k){var v=p.get(k);if(v)o[k]=v.slice(0,150);});if(document.referrer&&document.referrer.indexOf(location.origin)!==0)o.referrer=document.referrer.split('?')[0].slice(0,300);s.setItem('sfsAttribution',JSON.stringify(o));}catch(e){}})();</script>
 	<?php
 }
-add_action('wp_footer', 'wholesale_buying_journey_attribution_script', 5);
+add_action('wp_footer', 'retails_buying_journey_attribution_script', 5);
 
 /** Creates the /sign-packages/ page once (template: page-sign-packages.php). */
-function wholesale_packages_sync_page()
+function retails_packages_sync_page()
 {
-	if (!current_user_can('manage_options') || 'v1' === get_option('wholesale_packages_page_version')) {
+	if (!current_user_can('manage_options') || 'v1' === get_option('retails_packages_page_version')) {
 		return;
 	}
 	if (!get_page_by_path('sign-packages', OBJECT, 'page')) {
@@ -493,38 +493,38 @@ function wholesale_packages_sync_page()
 			'ping_status' => 'closed',
 		));
 	}
-	update_option('wholesale_packages_page_version', 'v1', false);
+	update_option('retails_packages_page_version', 'v1', false);
 }
-add_action('admin_init', 'wholesale_packages_sync_page', 21);
+add_action('admin_init', 'retails_packages_sync_page', 21);
 
 /* ---------------------------------------------------------------------------
  * Lead pipeline (Contact Submissions admin)
  * ------------------------------------------------------------------------- */
 
 add_action('add_meta_boxes_contact_submission', function () {
-	add_meta_box('wholesale-lead-pipeline', 'Lead pipeline', 'wholesale_lead_pipeline_meta_box', 'contact_submission', 'side', 'high');
-	add_meta_box('wholesale-lead-templates', 'Follow-up templates (copy into the reply box)', 'wholesale_lead_templates_meta_box', 'contact_submission', 'normal', 'low');
+	add_meta_box('retails-lead-pipeline', 'Lead pipeline', 'retails_lead_pipeline_meta_box', 'contact_submission', 'side', 'high');
+	add_meta_box('retails-lead-templates', 'Follow-up templates (copy into the reply box)', 'retails_lead_templates_meta_box', 'contact_submission', 'normal', 'low');
 });
 
-function wholesale_lead_pipeline_meta_box($post)
+function retails_lead_pipeline_meta_box($post)
 {
-	wp_nonce_field('wholesale_lead_pipeline', 'wholesale_lead_pipeline_nonce');
-	$stage = wholesale_lead_stage($post->ID);
+	wp_nonce_field('retails_lead_pipeline', 'retails_lead_pipeline_nonce');
+	$stage = retails_lead_stage($post->ID);
 	$owner = (int) get_post_meta($post->ID, '_lead_owner', true);
 	$last = (string) get_post_meta($post->ID, '_lead_last_contact', true);
 	$last = $last ? $last : substr((string) get_post_meta($post->ID, '_contact_last_reply', true), 0, 10);
 	$attribution = (array) get_post_meta($post->ID, '_contact_attribution', true);
 	$interest = (string) get_post_meta($post->ID, '_contact_interest', true);
-	$interests = wholesale_quote_interests();
+	$interests = retails_quote_interests();
 	$specs = (array) get_post_meta($post->ID, '_contact_specs', true);
 	$field = static function ($label, $html) {
 		echo '<p style="margin:0 0 10px"><label style="display:block;font-weight:600;margin-bottom:3px">' . esc_html($label) . '</label>' . $html . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput -- $html is built from escaped parts below.
 	};
-	if (wholesale_lead_is_overdue($post->ID)) {
+	if (retails_lead_is_overdue($post->ID)) {
 		echo '<p style="background:#fcf0f1;border-left:4px solid #d63638;padding:6px 8px;margin:0 0 10px"><strong>Follow-up overdue</strong></p>';
 	}
 	$options = '';
-	foreach (wholesale_lead_stages() as $key => $label) {
+	foreach (retails_lead_stages() as $key => $label) {
 		$options .= '<option value="' . esc_attr($key) . '"' . selected($stage, $key, false) . '>' . esc_html($label) . '</option>';
 	}
 	$field('Stage', '<select name="lead_stage" style="width:100%">' . $options . '</select>');
@@ -534,7 +534,7 @@ function wholesale_lead_pipeline_meta_box($post)
 	$field('Quote amount ($)', '<input type="number" step="0.01" min="0" name="lead_quote_amount" value="' . esc_attr((string) get_post_meta($post->ID, '_lead_quote_amount', true)) . '" style="width:100%">');
 	$field('Won order # (optional)', '<input type="text" name="lead_order" value="' . esc_attr((string) get_post_meta($post->ID, '_lead_order', true)) . '" style="width:100%">');
 	$reasons = '';
-	foreach (wholesale_lead_lost_reasons() as $key => $label) {
+	foreach (retails_lead_lost_reasons() as $key => $label) {
 		$reasons .= '<option value="' . esc_attr($key) . '"' . selected((string) get_post_meta($post->ID, '_lead_lost_reason', true), $key, false) . '>' . esc_html($label) . '</option>';
 	}
 	$field('Lost reason', '<select name="lead_lost_reason" style="width:100%">' . $reasons . '</select>');
@@ -553,20 +553,20 @@ function wholesale_lead_pipeline_meta_box($post)
 	}
 }
 
-function wholesale_lead_templates_meta_box($post)
+function retails_lead_templates_meta_box($post)
 {
 	$name = (string) get_post_meta($post->ID, '_contact_name', true);
 	$project = (string) get_post_meta($post->ID, '_contact_project_type', true);
 	$user = wp_get_current_user();
 	echo '<p>Drafts only. Nothing is sent until you paste one into “Reply to customer” and send it. Skip follow-ups when the customer has replied, ordered, declined or opted out.</p>';
-	foreach (wholesale_lead_templates() as $template) {
+	foreach (retails_lead_templates() as $template) {
 		$text = strtr($template[1], array('{name}' => $name ? strtok($name, ' ') : 'there', '{project}' => $project ? $project : 'sign', '{staff}' => $user->display_name));
 		echo '<details style="margin-bottom:8px"><summary style="cursor:pointer;font-weight:600">' . esc_html($template[0]) . '</summary><textarea readonly rows="8" style="width:100%;margin-top:6px" onfocus="this.select()">' . esc_textarea($text) . '</textarea></details>';
 	}
 }
 
 add_action('save_post_contact_submission', function ($post_id) {
-	if (!isset($_POST['wholesale_lead_pipeline_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['wholesale_lead_pipeline_nonce'])), 'wholesale_lead_pipeline')
+	if (!isset($_POST['retails_lead_pipeline_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['retails_lead_pipeline_nonce'])), 'retails_lead_pipeline')
 		|| (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || !current_user_can('edit_post', $post_id)) {
 		return;
 	}
@@ -575,7 +575,7 @@ add_action('save_post_contact_submission', function ($post_id) {
 		return preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) ? $value : '';
 	};
 	$stage = isset($_POST['lead_stage']) ? sanitize_key(wp_unslash($_POST['lead_stage'])) : 'new';
-	$stage = isset(wholesale_lead_stages()[$stage]) ? $stage : 'new';
+	$stage = isset(retails_lead_stages()[$stage]) ? $stage : 'new';
 	$closed = in_array($stage, array('won', 'lost'), true);
 	$reason = isset($_POST['lead_lost_reason']) ? sanitize_key(wp_unslash($_POST['lead_lost_reason'])) : '';
 	$amount = isset($_POST['lead_quote_amount']) && '' !== $_POST['lead_quote_amount'] ? round(max(0, (float) $_POST['lead_quote_amount']), 2) : '';
@@ -587,7 +587,7 @@ add_action('save_post_contact_submission', function ($post_id) {
 		'_lead_next_followup' => $stop ? '' : $date('lead_next_followup'),
 		'_lead_quote_amount' => $amount,
 		'_lead_order' => isset($_POST['lead_order']) ? sanitize_text_field(wp_unslash($_POST['lead_order'])) : '',
-		'_lead_lost_reason' => 'lost' === $stage && isset(wholesale_lead_lost_reasons()[$reason]) ? $reason : '',
+		'_lead_lost_reason' => 'lost' === $stage && isset(retails_lead_lost_reasons()[$reason]) ? $reason : '',
 		'_lead_no_followup' => $stop ? 1 : '',
 	);
 	foreach ($values as $key => $value) {
@@ -600,18 +600,18 @@ add_action('save_post_contact_submission', function ($post_id) {
 }, 20);
 
 /** A reply sent from the existing "Reply to customer" box marks a New lead as Contacted. */
-function wholesale_lead_note_reply($meta_id, $post_id, $meta_key)
+function retails_lead_note_reply($meta_id, $post_id, $meta_key)
 {
 	if ('_contact_last_reply' !== $meta_key || 'contact_submission' !== get_post_type($post_id)) {
 		return;
 	}
-	if ('new' === wholesale_lead_stage($post_id)) {
+	if ('new' === retails_lead_stage($post_id)) {
 		update_post_meta($post_id, '_lead_stage', 'contacted');
 	}
 	update_post_meta($post_id, '_lead_last_contact', current_time('Y-m-d'));
 }
-add_action('added_post_meta', 'wholesale_lead_note_reply', 10, 3);
-add_action('updated_post_meta', 'wholesale_lead_note_reply', 10, 3);
+add_action('added_post_meta', 'retails_lead_note_reply', 10, 3);
+add_action('updated_post_meta', 'retails_lead_note_reply', 10, 3);
 
 add_filter('manage_contact_submission_posts_columns', function ($columns) {
 	$date = isset($columns['date']) ? $columns['date'] : 'Received';
@@ -625,8 +625,8 @@ add_filter('manage_contact_submission_posts_columns', function ($columns) {
 
 add_action('manage_contact_submission_posts_custom_column', function ($column, $post_id) {
 	if ('lead_stage' === $column) {
-		$stages = wholesale_lead_stages();
-		$stage = wholesale_lead_stage($post_id);
+		$stages = retails_lead_stages();
+		$stage = retails_lead_stage($post_id);
 		$colors = array('new' => '#b26200', 'contacted' => '#2271b1', 'quoted' => '#6c3fb5', 'won' => '#008a20', 'lost' => '#646970');
 		echo '<strong style="color:' . esc_attr($colors[$stage]) . '">' . esc_html($stages[$stage]) . '</strong>';
 		$amount = get_post_meta($post_id, '_lead_quote_amount', true);
@@ -639,7 +639,7 @@ add_action('manage_contact_submission_posts_custom_column', function ($column, $
 			echo '<br><span style="color:#646970">' . esc_html($user->display_name) . '</span>';
 		}
 	} elseif ('lead_interest' === $column) {
-		$interests = wholesale_quote_interests();
+		$interests = retails_quote_interests();
 		$interest = (string) get_post_meta($post_id, '_contact_interest', true);
 		echo esc_html(isset($interests[$interest]) ? $interests[$interest]['label'] : (string) get_post_meta($post_id, '_contact_project_type', true));
 		$source = (string) get_post_meta($post_id, '_contact_source', true);
@@ -647,7 +647,7 @@ add_action('manage_contact_submission_posts_custom_column', function ($column, $
 	} elseif ('lead_followup' === $column) {
 		$next = (string) get_post_meta($post_id, '_lead_next_followup', true);
 		echo $next ? esc_html($next) : '—';
-		if (wholesale_lead_is_overdue($post_id)) {
+		if (retails_lead_is_overdue($post_id)) {
 			echo '<br><strong style="color:#d63638">Overdue</strong>';
 		}
 	}
@@ -657,7 +657,7 @@ add_action('manage_contact_submission_posts_custom_column', function ($column, $
 add_filter('views_edit-contact_submission', function ($views) {
 	$base = admin_url('edit.php?post_type=contact_submission');
 	$current = isset($_GET['lead_stage']) ? sanitize_key(wp_unslash($_GET['lead_stage'])) : '';
-	foreach (array_merge(wholesale_lead_stages(), array('overdue' => 'Overdue follow-up')) as $key => $label) {
+	foreach (array_merge(retails_lead_stages(), array('overdue' => 'Overdue follow-up')) as $key => $label) {
 		$views['lead_' . $key] = '<a href="' . esc_url(add_query_arg('lead_stage', $key, $base)) . '"' . ($current === $key ? ' class="current" aria-current="page"' : '') . '>' . esc_html($label) . '</a>';
 	}
 	return $views;
@@ -684,7 +684,7 @@ add_action('pre_get_posts', function ($query) {
 			array('key' => '_lead_stage', 'compare' => 'NOT EXISTS'),
 			array('key' => '_lead_stage', 'value' => 'new'),
 		));
-	} elseif (isset(wholesale_lead_stages()[$stage])) {
+	} elseif (isset(retails_lead_stages()[$stage])) {
 		$query->set('meta_query', array(array('key' => '_lead_stage', 'value' => $stage)));
 	}
 });
@@ -694,7 +694,7 @@ add_action('wp_dashboard_setup', function () {
 	if (!current_user_can('edit_posts')) {
 		return;
 	}
-	wp_add_dashboard_widget('wholesale_lead_reminders', 'Quote requests needing follow-up', function () {
+	wp_add_dashboard_widget('retails_lead_reminders', 'Quote requests needing follow-up', function () {
 		$ids = get_posts(array(
 			'post_type' => 'contact_submission',
 			'post_status' => 'publish',
@@ -702,14 +702,14 @@ add_action('wp_dashboard_setup', function () {
 			'fields' => 'ids',
 			'date_query' => array(array('after' => '90 days ago')),
 		));
-		$due = array_values(array_filter($ids, 'wholesale_lead_is_overdue'));
+		$due = array_values(array_filter($ids, 'retails_lead_is_overdue'));
 		if (!$due) {
 			echo '<p>Nothing overdue.</p>';
 			return;
 		}
 		echo '<ul>';
 		foreach (array_slice($due, 0, 15) as $id) {
-			echo '<li><a href="' . esc_url(get_edit_post_link($id)) . '">' . esc_html(get_the_title($id)) . '</a> &middot; ' . esc_html(wholesale_lead_stages()[wholesale_lead_stage($id)]) . '</li>';
+			echo '<li><a href="' . esc_url(get_edit_post_link($id)) . '">' . esc_html(get_the_title($id)) . '</a> &middot; ' . esc_html(retails_lead_stages()[retails_lead_stage($id)]) . '</li>';
 		}
 		echo '</ul><p>' . esc_html(sprintf('%d lead(s) in the last 90 days need a reply or follow-up.', count($due))) . ' <a href="' . esc_url(admin_url('edit.php?post_type=contact_submission&lead_stage=overdue')) . '">Overdue follow-ups</a></p>';
 	});
@@ -720,7 +720,7 @@ add_action('wp_dashboard_setup', function () {
  * ------------------------------------------------------------------------- */
 
 /** Case studies cleared to show: published, customer permission, and a real photo. */
-function wholesale_case_studies()
+function retails_case_studies()
 {
 	$file = get_template_directory() . '/data/case-studies.php';
 	$entries = file_exists($file) ? (array) include $file : array();
@@ -735,9 +735,9 @@ function wholesale_case_studies()
  * Case study cards, or '' when none are cleared (the section is then left out entirely).
  * $filter: optional callback to pick entries (e.g. by business type on an industry page).
  */
-function wholesale_render_case_studies($heading = 'Recent Customer Projects', $filter = null)
+function retails_render_case_studies($heading = 'Recent Customer Projects', $filter = null)
 {
-	$entries = wholesale_case_studies();
+	$entries = retails_case_studies();
 	if ($filter) {
 		$entries = array_filter($entries, $filter);
 	}
@@ -776,12 +776,12 @@ function wholesale_render_case_studies($heading = 'Recent Customer Projects', $f
 						<?php endif; ?>
 						<p class="case-study-links">
 							<?php foreach ((array) $entry['products'] as $slug) :
-								$product = wholesale_package_product($slug);
+								$product = retails_package_product($slug);
 								if ($product) : ?>
 									<a href="<?php echo esc_url(get_permalink($product)); ?>"><?php echo esc_html(html_entity_decode(get_the_title($product), ENT_QUOTES)); ?></a>
 								<?php endif;
 							endforeach; ?>
-							<a class="case-study-quote" href="<?php echo esc_url(wholesale_quote_url('channel-letters')); ?>">Get a quote for a sign like this</a>
+							<a class="case-study-quote" href="<?php echo esc_url(retails_quote_url('channel-letters')); ?>">Get a quote for a sign like this</a>
 						</p>
 					</article>
 				<?php endforeach; ?>
@@ -799,9 +799,9 @@ function wholesale_render_case_studies($heading = 'Recent Customer Projects', $f
  * quote). No names, emails, phones or files are sent in these events.
  * ------------------------------------------------------------------------- */
 
-function wholesale_ga4_gap_events()
+function retails_ga4_gap_events()
 {
-	if ('' === wholesale_ga4_measurement_id()) {
+	if ('' === retails_ga4_measurement_id()) {
 		return;
 	}
 	$item = null;
@@ -809,7 +809,7 @@ function wholesale_ga4_gap_events()
 		$product_id = get_queried_object_id();
 		$terms = wp_get_post_terms($product_id, 'product_category', array('fields' => 'names'));
 		$item = array(
-			'item_id' => wholesale_ads_item_id($product_id),
+			'item_id' => retails_ads_item_id($product_id),
 			'item_name' => html_entity_decode(get_the_title($product_id), ENT_QUOTES, 'UTF-8'),
 			'item_category' => is_array($terms) && $terms ? html_entity_decode((string) $terms[0], ENT_QUOTES, 'UTF-8') : '',
 		);
@@ -838,4 +838,4 @@ function wholesale_ga4_gap_events()
 	</script>
 	<?php
 }
-add_action('wp_footer', 'wholesale_ga4_gap_events', 22);
+add_action('wp_footer', 'retails_ga4_gap_events', 22);

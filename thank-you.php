@@ -5,17 +5,17 @@
  * @package litsign
  */
 
-$order = wholesale_thank_you_order();
-$order_number = $order ? wholesale_order_number($order) : '';
-$items = $order ? wholesale_decode_order_meta_array(get_post_meta($order, 'product_json', true)) : array();
-$cost = $order ? wholesale_decode_order_meta_array(get_post_meta($order, 'product_cost', true)) : array();
-$billing = $order ? wholesale_decode_order_meta_array(get_post_meta($order, 'billing_address', true)) : array();
-$shipping = $order ? wholesale_decode_order_meta_array(get_post_meta($order, 'shipping_address', true)) : array();
+$order = retails_thank_you_order();
+$order_number = $order ? retails_order_number($order) : '';
+$items = $order ? retails_decode_order_meta_array(get_post_meta($order, 'product_json', true)) : array();
+$cost = $order ? retails_decode_order_meta_array(get_post_meta($order, 'product_cost', true)) : array();
+$billing = $order ? retails_decode_order_meta_array(get_post_meta($order, 'billing_address', true)) : array();
+$shipping = $order ? retails_decode_order_meta_array(get_post_meta($order, 'shipping_address', true)) : array();
 $ship_by = $order ? get_post_meta($order, 'estimate_delivery_time', true) : '';
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
 };
-$noun = $items ? wholesale_items_noun($items) : 'order';
+$noun = $items ? retails_items_noun($items) : 'order';
 $ship_prefix = isset($shipping['shipping_fname']) ? 'shipping_' : 'billing_';
 
 get_header();
@@ -35,11 +35,11 @@ get_header();
             <?php endif; ?>
         </section>
 
-        <div class="confirmation-grid">
+        <div class="confirmation-grid<?php echo $order ? '' : ' is-single'; ?>">
             <section class="checkout-card" aria-labelledby="next-steps">
                 <h2 id="next-steps">What happens next</h2>
                 <?php // Ordered without artwork: it can still be uploaded from the order page (inc/order-artwork.php). ?>
-                <?php $artwork_missing = $order && function_exists('wholesale_order_artwork_is_owner') && wholesale_order_artwork_is_owner($order) ? wholesale_order_artwork_missing_lines($order) : array(); ?>
+                <?php $artwork_missing = $order && function_exists('retails_order_artwork_is_owner') && retails_order_artwork_is_owner($order) ? retails_order_artwork_missing_lines($order) : array(); ?>
                 <?php if ($artwork_missing) : ?>
                     <p class="order-artwork-alert" role="note">
                         <strong>No artwork yet?</strong> You can upload it from your order page now or later:
@@ -60,7 +60,7 @@ get_header();
                     <?php if (is_user_logged_in()) : ?>
                         <a class="checkout-pay" href="<?php echo esc_url(home_url('/my-orders/')); ?>">View my orders</a>
                     <?php elseif ($order) : ?>
-                        <a class="checkout-pay" href="<?php echo esc_url(wholesale_track_order_url($order)); ?>">Track this order</a>
+                        <a class="checkout-pay" href="<?php echo esc_url(retails_track_order_url($order)); ?>">Track this order</a>
                     <?php endif; ?>
                     <a class="cart-secondary" href="<?php echo esc_url(home_url('/')); ?>">Back to home</a>
                 </div>
@@ -88,7 +88,7 @@ get_header();
                         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd></div>
                         <div><dt>Shipping</dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
                         <div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd></div>
-                        <?php $net = $order && function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($order) : null; // inc/order-net-total.php ?>
+                        <?php $net = $order && function_exists('retails_order_net_amounts') ? retails_order_net_amounts($order) : null; // inc/order-net-total.php ?>
                         <?php if ($net && $net['has_refund']) : ?>
                             <div><dt>Order total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
                             <div class="checkout-refund" style="color:#1a7f37;"><dt>Refunded</dt><dd>&minus;<?php echo esc_html($money($net['refunded'])); ?></dd></div>
@@ -100,7 +100,7 @@ get_header();
                     <dl class="confirmation-meta">
                         <div>
                             <dt>Payment</dt>
-                            <dd><?php echo esc_html(wholesale_payment_customer_text($order, 'We will contact you to arrange payment')); ?></dd>
+                            <dd><?php echo esc_html(retails_payment_customer_text($order, 'We will contact you to arrange payment')); ?></dd>
                         </div>
                         <?php if (!empty($cost['shipping_method'])) : ?>
                             <div><dt>Shipping method</dt><dd><?php echo esc_html($cost['shipping_method']); ?></dd></div>

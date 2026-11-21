@@ -19,7 +19,7 @@ function process_price($price)
 /**
  * Channel letter builder breakdown for one order item: one row per letter/shape plus extras.
  */
-function wholesale_render_cl_breakdown($design)
+function retails_render_cl_breakdown($design)
 {
     $elements = isset($design['elements']) && is_array($design['elements']) ? $design['elements'] : array();
     $extras = isset($design['extras']) && is_array($design['extras']) ? $design['extras'] : array();
@@ -94,8 +94,8 @@ function wholesale_render_cl_breakdown($design)
 
 function render_order_attr_meta_box($post)
 {
-    $items = wholesale_decode_order_meta_array(get_post_meta($post->ID, 'product_json', true));
-    $cost = wholesale_decode_order_meta_array(get_post_meta($post->ID, 'product_cost', true));
+    $items = retails_decode_order_meta_array(get_post_meta($post->ID, 'product_json', true));
+    $cost = retails_decode_order_meta_array(get_post_meta($post->ID, 'product_cost', true));
     $money = static function ($value) {
         return '$' . number_format((float) $value, 2);
     };
@@ -109,9 +109,9 @@ function render_order_attr_meta_box($post)
         <?php foreach ($items as $line_index => $item) :
             $qty = max(1, (int) ($item['product_quantity'] ?? 1));
             $subtotal = (float) ($item['product_subtotal'] ?? 0);
-            $specs = wholesale_item_specs($item);
+            $specs = retails_item_specs($item);
             // Artwork box with Upload / Replace (inc/order-artwork.php); it shows the file links itself.
-            $artwork_box = function_exists('wholesale_order_artwork_box_html') && is_array($item) ? wholesale_order_artwork_box_html($post->ID, $line_index, $item, 'admin') : '';
+            $artwork_box = function_exists('retails_order_artwork_box_html') && is_array($item) ? retails_order_artwork_box_html($post->ID, $line_index, $item, 'admin') : '';
             if ('' !== $artwork_box) {
                 unset($specs['My Artwork']);
             }
@@ -142,13 +142,13 @@ function render_order_attr_meta_box($post)
                     <?php if ($specs) : ?>
                         <dl class="wo-specs">
                             <?php foreach ($specs as $label => $value) : ?>
-                                <div><dt><?php echo esc_html($label); ?></dt><dd><?php echo $value; // Escaped by wholesale_item_specs(). ?></dd></div>
+                                <div><dt><?php echo esc_html($label); ?></dt><dd><?php echo $value; // Escaped by retails_item_specs(). ?></dd></div>
                             <?php endforeach; ?>
                         </dl>
                     <?php endif; ?>
-                    <?php echo $artwork_box; // Escaped in wholesale_order_artwork_box_html(). ?>
+                    <?php echo $artwork_box; // Escaped in retails_order_artwork_box_html(). ?>
                     <?php if (is_array($design)) {
-                        wholesale_render_cl_breakdown($design);
+                        retails_render_cl_breakdown($design);
                     } ?>
                 </div>
             </li>
@@ -159,7 +159,7 @@ function render_order_attr_meta_box($post)
         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd></div>
         <div><dt>Shipping<?php echo !empty($cost['shipping_method']) ? ' <small>' . esc_html($cost['shipping_method']) . '</small>' : ''; ?></dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
         <div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd></div>
-        <?php $net = function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
+        <?php $net = function_exists('retails_order_net_amounts') ? retails_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
         <?php if ($net && $net['has_refund']) : ?>
             <div><dt>Order total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
             <div class="ont-refund"><dt>Refunded</dt><dd>&minus;<?php echo esc_html($money($net['refunded'])); ?></dd></div>
@@ -174,7 +174,7 @@ function render_order_attr_meta_box($post)
 /**
  * Editable address fields, keyed by the suffix after the "billing_"/"shipping_" prefix.
  */
-function wholesale_order_address_fields($with_email)
+function retails_order_address_fields($with_email)
 {
     $fields = array(
         'fname' => 'First name',
@@ -198,7 +198,7 @@ function wholesale_order_address_fields($with_email)
 /**
  * Which prefix an order's shipping address uses. Older orders copied the billing keys.
  */
-function wholesale_order_shipping_prefix($shipping)
+function retails_order_shipping_prefix($shipping)
 {
     return isset($shipping['shipping_fname']) || !isset($shipping['billing_fname']) ? 'shipping_' : 'billing_';
 }
@@ -206,12 +206,12 @@ function wholesale_order_shipping_prefix($shipping)
 function render_order_meta_box($post)
 {
     $post_id = $post->ID;
-    $shipping = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
-    $billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+    $shipping = retails_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
+    $billing = retails_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
     $comment = get_post_meta($post_id, 'order_comment', true);
     $staff_note = get_post_meta($post_id, '_staff_note', true);
     $ship_date = get_post_meta($post_id, 'estimate_delivery_time', true);
-    $ship_prefix = wholesale_order_shipping_prefix($shipping);
+    $ship_prefix = retails_order_shipping_prefix($shipping);
 
     $address = static function ($data, $prefix) {
         $lines = array(
@@ -225,7 +225,7 @@ function render_order_meta_box($post)
         return $lines ? implode('<br>', array_map('esc_html', $lines)) : '<span class="wo-muted">Not provided</span>';
     };
     $inputs = static function ($data, $prefix, $name, $with_email) {
-        foreach (wholesale_order_address_fields($with_email) as $key => $label) {
+        foreach (retails_order_address_fields($with_email) as $key => $label) {
             $id = 'wo_' . $name . '_' . $key;
             $wide = in_array($key, array('company', 'address', 'email'), true) ? ' wo-field--wide' : '';
             printf(

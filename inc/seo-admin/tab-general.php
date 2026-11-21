@@ -13,7 +13,7 @@ defined('ABSPATH') || exit;
  *
  * @return array kind => label.
  */
-function wholesale_seo_template_kinds()
+function retails_seo_template_kinds()
 {
 	return array(
 		'page' => 'Pages',
@@ -25,7 +25,7 @@ function wholesale_seo_template_kinds()
 	);
 }
 
-function wholesale_seo_general_fields()
+function retails_seo_general_fields()
 {
 	$fields = array(
 		'brand' => array(
@@ -64,7 +64,7 @@ function wholesale_seo_general_fields()
 		),
 	);
 
-	foreach (wholesale_seo_template_kinds() as $kind => $label) {
+	foreach (retails_seo_template_kinds() as $kind => $label) {
 		$fields['tpl_' . $kind . '_title'] = array(
 			'type' => 'text',
 			'label' => $label . ': title',
@@ -88,7 +88,7 @@ function wholesale_seo_general_fields()
  *
  * @return array kind => array(object_type, object_id, context).
  */
-function wholesale_seo_template_samples()
+function retails_seo_template_samples()
 {
 	$samples = array();
 
@@ -102,7 +102,7 @@ function wholesale_seo_template_samples()
 		$samples['post'] = array('post', (int) $posts[0], array());
 	}
 
-	$product = wholesale_seo_product('13oz-vinyl-banner');
+	$product = retails_seo_product('13oz-vinyl-banner');
 	if ($product) {
 		$samples['product'] = array('post', (int) $product->ID, array());
 	}
@@ -112,8 +112,8 @@ function wholesale_seo_template_samples()
 		$samples['product_category'] = array('term', (int) $term->term_id, array());
 	}
 
-	if (function_exists('wholesale_guide_registry')) {
-		foreach (wholesale_guide_registry() as $path => $entry) {
+	if (function_exists('retails_guide_registry')) {
+		foreach (retails_guide_registry() as $path => $entry) {
 			$kind = isset($entry['type']) ? ('industry' === $entry['type'] ? 'industry' : 'location') : '';
 			if (!$kind || isset($samples[$kind])) {
 				continue;
@@ -128,23 +128,23 @@ function wholesale_seo_template_samples()
 	return $samples;
 }
 
-function wholesale_seo_general_page()
+function retails_seo_general_page()
 {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
 
-	wholesale_seo_admin_header('wholesale-seo-general', 'Every field is optional. An empty field keeps what the theme prints today. Order of use: a page&rsquo;s own SEO box &rarr; the template or homepage field here &rarr; the theme&rsquo;s built-in text.');
-	wholesale_seo_form_open('general', 'wholesale-seo-general');
+	retails_seo_admin_header('retails-seo-general', 'Every field is optional. An empty field keeps what the theme prints today. Order of use: a page&rsquo;s own SEO box &rarr; the template or homepage field here &rarr; the theme&rsquo;s built-in text.');
+	retails_seo_form_open('general', 'retails-seo-general');
 
 	$front_id = (int) get_option('page_on_front');
-	$home_now = $front_id ? wholesale_seo_admin_effective('post', $front_id) : array();
-	$fields = wholesale_seo_general_fields();
-	$saved = wholesale_seo_settings('general');
+	$home_now = $front_id ? retails_seo_admin_effective('post', $front_id) : array();
+	$fields = retails_seo_general_fields();
+	$saved = retails_seo_settings('general');
 	?>
 	<h2>Site</h2>
 	<table class="form-table" role="presentation">
-		<?php wholesale_seo_field_rows('general', array('brand', 'separator')); ?>
+		<?php retails_seo_field_rows('general', array('brand', 'separator')); ?>
 	</table>
 
 	<h2>Homepage</h2>
@@ -156,37 +156,37 @@ function wholesale_seo_general_page()
 		$fields['home_title']['placeholder'] = $home_now ? $home_now['title'] : '';
 		$fields['home_description']['placeholder'] = $home_now ? $home_now['description'] : '';
 		foreach (array('home_title', 'home_description') as $key) {
-			wholesale_seo_field_row($key, $fields[$key], isset($saved[$key]) ? $saved[$key] : '');
+			retails_seo_field_row($key, $fields[$key], isset($saved[$key]) ? $saved[$key] : '');
 		}
 		?>
 	</table>
 
 	<h2>Social</h2>
 	<table class="form-table" role="presentation">
-		<?php wholesale_seo_field_rows('general', array('og_image', 'social_profiles')); ?>
+		<?php retails_seo_field_rows('general', array('og_image', 'social_profiles')); ?>
 	</table>
 
 	<h2>Title &amp; description templates</h2>
 	<p>Variables: <code>{title}</code> page or product name, <code>{brand}</code>, <code>{category}</code> product category, <code>{price_from}</code> lowest product price, <code>{state}</code>, <code>{city}</code>, <code>{sep}</code> separator. A variable with no value on a page is left out, with its separator.</p>
 	<p class="description">Templates never replace the hand-written keyword titles of the channel letter pages, the builder or the channel letter products; use those pages&rsquo; own SEO box instead.</p>
 	<?php
-	$samples = wholesale_seo_template_samples();
-	foreach (wholesale_seo_template_kinds() as $kind => $label) :
+	$samples = retails_seo_template_samples();
+	foreach (retails_seo_template_kinds() as $kind => $label) :
 		$sample = isset($samples[$kind]) ? $samples[$kind] : null;
 		$vars = array();
 		$now = array();
 		$sample_label = '';
 		if ($sample) {
 			$context = array('object_type' => $sample[0], 'object_id' => $sample[1], 'kind' => $kind, 'guide' => $sample[2]);
-			$vars = wholesale_seo_template_vars($context);
-			$now = wholesale_seo_admin_effective($sample[0], $sample[1]);
-			$sample_label = 'term' === $sample[0] ? $vars['title'] : wholesale_schema_text(get_the_title($sample[1]));
+			$vars = retails_seo_template_vars($context);
+			$now = retails_seo_admin_effective($sample[0], $sample[1]);
+			$sample_label = 'term' === $sample[0] ? $vars['title'] : retails_schema_text(get_the_title($sample[1]));
 		}
 		?>
 		<div class="wseo-card wseo-template" data-wseo-vars="<?php echo esc_attr(wp_json_encode($vars)); ?>" data-wseo-kind="<?php echo esc_attr($kind); ?>">
 			<h3><?php echo esc_html($label); ?></h3>
 			<table class="form-table" role="presentation">
-				<?php wholesale_seo_field_rows('general', array('tpl_' . $kind . '_title', 'tpl_' . $kind . '_description')); ?>
+				<?php retails_seo_field_rows('general', array('tpl_' . $kind . '_title', 'tpl_' . $kind . '_description')); ?>
 			</table>
 			<?php if ($sample) : ?>
 				<div class="wseo-preview">
@@ -208,5 +208,5 @@ function wholesale_seo_general_page()
 	<?php submit_button('Save settings'); ?>
 	</form>
 	<?php
-	wholesale_seo_admin_footer();
+	retails_seo_admin_footer();
 }

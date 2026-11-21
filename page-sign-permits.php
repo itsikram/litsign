@@ -11,9 +11,9 @@
 
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
-$install_url = wholesale_guide_url('how-to-install-channel-letters');
-$locations_url = wholesale_guide_url('locations');
-$ul_number = wholesale_guide_ul_file_number();
+$install_url = retails_guide_url('how-to-install-channel-letters');
+$locations_url = retails_guide_url('locations');
+$ul_number = retails_guide_ul_file_number();
 
 // What ships with every lit sign today (confirmed on the site). Add an item
 // here only once it is offered to every customer.
@@ -24,7 +24,7 @@ $included = array(
 	'A sign that was tested before it shipped',
 );
 
-wholesale_seo_set_page_faq(array(
+retails_seo_set_page_faq(array(
 	array(
 		'q' => 'Do I need a permit for a channel letter sign?',
 		'a' => 'Almost always. Most cities and counties require a sign permit for any permanent exterior business sign, and a lit sign also needs an electrical permit for the power connection. A few small or temporary signs are exempt in some places, but exemptions rarely cover illuminated signs.',
@@ -57,11 +57,11 @@ get_header();
 <main id="primary" class="sf-page gd-page">
 	<section class="sf-hero" aria-labelledby="gd-title">
 		<div class="container">
-			<?php wholesale_breadcrumbs(); ?>
+			<?php retails_breadcrumbs(); ?>
 			<p class="cl-kicker">Before you order</p>
 			<h1 id="gd-title" class="sf-hero-title">Sign Permits for Lit Storefront Signs</h1>
 			<p class="sf-hero-lead">Nearly every city asks for a permit before a lit business sign goes up. Here&rsquo;s how the process usually works, what the permit office and your electrician will ask for, and what comes in the box with every sign we ship.</p>
-			<?php wholesale_guide_byline(); ?>
+			<?php retails_guide_byline(); ?>
 			<ul class="gd-facts">
 				<li><strong>Usually needed</strong><span>A sign permit, plus an electrical permit for the power connection</span></li>
 				<li><strong>Who applies</strong><span>Often your licensed sign installer or electrician</span></li>
@@ -145,12 +145,12 @@ get_header();
 			<p class="cl-kicker">Questions</p>
 			<h2 id="gd-faq-title" class="cl-section-title">Sign Permit FAQ</h2>
 			<div class="cl-faq-list">
-				<?php wholesale_seo_render_faq(); ?>
+				<?php retails_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>
 
-	<?php wholesale_guide_render_help('Not Sure What Your City Allows?', 'Send us your storefront photo, logo and any sign criteria from your landlord. We&rsquo;ll suggest a size and style that fits before you order.'); ?>
+	<?php retails_guide_render_help('Not Sure What Your City Allows?', 'Send us your storefront photo, logo and any sign criteria from your landlord. We&rsquo;ll suggest a size and style that fits before you order.'); ?>
 </main>
 
 <?php

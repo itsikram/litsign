@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 /**
  * Whether the current admin screen is the product edit / new product screen.
  */
-function wholesale_pe_is_product_screen()
+function retails_pe_is_product_screen()
 {
 	$screen = function_exists('get_current_screen') ? get_current_screen() : null;
 	return $screen && 'post' === $screen->base && 'product' === $screen->post_type;
@@ -32,7 +32,7 @@ function wholesale_pe_is_product_screen()
  * Plain-language labels and help text for the CMB2 fields. Only the name, help
  * text and input hints change; ids, types, defaults and saving stay the same.
  */
-function wholesale_pe_field_copy()
+function retails_pe_field_copy()
 {
 	return array(
 		'product_details' => array(
@@ -111,7 +111,7 @@ add_action('cmb2_admin_init', function () {
 		'product_additional_info' => 'Descriptions and FAQ',
 		'product_extra_options' => 'Channel letter extras and defaults',
 	);
-	foreach (wholesale_pe_field_copy() as $box_id => $fields) {
+	foreach (retails_pe_field_copy() as $box_id => $fields) {
 		$box = cmb2_get_metabox($box_id);
 		if (!$box) {
 			continue;
@@ -153,7 +153,7 @@ add_filter('cmb2_override_meta_remove', function ($override, $args) {
  * rich text, wp_kses_post() drops attributes such as decoding="async"). Changed
  * values are cleaned as before. CMB2 works with slashed values here.
  */
-function wholesale_pe_keep_unchanged_value($override, $value, $object_id, $field_args)
+function retails_pe_keep_unchanged_value($override, $value, $object_id, $field_args)
 {
 	if (null !== $override || !is_string($value) || empty($field_args['id']) || 'product' !== get_post_type($object_id)) {
 		return $override;
@@ -164,10 +164,10 @@ function wholesale_pe_keep_unchanged_value($override, $value, $object_id, $field
 	}
 	return $override;
 }
-foreach (array('text', 'text_small', 'text_medium', 'textarea', 'textarea_small', 'wysiwyg') as $wholesale_pe_type) {
-	add_filter("cmb2_sanitize_{$wholesale_pe_type}", 'wholesale_pe_keep_unchanged_value', 10, 4);
+foreach (array('text', 'text_small', 'text_medium', 'textarea', 'textarea_small', 'wysiwyg') as $retails_pe_type) {
+	add_filter("cmb2_sanitize_{$retails_pe_type}", 'retails_pe_keep_unchanged_value', 10, 4);
 }
-unset($wholesale_pe_type);
+unset($retails_pe_type);
 
 /**
  * Swap the render callbacks of the options and channel letter boxes, keeping
@@ -177,8 +177,8 @@ unset($wholesale_pe_type);
 add_action('add_meta_boxes_product', function () {
 	global $wp_meta_boxes;
 	$swap = array(
-		'product_attr' => array('Product options (attributes)', 'wholesale_pe_render_attr_box'),
-		'product_cl_data' => array('Channel letter price table and colors', 'wholesale_pe_render_cl_box'),
+		'product_attr' => array('Product options (attributes)', 'retails_pe_render_attr_box'),
+		'product_cl_data' => array('Channel letter price table and colors', 'retails_pe_render_cl_box'),
 	);
 	foreach ($swap as $id => $box) {
 		foreach (array('normal', 'advanced', 'side') as $context) {
@@ -196,7 +196,7 @@ add_action('add_meta_boxes_product', function () {
  * Options box. The hidden #productAttrJson holds the stored value untouched;
  * the editor UI is built by JS from the JSON in the data attribute.
  */
-function wholesale_pe_render_attr_box($post)
+function retails_pe_render_attr_box($post)
 {
 	$product_attr = (string) get_post_meta($post->ID, 'product_attr', true);
 	$has_upload_artwork = get_post_meta($post->ID, '_has_upload_artwork', true);
@@ -223,7 +223,7 @@ function wholesale_pe_render_attr_box($post)
  * comes back byte for byte (the old box printed it unescaped, which cut it at
  * the first quote and gave the legacy '[{' value).
  */
-function wholesale_pe_render_cl_box($post)
+function retails_pe_render_cl_box($post)
 {
 	$product_cl_data = (string) get_post_meta($post->ID, 'product_cl_data', true);
 	$value = '[{' === $product_cl_data ? '[]' : $product_cl_data;
@@ -245,11 +245,11 @@ function wholesale_pe_render_cl_box($post)
 add_action('init', function () {
 	if (false !== has_action('save_post', 'save_product_attr_meta')) {
 		remove_action('save_post', 'save_product_attr_meta');
-		add_action('save_post', 'wholesale_pe_save_product_attr');
+		add_action('save_post', 'retails_pe_save_product_attr');
 	}
 	if (false !== has_action('save_post', 'save_product_cl_meta')) {
 		remove_action('save_post', 'save_product_cl_meta');
-		add_action('save_post', 'wholesale_pe_save_product_cl');
+		add_action('save_post', 'retails_pe_save_product_cl');
 	}
 });
 
@@ -259,7 +259,7 @@ add_action('init', function () {
  * (which appends the name to options sharing a bare price) would also rewrite
  * older groups nobody edited.
  */
-function wholesale_pe_save_product_attr($post_id)
+function retails_pe_save_product_attr($post_id)
 {
 	if ((defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || !current_user_can('edit_post', $post_id) || !isset($_POST['product_attr'])) {
 		return;
@@ -271,10 +271,10 @@ function wholesale_pe_save_product_attr($post_id)
 	}
 	$attrs = json_decode($raw, true);
 	if (!is_array($attrs)) {
-		set_transient('wholesale_attr_save_error_' . get_current_user_id(), $post_id, 60);
+		set_transient('retails_attr_save_error_' . get_current_user_id(), $post_id, 60);
 		return;
 	}
-	$clean = wholesale_normalize_product_attrs($attrs);
+	$clean = retails_normalize_product_attrs($attrs);
 
 	$old_by_name = array();
 	$old = json_decode($stored, true);
@@ -298,7 +298,7 @@ function wholesale_pe_save_product_attr($post_id)
 	update_post_meta($post_id, 'product_attr', wp_slash(wp_json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
 }
 
-function wholesale_pe_save_product_cl($post_id)
+function retails_pe_save_product_cl($post_id)
 {
 	if ((defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || !current_user_can('edit_post', $post_id) || !isset($_POST['product_cl_data'])) {
 		return;
@@ -311,14 +311,14 @@ function wholesale_pe_save_product_cl($post_id)
 	// Same cleaning as save_product_cl_meta(); keep the previous value if the result can't be read.
 	$clean = sanitize_text_field($_POST['product_cl_data']);
 	if (!is_array(json_decode(wp_unslash($clean), true))) {
-		set_transient('wholesale_cl_save_error_' . get_current_user_id(), $post_id, 60);
+		set_transient('retails_cl_save_error_' . get_current_user_id(), $post_id, 60);
 		return;
 	}
 	update_post_meta($post_id, 'product_cl_data', $clean);
 }
 
 add_action('admin_notices', function () {
-	$key = 'wholesale_cl_save_error_' . get_current_user_id();
+	$key = 'retails_cl_save_error_' . get_current_user_id();
 	if ($post_id = get_transient($key)) {
 		delete_transient($key);
 		echo '<div class="notice notice-error"><p>The channel letter data for &ldquo;' . esc_html(get_the_title($post_id)) . '&rdquo; was not saved because it could not be read. The previous data was kept.</p></div>';
@@ -326,13 +326,13 @@ add_action('admin_notices', function () {
 });
 
 add_action('admin_enqueue_scripts', function ($hook) {
-	if (!in_array($hook, array('post.php', 'post-new.php'), true) || !wholesale_pe_is_product_screen()) {
+	if (!in_array($hook, array('post.php', 'post-new.php'), true) || !retails_pe_is_product_screen()) {
 		return;
 	}
 	$dir = get_template_directory();
 	$uri = get_template_directory_uri();
-	wp_enqueue_style('wholesale-product-editor', $uri . '/css/admin-product-editor.css', array(), (string) filemtime($dir . '/css/admin-product-editor.css'));
-	wp_enqueue_script('wholesale-product-editor', $uri . '/js/admin-product-editor.js', array('jquery', 'jquery-ui-sortable'), (string) filemtime($dir . '/js/admin-product-editor.js'), true);
+	wp_enqueue_style('retails-product-editor', $uri . '/css/admin-product-editor.css', array(), (string) filemtime($dir . '/css/admin-product-editor.css'));
+	wp_enqueue_script('retails-product-editor', $uri . '/js/admin-product-editor.js', array('jquery', 'jquery-ui-sortable'), (string) filemtime($dir . '/js/admin-product-editor.js'), true);
 
 	$post = get_post();
 	$is_new = !$post || 'auto-draft' === $post->post_status;
@@ -342,7 +342,7 @@ add_action('admin_enqueue_scripts', function ($hook) {
 	// would then write that default in).
 	$stored = array();
 	if (!$is_new) {
-		foreach (wholesale_pe_field_copy() as $fields) {
+		foreach (retails_pe_field_copy() as $fields) {
 			foreach (array_keys($fields) as $key) {
 				$stored[$key] = metadata_exists('post', $post->ID, $key) ? get_post_meta($post->ID, $key, true) : null;
 			}
@@ -362,7 +362,7 @@ add_action('admin_enqueue_scripts', function ($hook) {
 		'no_found_rows' => true,
 	));
 
-	wp_localize_script('wholesale-product-editor', 'ssoProductEditor', array(
+	wp_localize_script('retails-product-editor', 'ssoProductEditor', array(
 		'postId' => $post ? (int) $post->ID : 0,
 		'isNew' => $is_new,
 		'stored' => $is_new ? new stdClass() : $stored,
@@ -373,9 +373,9 @@ add_action('admin_enqueue_scripts', function ($hook) {
 		'products' => array_map(static function ($product) {
 			return array('slug' => $product->post_name, 'title' => html_entity_decode(get_the_title($product), ENT_QUOTES, 'UTF-8'), 'status' => $product->post_status);
 		}, $products),
-		'sqftMinPrice' => defined('WHOLESALE_SQFT_MIN_PRICE') ? WHOLESALE_SQFT_MIN_PRICE : 16.5,
-		// wholesale_product_flat_options_on_top(), for the price preview.
-		'flatOnTop' => $post && function_exists('wholesale_product_flat_options_on_top') ? wholesale_product_flat_options_on_top($post->ID) : false,
-		'racewayPerFoot' => defined('WHOLESALE_RACEWAY_COST_PER_FOOT') ? WHOLESALE_RACEWAY_COST_PER_FOOT : 55,
+		'sqftMinPrice' => defined('RETAILS_SQFT_MIN_PRICE') ? RETAILS_SQFT_MIN_PRICE : 16.5,
+		// retails_product_flat_options_on_top(), for the price preview.
+		'flatOnTop' => $post && function_exists('retails_product_flat_options_on_top') ? retails_product_flat_options_on_top($post->ID) : false,
+		'racewayPerFoot' => defined('RETAILS_RACEWAY_COST_PER_FOOT') ? RETAILS_RACEWAY_COST_PER_FOOT : 55,
 	));
 });

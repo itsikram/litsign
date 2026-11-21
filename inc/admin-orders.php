@@ -13,7 +13,7 @@ if (!defined('ABSPATH')) {
 /**
  * Every payment status an order can have: key => array(label, badge tone).
  */
-function wholesale_payment_statuses()
+function retails_payment_statuses()
 {
 	return array(
 		'paid' => array('Paid', 'success'),
@@ -29,7 +29,7 @@ function wholesale_payment_statuses()
  * The order's payment status. Older ticket orders were saved without one, so it is
  * read from the ticket: paid by card means paid, accepted means payment is still owed.
  */
-function wholesale_get_payment_status($post_id)
+function retails_get_payment_status($post_id)
 {
 	$status = get_post_meta($post_id, '_payment_status', true);
 	if (!$status && ($ticket_id = (int) get_post_meta($post_id, '_ticket_id', true))) {
@@ -38,17 +38,17 @@ function wholesale_get_payment_status($post_id)
 	return (string) $status;
 }
 
-function wholesale_payment_badge($post_id)
+function retails_payment_badge($post_id)
 {
-	$labels = wholesale_payment_statuses();
-	$status = wholesale_get_payment_status($post_id);
+	$labels = retails_payment_statuses();
+	$status = retails_get_payment_status($post_id);
 	list($label, $tone) = isset($labels[$status]) ? $labels[$status] : array('Not recorded', 'muted');
 	return '<span class="order-badge order-badge--' . esc_attr($tone) . '">' . esc_html($label) . '</span>';
 }
 
-function wholesale_order_total($post_id)
+function retails_order_total($post_id)
 {
-	$cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
+	$cost = retails_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
 	return isset($cost['grand_total']) ? (float) $cost['grand_total'] : 0.0;
 }
 
@@ -69,11 +69,11 @@ add_filter('manage_order_posts_columns', function ($columns) {
 
 add_action('manage_order_posts_custom_column', function ($column, $post_id) {
 	if ('payment' === $column) {
-		echo wholesale_payment_badge($post_id); // Escaped in the helper.
+		echo retails_payment_badge($post_id); // Escaped in the helper.
 		printf(
-			'<span class="hidden wholesale-order-quick-data" data-order-status="%s" data-payment-status="%s" data-carrier="%s" data-tracking="%s" data-delivery="%s"></span>',
+			'<span class="hidden retails-order-quick-data" data-order-status="%s" data-payment-status="%s" data-carrier="%s" data-tracking="%s" data-delivery="%s"></span>',
 			esc_attr(get_post_status($post_id)),
-			esc_attr(wholesale_get_payment_status($post_id)),
+			esc_attr(retails_get_payment_status($post_id)),
 			esc_attr(get_post_meta($post_id, '_tracking_carrier', true)),
 			esc_attr(get_post_meta($post_id, '_tracking_number', true)),
 			esc_attr(get_post_meta($post_id, 'estimate_delivery_time', true))
@@ -86,20 +86,20 @@ add_action('quick_edit_custom_box', function ($column_name, $post_type) {
 		return;
 	}
 	?>
-	<fieldset class="inline-edit-col-right wholesale-order-quick-edit">
+	<fieldset class="inline-edit-col-right retails-order-quick-edit">
 		<div class="inline-edit-col">
 			<label>
 				<span class="title"><?php esc_html_e('Payment status', 'litsign'); ?></span>
-				<select name="wholesale_payment_status">
+				<select name="retails_payment_status">
 					<option value=""><?php esc_html_e('Not recorded', 'litsign'); ?></option>
-					<?php foreach (wholesale_payment_statuses() as $value => $item) : ?>
+					<?php foreach (retails_payment_statuses() as $value => $item) : ?>
 						<option value="<?php echo esc_attr($value); ?>"><?php echo esc_html($item[0]); ?></option>
 					<?php endforeach; ?>
 				</select>
 			</label>
 			<label>
 				<span class="title"><?php esc_html_e('Carrier', 'litsign'); ?></span>
-				<select name="wholesale_tracking_carrier">
+				<select name="retails_tracking_carrier">
 					<option value=""><?php esc_html_e('Select carrier', 'litsign'); ?></option>
 					<option value="ups">UPS</option>
 					<option value="fedex">FedEx</option>
@@ -109,14 +109,14 @@ add_action('quick_edit_custom_box', function ($column_name, $post_type) {
 			</label>
 			<label>
 				<span class="title"><?php esc_html_e('Tracking number', 'litsign'); ?></span>
-				<input type="text" name="wholesale_tracking_number" autocomplete="off">
+				<input type="text" name="retails_tracking_number" autocomplete="off">
 			</label>
 			<label>
 				<span class="title"><?php esc_html_e('Estimated delivery', 'litsign'); ?></span>
-				<input type="text" name="wholesale_estimated_delivery" placeholder="e.g. Oct 20 or 3-5 business days">
+				<input type="text" name="retails_estimated_delivery" placeholder="e.g. Oct 20 or 3-5 business days">
 			</label>
 			<label class="alignleft">
-				<input type="checkbox" name="wholesale_notify_customer" value="1">
+				<input type="checkbox" name="retails_notify_customer" value="1">
 				<span><?php esc_html_e('Email customer if order status changes', 'litsign'); ?></span>
 			</label>
 		</div>
@@ -140,7 +140,7 @@ add_action('admin_footer-edit.php', function () {
 				edit.apply(this, arguments);
 				var postId = typeof id === 'object' ? this.getId(id) : id;
 				var row = $('#post-' + postId);
-				var data = row.find('.wholesale-order-quick-data');
+				var data = row.find('.retails-order-quick-data');
 				var form = $('#edit-' + postId);
 				if (!data.length || !form.length) {
 					return;
@@ -149,11 +149,11 @@ add_action('admin_footer-edit.php', function () {
 					form.find('[name="order_status"] option[value="pending"]').remove();
 				}
 				form.find('[name="order_status"]').val(data.attr('data-order-status'));
-				form.find('[name="wholesale_payment_status"]').val(data.attr('data-payment-status'));
-				form.find('[name="wholesale_tracking_carrier"]').val(data.attr('data-carrier'));
-				form.find('[name="wholesale_tracking_number"]').val(data.attr('data-tracking'));
-				form.find('[name="wholesale_estimated_delivery"]').val(data.attr('data-delivery'));
-				form.find('[name="wholesale_notify_customer"]').prop('checked', false);
+				form.find('[name="retails_payment_status"]').val(data.attr('data-payment-status'));
+				form.find('[name="retails_tracking_carrier"]').val(data.attr('data-carrier'));
+				form.find('[name="retails_tracking_number"]').val(data.attr('data-tracking'));
+				form.find('[name="retails_estimated_delivery"]').val(data.attr('data-delivery'));
+				form.find('[name="retails_notify_customer"]').prop('checked', false);
 			};
 		});
 	</script>
@@ -214,7 +214,7 @@ add_action('load-edit.php', function () {
 	$rows = $wpdb->get_results(
 		"SELECT p.ID,
 			(SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = p.ID AND meta_key = '_wp_old_date' ORDER BY meta_id LIMIT 1) AS placed_day,
-			(SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = p.ID AND meta_key = '_wholesale_admin_order_email_sent' LIMIT 1) AS emailed
+			(SELECT meta_value FROM {$wpdb->postmeta} WHERE post_id = p.ID AND meta_key = '_retails_admin_order_email_sent' LIMIT 1) AS emailed
 		FROM {$wpdb->posts} p
 		WHERE p.post_type = 'order' AND TIME(p.post_date) = '00:00:00'
 			AND EXISTS (SELECT 1 FROM {$wpdb->postmeta} WHERE post_id = p.ID AND meta_key = '_wp_old_date')"
@@ -265,15 +265,15 @@ add_filter('use_block_editor_for_post_type', function ($use, $post_type) {
 add_action('add_meta_boxes_order', function () {
 	remove_meta_box('submitdiv', 'order', 'side');
 	remove_meta_box('slugdiv', 'order', 'normal');
-	add_meta_box('wholesale-order-status', 'Order status', 'wholesale_render_status_box', 'order', 'side', 'high');
-	add_meta_box('wholesale-fulfillment', 'Payment', 'wholesale_render_fulfillment_box', 'order', 'side', 'high');
-	add_meta_box('wholesale-order-activity', 'Activity', 'wholesale_render_activity_box', 'order', 'side', 'default');
+	add_meta_box('retails-order-status', 'Order status', 'retails_render_status_box', 'order', 'side', 'high');
+	add_meta_box('retails-fulfillment', 'Payment', 'retails_render_fulfillment_box', 'order', 'side', 'high');
+	add_meta_box('retails-order-activity', 'Activity', 'retails_render_activity_box', 'order', 'side', 'default');
 });
 
 /**
- * What the customer is told when an order moves to each status (see wholesale_send_status_email()).
+ * What the customer is told when an order moves to each status (see retails_send_status_email()).
  */
-function wholesale_status_email_hints()
+function retails_status_email_hints()
 {
 	return array(
 		'in-review' => 'No email is sent. New orders start here until the B2Sign order is linked.',
@@ -300,30 +300,30 @@ add_action('edit_form_top', function ($post) {
 	if ('order' !== $post->post_type) {
 		return;
 	}
-	$billing = wholesale_decode_order_meta_array(get_post_meta($post->ID, 'billing_address', true));
+	$billing = retails_decode_order_meta_array(get_post_meta($post->ID, 'billing_address', true));
 	$name = trim(($billing['billing_fname'] ?? '') . ' ' . ($billing['billing_lname'] ?? ''));
 	$email = $billing['billing_email'] ?? '';
 	$phone = $billing['billing_tel'] ?? '';
 	?>
 	<div class="wo-header">
 		<div class="wo-header__main">
-			<h2 class="wo-header__title">Order #<?php echo esc_html(wholesale_order_number($post->ID)); ?></h2>
-			<?php echo wholesale_order_status_badge($post->post_status, $post->ID); // Escaped in the helper. ?>
-			<?php echo wholesale_payment_badge($post->ID); // Escaped in the helper. ?>
+			<h2 class="wo-header__title">Order #<?php echo esc_html(retails_order_number($post->ID)); ?></h2>
+			<?php echo retails_order_status_badge($post->post_status, $post->ID); // Escaped in the helper. ?>
+			<?php echo retails_payment_badge($post->ID); // Escaped in the helper. ?>
 		</div>
 		<p class="wo-header__meta">
 			Placed <?php echo esc_html(get_the_date('M j, Y \a\t g:ia', $post)); ?>
 			<?php if ($name) : ?>&middot; <?php echo esc_html($name); ?><?php endif; ?>
 			<?php if (!empty($billing['billing_company'])) : ?>(<?php echo esc_html($billing['billing_company']); ?>)<?php endif; ?>
-			<?php $net = function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
-			&middot; <strong>$<?php echo esc_html(number_format($net ? $net['net'] : wholesale_order_total($post->ID), 2)); ?></strong>
+			<?php $net = function_exists('retails_order_net_amounts') ? retails_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
+			&middot; <strong>$<?php echo esc_html(number_format($net ? $net['net'] : retails_order_total($post->ID), 2)); ?></strong>
 			<?php if ($net && $net['has_refund']) : ?>
 				<span class="ont-was">(was <del>$<?php echo esc_html(number_format($net['total'], 2)); ?></del>, $<?php echo esc_html(number_format($net['refunded'], 2)); ?> refunded)</span>
 			<?php endif; ?>
 		</p>
 		<div class="wo-header__actions">
 			<?php if (is_email($email)) : ?>
-				<a class="button" href="mailto:<?php echo esc_attr($email); ?>?subject=<?php echo rawurlencode('Your order #' . wholesale_order_number($post->ID)); ?>"><span class="dashicons dashicons-email" aria-hidden="true"></span> Email customer</a>
+				<a class="button" href="mailto:<?php echo esc_attr($email); ?>?subject=<?php echo rawurlencode('Your order #' . retails_order_number($post->ID)); ?>"><span class="dashicons dashicons-email" aria-hidden="true"></span> Email customer</a>
 			<?php endif; ?>
 			<?php if ($phone) : ?>
 				<a class="button" href="tel:<?php echo esc_attr(preg_replace('/[^0-9+]/', '', $phone)); ?>"><span class="dashicons dashicons-phone" aria-hidden="true"></span> <?php echo esc_html($phone); ?></a>
@@ -334,20 +334,20 @@ add_action('edit_form_top', function ($post) {
 	<?php
 });
 
-function wholesale_render_status_box($post)
+function retails_render_status_box($post)
 {
 	$status = $post->post_status;
-	$info = wholesale_order_status_info();
-	$hints = wholesale_status_email_hints();
-	$emails_on = wholesale_setting_enabled('email_status_updates');
+	$info = retails_order_status_info();
+	$hints = retails_status_email_hints();
+	$emails_on = retails_setting_enabled('email_status_updates');
 	$carrier = get_post_meta($post->ID, '_tracking_carrier', true);
 	$tracking = get_post_meta($post->ID, '_tracking_number', true);
-	$tracking_url = wholesale_tracking_url($carrier, $tracking);
+	$tracking_url = retails_tracking_url($carrier, $tracking);
 	// "on_hold" and "pending" are legacy duplicates of "on-hold" and "in-review"; only offer them on orders that
 	// already use them.
 	$groups = array(
 		'Before shipping' => array('in-review', 'processing', 'finishing', 'ready-for-pickup', 'on-hold'),
-		'Shipping & delivery' => wholesale_order_shipped_statuses(),
+		'Shipping & delivery' => retails_order_shipped_statuses(),
 		'Closed' => array('cancelled', 'refunded', 'failed'),
 	);
 	if ('on_hold' === $status) {
@@ -357,7 +357,7 @@ function wholesale_render_status_box($post)
 		array_unshift($groups['Before shipping'], 'pending');
 	}
 	$options = array_merge(...array_values($groups));
-	wp_nonce_field('wholesale_fulfillment', 'wholesale_fulfillment_nonce');
+	wp_nonce_field('retails_fulfillment', 'retails_fulfillment_nonce');
 	?>
 	<div class="wo-status" data-current="<?php echo esc_attr($status); ?>">
 		<input type="hidden" name="original_post_status" value="<?php echo esc_attr($status); ?>">
@@ -379,16 +379,16 @@ function wholesale_render_status_box($post)
 
 		<div class="wo-status__tracking">
 			<p class="wo-status__row">
-				<label for="wholesale_tracking_carrier"><strong>Carrier</strong></label>
-				<select name="wholesale_tracking_carrier" id="wholesale_tracking_carrier">
+				<label for="retails_tracking_carrier"><strong>Carrier</strong></label>
+				<select name="retails_tracking_carrier" id="retails_tracking_carrier">
 					<?php foreach (array('' => 'Select…', 'ups' => 'UPS', 'fedex' => 'FedEx', 'usps' => 'USPS', 'freight' => 'Freight / other') as $value => $label) : ?>
 						<option value="<?php echo esc_attr($value); ?>" <?php selected($carrier, $value); ?>><?php echo esc_html($label); ?></option>
 					<?php endforeach; ?>
 				</select>
 			</p>
 			<p class="wo-status__row">
-				<label for="wholesale_tracking_number"><strong>Tracking #</strong></label>
-				<input type="text" name="wholesale_tracking_number" id="wholesale_tracking_number" value="<?php echo esc_attr($tracking); ?>" autocomplete="off">
+				<label for="retails_tracking_number"><strong>Tracking #</strong></label>
+				<input type="text" name="retails_tracking_number" id="retails_tracking_number" value="<?php echo esc_attr($tracking); ?>" autocomplete="off">
 			</p>
 			<?php if ($tracking_url) : ?>
 				<p class="wo-status__track"><a href="<?php echo esc_url($tracking_url); ?>" target="_blank" rel="noopener">Track this package &rarr;</a></p>
@@ -398,11 +398,11 @@ function wholesale_render_status_box($post)
 
 		<?php if ($emails_on) : ?>
 			<div class="wo-status__notify" hidden>
-				<label><input type="checkbox" name="wholesale_notify_customer" value="1" checked> Email the customer about this change</label>
+				<label><input type="checkbox" name="retails_notify_customer" value="1" checked> Email the customer about this change</label>
 				<p class="description wo-status__hint"></p>
 			</div>
 		<?php else : ?>
-			<p class="description">Status emails are off. <a href="<?php echo esc_url(admin_url('options-general.php?page=wholesale-settings')); ?>">Settings</a></p>
+			<p class="description">Status emails are off. <a href="<?php echo esc_url(admin_url('admin.php?page=retails-settings')); ?>">Settings</a></p>
 		<?php endif; ?>
 	</div>
 	<div class="wo-status__footer">
@@ -415,18 +415,18 @@ function wholesale_render_status_box($post)
 	<?php
 }
 
-function wholesale_render_fulfillment_box($post)
+function retails_render_fulfillment_box($post)
 {
-	$payment_status = wholesale_get_payment_status($post->ID);
+	$payment_status = retails_get_payment_status($post->ID);
 	$txn =get_post_meta($post->ID, '_payment_txn_id', true);
 	$last4 = get_post_meta($post->ID, '_payment_card_last4', true);
 	$approval = get_post_meta($post->ID, '_payment_approval_code', true);
 	$ticket_id = (int) get_post_meta($post->ID, '_ticket_id', true);
 	$verified_by = (int) get_post_meta($post->ID, '_payment_verified_by', true);
 	?>
-	<div class="wholesale-fulfillment">
-		<?php $net = function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
-		<p class="wo-pay__total"><span class="wo-pay__amount">$<?php echo esc_html(number_format($net ? $net['net'] : wholesale_order_total($post->ID), 2)); ?></span> <?php echo wholesale_payment_badge($post->ID); // Escaped in the helper. ?></p>
+	<div class="retails-fulfillment">
+		<?php $net = function_exists('retails_order_net_amounts') ? retails_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
+		<p class="wo-pay__total"><span class="wo-pay__amount">$<?php echo esc_html(number_format($net ? $net['net'] : retails_order_total($post->ID), 2)); ?></span> <?php echo retails_payment_badge($post->ID); // Escaped in the helper. ?></p>
 		<?php if ($net && $net['has_refund']) : ?>
 			<p class="wo-pay__net">Order total $<?php echo esc_html(number_format($net['total'], 2)); ?> &middot; <span class="ont-refunded">Refunded &minus;$<?php echo esc_html(number_format($net['refunded'], 2)); ?></span></p>
 		<?php endif; ?>
@@ -444,18 +444,18 @@ function wholesale_render_fulfillment_box($post)
 			<p class="description">Payment status last set by <?php echo esc_html($user->display_name); ?>.</p>
 		<?php endif; ?>
 		<?php if ('needs_review' === $payment_status) : ?>
-			<p class="wholesale-fulfillment-warning">Converge could not be reached to double-check this payment. Confirm the transaction in Converge before starting production.</p>
+			<p class="retails-fulfillment-warning">Converge could not be reached to double-check this payment. Confirm the transaction in Converge before starting production.</p>
 		<?php elseif ('manual' === $payment_status) : ?>
-			<p class="wholesale-fulfillment-warning">No card payment was taken. Collect payment before production.</p>
+			<p class="retails-fulfillment-warning">No card payment was taken. Collect payment before production.</p>
 		<?php endif; ?>
-		<?php wholesale_render_refund_panel($post); ?>
+		<?php retails_render_refund_panel($post); ?>
 		<p class="wo-status__row">
-			<label for="wholesale_payment_status"><strong>Payment status</strong></label>
-			<select name="wholesale_payment_status" id="wholesale_payment_status">
+			<label for="retails_payment_status"><strong>Payment status</strong></label>
+			<select name="retails_payment_status" id="retails_payment_status">
 				<?php if (!$payment_status) : ?>
 					<option value="" selected>Not recorded</option>
 				<?php endif; ?>
-				<?php foreach (wholesale_payment_statuses() as $value => $item) : ?>
+				<?php foreach (retails_payment_statuses() as $value => $item) : ?>
 					<option value="<?php echo esc_attr($value); ?>" <?php selected($payment_status, $value); ?>><?php echo esc_html($item[0]); ?></option>
 				<?php endforeach; ?>
 			</select>
@@ -464,9 +464,9 @@ function wholesale_render_fulfillment_box($post)
 	<?php
 }
 
-function wholesale_render_activity_box($post)
+function retails_render_activity_box($post)
 {
-	$info = wholesale_order_status_info();
+	$info = retails_order_status_info();
 	$label = static function ($status) use ($info) {
 		return $info[$status]['label'] ?? ucwords(str_replace(array('-', '_'), ' ', (string) $status));
 	};
@@ -492,11 +492,11 @@ function wholesale_render_activity_box($post)
 			'text' => 'Customer emailed: ' . $label($parts[2]),
 		);
 	}
-	foreach (wholesale_order_refund_log($post->ID) as $entry) {
-		$events[] = array('time' => (int) $entry['time'], 'text' => wholesale_refund_activity_text($entry));
+	foreach (retails_order_refund_log($post->ID) as $entry) {
+		$events[] = array('time' => (int) $entry['time'], 'text' => retails_refund_activity_text($entry));
 	}
 	// Staff-only notes from plugins, e.g. "Tracking synced from supplier" (each: time, text).
-	$events = (array) apply_filters('wholesale_order_activity_events', $events, $post);
+	$events = (array) apply_filters('retails_order_activity_events', $events, $post);
 	usort($events, static function ($a, $b) {
 		return $b['time'] <=> $a['time'];
 	});
@@ -520,9 +520,9 @@ add_action('transition_post_status', function ($new_status, $old_status, $post) 
 /**
  * Merge edited address fields into an order's stored address array.
  */
-function wholesale_merge_order_address($stored, $posted, $prefix, $with_email)
+function retails_merge_order_address($stored, $posted, $prefix, $with_email)
 {
-	foreach (wholesale_order_address_fields($with_email) as $key => $label) {
+	foreach (retails_order_address_fields($with_email) as $key => $label) {
 		if (!isset($posted[$key]) || !is_scalar($posted[$key])) {
 			continue;
 		}
@@ -540,35 +540,35 @@ add_action('save_post_order', function ($post_id) {
 	if ($is_quick_edit) {
 		check_ajax_referer('inlineeditnonce', '_inline_edit');
 	} elseif (
-		!isset($_POST['wholesale_fulfillment_nonce'])
-		|| !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['wholesale_fulfillment_nonce'])), 'wholesale_fulfillment')
+		!isset($_POST['retails_fulfillment_nonce'])
+		|| !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['retails_fulfillment_nonce'])), 'retails_fulfillment')
 	) {
 		return;
 	}
 	if (!current_user_can('edit_post', $post_id)) {
 		return;
 	}
-	if (isset($_POST['wholesale_tracking_carrier'])) {
-		$carrier = sanitize_key(wp_unslash($_POST['wholesale_tracking_carrier']));
+	if (isset($_POST['retails_tracking_carrier'])) {
+		$carrier = sanitize_key(wp_unslash($_POST['retails_tracking_carrier']));
 		if (in_array($carrier, array('', 'ups', 'fedex', 'usps', 'freight'), true)) {
 			update_post_meta($post_id, '_tracking_carrier', $carrier);
 		}
 	}
-	if (isset($_POST['wholesale_tracking_number'])) {
-		update_post_meta($post_id, '_tracking_number', sanitize_text_field(wp_unslash($_POST['wholesale_tracking_number'])));
+	if (isset($_POST['retails_tracking_number'])) {
+		update_post_meta($post_id, '_tracking_number', sanitize_text_field(wp_unslash($_POST['retails_tracking_number'])));
 	}
-	if (isset($_POST['wholesale_payment_status'])) {
-		$payment_status = sanitize_key(wp_unslash($_POST['wholesale_payment_status']));
+	if (isset($_POST['retails_payment_status'])) {
+		$payment_status = sanitize_key(wp_unslash($_POST['retails_payment_status']));
 		if ($is_quick_edit && '' === $payment_status) {
 			delete_post_meta($post_id, '_payment_status');
 			delete_post_meta($post_id, '_payment_verified_by');
-		} elseif (isset(wholesale_payment_statuses()[$payment_status]) && $payment_status !== get_post_meta($post_id, '_payment_status', true)) {
+		} elseif (isset(retails_payment_statuses()[$payment_status]) && $payment_status !== get_post_meta($post_id, '_payment_status', true)) {
 			update_post_meta($post_id, '_payment_status', $payment_status);
 			update_post_meta($post_id, '_payment_verified_by', get_current_user_id());
 		}
 	}
-	if (empty($_POST['wholesale_notify_customer'])) {
-		$GLOBALS['wholesale_skip_status_email'] = true;
+	if (empty($_POST['retails_notify_customer'])) {
+		$GLOBALS['retails_skip_status_email'] = true;
 	}
 	if (isset($_POST['wo_staff_note'])) {
 		update_post_meta($post_id, '_staff_note', sanitize_textarea_field(wp_unslash($_POST['wo_staff_note'])));
@@ -576,19 +576,19 @@ add_action('save_post_order', function ($post_id) {
 
 	// Addresses and ship date are only rewritten when staff opened the edit form.
 	if (empty($_POST['wo_details_edited'])) {
-		if ($is_quick_edit && isset($_POST['wholesale_estimated_delivery'])) {
-			update_post_meta($post_id, 'estimate_delivery_time', sanitize_text_field(wp_unslash($_POST['wholesale_estimated_delivery'])));
+		if ($is_quick_edit && isset($_POST['retails_estimated_delivery'])) {
+			update_post_meta($post_id, 'estimate_delivery_time', sanitize_text_field(wp_unslash($_POST['retails_estimated_delivery'])));
 		}
 		return;
 	}
-	$billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
-	$shipping = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
+	$billing = retails_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+	$shipping = retails_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
 	if (isset($_POST['wo_billing']) && is_array($_POST['wo_billing'])) {
-		$billing = wholesale_merge_order_address($billing, $_POST['wo_billing'], 'billing_', true);
+		$billing = retails_merge_order_address($billing, $_POST['wo_billing'], 'billing_', true);
 		update_post_meta($post_id, 'billing_address', wp_slash(wp_json_encode($billing)));
 	}
 	if (isset($_POST['wo_shipping']) && is_array($_POST['wo_shipping'])) {
-		$shipping = wholesale_merge_order_address($shipping, $_POST['wo_shipping'], wholesale_order_shipping_prefix($shipping), false);
+		$shipping = retails_merge_order_address($shipping, $_POST['wo_shipping'], retails_order_shipping_prefix($shipping), false);
 		update_post_meta($post_id, 'shipping_address', wp_slash(wp_json_encode($shipping)));
 	}
 	if (isset($_POST['wo_ship_date'])) {
@@ -609,11 +609,11 @@ add_action('admin_footer-post.php', function () {
 			if (box && select) {
 				var notify = box.querySelector('.wo-status__notify');
 				var hint = box.querySelector('.wo-status__hint');
-				var tracking = document.getElementById('wholesale_tracking_number');
+				var tracking = document.getElementById('retails_tracking_number');
 				var warning = box.querySelector('.wo-status__warning');
 				var sync = function () {
 					var changed = select.value !== box.dataset.current;
-					var shipped = <?php echo wp_json_encode(wholesale_order_shipped_statuses()); ?>.indexOf(select.value) !== -1;
+					var shipped = <?php echo wp_json_encode(retails_order_shipped_statuses()); ?>.indexOf(select.value) !== -1;
 					if (notify) {
 						notify.hidden = !changed;
 						hint.textContent = select.options[select.selectedIndex].dataset.hint || '';
@@ -683,26 +683,26 @@ add_action('transition_post_status', function ($new_status, $old_status, $post) 
 	if ('order' !== $post->post_type || $new_status === $old_status || in_array($old_status, array('new', 'auto-draft', 'draft'), true)) {
 		return;
 	}
-	if (!wholesale_setting_enabled('email_status_updates')) {
+	if (!retails_setting_enabled('email_status_updates')) {
 		return;
 	}
 	// Send at the end of the request so tracking numbers saved in the same request are included.
-	$GLOBALS['wholesale_status_emails'][$post->ID] = $new_status;
+	$GLOBALS['retails_status_emails'][$post->ID] = $new_status;
 }, 10, 3);
 
 add_action('shutdown', function () {
-	if (empty($GLOBALS['wholesale_status_emails']) || !empty($GLOBALS['wholesale_skip_status_email'])) {
+	if (empty($GLOBALS['retails_status_emails']) || !empty($GLOBALS['retails_skip_status_email'])) {
 		return;
 	}
-	foreach ($GLOBALS['wholesale_status_emails'] as $post_id => $status) {
-		wholesale_send_status_email($post_id, $status);
+	foreach ($GLOBALS['retails_status_emails'] as $post_id => $status) {
+		retails_send_status_email($post_id, $status);
 	}
 });
 
 /**
  * Whether the customer was already sent the shipped (or delivered) notice for this order.
  */
-function wholesale_order_shipped_email_sent($post_id)
+function retails_order_shipped_email_sent($post_id)
 {
 	foreach ((array) get_post_meta($post_id, '_status_email_log') as $entry) {
 		if (preg_match('/ (completed|delivered)\b/', (string) $entry)) {
@@ -712,25 +712,25 @@ function wholesale_order_shipped_email_sent($post_id)
 	return false;
 }
 
-function wholesale_send_status_email($post_id, $status)
+function retails_send_status_email($post_id, $status)
 {
 	// Carrier stages after Shipped send no email of their own. An order that reached one without the shipped
 	// notice (tracking moved it straight past Shipped) gets that notice now, or a delivered notice.
-	if (wholesale_order_is_shipped($status) && 'completed' !== $status) {
-		if (wholesale_order_shipped_email_sent($post_id)) {
+	if (retails_order_is_shipped($status) && 'completed' !== $status) {
+		if (retails_order_shipped_email_sent($post_id)) {
 			return;
 		}
 		$status = 'delivered' === $status ? 'delivered' : 'completed';
 	}
-	$billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+	$billing = retails_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
 	$email = $billing['billing_email'] ?? '';
 	if (!is_email($email)) {
 		return;
 	}
 
-	$number = wholesale_order_number($post_id);
+	$number = retails_order_number($post_id);
 	$tracking = get_post_meta($post_id, '_tracking_number', true);
-	$tracking_url = wholesale_tracking_url(get_post_meta($post_id, '_tracking_carrier', true), $tracking);
+	$tracking_url = retails_tracking_url(get_post_meta($post_id, '_tracking_carrier', true), $tracking);
 	$messages = array(
 		'processing' => array('Your order #%s is in production', 'Good news: your order is now in production. We will email you again when it ships.'),
 		'completed' => array('Your order #%s has shipped', 'Your order is on its way.'),
@@ -746,17 +746,17 @@ function wholesale_send_status_email($post_id, $status)
 
 	list($subject, $body) = $messages[$status];
 	$tracking_html = '';
-	if (wholesale_order_is_shipped($status) && $tracking) {
+	if (retails_order_is_shipped($status) && $tracking) {
 		$tracking_html = '<p style="margin:16px 0 0;padding:14px 16px;background:#eef7fc;border-radius:8px;font-size:15px;color:#0d2e4d;"><strong>Tracking number:</strong> '
 			. ($tracking_url ? '<a href="' . esc_url($tracking_url) . '" style="color:#1287b5;">' . esc_html($tracking) . '</a>' : esc_html($tracking)) . '</p>';
 	}
 	// The tracking sync plugin lists every package here when an order ships in several.
-	$tracking_html = (string) apply_filters('wholesale_status_email_tracking_html', $tracking_html, $post_id, $status);
+	$tracking_html = (string) apply_filters('retails_status_email_tracking_html', $tracking_html, $post_id, $status);
 
 	// Shipped email: invite a review of each item (signed links, so guests can review too).
-	$review_html = wholesale_order_is_shipped($status) && function_exists('wholesale_order_review_email_html') ? wholesale_order_review_email_html($post_id) : '';
+	$review_html = retails_order_is_shipped($status) && function_exists('retails_order_review_email_html') ? retails_order_review_email_html($post_id) : '';
 
-	$sent = wholesale_send_order_email($post_id, sprintf($subject, $number), '<p style="margin:0;">' . esc_html($body) . '</p>' . $tracking_html . $review_html);
+	$sent = retails_send_order_email($post_id, sprintf($subject, $number), '<p style="margin:0;">' . esc_html($body) . '</p>' . $tracking_html . $review_html);
 	// A failed send is retried automatically from the email log (Emails menu).
 	add_post_meta($post_id, '_status_email_log', current_time('mysql') . ' ' . $status . ($sent ? '' : ' (send failed, will retry)'));
 }
@@ -764,16 +764,16 @@ function wholesale_send_status_email($post_id, $status)
 /**
  * Sends the customer a branded email about their order. $body_html must already be escaped.
  */
-function wholesale_send_order_email($post_id, $subject, $body_html)
+function retails_send_order_email($post_id, $subject, $body_html)
 {
-	$billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+	$billing = retails_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
 	$email = $billing['billing_email'] ?? '';
 	if (!is_email($email)) {
 		return false;
 	}
 
 	// Refund emails add the new order total here (inc/order-net-total.php).
-	$body_html = (string) apply_filters('wholesale_order_email_body', $body_html, $post_id, $subject);
+	$body_html = (string) apply_filters('retails_order_email_body', $body_html, $post_id, $subject);
 
 	$font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
 	$html = '<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#f5f8fb;">'
@@ -783,7 +783,7 @@ function wholesale_send_order_email($post_id, $subject, $body_html)
 		. '<tr><td style="padding:28px;' . $font . 'color:#172027;font-size:15px;line-height:1.6;">'
 		. '<p style="margin:0 0 12px;">Hi' . (!empty($billing['billing_fname']) ? ' ' . esc_html($billing['billing_fname']) : '') . ',</p>'
 		. $body_html
-		. '<p style="margin:20px 0 0;"><a href="' . esc_url(get_permalink($post_id)) . '" style="display:inline-block;padding:12px 20px;background:#1fa8de;color:#fff;border-radius:6px;text-decoration:none;font-weight:700;">View order #' . esc_html(wholesale_order_number($post_id)) . '</a></p>'
+		. '<p style="margin:20px 0 0;"><a href="' . esc_url(get_permalink($post_id)) . '" style="display:inline-block;padding:12px 20px;background:#1fa8de;color:#fff;border-radius:6px;text-decoration:none;font-weight:700;">View order #' . esc_html(retails_order_number($post_id)) . '</a></p>'
 		. '<p style="margin:20px 0 0;color:#5b6b7b;font-size:14px;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT).</p>'
 		. '</td></tr></table></td></tr></table></body></html>';
 
@@ -797,7 +797,7 @@ function wholesale_send_order_email($post_id, $subject, $body_html)
 // Dashboard: sales at a glance
 // ------------------------------------------------------------------
 
-function wholesale_attention_order_ids()
+function retails_attention_order_ids()
 {
 	$needs_payment = get_posts(array(
 		'post_type' => 'order',
@@ -815,7 +815,7 @@ function wholesale_attention_order_ids()
  * When an order in review has waited too long: one business day (Saturday and Sunday don't count, site time zone)
  * after it was placed. 0 for orders not in review.
  */
-function wholesale_order_review_due($post_id)
+function retails_order_review_due($post_id)
 {
 	if (!in_array(get_post_status($post_id), array('in-review', 'pending'), true)) {
 		return 0;
@@ -833,9 +833,9 @@ function wholesale_order_review_due($post_id)
 /**
  * "In review 2 days" warning badge for orders in review past their due time, else ''. Already escaped.
  */
-function wholesale_order_review_late_badge($post_id)
+function retails_order_review_late_badge($post_id)
 {
-	$due = wholesale_order_review_due($post_id);
+	$due = retails_order_review_due($post_id);
 	if (!$due || $due > time()) {
 		return '';
 	}
@@ -845,7 +845,7 @@ function wholesale_order_review_late_badge($post_id)
 
 // The same warning under the status in the order list (after the status badge from functions.php).
 add_action('manage_order_posts_custom_column', function ($column, $post_id) {
-	$late = 'order_status' === $column ? wholesale_order_review_late_badge($post_id) : '';
+	$late = 'order_status' === $column ? retails_order_review_late_badge($post_id) : '';
 	if ('' !== $late) {
 		echo ' ' . $late; // Escaped in the helper.
 	}
@@ -862,19 +862,19 @@ add_action('wp_dashboard_setup', function () {
 	if (!current_user_can('edit_posts')) {
 		return;
 	}
-	wp_add_dashboard_widget('wholesale_sales', 'Storefront Sign sales', 'wholesale_render_sales_widget');
+	wp_add_dashboard_widget('retails_sales', 'Storefront Sign sales', 'retails_render_sales_widget');
 
 	// Put the sales widget first.
 	global $wp_meta_boxes;
 	$normal = $wp_meta_boxes['dashboard']['normal']['core'];
-	$widget = array('wholesale_sales' => $normal['wholesale_sales']);
-	unset($normal['wholesale_sales']);
+	$widget = array('retails_sales' => $normal['retails_sales']);
+	unset($normal['retails_sales']);
 	$wp_meta_boxes['dashboard']['normal']['core'] = array_merge($widget, $normal);
 });
 
-function wholesale_render_sales_widget()
+function retails_render_sales_widget()
 {
-	$counted = array_merge(array('in-review', 'pending', 'processing', 'finishing', 'ready-for-pickup', 'on-hold', 'on_hold'), wholesale_order_shipped_statuses());
+	$counted = array_merge(array('in-review', 'pending', 'processing', 'finishing', 'ready-for-pickup', 'on-hold', 'on_hold'), retails_order_shipped_statuses());
 	$recent = get_posts(array(
 		'post_type' => 'order',
 		'post_status' => $counted,
@@ -888,7 +888,7 @@ function wholesale_render_sales_widget()
 	$today_date = current_time('Y-m-d');
 	foreach ($recent as $id) {
 		// After refunds (inc/order-net-total.php).
-		$total = function_exists('wholesale_order_net_total') ? wholesale_order_net_total($id) : wholesale_order_total($id);
+		$total = function_exists('retails_order_net_total') ? retails_order_net_total($id) : retails_order_total($id);
 		$revenue += $total;
 		if (get_the_date('Y-m-d', $id) === $today_date) {
 			$today += $total;
@@ -896,13 +896,13 @@ function wholesale_render_sales_widget()
 		}
 	}
 	$in_production = count(get_posts(array('post_type' => 'order', 'post_status' => 'processing', 'posts_per_page' => -1, 'fields' => 'ids')));
-	$attention = wholesale_attention_order_ids();
-	$latest = get_posts(array('post_type' => 'order', 'post_status' => array_keys(wholesale_order_status_info()), 'posts_per_page' => 6));
+	$attention = retails_attention_order_ids();
+	$latest = get_posts(array('post_type' => 'order', 'post_status' => array_keys(retails_order_status_info()), 'posts_per_page' => 6));
 	$money = static function ($value) {
 		return '$' . number_format((float) $value, 2);
 	};
 	?>
-	<div class="wholesale-kpis">
+	<div class="retails-kpis">
 		<div><span>Today</span><strong><?php echo esc_html($money($today)); ?></strong><small><?php echo esc_html(sprintf(_n('%d order', '%d orders', $today_count, 'litsign'), $today_count)); ?></small></div>
 		<div><span>Last 30 days</span><strong><?php echo esc_html($money($revenue)); ?></strong><small><?php echo esc_html(sprintf(_n('%d order', '%d orders', count($recent), 'litsign'), count($recent))); ?></small></div>
 		<div><span>Average order</span><strong><?php echo esc_html($money($recent ? $revenue / count($recent) : 0)); ?></strong><small>last 30 days</small></div>
@@ -910,29 +910,29 @@ function wholesale_render_sales_widget()
 	</div>
 
 	<?php if ($attention) : ?>
-		<h3 class="wholesale-widget-heading">Needs attention (<?php echo esc_html(count($attention)); ?>)</h3>
-		<ul class="wholesale-widget-list">
+		<h3 class="retails-widget-heading">Needs attention (<?php echo esc_html(count($attention)); ?>)</h3>
+		<ul class="retails-widget-list">
 			<?php foreach (array_slice($attention, 0, 6) as $id) : ?>
 				<li>
-					<a href="<?php echo esc_url(get_edit_post_link($id)); ?>">#<?php echo esc_html(wholesale_order_number($id)); ?></a>
-					<?php echo wholesale_order_status_badge(get_post_status($id), $id); // Escaped in the helper. ?>
-					<?php echo wholesale_order_review_late_badge($id); // Escaped in the helper. ?>
-					<?php echo wholesale_payment_badge($id); // Escaped in the helper. ?>
-					<span><?php echo function_exists('wholesale_order_net_cell_html') ? wholesale_order_net_cell_html($id) : esc_html($money(wholesale_order_total($id))); // Escaped in the helper. ?></span>
+					<a href="<?php echo esc_url(get_edit_post_link($id)); ?>">#<?php echo esc_html(retails_order_number($id)); ?></a>
+					<?php echo retails_order_status_badge(get_post_status($id), $id); // Escaped in the helper. ?>
+					<?php echo retails_order_review_late_badge($id); // Escaped in the helper. ?>
+					<?php echo retails_payment_badge($id); // Escaped in the helper. ?>
+					<span><?php echo function_exists('retails_order_net_cell_html') ? retails_order_net_cell_html($id) : esc_html($money(retails_order_total($id))); // Escaped in the helper. ?></span>
 				</li>
 			<?php endforeach; ?>
 		</ul>
 	<?php endif; ?>
 
-	<h3 class="wholesale-widget-heading">Latest orders</h3>
-	<ul class="wholesale-widget-list">
+	<h3 class="retails-widget-heading">Latest orders</h3>
+	<ul class="retails-widget-list">
 		<?php foreach ($latest as $order) :
-			$billing = wholesale_decode_order_meta_array(get_post_meta($order->ID, 'billing_address', true)); ?>
+			$billing = retails_decode_order_meta_array(get_post_meta($order->ID, 'billing_address', true)); ?>
 			<li>
-				<a href="<?php echo esc_url(get_edit_post_link($order->ID)); ?>">#<?php echo esc_html(wholesale_order_number($order->ID)); ?></a>
+				<a href="<?php echo esc_url(get_edit_post_link($order->ID)); ?>">#<?php echo esc_html(retails_order_number($order->ID)); ?></a>
 				<span><?php echo esc_html(trim(($billing['billing_fname'] ?? '') . ' ' . ($billing['billing_lname'] ?? ''))); ?></span>
-				<?php echo wholesale_order_status_badge($order->post_status, $order->ID); // Escaped in the helper. ?>
-				<span><?php echo function_exists('wholesale_order_net_cell_html') ? wholesale_order_net_cell_html($order->ID) : esc_html($money(wholesale_order_total($order->ID))); // Escaped in the helper. ?></span>
+				<?php echo retails_order_status_badge($order->post_status, $order->ID); // Escaped in the helper. ?>
+				<span><?php echo function_exists('retails_order_net_cell_html') ? retails_order_net_cell_html($order->ID) : esc_html($money(retails_order_total($order->ID))); // Escaped in the helper. ?></span>
 			</li>
 		<?php endforeach; ?>
 	</ul>
@@ -943,7 +943,7 @@ function wholesale_render_sales_widget()
 // Count bubbles on the Orders and Reviews menus.
 add_action('admin_menu', function () {
 	global $menu;
-	$attention = count(wholesale_attention_order_ids());
+	$attention = count(retails_attention_order_ids());
 	$reviews = (int) wp_count_posts('review_submission')->pending;
 	foreach ($menu as $index => $item) {
 		if ('edit.php?post_type=order' === $item[2] && $attention) {
@@ -964,15 +964,15 @@ add_filter('post_row_actions', function ($actions, $post) {
 		return $actions;
 	}
 	$target = 'publish' === $post->post_status ? 'pending' : 'publish';
-	$url = wp_nonce_url(admin_url('admin-post.php?action=wholesale_review_status&post=' . $post->ID . '&status=' . $target), 'wholesale_review_status_' . $post->ID);
-	$actions = array('wholesale_review' => '<a href="' . esc_url($url) . '"><strong>' . ('publish' === $target ? 'Approve &amp; show on site' : 'Unpublish') . '</strong></a>') + $actions;
+	$url = wp_nonce_url(admin_url('admin-post.php?action=retails_review_status&post=' . $post->ID . '&status=' . $target), 'retails_review_status_' . $post->ID);
+	$actions = array('retails_review' => '<a href="' . esc_url($url) . '"><strong>' . ('publish' === $target ? 'Approve &amp; show on site' : 'Unpublish') . '</strong></a>') + $actions;
 	return $actions;
 }, 10, 2);
 
-add_action('admin_post_wholesale_review_status', function () {
+add_action('admin_post_retails_review_status', function () {
 	$post_id = absint($_GET['post'] ?? 0);
 	$status = sanitize_key(wp_unslash($_GET['status'] ?? ''));
-	check_admin_referer('wholesale_review_status_' . $post_id);
+	check_admin_referer('retails_review_status_' . $post_id);
 	if (!current_user_can('publish_post', $post_id) || 'review_submission' !== get_post_type($post_id) || !in_array($status, array('publish', 'pending'), true)) {
 		wp_die('Not allowed.');
 	}
@@ -984,7 +984,7 @@ add_action('admin_post_wholesale_review_status', function () {
 // Stars and a status badge instead of "5/5" in the review list.
 add_action('manage_review_submission_posts_custom_column', function ($column, $post_id) {
 	if ('review_rating' === $column) {
-		echo '<span class="wholesale-review-stars" aria-hidden="true">' . str_repeat('&#9733;', absint(get_post_meta($post_id, '_review_rating', true))) . '</span> ';
+		echo '<span class="retails-review-stars" aria-hidden="true">' . str_repeat('&#9733;', absint(get_post_meta($post_id, '_review_rating', true))) . '</span> ';
 	}
 }, 5, 2);
 
@@ -995,7 +995,7 @@ add_filter('manage_review_submission_posts_columns', function ($columns) {
 
 add_action('manage_review_submission_posts_custom_column', function ($column, $post_id) {
 	if ('review_status' === $column) {
-		if (wholesale_review_is_sample($post_id)) {
+		if (retails_review_is_sample($post_id)) {
 			echo '<span class="order-badge order-badge--muted">Sample (hidden)</span>';
 			return;
 		}
@@ -1031,19 +1031,19 @@ add_action('admin_head', function () {
 		.post-type-order .fixed .column-sfs_shipment { width: 150px; }
 		.post-type-order .fixed .column-date { width: 110px; }
 		.column-order_status .order-badge { white-space: normal; }
-		.wholesale-order-customer__name { display: block; }
-		.wholesale-order-customer__line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #50575e; }
-		.wholesale-fulfillment-warning { padding: 8px 10px; border-left: 4px solid #d63638; background: #fcf0f1; }
-		.wholesale-kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
-		.wholesale-kpis > div { padding: 10px 12px; border: 1px solid #e3e9ef; border-radius: 8px; background: #f8fafc; }
-		.wholesale-kpis span { display: block; color: #5b6b7b; font-size: 12px; }
-		.wholesale-kpis strong { display: block; font-size: 20px; line-height: 1.4; }
-		.wholesale-kpis small { color: #5b6b7b; }
-		.wholesale-widget-heading { margin: 14px 0 6px !important; font-size: 13px !important; }
-		.wholesale-widget-list { margin: 0; }
-		.wholesale-widget-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f1; }
-		.wholesale-widget-list li > span:last-child { margin-left: auto; font-weight: 600; }
-		.wholesale-review-stars { color: #f5ad27; letter-spacing: 1px; }
+		.retails-order-customer__name { display: block; }
+		.retails-order-customer__line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #50575e; }
+		.retails-fulfillment-warning { padding: 8px 10px; border-left: 4px solid #d63638; background: #fcf0f1; }
+		.retails-kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+		.retails-kpis > div { padding: 10px 12px; border: 1px solid #e3e9ef; border-radius: 8px; background: #f8fafc; }
+		.retails-kpis span { display: block; color: #5b6b7b; font-size: 12px; }
+		.retails-kpis strong { display: block; font-size: 20px; line-height: 1.4; }
+		.retails-kpis small { color: #5b6b7b; }
+		.retails-widget-heading { margin: 14px 0 6px !important; font-size: 13px !important; }
+		.retails-widget-list { margin: 0; }
+		.retails-widget-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f1; }
+		.retails-widget-list li > span:last-child { margin-left: auto; font-weight: 600; }
+		.retails-review-stars { color: #f5ad27; letter-spacing: 1px; }
 
 		/* Order edit screen */
 		.post-type-order.post-php .wrap > h1.wp-heading-inline, .post-type-order.post-php .wrap > .page-title-action { display: none; }

@@ -11,7 +11,7 @@ if (is_user_logged_in()) {
 }
 
 if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['email'])) {
-    check_admin_referer('wholesale_login', 'wholesale_login_nonce');
+    check_admin_referer('retails_login', 'retails_login_nonce');
 
     $login = sanitize_text_field(wp_unslash($_POST['email']));
     $pass = isset($_POST['password']) ? (string) wp_unslash($_POST['password']) : '';
@@ -59,7 +59,7 @@ get_header();
                 </div>
                 <div class="card-body">
                     <form method="POST">
-                        <?php wp_nonce_field('wholesale_login', 'wholesale_login_nonce'); ?>
+                        <?php wp_nonce_field('retails_login', 'retails_login_nonce'); ?>
                         <input type="hidden" name="redirect_ulr" value="<?php echo esc_attr($redirect_url); ?>">
                         <div class="form-group mb-2">
                             <label for="" class="form-label">Email</label>

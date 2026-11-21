@@ -9,13 +9,13 @@
 
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
-$permits_url = wholesale_guide_url('sign-permits');
-$install_url = wholesale_guide_url('how-to-install-channel-letters');
-$shipping_url = wholesale_guide_url('shipping-returns');
+$permits_url = retails_guide_url('sign-permits');
+$install_url = retails_guide_url('how-to-install-channel-letters');
+$shipping_url = retails_guide_url('shipping-returns');
 
 // Keep the directory, its ItemList schema and the sitemap in sync.
-$guides = wholesale_location_public_guides();
-$states = wholesale_guide_states();
+$guides = retails_location_public_guides();
+$states = retails_guide_states();
 $state_links = array();
 $city_groups = array();
 $state_pages = array();
@@ -31,14 +31,14 @@ foreach ($guides as $guide) {
 		$city_groups[$slug][$guide['loc']] = $guide['title'] . ', ' . $state['abbr'];
 	}
 }
-$GLOBALS['wholesale_page_items'] = array_merge($state_pages, $city_pages);
+$GLOBALS['retails_page_items'] = array_merge($state_pages, $city_pages);
 
-add_filter('wholesale_seo_webpage_schema', static function ($page) use ($guides) {
-	$page['dateModified'] = wholesale_location_directory_modified($guides);
+add_filter('retails_seo_webpage_schema', static function ($page) use ($guides) {
+	$page['dateModified'] = retails_location_directory_modified($guides);
 	return $page;
 });
 
-wholesale_seo_set_page_faq(array(
+retails_seo_set_page_faq(array(
 	array(
 		'q' => 'Do you ship storefront signs to every state?',
 		'a' => 'Yes. We make each sign to order and ship it from Washington or California to all 50 states. Enter your ZIP code at checkout to see the services and delivery estimates available for your address.',
@@ -63,7 +63,7 @@ get_header();
 <main id="primary" class="sf-page gd-page">
 	<section class="sf-hero" aria-labelledby="gd-title">
 		<div class="container">
-			<?php wholesale_breadcrumbs(); ?>
+			<?php retails_breadcrumbs(); ?>
 			<p class="cl-kicker">Shipped to all 50 states</p>
 			<h1 id="gd-title" class="sf-hero-title">Storefront Signs Shipped to Your State</h1>
 			<p class="sf-hero-lead">Find the sign permit office, installer licensing rules and official sources for your state or city. We build custom LED channel letters in Washington and California and ship them to all 50 states for your licensed installer.</p>
@@ -155,12 +155,12 @@ get_header();
 			<p class="cl-kicker">Questions</p>
 			<h2 id="gd-faq-title" class="cl-section-title">Shipping and Installation FAQ</h2>
 			<div class="cl-faq-list">
-				<?php wholesale_seo_render_faq(); ?>
+				<?php retails_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>
 
-	<?php wholesale_guide_render_help(); ?>
+	<?php retails_guide_render_help(); ?>
 </main>
 
 <?php

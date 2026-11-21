@@ -61,10 +61,10 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['landing_quote_submit'
 		exit;
 	}
 
-	list($subject, $message) = wholesale_contact_mail_tag($subject, $message);
-	wholesale_mail_team($subject, $message, $headers);
-	wholesale_send_quote_confirmation($submission_id);
-	wp_safe_redirect(add_query_arg(wholesale_quote_lead_args($submission_id), $redirect_url) . '#quote');
+	list($subject, $message) = retails_contact_mail_tag($subject, $message);
+	retails_mail_team($subject, $message, $headers);
+	retails_send_quote_confirmation($submission_id);
+	wp_safe_redirect(add_query_arg(retails_quote_lead_args($submission_id), $redirect_url) . '#quote');
 	exit;
 }
 
@@ -95,13 +95,13 @@ $landing_products = new WP_Query(array(
 	),
 ));
 
-wholesale_track_quote_lead('landing_page');
+retails_track_quote_lead('landing_page');
 
 get_header();
 ?>
 
 <main class="landing-page">
-	<section class="landing-hero" style="<?php echo esc_attr(wholesale_landing_hero_style()); ?>">
+	<section class="landing-hero" style="<?php echo esc_attr(retails_landing_hero_style()); ?>">
 		<div class="landing-shell container landing-hero-inner">
 			<div class="landing-hero-copy">
 				<p class="landing-eyebrow">Professional signage. Delivered nationwide.</p>
@@ -141,13 +141,13 @@ get_header();
 	<section class="landing-section" id="solutions">
 		<div class="landing-shell container">
 			<header class="landing-section-heading"><p class="landing-eyebrow">Stand out from the crowd</p><h2>Our <span>premium</span> sign solutions</h2><p>High quality custom signs that help your business stand out and grow.</p></header>
-			<p class="text-center"><a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>">Explore custom channel letter signs for your storefront</a></p>
+			<p class="text-center"><a href="<?php echo esc_url(retails_category_url('channel-letters')); ?>">Explore custom channel letter signs for your storefront</a></p>
 			<div class="landing-solution-grid product-box-container">
 				<?php if ($landing_products->have_posts()) : $index = 0; while ($landing_products->have_posts()) : $landing_products->the_post(); ?>
 					<article class="product-box landing-solution-card">
 						<a href="<?php the_permalink(); ?>">
 							<div class="pb-image-top">
-								<?php wholesale_render_sale_badge(get_the_ID()); ?>
+								<?php retails_render_sale_badge(get_the_ID()); ?>
 								<?php if (has_post_thumbnail()) : ?>
 									<?php the_post_thumbnail('medium_large', array('loading' => $index === 0 ? 'eager' : 'lazy', 'fetchpriority' => $index === 0 ? 'high' : 'auto', 'decoding' => 'async')); ?>
 								<?php endif; ?>
@@ -158,7 +158,7 @@ get_header();
 								<hr>
 								<div class="start-at-pricing">
 									<span class="pb-title-short">Starting at</span>
-									<span class="pb-price"><?php echo wp_kses_post(wholesale_price_no_cents(get_post_meta(get_the_ID(), '_starting_at_text', true))); ?></span>
+									<span class="pb-price"><?php echo wp_kses_post(retails_price_no_cents(get_post_meta(get_the_ID(), '_starting_at_text', true))); ?></span>
 								</div>
 							</div>
 						</a>

@@ -9,15 +9,15 @@
  * related-product strips they read as sales and brands we don't have. Until the
  * owner replaces those photos in wp-admin, public pages use these three lists:
  *
- * 1. wholesale_product_photo_overrides(): product slug => attachment ID of a clean
+ * 1. retails_product_photo_overrides(): product slug => attachment ID of a clean
  *    photo of the same product, taken from that product's own gallery. It is the
  *    main photo on public pages (cards, the product page, structured data, the
  *    Merchant Center feed and the image sitemap) while the stored main photo is one
  *    of the product's hidden photos below and the clean photo is still in its gallery.
- * 2. wholesale_product_photo_hidden(): product slug => gallery attachment IDs that
+ * 2. retails_product_photo_hidden(): product slug => gallery attachment IDs that
  *    public pages leave out (product page gallery, feed additional images, image
  *    sitemap, structured data). A replaced main photo is listed here too.
- * 3. wholesale_card_hidden_products(): products with no clean photo at all. They stay
+ * 3. retails_card_hidden_products(): products with no clean photo at all. They stay
  *    on sale, on their own page, in their category listing and in the feed, but
  *    related-product strips, home picks and category tiles skip them instead of
  *    showing the artwork. The owner needs to add new photos for these.
@@ -38,7 +38,7 @@ if (!defined('ABSPATH')) {
  *
  * @return array<string, int>
  */
-function wholesale_product_photo_overrides()
+function retails_product_photo_overrides()
 {
 	return array(
 		// Stored main photo 6mNPA0Wf-s1000.jpg reads BLACK FRIDAY 50% OFF.
@@ -58,7 +58,7 @@ function wholesale_product_photo_overrides()
  *
  * @return array<string, int[]>
  */
-function wholesale_product_photo_hidden()
+function retails_product_photo_hidden()
 {
 	return array(
 		'adhesive-window-perf'       => array(162, 1378), // 6mNPA0Wf main photo and its gallery copy: BLACK FRIDAY 50% OFF.
@@ -80,7 +80,7 @@ function wholesale_product_photo_hidden()
  *
  * @return string[] Product slugs.
  */
-function wholesale_card_hidden_products()
+function retails_card_hidden_products()
 {
 	return array(
 		'fabric-banner-9oz-wrinkle-free-copy', // BLACK FRIDAY 50% OFF; the gallery has only a finishing chart.
@@ -97,7 +97,7 @@ function wholesale_card_hidden_products()
  * front-end AJAX (cart drawer). Not wp-admin, its AJAX, the REST API (the block
  * editor reads and saves the featured image there) or cron.
  */
-function wholesale_product_photo_overrides_active()
+function retails_product_photo_overrides_active()
 {
 	if (wp_doing_cron()) {
 		return false;
@@ -122,16 +122,16 @@ function wholesale_product_photo_overrides_active()
  *
  * @return array<string, int> Slug => product ID (published products only).
  */
-function wholesale_product_photo_product_ids()
+function retails_product_photo_product_ids()
 {
 	static $ids = null;
 	if (null !== $ids) {
 		return $ids;
 	}
 	$slugs = array_values(array_unique(array_merge(
-		array_keys(wholesale_product_photo_overrides()),
-		array_keys(wholesale_product_photo_hidden()),
-		wholesale_card_hidden_products()
+		array_keys(retails_product_photo_overrides()),
+		array_keys(retails_product_photo_hidden()),
+		retails_card_hidden_products()
 	)));
 	global $wpdb;
 	$ids = array();
@@ -148,7 +148,7 @@ function wholesale_product_photo_product_ids()
 /**
  * A product's stored meta value, read from the meta cache (bypasses the filters below).
  */
-function wholesale_product_photo_stored_meta($product_id, $key)
+function retails_product_photo_stored_meta($product_id, $key)
 {
 	$cache = wp_cache_get($product_id, 'post_meta');
 	if (false === $cache) {
@@ -163,53 +163,53 @@ function wholesale_product_photo_stored_meta($product_id, $key)
  *
  * @return int[]
  */
-function wholesale_product_photo_hidden_ids($product_id)
+function retails_product_photo_hidden_ids($product_id)
 {
-	$slug = array_search((int) $product_id, wholesale_product_photo_product_ids(), true);
-	$hidden = wholesale_product_photo_hidden();
+	$slug = array_search((int) $product_id, retails_product_photo_product_ids(), true);
+	$hidden = retails_product_photo_hidden();
 	return false !== $slug && isset($hidden[$slug]) ? array_map('intval', $hidden[$slug]) : array();
 }
 
 /**
  * The clean main photo for a product, or 0 when its stored main photo is fine.
  */
-function wholesale_product_photo_override_id($product_id)
+function retails_product_photo_override_id($product_id)
 {
 	$product_id = (int) $product_id;
-	$slug = array_search($product_id, wholesale_product_photo_product_ids(), true);
-	$overrides = wholesale_product_photo_overrides();
+	$slug = array_search($product_id, retails_product_photo_product_ids(), true);
+	$overrides = retails_product_photo_overrides();
 	if (false === $slug || empty($overrides[$slug])) {
 		return 0;
 	}
-	$stored = (int) wholesale_product_photo_stored_meta($product_id, '_thumbnail_id');
-	$gallery = wholesale_product_photo_stored_meta($product_id, '_product_gallery');
+	$stored = (int) retails_product_photo_stored_meta($product_id, '_thumbnail_id');
+	$gallery = retails_product_photo_stored_meta($product_id, '_product_gallery');
 	$clean = (int) $overrides[$slug];
-	$active = in_array($stored, wholesale_product_photo_hidden_ids($product_id), true)
+	$active = in_array($stored, retails_product_photo_hidden_ids($product_id), true)
 		&& is_array($gallery) && isset($gallery[$clean]) && wp_attachment_is_image($clean);
 	return $active ? $clean : 0;
 }
 
 add_filter('post_thumbnail_id', static function ($thumbnail_id, $post) {
-	if (!$thumbnail_id || !wholesale_product_photo_overrides_active()) {
+	if (!$thumbnail_id || !retails_product_photo_overrides_active()) {
 		return $thumbnail_id;
 	}
 	$post = get_post($post);
 	if (!$post || 'product' !== $post->post_type) {
 		return $thumbnail_id;
 	}
-	$clean = wholesale_product_photo_override_id($post->ID);
+	$clean = retails_product_photo_override_id($post->ID);
 	return $clean ? $clean : $thumbnail_id;
 }, 10, 2);
 
 add_filter('get_post_metadata', static function ($value, $object_id, $meta_key, $single) {
-	if ('_product_gallery' !== $meta_key || null !== $value || !wholesale_product_photo_overrides_active()) {
+	if ('_product_gallery' !== $meta_key || null !== $value || !retails_product_photo_overrides_active()) {
 		return $value;
 	}
-	$hidden = wholesale_product_photo_hidden_ids($object_id);
+	$hidden = retails_product_photo_hidden_ids($object_id);
 	if (!$hidden) {
 		return $value;
 	}
-	$gallery = wholesale_product_photo_stored_meta((int) $object_id, '_product_gallery');
+	$gallery = retails_product_photo_stored_meta((int) $object_id, '_product_gallery');
 	if (!is_array($gallery)) {
 		return $value;
 	}
@@ -217,7 +217,7 @@ add_filter('get_post_metadata', static function ($value, $object_id, $meta_key, 
 		unset($gallery[$attachment_id]);
 	}
 	// The clean photo that replaced the main photo leads the gallery, as the main photo did.
-	$clean = wholesale_product_photo_override_id($object_id);
+	$clean = retails_product_photo_override_id($object_id);
 	if ($clean && isset($gallery[$clean])) {
 		$gallery = array($clean => $gallery[$clean]) + $gallery;
 	}
@@ -225,17 +225,17 @@ add_filter('get_post_metadata', static function ($value, $object_id, $meta_key, 
 }, 10, 4);
 
 /**
- * Whether cards and tiles should skip a product (see wholesale_card_hidden_products()).
+ * Whether cards and tiles should skip a product (see retails_card_hidden_products()).
  *
  * @param int|WP_Post|string $product Product ID, post or slug.
  */
-function wholesale_product_card_hidden($product)
+function retails_product_card_hidden($product)
 {
 	if (is_string($product) && !is_numeric($product)) {
-		return in_array($product, wholesale_card_hidden_products(), true);
+		return in_array($product, retails_card_hidden_products(), true);
 	}
 	$product_id = $product instanceof WP_Post ? (int) $product->ID : (int) $product;
-	return in_array($product_id, wholesale_card_hidden_product_ids(), true);
+	return in_array($product_id, retails_card_hidden_product_ids(), true);
 }
 
 /**
@@ -243,9 +243,9 @@ function wholesale_product_card_hidden($product)
  *
  * @return int[]
  */
-function wholesale_card_hidden_product_ids()
+function retails_card_hidden_product_ids()
 {
-	return array_values(array_intersect_key(wholesale_product_photo_product_ids(), array_flip(wholesale_card_hidden_products())));
+	return array_values(array_intersect_key(retails_product_photo_product_ids(), array_flip(retails_card_hidden_products())));
 }
 
 /**
@@ -254,11 +254,11 @@ function wholesale_card_hidden_product_ids()
  *
  * @return array<string, string>
  */
-function wholesale_card_picks(array $picks, array $fallbacks = array())
+function retails_card_picks(array $picks, array $fallbacks = array())
 {
 	$out = array();
 	foreach ($picks as $slug => $label) {
-		if (!wholesale_product_card_hidden($slug)) {
+		if (!retails_product_card_hidden($slug)) {
 			$out[$slug] = $label;
 		}
 	}
@@ -266,7 +266,7 @@ function wholesale_card_picks(array $picks, array $fallbacks = array())
 		if (count($out) >= count($picks)) {
 			break;
 		}
-		if (!isset($out[$slug]) && !isset($picks[$slug]) && !wholesale_product_card_hidden($slug)) {
+		if (!isset($out[$slug]) && !isset($picks[$slug]) && !retails_product_card_hidden($slug)) {
 			$out[$slug] = $label;
 		}
 	}

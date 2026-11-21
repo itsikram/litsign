@@ -2,7 +2,7 @@
 
 `css/bootstrap-critical.css` holds only the Bootstrap 5.3.3 rules that match
 elements on the site's public pages (about 8 KB gzipped instead of 31 KB).
-`inc/performance.php` (`wholesale_critical_bootstrap_tag()`) prints it in place
+`inc/performance.php` (`retails_critical_bootstrap_tag()`) prints it in place
 of `css/bootstrap.min.css` on content and landing pages and adds the full file
 after the page loads. Product, cart, checkout, account and builder pages keep
 the full file. If `bootstrap.min.css` is ever newer than the subset, the theme
@@ -26,7 +26,7 @@ DevTools; nothing on the page should move or change colour.
 
 `css/style-home-critical.css` holds the `css/style.css` rules that match
 elements on the home page (about 7 KB gzipped instead of 27 KB).
-`wholesale_critical_home_style_tag()` in `inc/performance.php` prints it in
+`retails_critical_home_style_tag()` in `inc/performance.php` prints it in
 place of `style.css` on the front page and adds the full file after load.
 Whenever `style.css` is newer than the subset, the home page loads the full
 file again (safe, just slower), so rebuild after editing `style.css`:
@@ -49,11 +49,11 @@ file again (safe, just slower), so rebuild after editing `style.css`:
 
 `css/ui-polish-home-critical.css` holds the 18 `css/ui-polish.css` rules that
 match elements on the home page (under 1 KB gzipped instead of 16 KB).
-`wholesale_critical_home_ui_polish_tag()` in `inc/performance.php` prints it
+`retails_critical_home_ui_polish_tag()` in `inc/performance.php` prints it
 inline in place of `ui-polish.css` on the front page (logged out) and adds the
 full file after load. The subset's first comment records the md5 of the
 `ui-polish.css` it was cut from (`source-md5: ...`); whenever `ui-polish.css`
-changes, `wholesale_critical_css_fresh()` sees a different md5 and the home
+changes, `retails_critical_css_fresh()` sees a different md5 and the home
 page loads the full file again (safe, just slower). Rebuild after editing
 `ui-polish.css`:
 
@@ -67,7 +67,7 @@ page loads the full file again (safe, just slower). Rebuild after editing
    `python build_ui_polish_home.py ../../css/ui-polish.css ../../css/ui-polish-home-critical.css`.
 4. Delete `ui-polish-selectors.json` from the web root.
 5. Check: paste `verify.js` into the console of the home page and run
-   `await verifySubset('wholesale-ui-polish-css', '<theme url>/css/ui-polish-home-critical.css')`
+   `await verifySubset('retails-ui-polish-css', '<theme url>/css/ui-polish-home-critical.css')`
    at each width. It must report `diffs: 0` (2026-11-17 build: 0 of about
    2,900 elements at 412, 820 and 1366px, and with the menus and FAQ open).
 

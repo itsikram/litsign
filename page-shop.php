@@ -14,12 +14,12 @@ $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $builder_url = home_url('/channel-letter-builder/');
 
-$all_products = wholesale_shop_products();
-$state = wholesale_shop_request_state();
-$products = wholesale_shop_filter($all_products, $state);
-$category_tree = wholesale_shop_category_tree($all_products);
-$pricing_labels = wholesale_shop_pricing_labels();
-$sort_options = wholesale_shop_sort_options();
+$all_products = retails_shop_products();
+$state = retails_shop_request_state();
+$products = retails_shop_filter($all_products, $state);
+$category_tree = retails_shop_category_tree($all_products);
+$pricing_labels = retails_shop_pricing_labels();
+$sort_options = retails_shop_sort_options();
 $total = count($all_products);
 
 $price_ceiling = 0;
@@ -35,7 +35,7 @@ foreach ($all_products as $product) {
 	}
 }
 $price_ceiling = (int) ceil($price_ceiling);
-$show_ratings = (function_exists('wholesale_setting_enabled') ? wholesale_setting_enabled('show_product_ratings') : true) && $rated[3] > 0;
+$show_ratings = (function_exists('retails_setting_enabled') ? retails_setting_enabled('show_product_ratings') : true) && $rated[3] > 0;
 
 // Category tiles: top-level categories, pictured by their first product.
 $category_tiles = array();
@@ -53,7 +53,7 @@ foreach ($category_tree as $node) {
 		$tile_image = 0;
 		foreach ($all_products as $product) {
 			// A product whose only photos carry sample sale artwork doesn't picture a category (inc/product-photo-overrides.php).
-			if ($product['thumb'] && in_array($tile['term']->slug, $product['cats'], true) && !(function_exists('wholesale_product_card_hidden') && wholesale_product_card_hidden($product['id']))) {
+			if ($product['thumb'] && in_array($tile['term']->slug, $product['cats'], true) && !(function_exists('retails_product_card_hidden') && retails_product_card_hidden($product['id']))) {
 				$tile_image = $product['thumb'];
 				break;
 			}
@@ -63,11 +63,11 @@ foreach ($category_tree as $node) {
 }
 
 // Structured data: the full product list (ItemList), FAQ, share image.
-$GLOBALS['wholesale_page_items'] = wp_list_pluck($all_products, 'id');
+$GLOBALS['retails_page_items'] = wp_list_pluck($all_products, 'id');
 if (!empty($all_products[0]['thumb'])) {
-	$GLOBALS['wholesale_page_image'] = wp_get_attachment_image_url($all_products[0]['thumb'], 'large');
+	$GLOBALS['retails_page_image'] = wp_get_attachment_image_url($all_products[0]['thumb'], 'large');
 }
-wholesale_seo_set_page_faq(array(
+retails_seo_set_page_faq(array(
 	array(
 		'q' => 'How is the price of a custom sign worked out?',
 		'a' => 'Each product shows where it starts. Printed products such as banners, vinyl and window graphics are priced per square foot of your size; flags, stands, frames and tents are priced per item; channel letter starting rates are shown per inch of letter height. Open any product, choose your size and options, and you see your full price before checkout.',
@@ -97,7 +97,7 @@ get_header();
 
 	<section class="sc-hero" aria-labelledby="sc-title">
 		<div class="container">
-			<?php wholesale_breadcrumbs(); ?>
+			<?php retails_breadcrumbs(); ?>
 			<div class="sc-hero-grid">
 				<div class="sc-hero-copy">
 					<h1 id="sc-title" class="sc-hero-title"><?php esc_html_e('Shop Custom Signs, Banners & Displays', 'litsign'); ?></h1>
@@ -112,9 +112,9 @@ get_header();
 					</p>
 				</div>
 				<ul class="sc-hero-trust" aria-label="<?php esc_attr_e('Why order from us', 'litsign'); ?>">
-					<li><?php echo wholesale_home_icon('check'); ?><span><strong><?php esc_html_e('Prices online', 'litsign'); ?></strong> <?php esc_html_e('See your total before checkout', 'litsign'); ?></span></li>
-					<li><?php echo wholesale_home_icon('flag'); ?><span><strong><?php esc_html_e('Made to order', 'litsign'); ?></strong> <?php esc_html_e('Built for your business', 'litsign'); ?></span></li>
-					<li><?php echo wholesale_home_icon('phone'); ?><span><strong><?php esc_html_e('Real sign experts', 'litsign'); ?></strong> <a href="tel:+18664362101">866-436-2101</a></span></li>
+					<li><?php echo retails_home_icon('check'); ?><span><strong><?php esc_html_e('Prices online', 'litsign'); ?></strong> <?php esc_html_e('See your total before checkout', 'litsign'); ?></span></li>
+					<li><?php echo retails_home_icon('flag'); ?><span><strong><?php esc_html_e('Made to order', 'litsign'); ?></strong> <?php esc_html_e('Built for your business', 'litsign'); ?></span></li>
+					<li><?php echo retails_home_icon('phone'); ?><span><strong><?php esc_html_e('Real sign experts', 'litsign'); ?></strong> <a href="tel:+18664362101">866-436-2101</a></span></li>
 				</ul>
 			</div>
 		</div>
@@ -169,7 +169,7 @@ get_header();
 
 				<fieldset class="sc-group" data-group="cat">
 					<legend class="sc-group-title"><?php esc_html_e('Category', 'litsign'); ?></legend>
-					<?php wholesale_shop_render_category_tree($category_tree, $state['cat']); ?>
+					<?php retails_shop_render_category_tree($category_tree, $state['cat']); ?>
 				</fieldset>
 
 				<fieldset class="sc-group" data-group="price">
@@ -224,7 +224,7 @@ get_header();
 									<label class="sc-check sc-check--radio" for="sc-rating-<?php echo esc_attr($stars); ?>">
 										<input type="radio" id="sc-rating-<?php echo esc_attr($stars); ?>" name="rating" value="<?php echo esc_attr($stars); ?>"<?php checked($state['rating'], $stars); ?>>
 										<span class="sc-check-box" aria-hidden="true"></span>
-										<span class="sc-check-label"><?php echo wholesale_review_stars($stars, 'sc-stars'); // Escaped in helper. ?> <?php esc_html_e('& up', 'litsign'); ?></span>
+										<span class="sc-check-label"><?php echo retails_review_stars($stars, 'sc-stars'); // Escaped in helper. ?> <?php esc_html_e('& up', 'litsign'); ?></span>
 										<span class="sc-count" data-count-for="rating:<?php echo esc_attr($stars); ?>"><?php echo (int) $count; ?></span>
 									</label>
 								</div></li>
@@ -279,12 +279,12 @@ get_header();
 				// stay in the page (hidden) so the browser can filter without reloading.
 				$shown_ids = wp_list_pluck($products, 'id');
 				foreach ($products as $index => $product) {
-					wholesale_shop_render_card($product, $index);
+					retails_shop_render_card($product, $index);
 				}
 				foreach ($all_products as $product) {
 					if (!in_array($product['id'], $shown_ids, true)) {
 						ob_start();
-						wholesale_shop_render_card($product, 99);
+						retails_shop_render_card($product, 99);
 						echo str_replace('<li class="sc-card"', '<li class="sc-card" hidden', ob_get_clean()); // Markup built and escaped above.
 					}
 				}
@@ -316,7 +316,7 @@ get_header();
 				<p><?php esc_html_e('Send us your logo, a storefront photo or your measurements and a sign specialist will recommend the right product and give you a free quote.', 'litsign'); ?></p>
 			</div>
 			<div class="sc-help-actions">
-				<a class="sc-btn sc-btn--light" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> 866-436-2101</a>
+				<a class="sc-btn sc-btn--light" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?> 866-436-2101</a>
 				<a class="sc-btn sc-btn--primary" href="<?php echo esc_url($contact_url); ?>"><?php esc_html_e('Get a free quote', 'litsign'); ?></a>
 			</div>
 		</div>
@@ -329,26 +329,26 @@ get_header();
 					<h2 id="sc-guide-title"><?php esc_html_e('Custom signs and printing for every part of your business', 'litsign'); ?></h2>
 					<p><?php echo wp_kses_post(sprintf(
 						__('Start with your building: <a href="%1$s">LED channel letters</a> are the most-requested storefront sign, and you can <a href="%2$s">design yours online</a> and see the price as you go. Then add signs at eye level — <a href="%3$s">window graphics</a>, <a href="%4$s">sidewalk A-frames</a> and <a href="%5$s">rigid signs</a> for doors, hours and parking.', 'litsign'),
-						esc_url(wholesale_category_url('channel-letters')),
+						esc_url(retails_category_url('channel-letters')),
 						esc_url($builder_url),
-						esc_url(wholesale_category_url('adhesive-products')),
-						esc_url(wholesale_category_url('signicade-a-frames')),
-						esc_url(wholesale_category_url('rigid-signs-and-magnets'))
+						esc_url(retails_category_url('adhesive-products')),
+						esc_url(retails_category_url('signicade-a-frames')),
+						esc_url(retails_category_url('rigid-signs-and-magnets'))
 					)); ?></p>
 					<p><?php echo wp_kses_post(sprintf(
 						__('For openings, sales and events, choose from <a href="%1$s">vinyl, mesh and fabric banners</a>, <a href="%2$s">feather and teardrop flags</a>, <a href="%3$s">retractable banner stands</a>, <a href="%4$s">trade show displays</a> and <a href="%5$s">printed event tents</a>.', 'litsign'),
-						esc_url(wholesale_category_url('banners')),
-						esc_url(wholesale_category_url('advertising-flags')),
-						esc_url(wholesale_category_url('banner-stands')),
-						esc_url(wholesale_category_url('trade-show-products')),
-						esc_url(wholesale_category_url('custom-event-tents'))
+						esc_url(retails_category_url('banners')),
+						esc_url(retails_category_url('advertising-flags')),
+						esc_url(retails_category_url('banner-stands')),
+						esc_url(retails_category_url('trade-show-products')),
+						esc_url(retails_category_url('custom-event-tents'))
 					)); ?></p>
 				</div>
 				<div class="sc-guide-links">
 					<h3><?php esc_html_e('All categories', 'litsign'); ?></h3>
 					<ul>
 						<?php foreach ($category_tiles as $tile) : ?>
-							<li><a href="<?php echo esc_url(wholesale_category_url($tile['term']->slug)); ?>"><?php echo esc_html($tile['term']->name); ?></a></li>
+							<li><a href="<?php echo esc_url(retails_category_url($tile['term']->slug)); ?>"><?php echo esc_html($tile['term']->name); ?></a></li>
 						<?php endforeach; ?>
 					</ul>
 				</div>
@@ -361,7 +361,7 @@ get_header();
 			<p class="cl-kicker"><?php esc_html_e('Before you order', 'litsign'); ?></p>
 			<h2 id="sc-faq-title" class="cl-section-title"><?php esc_html_e('Frequently Asked Questions', 'litsign'); ?></h2>
 			<div class="cl-faq-list">
-				<?php wholesale_seo_render_faq(); ?>
+				<?php retails_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>

@@ -2,7 +2,7 @@
 (function () {
 	'use strict';
 
-	var C = window.WholesalePayments;
+	var C = window.RetailsPayments;
 	var root = document.getElementById('wpa');
 	if (!C || !root) {
 		return;
@@ -70,7 +70,7 @@
 			.catch(function () { return { ok: false, data: {}, raw: {}, message: 'Network error. Check your connection and try again.' }; });
 	};
 	var pa = function (doAction, data) {
-		return post('wholesale_pa_action', Object.assign({ nonce: C.nonce, do: doAction }, data || {}));
+		return post('retails_pa_action', Object.assign({ nonce: C.nonce, do: doAction }, data || {}));
 	};
 
 	var toastEl;
@@ -197,12 +197,12 @@
 		});
 		if (push) {
 			var url = new URL(window.location.href);
-			url.searchParams.set('page', 'wholesale-payments' + (tab === 'overview' ? '' : '-' + tab));
+			url.searchParams.set('page', 'retails-payments' + (tab === 'overview' ? '' : '-' + tab));
 			url.hash = '';
 			window.history.replaceState({}, '', url.toString());
 			// Keep the WP submenu highlight in step.
 			var page = url.searchParams.get('page');
-			$$('#toplevel_page_wholesale-payments .wp-submenu li').forEach(function (li) {
+			$$('#toplevel_page_retails-payments .wp-submenu li').forEach(function (li) {
 				var a = li.querySelector('a');
 				var on = !!a && (a.getAttribute('href') || '').split('page=')[1] === page;
 				li.classList.toggle('current', on);
@@ -914,7 +914,7 @@
 	var reloadData = function () {
 		var btn = $('#wpa-reload');
 		btn.classList.add('is-busy');
-		return post('wholesale_pa_data', { nonce: C.nonce }).then(function (res) {
+		return post('retails_pa_data', { nonce: C.nonce }).then(function (res) {
 			btn.classList.remove('is-busy');
 			if (res.ok) {
 				data = res.data;
@@ -957,7 +957,7 @@
 		if (history.replaceState) {
 			history.replaceState({}, '', '#pay-' + id);
 		}
-		return post('wholesale_pa_detail', { nonce: C.nonce, id: id }).then(function (res) {
+		return post('retails_pa_detail', { nonce: C.nonce, id: id }).then(function (res) {
 			if (!res.ok) {
 				drawerBody.innerHTML = '<div class="wpa-empty"><span class="dashicons dashicons-warning"></span>' + esc(res.message) + '</div>';
 				return;
@@ -1263,7 +1263,7 @@
 	};
 
 	var payLinkCall = function (mode, extra) {
-		return post('wholesale_order_pay_link', Object.assign({ order: current.id, nonce: current.payLink.nonce, mode: mode }, extra || {}));
+		return post('retails_order_pay_link', Object.assign({ order: current.id, nonce: current.payLink.nonce, mode: mode }, extra || {}));
 	};
 	actions.copylink = function (btn) {
 		btn.classList.add('is-busy');
@@ -1352,7 +1352,7 @@
 				onSubmit: function () {
 					var payload = { post_id: c.id, nonce: r.nonce, kind: f.kind, amount: f.kind === 'full' ? '' : amount.toFixed(2), reason: f.reason || '', notify: f.notify ? 1 : '', status: f.status || '' };
 					var call = r.endpoint === 'converge'
-						? post('wholesale_refund_issue', Object.assign(payload, { method: f.method }))
+						? post('retails_refund_issue', Object.assign(payload, { method: f.method }))
 						: post('sfs_wallet_refund', payload);
 					call.then(function (res) {
 						if (!res.ok) {
@@ -1376,7 +1376,7 @@
 				return;
 			}
 			showModal({ title: 'Refund order #' + c.number, body: '<div class="wpa-skeleton"></div><p>Checking the payment with Converge…</p>', noSubmit: true });
-			post('wholesale_refund_check', { post_id: c.id, nonce: r.nonce }).then(function (res) {
+			post('retails_refund_check', { post_id: c.id, nonce: r.nonce }).then(function (res) {
 				if (!res.ok) {
 					showModal({ title: 'Refund order #' + c.number, body: '<p class="wpa-alert"><span class="dashicons dashicons-warning"></span><span>' + esc(res.message) + '</span></p>', noSubmit: true });
 					return;

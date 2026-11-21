@@ -5,7 +5,7 @@
  * either way the server fixes the amount and verifies the result. See inc/payments.php.
  */
 (() => {
-  const settings = window.wholesalePayment;
+  const settings = window.retailsPayment;
   if (!settings) return;
 
   const money = (value) => '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -490,7 +490,7 @@
       const password = form.querySelector('[name="account_password"]');
       if (password) data.append('account_password', password.value);
       try {
-        const result = await post('wholesale_payment_complete', data);
+        const result = await post('retails_payment_complete', data);
         window.location.href = result.redirect;
       } catch (error) {
         setBusy(false);
@@ -517,7 +517,7 @@
       const data = new FormData(form);
       data.append('kind', kind);
       try {
-        const start = await post('wholesale_payment_start', data);
+        const start = await post('retails_payment_start', data);
         if (start.redirect) {
           window.location.href = start.redirect;
           return;

@@ -891,6 +891,7 @@ $icon = static function ($name, $size = 20) {
 				<p class="srp-sub">Type what you&rsquo;re looking for, like channel letters, banners or flags.</p>
 			<?php endif; ?>
 
+			<?php if ('' === $q) : // Results page uses the header search; only the empty page keeps this form. ?>
 			<form class="srp-form" role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
 				<label class="srp-vh" for="srpInput"><?php esc_html_e('Search', 'litsign'); ?></label>
 				<div class="srp-field">
@@ -905,6 +906,7 @@ $icon = static function ($name, $size = 20) {
 					</button>
 				</div>
 			</form>
+			<?php endif; ?>
 
 			<?php if (!$found) : ?>
 				<div class="srp-popular">
@@ -964,7 +966,7 @@ $icon = static function ($name, $size = 20) {
 							// Same whole-dollar "starting at" price as the product cards.
 							$starting = (string) get_post_meta($post_id, '_starting_at_text', true);
 							if ('' !== trim(wp_strip_all_tags($starting))) {
-								$price_html = 'From ' . wp_kses(wholesale_price_no_cents($starting), array('sup' => array(), 'del' => array()));
+								$price_html = 'From ' . wp_kses(retails_price_no_cents($starting), array('sup' => array(), 'del' => array()));
 							}
 						}
 						if ('' === $excerpt) {
@@ -973,9 +975,9 @@ $icon = static function ($name, $size = 20) {
 					?>
 						<li>
 							<article <?php post_class('srp-card'); ?>>
-								<?php if ('product' === get_post_type()) { echo wholesale_admin_edit_product_link($post_id); /* Escaped in helper. */ } ?>
+								<?php if ('product' === get_post_type()) { echo retails_admin_edit_product_link($post_id); /* Escaped in helper. */ } ?>
 								<div class="srp-card__media">
-									<?php if ('product' === get_post_type()) { wholesale_render_sale_badge($post_id); } ?>
+									<?php if ('product' === get_post_type()) { retails_render_sale_badge($post_id); } ?>
 									<?php
 									if (has_post_thumbnail()) {
 										echo get_the_post_thumbnail($post_id, 'medium_large', array(
@@ -995,12 +997,13 @@ $icon = static function ($name, $size = 20) {
 
 								<div class="srp-card__body">
 									<h2 class="srp-card__title">
-										<a href="<?php the_permalink(); ?>"><?php echo $highlight(get_the_title()); // Escaped inside the closure. ?></a>
+										<a href="<?php the_permalink(); ?>"><?php echo $highlight(function_exists('ssx_live_search_title') ? ssx_live_search_title(get_post()) : get_the_title()); // Grouped products: own title. Escaped inside the closure. ?></a>
 									</h2>
 
 									<?php if ($excerpt) : ?>
 										<p class="srp-card__excerpt"><?php echo $highlight($excerpt); // Escaped inside the closure. ?></p>
 									<?php endif; ?>
+									<?php if ('product' === get_post_type() && function_exists('retails_card_trust')) { echo retails_card_trust($post_id); /* Escaped in helper. */ } ?>
 
 									<div class="srp-card__foot">
 										<?php if ($price_html) : ?>

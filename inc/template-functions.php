@@ -39,7 +39,7 @@ add_action( 'wp_head', 'litsign_pingback_header' );
 /**
  * Stroke icons for the channel letter and storefront sign sections (the icon font is a small subset).
  */
-function wholesale_home_icon($name)
+function retails_home_icon($name)
 {
 	$paths = array(
 		'flag' => '<path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/>',
@@ -74,7 +74,7 @@ function wholesale_home_icon($name)
  * page can show the amount large and the unit small. The current price is the last
  * dollar amount outside <del>; e.g. "<del>$9.16</del> $8.25 per ft<sup>2</sup>".
  */
-function wholesale_emphasize_price($html)
+function retails_emphasize_price($html)
 {
 	$html = (string) $html;
 	if ('' === trim($html) || false !== stripos($html, '<strong')) {
@@ -102,7 +102,7 @@ function wholesale_emphasize_price($html)
  * "I don't need you to round" (the banners card read "$2" while its product page said
  * $1.58 per ft²); before that, card prices were rounded up to whole dollars.
  */
-function wholesale_whole_dollars($amount)
+function retails_whole_dollars($amount)
 {
 	$amount = round((float) $amount, 2);
 
@@ -114,13 +114,13 @@ function wholesale_whole_dollars($amount)
  * e.g. "<del>$2.26</del> $1.98 per ft<sup>2</sup>" stays as it is and "$16.00 per item"
  * reads "$16 per item". A struck-through price equal to the current price is removed.
  */
-function wholesale_price_no_cents($html)
+function retails_price_no_cents($html)
 {
 	if (preg_match('/per\s*inch|\/\s*inch/i', wp_strip_all_tags((string) $html))) {
 		return $html;
 	}
 	$html = preg_replace_callback('/\$\s?([\d,]+(?:\.\d+)?)/', static function ($m) {
-		return wholesale_whole_dollars(str_replace(',', '', $m[1]));
+		return retails_whole_dollars(str_replace(',', '', $m[1]));
 	}, (string) $html);
 
 	if (preg_match('/<del\b[^>]*>[^$<]*(\$[\d,]+(?:\.\d+)?)\s*<\/del>/i', $html, $was) && preg_match_all('/\$[\d,]+(?:\.\d+)?/', wp_strip_all_tags(preg_replace('/<del\b.*?<\/del>/is', '', $html)), $now) && end($now[0]) === $was[1]) {

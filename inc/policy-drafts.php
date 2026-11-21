@@ -10,7 +10,7 @@
 /**
  * Privacy Policy draft, describing what the site's code actually collects.
  */
-function wholesale_policy_privacy_draft()
+function retails_policy_privacy_draft()
 {
 	return <<<'HTML'
 <p><strong>[DRAFT FOR REVIEW. Complete every [PLACEHOLDER], have it reviewed, then publish. Delete this line before publishing.]</strong></p>
@@ -73,7 +73,7 @@ HTML;
  * Shipping & Returns draft, restating the site's existing Terms & Conditions
  * and shipping information in one place.
  */
-function wholesale_policy_shipping_draft()
+function retails_policy_shipping_draft()
 {
 	return <<<'HTML'
 <p><strong>[DRAFT FOR REVIEW. Check every statement against how you work today, then publish. Delete this line before publishing.]</strong></p>

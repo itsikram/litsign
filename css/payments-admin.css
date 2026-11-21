@@ -1,6 +1,6 @@
 /* Payments admin page (inc/payments-admin.php). Scoped to .wpa / .wpa-drawer / .wpa-modal. */
 
-.wholesale-payments-page {
+.retails-payments-page {
 	--wpa-bg: #f4f6f9;
 	--wpa-surface: #ffffff;
 	--wpa-ink: #0f1d2b;
@@ -31,9 +31,9 @@
 	background: var(--wpa-bg);
 }
 
-.wholesale-payments-page #wpcontent { padding-left: 0; }
-.wholesale-payments-page #wpbody-content { padding-bottom: 40px; }
-.wholesale-payments-page .notice:not(.wpa-notice) { margin-left: 24px; margin-right: 24px; }
+.retails-payments-page #wpcontent { padding-left: 0; }
+.retails-payments-page #wpbody-content { padding-bottom: 40px; }
+.retails-payments-page .notice:not(.wpa-notice) { margin-left: 24px; margin-right: 24px; }
 
 .wpa {
 	margin: 0;
@@ -437,14 +437,14 @@
 
 /* Print: only the open detail panel */
 @media print {
-	body.wholesale-payments-page.wpa-printing #adminmenumain, body.wholesale-payments-page.wpa-printing #wpadminbar,
-	body.wholesale-payments-page.wpa-printing #wpa, body.wholesale-payments-page.wpa-printing #wpfooter,
-	body.wholesale-payments-page.wpa-printing .wpa-drawer__scrim, body.wholesale-payments-page.wpa-printing .wpa-drawer__tools,
-	body.wholesale-payments-page.wpa-printing .wpa-drawer__actions, body.wholesale-payments-page.wpa-printing .wpa-note-form,
-	body.wholesale-payments-page.wpa-printing .wpa-copy { display: none !important; }
-	body.wholesale-payments-page.wpa-printing .wpa-drawer, body.wholesale-payments-page.wpa-printing .wpa-drawer__panel { position: static; transform: none; box-shadow: none; width: 100%; visibility: visible; background: #fff; }
-	body.wholesale-payments-page.wpa-printing .wpa-drawer__body { overflow: visible; }
-	body.wholesale-payments-page.wpa-printing .wpa-hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+	body.retails-payments-page.wpa-printing #adminmenumain, body.retails-payments-page.wpa-printing #wpadminbar,
+	body.retails-payments-page.wpa-printing #wpa, body.retails-payments-page.wpa-printing #wpfooter,
+	body.retails-payments-page.wpa-printing .wpa-drawer__scrim, body.retails-payments-page.wpa-printing .wpa-drawer__tools,
+	body.retails-payments-page.wpa-printing .wpa-drawer__actions, body.retails-payments-page.wpa-printing .wpa-note-form,
+	body.retails-payments-page.wpa-printing .wpa-copy { display: none !important; }
+	body.retails-payments-page.wpa-printing .wpa-drawer, body.retails-payments-page.wpa-printing .wpa-drawer__panel { position: static; transform: none; box-shadow: none; width: 100%; visibility: visible; background: #fff; }
+	body.retails-payments-page.wpa-printing .wpa-drawer__body { overflow: visible; }
+	body.retails-payments-page.wpa-printing .wpa-hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 @media (prefers-reduced-motion: reduce) {

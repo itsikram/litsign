@@ -7,7 +7,7 @@
  *  - Product categories: fields on the add/edit form (child categories use
  *    their parent's photo until they get their own).
  *  - Settings > Storefront Sign > Images: a fallback pair for the text-only
- *    guide pages (warranty, permits, industries ...), see wholesale_image_slots().
+ *    guide pages (warranty, permits, industries ...), see retails_image_slots().
  *
  * Nothing changes on a page until one of those fields is filled in: the CSS
  * below is printed only for pages that have a photo, so every other page keeps
@@ -21,17 +21,17 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const WHOLESALE_HERO_DESKTOP = '_sfs_hero_desktop';
-const WHOLESALE_HERO_MOBILE = '_sfs_hero_mobile';
-const WHOLESALE_HERO_OVERLAY = '_sfs_hero_overlay';
-const WHOLESALE_HERO_FOCUS = '_sfs_hero_focus';
+const RETAILS_HERO_DESKTOP = '_sfs_hero_desktop';
+const RETAILS_HERO_MOBILE = '_sfs_hero_mobile';
+const RETAILS_HERO_OVERLAY = '_sfs_hero_overlay';
+const RETAILS_HERO_FOCUS = '_sfs_hero_focus';
 
 /**
  * Overlay presets: label, plus the gradient layers for desktop, tablet and
  * phone. Same navy as the rest of the site's heroes (rgb 3, 24, 53). Phones get
  * a top-down overlay because the copy spans the full width there.
  */
-function wholesale_hero_overlays()
+function retails_hero_overlays()
 {
 	$n = 'rgba(3,24,53,';
 	return array(
@@ -63,7 +63,7 @@ function wholesale_hero_overlays()
 }
 
 /** Focal point choices: key => CSS background-position. */
-function wholesale_hero_focus_points()
+function retails_hero_focus_points()
 {
 	return array(
 		'left top' => array('Top left', '15% 15%'),
@@ -79,7 +79,7 @@ function wholesale_hero_focus_points()
 }
 
 /** Templates whose hero is a text-only .sf-hero band (the fallback photo goes here). */
-function wholesale_hero_fallback_templates()
+function retails_hero_fallback_templates()
 {
 	return array(
 		'page-industries.php', 'page-industry.php', 'page-location.php', 'page-locations.php',
@@ -89,34 +89,34 @@ function wholesale_hero_fallback_templates()
 	);
 }
 
-function wholesale_hero_remember_template($template)
+function retails_hero_remember_template($template)
 {
-	$GLOBALS['wholesale_hero_template'] = basename((string) $template);
+	$GLOBALS['retails_hero_template'] = basename((string) $template);
 	return $template;
 }
-add_filter('template_include', 'wholesale_hero_remember_template', 99);
+add_filter('template_include', 'retails_hero_remember_template', 99);
 
 /* ------------------------------------------------------------------------
  * Reading
  * --------------------------------------------------------------------- */
 
-function wholesale_hero_valid_image($id)
+function retails_hero_valid_image($id)
 {
 	$id = absint($id);
 	return $id && wp_attachment_is_image($id) ? $id : 0;
 }
 
 /** The four values for a page (post) or category (term), '' / 0 when unset. */
-function wholesale_hero_read($kind, $id)
+function retails_hero_read($kind, $id)
 {
 	$get = 'term' === $kind ? 'get_term_meta' : 'get_post_meta';
-	$overlay = (string) $get($id, WHOLESALE_HERO_OVERLAY, true);
-	$focus = (string) $get($id, WHOLESALE_HERO_FOCUS, true);
+	$overlay = (string) $get($id, RETAILS_HERO_OVERLAY, true);
+	$focus = (string) $get($id, RETAILS_HERO_FOCUS, true);
 	return array(
-		'desktop' => wholesale_hero_valid_image($get($id, WHOLESALE_HERO_DESKTOP, true)),
-		'mobile' => wholesale_hero_valid_image($get($id, WHOLESALE_HERO_MOBILE, true)),
-		'overlay' => isset(wholesale_hero_overlays()[$overlay]) ? $overlay : 'left',
-		'focus' => isset(wholesale_hero_focus_points()[$focus]) ? $focus : 'center center',
+		'desktop' => retails_hero_valid_image($get($id, RETAILS_HERO_DESKTOP, true)),
+		'mobile' => retails_hero_valid_image($get($id, RETAILS_HERO_MOBILE, true)),
+		'overlay' => isset(retails_hero_overlays()[$overlay]) ? $overlay : 'left',
+		'focus' => isset(retails_hero_focus_points()[$focus]) ? $focus : 'center center',
 	);
 }
 
@@ -124,7 +124,7 @@ function wholesale_hero_read($kind, $id)
  * The hero configuration for the page being shown, or null when the page has
  * no photo of its own and is not a fallback page (it then looks as before).
  */
-function wholesale_hero_config()
+function retails_hero_config()
 {
 	static $config = false;
 	if (false !== $config) {
@@ -139,7 +139,7 @@ function wholesale_hero_config()
 	$object = get_queried_object();
 
 	// Category pages are served by home.php / page-channel-letters.php through the
-	// category_slug query var (see wholesale_category_template()), not as a term archive.
+	// category_slug query var (see retails_category_template()), not as a term archive.
 	$slug = get_query_var('category_slug');
 	$slug = $slug ? sanitize_title($slug) : '';
 	$term = $slug ? get_term_by('slug', $slug, 'product_category') : null;
@@ -147,7 +147,7 @@ function wholesale_hero_config()
 		$term = $object;
 	}
 	for ($i = 0; $term && !is_wp_error($term) && $i < 6; $i++) {
-		$values = wholesale_hero_read('term', $term->term_id);
+		$values = retails_hero_read('term', $term->term_id);
 		if ($values['desktop'] || $values['mobile']) {
 			$found = $values;
 			break;
@@ -163,17 +163,17 @@ function wholesale_hero_config()
 			$page_id = (int) get_option('page_on_front');
 		}
 		if ($page_id && !$slug) {
-			$values = wholesale_hero_read('post', $page_id);
+			$values = retails_hero_read('post', $page_id);
 			$found = ($values['desktop'] || $values['mobile']) ? $values : null;
 		}
 	}
 
 	if (!$found) {
 		// Fallback photo for the text-only guide pages.
-		$template = $GLOBALS['wholesale_hero_template'] ?? '';
-		if (in_array($template, wholesale_hero_fallback_templates(), true)) {
-			$desktop = wholesale_image_slot_effective_id('hero_fallback');
-			$mobile = wholesale_image_slot_effective_id('hero_fallback_mobile');
+		$template = $GLOBALS['retails_hero_template'] ?? '';
+		if (in_array($template, retails_hero_fallback_templates(), true)) {
+			$desktop = retails_image_slot_effective_id('hero_fallback');
+			$mobile = retails_image_slot_effective_id('hero_fallback_mobile');
 			if ($desktop || $mobile) {
 				$found = array('desktop' => $desktop, 'mobile' => $mobile, 'overlay' => 'left', 'focus' => 'center center');
 			}
@@ -188,8 +188,8 @@ function wholesale_hero_config()
 			return '';
 		}
 		$src = wp_get_attachment_image_url($id, $size);
-		if ($src && function_exists('wholesale_webp_url')) {
-			$src = wholesale_webp_url($src);
+		if ($src && function_exists('retails_webp_url')) {
+			$src = retails_webp_url($src);
 		}
 		return $src ? esc_url_raw($src) : '';
 	};
@@ -210,16 +210,16 @@ function wholesale_hero_config()
 	return $config;
 }
 
-function wholesale_hero_body_class($classes)
+function retails_hero_body_class($classes)
 {
-	if (wholesale_hero_config()) {
+	if (retails_hero_config()) {
 		$classes[] = 'sfs-hero-on';
 	}
 	return $classes;
 }
-add_filter('body_class', 'wholesale_hero_body_class');
+add_filter('body_class', 'retails_hero_body_class');
 
-function wholesale_hero_css_url($url)
+function retails_hero_css_url($url)
 {
 	return "url('" . str_replace(array("'", '"', '(', ')', ' ', "\n"), array('%27', '%22', '%28', '%29', '%20', ''), $url) . "')";
 }
@@ -228,16 +228,16 @@ function wholesale_hero_css_url($url)
  * Front end: preload + CSS (only on pages that have a photo)
  * --------------------------------------------------------------------- */
 
-function wholesale_hero_head()
+function retails_hero_head()
 {
-	$config = wholesale_hero_config();
+	$config = retails_hero_config();
 	if (!$config) {
 		return;
 	}
 
 	// The template's own hero photo is no longer shown; don't preload it.
 	if ($config['desktop']) {
-		$GLOBALS['wholesale_hero_custom'] = true;
+		$GLOBALS['retails_hero_custom'] = true;
 	}
 
 	$desktop = $config['desktop'];
@@ -253,8 +253,8 @@ function wholesale_hero_head()
 		}
 	}
 
-	$overlay = wholesale_hero_overlays()[$config['overlay']];
-	$pos = wholesale_hero_focus_points()[$config['focus']][1];
+	$overlay = retails_hero_overlays()[$config['overlay']];
+	$pos = retails_hero_focus_points()[$config['focus']][1];
 
 	// The hero bands the templates print. body.sfs-hero-on keeps these rules
 	// above the per-page rules in style.css, whatever the load order.
@@ -263,7 +263,7 @@ function wholesale_hero_head()
 
 	$css = $bands . '{' . $base . '}';
 	if ($desktop) {
-		$d = wholesale_hero_css_url($desktop);
+		$d = retails_hero_css_url($desktop);
 		$css .= '@media(min-width:768px){' . $bands . '{background-image:' . $overlay['t'] . ',' . $d . '}}';
 		$css .= '@media(min-width:992px){' . $bands . '{background-image:' . $overlay['d'] . ',' . $d . '}';
 		// Channel letters page: the photo sits on a ::before layer that starts 22% in.
@@ -274,7 +274,7 @@ function wholesale_hero_head()
 		$css .= 'body.sfs-hero-on .home-hero--cl-page .home-hero-content::before{background-image:' . $cl_overlay . ',' . $d . ';background-position:' . $pos . '}}';
 	}
 	if ($mobile) {
-		$m = wholesale_hero_css_url($mobile);
+		$m = retails_hero_css_url($mobile);
 		$css .= '@media(max-width:767px){' . $bands . '{background-image:' . $overlay['m'] . ',' . $m . '}}';
 	}
 
@@ -312,16 +312,16 @@ function wholesale_hero_head()
 
 	echo '<style id="sfs-hero-images">' . $css . "</style>\n"; // Built from fixed presets and escaped URLs.
 }
-add_action('wp_head', 'wholesale_hero_head', 0);
+add_action('wp_head', 'retails_hero_head', 0);
 
 /* ------------------------------------------------------------------------
  * Admin fields
  * --------------------------------------------------------------------- */
 
-function wholesale_hero_field_html($values, $table = false)
+function retails_hero_field_html($values, $table = false)
 {
-	$overlays = wholesale_hero_overlays();
-	$focus_points = wholesale_hero_focus_points();
+	$overlays = retails_hero_overlays();
+	$focus_points = retails_hero_focus_points();
 	$images = array(
 		'desktop' => array('Desktop photo', 'Landscape, about 1920 &times; 800 px (WebP or JPEG). Keep the left third quiet and dark where the headline sits.'),
 		'mobile' => array('Phone photo (optional)', 'Portrait or square, about 900 &times; 1200 px, for screens under 768 px. Empty: phones get a smaller copy of the desktop photo.'),
@@ -358,7 +358,7 @@ function wholesale_hero_field_html($values, $table = false)
 	echo '</div>';
 }
 
-function wholesale_hero_save_values($kind, $id)
+function retails_hero_save_values($kind, $id)
 {
 	if (!isset($_POST['sfs_hero_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['sfs_hero_nonce'])), 'sfs_hero_save')) {
 		return;
@@ -366,65 +366,65 @@ function wholesale_hero_save_values($kind, $id)
 	$set = 'term' === $kind ? 'update_term_meta' : 'update_post_meta';
 	$delete = 'term' === $kind ? 'delete_term_meta' : 'delete_post_meta';
 
-	foreach (array('desktop' => WHOLESALE_HERO_DESKTOP, 'mobile' => WHOLESALE_HERO_MOBILE) as $field => $meta) {
-		$value = isset($_POST['sfs_hero_' . $field]) ? wholesale_hero_valid_image(wp_unslash($_POST['sfs_hero_' . $field])) : 0;
+	foreach (array('desktop' => RETAILS_HERO_DESKTOP, 'mobile' => RETAILS_HERO_MOBILE) as $field => $meta) {
+		$value = isset($_POST['sfs_hero_' . $field]) ? retails_hero_valid_image(wp_unslash($_POST['sfs_hero_' . $field])) : 0;
 		$value ? $set($id, $meta, $value) : $delete($id, $meta);
 	}
 
 	$overlay = isset($_POST['sfs_hero_overlay']) ? sanitize_key(wp_unslash($_POST['sfs_hero_overlay'])) : 'left';
-	('left' !== $overlay && isset(wholesale_hero_overlays()[$overlay])) ? $set($id, WHOLESALE_HERO_OVERLAY, $overlay) : $delete($id, WHOLESALE_HERO_OVERLAY);
+	('left' !== $overlay && isset(retails_hero_overlays()[$overlay])) ? $set($id, RETAILS_HERO_OVERLAY, $overlay) : $delete($id, RETAILS_HERO_OVERLAY);
 
 	$focus = isset($_POST['sfs_hero_focus']) ? sanitize_text_field(wp_unslash($_POST['sfs_hero_focus'])) : 'center center';
-	('center center' !== $focus && isset(wholesale_hero_focus_points()[$focus])) ? $set($id, WHOLESALE_HERO_FOCUS, $focus) : $delete($id, WHOLESALE_HERO_FOCUS);
+	('center center' !== $focus && isset(retails_hero_focus_points()[$focus])) ? $set($id, RETAILS_HERO_FOCUS, $focus) : $delete($id, RETAILS_HERO_FOCUS);
 }
 
 /* Pages */
-function wholesale_hero_add_metabox()
+function retails_hero_add_metabox()
 {
 	add_meta_box('sfs-hero-images', 'Hero images', function ($post) {
-		wholesale_hero_field_html(wholesale_hero_read('post', $post->ID));
+		retails_hero_field_html(retails_hero_read('post', $post->ID));
 	}, 'page', 'side', 'default');
 }
-add_action('add_meta_boxes_page', 'wholesale_hero_add_metabox');
+add_action('add_meta_boxes_page', 'retails_hero_add_metabox');
 
-function wholesale_hero_save_page($post_id)
+function retails_hero_save_page($post_id)
 {
 	if ((defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || wp_is_post_revision($post_id) || !current_user_can('edit_page', $post_id)) {
 		return;
 	}
-	wholesale_hero_save_values('post', $post_id);
+	retails_hero_save_values('post', $post_id);
 }
-add_action('save_post_page', 'wholesale_hero_save_page');
+add_action('save_post_page', 'retails_hero_save_page');
 
 /* Product categories */
-function wholesale_hero_term_add_form()
+function retails_hero_term_add_form()
 {
 	echo '<div class="form-field"><label>Hero images</label>';
-	wholesale_hero_field_html(wholesale_hero_read('term', 0));
+	retails_hero_field_html(retails_hero_read('term', 0));
 	echo '</div>';
 }
-add_action('product_category_add_form_fields', 'wholesale_hero_term_add_form');
+add_action('product_category_add_form_fields', 'retails_hero_term_add_form');
 
-function wholesale_hero_term_edit_form($term)
+function retails_hero_term_edit_form($term)
 {
 	echo '<tr class="form-field"><th scope="row">Hero images</th><td>';
-	wholesale_hero_field_html(wholesale_hero_read('term', $term->term_id));
+	retails_hero_field_html(retails_hero_read('term', $term->term_id));
 	echo '<p class="description">Child categories use the parent category\'s hero photo until they get their own.</p></td></tr>';
 }
-add_action('product_category_edit_form_fields', 'wholesale_hero_term_edit_form');
+add_action('product_category_edit_form_fields', 'retails_hero_term_edit_form');
 
-function wholesale_hero_save_term($term_id)
+function retails_hero_save_term($term_id)
 {
 	if (!current_user_can('manage_categories')) {
 		return;
 	}
-	wholesale_hero_save_values('term', $term_id);
+	retails_hero_save_values('term', $term_id);
 }
-add_action('created_product_category', 'wholesale_hero_save_term');
-add_action('edited_product_category', 'wholesale_hero_save_term');
+add_action('created_product_category', 'retails_hero_save_term');
+add_action('edited_product_category', 'retails_hero_save_term');
 
 /* Media picker script, only on the screens that have the fields. */
-function wholesale_hero_admin_assets($hook)
+function retails_hero_admin_assets($hook)
 {
 	$screen = get_current_screen();
 	if (!$screen || !in_array($screen->id, array('page', 'edit-product_category'), true)) {
@@ -465,4 +465,4 @@ jQuery(function ($) {
 JS
 	);
 }
-add_action('admin_enqueue_scripts', 'wholesale_hero_admin_assets');
+add_action('admin_enqueue_scripts', 'retails_hero_admin_assets');

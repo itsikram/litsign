@@ -14,21 +14,21 @@
 // it so sales can be matched to the products in the feed (cart data).
 define('WHOLESALE_MERCHANT_CENTER_ID', 5877365740);
 
-function wholesale_merchant_feed_rewrite()
+function retails_merchant_feed_rewrite()
 {
-	add_rewrite_rule('^merchant-feed\.xml$', 'index.php?wholesale_merchant_feed=1', 'top');
+	add_rewrite_rule('^merchant-feed\.xml$', 'index.php?retails_merchant_feed=1', 'top');
 }
-add_action('init', 'wholesale_merchant_feed_rewrite', 20);
+add_action('init', 'retails_merchant_feed_rewrite', 20);
 
 add_action('init', function () {
-	if ('1' !== get_option('wholesale_merchant_feed_rewrite_version')) {
+	if ('1' !== get_option('retails_merchant_feed_rewrite_version')) {
 		flush_rewrite_rules(false);
-		update_option('wholesale_merchant_feed_rewrite_version', '1');
+		update_option('retails_merchant_feed_rewrite_version', '1');
 	}
 }, 99);
 
 add_filter('query_vars', function ($vars) {
-	$vars[] = 'wholesale_merchant_feed';
+	$vars[] = 'retails_merchant_feed';
 	return $vars;
 });
 
@@ -36,7 +36,7 @@ add_filter('query_vars', function ($vars) {
  * Google product category ID for a product_category slug.
  * https://www.google.com/basepages/producttype/taxonomy-with-ids.en-US.txt
  */
-function wholesale_merchant_google_category($slug)
+function retails_merchant_google_category($slug)
 {
 	$map = array(
 		'channel-letters' => 4131, // Signage > Electric Signs > LED Signs
@@ -63,9 +63,9 @@ function wholesale_merchant_google_category($slug)
  * Plain-text product description for the feed: the "Description" section of
  * the product content (not the shared turnaround notes), else the bullets.
  */
-function wholesale_merchant_description($product_id)
+function retails_merchant_description($product_id)
 {
-	$channel_letter = wholesale_seo_channel_letter_product($product_id);
+	$channel_letter = retails_seo_channel_letter_product($product_id);
 	if ($channel_letter) {
 		return $channel_letter['intro'];
 	}
@@ -94,7 +94,7 @@ function wholesale_merchant_description($product_id)
  * @param string $title         Product name with its variant label.
  * @param string $category_name The product's category (custom_label_0).
  */
-function wholesale_merchant_title($title, $category_name)
+function retails_merchant_title($title, $category_name)
 {
 	$printed = array(
 		'Custom Printed Banners',
@@ -134,7 +134,7 @@ function wholesale_merchant_title($title, $category_name)
  * Feed item ID: the product slug, which Merchant Center limits to 50
  * characters. Longer slugs are cut and end in the post ID so they stay unique.
  */
-function wholesale_merchant_item_id($product)
+function retails_merchant_item_id($product)
 {
 	$id = (string) $product->post_name;
 	if (strlen($id) <= 50) {
@@ -151,43 +151,43 @@ function wholesale_merchant_item_id($product)
  * cart data) must name products the way the feed does, or Google can't tie a
  * sale to the Shopping product that brought it.
  */
-function wholesale_merchant_feed_id($product_id)
+function retails_merchant_feed_id($product_id)
 {
 	$product = get_post((int) $product_id);
 
-	return $product && 'product' === $product->post_type ? wholesale_merchant_item_id($product) : (string) $product_id;
+	return $product && 'product' === $product->post_type ? retails_merchant_item_id($product) : (string) $product_id;
 }
 
 /**
  * Feed items for a product's popular sizes (inc/size-chips.php): one per size,
  * ID "<base id>-<w>x<h>", the size in the title's first 40 characters, the price
- * wholesale_price_quote() gives that size with the page's default options (the
+ * retails_price_quote() gives that size with the page's default options (the
  * price /product/<slug>/?size=<w>x<h> shows in its HTML), linking to that page.
  * Products with preset sizes only get chips on the page, not feed items.
  *
- * @return array list of variant arrays for wholesale_render_merchant_feed().
+ * @return array list of variant arrays for retails_render_merchant_feed().
  */
-function wholesale_merchant_size_items($product, $title)
+function retails_merchant_size_items($product, $title)
 {
-	$map = wholesale_size_chip_map();
+	$map = retails_size_chip_map();
 	if (!isset($map[$product->post_name])) {
 		return array();
 	}
 	$items = array();
 	// "Custom Magnets 12" x 18" – Full Color Printed": no second "Custom" when the name has one.
-	$search_name = wholesale_seo_product_search_name($product->ID);
+	$search_name = retails_seo_product_search_name($product->ID);
 	$suffix = 0 === stripos($search_name, 'custom ') ? 'Full Color Printed' : 'Custom Full Color Printed';
-	foreach (wholesale_size_chips($product->ID) as $chip) {
-		$quote = wholesale_price_quote($product->ID, wholesale_size_chip_request($product->ID, $chip['width'], $chip['height']));
+	foreach (retails_size_chips($product->ID) as $chip) {
+		$quote = retails_price_quote($product->ID, retails_size_chip_request($product->ID, $chip['width'], $chip['height']));
 		if (empty($quote['ok']) || $quote['total'] <= 0) {
 			continue;
 		}
 		$price = (float) $quote['total'];
-		$promo = !empty($quote['promo_discount']) && $quote['promo_discount'] > 0 ? wholesale_product_promotion($product->ID) : null;
-		$base_offer = wholesale_seo_product_lowest_offer($product->ID);
+		$promo = !empty($quote['promo_discount']) && $quote['promo_discount'] > 0 ? retails_product_promotion($product->ID) : null;
+		$base_offer = retails_seo_product_lowest_offer($product->ID);
 		$size = $chip['width'] . 'x' . $chip['height'];
 		$items[] = array(
-			'id' => wholesale_merchant_item_id($product) . '-' . $size,
+			'id' => retails_merchant_item_id($product) . '-' . $size,
 			'title' => sprintf('%s %s – %s', $search_name, str_replace('×', 'x', $chip['label']), $suffix),
 			'link' => add_query_arg('size', $size, get_permalink($product)),
 			'offer' => array(
@@ -197,7 +197,7 @@ function wholesale_merchant_size_items($product, $title)
 				'sale_starts' => $promo && !empty($base_offer['sale_starts']) ? $base_offer['sale_starts'] : '',
 			),
 			'price' => $price,
-			'shipping' => wholesale_seo_offer_shipping_details($product->ID, $price),
+			'shipping' => retails_seo_offer_shipping_details($product->ID, $price),
 			'size' => sprintf('%s x %s in', $chip['width'], $chip['height']),
 		);
 	}
@@ -211,7 +211,7 @@ function wholesale_merchant_size_items($product, $title)
  * images of Front Lit are labelled diagrams, which Merchant Center can treat as
  * text overlays. The product page keeps its own featured image.
  */
-function wholesale_merchant_lead_image_overrides()
+function retails_merchant_lead_image_overrides()
 {
 	return array(
 		'standard-channel-letter-front-lit' => '2026/10/storefront-sign-online-cl-front-lit-wide.jpg',
@@ -228,9 +228,9 @@ function wholesale_merchant_lead_image_overrides()
  *
  * @return string[]
  */
-function wholesale_merchant_feed_images($product)
+function retails_merchant_feed_images($product)
 {
-	$images = wholesale_product_sitemap_images($product->ID);
+	$images = retails_product_sitemap_images($product->ID);
 	$uploads = wp_get_upload_dir();
 	$base_dir = untrailingslashit($uploads['basedir']);
 	$base_url = untrailingslashit($uploads['baseurl']);
@@ -261,7 +261,7 @@ function wholesale_merchant_feed_images($product)
 		}
 	}
 
-	$overrides = wholesale_merchant_lead_image_overrides();
+	$overrides = retails_merchant_lead_image_overrides();
 	if ($lead_dropped && isset($overrides[$product->post_name]) && $big_enough('/' . $overrides[$product->post_name])) {
 		array_unshift($kept, $base_url . '/' . $overrides[$product->post_name]);
 	}
@@ -278,36 +278,36 @@ function wholesale_merchant_feed_images($product)
  *
  * @return array[]
  */
-function wholesale_merchant_feed_rows()
+function retails_merchant_feed_rows()
 {
 	$products = get_posts(array(
 		'post_type' => 'product',
 		'post_status' => 'publish',
 		'posts_per_page' => -1,
-		'post__not_in' => wholesale_seo_duplicate_product_ids(),
+		'post__not_in' => retails_seo_duplicate_product_ids(),
 		'orderby' => 'title',
 		'order' => 'ASC',
 	));
 
 	$rows = array();
 	foreach ($products as $product) {
-		$offer = wholesale_seo_product_lowest_offer($product->ID);
+		$offer = retails_seo_product_lowest_offer($product->ID);
 		$price = $offer ? $offer['price'] : 0;
-		$images = wholesale_merchant_feed_images($product);
+		$images = retails_merchant_feed_images($product);
 		$image = $images ? $images[0] : '';
-		$description = wholesale_merchant_description($product->ID);
+		$description = retails_merchant_description($product->ID);
 		if ($price <= 0 || !$image || '' === $description) {
 			continue; // Merchant Center rejects items without a price, image or description.
 		}
 
-		$channel_letter = wholesale_seo_channel_letter_product($product->ID);
-		$variant = wholesale_seo_product_variant_label($product->ID);
+		$channel_letter = retails_seo_channel_letter_product($product->ID);
+		$variant = retails_seo_product_variant_label($product->ID);
 		$title = $channel_letter
 			? $channel_letter['heading']
-			: wholesale_seo_product_search_name($product->ID) . ($variant ? ' (' . $variant . ')' : '');
+			: retails_seo_product_search_name($product->ID) . ($variant ? ' (' . $variant . ')' : '');
 		// Channel letters are priced per letter: name the configuration the price buys,
 		// as the product page's "One N inch letter" note does.
-		$cl_from = $channel_letter && function_exists('wholesale_cl_from_price') ? wholesale_cl_from_price($product->ID) : null;
+		$cl_from = $channel_letter && function_exists('retails_cl_from_price') ? retails_cl_from_price($product->ID) : null;
 		if (!empty($cl_from['height'])) {
 			$title .= sprintf(' - Single %d" Letter', $cl_from['height']);
 		}
@@ -327,25 +327,25 @@ function wholesale_merchant_feed_rows()
 		}
 
 		if (!$channel_letter && $term) {
-			$title = wholesale_merchant_title($title, $term->name);
+			$title = retails_merchant_title($title, $term->name);
 		}
 		// Graphic-only, flag-only and hardware-only items say so in their first 40 characters.
-		$kit_info = $channel_letter ? null : wholesale_product_kit_info($product->ID);
+		$kit_info = $channel_letter ? null : retails_product_kit_info($product->ID);
 		if ($kit_info) {
 			$title = $kit_info['feed_title'];
 		}
 
-		$shipping = wholesale_seo_offer_shipping_details($product->ID, $price);
-		$stock = wholesale_product_stock_status($product->ID);
+		$shipping = retails_seo_offer_shipping_details($product->ID, $price);
+		$stock = retails_product_stock_status($product->ID);
 		$availability_date = 'backorder' === $stock
-			? (new DateTimeImmutable(wholesale_product_backorder_date($product->ID), wp_timezone()))->format('c')
+			? (new DateTimeImmutable(retails_product_backorder_date($product->ID), wp_timezone()))->format('c')
 			: '';
 
 		// The product, then its popular sizes as their own items (inc/size-chips.php):
 		// "13oz Vinyl Banner 3 x 6 ft" at that size's price, linking to the page opened
 		// on that size. The base item is unchanged.
 		$variants = array(array(
-			'id' => wholesale_merchant_item_id($product),
+			'id' => retails_merchant_item_id($product),
 			'title' => $title,
 			'link' => get_permalink($product),
 			'offer' => $offer,
@@ -353,7 +353,7 @@ function wholesale_merchant_feed_rows()
 			'shipping' => $shipping,
 			'size' => '',
 		));
-		foreach (wholesale_merchant_size_items($product, $title) as $sized) {
+		foreach (retails_merchant_size_items($product, $title) as $sized) {
 			$variants[] = $sized;
 		}
 
@@ -383,13 +383,14 @@ function wholesale_merchant_feed_rows()
 	return $rows;
 }
 
-function wholesale_render_merchant_feed()
+function retails_render_merchant_feed()
 {
-	if ('1' !== get_query_var('wholesale_merchant_feed')) {
+	if ('1' !== get_query_var('retails_merchant_feed')) {
 		return;
 	}
 
-	$rows = wholesale_merchant_feed_rows();
+	$rows = retails_merchant_feed_rows();
+	$ship_promo_id = function_exists('retails_ship_code_promotion_id') ? retails_ship_code_promotion_id() : '';
 
 	nocache_headers();
 	header('Content-Type: application/xml; charset=UTF-8');
@@ -439,6 +440,15 @@ function wholesale_render_merchant_feed()
 				echo '<g:sale_price_effective_date>' . $starts->format('Y-m-d\TH:iO') . '/' . $ends->format('Y-m-d\TH:iO') . "</g:sale_price_effective_date>\n";
 			}
 		}
+		// Free shipping promo code (Settings > Sales): only items that don't already ship
+		// free at their price (prints under $100, channel letters under $1,000), because a
+		// promotion must add value (Merchant Center promotions policy).
+		if ($ship_promo_id) {
+			$ship_min = (float) retails_get_setting(retails_product_is_channel_letter($row['product_id']) ? 'free_shipping_channel_min' : 'free_shipping_min');
+			if ($ship_min > 0 && $price < $ship_min) {
+				echo '<g:promotion_id>' . $x($ship_promo_id) . "</g:promotion_id>\n";
+			}
+		}
 		if ($row['size']) {
 			echo '<g:size>' . $x($row['size']) . "</g:size>\n";
 		}
@@ -446,7 +456,7 @@ function wholesale_render_merchant_feed()
 		echo '<g:brand>' . $x(get_bloginfo('name')) . "</g:brand>\n";
 		// Made to order: no GTIN or manufacturer part number exists.
 		echo "<g:identifier_exists>no</g:identifier_exists>\n";
-		echo '<g:google_product_category>' . (int) wholesale_merchant_google_category($row['term_slug']) . "</g:google_product_category>\n";
+		echo '<g:google_product_category>' . (int) retails_merchant_google_category($row['term_slug']) . "</g:google_product_category>\n";
 		if ($row['product_type']) {
 			echo '<g:product_type>' . $x($row['product_type']) . "</g:product_type>\n";
 			// Lets ads campaigns bid and report by product line.
@@ -465,4 +475,4 @@ function wholesale_render_merchant_feed()
 	echo "</channel>\n</rss>\n";
 	exit;
 }
-add_action('template_redirect', 'wholesale_render_merchant_feed', 0);
+add_action('template_redirect', 'retails_render_merchant_feed', 0);

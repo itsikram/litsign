@@ -2,7 +2,7 @@
 (function ($) {
 	'use strict';
 
-	var settings = window.wholesaleSeo || {};
+	var settings = window.retailsSeo || {};
 
 	function length(text) {
 		return Array.from(String(text || '')).length;
@@ -147,7 +147,7 @@
 		}
 
 		function post(data) {
-			return $.post(settings.ajaxUrl, $.extend({ action: 'wholesale_seo_scan', nonce: settings.scanNonce }, data));
+			return $.post(settings.ajaxUrl, $.extend({ action: 'retails_seo_scan', nonce: settings.scanNonce }, data));
 		}
 
 		post({ step: 'start' }).done(function (response) {
@@ -210,7 +210,7 @@
 		var $buttons = $quick.find('button').prop('disabled', true);
 
 		$.post(settings.ajaxUrl, {
-			action: 'wholesale_seo_bulk_save',
+			action: 'retails_seo_bulk_save',
 			nonce: settings.bulkNonce,
 			object_type: $row.data('object-type'),
 			object_id: $row.data('object-id'),

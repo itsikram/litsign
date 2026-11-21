@@ -34,7 +34,7 @@ if (!defined('ABSPATH')) {
  *
  * @return array
  */
-function wholesale_lc_facts()
+function retails_lc_facts()
 {
 	static $facts = null;
 	if (null !== $facts) {
@@ -47,14 +47,14 @@ function wholesale_lc_facts()
 		'sms' => '206-618-6543',
 		'sms_tel' => 'sms:+12066186543',
 		'hours' => 'Mon–Fri, 8am–5pm Pacific',
-		'response' => function_exists('wholesale_quote_response_text') ? wholesale_quote_response_text() : 'usually within one business day',
-		'free_min' => function_exists('wholesale_free_shipping_amount') ? wholesale_free_shipping_amount() : '',
-		'free_channel_min' => function_exists('wholesale_free_shipping_amount') ? wholesale_free_shipping_amount(true) : '',
-		'ship_from' => function_exists('wholesale_shipping_from_amount') ? wholesale_shipping_from_amount() : '',
-		'ship_from_channel' => function_exists('wholesale_shipping_from_amount') ? wholesale_shipping_from_amount(true) : '',
+		'response' => function_exists('retails_quote_response_text') ? retails_quote_response_text() : 'usually within one business day',
+		'free_min' => function_exists('retails_free_shipping_amount') ? retails_free_shipping_amount() : '',
+		'free_channel_min' => function_exists('retails_free_shipping_amount') ? retails_free_shipping_amount(true) : '',
+		'ship_from' => function_exists('retails_shipping_from_amount') ? retails_shipping_from_amount() : '',
+		'ship_from_channel' => function_exists('retails_shipping_from_amount') ? retails_shipping_from_amount(true) : '',
 		'cl_from' => '',
 		'cl_height' => 0,
-		'cl_example' => function_exists('wholesale_cl_worked_example_text') ? wholesale_cl_worked_example_text() : '',
+		'cl_example' => function_exists('retails_cl_worked_example_text') ? retails_cl_worked_example_text() : '',
 		'contact_url' => home_url('/contact/'),
 		'builder_url' => home_url('/channel-letter-builder/'),
 		'cl_url' => home_url('/custom-channel-letters/'),
@@ -66,8 +66,8 @@ function wholesale_lc_facts()
 		$facts['contact_url'] = get_permalink($contact);
 	}
 
-	$front_lit = function_exists('wholesale_seo_product') ? wholesale_seo_product('standard-channel-letter-front-lit') : null;
-	$from = $front_lit && function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($front_lit->ID) : null;
+	$front_lit = function_exists('retails_seo_product') ? retails_seo_product('standard-channel-letter-front-lit') : null;
+	$from = $front_lit && function_exists('retails_cl_from_inch_rate') ? retails_cl_from_inch_rate($front_lit->ID) : null;
 	if ($from && !empty($from['price'])) {
 		$facts['cl_from'] = '$' . number_format($from['price'], 2);
 		$facts['cl_height'] = (int) $from['height'];
@@ -84,12 +84,12 @@ function wholesale_lc_facts()
  * @param string $slug Product slug.
  * @return string Plain text.
  */
-function wholesale_lc_from_text($slug)
+function retails_lc_from_text($slug)
 {
-	if (!function_exists('wholesale_seo_product_starting_text')) {
+	if (!function_exists('retails_seo_product_starting_text')) {
 		return '';
 	}
-	$html = wholesale_seo_product_starting_text($slug);
+	$html = retails_seo_product_starting_text($slug);
 	if ('' === $html) {
 		return '';
 	}
@@ -102,26 +102,26 @@ function wholesale_lc_from_text($slug)
 	$amount = (float) str_replace(',', '', $m[1]);
 	$lower = strtolower($text);
 	if (false !== strpos($lower, 'letter') || false !== strpos($lower, 'inch')) {
-		$product = wholesale_seo_product($slug);
-		$from = $product && function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($product->ID) : null;
+		$product = retails_seo_product($slug);
+		$from = $product && function_exists('retails_cl_from_inch_rate') ? retails_cl_from_inch_rate($product->ID) : null;
 		return $from && !empty($from['price']) ? 'from $' . number_format($from['price'], 2) . ' per inch' : '';
 	}
 	if (false !== strpos($lower, 'ft')) {
 		// Square-foot prices keep their cents: "$2" would misstate a $2.18 rate.
 		return 'from $' . number_format($amount, 2) . ' per sq ft';
 	}
-	return 'from ' . wholesale_whole_dollars($amount);
+	return 'from ' . retails_whole_dollars($amount);
 }
 
 /**
  * The quote-form URL for an interest, falling back to /contact/.
  */
-function wholesale_lc_quote_url($interest = '', $item = '')
+function retails_lc_quote_url($interest = '', $item = '')
 {
-	if (function_exists('wholesale_quote_url')) {
-		return wholesale_quote_url($interest, $item, false);
+	if (function_exists('retails_quote_url')) {
+		return retails_quote_url($interest, $item, false);
 	}
-	return wholesale_lc_facts()['contact_url'];
+	return retails_lc_facts()['contact_url'];
 }
 
 /* ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ function wholesale_lc_quote_url($interest = '', $item = '')
  * @param string $note    Optional closing line (may hold links).
  * @param string $kicker  Small label above the heading.
  */
-function wholesale_render_short_version($title, $rows, $actions = array(), $note = '', $kicker = 'The short version')
+function retails_render_short_version($title, $rows, $actions = array(), $note = '', $kicker = 'The short version')
 {
 	$rows = array_filter((array) $rows, static function ($row) {
 		return is_array($row) ? !empty($row[1]) : '' !== trim((string) $row);
@@ -176,7 +176,7 @@ function wholesale_render_short_version($title, $rows, $actions = array(), $note
 							}
 							$style = isset($action['style']) ? $action['style'] : 'outline';
 							?>
-							<a class="lc-btn lc-btn--<?php echo esc_attr($style); ?>" href="<?php echo esc_url($action['url']); ?>"><?php if ('call' === $style) : ?><?php echo wholesale_home_icon('phone'); ?><?php endif; ?><?php echo esc_html($action['label']); ?></a>
+							<a class="lc-btn lc-btn--<?php echo esc_attr($style); ?>" href="<?php echo esc_url($action['url']); ?>"><?php if ('call' === $style) : ?><?php echo retails_home_icon('phone'); ?><?php endif; ?><?php echo esc_html($action['label']); ?></a>
 						<?php endforeach; ?>
 					</div>
 				<?php endif; ?>
@@ -197,9 +197,9 @@ function wholesale_render_short_version($title, $rows, $actions = array(), $note
  * @param array  $primary   array('label', 'url').
  * @param array  $secondary array('label', 'url') or empty.
  */
-function wholesale_render_quote_strip($title = 'Ready to price your sign?', $text = '', $primary = array(), $secondary = array())
+function retails_render_quote_strip($title = 'Ready to price your sign?', $text = '', $primary = array(), $secondary = array())
 {
-	$facts = wholesale_lc_facts();
+	$facts = retails_lc_facts();
 	if (!$primary) {
 		$primary = array('label' => 'Get a free quote', 'url' => $facts['contact_url']);
 	}
@@ -221,7 +221,7 @@ function wholesale_render_quote_strip($title = 'Ready to price your sign?', $tex
 				<?php if ($secondary && !empty($secondary['url'])) : ?>
 					<a class="lc-btn lc-btn--outline" href="<?php echo esc_url($secondary['url']); ?>"><?php echo esc_html($secondary['label']); ?></a>
 				<?php endif; ?>
-				<a class="lc-btn lc-btn--call" href="<?php echo esc_url($facts['phone_tel']); ?>"><?php echo wholesale_home_icon('phone'); ?><?php echo esc_html($facts['phone']); ?></a>
+				<a class="lc-btn lc-btn--call" href="<?php echo esc_url($facts['phone_tel']); ?>"><?php echo retails_home_icon('phone'); ?><?php echo esc_html($facts['phone']); ?></a>
 			</div>
 		</div>
 	</section>
@@ -234,7 +234,7 @@ function wholesale_render_quote_strip($title = 'Ready to price your sign?', $tex
  * @param string $title Heading.
  * @param array  $links List of array(url, label, small-print).
  */
-function wholesale_render_related_links($title, $links)
+function retails_render_related_links($title, $links)
 {
 	$links = array_values(array_filter((array) $links, static function ($link) {
 		return !empty($link[0]) && !empty($link[1]);
@@ -268,14 +268,14 @@ function wholesale_render_related_links($title, $links)
  * @param string $shop_url   Where the filled button goes.
  * @param string $shop_label Its label.
  */
-function wholesale_landing_mobile_bar($quote_url = '', $shop_url = '', $shop_label = 'See Prices')
+function retails_landing_mobile_bar($quote_url = '', $shop_url = '', $shop_label = 'See Prices')
 {
-	$facts = wholesale_lc_facts();
+	$facts = retails_lc_facts();
 	$quote_url = $quote_url ? $quote_url : $facts['contact_url'];
 	$shop_url = $shop_url ? $shop_url : $facts['cl_url'];
 	?>
 	<nav class="cl-mobile-bar" aria-label="Quick actions">
-		<button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo wholesale_home_icon('grid'); ?> All Products</button>
+		<button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo retails_home_icon('grid'); ?> All Products</button>
 		<a class="cl-mobile-bar-quote" href="<?php echo esc_url($quote_url); ?>">Free Quote</a>
 		<a class="cl-mobile-bar-shop" href="<?php echo esc_url($shop_url); ?>"><?php echo esc_html($shop_label); ?></a>
 	</nav>
@@ -289,9 +289,9 @@ function wholesale_landing_mobile_bar($quote_url = '', $shop_url = '', $shop_lab
 /**
  * Sentences shared by the channel-letter boxes.
  */
-function wholesale_lc_cl_sentences()
+function retails_lc_cl_sentences()
 {
-	$f = wholesale_lc_facts();
+	$f = retails_lc_facts();
 	$price = '';
 	if ($f['cl_from']) {
 		$price = sprintf('Front lit channel letters start at <strong>%s per inch</strong> of letter height at %d inches tall. Rates vary by height and style; the builder shows the full sign price.', $f['cl_from'], $f['cl_height']);
@@ -322,10 +322,10 @@ function wholesale_lc_cl_sentences()
  * @param string $place_name "Houston, TX" or "Texas".
  * @param string $transit    The page's shipping sentence.
  */
-function wholesale_lc_location_box($state, $place, $place_name, $transit)
+function retails_lc_location_box($state, $place, $place_name, $transit)
 {
-	$f = wholesale_lc_facts();
-	$s = wholesale_lc_cl_sentences();
+	$f = retails_lc_facts();
+	$s = retails_lc_cl_sentences();
 	$facts = isset($place['facts']) ? (array) $place['facts'] : array();
 
 	$permit = $s['permit'];
@@ -349,7 +349,7 @@ function wholesale_lc_location_box($state, $place, $place_name, $transit)
 		$shipping .= ' ' . $s['shipping'];
 	}
 
-	wholesale_render_short_version(
+	retails_render_short_version(
 		sprintf('Ordering a sign in %s: the short version', $place_name),
 		array(
 			array('Do I need a permit?', $permit),
@@ -360,7 +360,7 @@ function wholesale_lc_location_box($state, $place, $place_name, $transit)
 		),
 		array(
 			array('label' => 'Price your channel letters', 'url' => $f['builder_url'], 'style' => 'primary'),
-			array('label' => 'Send your logo for a quote', 'url' => wholesale_lc_quote_url('channel-letters'), 'style' => 'outline'),
+			array('label' => 'Send your logo for a quote', 'url' => retails_lc_quote_url('channel-letters'), 'style' => 'outline'),
 			array('label' => $f['phone'], 'url' => $f['phone_tel'], 'style' => 'call'),
 		),
 		sprintf('The rest of this page covers the local rules in detail. <a href="%s">See channel letter prices</a> or <a href="%s">compare the seven lit styles</a>.', esc_url($f['cost_url']), esc_url($f['cl_url']))
@@ -372,18 +372,18 @@ function wholesale_lc_location_box($state, $place, $place_name, $transit)
  *
  * @param array $industry Industry data (data/industries.php).
  */
-function wholesale_lc_industry_box($industry)
+function retails_lc_industry_box($industry)
 {
-	$f = wholesale_lc_facts();
-	$s = wholesale_lc_cl_sentences();
+	$f = retails_lc_facts();
+	$s = retails_lc_cl_sentences();
 	$is_events = 'event-trade-show-signs' === $industry['slug'];
 
 	$first = '';
 	$products = isset($industry['products']) ? (array) $industry['products'] : array();
 	foreach ($products as $slug => $note) {
-		$product = wholesale_seo_product($slug);
+		$product = retails_seo_product($slug);
 		if ($product) {
-			$from = wholesale_lc_from_text($slug);
+			$from = retails_lc_from_text($slug);
 			$first = sprintf('<a href="%s">%s</a>%s. %s', esc_url(get_permalink($product)), esc_html(html_entity_decode(get_the_title($product), ENT_QUOTES, 'UTF-8')), $from ? ', ' . esc_html($from) : '', wp_kses_post($note));
 			break;
 		}
@@ -394,12 +394,12 @@ function wholesale_lc_industry_box($industry)
 			array('Start with', $first),
 			array('How long?', 'Most banners, stands and table covers print in 1–2 business days after you approve the artwork. Each product shows its own cut-off time. Shipping speed is chosen at checkout.'),
 			array('Shipping', $f['free_min'] ? sprintf('Orders of %s or more ship free (standard). Faster 3-day, 2-day and overnight options are shown at checkout.', $f['free_min']) : 'Standard, 3-day, 2-day and overnight shipping are shown at checkout.'),
-			array('Artwork', sprintf('Upload a JPG or PDF at the size you order, or <a href="%s">send your logo</a> and we lay it out. Free <a href="%s">design templates</a> are available for flags, stands and tents.', esc_url(wholesale_lc_quote_url('displays')), esc_url(home_url('/design-templates/')))),
+			array('Artwork', sprintf('Upload a JPG or PDF at the size you order, or <a href="%s">send your logo</a> and we lay it out. Free <a href="%s">design templates</a> are available for flags, stands and tents.', esc_url(retails_lc_quote_url('displays')), esc_url(home_url('/design-templates/')))),
 			array('Setup', 'Portable displays need no installer. They set up in minutes and pack into a carry bag.'),
 		);
 		$actions = array(
 			array('label' => 'Shop banners & displays', 'url' => home_url('/banners-displays/'), 'style' => 'primary'),
-			array('label' => 'Get a free quote', 'url' => wholesale_lc_quote_url('displays'), 'style' => 'outline'),
+			array('label' => 'Get a free quote', 'url' => retails_lc_quote_url('displays'), 'style' => 'outline'),
 			array('label' => $f['phone'], 'url' => $f['phone_tel'], 'style' => 'call'),
 		);
 	} else {
@@ -412,13 +412,13 @@ function wholesale_lc_industry_box($industry)
 		);
 		$actions = array(
 			array('label' => 'See channel letter prices', 'url' => $f['cl_url'], 'style' => 'primary'),
-			array('label' => 'Send your logo for a quote', 'url' => wholesale_lc_quote_url('channel-letters'), 'style' => 'outline'),
+			array('label' => 'Send your logo for a quote', 'url' => retails_lc_quote_url('channel-letters'), 'style' => 'outline'),
 			array('label' => $f['phone'], 'url' => $f['phone_tel'], 'style' => 'call'),
 		);
 	}
 
-	wholesale_render_short_version(
-		sprintf('Signs for %s: the short version', wholesale_schema_text($industry['name'])),
+	retails_render_short_version(
+		sprintf('Signs for %s: the short version', retails_schema_text($industry['name'])),
 		$rows,
 		$actions
 	);
@@ -429,7 +429,7 @@ function wholesale_lc_industry_box($industry)
  * product (its price is the "from" price), the production line, the quote
  * interest and the guides that explain the category.
  */
-function wholesale_lc_category_map()
+function retails_lc_category_map()
 {
 	$print = 'Most orders print in 1–2 business days after you approve the artwork. Many banners and vinyl orders placed by 4pm Pacific ship the next business day. Each product page shows its own cut-off.';
 	$hardware = 'In-stock hardware ordered by 12pm Pacific ships the same business day.';
@@ -455,7 +455,7 @@ function wholesale_lc_category_map()
 			array($pk . '#grand-opening', 'Grand opening package', 'Banner, flag and decal together'),
 		)),
 		'flag-hardware' => array('product' => '', 'noun' => 'hardware', 'time' => $hardware, 'interest' => 'flags', 'links' => array(
-			array(wholesale_category_url('advertising-flags'), 'Printed flags', 'Order the flag graphic'),
+			array(retails_category_url('advertising-flags'), 'Printed flags', 'Order the flag graphic'),
 			array($bd . '#flags', 'Banners & displays guide', 'Which flag and base to choose'),
 		)),
 		'banner-stands' => array('product' => 'standard-retractable-insert-stand', 'noun' => 'display', 'time' => $made, 'interest' => 'displays', 'links' => array(
@@ -464,39 +464,39 @@ function wholesale_lc_category_map()
 			array($ev, 'Signs for events & trade shows', 'What a booth needs'),
 		)),
 		'hardware-only' => array('product' => '', 'noun' => 'hardware', 'time' => $hardware, 'interest' => 'displays', 'links' => array(
-			array(wholesale_category_url('banner-stands'), 'Printed banner stands', 'Graphic with the stand'),
+			array(retails_category_url('banner-stands'), 'Printed banner stands', 'Graphic with the stand'),
 			array($bd . '#stands', 'Banner stands side by side', 'Which stand fits'),
 		)),
 		'banner-stand-hardware' => array('product' => '', 'noun' => 'hardware', 'time' => $hardware, 'interest' => 'displays', 'links' => array(
-			array(wholesale_category_url('banner-stands'), 'Printed banner stands', 'Graphic with the stand'),
+			array(retails_category_url('banner-stands'), 'Printed banner stands', 'Graphic with the stand'),
 			array($bd . '#stands', 'Banner stands side by side', 'Which stand fits'),
 		)),
 		'a-frame-and-sign-holders' => array('product' => 'banner-a-banner-frame', 'noun' => 'display', 'time' => $made, 'interest' => 'displays', 'links' => array(
 			array($sf, 'Storefront signs guide', 'Sidewalk signs with your building sign'),
 			array($rs, 'Restaurant signs', 'Menus and specials at the door'),
-			array(wholesale_category_url('signicade-a-frames'), 'Signicade A-frames', 'Plastic sidewalk signs'),
+			array(retails_category_url('signicade-a-frames'), 'Signicade A-frames', 'Plastic sidewalk signs'),
 		)),
 		'signicade-a-frames' => array('product' => 'deluxe-signicade-graphic-frame', 'noun' => 'display', 'time' => $made, 'interest' => 'displays', 'links' => array(
 			array($sf, 'Storefront signs guide', 'Sidewalk signs with your building sign'),
 			array($rs, 'Restaurant signs', 'Daily specials at the door'),
-			array(wholesale_category_url('dry-erase-products'), 'Dry erase signs', 'Write today\'s message by hand'),
+			array(retails_category_url('dry-erase-products'), 'Dry erase signs', 'Write today\'s message by hand'),
 		)),
 		'real-estate-products' => array('product' => 'yard-sign-and-h-stake', 'noun' => 'display', 'time' => $made, 'interest' => 'not-sure', 'links' => array(
-			array(wholesale_category_url('reflective-products'), 'Reflective signs', 'Readable at night without power'),
-			array(wholesale_category_url('rigid-signs-and-magnets'), 'Rigid signs & magnets', 'Aluminum, PVC and Coroplast'),
+			array(retails_category_url('reflective-products'), 'Reflective signs', 'Readable at night without power'),
+			array(retails_category_url('rigid-signs-and-magnets'), 'Rigid signs & magnets', 'Aluminum, PVC and Coroplast'),
 		)),
 		'rigid-signs-and-magnets' => array('product' => 'coroplast', 'noun' => 'print', 'time' => $made, 'interest' => 'not-sure', 'links' => array(
 			array($sf, 'Storefront signs guide', 'Door, hours and parking signs'),
-			array(wholesale_category_url('reflective-products'), 'Reflective signs', 'For night-time visibility'),
+			array(retails_category_url('reflective-products'), 'Reflective signs', 'For night-time visibility'),
 			array($re, 'Retail store signs', 'Inside and out'),
 		)),
 		'reflective-products' => array('product' => 'reflective-aluminum-sign', 'noun' => 'print', 'time' => $made, 'interest' => 'not-sure', 'links' => array(
-			array(wholesale_category_url('rigid-signs-and-magnets'), 'Rigid signs & magnets', 'Non-reflective boards'),
+			array(retails_category_url('rigid-signs-and-magnets'), 'Rigid signs & magnets', 'Non-reflective boards'),
 			array($sf, 'Storefront signs guide', 'Lit signs for the building'),
 		)),
 		'dry-erase-products' => array('product' => 'dry-erase-signicade-a-frame', 'noun' => 'print', 'time' => $made, 'interest' => 'not-sure', 'links' => array(
 			array($rs, 'Restaurant signs', 'Specials and menus'),
-			array(wholesale_category_url('signicade-a-frames'), 'Signicade A-frames', 'Printed sidewalk signs'),
+			array(retails_category_url('signicade-a-frames'), 'Signicade A-frames', 'Printed sidewalk signs'),
 		)),
 		'seg-products' => array('product' => '10ft-seg-fabric-display-graphic-frame', 'noun' => 'display', 'time' => $made, 'interest' => 'displays', 'links' => array(
 			array($bd . '#seg', 'Banners & displays guide', 'SEG and backlit displays explained'),
@@ -514,7 +514,7 @@ function wholesale_lc_category_map()
 			array($ev, 'Signs for events & trade shows', 'Outdoor event setups'),
 		)),
 		'event-tent-hardware-only' => array('product' => '', 'noun' => 'hardware', 'time' => $hardware, 'interest' => 'displays', 'links' => array(
-			array(wholesale_category_url('custom-event-tents'), 'Printed event tents', 'Canopies and walls'),
+			array(retails_category_url('custom-event-tents'), 'Printed event tents', 'Canopies and walls'),
 		)),
 		'table-throws' => array('product' => '6ft-table-cover', 'noun' => 'table cover', 'time' => $made, 'interest' => 'displays', 'links' => array(
 			array($pk . '#trade-show-starter', 'Trade show starter package', 'Table cover, backdrop and stand'),
@@ -528,10 +528,10 @@ function wholesale_lc_category_map()
 		)),
 		'large-format' => array('product' => 'adhesive-window-perf', 'noun' => 'print', 'time' => $print, 'interest' => 'window-graphics', 'links' => array(
 			array($wg, 'Window graphics guide', 'Perf, frosted, clings and decals'),
-			array(wholesale_category_url('wall-art'), 'Wall art prints', 'Canvas and acrylic'),
+			array(retails_category_url('wall-art'), 'Wall art prints', 'Canvas and acrylic'),
 		)),
 		'wall-art' => array('product' => 'canvas-wrap', 'noun' => 'print', 'time' => $made, 'interest' => 'not-sure', 'links' => array(
-			array(wholesale_category_url('large-format'), 'Large format printing', 'Posters, styrene and film'),
+			array(retails_category_url('large-format'), 'Large format printing', 'Posters, styrene and film'),
 			array($re, 'Retail store signs', 'Decor and displays inside the store'),
 		)),
 		'indoor-outdoor-displays' => array('product' => 'standard-retractable-insert-stand', 'noun' => 'display', 'time' => $made, 'interest' => 'displays', 'links' => array(
@@ -548,21 +548,21 @@ function wholesale_lc_category_map()
  * @param string $slug    product_category slug.
  * @param string $heading The page H1.
  */
-function wholesale_lc_category_box($slug, $heading)
+function retails_lc_category_box($slug, $heading)
 {
-	$map = wholesale_lc_category_map();
+	$map = retails_lc_category_map();
 	if (!isset($map[$slug])) {
 		return;
 	}
-	$f = wholesale_lc_facts();
+	$f = retails_lc_facts();
 	$entry = $map[$slug];
 	$noun = $entry['noun'];
 	$plural = 'hardware' === $noun ? 'hardware' : $noun . 's';
 
 	$price = '';
 	if ($entry['product']) {
-		$product = wholesale_seo_product($entry['product']);
-		$from = $product ? wholesale_lc_from_text($entry['product']) : '';
+		$product = retails_seo_product($entry['product']);
+		$from = $product ? retails_lc_from_text($entry['product']) : '';
 		if ($product && $from) {
 			$price = sprintf('<a href="%s">%s</a> starts %s. Enter your size and options on the product page and the price updates before you add it to the cart.', esc_url(get_permalink($product)), esc_html(html_entity_decode(get_the_title($product), ENT_QUOTES, 'UTF-8')), esc_html($from));
 		}
@@ -577,20 +577,20 @@ function wholesale_lc_category_box($slug, $heading)
 
 	$artwork = 'hardware' === $noun
 		? 'No artwork needed. Hardware ships on its own; printed graphics are ordered separately.'
-		: sprintf('Upload a JPG or PDF at the size you order, or <a href="%s">send your logo</a> and we lay it out for you. Free <a href="%s">design templates</a> show the safe area.', esc_url(wholesale_lc_quote_url($entry['interest'])), esc_url(home_url('/design-templates/')));
+		: sprintf('Upload a JPG or PDF at the size you order, or <a href="%s">send your logo</a> and we lay it out for you. Free <a href="%s">design templates</a> show the safe area.', esc_url(retails_lc_quote_url($entry['interest'])), esc_url(home_url('/design-templates/')));
 
-	wholesale_render_short_version(
-		sprintf('%s: the short version', wholesale_schema_text($heading)),
+	retails_render_short_version(
+		sprintf('%s: the short version', retails_schema_text($heading)),
 		array(
 			array('What it costs', $price),
 			array('How long it takes', $entry['time']),
 			array('Shipping', $shipping),
 			array('Artwork', $artwork),
-			array('Need help?', sprintf('Call <a href="%s">%s</a> or <a href="%s">ask a sign specialist online</a>. We answer %s.', esc_url($f['phone_tel']), esc_html($f['phone']), esc_url(wholesale_lc_quote_url($entry['interest'])), esc_html($f['response']))),
+			array('Need help?', sprintf('Call <a href="%s">%s</a> or <a href="%s">ask a sign specialist online</a>. We answer %s.', esc_url($f['phone_tel']), esc_html($f['phone']), esc_url(retails_lc_quote_url($entry['interest'])), esc_html($f['response']))),
 		),
 		array(
 			array('label' => 'hardware' === $noun ? 'Shop hardware' : 'Shop ' . $plural, 'url' => '#product-box-container', 'style' => 'primary'),
-			array('label' => 'Get a free quote', 'url' => wholesale_lc_quote_url($entry['interest']), 'style' => 'outline'),
+			array('label' => 'Get a free quote', 'url' => retails_lc_quote_url($entry['interest']), 'style' => 'outline'),
 			array('label' => $f['phone'], 'url' => $f['phone_tel'], 'style' => 'call'),
 		)
 	);
@@ -599,13 +599,13 @@ function wholesale_lc_category_box($slug, $heading)
 /**
  * "Related guides" for a category page, from the map above.
  */
-function wholesale_lc_category_related($slug)
+function retails_lc_category_related($slug)
 {
-	$map = wholesale_lc_category_map();
+	$map = retails_lc_category_map();
 	if (empty($map[$slug]['links'])) {
 		return;
 	}
-	wholesale_render_related_links('Guides That Explain This Category', $map[$slug]['links']);
+	retails_render_related_links('Guides That Explain This Category', $map[$slug]['links']);
 }
 
 /* ---------------------------------------------------------------------------
@@ -617,12 +617,12 @@ function wholesale_lc_category_related($slug)
  * The home page, /custom-channel-letters/, /banners-displays/ and
  * /window-graphics/ already print their own bar.
  */
-function wholesale_lc_is_landing()
+function retails_lc_is_landing()
 {
-	if (function_exists('wholesale_guide_current') && wholesale_guide_current()) {
+	if (function_exists('retails_guide_current') && retails_guide_current()) {
 		return true;
 	}
-	if (get_query_var('category_slug') && empty($GLOBALS['wholesale_channel_letter_landing'])) {
+	if (get_query_var('category_slug') && empty($GLOBALS['retails_channel_letter_landing'])) {
 		return true;
 	}
 	return is_page(array('storefront-signs', 'channel-letter-cost', 'sign-packages', 'design-templates'));
@@ -631,9 +631,9 @@ function wholesale_lc_is_landing()
 /**
  * Pages whose bar is printed by this layer (not by the template itself).
  */
-function wholesale_lc_prints_bar()
+function retails_lc_prints_bar()
 {
-	if (!wholesale_lc_is_landing()) {
+	if (!retails_lc_is_landing()) {
 		return false;
 	}
 	// home.php prints its own bar only on the channel letter routes; plain
@@ -647,29 +647,29 @@ function wholesale_lc_prints_bar()
  * HTML doesn't matter, and the live chat loader looks for it after the DOM
  * has loaded.
  */
-function wholesale_lc_footer_bar()
+function retails_lc_footer_bar()
 {
-	if (!wholesale_lc_prints_bar()) {
+	if (!retails_lc_prints_bar()) {
 		return;
 	}
-	$f = wholesale_lc_facts();
+	$f = retails_lc_facts();
 	$quote = $f['contact_url'];
 	$shop = $f['cl_url'];
 	$label = 'See Prices';
 
-	$entry = function_exists('wholesale_guide_current') ? wholesale_guide_current() : array();
+	$entry = function_exists('retails_guide_current') ? retails_guide_current() : array();
 	$type = isset($entry['type']) ? $entry['type'] : '';
 	if ('state' === $type || 'city' === $type) {
-		$quote = wholesale_lc_quote_url('channel-letters');
+		$quote = retails_lc_quote_url('channel-letters');
 		$shop = $f['builder_url'];
 		$label = 'Start Building';
 	} elseif ('industry' === $type && 'event-trade-show-signs' === $entry['industry']) {
-		$quote = wholesale_lc_quote_url('displays');
+		$quote = retails_lc_quote_url('displays');
 		$shop = home_url('/banners-displays/');
 	} elseif ('industry' === $type) {
-		$quote = wholesale_lc_quote_url('channel-letters');
+		$quote = retails_lc_quote_url('channel-letters');
 	} elseif (is_page('sign-packages')) {
-		$quote = wholesale_lc_quote_url('mixed');
+		$quote = retails_lc_quote_url('mixed');
 		$shop = home_url('/banners-displays/');
 	} elseif (is_page(array('design-templates', 'shipping-returns'))) {
 		$shop = home_url('/banners-displays/');
@@ -678,26 +678,26 @@ function wholesale_lc_footer_bar()
 		$label = 'Price Your Sign';
 	}
 
-	wholesale_landing_mobile_bar($quote, $shop, $label);
+	retails_landing_mobile_bar($quote, $shop, $label);
 }
-add_action('wp_footer', 'wholesale_lc_footer_bar', 5);
+add_action('wp_footer', 'retails_lc_footer_bar', 5);
 
-function wholesale_lc_body_class($classes)
+function retails_lc_body_class($classes)
 {
-	if (wholesale_lc_prints_bar() && !in_array('has-cl-mobile-bar', $classes, true)) {
+	if (retails_lc_prints_bar() && !in_array('has-cl-mobile-bar', $classes, true)) {
 		$classes[] = 'has-cl-mobile-bar';
 	}
 	return $classes;
 }
-add_filter('body_class', 'wholesale_lc_body_class', 20);
+add_filter('body_class', 'retails_lc_body_class', 20);
 
-function wholesale_lc_assets()
+function retails_lc_assets()
 {
-	$needs = wholesale_lc_is_landing() || is_page(array('banners-displays', 'window-graphics'));
+	$needs = retails_lc_is_landing() || is_page(array('banners-displays', 'window-graphics'));
 	if (!$needs) {
 		return;
 	}
 	$css = '/css/landing-clarity.css';
-	wp_enqueue_style('wholesale-landing-clarity', get_template_directory_uri() . $css, array('custom-style'), (string) filemtime(get_template_directory() . $css));
+	wp_enqueue_style('retails-landing-clarity', get_template_directory_uri() . $css, array('custom-style'), (string) filemtime(get_template_directory() . $css));
 }
-add_action('wp_enqueue_scripts', 'wholesale_lc_assets', 30);
+add_action('wp_enqueue_scripts', 'retails_lc_assets', 30);

@@ -8,10 +8,10 @@
  * inc/seo-content.php, inc/guide-pages.php) exactly as it is.
  *
  * Storage:
- * - one option per tab, wholesale_seo_{tab}; only the ones the front end reads
+ * - one option per tab, retails_seo_{tab}; only the ones the front end reads
  *   are autoloaded, so a page view costs no extra database query;
- * - per-page values in post meta / term meta named _wholesale_seo_{field};
- * - wholesale_seo_overrides: which posts and terms have per-page values, so
+ * - per-page values in post meta / term meta named _retails_seo_{field};
+ * - retails_seo_overrides: which posts and terms have per-page values, so
  *   the front end never reads meta for pages that have none.
  *
  * @package litsign
@@ -30,12 +30,12 @@ if (defined('WHOLESALE_SEO_ADMIN_OFF') && WHOLESALE_SEO_ADMIN_OFF) {
  *
  * @return array Option name => autoload.
  */
-function wholesale_seo_options()
+function retails_seo_options()
 {
 	return array(
-		'wholesale_seo_general' => true,
-		'wholesale_seo_business' => true,
-		'wholesale_seo_overrides' => true,
+		'retails_seo_general' => true,
+		'retails_seo_business' => true,
+		'retails_seo_overrides' => true,
 	);
 }
 
@@ -44,9 +44,9 @@ function wholesale_seo_options()
  *
  * @return array
  */
-function wholesale_seo_settings($tab)
+function retails_seo_settings($tab)
 {
-	$value = get_option('wholesale_seo_' . $tab, array());
+	$value = get_option('retails_seo_' . $tab, array());
 	return is_array($value) ? $value : array();
 }
 
@@ -55,9 +55,9 @@ function wholesale_seo_settings($tab)
  *
  * @return mixed
  */
-function wholesale_seo_opt($tab, $key)
+function retails_seo_opt($tab, $key)
 {
-	$settings = wholesale_seo_settings($tab);
+	$settings = retails_seo_settings($tab);
 	return isset($settings[$key]) ? $settings[$key] : '';
 }
 
@@ -65,22 +65,22 @@ function wholesale_seo_opt($tab, $key)
  * Create the autoloaded options once, from wp-admin, so front-end reads always
  * hit the autoload cache instead of querying for a missing option.
  */
-function wholesale_seo_ensure_options()
+function retails_seo_ensure_options()
 {
-	foreach (wholesale_seo_options() as $name => $autoload) {
+	foreach (retails_seo_options() as $name => $autoload) {
 		if (false === get_option($name, false)) {
 			add_option($name, array(), '', $autoload ? 'yes' : 'no');
 		}
 	}
 }
-add_action('admin_init', 'wholesale_seo_ensure_options', 1);
+add_action('admin_init', 'retails_seo_ensure_options', 1);
 
 /**
- * Per-page fields, stored as _wholesale_seo_{key}.
+ * Per-page fields, stored as _retails_seo_{key}.
  *
  * @return array Key => type.
  */
-function wholesale_seo_object_fields()
+function retails_seo_object_fields()
 {
 	return array(
 		'title' => 'text',
@@ -99,9 +99,9 @@ function wholesale_seo_object_fields()
 /**
  * Sanitize one per-page value.
  */
-function wholesale_seo_sanitize_object_value($key, $value)
+function retails_seo_sanitize_object_value($key, $value)
 {
-	$fields = wholesale_seo_object_fields();
+	$fields = retails_seo_object_fields();
 	$type = isset($fields[$key]) ? $fields[$key] : 'text';
 	$value = is_scalar($value) ? (string) $value : '';
 
@@ -121,7 +121,7 @@ function wholesale_seo_sanitize_object_value($key, $value)
  * Save per-page values for a post ('post') or a term ('term') and keep the
  * overrides index in step. Keys missing from $values are left alone.
  */
-function wholesale_seo_save_object_values($object_type, $object_id, array $values)
+function retails_seo_save_object_values($object_type, $object_id, array $values)
 {
 	$object_id = (int) $object_id;
 	if (!$object_id || !in_array($object_type, array('post', 'term'), true)) {
@@ -129,11 +129,11 @@ function wholesale_seo_save_object_values($object_type, $object_id, array $value
 	}
 
 	foreach ($values as $key => $value) {
-		if (!array_key_exists($key, wholesale_seo_object_fields())) {
+		if (!array_key_exists($key, retails_seo_object_fields())) {
 			continue;
 		}
-		$value = wholesale_seo_sanitize_object_value($key, $value);
-		$meta_key = '_wholesale_seo_' . $key;
+		$value = retails_seo_sanitize_object_value($key, $value);
+		$meta_key = '_retails_seo_' . $key;
 		if ('' === $value) {
 			'post' === $object_type ? delete_post_meta($object_id, $meta_key) : delete_term_meta($object_id, $meta_key);
 		} else {
@@ -141,21 +141,21 @@ function wholesale_seo_save_object_values($object_type, $object_id, array $value
 		}
 	}
 
-	wholesale_seo_reindex_object($object_type, $object_id);
+	retails_seo_reindex_object($object_type, $object_id);
 }
 
 /**
  * Record which per-page fields an object has, or drop it from the index.
  */
-function wholesale_seo_reindex_object($object_type, $object_id)
+function retails_seo_reindex_object($object_type, $object_id)
 {
-	$index = wholesale_seo_settings('overrides');
+	$index = retails_seo_settings('overrides');
 	$present = array();
 
-	foreach (array_keys(wholesale_seo_object_fields()) as $key) {
+	foreach (array_keys(retails_seo_object_fields()) as $key) {
 		$value = 'post' === $object_type
-			? get_post_meta($object_id, '_wholesale_seo_' . $key, true)
-			: get_term_meta($object_id, '_wholesale_seo_' . $key, true);
+			? get_post_meta($object_id, '_retails_seo_' . $key, true)
+			: get_term_meta($object_id, '_retails_seo_' . $key, true);
 		if ('' !== (string) $value) {
 			$present[] = $key;
 		}
@@ -170,22 +170,22 @@ function wholesale_seo_reindex_object($object_type, $object_id)
 		}
 	}
 
-	update_option('wholesale_seo_overrides', $index, true);
+	update_option('retails_seo_overrides', $index, true);
 }
 
 add_action('deleted_post', function ($post_id) {
-	$index = wholesale_seo_settings('overrides');
+	$index = retails_seo_settings('overrides');
 	if (isset($index['post'][$post_id])) {
 		unset($index['post'][$post_id]);
-		update_option('wholesale_seo_overrides', $index, true);
+		update_option('retails_seo_overrides', $index, true);
 	}
 });
 
 add_action('delete_term', function ($term_id) {
-	$index = wholesale_seo_settings('overrides');
+	$index = retails_seo_settings('overrides');
 	if (isset($index['term'][$term_id])) {
 		unset($index['term'][$term_id]);
-		update_option('wholesale_seo_overrides', $index, true);
+		update_option('retails_seo_overrides', $index, true);
 	}
 });
 
@@ -194,15 +194,15 @@ add_action('delete_term', function ($term_id) {
  * hit counters and visitor stats can skip them. Signed with a site salt so a
  * visitor can't fake it.
  */
-function wholesale_seo_scan_signature()
+function retails_seo_scan_signature()
 {
-	return hash_hmac('sha256', 'wholesale-seo-scan', wp_salt('auth'));
+	return hash_hmac('sha256', 'retails-seo-scan', wp_salt('auth'));
 }
 
-function wholesale_seo_is_scan_request()
+function retails_seo_is_scan_request()
 {
-	return isset($_SERVER['HTTP_X_WHOLESALE_SEO_SCAN'])
-		&& hash_equals(wholesale_seo_scan_signature(), (string) $_SERVER['HTTP_X_WHOLESALE_SEO_SCAN']);
+	return isset($_SERVER['HTTP_X_RETAILS_SEO_SCAN'])
+		&& hash_equals(retails_seo_scan_signature(), (string) $_SERVER['HTTP_X_RETAILS_SEO_SCAN']);
 }
 
 require_once __DIR__ . '/frontend.php';

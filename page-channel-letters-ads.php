@@ -51,7 +51,7 @@ $variants = array(
 	),
 	// ?type=trade (sign shops and contractors) overrides the ?style= headline.
 	'trade' => array(
-		'title' => 'Wholesale Channel Letters',
+		'title' => 'Retail Channel Letters',
 		'accent' => 'for Sign Shops &amp; Contractors',
 		'lead' => 'We build and ship UL listed channel letters, tested, with a wiring diagram and install pattern; you install and keep your customer.',
 	),
@@ -121,14 +121,14 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 	$logo_path = '';
 	$logo_url = '';
 	// Uploaded in the background (inc/async-uploads.php), or posted with the form.
-	$logo_file = wholesale_async_upload_take($_POST['cla_logo_token'] ?? '', 'quote');
+	$logo_file = retails_async_upload_take($_POST['cla_logo_token'] ?? '', 'quote');
 	$logo_file = $logo_file ? $logo_file : ($_FILES['cla_logo'] ?? null);
 	if ($logo_file && UPLOAD_ERR_NO_FILE !== (int) $logo_file['error']) {
 		if (UPLOAD_ERR_OK !== (int) $logo_file['error'] || (int) $logo_file['size'] > $logo_max_mb * MB_IN_BYTES) {
 			$fail('file_error');
 		}
 
-		$upload = wholesale_async_upload_store($logo_file, array(
+		$upload = retails_async_upload_store($logo_file, array(
 			'mimes' => array(
 				'jpg|jpeg|jpe' => 'image/jpeg',
 				'png' => 'image/png',
@@ -199,12 +199,12 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 		'From: ' . get_option('admin_email'),
 	);
 
-	list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
-	wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers, $logo_path ? array($logo_path) : array());
-	wholesale_send_quote_confirmation($submission_id);
+	list($subject, $body) = retails_contact_mail_tag($subject, $body);
+	wp_mail(retails_contact_admin_recipients(), $subject, $body, $headers, $logo_path ? array($logo_path) : array());
+	retails_send_quote_confirmation($submission_id);
 
 	// The quote is saved even when mail fails, so the visitor still sees success.
-	wp_safe_redirect(add_query_arg(wholesale_quote_lead_args($submission_id), $return_url) . '#quote');
+	wp_safe_redirect(add_query_arg(retails_quote_lead_args($submission_id), $return_url) . '#quote');
 	exit;
 }
 
@@ -220,7 +220,7 @@ foreach (array(
 	array('standard-channel-letter-front-lit', 10, 18, 'Front lit, 10 letters, 18 in tall'),
 	array('hidden-back-halo-lit', 8, 12, 'Halo lit, 8 letters, 12 in tall'),
 ) as $cl_example) {
-	$cl_example_price = wholesale_cl_example_price($cl_example[0], $cl_example[1], $cl_example[2]);
+	$cl_example_price = retails_cl_example_price($cl_example[0], $cl_example[1], $cl_example[2]);
 	if ($cl_example_price) {
 		$cl_examples[] = array('label' => $cl_example[3], 'total' => $cl_example_price['total']);
 	}
@@ -236,7 +236,7 @@ $lead_valid = 'sent' === $quote_status && $lead_id
 	&& 'contact_submission' === get_post_type($lead_id);
 
 // Fire the lead conversion once, only for the visitor who just sent the quote.
-wholesale_track_quote_lead('channel_letters_ads');
+retails_track_quote_lead('channel_letters_ads');
 
 $styles = new WP_Query(array(
 	'post_type' => 'product',
@@ -262,15 +262,15 @@ $styles = new WP_Query(array(
 ));
 $style_names = wp_list_pluck($styles->posts, 'post_title');
 
-$reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
+$reviews = function_exists('retails_google_reviews') ? retails_google_reviews() : null;
 $rating = $reviews && !empty($reviews['rating']) ? (float) $reviews['rating'] : 0;
 $rating_count = $reviews && !empty($reviews['count']) ? (int) $reviews['count'] : 0;
 
 $logo_id = get_theme_mod('custom_logo');
 $privacy_url = get_privacy_policy_url();
 
-if (!function_exists('wholesale_cla_icon')) {
-	function wholesale_cla_icon($name)
+if (!function_exists('retails_cla_icon')) {
+	function retails_cla_icon($name)
 	{
 		$paths = array(
 			'flag' => '<path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/>',
@@ -318,13 +318,13 @@ if (!function_exists('wholesale_cla_icon')) {
 				if ($logo_id) {
 					echo wp_get_attachment_image($logo_id, 'full', false, array('alt' => get_bloginfo('name'), 'class' => 'cla-logo', 'loading' => 'eager', 'decoding' => 'async', 'sizes' => '240px'));
 				} else {
-					echo wholesale_logo_fallback_html('cla-logo');
+					echo retails_logo_fallback_html('cla-logo');
 				}
 				?>
 			</a>
 			<div class="cla-topbar-contact">
-				<span class="cla-topbar-hours"><?php echo wholesale_cla_icon('clock'); ?> Mon&ndash;Fri 8am&ndash;5pm PT</span>
-				<a class="cla-topbar-phone" href="<?php echo esc_attr($phone_link); ?>"><?php echo wholesale_cla_icon('phone'); ?><span><small>Talk to a sign specialist</small><?php echo esc_html($phone_display); ?></span></a>
+				<span class="cla-topbar-hours"><?php echo retails_cla_icon('clock'); ?> Mon&ndash;Fri 8am&ndash;5pm PT</span>
+				<a class="cla-topbar-phone" href="<?php echo esc_attr($phone_link); ?>"><?php echo retails_cla_icon('phone'); ?><span><small>Talk to a sign specialist</small><?php echo esc_html($phone_display); ?></span></a>
 			</div>
 		</div>
 	</header>
@@ -335,20 +335,20 @@ if (!function_exists('wholesale_cla_icon')) {
 				<div class="cla-hero-copy">
 					<p class="cla-eyebrow">UL listed &middot; 5-year warranty &middot; Built in WA &amp; CA</p>
 					<h1 id="cla-title"><?php echo wp_kses_post($variant['title']); ?> <span><?php echo wp_kses_post($variant['accent']); ?></span></h1>
-					<p class="cla-promise"><?php echo wholesale_cla_icon('clock'); ?> <?php echo esc_html($reply_promise); ?></p>
+					<p class="cla-promise"><?php echo retails_cla_icon('clock'); ?> <?php echo esc_html($reply_promise); ?></p>
 					<p class="cla-lead"><?php echo esc_html($variant['lead']); ?></p>
 					<ul class="cla-hero-points">
-						<li><?php echo wholesale_cla_icon('check'); ?> Free quote &amp; layout from a real person</li>
-						<li><?php echo wholesale_cla_icon('check'); ?> Making signs since 2002, shipped to all 50 states</li>
-						<li><?php echo wholesale_cla_icon('check'); ?> Ships tested, with a wiring diagram and install pattern for your electrician or sign installer</li>
+						<li><?php echo retails_cla_icon('check'); ?> Free quote &amp; layout from a real person</li>
+						<li><?php echo retails_cla_icon('check'); ?> Making signs since 2002, shipped to all 50 states</li>
+						<li><?php echo retails_cla_icon('check'); ?> Ships tested, with a wiring diagram and install pattern for your electrician or sign installer</li>
 					</ul>
 					<div class="cla-hero-actions">
-						<a class="cla-button cla-button--primary" href="#quote">Get my free quote <?php echo wholesale_cla_icon('arrow'); ?></a>
-						<a class="cla-button cla-button--ghost" href="<?php echo esc_url($builder_url); ?>"><?php echo wholesale_cla_icon('pen'); ?> Design &amp; price online</a>
+						<a class="cla-button cla-button--primary" href="#quote">Get my free quote <?php echo retails_cla_icon('arrow'); ?></a>
+						<a class="cla-button cla-button--ghost" href="<?php echo esc_url($builder_url); ?>"><?php echo retails_cla_icon('pen'); ?> Design &amp; price online</a>
 					</div>
 					<?php if ($rating > 0) : ?>
 						<p class="cla-hero-rating">
-							<span class="cla-stars" aria-hidden="true"><?php echo str_repeat(wholesale_cla_icon('star'), 5); ?></span>
+							<span class="cla-stars" aria-hidden="true"><?php echo str_repeat(retails_cla_icon('star'), 5); ?></span>
 							<strong><?php echo esc_html(number_format($rating, 1)); ?></strong> on Google
 							<?php if ($rating_count) : ?>&middot; <?php echo esc_html(sprintf(_n('%s review', '%s reviews', $rating_count, 'litsign'), number_format_i18n($rating_count))); ?><?php endif; ?>
 						</p>
@@ -362,12 +362,12 @@ if (!function_exists('wholesale_cla_icon')) {
 				<div class="cla-quote-card">
 					<?php if ($lead_valid) : ?>
 						<div class="cla-quote-success" role="status">
-							<span class="cla-success-icon"><?php echo wholesale_cla_icon('check'); ?></span>
+							<span class="cla-success-icon"><?php echo retails_cla_icon('check'); ?></span>
 							<h2 id="cla-quote-title">Thanks! Your quote request is in.</h2>
 							<p>A sign specialist will review your project and reach out with pricing and design options. Need it sooner? Call us during business hours.</p>
 							<div class="cla-success-actions">
-								<a class="cla-button cla-button--primary" href="<?php echo esc_attr($phone_link); ?>"><?php echo wholesale_cla_icon('phone'); ?> Call <?php echo esc_html($phone_display); ?></a>
-								<a class="cla-button cla-button--outline" href="<?php echo esc_url($builder_url); ?>"><?php echo wholesale_cla_icon('pen'); ?> Design your sign online</a>
+								<a class="cla-button cla-button--primary" href="<?php echo esc_attr($phone_link); ?>"><?php echo retails_cla_icon('phone'); ?> Call <?php echo esc_html($phone_display); ?></a>
+								<a class="cla-button cla-button--outline" href="<?php echo esc_url($builder_url); ?>"><?php echo retails_cla_icon('pen'); ?> Design your sign online</a>
 							</div>
 						</div>
 					<?php else : ?>
@@ -376,9 +376,9 @@ if (!function_exists('wholesale_cla_icon')) {
 							<h2 id="cla-quote-title">Get your channel letter quote</h2>
 							<p>Tell us what your sign should say. Add your logo if you have one and we&rsquo;ll price the exact letters you need.</p>
 							<ul class="cla-quote-promise">
-								<li><?php echo wholesale_cla_icon('check'); ?> No hidden charges</li>
-								<li><?php echo wholesale_cla_icon('check'); ?> Free design help</li>
-								<li><?php echo wholesale_cla_icon('check'); ?> Your details stay private</li>
+								<li><?php echo retails_cla_icon('check'); ?> No hidden charges</li>
+								<li><?php echo retails_cla_icon('check'); ?> Free design help</li>
+								<li><?php echo retails_cla_icon('check'); ?> Your details stay private</li>
 							</ul>
 						</div>
 
@@ -422,7 +422,7 @@ if (!function_exists('wholesale_cla_icon')) {
 								</label>
 								<label class="cla-upload cla-field--wide">
 									<input type="file" name="cla_logo" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-cla-file data-async-upload="quote" data-async-field="cla_logo_token">
-									<span class="cla-upload-icon"><?php echo wholesale_cla_icon('upload'); ?></span>
+									<span class="cla-upload-icon"><?php echo retails_cla_icon('upload'); ?></span>
 									<span class="cla-upload-text"><strong data-cla-file-name>Upload your logo</strong><small>JPG, PNG or PDF up to <?php echo esc_html($logo_max_mb); ?>&nbsp;MB</small></span>
 								</label>
 								<label class="cla-field">
@@ -463,10 +463,10 @@ if (!function_exists('wholesale_cla_icon')) {
 								</label>
 							</div>
 
-							<button class="cla-button cla-button--primary cla-submit" type="submit">Get my free quote <?php echo wholesale_cla_icon('arrow'); ?></button>
+							<button class="cla-button cla-button--primary cla-submit" type="submit">Get my free quote <?php echo retails_cla_icon('arrow'); ?></button>
 							<div class="cla-contact-buttons">
-								<a class="cla-button cla-button--outline" href="<?php echo esc_attr($phone_link); ?>"><?php echo wholesale_cla_icon('phone'); ?> Call <?php echo esc_html($phone_display); ?></a>
-								<a class="cla-button cla-button--outline" href="<?php echo esc_attr($text_link); ?>"><?php echo wholesale_cla_icon('message'); ?> Text <?php echo esc_html($text_display); ?></a>
+								<a class="cla-button cla-button--outline" href="<?php echo esc_attr($phone_link); ?>"><?php echo retails_cla_icon('phone'); ?> Call <?php echo esc_html($phone_display); ?></a>
+								<a class="cla-button cla-button--outline" href="<?php echo esc_attr($text_link); ?>"><?php echo retails_cla_icon('message'); ?> Text <?php echo esc_html($text_display); ?></a>
 							</div>
 							<p class="cla-form-note">Calls Mon&ndash;Fri 8am&ndash;5pm PT.</p>
 						</form>
@@ -488,7 +488,7 @@ if (!function_exists('wholesale_cla_icon')) {
 							<li><span><?php echo esc_html($cl_example['label']); ?></span><strong>$<?php echo esc_html(number_format($cl_example['total'], 2)); ?></strong></li>
 						<?php endforeach; ?>
 					</ul>
-					<p class="cla-example-note">Prices before shipping and tax. <?php echo esc_html(wholesale_cl_shipping_rule_text()); ?> Installation is not included.</p>
+					<p class="cla-example-note">Prices before shipping and tax. <?php echo esc_html(retails_cl_shipping_rule_text()); ?> Installation is not included.</p>
 				</div>
 			</section>
 		<?php endif; ?>
@@ -510,10 +510,10 @@ if (!function_exists('wholesale_cla_icon')) {
 
 		<section class="cla-trust" aria-label="Why customers choose us">
 			<div class="cla-shell cla-trust-grid">
-				<div><?php echo wholesale_cla_icon('flag'); ?><span><strong>Built in WA &amp; CA</strong><small>Made to order for your business</small></span></div>
-				<div><?php echo wholesale_cla_icon('badge'); ?><span><strong>UL Listed</strong><small>Outdoor signs ship with UL labels</small></span></div>
-				<div><?php echo wholesale_cla_icon('shield'); ?><span><strong>5-Year Warranty</strong><small>On all 7 channel letter styles</small></span></div>
-				<div><?php echo wholesale_cla_icon('plug'); ?><span><strong>Tested Before Shipping</strong><small>With a wiring diagram and install pattern</small></span></div>
+				<div><?php echo retails_cla_icon('flag'); ?><span><strong>Built in WA &amp; CA</strong><small>Made to order for your business</small></span></div>
+				<div><?php echo retails_cla_icon('badge'); ?><span><strong>UL Listed</strong><small>Outdoor signs ship with UL labels</small></span></div>
+				<div><?php echo retails_cla_icon('shield'); ?><span><strong>5-Year Warranty</strong><small>On all 7 channel letter styles</small></span></div>
+				<div><?php echo retails_cla_icon('plug'); ?><span><strong>Tested Before Shipping</strong><small>With a wiring diagram and install pattern</small></span></div>
 			</div>
 		</section>
 
@@ -527,7 +527,7 @@ if (!function_exists('wholesale_cla_icon')) {
 					</header>
 					<div class="cla-style-grid">
 						<?php while ($styles->have_posts()) : $styles->the_post(); ?>
-							<?php $start_price = wholesale_price_no_cents(get_post_meta(get_the_ID(), '_starting_at_text', true)); ?>
+							<?php $start_price = retails_price_no_cents(get_post_meta(get_the_ID(), '_starting_at_text', true)); ?>
 							<article class="cla-style-card">
 								<a class="cla-style-image" href="<?php the_permalink(); ?>" tabindex="-1" aria-hidden="true">
 									<?php if (has_post_thumbnail()) : ?>
@@ -539,7 +539,7 @@ if (!function_exists('wholesale_cla_icon')) {
 									<?php if ($start_price) : ?>
 										<p class="cla-style-price"><small>Starting at</small> <?php echo wp_kses_post($start_price); ?></p>
 									<?php endif; ?>
-									<a class="cla-style-link" href="<?php echo esc_url(add_query_arg('product_id', get_the_ID(), $builder_url)); ?>">Design &amp; price <?php echo wholesale_cla_icon('arrow'); ?></a>
+									<a class="cla-style-link" href="<?php echo esc_url(add_query_arg('product_id', get_the_ID(), $builder_url)); ?>">Design &amp; price <?php echo retails_cla_icon('arrow'); ?></a>
 								</div>
 							</article>
 						<?php endwhile; ?>
@@ -555,19 +555,19 @@ if (!function_exists('wholesale_cla_icon')) {
 					<p class="cla-kicker">Built to last</p>
 					<h2 id="cla-why-title">Commercial-Grade Signs Your Customers Will Notice</h2>
 					<p>Your sign works for you 24 hours a day. We build channel letters with bright, energy-efficient LEDs and durable materials so your storefront looks sharp for years.</p>
-					<a class="cla-button cla-button--primary" href="#quote">Get my free quote <?php echo wholesale_cla_icon('arrow'); ?></a>
+					<a class="cla-button cla-button--primary" href="#quote">Get my free quote <?php echo retails_cla_icon('arrow'); ?></a>
 				</div>
 				<ul class="cla-why-list">
-					<li><?php echo wholesale_cla_icon('badge'); ?><span><strong>UL listed</strong> outdoor channel letter signs with sign section labels.</span></li>
-					<li><?php echo wholesale_cla_icon('shield'); ?><span><strong>5-year warranty</strong> on all 7 channel letter styles, plus the LED modules and power supplies.</span></li>
-					<li><?php echo wholesale_cla_icon('flag'); ?><span><strong>Built in WA and CA</strong>, made to order with aluminum returns and acrylic faces.</span></li>
-					<li><?php echo wholesale_cla_icon('truck'); ?><span><strong>Fast shipping options</strong>: standard, 3-day, 2-day or overnight after manufacturing.</span></li>
+					<li><?php echo retails_cla_icon('badge'); ?><span><strong>UL listed</strong> outdoor channel letter signs with sign section labels.</span></li>
+					<li><?php echo retails_cla_icon('shield'); ?><span><strong>5-year warranty</strong> on all 7 channel letter styles, plus the LED modules and power supplies.</span></li>
+					<li><?php echo retails_cla_icon('flag'); ?><span><strong>Built in WA and CA</strong>, made to order with aluminum returns and acrylic faces.</span></li>
+					<li><?php echo retails_cla_icon('truck'); ?><span><strong>Fast shipping options</strong>: standard, 3-day, 2-day or overnight after manufacturing.</span></li>
 				</ul>
 			</div>
 		</section>
 
-		<?php if (function_exists('wholesale_render_review_slider')) : ?>
-			<div class="cla-reviews"><?php wholesale_render_review_slider(); ?></div>
+		<?php if (function_exists('retails_render_review_slider')) : ?>
+			<div class="cla-reviews"><?php retails_render_review_slider(); ?></div>
 		<?php endif; ?>
 
 		<section class="cla-section" aria-labelledby="cla-faq-title">
@@ -613,8 +613,8 @@ if (!function_exists('wholesale_cla_icon')) {
 					<p>Get a free quote today, or talk to a sign specialist now.</p>
 				</div>
 				<div class="cla-final-actions">
-					<a class="cla-button cla-button--primary" href="#quote">Get my free quote <?php echo wholesale_cla_icon('arrow'); ?></a>
-					<a class="cla-button cla-button--ghost" href="<?php echo esc_attr($phone_link); ?>"><?php echo wholesale_cla_icon('phone'); ?> <?php echo esc_html($phone_display); ?></a>
+					<a class="cla-button cla-button--primary" href="#quote">Get my free quote <?php echo retails_cla_icon('arrow'); ?></a>
+					<a class="cla-button cla-button--ghost" href="<?php echo esc_attr($phone_link); ?>"><?php echo retails_cla_icon('phone'); ?> <?php echo esc_html($phone_display); ?></a>
 				</div>
 			</div>
 		</section>
@@ -623,12 +623,12 @@ if (!function_exists('wholesale_cla_icon')) {
 	<footer class="cla-footer">
 		<div class="cla-shell cla-footer-inner">
 			<div>
-				<strong><?php echo esc_html(wholesale_get_setting('ticket_business_name')); ?></strong>
-				<p><?php echo wholesale_cla_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</p>
+				<strong><?php echo esc_html(retails_get_setting('ticket_business_name')); ?></strong>
+				<p><?php echo retails_cla_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</p>
 			</div>
 			<div>
-				<p><?php echo wholesale_cla_icon('phone'); ?> <a href="<?php echo esc_attr($phone_link); ?>"><?php echo esc_html($phone_display); ?></a></p>
-				<p><?php echo wholesale_cla_icon('mail'); ?> <a href="mailto:<?php echo esc_attr($email_address); ?>"><?php echo esc_html($email_address); ?></a></p>
+				<p><?php echo retails_cla_icon('phone'); ?> <a href="<?php echo esc_attr($phone_link); ?>"><?php echo esc_html($phone_display); ?></a></p>
+				<p><?php echo retails_cla_icon('mail'); ?> <a href="mailto:<?php echo esc_attr($email_address); ?>"><?php echo esc_html($email_address); ?></a></p>
 			</div>
 			<nav class="cla-footer-links" aria-label="Legal">
 				<a href="<?php echo esc_url(home_url('/')); ?>">Shop all signs</a>
@@ -642,7 +642,7 @@ if (!function_exists('wholesale_cla_icon')) {
 	</footer>
 
 	<nav class="cla-mobile-bar" aria-label="Quick actions">
-		<a class="cla-mobile-call" href="<?php echo esc_attr($phone_link); ?>"><?php echo wholesale_cla_icon('phone'); ?> Call us</a>
+		<a class="cla-mobile-call" href="<?php echo esc_attr($phone_link); ?>"><?php echo retails_cla_icon('phone'); ?> Call us</a>
 		<a class="cla-mobile-quote" href="#quote">Free quote</a>
 	</nav>
 

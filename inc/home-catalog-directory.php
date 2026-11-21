@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
  *
  * @return array{featured: array, groups: array, total: int}
  */
-function wholesale_home_catalog_directory()
+function retails_home_catalog_directory()
 {
 	// Featured tiles in display order (the first is the large tile): category slug =>
 	// blurb, product whose photo and price front the tile, tile tint.
@@ -86,13 +86,13 @@ function wholesale_home_catalog_directory()
 		),
 	);
 
-	$data = get_transient('wholesale_home_catalog_directory');
+	$data = get_transient('retails_home_catalog_directory');
 	// v4 (2026-11-09): photos follow inc/product-photo-overrides.php (v4 adds the poster
 	// stand overrides); the version change rebuilds the cached copy, which still held the
 	// sale-artwork photos.
 	if (!is_array($data) || empty($data['v']) || 4 !== $data['v']) {
 		$data = array('v' => 4, 'terms' => array(), 'groups' => array(), 'featured' => array());
-		$card_hidden = function_exists('wholesale_card_hidden_product_ids') ? wholesale_card_hidden_product_ids() : array();
+		$card_hidden = function_exists('retails_card_hidden_product_ids') ? retails_card_hidden_product_ids() : array();
 		$photo = static function ($product_id) use ($card_hidden) {
 			$product_id = (int) $product_id;
 			return $product_id && 'publish' === get_post_status($product_id) && !in_array($product_id, $card_hidden, true) ? (int) get_post_thumbnail_id($product_id) : 0;
@@ -133,10 +133,10 @@ function wholesale_home_catalog_directory()
 			))) : 0;
 		}
 		foreach ($featured as $slug => $item) {
-			$product = wholesale_seo_product($item['product']);
+			$product = retails_seo_product($item['product']);
 			$data['featured'][$slug] = $product ? (int) get_post_thumbnail_id($product) : 0;
 		}
-		set_transient('wholesale_home_catalog_directory', $data, 12 * HOUR_IN_SECONDS);
+		set_transient('retails_home_catalog_directory', $data, 12 * HOUR_IN_SECONDS);
 	}
 
 	$out = array('featured' => array(), 'groups' => array(), 'total' => 0);
@@ -148,7 +148,7 @@ function wholesale_home_catalog_directory()
 			}
 			$items[$slug] = array(
 				'name'  => $category[0],
-				'url'   => wholesale_category_url($slug),
+				'url'   => retails_category_url($slug),
 				'count' => $data['terms'][$slug]['count'],
 				'image' => $data['terms'][$slug]['image'],
 			);
@@ -162,7 +162,7 @@ function wholesale_home_catalog_directory()
 			'icon'  => $group['icon'],
 			'count' => isset($data['groups'][$key]) ? (int) $data['groups'][$key] : 0,
 			'items' => $items,
-			'all'   => $group['all'] ? wholesale_category_url($group['all']) : '',
+			'all'   => $group['all'] ? retails_category_url($group['all']) : '',
 		);
 		foreach ($featured as $slug => $item) {
 			if (isset($items[$slug])) {
@@ -181,9 +181,9 @@ function wholesale_home_catalog_directory()
 }
 
 /** A saved product or category can change the directory's counts and photos. */
-foreach (array('save_post_product', 'deleted_post', 'created_product_category', 'edited_product_category', 'delete_product_category') as $wholesale_home_directory_hook) {
-	add_action($wholesale_home_directory_hook, static function () {
-		delete_transient('wholesale_home_catalog_directory');
+foreach (array('save_post_product', 'deleted_post', 'created_product_category', 'edited_product_category', 'delete_product_category') as $retails_home_directory_hook) {
+	add_action($retails_home_directory_hook, static function () {
+		delete_transient('retails_home_catalog_directory');
 	});
 }
-unset($wholesale_home_directory_hook);
+unset($retails_home_directory_hook);

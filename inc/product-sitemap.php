@@ -12,23 +12,23 @@
  * @package litsign
  */
 
-function wholesale_product_sitemap_rewrite()
+function retails_product_sitemap_rewrite()
 {
-	add_rewrite_rule('^product-sitemap\.xml$', 'index.php?wholesale_product_sitemap=1', 'top');
-	add_rewrite_rule('^category-sitemap\.xml$', 'index.php?wholesale_category_sitemap=1', 'top');
+	add_rewrite_rule('^product-sitemap\.xml$', 'index.php?retails_product_sitemap=1', 'top');
+	add_rewrite_rule('^category-sitemap\.xml$', 'index.php?retails_category_sitemap=1', 'top');
 }
-add_action('init', 'wholesale_product_sitemap_rewrite', 20);
+add_action('init', 'retails_product_sitemap_rewrite', 20);
 
 add_action('init', function () {
-	if ('2' !== get_option('wholesale_product_sitemap_rewrite_version')) {
+	if ('2' !== get_option('retails_product_sitemap_rewrite_version')) {
 		flush_rewrite_rules(false);
-		update_option('wholesale_product_sitemap_rewrite_version', '2');
+		update_option('retails_product_sitemap_rewrite_version', '2');
 	}
 }, 99);
 
 add_filter('query_vars', function ($vars) {
-	$vars[] = 'wholesale_product_sitemap';
-	$vars[] = 'wholesale_category_sitemap';
+	$vars[] = 'retails_product_sitemap';
+	$vars[] = 'retails_category_sitemap';
 	return $vars;
 });
 
@@ -38,7 +38,7 @@ add_filter('query_vars', function ($vars) {
  *
  * @return string[]
  */
-function wholesale_product_sitemap_images($product_id)
+function retails_product_sitemap_images($product_id)
 {
 	$images = array();
 	$featured = get_the_post_thumbnail_url($product_id, 'full');
@@ -74,9 +74,9 @@ function wholesale_product_sitemap_images($product_id)
 	return array_slice($images, 0, 10);
 }
 
-function wholesale_render_product_sitemap()
+function retails_render_product_sitemap()
 {
-	if ('1' !== get_query_var('wholesale_product_sitemap')) {
+	if ('1' !== get_query_var('retails_product_sitemap')) {
 		return;
 	}
 
@@ -84,7 +84,7 @@ function wholesale_render_product_sitemap()
 		'post_type' => 'product',
 		'post_status' => 'publish',
 		'posts_per_page' => -1,
-		'post__not_in' => wholesale_seo_sitemap_excluded_product_ids(),
+		'post__not_in' => retails_seo_sitemap_excluded_product_ids(),
 		'orderby' => 'modified',
 		'order' => 'DESC',
 		'no_found_rows' => true,
@@ -106,8 +106,8 @@ function wholesale_render_product_sitemap()
 
 		echo "\t<url>\n";
 		echo "\t\t<loc>" . esc_xml(esc_url_raw($url)) . "</loc>\n";
-		echo "\t\t<lastmod>" . esc_xml(wholesale_product_content_modified($product)) . "</lastmod>\n";
-		foreach (wholesale_product_sitemap_images($product->ID) as $image) {
+		echo "\t\t<lastmod>" . esc_xml(retails_product_content_modified($product)) . "</lastmod>\n";
+		foreach (retails_product_sitemap_images($product->ID) as $image) {
 			echo "\t\t<image:image>\n\t\t\t<image:loc>" . esc_xml($image) . "</image:loc>\n\t\t</image:image>\n";
 		}
 		echo "\t</url>\n";
@@ -116,15 +116,15 @@ function wholesale_render_product_sitemap()
 	echo '</urlset>';
 	exit;
 }
-add_action('template_redirect', 'wholesale_render_product_sitemap', 0);
+add_action('template_redirect', 'retails_render_product_sitemap', 0);
 
-function wholesale_render_category_sitemap()
+function retails_render_category_sitemap()
 {
-	if ('1' !== get_query_var('wholesale_category_sitemap')) {
+	if ('1' !== get_query_var('retails_category_sitemap')) {
 		return;
 	}
 
-	$terms = wholesale_seo_sitemap_categories();
+	$terms = retails_seo_sitemap_categories();
 
 	nocache_headers();
 	header('Content-Type: application/xml; charset=UTF-8');
@@ -137,11 +137,11 @@ function wholesale_render_category_sitemap()
 	$seen = array();
 	foreach ($terms as $term) {
 		// Same exclusions as /sitemap.xml: redirected or canonicalized routes.
-		if (in_array($term->slug, wholesale_seo_sitemap_excluded_categories(), true)) {
+		if (in_array($term->slug, retails_seo_sitemap_excluded_categories(), true)) {
 			continue;
 		}
 
-		$url = esc_url_raw(wholesale_category_url($term->slug));
+		$url = esc_url_raw(retails_category_url($term->slug));
 		if (!$url || isset($seen[$url])) {
 			continue;
 		}
@@ -152,7 +152,7 @@ function wholesale_render_category_sitemap()
 			'post_type' => 'product',
 			'post_status' => 'publish',
 			'posts_per_page' => -1,
-			'post__not_in' => wholesale_seo_duplicate_product_ids(),
+			'post__not_in' => retails_seo_duplicate_product_ids(),
 			'orderby' => 'modified',
 			'order' => 'DESC',
 			'no_found_rows' => true,
@@ -166,7 +166,7 @@ function wholesale_render_category_sitemap()
 
 		$images = array();
 		foreach ($products as $product) {
-			$product_images = wholesale_product_sitemap_images($product->ID);
+			$product_images = retails_product_sitemap_images($product->ID);
 			if ($product_images && !in_array($product_images[0], $images, true)) {
 				$images[] = $product_images[0];
 			}
@@ -178,8 +178,8 @@ function wholesale_render_category_sitemap()
 		// The page changes with its products and with its own lead and buying
 		// guide (data/category-pages.php).
 		$lastmod = $products ? get_post_modified_time('c', true, $products[0]) : '';
-		if (defined('WHOLESALE_CATEGORY_PAGES_REVISED') && function_exists('wholesale_category_page') && wholesale_category_page($term->slug)) {
-			$lastmod = max($lastmod, WHOLESALE_CATEGORY_PAGES_REVISED);
+		if (defined('RETAILS_CATEGORY_PAGES_REVISED') && function_exists('retails_category_page') && retails_category_page($term->slug)) {
+			$lastmod = max($lastmod, RETAILS_CATEGORY_PAGES_REVISED);
 		}
 
 		echo "\t<url>\n";
@@ -196,7 +196,7 @@ function wholesale_render_category_sitemap()
 	echo '</urlset>';
 	exit;
 }
-add_action('template_redirect', 'wholesale_render_category_sitemap', 0);
+add_action('template_redirect', 'retails_render_category_sitemap', 0);
 
 /**
  * Announce the theme's sitemap index in robots.txt. /sitemap.xml lists the

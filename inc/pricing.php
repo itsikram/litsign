@@ -11,7 +11,7 @@
  *  - Each priced option is added in page order: "N" or "N/label" adds N, "N/%" adds N% of the
  *    running price, "N/sqft" adds N per sq ft, "N/lft" adds N per linear foot of letters.
  *  - Quantity multiplies everything; the product discount applies after quantity, then any
- *    dated sale (wholesale_product_promotion()); same-day turnaround adds 100% of the
+ *    dated sale (retails_product_promotion()); same-day turnaround adds 100% of the
  *    undiscounted price.
  *
  * @package litsign
@@ -22,29 +22,29 @@ if (!defined('ABSPATH')) {
 }
 
 // Builder raceway price per foot; matches the product page raceway option ("50/lft").
-const WHOLESALE_RACEWAY_COST_PER_FOOT = 50;
-const WHOLESALE_CL_MIN_INCHES = 8;
-const WHOLESALE_CL_MAX_INCHES = 45;
+const RETAILS_RACEWAY_COST_PER_FOOT = 50;
+const RETAILS_CL_MIN_INCHES = 8;
+const RETAILS_CL_MAX_INCHES = 45;
 // Channel letters can carry B2Sign's per-letter option prices: Lexan face (_cl_lexan_percent),
 // 1" trimcap (_cl_trimcap_1in) and per-inch faces ("N/clin/..."). SFS B2Sign Sync only writes
 // them to a theme that defines this.
-const WHOLESALE_CL_OPTION_PRICING = 1;
-// Channel letters can carry B2Sign's piece rules (_cl_piece_pricing, see wholesale_cl_option_prices()):
+const RETAILS_CL_OPTION_PRICING = 1;
+// Channel letters can carry B2Sign's piece rules (_cl_piece_pricing, see retails_cl_option_prices()):
 // large letters by sq ft and small lit letters. SFS B2Sign Sync only writes them to a theme that defines this.
-const WHOLESALE_CL_PIECE_PRICING = 1;
+const RETAILS_CL_PIECE_PRICING = 1;
 // Default lowest per-item price for products sized with the sq ft dimensions calculator.
-// A product can set its own with _min_order_price (see wholesale_product_min_order()).
-const WHOLESALE_SQFT_MIN_PRICE = 16.5;
+// A product can set its own with _min_order_price (see retails_product_min_order()).
+const RETAILS_SQFT_MIN_PRICE = 16.5;
 
 /**
  * Lowest price one item of a calculator product can cost, after the product's own
- * _discount_percent: its _min_order_price, or WHOLESALE_SQFT_MIN_PRICE when that is
+ * _discount_percent: its _min_order_price, or RETAILS_SQFT_MIN_PRICE when that is
  * empty. 0 means no minimum.
  */
-function wholesale_product_min_order($product_id)
+function retails_product_min_order($product_id)
 {
 	$value = trim((string) get_post_meta($product_id, '_min_order_price', true));
-	return is_numeric($value) ? max(0.0, (float) $value) : (float) WHOLESALE_SQFT_MIN_PRICE;
+	return is_numeric($value) ? max(0.0, (float) $value) : (float) RETAILS_SQFT_MIN_PRICE;
 }
 
 /**
@@ -52,14 +52,14 @@ function wholesale_product_min_order($product_id)
  * after the product's own discount, reaches its minimum order price. Rounded up to
  * 0.01 sq ft, the precision it is shown at. 0 when there is no minimum.
  */
-function wholesale_product_min_area($product_id)
+function retails_product_min_area($product_id)
 {
-	if (get_post_meta($product_id, '_hide_calculator', true) || wholesale_product_min_sides($product_id)) {
+	if (get_post_meta($product_id, '_hide_calculator', true) || retails_product_min_sides($product_id)) {
 		return 0.0;
 	}
 	$rate = max(0, (float) get_post_meta($product_id, '_price_per_sqft', true));
 	$keep = (100 - min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)))) / 100;
-	$min_price = wholesale_product_min_order($product_id);
+	$min_price = retails_product_min_order($product_id);
 	if ($rate <= 0 || $keep <= 0 || $min_price <= 0) {
 		return 0.0;
 	}
@@ -72,9 +72,9 @@ function wholesale_product_min_area($product_id)
  * can be ordered; one that costs less than the minimum order price pays that minimum.
  * array(width_in, height_in), or null for products without the size calculator.
  */
-function wholesale_product_min_sides($product_id)
+function retails_product_min_sides($product_id)
 {
-	if (get_post_meta($product_id, '_hide_calculator', true) || wholesale_product_is_channel_letter($product_id)) {
+	if (get_post_meta($product_id, '_hide_calculator', true) || retails_product_is_channel_letter($product_id)) {
 		return null;
 	}
 	// "0" means any size (like B2Sign's vinyl, which only bills its minimum charge).
@@ -91,9 +91,9 @@ function wholesale_product_min_sides($product_id)
  * fit either way round. array(short_in, long_in), or null when the product has none
  * (the legacy _max_width / _max_height are not enforced).
  */
-function wholesale_product_max_sides($product_id)
+function retails_product_max_sides($product_id)
 {
-	if (!wholesale_product_min_sides($product_id)) {
+	if (!retails_product_min_sides($product_id)) {
 		return null;
 	}
 	if (!preg_match('/(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)/', (string) get_post_meta($product_id, '_max_size', true), $m)) {
@@ -110,17 +110,17 @@ function wholesale_product_max_sides($product_id)
  * kept within the product's min/max sides. array(width_in, height_in), or null for
  * products without the size calculator.
  */
-function wholesale_product_default_size($product_id)
+function retails_product_default_size($product_id)
 {
-	$min_sides = wholesale_product_min_sides($product_id);
+	$min_sides = retails_product_min_sides($product_id);
 	if (!$min_sides) {
 		return null;
 	}
 	$rate = max(0, (float) get_post_meta($product_id, '_price_per_sqft', true));
 	$keep = (100 - min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)))) / 100;
-	$min_price = wholesale_product_min_order($product_id);
+	$min_price = retails_product_min_order($product_id);
 	$side = $rate > 0 && $keep > 0 && $min_price > 0 ? floor(round(sqrt($min_price / ($rate * $keep)) * 12, 6)) : 0;
-	$max_sides = wholesale_product_max_sides($product_id);
+	$max_sides = retails_product_max_sides($product_id);
 	if ($max_sides) {
 		$side = min($side, $max_sides[0]);
 	}
@@ -128,14 +128,14 @@ function wholesale_product_default_size($product_id)
 	// H-stake), so shrink the square until that quote still lands on the minimum charge.
 	if ($side > 0 && $min_price > 0) {
 		$request = array('product_quantity' => 1);
-		foreach (wholesale_product_price_attrs($product_id) as $attr) {
-			$options = wholesale_attr_options($attr);
+		foreach (retails_product_price_attrs($product_id) as $attr) {
+			$options = retails_attr_options($attr);
 			if ($options && !empty($attr['name'])) {
 				$request[$attr['name']] = $options[0]['value'];
 			}
 		}
 		while ($side > max($min_sides[0], $min_sides[1], 1)) {
-			$quote = wholesale_price_quote($product_id, array('width-in' => $side, 'height-in' => $side) + $request);
+			$quote = retails_price_quote($product_id, array('width-in' => $side, 'height-in' => $side) + $request);
 			if (!$quote['ok'] || !empty($quote['minimum_order'])) {
 				break;
 			}
@@ -146,16 +146,16 @@ function wholesale_product_default_size($product_id)
 }
 
 /**
- * Example size for wholesale_product_min_area(): the smallest square in whole inches
+ * Example size for retails_product_min_area(): the smallest square in whole inches
  * that reaches it, e.g. 14" x 14".
  */
-function wholesale_min_area_example($area)
+function retails_min_area_example($area)
 {
 	$side = (int) ceil(round(sqrt($area) * 12, 6));
 	return sprintf('%d" x %d"', $side, $side);
 }
 
-function wholesale_product_is_channel_letter($product_id)
+function retails_product_is_channel_letter($product_id)
 {
 	$terms = get_the_terms($product_id, 'product_category');
 	return is_array($terms) && isset($terms[0]) && 'channel-letters' === $terms[0]->slug;
@@ -166,7 +166,7 @@ function wholesale_product_is_channel_letter($product_id)
  * "the width of your flag"). Only channel letters are a "sign"; everything
  * else uses its own word, and hardware or anything unmapped is a "product".
  */
-function wholesale_product_noun($product_id)
+function retails_product_noun($product_id)
 {
 	$nouns = array(
 		'channel-letters' => 'sign',
@@ -203,13 +203,13 @@ function wholesale_product_noun($product_id)
  * One word for a whole cart or order ("Ship my banner", "Your sign is on its way").
  * Takes cart item objects or order product_json rows. Items that disagree make it an "order".
  */
-function wholesale_items_noun($items)
+function retails_items_noun($items)
 {
 	$nouns = array();
 	foreach ((array) $items as $item) {
 		$product_id = is_object($item) ? ($item->product_id ?? 0) : ($item['product_id'] ?? 0);
 		if ($product_id) {
-			$nouns[wholesale_product_noun((int) $product_id)] = true;
+			$nouns[retails_product_noun((int) $product_id)] = true;
 		}
 	}
 	return 1 === count($nouns) ? (string) key($nouns) : 'order';
@@ -218,12 +218,12 @@ function wholesale_items_noun($items)
 /**
  * The noun for an order post, from its saved items.
  */
-function wholesale_order_noun($order_post_id)
+function retails_order_noun($order_post_id)
 {
-	return wholesale_items_noun(wholesale_decode_order_meta_array(get_post_meta($order_post_id, 'product_json', true)));
+	return retails_items_noun(retails_decode_order_meta_array(get_post_meta($order_post_id, 'product_json', true)));
 }
 
-function wholesale_product_price_attrs($product_id)
+function retails_product_price_attrs($product_id)
 {
 	$attrs = json_decode((string) get_post_meta($product_id, 'product_attr', true), true);
 	return is_array($attrs) ? array_values(array_filter($attrs, 'is_array')) : array();
@@ -232,7 +232,7 @@ function wholesale_product_price_attrs($product_id)
 /**
  * Flattens [{"Label": "value"}, ...] into [['label' => ..., 'value' => ...], ...].
  */
-function wholesale_attr_options($attr)
+function retails_attr_options($attr)
 {
 	$options = array();
 	foreach (isset($attr['options']) && is_array($attr['options']) ? $attr['options'] : array() as $option) {
@@ -255,7 +255,7 @@ function wholesale_attr_options($attr)
  * Channel letters: "0.88/clin/..." per inch of letter height, per letter (B2Sign's vinyl faces).
  * A value that doesn't start with a number (a color name, "3-Inch") carries no price.
  */
-function wholesale_parse_option_price($value)
+function retails_parse_option_price($value)
 {
 	$parts = explode('/', trim((string) $value));
 	if (!is_numeric(trim($parts[0]))) {
@@ -271,7 +271,7 @@ function wholesale_parse_option_price($value)
 /**
  * Form fields are named after the attribute, with a few spelling variants between templates.
  */
-function wholesale_request_attr_value($request, $attr_name)
+function retails_request_attr_value($request, $attr_name)
 {
 	foreach (array($attr_name, strtolower($attr_name), str_replace(' ', '-', $attr_name), strtolower(str_replace(' ', '-', $attr_name)), str_replace(' ', '', $attr_name)) as $key) {
 		if (isset($request[$key]) && !is_array($request[$key])) {
@@ -286,7 +286,7 @@ function wholesale_request_attr_value($request, $attr_name)
  * width/height calculator the typed size sets the price, so this attribute is neither
  * shown nor charged; it only applies while the calculator is hidden.
  */
-function wholesale_attr_is_preset_size($attr)
+function retails_attr_is_preset_size($attr)
 {
 	$css = (string) ($attr['cssClass'] ?? '');
 	return 'size' === strtolower(trim((string) ($attr['name'] ?? ''))) && false === strpos($css, 'size-width-inch') && false === strpos($css, 'size-height-inch');
@@ -299,7 +299,7 @@ function wholesale_attr_is_preset_size($attr)
  * cost for 18" / 24" / 30") and the lowest price of the item (after the product's discount, like
  * _min_order_price; 0 = none). "extra" raises the minimum when that option is chosen (two-sided).
  */
-function wholesale_size_dropdown_pricing($product_id)
+function retails_size_dropdown_pricing($product_id)
 {
 	$data = json_decode((string) get_post_meta($product_id, '_size_dropdown', true), true);
 	if (!is_array($data) || !isset($data['w']) || !is_array($data['w']) || !$data['w']) {
@@ -324,7 +324,7 @@ function wholesale_size_dropdown_pricing($product_id)
  * B2Sign quantity pricing for a product (meta _qty_pricing, written by SFS B2Sign Sync), or null.
  * {"min":[[from qty, lowest shown price per item], ...], "sheet":{"w":48,"h":96,"price":stored price per sheet}}
  */
-function wholesale_product_qty_pricing($product_id)
+function retails_product_qty_pricing($product_id)
 {
 	$data = json_decode((string) get_post_meta($product_id, '_qty_pricing', true), true);
 	if (!is_array($data) || ((!isset($data['min']) || !is_array($data['min'])) && (!isset($data['unit']) || !is_array($data['unit'])))) {
@@ -371,7 +371,7 @@ function wholesale_product_qty_pricing($product_id)
 }
 
 /** Pieces of w x h inches that fit on a W x H inch sheet, either way round. */
-function wholesale_pieces_per_sheet($w, $h, $sheet_w, $sheet_h)
+function retails_pieces_per_sheet($w, $h, $sheet_w, $sheet_h)
 {
 	if ($w <= 0 || $h <= 0) {
 		return 0;
@@ -383,7 +383,7 @@ function wholesale_pieces_per_sheet($w, $h, $sheet_w, $sheet_h)
  * A product's own production-time choices (meta _turnaround_spec, written by SFS B2Sign Sync), or array().
  * Each: value, label, min_qty, max_qty (null = no limit), cutoff ("16:00" Pacific), days, percent, automatic.
  */
-function wholesale_product_turnaround_spec($product_id)
+function retails_product_turnaround_spec($product_id)
 {
 	$data = json_decode((string) get_post_meta($product_id, '_turnaround_spec', true), true);
 	$out = array();
@@ -425,7 +425,7 @@ function wholesale_product_turnaround_spec($product_id)
  * True when B2Sign Sync mirrored that B2Sign offers no production-time choice for this product (meta "[]",
  * hardware): the page then shows none, like B2Sign, instead of the site's Next Day / Same Day.
  */
-function wholesale_product_turnaround_none($product_id)
+function retails_product_turnaround_none($product_id)
 {
 	return '[]' === trim((string) get_post_meta($product_id, '_turnaround_spec', true));
 }
@@ -434,7 +434,7 @@ function wholesale_product_turnaround_none($product_id)
  * Is a production-time choice open now (Pacific)? Like B2Sign: a choice with a time gate is open on business days
  * before it (and again from reopen_at), and all day on days off when B2Sign says so. Holidays are not known here.
  */
-function wholesale_turnaround_open_now($o)
+function retails_turnaround_open_now($o)
 {
 	if ('' === $o['time_gate']) {
 		return true;
@@ -448,7 +448,7 @@ function wholesale_turnaround_open_now($o)
 }
 
 /** True on a weekday before the Pacific time "HH:MM". */
-function wholesale_before_pacific_time($cutoff)
+function retails_before_pacific_time($cutoff)
 {
 	$now = new DateTime('now', new DateTimeZone('America/Los_Angeles'));
 	return (int) $now->format('N') < 6 && $now->format('H:i') < $cutoff;
@@ -460,7 +460,7 @@ function wholesale_before_pacific_time($cutoff)
  * $size: array(width_in, height_in) when the product has a size box. B2Sign closes Same Day when both
  * sides are over 120" (max_both_sides).
  */
-function wholesale_turnaround_choice($spec, $value, $quantity, $size = null)
+function retails_turnaround_choice($spec, $value, $quantity, $size = null)
 {
 	$open = array();
 	foreach ($spec as $o) {
@@ -476,17 +476,17 @@ function wholesale_turnaround_choice($spec, $value, $quantity, $size = null)
 		return 'No production time is available for this quantity. Please contact us.';
 	}
 	// Suggest only choices open right now (a greyed-out Free Same Day is no help).
-	$now_open = array_filter($open, 'wholesale_turnaround_open_now');
+	$now_open = array_filter($open, 'retails_turnaround_open_now');
 	$labels = implode(' or ', wp_list_pluck(array_values($now_open ?: $open), 'label'));
 	if ('' === $value) {
 		// B2Sign's own default (Next Day) when it is open, else the first choice open now.
 		foreach ($open as $o) {
-			if ($o['default'] && wholesale_turnaround_open_now($o)) {
+			if ($o['default'] && retails_turnaround_open_now($o)) {
 				return $o;
 			}
 		}
 		foreach ($open as $o) {
-			if (wholesale_turnaround_open_now($o)) {
+			if (retails_turnaround_open_now($o)) {
 				return $o;
 			}
 		}
@@ -496,19 +496,19 @@ function wholesale_turnaround_choice($spec, $value, $quantity, $size = null)
 		return sprintf('That production time is not available for this order. Please choose %s.', $labels);
 	}
 	$o = $open[$value];
-	if (!wholesale_turnaround_open_now($o)) {
+	if (!retails_turnaround_open_now($o)) {
 		return sprintf('%s is only available on business days before %s PST. Please choose another production time.', $o['label'], date('g:ia', strtotime($o['time_gate'])));
 	}
 	return $o;
 }
 
-function wholesale_same_day_available()
+function retails_same_day_available()
 {
 	$now = new DateTime('now', new DateTimeZone('America/Los_Angeles'));
 	return (int) $now->format('G') < 12;
 }
 
-function wholesale_count_letters($text)
+function retails_count_letters($text)
 {
 	return (int) preg_match_all('/\S/u', (string) $text);
 }
@@ -517,7 +517,7 @@ function wholesale_count_letters($text)
  * Face color rate per inch for a builder element: the cost of the color group the
  * chosen color belongs to, or the product's default color cost.
  */
-function wholesale_cl_face_rate($product_id, $cl_data, $face_color)
+function retails_cl_face_rate($product_id, $cl_data, $face_color)
 {
 	if (empty($face_color['title'])) {
 		return (float) get_post_meta($product_id, '_default_color_cost', true);
@@ -530,7 +530,7 @@ function wholesale_cl_face_rate($product_id, $cl_data, $face_color)
 		if (!isset($group['id']) || 0 !== strpos((string) $group['id'], 'color-')) {
 			continue;
 		}
-		foreach (wholesale_attr_options($group) as $option) {
+		foreach (retails_attr_options($group) as $option) {
 			if (trim($option['label']) !== trim((string) $face_color['title'])) {
 				continue;
 			}
@@ -558,7 +558,7 @@ function wholesale_cl_face_rate($product_id, $cl_data, $face_color)
  *   inches under_price (B2Sign's lit letters).
  * The builder reads the same array (cl_builderr.php).
  */
-function wholesale_cl_option_prices($product_id)
+function retails_cl_option_prices($product_id)
 {
 	$trimcap = json_decode((string) get_post_meta($product_id, '_cl_trimcap_1in', true), true);
 	$piece = json_decode((string) get_post_meta($product_id, '_cl_piece_pricing', true), true);
@@ -579,10 +579,10 @@ function wholesale_cl_option_prices($product_id)
  * rate table prices), raw (its measured longer side), w and h (its measured size), in inches.
  * Same as getLetterCosts() in js/cl.js.
  */
-function wholesale_cl_letter_cost($cost_table, $options, $letter, $element)
+function retails_cl_letter_cost($cost_table, $options, $letter, $element)
 {
-	$pieces = '' === (string) $letter['char'] ? 1 : wholesale_cl_char_pieces($letter['char']);
-	$rate = (float) wholesale_cl_rate_for_side($cost_table, $letter['side']);
+	$pieces = '' === (string) $letter['char'] ? 1 : retails_cl_char_pieces($letter['char']);
+	$rate = (float) retails_cl_rate_for_side($cost_table, $letter['side']);
 	// Longer than the rate table: at least B2Sign's price per inch.
 	$inches = (int) ceil(round((float) $letter['side'], 1) - 0.000001);
 	if ($options['per_inch'] > 0 && $cost_table && $inches > max(array_keys($cost_table))) {
@@ -626,7 +626,7 @@ function wholesale_cl_letter_cost($cost_table, $options, $letter, $element)
 	return $cost;
 }
 
-function wholesale_cl_rate_for_size($cost_table, $inches)
+function retails_cl_rate_for_size($cost_table, $inches)
 {
 	$size = (int) floor((float) $inches);
 	return isset($cost_table[$size]) ? $cost_table[$size] : null;
@@ -636,7 +636,7 @@ function wholesale_cl_rate_for_size($cost_table, $inches)
  * The rate for one letter by its longer side, as B2Sign prices it: rounded up to the next inch,
  * within the product's table (a small lowercase letter pays the smallest height's price).
  */
-function wholesale_cl_rate_for_side($cost_table, $side)
+function retails_cl_rate_for_side($cost_table, $side)
 {
 	if (!$cost_table) {
 		return null;
@@ -648,7 +648,7 @@ function wholesale_cl_rate_for_side($cost_table, $side)
 }
 
 /** Separate pieces in one character, which B2Sign prices one by one: the dot of an i, an accent. */
-function wholesale_cl_char_pieces($char)
+function retails_cl_char_pieces($char)
 {
 	if (false !== strpos('ij!?:;="%', $char)) {
 		return 2;
@@ -664,9 +664,9 @@ function wholesale_cl_char_pieces($char)
  * Sizes are kept up to 2.5 times the text height, and the priced side at least half of it, so a
  * tampered design can't price letters far below their real size. Same as getTextLetters() in js/cl.js.
  */
-function wholesale_cl_text_letters($element, $height)
+function retails_cl_text_letters($element, $height)
 {
-	$pieces = wholesale_cl_text_pieces($element, $height);
+	$pieces = retails_cl_text_pieces($element, $height);
 	if (null !== $pieces) {
 		return $pieces;
 	}
@@ -692,12 +692,12 @@ function wholesale_cl_text_letters($element, $height)
  * Every separate piece of a text element's letters, as B2Sign prices them (Ug.splitTextByPathes() in its
  * builder): the dot of an i, the two dots of a colon and the three parts of a % are each a channel letter
  * of their own, sized by their own outline. From element "pieces": per non-space character, its pieces as
- * [[width, height], ...] in inches (js/cl-measure.js). Each piece is a letter as wholesale_cl_letter_cost()
+ * [[width, height], ...] in inches (js/cl-measure.js). Each piece is a letter as retails_cl_letter_cost()
  * reads it, with no character (one piece) and its longer side as the side the rate table prices, as on
  * B2Sign. Null when missing or not believable: a character that is always two pieces or more (i, j, !, ?,
  * :, ;, =, ", %) sent as one, or a letter or digit whose largest piece is under 30% of the text height.
  */
-function wholesale_cl_text_pieces($element, $height)
+function retails_cl_text_pieces($element, $height)
 {
 	$chars = preg_split('//u', preg_replace('/\s+/u', '', (string) ($element['text'] ?? '')), -1, PREG_SPLIT_NO_EMPTY);
 	$pieces = isset($element['pieces']) && is_array($element['pieces']) ? array_values($element['pieces']) : array();
@@ -733,7 +733,7 @@ function wholesale_cl_text_pieces($element, $height)
  * the builder measured letters): each real character at the text height, 80% as wide as it is tall
  * (the letter the rate table is priced for). Same as getTextLetters() in js/cl.js.
  */
-function wholesale_cl_text_letters_unmeasured($element, $height)
+function retails_cl_text_letters_unmeasured($element, $height)
 {
 	$letters = array();
 	foreach (preg_split('//u', (string) preg_replace('/\s+/u', '', (string) ($element['text'] ?? '')), -1, PREG_SPLIT_NO_EMPTY) ?: array() as $char) {
@@ -742,12 +742,12 @@ function wholesale_cl_text_letters_unmeasured($element, $height)
 	return $letters;
 }
 
-/** Pieces in a channel letter text, as the builder and B2Sign count them (wholesale_cl_char_pieces()). */
-function wholesale_cl_count_pieces($text)
+/** Pieces in a channel letter text, as the builder and B2Sign count them (retails_cl_char_pieces()). */
+function retails_cl_count_pieces($text)
 {
 	$pieces = 0;
 	foreach (preg_split('//u', (string) preg_replace('/\s+/u', '', (string) $text), -1, PREG_SPLIT_NO_EMPTY) ?: array() as $char) {
-		$pieces += wholesale_cl_char_pieces($char);
+		$pieces += retails_cl_char_pieces($char);
 	}
 	return $pieces;
 }
@@ -757,13 +757,13 @@ function wholesale_cl_count_pieces($text)
  * product discount): the builder's "cost-per-inch" group in product_cl_data. The product page prices
  * from the same table, so a text costs the same on both.
  */
-function wholesale_cl_cost_table($product_id)
+function retails_cl_cost_table($product_id)
 {
 	$cl_data = json_decode((string) get_post_meta($product_id, 'product_cl_data', true), true);
 	$table = array();
 	foreach (is_array($cl_data) ? $cl_data : array() as $group) {
 		if (is_array($group) && isset($group['id']) && 'cost-per-inch' === $group['id']) {
-			foreach (wholesale_attr_options($group) as $option) {
+			foreach (retails_attr_options($group) as $option) {
 				$table[(int) $option['label']] = (float) $option['value'];
 			}
 		}
@@ -783,7 +783,7 @@ function wholesale_cl_cost_table($product_id)
  * js/cl-measure.js (to 0.1"). Still reads the first version, {"g": [[width, ascent, descent], ...],
  * "t": width at the font size}, which a page loaded before 2026-11-15 sends.
  */
-function wholesale_cl_request_measure($request, $height)
+function retails_cl_request_measure($request, $height)
 {
 	$raw = isset($request['cl_measure']) && is_string($request['cl_measure']) ? json_decode($request['cl_measure'], true) : null;
 	$chars = preg_split('//u', (string) preg_replace('/\s+/u', '', (string) ($request['letters'] ?? '')), -1, PREG_SPLIT_NO_EMPTY);
@@ -848,12 +848,12 @@ function wholesale_cl_request_measure($request, $height)
  * Element sizes, text and colors come from the design; every dollar amount comes from
  * the product settings. Returns a WP_Error when the design can't be priced.
  */
-function wholesale_cl_design_quote($product_id, $design)
+function retails_cl_design_quote($product_id, $design)
 {
 	$cl_data = json_decode((string) get_post_meta($product_id, 'product_cl_data', true), true);
 	$cl_data = is_array($cl_data) ? $cl_data : array();
 
-	$cost_table = wholesale_cl_cost_table($product_id);
+	$cost_table = retails_cl_cost_table($product_id);
 	if (!$cost_table) {
 		return new WP_Error('no_rates', 'This product is not set up for online pricing yet. Please call us for a quote.');
 	}
@@ -863,7 +863,7 @@ function wholesale_cl_design_quote($product_id, $design)
 		return new WP_Error('empty_design', 'Your design is empty. Add your letters in the builder first.');
 	}
 
-	$option_prices = wholesale_cl_option_prices($product_id);
+	$option_prices = retails_cl_option_prices($product_id);
 	$letters_cost = 0.0;
 	foreach ($elements as $element) {
 		if (!is_array($element)) {
@@ -874,40 +874,40 @@ function wholesale_cl_design_quote($product_id, $design)
 		$height = (float) ($element['height'] ?? 0);
 
 		if ('Raceway' === $type) {
-			$letters_cost += ($width / 12) * WHOLESALE_RACEWAY_COST_PER_FOOT;
+			$letters_cost += ($width / 12) * RETAILS_RACEWAY_COST_PER_FOOT;
 			continue;
 		}
 
-		$face_rate = wholesale_cl_face_rate($product_id, $cl_data, isset($element['faceColor']) && is_array($element['faceColor']) ? $element['faceColor'] : array());
+		$face_rate = retails_cl_face_rate($product_id, $cl_data, isset($element['faceColor']) && is_array($element['faceColor']) ? $element['faceColor'] : array());
 		if (null === $face_rate) {
 			return new WP_Error('bad_color', 'One of the colors in your design is no longer available. Please pick another color in the builder.');
 		}
 
 		if ('Text' === $type) {
-			$count = wholesale_count_letters($element['text'] ?? '');
-			$rate = wholesale_cl_rate_for_size($cost_table, $height);
+			$count = retails_count_letters($element['text'] ?? '');
+			$rate = retails_cl_rate_for_size($cost_table, $height);
 			if (!$count) {
 				continue;
 			}
 			if (null === $rate) {
 				return new WP_Error('bad_size', sprintf('Letter height must be between %d" and %d". Please resize your letters in the builder.', min(array_keys($cost_table)), max(array_keys($cost_table))));
 			}
-			// Like B2Sign: every letter by its own size (wholesale_cl_letter_cost()), and every separate
+			// Like B2Sign: every letter by its own size (retails_cl_letter_cost()), and every separate
 			// piece (the dot of an i) priced on its own. Without measured letters, all take the text height.
-			$letters = wholesale_cl_text_letters($element, $height);
+			$letters = retails_cl_text_letters($element, $height);
 			if (!$letters) {
-				$letters = wholesale_cl_text_letters_unmeasured($element, $height);
+				$letters = retails_cl_text_letters_unmeasured($element, $height);
 			}
 		} else {
 			// A shape is one piece, priced on its larger side like a letter (rounded up) and by its width x height.
 			$size = max($width, $height);
-			if (null === wholesale_cl_rate_for_size($cost_table, $size)) {
+			if (null === retails_cl_rate_for_size($cost_table, $size)) {
 				return new WP_Error('bad_size', sprintf('Shapes must be between %d" and %d". Please resize them in the builder.', min(array_keys($cost_table)), max(array_keys($cost_table))));
 			}
 			$letters = array(array('char' => '', 'side' => $size, 'raw' => $size, 'w' => $width, 'h' => $height));
 		}
 		foreach ($letters as $letter) {
-			$cost = wholesale_cl_letter_cost($cost_table, $option_prices, $letter, $element);
+			$cost = retails_cl_letter_cost($cost_table, $option_prices, $letter, $element);
 			$letters_cost += $cost['letter'] + $letter['side'] * $face_rate + $cost['lexan'] + $cost['trimcap'];
 		}
 	}
@@ -946,12 +946,12 @@ function wholesale_cl_design_quote($product_id, $design)
  * minimum charge and the full sheet price, as on B2Sign's rigid signs (checked against
  * B2Sign coroplast quotes 2026-11-05). Other products keep them inside the minimum.
  */
-function wholesale_product_flat_options_on_top($product_id)
+function retails_product_flat_options_on_top($product_id)
 {
 	return has_term('rigid-signs-and-magnets', 'product_category', $product_id);
 }
 
-function wholesale_price_quote($product_id, $request, $design = null)
+function retails_price_quote($product_id, $request, $design = null)
 {
 	$fail = static function ($message) {
 		return array('ok' => false, 'error' => $message, 'unit_price' => 0, 'quantity' => 1, 'subtotal' => 0, 'discount_percent' => 0, 'discount' => 0, 'turnaround' => 0, 'total' => 0, 'lines' => array());
@@ -962,8 +962,8 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		return $fail('This product is no longer available.');
 	}
 
-	$is_cl = wholesale_product_is_channel_letter($product_id);
-	$attrs = wholesale_product_price_attrs($product_id);
+	$is_cl = retails_product_is_channel_letter($product_id);
+	$attrs = retails_product_price_attrs($product_id);
 	$lines = array();
 	$min_sqft = max(0, (float) get_post_meta($product_id, '_min_sqft', true));
 	$price_per_sqft = max(0, (float) get_post_meta($product_id, '_price_per_sqft', true));
@@ -977,7 +977,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	$height_ft = 0.0;
 
 	if ($is_cl && is_array($design)) {
-		$design_total = wholesale_cl_design_quote($product_id, $design);
+		$design_total = retails_cl_design_quote($product_id, $design);
 		if (is_wp_error($design_total)) {
 			return $fail($design_total->get_error_message());
 		}
@@ -985,17 +985,17 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		$lines[] = array('label' => 'Your channel letter design', 'amount' => $design_total);
 		$attrs = array(); // The builder design already includes every option.
 	} elseif ($is_cl) {
-		$letter_count = wholesale_count_letters($request['letters'] ?? '');
+		$letter_count = retails_count_letters($request['letters'] ?? '');
 		if (!$letter_count) {
 			return $fail('Enter the text for your sign so we can calculate a price.');
 		}
-		$height_value = wholesale_request_attr_value($request, 'height');
+		$height_value = retails_request_attr_value($request, 'height');
 		$per_letter = null;
 		foreach ($attrs as $attr) {
 			if ('height' !== ($attr['name'] ?? '')) {
 				continue;
 			}
-			foreach (wholesale_attr_options($attr) as $option) {
+			foreach (retails_attr_options($attr) as $option) {
 				if (null !== $height_value && trim($option['value']) === trim($height_value)) {
 					$per_letter = (float) $option['value'];
 					$letter_height = (int) $option['label'];
@@ -1006,39 +1006,39 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		if (null === $per_letter) {
 			return $fail('Please choose a letter height.');
 		}
-		// Priced as the builder prices the same text (wholesale_cl_design_quote()): from its rate table,
+		// Priced as the builder prices the same text (retails_cl_design_quote()): from its rate table,
 		// each letter by its own size in the chosen font as the page measured it (a W is wider than tall,
 		// a lowercase letter shorter), every separate piece (the dot of an i, an accent) at a letter price,
 		// and B2Sign's piece rules. Without a measurement every letter takes the chosen height.
-		$cost_table = wholesale_cl_cost_table($product_id);
+		$cost_table = retails_cl_cost_table($product_id);
 		if (!isset($cost_table[$letter_height])) {
 			// No builder rate table for this height: the height dropdown's own prices.
 			$cost_table = array();
 			foreach ($attrs as $attr) {
 				if ('height' === ($attr['name'] ?? '')) {
-					foreach (wholesale_attr_options($attr) as $option) {
+					foreach (retails_attr_options($attr) as $option) {
 						$cost_table[(int) $option['label']] = (float) $option['value'];
 					}
 				}
 			}
 		}
-		$cl_measure = wholesale_cl_request_measure($request, $letter_height);
+		$cl_measure = retails_cl_request_measure($request, $letter_height);
 		$cl_element = array('text' => (string) ($request['letters'] ?? ''), 'glyphs' => $cl_measure ? $cl_measure['glyphs'] : null, 'pieces' => $cl_measure ? $cl_measure['pieces'] : null);
-		$cl_letters = wholesale_cl_text_letters($cl_element, $letter_height) ?: wholesale_cl_text_letters_unmeasured($cl_element, $letter_height);
-		$cl_option_prices = wholesale_cl_option_prices($product_id);
+		$cl_letters = retails_cl_text_letters($cl_element, $letter_height) ?: retails_cl_text_letters_unmeasured($cl_element, $letter_height);
+		$cl_option_prices = retails_cl_option_prices($product_id);
 		$running = 0.0;
 		// Inches of letter the per-inch faces are charged on, and what a Lexan face adds, letter by letter as in the builder.
 		$cl_face_inches = 0.0;
 		$cl_lexan = 0.0;
 		foreach ($cl_letters as $cl_letter) {
-			$cl_cost = wholesale_cl_letter_cost($cost_table, $cl_option_prices, $cl_letter, array('faceColor' => array('title' => 'Lexan White')));
+			$cl_cost = retails_cl_letter_cost($cost_table, $cl_option_prices, $cl_letter, array('faceColor' => array('title' => 'Lexan White')));
 			$running += $cl_cost['letter'];
 			$cl_lexan += $cl_cost['lexan'];
 			$cl_face_inches += $cl_letter['side'];
 		}
 		// The raceway runs the width of the text, as B2Sign measures it.
 		$cl_text_width = $cl_measure ? $cl_measure['width'] : $letter_height * $letter_count;
-		$letter_pieces = null !== wholesale_cl_text_pieces($cl_element, $letter_height) ? count($cl_letters) : max($letter_count, wholesale_cl_count_pieces($request['letters'] ?? ''));
+		$letter_pieces = null !== retails_cl_text_pieces($cl_element, $letter_height) ? count($cl_letters) : max($letter_count, retails_cl_count_pieces($request['letters'] ?? ''));
 		$lines[] = array('label' => $letter_pieces > $letter_count ? sprintf('%d letters (%d pieces) at %d"', $letter_count, $letter_pieces, $letter_height) : sprintf('%d letters at %d"', $letter_count, $letter_height), 'amount' => $running);
 	} else {
 		$has_calculator = !get_post_meta($product_id, '_hide_calculator', true);
@@ -1047,10 +1047,10 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		foreach ($attrs as $attr) {
 			$css = (string) ($attr['cssClass'] ?? '');
 			if (false !== strpos($css, 'size-width-inch')) {
-				$width_attr_value = wholesale_request_attr_value($request, $attr['name']);
+				$width_attr_value = retails_request_attr_value($request, $attr['name']);
 			}
 			if (false !== strpos($css, 'size-height-inch')) {
-				$height_attr_value = wholesale_request_attr_value($request, $attr['name']);
+				$height_attr_value = retails_request_attr_value($request, $attr['name']);
 			}
 		}
 
@@ -1062,35 +1062,35 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		} elseif ($has_calculator) {
 			$height_ft = (float) ($request['height-ft'] ?? 0) + (float) ($request['height-in'] ?? 0) / 12;
 			$width_ft = (float) ($request['width-ft'] ?? 0) + (float) ($request['width-in'] ?? 0) / 12;
-			// The smallest size: a width and height (wholesale_product_min_sides()), or else the
-			// area that reaches the minimum order price (wholesale_product_min_area()).
+			// The smallest size: a width and height (retails_product_min_sides()), or else the
+			// area that reaches the minimum order price (retails_product_min_area()).
 			foreach (array('height' => $height_ft, 'width' => $width_ft) as $label => $value) {
 				if ($value <= 0) {
-					return $fail(sprintf('Please enter the %s of your %s.', $label, wholesale_product_noun($product_id)));
+					return $fail(sprintf('Please enter the %s of your %s.', $label, retails_product_noun($product_id)));
 				}
 			}
 			$is_sqft_calc = true;
 			$sqft = $height_ft * $width_ft;
-			$min_sides = wholesale_product_min_sides($product_id);
+			$min_sides = retails_product_min_sides($product_id);
 			// Like B2Sign, a size outside the limits is still priced (the page shows it) but
 			// the quote is not ok, so it can't reach the cart.
 			if ($min_sides && ($width_ft * 12 < $min_sides[0] - 0.000001 || $height_ft * 12 < $min_sides[1] - 0.000001)) {
 				$size_error = sprintf('The smallest size for this product is %s" x %s" (width x height). Please enter a larger size.', $min_sides[0] + 0, $min_sides[1] + 0);
 			}
-			$max_sides = wholesale_product_max_sides($product_id);
+			$max_sides = retails_product_max_sides($product_id);
 			if ($max_sides && (min($width_ft, $height_ft) * 12 > $max_sides[0] + 0.000001 || max($width_ft, $height_ft) * 12 > $max_sides[1] + 0.000001)) {
 				$size_error = sprintf('The largest size for this product is %1$s" x %2$s" or %2$s" x %1$s". Please enter a smaller size.', $max_sides[0] + 0, $max_sides[1] + 0);
 			}
-			$min_area = wholesale_product_min_area($product_id);
+			$min_area = retails_product_min_area($product_id);
 			if ($sqft < $min_area - 0.000001) {
-				return $fail(sprintf('The smallest size for this product is %s sq ft (for example %s). Please enter a larger size.', number_format($min_area, 2), wholesale_min_area_example($min_area)));
+				return $fail(sprintf('The smallest size for this product is %s sq ft (for example %s). Please enter a larger size.', number_format($min_area, 2), retails_min_area_example($min_area)));
 			}
 		}
 
 		$running = $sqft * $price_per_sqft;
 		$lines[] = array('label' => $has_calculator || null !== $width_attr_value ? sprintf('%s sq ft', number_format($sqft, 2)) : 'Base price', 'amount' => $running);
 		// Dropdown sizes priced like B2Sign (meta _size_dropdown): the width's add-on, and its minimum below.
-		$size_dropdown = null !== $width_attr_value && null !== $height_attr_value ? wholesale_size_dropdown_pricing($product_id) : null;
+		$size_dropdown = null !== $width_attr_value && null !== $height_attr_value ? retails_size_dropdown_pricing($product_id) : null;
 		if ($size_dropdown) {
 			$width_key = (string) (0 + (float) $width_attr_value);
 			if (!isset($size_dropdown['w'][$width_key])) {
@@ -1102,7 +1102,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 				$running += $width_add;
 			}
 			$extra = $size_dropdown['extra'];
-			if ($extra && null !== ($chosen_extra = wholesale_request_attr_value($request, $extra['attr'])) && trim($chosen_extra) === trim($extra['value'])) {
+			if ($extra && null !== ($chosen_extra = retails_request_attr_value($request, $extra['attr'])) && trim($chosen_extra) === trim($extra['value'])) {
 				$dropdown_min += $extra['min'];
 			}
 		}
@@ -1113,22 +1113,22 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	// Flat-priced options (grommets, H-stake) on a rigid size calculator product: added on
 	// top of the minimum charge and the full sheet price below, as B2Sign does.
 	$flat_total = 0.0;
-	$flat_on_top = $is_sqft_calc && wholesale_product_flat_options_on_top($product_id);
+	$flat_on_top = $is_sqft_calc && retails_product_flat_options_on_top($product_id);
 	foreach ($attrs as $attr) {
-		$options = wholesale_attr_options($attr);
+		$options = retails_attr_options($attr);
 		$css = (string) ($attr['cssClass'] ?? '');
 		// Single-option attributes are shown as fixed text (charged only when they carry a
 		// price, e.g. an included H-stake), and avoid-price ones are handled above.
-		$fixed = 1 === count($options) && 0.0 !== round(wholesale_parse_option_price($options[0]['value'])['amount'], 2);
+		$fixed = 1 === count($options) && 0.0 !== round(retails_parse_option_price($options[0]['value'])['amount'], 2);
 		if (count($options) < 2 && !$fixed || false !== strpos($css, 'avoid-price') || 'height' === ($attr['name'] ?? '') && $is_cl) {
 			continue;
 		}
 		// The calculator's typed size replaces a preset size dropdown.
-		if ($is_sqft_calc && wholesale_attr_is_preset_size($attr)) {
+		if ($is_sqft_calc && retails_attr_is_preset_size($attr)) {
 			continue;
 		}
 
-		$submitted = wholesale_request_attr_value($request, $attr['name']);
+		$submitted = retails_request_attr_value($request, $attr['name']);
 		$chosen = $fixed ? $options[0] : null;
 		foreach ($fixed ? array() : $options as $option) {
 			if (null !== $submitted && (trim($option['value']) === trim($submitted) || sanitize_text_field($option['value']) === trim($submitted))) {
@@ -1137,7 +1137,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			}
 		}
 		if (null === $chosen) {
-			return $fail(sprintf('Please choose a valid %s.', strtolower(wholesale_attr_label($attr['name']))));
+			return $fail(sprintf('Please choose a valid %s.', strtolower(retails_attr_label($attr['name']))));
 		}
 		if (in_array(strtolower((string) $attr['name']), array('of-sides', 'sides'), true) && (int) $chosen['label'] > 1) {
 			$sides = (int) $chosen['label'];
@@ -1146,7 +1146,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			$sides = 2;
 		}
 
-		$price = wholesale_parse_option_price($chosen['value']);
+		$price = retails_parse_option_price($chosen['value']);
 		switch ($price['type']) {
 			case '%total':
 				// Applied after the loop, to the item with every other option.
@@ -1185,7 +1185,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		}
 
 		if (0.0 !== round($amount, 2)) {
-			$lines[] = array('label' => wholesale_attr_label($attr['name']) . ': ' . $chosen['label'], 'amount' => $amount);
+			$lines[] = array('label' => retails_attr_label($attr['name']) . ': ' . $chosen['label'], 'amount' => $amount);
 		}
 		$running += $amount;
 	}
@@ -1193,11 +1193,11 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	foreach ($percent_total as $item) {
 		$amount = $base_running * $item['percent'] / 100;
 		if (0.0 !== round($amount, 2)) {
-			$lines[] = array('label' => wholesale_attr_label($item['attr']['name']) . ': ' . $item['chosen']['label'], 'amount' => $amount);
+			$lines[] = array('label' => retails_attr_label($item['attr']['name']) . ': ' . $item['chosen']['label'], 'amount' => $amount);
 		}
 		$running += $amount;
 	}
-	// Channel letters: to the cent before the discount, as a builder design is (wholesale_cl_design_quote()),
+	// Channel letters: to the cent before the discount, as a builder design is (retails_cl_design_quote()),
 	// so the same sign never differs by a cent between the product page and the builder.
 	if ($is_cl) {
 		$running = round($running, 2);
@@ -1216,7 +1216,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	$minimum_order = 0;
 	$extra_sides = max(0, $sides - 1);
 	$printed = $running - $flat_total;
-	$min_price = $is_sqft_calc && $keep > 0 ? wholesale_product_min_order($product_id) : 0;
+	$min_price = $is_sqft_calc && $keep > 0 ? retails_product_min_order($product_id) : 0;
 	$min_one_side = $min_price;
 	// _min_order_per_side: the minimum is per printed side (B2Sign banners: $8 one side, $16 two).
 	if (get_post_meta($product_id, '_min_order_per_side', true)) {
@@ -1251,7 +1251,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	$quantity = min(1000, max(1, absint($request['product_quantity'] ?? 1)));
 	// B2Sign's quantity pricing, mirrored by SFS B2Sign Sync (meta _qty_pricing): the lowest price per
 	// item depends on the quantity, and rigid boards never cost more than the full sheets they need.
-	$qty_pricing = $is_cl ? null : wholesale_product_qty_pricing($product_id);
+	$qty_pricing = $is_cl ? null : retails_product_qty_pricing($product_id);
 	if ($qty_pricing && $keep > 0) {
 		$printed_now = $running - $flat_total;
 		$tier_min = 0.0;
@@ -1274,7 +1274,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			$unit_printed = min($unit_printed, $max_price / $keep);
 		}
 		if (!empty($qty_pricing['sheet']) && $is_sqft_calc) {
-			$per_sheet = wholesale_pieces_per_sheet($width_ft * 12, $height_ft * 12, $qty_pricing['sheet']['w'], $qty_pricing['sheet']['h']);
+			$per_sheet = retails_pieces_per_sheet($width_ft * 12, $height_ft * 12, $qty_pricing['sheet']['w'], $qty_pricing['sheet']['h']);
 			if ($per_sheet > 0) {
 				// A two-sided sheet costs more (B2Sign coroplast $33.99 against $29.99).
 				$sheet_price = $qty_pricing['sheet']['price'] + $extra_sides * $qty_pricing['sheet']['extra_side'];
@@ -1293,7 +1293,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 			$unit_printed = $printed_now + ($tier_unit - $first_unit) / $keep;
 			// A chosen option whose own difference changes with the quantity (meta _qty_pricing "opt").
 			foreach ($qty_pricing['opt'] as $o) {
-				$chosen_opt = wholesale_request_attr_value($request, $o[0]);
+				$chosen_opt = retails_request_attr_value($request, $o[0]);
 				if (null === $chosen_opt || trim($chosen_opt) !== trim($o[1])) {
 					continue;
 				}
@@ -1330,22 +1330,22 @@ function wholesale_price_quote($product_id, $request, $design = null)
 	// A dated sale (Settings > Storefront Sign) comes off the everyday price, after the
 	// product's own price adjustment above. Zero outside the sale's dates.
 	$everyday = $subtotal - $discount;
-	$promo_percent = wholesale_product_promotion_percent($product_id);
-	// Rounded the way the shown sale price is (wholesale_promotion_price()), so a
+	$promo_percent = retails_product_promotion_percent($product_id);
+	// Rounded the way the shown sale price is (retails_promotion_price()), so a
 	// half cent can't make checkout differ from the advertised price.
-	$promo_discount = $promo_percent > 0 ? round($everyday, 2) - wholesale_promotion_price($product_id, round($everyday, 2)) : 0.0;
+	$promo_discount = $promo_percent > 0 ? round($everyday, 2) - retails_promotion_price($product_id, round($everyday, 2)) : 0.0;
 	$discount += $promo_discount;
 
 	$turnaround = 0.0;
 	$turnaround_label = '';
 	// Per-product production times mirrored from B2Sign (meta _turnaround_spec): which choices a quantity
 	// allows, their Pacific cut-off and their surcharge. Products without it keep Next Day / Same Day +100%.
-	$turnaround_spec = $is_cl ? array() : wholesale_product_turnaround_spec($product_id);
+	$turnaround_spec = $is_cl ? array() : retails_product_turnaround_spec($product_id);
 	// What each choice would add at this price, for the "+$8.00" / "Free" B2Sign shows next to each one.
 	$turnaround_options = array();
 	if ($turnaround_spec) {
 		$typed = $width_ft > 0 && $height_ft > 0 ? array($width_ft * 12, $height_ft * 12) : null;
-		$chosen = wholesale_turnaround_choice($turnaround_spec, (string) ($request['turnaround_option'] ?? ''), $quantity, $typed);
+		$chosen = retails_turnaround_choice($turnaround_spec, (string) ($request['turnaround_option'] ?? ''), $quantity, $typed);
 		if (is_string($chosen)) {
 			return $fail($chosen);
 		}
@@ -1354,11 +1354,11 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		foreach ($turnaround_spec as $o) {
 			$turnaround_options[$o['value']] = round($subtotal * $o['percent'] / 100, 2);
 		}
-	} elseif (!$is_cl && wholesale_product_turnaround_none($product_id)) {
+	} elseif (!$is_cl && retails_product_turnaround_none($product_id)) {
 		// B2Sign offers no production-time choice for this product (hardware): nothing to choose or charge.
 		$turnaround = 0.0;
 	} elseif (!$is_cl && isset($request['turnaround_option']) && 'same_day' === $request['turnaround_option']) {
-		if (!wholesale_same_day_available()) {
+		if (!retails_same_day_available()) {
 			return $fail('Same-day production is only available for orders placed before 12pm PST. Please choose Next Day.');
 		}
 		$turnaround = $subtotal;
@@ -1395,7 +1395,7 @@ function wholesale_price_quote($product_id, $request, $design = null)
 /**
  * The saved builder design for a product in this visitor's session, if any.
  */
-function wholesale_session_cl_design($product_id)
+function retails_session_cl_design($product_id)
 {
 	if (empty($_SESSION['design_data_' . $product_id])) {
 		return null;
@@ -1411,11 +1411,11 @@ function wholesale_session_cl_design($product_id)
  *
  * @return array|WP_Error The stored design.
  */
-function wholesale_store_session_cl_design($product_id, $design_id, $design_json)
+function retails_store_session_cl_design($product_id, $design_id, $design_json)
 {
 	$product_id = absint($product_id);
 	$design_id = absint($design_id);
-	wholesale_get_cart(); // Loads the Cart class, which AJAX requests don't include.
+	retails_get_cart(); // Loads the Cart class, which AJAX requests don't include.
 	if (!Cart::is_session_design($design_id)) {
 		return new WP_Error('invalid_design', 'Your design image could not be found. Please try again.');
 	}
@@ -1424,12 +1424,12 @@ function wholesale_store_session_cl_design($product_id, $design_id, $design_json
 		return new WP_Error('invalid_design', 'Add letters or a shape to your design first.');
 	}
 
-	$old_design = wholesale_session_cl_design($product_id);
+	$old_design = retails_session_cl_design($product_id);
 	$old_design_id = $old_design && isset($old_design['design_id']) ? absint($old_design['design_id']) : 0;
 	if ($old_design_id && $old_design_id !== $design_id && Cart::is_session_design($old_design_id)) {
 		// Never delete an image a cart line still shows.
 		$in_cart = false;
-		foreach (wholesale_get_cart()->get_items() as $item) {
+		foreach (retails_get_cart()->get_items() as $item) {
 			$in_cart = $in_cart || absint($item->design_id ?? 0) === $old_design_id;
 		}
 		if (!$in_cart) {
@@ -1441,7 +1441,7 @@ function wholesale_store_session_cl_design($product_id, $design_id, $design_json
 	update_post_meta($design_id, '_cl_data', wp_slash(stripslashes((string) $design_json)));
 	$design['design_url'] = wp_get_attachment_url($design_id);
 	$design['design_id'] = $design_id;
-	$design['total_cost'] = wholesale_cl_design_total($design, $product_id);
+	$design['total_cost'] = retails_cl_design_total($design, $product_id);
 	$design['product_id'] = $product_id;
 	// Every reader runs stripslashes() before json_decode(), so store it slashed. Unescaped
 	// unicode keeps "CAFÉ" from being read back as "CAFu00c9" (extra letters charged).
@@ -1453,17 +1453,17 @@ function wholesale_store_session_cl_design($product_id, $design_id, $design_json
 /**
  * AJAX: live price for the product page, so the price shown is exactly what the cart charges.
  */
-function wholesale_ajax_price_quote()
+function retails_ajax_price_quote()
 {
 	$request = map_deep(wp_unslash($_POST), 'sanitize_text_field');
 	$product_id = absint($request['product_id'] ?? 0);
-	$design = wholesale_product_is_channel_letter($product_id) ? wholesale_session_cl_design($product_id) : null;
-	$quote = wholesale_price_quote($product_id, $request, $design);
+	$design = retails_product_is_channel_letter($product_id) ? retails_session_cl_design($product_id) : null;
+	$quote = retails_price_quote($product_id, $request, $design);
 
 	// Prices for the page's other choices, in the same request (js/main.js caches them): the
 	// next option the visitor picks shows its price at once, with no wait for the server. The
 	// page lists the fields and values ("variants": [[name, value], ...]); only fields already
-	// in this request are varied, each priced by the same wholesale_price_quote() as above.
+	// in this request are varied, each priced by the same retails_price_quote() as above.
 	// Not for a saved builder design, which lives in the session and can change under the page.
 	// Read raw and cleaned value by value below, as each field is when posted normally.
 	$variants = isset($_POST['variants']) && is_string($_POST['variants']) ? json_decode(wp_unslash($_POST['variants']), true) : null;
@@ -1484,7 +1484,7 @@ function wholesale_ajax_price_quote()
 			if (!isset($request[$name]) || is_array($request[$name]) || $value === (string) $request[$name]) {
 				continue;
 			}
-			$variant = wholesale_price_quote($product_id, array_merge($request, array($name => $value)), null);
+			$variant = retails_price_quote($product_id, array_merge($request, array($name => $value)), null);
 			unset($variant['lines']); // The page doesn't show them; keeps the answer small.
 			// The value as the page sent it, so the page can match it to its own form.
 			$quote['variants'][] = array($pair[0], (string) $pair[1], $variant);
@@ -1492,25 +1492,25 @@ function wholesale_ajax_price_quote()
 	}
 	wp_send_json($quote);
 }
-add_action('wp_ajax_wholesale_price_quote', 'wholesale_ajax_price_quote');
-add_action('wp_ajax_nopriv_wholesale_price_quote', 'wholesale_ajax_price_quote');
+add_action('wp_ajax_retails_price_quote', 'retails_ajax_price_quote');
+add_action('wp_ajax_nopriv_retails_price_quote', 'retails_ajax_price_quote');
 
 /**
- * Example total for a channel letter product, from wholesale_price_quote(): the product
+ * Example total for a channel letter product, from retails_price_quote(): the product
  * page's default selections (first face color, no raceway, and the standard power supply
  * the calculator adds once text is entered), for $letters letters at $inches tall.
  *
  * @return array|null array('total' => float, 'discount' => float) or null when it can't be priced.
  */
-function wholesale_cl_example_price($slug, $letters, $inches)
+function retails_cl_example_price($slug, $letters, $inches)
 {
 	$product = get_page_by_path($slug, OBJECT, 'product');
 	if (!$product) {
 		return null;
 	}
 	$request = array('letters' => str_repeat('A', max(1, (int) $letters)), 'product_quantity' => 1);
-	foreach (wholesale_product_price_attrs($product->ID) as $attr) {
-		$options = wholesale_attr_options($attr);
+	foreach (retails_product_price_attrs($product->ID) as $attr) {
+		$options = retails_attr_options($attr);
 		$name = (string) ($attr['name'] ?? '');
 		if (!$options || '' === $name) {
 			continue;
@@ -1529,7 +1529,7 @@ function wholesale_cl_example_price($slug, $letters, $inches)
 		}
 		$request[$name] = $value;
 	}
-	$quote = wholesale_price_quote($product->ID, $request);
+	$quote = retails_price_quote($product->ID, $request);
 
 	return $quote['ok'] ? array('total' => $quote['total'], 'discount' => $quote['discount']) : null;
 }
@@ -1537,23 +1537,23 @@ function wholesale_cl_example_price($slug, $letters, $inches)
 /**
  * Grand Total a fixed-price product (one with the size calculator hidden, like a pole
  * banner set) shows on its product page before the buyer changes anything: the first
- * choice of every option, quantity 1, from wholesale_price_quote(), so it's the price
+ * choice of every option, quantity 1, from retails_price_quote(), so it's the price
  * the cart charges. Null for calculator products, or when it can't be priced.
  */
-function wholesale_product_default_total($slug)
+function retails_product_default_total($slug)
 {
 	$product = get_page_by_path($slug, OBJECT, 'product');
 	if (!$product || !get_post_meta($product->ID, '_hide_calculator', true)) {
 		return null;
 	}
 	$request = array('product_quantity' => 1);
-	foreach (wholesale_product_price_attrs($product->ID) as $attr) {
-		$options = wholesale_attr_options($attr);
+	foreach (retails_product_price_attrs($product->ID) as $attr) {
+		$options = retails_attr_options($attr);
 		if ($options && !empty($attr['name'])) {
 			$request[$attr['name']] = $options[0]['value'];
 		}
 	}
-	$quote = wholesale_price_quote($product->ID, $request);
+	$quote = retails_price_quote($product->ID, $request);
 
 	return $quote['ok'] ? (float) $quote['total'] : null;
 }
@@ -1565,38 +1565,49 @@ function wholesale_product_default_total($slug)
  * own _discount_percent adjustment, which is never shown as a sale); only this sale shows
  * a badge or a struck-through price, and only between its start and end dates.
  */
-function wholesale_product_promotion($product_id)
+function retails_product_promotion($product_id)
 {
 	// A product's own dated sale (_promo_percent/_promo_start/_promo_end) replaces the
 	// site-wide one while it runs.
-	$own = wholesale_dated_sale_window(get_post_meta($product_id, '_promo_percent', true), get_post_meta($product_id, '_promo_start', true), get_post_meta($product_id, '_promo_end', true));
+	$own = retails_dated_sale_window(get_post_meta($product_id, '_promo_percent', true), get_post_meta($product_id, '_promo_start', true), get_post_meta($product_id, '_promo_end', true));
 	if ($own) {
 		return $own;
 	}
-	$window = wholesale_promotion_window();
+	$window = retails_promotion_window();
 	if (!$window) {
 		return null;
 	}
 	if ('channel-letters' === $window['scope'] || 'other' === $window['scope']) {
-		if (('channel-letters' === $window['scope']) !== wholesale_product_is_channel_letter($product_id)) {
+		if (('channel-letters' === $window['scope']) !== retails_product_is_channel_letter($product_id)) {
 			return null;
 		}
 	}
 
-	return array('percent' => $window['percent'], 'ends' => $window['ends']);
+	return array('percent' => $window['percent'], 'ends' => $window['ends'], 'name' => $window['name']);
+}
+
+/**
+ * "Black Friday Sale": the site-wide sale's name from Settings, or $fallback when it has
+ * none (a product's own dated sale never has a name).
+ */
+function retails_promotion_label($promotion, $fallback = 'Sale')
+{
+	$name = is_array($promotion) ? trim((string) ($promotion['name'] ?? '')) : '';
+	return '' !== $name ? $name : $fallback;
 }
 
 /**
  * The sale settings when today is within the sale's dates, whatever products it covers:
  * array('percent', 'ends', 'scope'), or null.
  */
-function wholesale_promotion_window()
+function retails_promotion_window()
 {
 	static $window = false;
 	if (false === $window) {
-		$window = wholesale_dated_sale_window(wholesale_get_setting('promo_percent'), wholesale_get_setting('promo_start'), wholesale_get_setting('promo_end'));
+		$window = retails_dated_sale_window(retails_get_setting('promo_percent'), retails_get_setting('promo_start'), retails_get_setting('promo_end'));
 		if ($window) {
-			$window['scope'] = (string) wholesale_get_setting('promo_scope');
+			$window['scope'] = (string) retails_get_setting('promo_scope');
+			$window['name'] = trim((string) retails_get_setting('promo_name'));
 		}
 	}
 
@@ -1607,7 +1618,7 @@ function wholesale_promotion_window()
  * A sale percent with Y-m-d start and end dates (Pacific): array('percent', 'ends')
  * when today is within them, else null.
  */
-function wholesale_dated_sale_window($percent, $start, $end)
+function retails_dated_sale_window($percent, $start, $end)
 {
 	$percent = min(90, max(0, (float) $percent));
 	$zone = new DateTimeZone('America/Los_Angeles');
@@ -1621,25 +1632,25 @@ function wholesale_dated_sale_window($percent, $start, $end)
 	return time() >= $start->getTimestamp() && time() <= $ends ? array('percent' => $percent, 'ends' => $ends) : null;
 }
 
-function wholesale_product_promotion_percent($product_id)
+function retails_product_promotion_percent($product_id)
 {
-	$promotion = wholesale_product_promotion($product_id);
+	$promotion = retails_product_promotion($product_id);
 	return $promotion ? (float) $promotion['percent'] : 0.0;
 }
 
 /**
  * An everyday price after the dated sale, or the price unchanged when no sale is running.
  */
-function wholesale_promotion_price($product_id, $everyday_price)
+function retails_promotion_price($product_id, $everyday_price)
 {
-	$percent = wholesale_product_promotion_percent($product_id);
+	$percent = retails_product_promotion_percent($product_id);
 	return $percent > 0 ? round($everyday_price * (1 - $percent / 100), 2) : $everyday_price;
 }
 
 /**
  * "Oct 31": the last day of a sale, for "ends ..." labels.
  */
-function wholesale_promotion_end_text($promotion)
+function retails_promotion_end_text($promotion)
 {
 	return wp_date('M j', $promotion['ends'], new DateTimeZone('America/Los_Angeles'));
 }
@@ -1648,12 +1659,12 @@ function wholesale_promotion_end_text($promotion)
  * Lowest price of one channel letter: the cheapest letter height on the product
  * page, with no paid options: before the product discount ('regular'), after it
  * ('everyday') and after any dated sale too ('price'). 'price' is what
- * wholesale_price_quote() charges for that letter, so a "from" price built on it is
+ * retails_price_quote() charges for that letter, so a "from" price built on it is
  * always one a buyer can actually pay.
  *
  * @return array|null array('regular' => float, 'everyday' => float, 'price' => float, 'height' => int) or null.
  */
-function wholesale_cl_from_price($product_id)
+function retails_cl_from_price($product_id)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
@@ -1662,11 +1673,11 @@ function wholesale_cl_from_price($product_id)
 	}
 
 	$cache[$product_id] = null;
-	foreach (wholesale_product_price_attrs($product_id) as $attr) {
+	foreach (retails_product_price_attrs($product_id) as $attr) {
 		if ('height' !== ($attr['name'] ?? '')) {
 			continue;
 		}
-		foreach (wholesale_attr_options($attr) as $option) {
+		foreach (retails_attr_options($attr) as $option) {
 			$value = (float) $option['value'];
 			if ($value > 0 && (null === $cache[$product_id] || $value < $cache[$product_id]['regular'])) {
 				$cache[$product_id] = array('regular' => $value, 'price' => 0.0, 'height' => (int) $option['label']);
@@ -1676,7 +1687,7 @@ function wholesale_cl_from_price($product_id)
 	if ($cache[$product_id]) {
 		$discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
 		$everyday = $cache[$product_id]['regular'] * (1 - $discount / 100);
-		$promo_percent = wholesale_product_promotion_percent($product_id);
+		$promo_percent = retails_product_promotion_percent($product_id);
 		$cache[$product_id]['everyday'] = round($everyday, 2);
 		$cache[$product_id]['price'] = round($promo_percent > 0 ? $everyday * (1 - $promo_percent / 100) : $everyday, 2);
 	}
@@ -1689,7 +1700,7 @@ function wholesale_cl_from_price($product_id)
  * The displayed rate is rounded up to a cent so it never understates the rate.
  * This is advertising copy only; the builder still quotes the full design.
  */
-function wholesale_cl_from_inch_rate($product_id)
+function retails_cl_from_inch_rate($product_id)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
@@ -1698,12 +1709,12 @@ function wholesale_cl_from_inch_rate($product_id)
 	}
 	$cache[$product_id] = null;
 	$discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
-	$promotion = wholesale_product_promotion_percent($product_id);
-	foreach (wholesale_product_price_attrs($product_id) as $attr) {
+	$promotion = retails_product_promotion_percent($product_id);
+	foreach (retails_product_price_attrs($product_id) as $attr) {
 		if ('height' !== ($attr['name'] ?? '')) {
 			continue;
 		}
-		foreach (wholesale_attr_options($attr) as $option) {
+		foreach (retails_attr_options($attr) as $option) {
 			$height = (int) $option['label'];
 			$regular = (float) $option['value'];
 			if ($height <= 0 || $regular <= 0) {
@@ -1729,9 +1740,9 @@ function wholesale_cl_from_inch_rate($product_id)
 /**
  * Advertised starting rate per inch of letter height, including dated sales.
  */
-function wholesale_cl_starting_text($product_id)
+function retails_cl_starting_text($product_id)
 {
-	$from = wholesale_cl_from_inch_rate($product_id);
+	$from = retails_cl_from_inch_rate($product_id);
 	if (!$from) {
 		return '';
 	}
@@ -1745,19 +1756,19 @@ function wholesale_cl_starting_text($product_id)
 
 /**
  * One worked example under the "from" price: 6 front lit letters at 12 inches with
- * the standard power supply (wholesale_cl_example_price()), plus shipping as the
+ * the standard power supply (retails_cl_example_price()), plus shipping as the
  * checkout charges it (free at or above the channel letter minimum). Empty when it can't be priced.
  */
-function wholesale_cl_worked_example_text()
+function retails_cl_worked_example_text()
 {
-	$example = wholesale_cl_example_price('standard-channel-letter-front-lit', 6, 12);
+	$example = retails_cl_example_price('standard-channel-letter-front-lit', 6, 12);
 	if (!$example) {
 		return '';
 	}
 	// Shipping follows the checkout rule: free at or above the channel letter minimum
-	// (wholesale_cart_qualifies_free_shipping()), else the cheapest channel rate.
+	// (retails_cart_qualifies_free_shipping()), else the cheapest channel rate.
 	return sprintf('Example: 6 front lit letters, 12&Prime; tall, with power supply: $%s', number_format($example['total'], 2))
-		. wholesale_cl_example_shipping_text($example['total']);
+		. retails_cl_example_shipping_text($example['total']);
 }
 
 /**
@@ -1765,15 +1776,15 @@ function wholesale_cl_worked_example_text()
  * real settings: the smallest letter height, whether any face color adds a per-inch
  * charge, and the dated sale behind a struck-through price. Sentences only, no markup.
  */
-function wholesale_cl_starting_price_note()
+function retails_cl_starting_price_note()
 {
 	$product = get_page_by_path('standard-channel-letter-front-lit', OBJECT, 'product');
-	$from = $product ? wholesale_cl_from_price($product->ID) : null;
+	$from = $product ? retails_cl_from_price($product->ID) : null;
 	if (!$from) {
 		return '';
 	}
 
-	$rate = wholesale_cl_from_inch_rate($product->ID);
+	$rate = retails_cl_from_inch_rate($product->ID);
 	$note = sprintf('Starting rates are per inch of letter height, before options. The lowest front lit rate is at %d&Prime;. Rates vary by height and style; enter your letters in the builder to see the full sign price, including options such as a raceway or power supply.', $rate ? $rate['height'] : $from['height']);
 
 	$cl_data = json_decode((string) get_post_meta($product->ID, 'product_cl_data', true), true);
@@ -1784,9 +1795,9 @@ function wholesale_cl_starting_price_note()
 		}
 	}
 
-	$promotion = wholesale_product_promotion($product->ID);
+	$promotion = retails_product_promotion($product->ID);
 	if ($promotion && $from['price'] < $from['everyday']) {
-		$note .= sprintf(' Struck-through prices are everyday prices; the lower price is our current sale, which ends %s.', wholesale_promotion_end_text($promotion));
+		$note .= sprintf(' Struck-through prices are everyday prices; the lower price is our %s, which ends %s.', esc_html(retails_promotion_label($promotion, 'current sale')), retails_promotion_end_text($promotion));
 	}
 
 	return $note;
@@ -1797,21 +1808,21 @@ function wholesale_cl_starting_price_note()
  * dropped, because product prices are everyday prices, not sales. During a dated sale
  * the price is struck through and the sale price follows it.
  */
-function wholesale_starting_text_for_sale($product_id, $text)
+function retails_starting_text_for_sale($product_id, $text)
 {
 	$text = trim(preg_replace('/<del\b[^>]*>.*?<\/del>\s*/is', '', (string) $text));
-	if (wholesale_product_promotion_percent($product_id) <= 0 || !preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', $text, $prices, PREG_OFFSET_CAPTURE)) {
+	if (retails_product_promotion_percent($product_id) <= 0 || !preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', $text, $prices, PREG_OFFSET_CAPTURE)) {
 		return $text;
 	}
 	$last = end($prices[0]);
-	$sale = wholesale_promotion_price($product_id, (float) str_replace(',', '', end($prices[1])[0]));
+	$sale = retails_promotion_price($product_id, (float) str_replace(',', '', end($prices[1])[0]));
 
 	return substr($text, 0, $last[1]) . '<del>' . $last[0] . '</del> $' . number_format($sale, 2) . substr($text, $last[1] + strlen($last[0]));
 }
 
 /**
  * The cheapest way to buy one of a product: the smallest-size quote Google gets
- * (wholesale_seo_product_lowest_price, default choices), then every choice of each
+ * (retails_seo_product_lowest_price, default choices), then every choice of each
  * option on its own, then the cheapest choice of every option together.
  *
  * @return array array('total' => what checkout charges now, after any dated sale and
@@ -1822,15 +1833,15 @@ function wholesale_starting_text_for_sale($product_id, $text)
  *                    SFS B2Sign Sync prices its proposed values this way, so the
  *                    "Starting at" it saves is exactly what the storefront shows.
  */
-function wholesale_product_cheapest_quote($product_id, $fresh = false)
+function retails_product_cheapest_quote($product_id, $fresh = false)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
 	if (!$fresh && isset($cache[$product_id])) {
 		return $cache[$product_id];
 	}
-	$lowest = function_exists('wholesale_seo_product_lowest_price') ? (float) wholesale_seo_product_lowest_price($product_id, $fresh) : 0.0;
-	$first = $GLOBALS['wholesale_seo_lowest_quote'][$product_id] ?? null;
+	$lowest = function_exists('retails_seo_product_lowest_price') ? (float) retails_seo_product_lowest_price($product_id, $fresh) : 0.0;
+	$first = $GLOBALS['retails_seo_lowest_quote'][$product_id] ?? null;
 	if ($lowest <= 0 || !is_array($first) || !is_array($first['request'] ?? null)) {
 		return $cache[$product_id] = array('total' => round($lowest, 2), 'everyday' => round($lowest, 2));
 	}
@@ -1845,14 +1856,14 @@ function wholesale_product_cheapest_quote($product_id, $fresh = false)
 		}
 	};
 	$pick = array();
-	foreach (wholesale_product_price_attrs($product_id) as $attr) {
-		$options = wholesale_attr_options($attr);
+	foreach (retails_product_price_attrs($product_id) as $attr) {
+		$options = retails_attr_options($attr);
 		if (empty($attr['name']) || count($options) < 2) {
 			continue;
 		}
 		$low = null;
 		foreach ($options as $option) {
-			$quote = wholesale_price_quote($product_id, array_merge($request, array($attr['name'] => $option['value'])));
+			$quote = retails_price_quote($product_id, array_merge($request, array($attr['name'] => $option['value'])));
 			$keep($quote);
 			if (!empty($quote['ok']) && $quote['total'] > 0 && (null === $low || $quote['total'] < $low[0])) {
 				$low = array((float) $quote['total'], $option['value']);
@@ -1863,18 +1874,18 @@ function wholesale_product_cheapest_quote($product_id, $fresh = false)
 		}
 	}
 	if (count($pick) > 1) {
-		$keep(wholesale_price_quote($product_id, array_merge($request, $pick)));
+		$keep(retails_price_quote($product_id, array_merge($request, $pick)));
 	}
 	return $cache[$product_id] = array('total' => round($best['total'], 2), 'everyday' => round($best['everyday'], 2));
 }
 
 /**
  * What checkout charges now for the cheapest way to buy one of a product (see
- * wholesale_product_cheapest_quote()). 0 when the product has no online price.
+ * retails_product_cheapest_quote()). 0 when the product has no online price.
  */
-function wholesale_product_cheapest_price($product_id)
+function retails_product_cheapest_price($product_id)
 {
-	$cheapest = wholesale_product_cheapest_quote($product_id);
+	$cheapest = retails_product_cheapest_quote($product_id);
 
 	return $cheapest['total'];
 }
@@ -1892,7 +1903,7 @@ function wholesale_product_cheapest_price($product_id)
  *
  * @return float 0 when the product has no online price.
  */
-function wholesale_product_starting_everyday($product_id)
+function retails_product_starting_everyday($product_id)
 {
 	static $store = null;
 	static $dirty = false;
@@ -1910,7 +1921,7 @@ function wholesale_product_starting_everyday($product_id)
 		});
 	}
 	$meta = get_post_meta($product_id);
-	unset($meta['_edit_lock'], $meta['_edit_last'], $meta['_starting_at_text'], $meta['_wholesale_review_pricing_snapshot']);
+	unset($meta['_edit_lock'], $meta['_edit_last'], $meta['_starting_at_text'], $meta['_retails_review_pricing_snapshot']);
 	foreach (array_keys((array) $meta) as $key) {
 		if (0 === strpos($key, 'rank_math_')) {
 			unset($meta[$key]);
@@ -1925,7 +1936,7 @@ function wholesale_product_starting_everyday($product_id)
 	if (isset($store[$product_id]['fp'], $store[$product_id]['everyday']) && $fingerprint === $store[$product_id]['fp']) {
 		return (float) $store[$product_id]['everyday'];
 	}
-	$cheapest = wholesale_product_cheapest_quote($product_id);
+	$cheapest = retails_product_cheapest_quote($product_id);
 	$store[$product_id] = array('fp' => $fingerprint, 'everyday' => (float) $cheapest['everyday']);
 	$dirty = true;
 
@@ -1937,7 +1948,7 @@ function wholesale_product_starting_everyday($product_id)
  * sq ft after its own discount), for a product with the size calculator shown. '' for
  * any other product.
  */
-function wholesale_product_sqft_starting_text($product_id)
+function retails_product_sqft_starting_text($product_id)
 {
 	$rate = (float) get_post_meta($product_id, '_price_per_sqft', true);
 	if ($rate <= 0 || get_post_meta($product_id, '_hide_calculator', true)) {
@@ -1954,16 +1965,16 @@ function wholesale_product_sqft_starting_text($product_id)
  * ft² too"): the per sq ft rate the cart charges ("$1.58 per ft²") for a size calculator
  * product whose stored text says per ft² (SFS B2Sign Sync writes it so), otherwise the
  * cheapest price checkout charges for one item before any dated sale ("$16.00 per item").
- * '' for channel letters (per inch, wholesale_cl_starting_text()) and for products with
+ * '' for channel letters (per inch, retails_cl_starting_text()) and for products with
  * no online price.
  *
  * @param string|null $unit  'sqft' or 'item'; null follows the stored text.
  * @param bool        $fresh Work the item price out again instead of using the cache
  *                           (SFS B2Sign Sync prices proposed values this way).
  */
-function wholesale_product_starting_text($product_id, $unit = null, $fresh = false)
+function retails_product_starting_text($product_id, $unit = null, $fresh = false)
 {
-	if (wholesale_product_is_channel_letter($product_id)) {
+	if (retails_product_is_channel_letter($product_id)) {
 		return '';
 	}
 	if (null === $unit) {
@@ -1972,16 +1983,16 @@ function wholesale_product_starting_text($product_id, $unit = null, $fresh = fal
 		$unit = preg_match('/per\s*(ft|sq)/i', wp_strip_all_tags((string) ($meta['_starting_at_text'][0] ?? ''))) ? 'sqft' : 'item';
 	}
 	if ('sqft' === $unit) {
-		$text = wholesale_product_sqft_starting_text($product_id);
+		$text = retails_product_sqft_starting_text($product_id);
 		if ('' !== $text) {
 			return $text;
 		}
 	}
 	if ($fresh) {
-		$cheapest = wholesale_product_cheapest_quote($product_id, true);
+		$cheapest = retails_product_cheapest_quote($product_id, true);
 		$everyday = (float) $cheapest['everyday'];
 	} else {
-		$everyday = wholesale_product_starting_everyday($product_id);
+		$everyday = retails_product_starting_everyday($product_id);
 	}
 
 	return $everyday > 0 ? '$' . number_format($everyday, 2) . ' per item' : '';
@@ -1992,24 +2003,24 @@ function wholesale_product_starting_text($product_id, $unit = null, $fresh = fal
  * pages, comparison tables, the builder's product switcher) gets the text shoppers
  * should see: the computed per-inch text above for channel letters, and for every other
  * product with an online price the live per ft² rate or cheapest item price, in the unit
- * its stored text names (wholesale_product_starting_text()), through
- * wholesale_starting_text_for_sale(). Only a product with no online
+ * its stored text names (retails_product_starting_text()), through
+ * retails_starting_text_for_sale(). Only a product with no online
  * price shows its stored text. The admin editor still shows and saves the stored value.
  */
 add_filter('get_post_metadata', function ($value, $object_id, $meta_key) {
 	static $reading = false;
-	if ('_starting_at_text' === $meta_key && !empty($GLOBALS['wholesale_starting_raw_read'][(int) $object_id])) {
+	if ('_starting_at_text' === $meta_key && !empty($GLOBALS['retails_starting_raw_read'][(int) $object_id])) {
 		// update_post_meta()'s own "has it changed?" read (see the update_post_metadata hook below).
-		unset($GLOBALS['wholesale_starting_raw_read'][(int) $object_id]);
+		unset($GLOBALS['retails_starting_raw_read'][(int) $object_id]);
 		return $value;
 	}
 	if ($reading || '_starting_at_text' !== $meta_key || null !== $value || (is_admin() && !wp_doing_ajax()) || 'product' !== get_post_type($object_id)) {
 		return $value;
 	}
-	$text = wholesale_product_is_channel_letter($object_id) ? wholesale_cl_starting_text($object_id) : '';
+	$text = retails_product_is_channel_letter($object_id) ? retails_cl_starting_text($object_id) : '';
 	if ('' === $text) {
 		$reading = true;
-		$stored = wholesale_product_starting_text($object_id);
+		$stored = retails_product_starting_text($object_id);
 		if ('' === $stored) {
 			$stored = (string) get_post_meta($object_id, '_starting_at_text', true);
 		}
@@ -2017,7 +2028,7 @@ add_filter('get_post_metadata', function ($value, $object_id, $meta_key) {
 		if ('' === $stored) {
 			return $value;
 		}
-		$text = wholesale_starting_text_for_sale($object_id, $stored);
+		$text = retails_starting_text_for_sale($object_id, $stored);
 		// Stored text varies ("$539per item", "Per Item"); show one form.
 		$text = preg_replace(array('/(\$[\d,]+(?:\.\d+)?)(?=per\b)/i', '/\bper\s+item\b/i'), array('$1 ', 'per item'), $text);
 	}
@@ -2034,19 +2045,19 @@ add_filter('get_post_metadata', function ($value, $object_id, $meta_key) {
  */
 add_filter('update_post_metadata', function ($check, $object_id, $meta_key) {
 	if (null === $check && '_starting_at_text' === $meta_key) {
-		$GLOBALS['wholesale_starting_raw_read'][(int) $object_id] = true;
+		$GLOBALS['retails_starting_raw_read'][(int) $object_id] = true;
 	}
 
 	return $check;
 }, PHP_INT_MAX, 3);
 add_action('update_post_meta', static function ($meta_id, $object_id, $meta_key) {
 	if ('_starting_at_text' === $meta_key) {
-		unset($GLOBALS['wholesale_starting_raw_read'][(int) $object_id]);
+		unset($GLOBALS['retails_starting_raw_read'][(int) $object_id]);
 	}
 }, 10, 3);
 add_action('add_post_meta', static function ($object_id, $meta_key) {
 	if ('_starting_at_text' === $meta_key) {
-		unset($GLOBALS['wholesale_starting_raw_read'][(int) $object_id]);
+		unset($GLOBALS['retails_starting_raw_read'][(int) $object_id]);
 	}
 }, 10, 2);
 
@@ -2054,21 +2065,21 @@ add_action('add_post_meta', static function ($object_id, $meta_key) {
  * Whole-number percentage for a product's sale badge: the dated sale running now,
  * rounded down so the badge never overstates it, or 0.
  */
-function wholesale_product_sale_percent($product_id)
+function retails_product_sale_percent($product_id)
 {
-	return (int) floor(min(99, wholesale_product_promotion_percent($product_id)));
+	return (int) floor(min(99, retails_product_promotion_percent($product_id)));
 }
 
 /**
  * Shopper price for one of a product's option amounts: the everyday price (after the
  * product discount), struck through with the sale price after it during a dated sale.
  */
-function wholesale_price_with_sale($product_id, $regular_price)
+function retails_price_with_sale($product_id, $regular_price)
 {
 	$regular_price = round((float) $regular_price, 2);
 	$discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
 	$everyday = round($regular_price * (1 - ($discount / 100)), 2);
-	$sale_price = wholesale_promotion_price($product_id, $everyday);
+	$sale_price = retails_promotion_price($product_id, $everyday);
 	$format = static function ($amount) {
 		return '$' . number_format($amount, 2, '.', ',');
 	};
@@ -2083,20 +2094,20 @@ function wholesale_price_with_sale($product_id, $regular_price)
 /**
  * Product image badge. Out of stock takes priority over any dated sale.
  */
-function wholesale_render_sale_badge($product_id, $percent = null)
+function retails_render_sale_badge($product_id, $percent = null)
 {
-	if ('outofstock' === wholesale_product_stock_status($product_id)) {
+	if ('outofstock' === retails_product_stock_status($product_id)) {
 		echo '<span class="sale-badge sale-badge--out-of-stock"><span class="sale-badge__label">' . esc_html__('Out of stock', 'litsign') . '</span></span>';
 		return;
 	}
 
-	$percent = null === $percent ? wholesale_product_sale_percent($product_id) : (int) $percent;
-	$promotion = wholesale_product_promotion($product_id);
+	$percent = null === $percent ? retails_product_sale_percent($product_id) : (int) $percent;
+	$promotion = retails_product_promotion($product_id);
 	if ($percent < 1 || !$promotion) {
 		return;
 	}
 	?>
-	<span class="sale-badge" role="img" aria-label="<?php echo esc_attr(sprintf(__('On sale: save %1$d%% through %2$s', 'litsign'), $percent, wholesale_promotion_end_text($promotion))); ?>">
+	<span class="sale-badge" role="img" aria-label="<?php echo esc_attr(sprintf(__('On sale: save %1$d%% through %2$s', 'litsign'), $percent, retails_promotion_end_text($promotion))); ?>">
 		<span class="sale-badge__label" aria-hidden="true"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor"/></svg><?php esc_html_e('Sale', 'litsign'); ?></span>
 		<span class="sale-badge__value" aria-hidden="true"><?php echo esc_html(sprintf(__('%d%% off', 'litsign'), $percent)); ?></span>
 	</span>

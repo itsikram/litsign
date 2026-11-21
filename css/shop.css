@@ -351,6 +351,115 @@
   white-space: nowrap;
 }
 
+/* Free shipping promo code box in the order summary (checkout.php, 2026-11-21). */
+.checkout-promo {
+  margin: 0 0 16px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--shop-line);
+}
+
+.checkout-promo__label {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--shop-ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.checkout-promo__row {
+  display: flex;
+  gap: 8px;
+}
+
+.checkout-promo__row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #cfd8e1;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--shop-ink);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.checkout-promo__row input::placeholder {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.checkout-promo__row input:focus {
+  border-color: var(--shop-brand);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(31, 168, 222, 0.18);
+}
+
+.checkout-promo__row input[aria-invalid="true"] {
+  border-color: #d64545;
+}
+
+.checkout-promo__apply {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1.5px solid var(--shop-ink);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--shop-ink);
+  font-weight: 700;
+}
+
+.checkout-promo__apply:hover,
+.checkout-promo__apply:focus-visible {
+  background: var(--shop-ink);
+  color: #fff;
+}
+
+.checkout-promo__applied {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #bbe5cb;
+  border-radius: 8px;
+  background: #effaf3;
+  color: #166534;
+  font-size: 0.9rem;
+}
+
+.checkout-promo__applied svg {
+  flex: none;
+}
+
+.checkout-promo__applied span {
+  flex: 1 1 auto;
+}
+
+.checkout-promo__remove {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #166534;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.checkout-promo__message {
+  margin: 6px 0 0;
+  color: var(--shop-muted);
+  font-size: 0.85rem;
+}
+
+.checkout-promo__message.is-error {
+  color: #b42318;
+}
+
 .checkout-totals {
   display: grid;
   gap: 8px;
@@ -1066,6 +1175,12 @@ a.checkout-pay:hover {
   align-items: start;
   max-width: 1080px;
   margin: 0 auto;
+}
+
+/* No order summary (order not found / guest): one centered card under the hero. */
+.confirmation-grid.is-single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 720px;
 }
 
 .confirmation-steps {

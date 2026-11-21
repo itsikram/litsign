@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
  * @param int    $product_id Product post ID.
  * @param string $modifier   Extra class suffix, e.g. 'page' for the product page.
  */
-function wholesale_admin_edit_product_link($product_id, $modifier = '')
+function retails_admin_edit_product_link($product_id, $modifier = '')
 {
 	$product_id = (int) $product_id;
 	if (!$product_id || !is_user_logged_in() || !current_user_can('edit_post', $product_id)) {
@@ -41,7 +41,7 @@ function wholesale_admin_edit_product_link($product_id, $modifier = '')
 /**
  * Pencil styles, printed only for users who can edit products.
  */
-function wholesale_admin_edit_pencil_styles()
+function retails_admin_edit_pencil_styles()
 {
 	if (is_admin() || !is_user_logged_in() || !current_user_can('edit_posts')) {
 		return;
@@ -65,4 +65,4 @@ function wholesale_admin_edit_pencil_styles()
 	</style>
 	<?php
 }
-add_action('wp_head', 'wholesale_admin_edit_pencil_styles', 99);
+add_action('wp_head', 'retails_admin_edit_pencil_styles', 99);

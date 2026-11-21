@@ -11,7 +11,7 @@
  * September 2026 compromise (casino, betting and dating articles). Only used
  * for requests that already 404, so a false match changes nothing but the code.
  */
-function wholesale_is_removed_spam_path($path)
+function retails_is_removed_spam_path($path)
 {
 	$slug = trim((string) $path, '/');
 	if ('' === $slug) {
@@ -34,7 +34,7 @@ function wholesale_is_removed_spam_path($path)
  * Answer removed spam URLs with 410 Gone so search engines drop them faster
  * than a plain 404. The normal 404 template still renders.
  */
-function wholesale_removed_spam_status()
+function retails_removed_spam_status()
 {
 	if (!is_404()) {
 		return;
@@ -46,11 +46,11 @@ function wholesale_removed_spam_status()
 		$path = substr((string) $path, strlen($home_path));
 	}
 
-	if (wholesale_is_removed_spam_path($path)) {
+	if (retails_is_removed_spam_path($path)) {
 		status_header(410);
 	}
 }
-add_action('template_redirect', 'wholesale_removed_spam_status', 2);
+add_action('template_redirect', 'retails_removed_spam_status', 2);
 
 /**
  * The owner's other domains (Settings > Storefront Sign > Domain redirects).
@@ -61,7 +61,7 @@ add_action('template_redirect', 'wholesale_removed_spam_status', 2);
  *
  * Hard-coded target: home_url() may follow the requested host on the live server.
  */
-function wholesale_domain_redirect_target()
+function retails_domain_redirect_target()
 {
 	return 'https://storefrontsignonline.com';
 }
@@ -80,9 +80,9 @@ function wholesale_domain_redirect_target()
  * @param array  $rejected Filled with "line: reason" for each line left out.
  * @return array<string,string> Host without www. => '' (same path) or a path.
  */
-function wholesale_parse_redirect_domains($text, &$rejected = array())
+function retails_parse_redirect_domains($text, &$rejected = array())
 {
-	$main = (string) wp_parse_url(wholesale_domain_redirect_target(), PHP_URL_HOST);
+	$main = (string) wp_parse_url(retails_domain_redirect_target(), PHP_URL_HOST);
 	$rules = array();
 	$rejected = array();
 
@@ -136,11 +136,11 @@ function wholesale_parse_redirect_domains($text, &$rejected = array())
 }
 
 /** The saved rules. @return array<string,string> */
-function wholesale_domain_redirect_rules()
+function retails_domain_redirect_rules()
 {
 	static $rules = null;
 	if (null === $rules) {
-		$rules = wholesale_parse_redirect_domains((string) wholesale_get_setting('domain_redirect_domains'));
+		$rules = retails_parse_redirect_domains((string) retails_get_setting('domain_redirect_domains'));
 	}
 	return $rules;
 }
@@ -149,25 +149,25 @@ function wholesale_domain_redirect_rules()
  * Where a request goes: the same path and query on the main site, or the
  * rule's page with the query kept, so ?gclid and UTM tags survive either way.
  */
-function wholesale_domain_redirect_url($path, $uri)
+function retails_domain_redirect_url($path, $uri)
 {
 	$uri = '/' === substr((string) $uri, 0, 1) ? (string) $uri : '/';
 	if ('' === $path) {
-		return wholesale_domain_redirect_target() . $uri;
+		return retails_domain_redirect_target() . $uri;
 	}
 	$query = (string) wp_parse_url($uri, PHP_URL_QUERY);
-	return wholesale_domain_redirect_target() . $path . ('' !== $query ? '?' . $query : '');
+	return retails_domain_redirect_target() . $path . ('' !== $query ? '?' . $query : '');
 }
 
 /** Settings sanitizer: the Domains box, cleaned, one rule per line. */
-function wholesale_sanitize_redirect_domains($value)
+function retails_sanitize_redirect_domains($value)
 {
 	static $reported = false; // A first save runs this twice (update_option, then add_option).
 
-	$rules = wholesale_parse_redirect_domains(is_string($value) ? $value : '', $rejected);
+	$rules = retails_parse_redirect_domains(is_string($value) ? $value : '', $rejected);
 	if ($rejected && !$reported && function_exists('add_settings_error')) {
 		$reported = true;
-		add_settings_error('wholesale_domain_redirect_domains', 'wholesale_domain_redirect_domains', 'Domain redirects: left out ' . implode('; ', $rejected) . '.', 'warning');
+		add_settings_error('retails_domain_redirect_domains', 'retails_domain_redirect_domains', 'Domain redirects: left out ' . implode('; ', $rejected) . '.', 'warning');
 	}
 
 	$lines = array();
@@ -177,22 +177,22 @@ function wholesale_sanitize_redirect_domains($value)
 	return implode("\n", $lines);
 }
 
-function wholesale_sanitize_redirect_status($value)
+function retails_sanitize_redirect_status($value)
 {
 	return '302' === (string) $value ? '302' : '301';
 }
 
-function wholesale_seo_redirect_extra_domains()
+function retails_seo_redirect_extra_domains()
 {
 	if (is_admin() || wp_doing_cron() || (defined('WP_CLI') && WP_CLI) || empty($_SERVER['HTTP_HOST'])
-		|| !wholesale_setting_enabled('domain_redirect_enabled')) {
+		|| !retails_setting_enabled('domain_redirect_enabled')) {
 		return;
 	}
 
 	// Only the listed domains, with or without www. The main domain, IPs and
-	// localhost can't be listed (see wholesale_parse_redirect_domains()).
+	// localhost can't be listed (see retails_parse_redirect_domains()).
 	$host = strtolower(preg_replace('/^www\.|:\d+$/', '', (string) wp_unslash($_SERVER['HTTP_HOST'])));
-	$rules = wholesale_domain_redirect_rules();
+	$rules = retails_domain_redirect_rules();
 	if (!isset($rules[$host])) {
 		return;
 	}
@@ -204,11 +204,11 @@ function wholesale_seo_redirect_extra_domains()
 		return;
 	}
 
-	$status = '302' === (string) wholesale_get_setting('domain_redirect_status') ? 302 : 301;
-	wp_redirect(wholesale_domain_redirect_url($rules[$host], $uri), $status, 'Storefront Sign domain redirects');
+	$status = '302' === (string) retails_get_setting('domain_redirect_status') ? 302 : 301;
+	wp_redirect(retails_domain_redirect_url($rules[$host], $uri), $status, 'Storefront Sign domain redirects');
 	exit;
 }
-add_action('init', 'wholesale_seo_redirect_extra_domains', 1);
+add_action('init', 'retails_seo_redirect_extra_domains', 1);
 
 /**
  * Plain-http requests for the main domain go to https. WordPress only does this
@@ -216,7 +216,7 @@ add_action('init', 'wholesale_seo_redirect_extra_domains', 1);
  * answered 200 over http, a second copy of the site. Like the extra domains, this
  * belongs at the server (root .htaccess); it runs here until it is there.
  */
-function wholesale_seo_redirect_to_https()
+function retails_seo_redirect_to_https()
 {
 	if (is_ssl() || is_admin() || wp_doing_cron() || (defined('WP_CLI') && WP_CLI) || empty($_SERVER['HTTP_HOST'])) {
 		return;
@@ -242,14 +242,14 @@ function wholesale_seo_redirect_to_https()
 	wp_redirect('https://storefrontsignonline.com' . ('/' === substr($uri, 0, 1) ? $uri : '/'), 301);
 	exit;
 }
-add_action('init', 'wholesale_seo_redirect_to_https', 1);
+add_action('init', 'retails_seo_redirect_to_https', 1);
 
 /**
  * WordPress's old-slug redirect (a renamed product, e.g. /product/pole-banner-set/,
  * a Google Ads sitelink) rebuilds the URL without the query string, which drops
  * ?gclid and UTM tags and breaks ad attribution. Carry them over.
  */
-function wholesale_seo_old_slug_keep_query($link)
+function retails_seo_old_slug_keep_query($link)
 {
 	$query = isset($_SERVER['QUERY_STRING']) ? (string) wp_unslash($_SERVER['QUERY_STRING']) : '';
 	if ('' === $query || false !== strpos((string) $link, '?')) {
@@ -259,14 +259,14 @@ function wholesale_seo_old_slug_keep_query($link)
 	parse_str($query, $args);
 	return $args ? add_query_arg(array_map('rawurlencode', array_filter($args, 'is_scalar')), $link) : $link;
 }
-add_filter('old_slug_redirect_url', 'wholesale_seo_old_slug_keep_query');
+add_filter('old_slug_redirect_url', 'retails_seo_old_slug_keep_query');
 
 /**
  * Permanently redirect leftover placeholder pages to the page that replaces them.
  *
  * @return array Page slug => target URL.
  */
-function wholesale_seo_page_redirects()
+function retails_seo_page_redirects()
 {
 	return array(
 		'sample-page' => home_url('/'),
@@ -274,35 +274,35 @@ function wholesale_seo_page_redirects()
 	);
 }
 
-function wholesale_seo_redirect_pages()
+function retails_seo_redirect_pages()
 {
 	if (!is_page()) {
 		return;
 	}
 
 	$slug = get_post_field('post_name', get_queried_object_id());
-	$redirects = wholesale_seo_page_redirects();
+	$redirects = retails_seo_page_redirects();
 
 	if ($slug && isset($redirects[$slug])) {
 		wp_safe_redirect($redirects[$slug], 301);
 		exit;
 	}
 }
-add_action('template_redirect', 'wholesale_seo_redirect_pages', 1);
+add_action('template_redirect', 'retails_seo_redirect_pages', 1);
 
 /**
  * The site has no blog authors: /author/{name}/ pages are thin duplicates
  * that also reveal admin user names. Send them home and keep them out of
  * the sitemap.
  */
-function wholesale_seo_redirect_author_archives()
+function retails_seo_redirect_author_archives()
 {
 	if (is_author()) {
 		wp_safe_redirect(home_url('/'), 301);
 		exit;
 	}
 }
-add_action('template_redirect', 'wholesale_seo_redirect_author_archives', 1);
+add_action('template_redirect', 'retails_seo_redirect_author_archives', 1);
 
 /**
  * WordPress answers a 404 by guessing a post whose slug starts with the
@@ -320,7 +320,7 @@ add_filter('pre_redirect_guess_404_permalink', function ($pre) {
 	}
 	$path = preg_replace('#/page/\d+$#i', '', strtolower($path));
 	$path = preg_replace('#^(?:product[_-]category|category)/#', '', $path);
-	$original = wholesale_seo_merge_copy_target($path);
+	$original = retails_seo_merge_copy_target($path);
 	if ($original) {
 		return $original;
 	}
@@ -345,8 +345,8 @@ add_filter('pre_redirect_guess_404_permalink', function ($pre) {
 	}
 
 	$term = get_term_by('slug', sanitize_title($path), 'product_category');
-	if ($term && !is_wp_error($term) && wholesale_seo_category_has_products($term)) {
-		return wholesale_category_url($term->slug);
+	if ($term && !is_wp_error($term) && retails_seo_category_has_products($term)) {
+		return retails_category_url($term->slug);
 	}
 
 	return $pre;
@@ -363,7 +363,7 @@ add_filter('pre_redirect_guess_404_permalink', function ($pre) {
  * @param string $path Request path without slashes at either end, lower case.
  * @return string Original URL, or '' when the path is not a copy of a live item.
  */
-function wholesale_seo_merge_copy_target($path)
+function retails_seo_merge_copy_target($path)
 {
 	if (!preg_match('#^(?:(product)/)?([a-z0-9-]+)-[2-9]$#', (string) $path, $m)) {
 		return '';
@@ -377,8 +377,8 @@ function wholesale_seo_merge_copy_target($path)
 
 	if ('' === $m[1]) {
 		$term = get_term_by('slug', $slug, 'product_category');
-		if ($term && !is_wp_error($term) && wholesale_seo_category_has_products($term)) {
-			return wholesale_category_url($term->slug);
+		if ($term && !is_wp_error($term) && retails_seo_category_has_products($term)) {
+			return retails_category_url($term->slug);
 		}
 	}
 
@@ -393,27 +393,27 @@ add_filter('wp_sitemaps_add_provider', function ($provider, $name) {
  * Product category links point at the clean /{category}/ routes the theme
  * serves, instead of /category/{slug}/ URLs that only redirect there.
  */
-function wholesale_seo_product_category_link($url, $term, $taxonomy)
+function retails_seo_product_category_link($url, $term, $taxonomy)
 {
-	return 'product_category' === $taxonomy ? wholesale_category_url($term->slug) : $url;
+	return 'product_category' === $taxonomy ? retails_category_url($term->slug) : $url;
 }
-add_filter('term_link', 'wholesale_seo_product_category_link', 10, 3);
+add_filter('term_link', 'retails_seo_product_category_link', 10, 3);
 
 /**
  * Categories whose route is canonicalized or redirected elsewhere stay out of
  * the core sitemap.
  */
-function wholesale_seo_sitemap_excluded_categories()
+function retails_seo_sitemap_excluded_categories()
 {
 	$excluded = array('channel-letters');
 
 	// /signs-letters/ redirects to the Storefront Signs guide once it is published.
-	if (wholesale_seo_storefront_signs_url()) {
+	if (retails_seo_storefront_signs_url()) {
 		$excluded[] = 'signs-letters';
 	}
 
 	// Plus categories set to noindex or "exclude from sitemap" under SEO (inc/seo-admin/).
-	return (array) apply_filters('wholesale_seo_sitemap_excluded_categories', $excluded);
+	return (array) apply_filters('retails_seo_sitemap_excluded_categories', $excluded);
 }
 
 /**
@@ -421,7 +421,7 @@ function wholesale_seo_sitemap_excluded_categories()
  * Hubs such as /indoor-outdoor-displays/ hold no products directly, so core's
  * hide_empty dropped them from every sitemap.
  */
-function wholesale_seo_category_has_products($term)
+function retails_seo_category_has_products($term)
 {
 	if ((int) $term->count > 0) {
 		return true;
@@ -443,7 +443,7 @@ function wholesale_seo_category_has_products($term)
  *
  * @return WP_Term[]
  */
-function wholesale_seo_sitemap_categories()
+function retails_seo_sitemap_categories()
 {
 	$terms = get_terms(array(
 		'taxonomy' => 'product_category',
@@ -451,13 +451,13 @@ function wholesale_seo_sitemap_categories()
 		'orderby' => 'name',
 	));
 
-	return is_wp_error($terms) ? array() : array_values(array_filter($terms, 'wholesale_seo_category_has_products'));
+	return is_wp_error($terms) ? array() : array_values(array_filter($terms, 'retails_seo_category_has_products'));
 }
 
 /**
  * A category page with nothing to list is thin content: keep it out of search.
  */
-function wholesale_seo_is_empty_category_page()
+function retails_seo_is_empty_category_page()
 {
 	$slug = get_query_var('category_slug');
 	if (!$slug) {
@@ -466,13 +466,13 @@ function wholesale_seo_is_empty_category_page()
 
 	$term = get_term_by('slug', sanitize_title($slug), 'product_category');
 
-	return $term && !is_wp_error($term) && !wholesale_seo_category_has_products($term);
+	return $term && !is_wp_error($term) && !retails_seo_category_has_products($term);
 }
 
 /**
  * URL of the published Storefront Signs guide, or ''.
  */
-function wholesale_seo_storefront_signs_url()
+function retails_seo_storefront_signs_url()
 {
 	static $url = null;
 
@@ -488,25 +488,25 @@ function wholesale_seo_storefront_signs_url()
  * /signs-letters/ listed the same seven channel letter products as the home
  * page; send it to the Storefront Signs guide instead.
  */
-function wholesale_seo_redirect_signs_letters()
+function retails_seo_redirect_signs_letters()
 {
-	if ('signs-letters' === get_query_var('category_slug') && ($url = wholesale_seo_storefront_signs_url())) {
+	if ('signs-letters' === get_query_var('category_slug') && ($url = retails_seo_storefront_signs_url())) {
 		wp_safe_redirect($url, 301);
 		exit;
 	}
 }
-add_action('template_redirect', 'wholesale_seo_redirect_signs_letters', 1);
+add_action('template_redirect', 'retails_seo_redirect_signs_letters', 1);
 
 /**
  * /channel-letters/ rendered the same letters as the channel letters landing
  * page; send it (and its link equity) to /custom-channel-letters/.
  */
-function wholesale_seo_redirect_channel_letters()
+function retails_seo_redirect_channel_letters()
 {
-	if ('channel-letters' === get_query_var('category_slug') && wholesale_channel_letters_landing_id()) {
+	if ('channel-letters' === get_query_var('category_slug') && retails_channel_letters_landing_id()) {
 		// Keep ad tags (?gclid, UTM) but drop category_slug: carrying it over
 		// makes the landing page match again and redirect to itself forever.
-		$url = get_permalink(wholesale_channel_letters_landing_id());
+		$url = get_permalink(retails_channel_letters_landing_id());
 		$args = array_filter($_GET, 'is_scalar');
 		unset($args['category_slug']);
 		if ($args) {
@@ -516,27 +516,27 @@ function wholesale_seo_redirect_channel_letters()
 		exit;
 	}
 }
-add_action('template_redirect', 'wholesale_seo_redirect_channel_letters', 1);
+add_action('template_redirect', 'retails_seo_redirect_channel_letters', 1);
 
 /**
  * The site has no blog, so RSS feeds (/feed/, /comments/feed/, ...) are empty
  * pages Google keeps crawling; send them to the home page.
  */
-function wholesale_seo_redirect_feeds()
+function retails_seo_redirect_feeds()
 {
 	if (is_feed()) {
 		wp_safe_redirect(home_url('/'), 301);
 		exit;
 	}
 }
-add_action('template_redirect', 'wholesale_seo_redirect_feeds', 1);
+add_action('template_redirect', 'retails_seo_redirect_feeds', 1);
 
 /**
  * The home page is a catalog, not a list of posts, so /page/2/, /page/3/ ... answered
  * 200 with the same page (canonical home); Visitor Insights logged /page/3/ landings that
  * left at once. Send them home, keeping any ad tags in the query string.
  */
-function wholesale_seo_redirect_home_pages()
+function retails_seo_redirect_home_pages()
 {
 	// The front page is a static page, so /page/2/ arrives as is_front_page() with paged=2.
 	if (!(is_front_page() || is_home()) || max((int) get_query_var('paged'), (int) get_query_var('page')) < 2) {
@@ -551,7 +551,7 @@ function wholesale_seo_redirect_home_pages()
 	wp_safe_redirect(home_url('/') . ('' !== $query ? '?' . $query : ''), 301);
 	exit;
 }
-add_action('template_redirect', 'wholesale_seo_redirect_home_pages', 1);
+add_action('template_redirect', 'retails_seo_redirect_home_pages', 1);
 remove_action('wp_head', 'feed_links', 2);
 remove_action('wp_head', 'feed_links_extra', 3);
 
@@ -560,30 +560,30 @@ remove_action('wp_head', 'feed_links_extra', 3);
  * product query var, so /reviews/?product=115 answers 404. The filter is
  * ?review_product= now; send links Google still has to the working URL.
  */
-function wholesale_seo_redirect_old_review_filter()
+function retails_seo_redirect_old_review_filter()
 {
 	if (!is_404() || !isset($_GET['product']) || !is_scalar($_GET['product']) || !absint($_GET['product'])) {
 		return;
 	}
 
 	$path = untrailingslashit((string) wp_parse_url(isset($_SERVER['REQUEST_URI']) ? wp_unslash($_SERVER['REQUEST_URI']) : '', PHP_URL_PATH));
-	if ($path !== untrailingslashit((string) wp_parse_url(wholesale_reviews_page_url(), PHP_URL_PATH))) {
+	if ($path !== untrailingslashit((string) wp_parse_url(retails_reviews_page_url(), PHP_URL_PATH))) {
 		return;
 	}
 
-	wp_safe_redirect(wholesale_reviews_page_url(array('review_product' => absint($_GET['product']))), 301);
+	wp_safe_redirect(retails_reviews_page_url(array('review_product' => absint($_GET['product']))), 301);
 	exit;
 }
-add_action('template_redirect', 'wholesale_seo_redirect_old_review_filter', 1);
+add_action('template_redirect', 'retails_seo_redirect_old_review_filter', 1);
 
-function wholesale_seo_sitemap_taxonomy_args($args, $taxonomy)
+function retails_seo_sitemap_taxonomy_args($args, $taxonomy)
 {
 	if ('product_category' !== $taxonomy) {
 		return $args;
 	}
 
 	$excluded = array();
-	foreach (wholesale_seo_sitemap_excluded_categories() as $slug) {
+	foreach (retails_seo_sitemap_excluded_categories() as $slug) {
 		$term = get_term_by('slug', $slug, 'product_category');
 		if ($term && !is_wp_error($term)) {
 			$excluded[] = (int) $term->term_id;
@@ -594,7 +594,7 @@ function wholesale_seo_sitemap_taxonomy_args($args, $taxonomy)
 	// truly empty ones instead.
 	$args['hide_empty'] = false;
 	foreach (get_terms(array('taxonomy' => 'product_category', 'hide_empty' => false)) as $term) {
-		if (!wholesale_seo_category_has_products($term)) {
+		if (!retails_seo_category_has_products($term)) {
 			$excluded[] = (int) $term->term_id;
 		}
 	}
@@ -605,21 +605,21 @@ function wholesale_seo_sitemap_taxonomy_args($args, $taxonomy)
 
 	return $args;
 }
-add_filter('wp_sitemaps_taxonomies_query_args', 'wholesale_seo_sitemap_taxonomy_args', 10, 2);
+add_filter('wp_sitemaps_taxonomies_query_args', 'retails_seo_sitemap_taxonomy_args', 10, 2);
 
 /**
  * Menu links that point at the wrong or a retired URL, keyed by path.
  *
  * @return array Path without trailing slash => site path to use instead.
  */
-function wholesale_seo_link_fixes()
+function retails_seo_link_fixes()
 {
 	return array(
 		// The old slug now redirects to Tension Fabric, a different product.
 		'/product/fabric-banner-9oz-wrinkle-free' => '/product/fabric-banner-9oz-wrinkle-free-copy/',
 		// The channel letter route redirects to the channel letters landing page.
-		'/channel-letters' => wholesale_channel_letters_landing_id()
-			? '/' . get_page_uri(wholesale_channel_letters_landing_id()) . '/'
+		'/channel-letters' => retails_channel_letters_landing_id()
+			? '/' . get_page_uri(retails_channel_letters_landing_id()) . '/'
 			: '/',
 	);
 }
@@ -629,7 +629,7 @@ function wholesale_seo_link_fixes()
  * path, clean category routes, and a trailing slash, so a click never costs a
  * redirect. External, anchor, tel:, mailto: and sms: links are returned as-is.
  */
-function wholesale_seo_normalize_internal_url($url)
+function retails_seo_normalize_internal_url($url)
 {
 	$url = trim((string) $url);
 	if ('' === $url || '#' === $url[0] || preg_match('/^(?:tel|mailto|sms|javascript):/i', $url)) {
@@ -664,7 +664,7 @@ function wholesale_seo_normalize_internal_url($url)
 		}
 	}
 
-	$fixes = wholesale_seo_link_fixes();
+	$fixes = retails_seo_link_fixes();
 	$key = untrailingslashit($path);
 	if (isset($fixes[$key])) {
 		$path = $fixes[$key];
@@ -683,17 +683,17 @@ function wholesale_seo_normalize_internal_url($url)
 	return $normalized;
 }
 
-function wholesale_seo_normalize_menu_urls($items)
+function retails_seo_normalize_menu_urls($items)
 {
 	foreach ($items as $item) {
 		if (!empty($item->url)) {
-			$item->url = wholesale_seo_normalize_internal_url($item->url);
+			$item->url = retails_seo_normalize_internal_url($item->url);
 		}
 	}
 
 	return $items;
 }
-add_filter('wp_nav_menu_objects', 'wholesale_seo_normalize_menu_urls', 20);
+add_filter('wp_nav_menu_objects', 'retails_seo_normalize_menu_urls', 20);
 
 /**
  * Rewrite this site's http:// URLs to https:// in a page served over HTTPS.
@@ -703,7 +703,7 @@ add_filter('wp_nav_menu_objects', 'wholesale_seo_normalize_menu_urls', 20);
  * mixed content. Setting both site addresses to https in Settings > General
  * and running a search-replace fixes the data; this keeps pages clean either way.
  */
-function wholesale_seo_force_https_urls($html)
+function retails_seo_force_https_urls($html)
 {
 	$host = wp_parse_url(home_url('/'), PHP_URL_HOST);
 	if (!$host) {
@@ -717,46 +717,46 @@ function wholesale_seo_force_https_urls($html)
 	);
 }
 
-function wholesale_seo_start_https_buffer()
+function retails_seo_start_https_buffer()
 {
 	if (!is_ssl() || is_admin() || wp_doing_ajax() || is_feed()) {
 		return;
 	}
 
-	ob_start('wholesale_seo_force_https_urls');
+	ob_start('retails_seo_force_https_urls');
 }
-add_action('template_redirect', 'wholesale_seo_start_https_buffer', 0);
+add_action('template_redirect', 'retails_seo_start_https_buffer', 0);
 
 /**
  * One-time database updates that travel with the theme. Each step runs once,
  * for an administrator, and is recorded so it never repeats.
  */
-function wholesale_seo_migrations()
+function retails_seo_migrations()
 {
 	return array(
-		'2026-10-remove-spam-categories' => 'wholesale_seo_migrate_remove_spam_categories',
-		'2026-10-storefront-signs-page' => 'wholesale_seo_migrate_storefront_signs_page',
-		'2026-10-image-alt-text' => 'wholesale_seo_migrate_image_alt_text',
-		'2026-10-product-copy-titles' => 'wholesale_seo_migrate_product_copy_titles',
-		'2026-10-policy-drafts' => 'wholesale_seo_migrate_policy_drafts',
-		'2026-10-remove-supplier-references' => 'wholesale_seo_migrate_remove_supplier_references',
-		'2026-10-banners-displays-page' => 'wholesale_seo_migrate_banners_displays_page',
-		'2026-10-coroplast-description' => 'wholesale_seo_migrate_coroplast_description',
-		'2026-10-channel-letter-cost-page' => 'wholesale_seo_migrate_channel_letter_cost_page',
-		'2026-10-design-templates-page' => 'wholesale_seo_migrate_design_templates_page',
-		'2026-10-storefront-media' => 'wholesale_seo_migrate_storefront_media',
-		'2026-10-supplier-text' => 'wholesale_seo_migrate_supplier_text',
-		'2026-10-site-title' => 'wholesale_seo_migrate_site_title',
-		'2026-10-brand-chat-alt' => 'wholesale_seo_migrate_brand_chat_alt',
-		'2026-10-product-typos' => 'wholesale_seo_migrate_product_typos',
-		'2026-10-short-descriptions' => 'wholesale_seo_migrate_short_descriptions',
-		'2026-10-13oz-banner-description' => 'wholesale_seo_migrate_13oz_banner_description',
-		'2026-10-window-graphics-page' => 'wholesale_seo_migrate_window_graphics_page',
-		'2026-10-old-dev-gallery-urls' => 'wholesale_seo_migrate_old_dev_gallery_urls',
-		'2026-10-seo-phase-copy-overrides' => 'wholesale_seo_migrate_phase_copy_overrides',
+		'2026-10-remove-spam-categories' => 'retails_seo_migrate_remove_spam_categories',
+		'2026-10-storefront-signs-page' => 'retails_seo_migrate_storefront_signs_page',
+		'2026-10-image-alt-text' => 'retails_seo_migrate_image_alt_text',
+		'2026-10-product-copy-titles' => 'retails_seo_migrate_product_copy_titles',
+		'2026-10-policy-drafts' => 'retails_seo_migrate_policy_drafts',
+		'2026-10-remove-supplier-references' => 'retails_seo_migrate_remove_supplier_references',
+		'2026-10-banners-displays-page' => 'retails_seo_migrate_banners_displays_page',
+		'2026-10-coroplast-description' => 'retails_seo_migrate_coroplast_description',
+		'2026-10-channel-letter-cost-page' => 'retails_seo_migrate_channel_letter_cost_page',
+		'2026-10-design-templates-page' => 'retails_seo_migrate_design_templates_page',
+		'2026-10-storefront-media' => 'retails_seo_migrate_storefront_media',
+		'2026-10-supplier-text' => 'retails_seo_migrate_supplier_text',
+		'2026-10-site-title' => 'retails_seo_migrate_site_title',
+		'2026-10-brand-chat-alt' => 'retails_seo_migrate_brand_chat_alt',
+		'2026-10-product-typos' => 'retails_seo_migrate_product_typos',
+		'2026-10-short-descriptions' => 'retails_seo_migrate_short_descriptions',
+		'2026-10-13oz-banner-description' => 'retails_seo_migrate_13oz_banner_description',
+		'2026-10-window-graphics-page' => 'retails_seo_migrate_window_graphics_page',
+		'2026-10-old-dev-gallery-urls' => 'retails_seo_migrate_old_dev_gallery_urls',
+		'2026-10-seo-phase-copy-overrides' => 'retails_seo_migrate_phase_copy_overrides',
 		// Not SEO, but it rides the same once-per-site runner (functions.php).
-		'2026-10-places-key-cleanup' => 'wholesale_migrate_places_key_cleanup',
-		'2026-10-terms-business-identity' => 'wholesale_seo_migrate_terms_business_identity',
+		'2026-10-places-key-cleanup' => 'retails_migrate_places_key_cleanup',
+		'2026-10-terms-business-identity' => 'retails_seo_migrate_terms_business_identity',
 	);
 }
 
@@ -767,7 +767,7 @@ function wholesale_seo_migrations()
  * same as page-shipping-returns.php. Only text still as originally written is
  * replaced.
  */
-function wholesale_seo_migrate_terms_business_identity()
+function retails_seo_migrate_terms_business_identity()
 {
 	$page = get_page_by_path('terms-conditions');
 	if (!$page) {
@@ -805,11 +805,11 @@ function wholesale_seo_migrate_terms_business_identity()
 /**
  * Category and product titles and descriptions saved on the SEO screen
  * (inc/seo-admin/) were copies of the theme's defaults at the time, so they
- * hid the rewritten ones in wholesale_seo_category_meta() and
+ * hid the rewritten ones in retails_seo_category_meta() and
  * data/product-pages/ (Oct 2026 SEO pass). Clear only the values still
  * exactly as they were saved; anything edited since is kept.
  */
-function wholesale_seo_migrate_phase_copy_overrides()
+function retails_seo_migrate_phase_copy_overrides()
 {
 	$saved = array(
 		'term' => array(
@@ -938,7 +938,7 @@ function wholesale_seo_migrate_phase_copy_overrides()
 			$id = 'term' === $type ? (int) $object->term_id : (int) $object->ID;
 			$clear = array();
 			foreach ($fields as $key => $value) {
-				$stored = 'term' === $type ? get_term_meta($id, '_wholesale_seo_' . $key, true) : get_post_meta($id, '_wholesale_seo_' . $key, true);
+				$stored = 'term' === $type ? get_term_meta($id, '_retails_seo_' . $key, true) : get_post_meta($id, '_retails_seo_' . $key, true);
 				if ('' !== (string) $stored && $value === html_entity_decode(trim((string) $stored), ENT_QUOTES, 'UTF-8')) {
 					$clear[$key] = '';
 				}
@@ -946,11 +946,11 @@ function wholesale_seo_migrate_phase_copy_overrides()
 			if (!$clear) {
 				continue;
 			}
-			if (function_exists('wholesale_seo_save_object_values')) {
-				wholesale_seo_save_object_values($type, $id, $clear);
+			if (function_exists('retails_seo_save_object_values')) {
+				retails_seo_save_object_values($type, $id, $clear);
 			} else {
 				foreach (array_keys($clear) as $key) {
-					'term' === $type ? delete_term_meta($id, '_wholesale_seo_' . $key) : delete_post_meta($id, '_wholesale_seo_' . $key);
+					'term' === $type ? delete_term_meta($id, '_retails_seo_' . $key) : delete_post_meta($id, '_retails_seo_' . $key);
 				}
 			}
 		}
@@ -965,7 +965,7 @@ function wholesale_seo_migrate_phase_copy_overrides()
  * migration's search-replace never matched: the Acrylic Prints photos were
  * broken on live. Point them at this site's uploads when the file is there.
  */
-function wholesale_seo_migrate_old_dev_gallery_urls()
+function retails_seo_migrate_old_dev_gallery_urls()
 {
 	global $wpdb;
 
@@ -999,7 +999,7 @@ function wholesale_seo_migrate_old_dev_gallery_urls()
  * which they are not on 13oz banners. The Merchant Center feed sends this
  * description to Google Shopping. Only those sentences change.
  */
-function wholesale_seo_migrate_13oz_banner_description()
+function retails_seo_migrate_13oz_banner_description()
 {
 	$product = get_page_by_path('13oz-vinyl-banner', OBJECT, 'product');
 	if (!$product) {
@@ -1035,9 +1035,9 @@ function wholesale_seo_migrate_13oz_banner_description()
  * characters. Saved as the SEO screen's description, and only where that field
  * is still empty, so the owner can edit or clear them there.
  */
-function wholesale_seo_migrate_short_descriptions()
+function retails_seo_migrate_short_descriptions()
 {
-	if (!function_exists('wholesale_seo_save_object_values')) {
+	if (!function_exists('retails_seo_save_object_values')) {
 		return false;
 	}
 
@@ -1054,14 +1054,14 @@ function wholesale_seo_migrate_short_descriptions()
 	);
 	foreach ($products as $slug => $description) {
 		$product = get_page_by_path($slug, OBJECT, 'product');
-		if ($product && '' === (string) get_post_meta($product->ID, '_wholesale_seo_description', true)) {
-			wholesale_seo_save_object_values('post', $product->ID, array('description' => $description));
+		if ($product && '' === (string) get_post_meta($product->ID, '_retails_seo_description', true)) {
+			retails_seo_save_object_values('post', $product->ID, array('description' => $description));
 		}
 	}
 
 	$term = get_term_by('slug', 'banner-stand-hardware', 'product_category');
-	if ($term && !is_wp_error($term) && '' === (string) get_term_meta($term->term_id, '_wholesale_seo_description', true)) {
-		wholesale_seo_save_object_values('term', $term->term_id, array('description' => 'Replacement hardware for retractable banner stands and tension fabric stands: bases, poles and frames that fit our graphics. Graphic not included.'));
+	if ($term && !is_wp_error($term) && '' === (string) get_term_meta($term->term_id, '_retails_seo_description', true)) {
+		retails_seo_save_object_values('term', $term->term_id, array('description' => 'Replacement hardware for retractable banner stands and tension fabric stands: bases, poles and frames that fit our graphics. Graphic not included.'));
 	}
 
 	return true;
@@ -1071,7 +1071,7 @@ function wholesale_seo_migrate_short_descriptions()
  * Spelling mistakes from the supplier copy that show in product pages and in
  * Google snippets ("Permanant adhesive backing").
  */
-function wholesale_seo_migrate_product_typos()
+function retails_seo_migrate_product_typos()
 {
 	global $wpdb;
 
@@ -1114,7 +1114,7 @@ function wholesale_seo_migrate_product_typos()
  * Online" (ads, schema, footer). Only that exact old value is changed, so a
  * title the owner set by hand is left alone.
  */
-function wholesale_seo_migrate_site_title()
+function retails_seo_migrate_site_title()
 {
 	if ('Store Front Sign Online' === get_option('blogname')) {
 		update_option('blogname', 'Storefront Sign Online');
@@ -1127,7 +1127,7 @@ function wholesale_seo_migrate_site_title()
  * The live chat widget's business name and two logo alt texts still said
  * "Store Front Sign Online", which printed on every page.
  */
-function wholesale_seo_migrate_brand_chat_alt()
+function retails_seo_migrate_brand_chat_alt()
 {
 	global $wpdb;
 
@@ -1146,32 +1146,32 @@ function wholesale_seo_migrate_brand_chat_alt()
 	return true;
 }
 
-function wholesale_seo_run_migrations()
+function retails_seo_run_migrations()
 {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
 
-	$done = get_option('wholesale_seo_migrations_done', array());
+	$done = get_option('retails_seo_migrations_done', array());
 	$done = is_array($done) ? $done : array();
 
-	foreach (wholesale_seo_migrations() as $key => $callback) {
+	foreach (retails_seo_migrations() as $key => $callback) {
 		if (in_array($key, $done, true) || !is_callable($callback)) {
 			continue;
 		}
 
 		if (false !== call_user_func($callback)) {
 			$done[] = $key;
-			update_option('wholesale_seo_migrations_done', $done, false);
+			update_option('retails_seo_migrations_done', $done, false);
 		}
 	}
 }
-add_action('admin_init', 'wholesale_seo_run_migrations');
+add_action('admin_init', 'retails_seo_run_migrations');
 
 /**
  * Delete the empty post categories the spam injection created.
  */
-function wholesale_seo_migrate_remove_spam_categories()
+function retails_seo_migrate_remove_spam_categories()
 {
 	$slugs = array('bez-rubriki', 'pinup', 'pu', 'bh-top', 'bt', 'btprod', 'casinom-hub', 'gatesofolympus-link', 'marsbet', 'pb-top', 'sahabet');
 
@@ -1189,7 +1189,7 @@ function wholesale_seo_migrate_remove_spam_categories()
  * Create the Storefront Signs guide page. Its content comes from
  * page-storefront-signs.php, so the page itself stays empty.
  */
-function wholesale_seo_migrate_storefront_signs_page()
+function retails_seo_migrate_storefront_signs_page()
 {
 	if (get_page_by_path('storefront-signs', OBJECT, 'page')) {
 		return true;
@@ -1212,7 +1212,7 @@ function wholesale_seo_migrate_storefront_signs_page()
  * Create the Banners & Displays landing page. Its content comes from
  * page-banners-displays.php, so the page itself stays empty.
  */
-function wholesale_seo_migrate_banners_displays_page()
+function retails_seo_migrate_banners_displays_page()
 {
 	if (get_page_by_path('banners-displays', OBJECT, 'page')) {
 		return true;
@@ -1235,7 +1235,7 @@ function wholesale_seo_migrate_banners_displays_page()
  * Fill empty alt text on media library images from the product each image
  * belongs to. Existing alt text is never changed.
  */
-function wholesale_seo_migrate_image_alt_text()
+function retails_seo_migrate_image_alt_text()
 {
 	$attachments = get_posts(array(
 		'post_type' => 'attachment',
@@ -1251,7 +1251,7 @@ function wholesale_seo_migrate_image_alt_text()
 			continue;
 		}
 
-		$alt = wholesale_seo_attachment_alt($attachment_id);
+		$alt = retails_seo_attachment_alt($attachment_id);
 		if ('' !== $alt) {
 			update_post_meta($attachment_id, '_wp_attachment_image_alt', sanitize_text_field($alt));
 		}
@@ -1264,7 +1264,7 @@ function wholesale_seo_migrate_image_alt_text()
  * Two products were published with " Copy" left in their names from being
  * duplicated. Only the displayed name changes; the URLs stay the same.
  */
-function wholesale_seo_migrate_product_copy_titles()
+function retails_seo_migrate_product_copy_titles()
 {
 	$titles = array(
 		'fabric-banner-9oz-wrinkle-free-copy' => 'Fabric Banner (9oz. Wrinkle Free)',
@@ -1286,7 +1286,7 @@ function wholesale_seo_migrate_product_copy_titles()
  * review and publish. Never publishes anything, and only replaces the
  * privacy page's content while it still holds WordPress's sample text.
  */
-function wholesale_seo_migrate_policy_drafts()
+function retails_seo_migrate_policy_drafts()
 {
 	require_once get_template_directory() . '/inc/policy-drafts.php';
 
@@ -1295,7 +1295,7 @@ function wholesale_seo_migrate_policy_drafts()
 	if ($privacy && 'publish' !== $privacy->post_status && false !== strpos($privacy->post_content, 'privacy-policy-tutorial')) {
 		wp_update_post(array(
 			'ID' => $privacy_id,
-			'post_content' => wholesale_policy_privacy_draft(),
+			'post_content' => retails_policy_privacy_draft(),
 		));
 	}
 
@@ -1305,7 +1305,7 @@ function wholesale_seo_migrate_policy_drafts()
 			'post_status' => 'draft',
 			'post_title' => 'Shipping & Returns',
 			'post_name' => 'shipping-returns',
-			'post_content' => str_replace('href="/terms-conditions/"', 'href="' . esc_url(home_url('/terms-conditions/')) . '"', wholesale_policy_shipping_draft()),
+			'post_content' => str_replace('href="/terms-conditions/"', 'href="' . esc_url(home_url('/terms-conditions/')) . '"', retails_policy_shipping_draft()),
 			'comment_status' => 'closed',
 			'ping_status' => 'closed',
 		));
@@ -1321,7 +1321,7 @@ function wholesale_seo_migrate_policy_drafts()
  * printed matte, one or two sides, free grommets, optional H-stake. Only runs
  * while the magnet text is still there, so owner edits are never overwritten.
  */
-function wholesale_seo_migrate_coroplast_description()
+function retails_seo_migrate_coroplast_description()
 {
 	$product = get_page_by_path('coroplast', OBJECT, 'product');
 	if (!$product || false === strpos($product->post_content, 'Our magnet sheet')) {
@@ -1415,7 +1415,7 @@ Choose a standard size or enter your own, print one or both sides, and add an H-
  * Create the Channel Letter Cost guide page. Its content comes from
  * page-channel-letter-cost.php, so the page itself stays empty.
  */
-function wholesale_seo_migrate_channel_letter_cost_page()
+function retails_seo_migrate_channel_letter_cost_page()
 {
 	if (get_page_by_path('channel-letter-cost', OBJECT, 'page')) {
 		return true;
@@ -1439,7 +1439,7 @@ function wholesale_seo_migrate_channel_letter_cost_page()
  * download). Its content comes from page-design-templates.php, so the page
  * itself stays empty.
  */
-function wholesale_seo_migrate_design_templates_page()
+function retails_seo_migrate_design_templates_page()
 {
 	if (get_page_by_path('design-templates', OBJECT, 'page')) {
 		return true;
@@ -1463,7 +1463,7 @@ function wholesale_seo_migrate_design_templates_page()
  * "SSO - Window Graphics & Vinyl - USA"). Its content comes from
  * page-window-graphics.php, so the page itself stays empty.
  */
-function wholesale_seo_migrate_window_graphics_page()
+function retails_seo_migrate_window_graphics_page()
 {
 	if (get_page_by_path('window-graphics', OBJECT, 'page')) {
 		return true;

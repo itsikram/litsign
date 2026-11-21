@@ -11,17 +11,17 @@
 
 defined('ABSPATH') || exit;
 
-const WHOLESALE_SEO_BULK_PER_PAGE = 25;
+const RETAILS_SEO_BULK_PER_PAGE = 25;
 
 /**
  * Rows for the bulk editor with stored and current values.
  *
  * @return array
  */
-function wholesale_seo_bulk_rows()
+function retails_seo_bulk_rows()
 {
-	$targets = wholesale_seo_scan_targets();
-	$scan = get_transient('wholesale_seo_scan');
+	$targets = retails_seo_scan_targets();
+	$scan = get_transient('retails_seo_scan');
 	$results = is_array($scan) && isset($scan['results']) ? $scan['results'] : array();
 
 	$post_ids = array();
@@ -39,9 +39,9 @@ function wholesale_seo_bulk_rows()
 
 	$rows = array();
 	foreach ($targets as $key => $target) {
-		$stored = wholesale_seo_object_values($target['object_type'], $target['object_id']);
+		$stored = retails_seo_object_values($target['object_type'], $target['object_id']);
 		$result = isset($results[$key]) && 200 === (int) $results[$key]['code'] ? $results[$key] : null;
-		$theme_noindex = wholesale_seo_theme_noindex_reason($target['object_type'], $target['object_id']);
+		$theme_noindex = retails_seo_theme_noindex_reason($target['object_type'], $target['object_id']);
 
 		$rows[$key] = $target + array(
 			'stored' => $stored,
@@ -60,13 +60,13 @@ function wholesale_seo_bulk_rows()
 /**
  * Fill in "now" values for rows the scan hasn't seen (visible page only).
  */
-function wholesale_seo_bulk_fill_now(array &$rows)
+function retails_seo_bulk_fill_now(array &$rows)
 {
 	foreach ($rows as &$row) {
 		if (null !== $row['now_title']) {
 			continue;
 		}
-		$now = wholesale_seo_admin_effective($row['object_type'], $row['object_id']);
+		$now = retails_seo_admin_effective($row['object_type'], $row['object_id']);
 		$row['now_title'] = isset($now['title']) ? $now['title'] : '';
 		$row['now_description'] = isset($now['description']) ? $now['description'] : '';
 		$row['robots'] = isset($now['robots']) ? $now['robots'] : '';
@@ -74,7 +74,7 @@ function wholesale_seo_bulk_fill_now(array &$rows)
 	unset($row);
 }
 
-function wholesale_seo_bulk_effective($row, $field)
+function retails_seo_bulk_effective($row, $field)
 {
 	$stored = $row['stored'][$field];
 	if ('' !== $stored) {
@@ -84,7 +84,7 @@ function wholesale_seo_bulk_effective($row, $field)
 	return null === $now ? '' : $now;
 }
 
-function wholesale_seo_bulk_page()
+function retails_seo_bulk_page()
 {
 	if (!current_user_can('manage_options')) {
 		return;
@@ -95,8 +95,8 @@ function wholesale_seo_bulk_page()
 	$search = isset($_GET['s']) ? sanitize_text_field(wp_unslash($_GET['s'])) : '';
 	$paged = isset($_GET['paged']) ? max(1, (int) $_GET['paged']) : 1;
 
-	$rows = wholesale_seo_bulk_rows();
-	$has_scan = (bool) get_transient('wholesale_seo_scan');
+	$rows = retails_seo_bulk_rows();
+	$has_scan = (bool) get_transient('retails_seo_scan');
 
 	// Duplicates among indexable rows, by effective value.
 	$seen = array('title' => array(), 'description' => array());
@@ -105,7 +105,7 @@ function wholesale_seo_bulk_page()
 			continue;
 		}
 		foreach (array('title', 'description') as $field) {
-			$value = mb_strtolower(wholesale_seo_bulk_effective($row, $field));
+			$value = mb_strtolower(retails_seo_bulk_effective($row, $field));
 			if ('' !== $value) {
 				$seen[$field][$value][] = $key;
 			}
@@ -125,8 +125,8 @@ function wholesale_seo_bulk_page()
 	$counts = array('' => count($rows), 'missing' => 0, 'long' => 0, 'duplicate' => 0, 'noindex' => 0, 'custom' => 0);
 	$matches = array();
 	foreach ($rows as $key => $row) {
-		$title = wholesale_seo_bulk_effective($row, 'title');
-		$description = wholesale_seo_bulk_effective($row, 'description');
+		$title = retails_seo_bulk_effective($row, 'title');
+		$description = retails_seo_bulk_effective($row, 'description');
 		$known = $row['scanned'] || '' !== $row['stored']['title'];
 		$flags = array(
 			'missing' => !$row['noindex'] && $known && ('' === $title || '' === $description),
@@ -152,18 +152,18 @@ function wholesale_seo_bulk_page()
 	}
 
 	$total = count($matches);
-	$pages = max(1, (int) ceil($total / WHOLESALE_SEO_BULK_PER_PAGE));
+	$pages = max(1, (int) ceil($total / RETAILS_SEO_BULK_PER_PAGE));
 	$paged = min($paged, $pages);
-	$visible = array_slice($matches, ($paged - 1) * WHOLESALE_SEO_BULK_PER_PAGE, WHOLESALE_SEO_BULK_PER_PAGE, true);
-	wholesale_seo_bulk_fill_now($visible);
+	$visible = array_slice($matches, ($paged - 1) * RETAILS_SEO_BULK_PER_PAGE, RETAILS_SEO_BULK_PER_PAGE, true);
+	retails_seo_bulk_fill_now($visible);
 
-	$base = admin_url('admin.php?page=wholesale-seo-bulk');
+	$base = admin_url('admin.php?page=retails-seo-bulk');
 	$filters = array('' => 'All', 'missing' => 'Missing', 'long' => 'Too long', 'duplicate' => 'Duplicate', 'noindex' => 'Noindex', 'custom' => 'Set here');
 	$kinds = array('' => 'All types', 'home' => 'Homepage', 'page' => 'Pages', 'post' => 'Posts', 'product' => 'Products', 'product_category' => 'Product categories');
 
-	wholesale_seo_admin_header('wholesale-seo-bulk', 'Every public URL. Quick edit sets the page&rsquo;s own SEO title and description (the same fields as the SEO box on its edit screen); leave a field empty to keep what the page prints now.');
+	retails_seo_admin_header('retails-seo-bulk', 'Every public URL. Quick edit sets the page&rsquo;s own SEO title and description (the same fields as the SEO box on its edit screen); leave a field empty to keep what the page prints now.');
 	if (!$has_scan) {
-		echo '<div class="notice notice-info inline"><p>Run a scan on the <a href="' . esc_url(admin_url('admin.php?page=wholesale-seo')) . '">Dashboard</a> so the filters can use what every page prints now. Until then, only the rows on screen are checked.</p></div>';
+		echo '<div class="notice notice-info inline"><p>Run a scan on the <a href="' . esc_url(admin_url('admin.php?page=retails-seo')) . '">Dashboard</a> so the filters can use what every page prints now. Until then, only the rows on screen are checked.</p></div>';
 	}
 	?>
 	<ul class="subsubsub">
@@ -178,7 +178,7 @@ function wholesale_seo_bulk_page()
 	</ul>
 
 	<form method="get" class="wseo-bulk-search">
-		<input type="hidden" name="page" value="wholesale-seo-bulk">
+		<input type="hidden" name="page" value="retails-seo-bulk">
 		<input type="hidden" name="filter" value="<?php echo esc_attr($filter); ?>">
 		<label class="screen-reader-text" for="wseo-kind">Type</label>
 		<select name="kind" id="wseo-kind">
@@ -206,9 +206,9 @@ function wholesale_seo_bulk_page()
 			<?php endif; ?>
 			<?php foreach ($visible as $key => $row) : ?>
 				<?php
-				$title = wholesale_seo_bulk_effective($row, 'title');
-				$description = wholesale_seo_bulk_effective($row, 'description');
-				$edit = wholesale_seo_edit_link($row['object_type'], $row['object_id']);
+				$title = retails_seo_bulk_effective($row, 'title');
+				$description = retails_seo_bulk_effective($row, 'description');
+				$edit = retails_seo_edit_link($row['object_type'], $row['object_id']);
 				?>
 				<tr data-wseo-row="<?php echo esc_attr($key); ?>" data-object-type="<?php echo esc_attr($row['object_type']); ?>" data-object-id="<?php echo (int) $row['object_id']; ?>">
 					<td class="column-primary" data-colname="Page">
@@ -222,13 +222,13 @@ function wholesale_seo_bulk_page()
 					</td>
 					<td data-colname="SEO title">
 						<span class="wseo-cell" data-wseo-cell="title"><?php echo esc_html($title); ?></span>
-						<?php echo wholesale_seo_length_badge($title, 60); // Escaped in the helper. ?>
+						<?php echo retails_seo_length_badge($title, 60); // Escaped in the helper. ?>
 						<?php echo '' !== $row['stored']['title'] ? '<span class="wseo-tag">set here</span>' : ''; ?>
 						<?php echo isset($duplicates[$key]['title']) ? '<span class="wseo-tag is-warn">duplicate</span>' : ''; ?>
 					</td>
 					<td data-colname="Meta description">
 						<span class="wseo-cell" data-wseo-cell="description"><?php echo esc_html($description); ?></span>
-						<?php echo wholesale_seo_length_badge($description, 160); // Escaped in the helper. ?>
+						<?php echo retails_seo_length_badge($description, 160); // Escaped in the helper. ?>
 						<?php echo '' !== $row['stored']['description'] ? '<span class="wseo-tag">set here</span>' : ''; ?>
 						<?php echo isset($duplicates[$key]['description']) ? '<span class="wseo-tag is-warn">duplicate</span>' : ''; ?>
 					</td>
@@ -283,14 +283,14 @@ function wholesale_seo_bulk_page()
 		</div>
 	</div>
 	<?php
-	wholesale_seo_admin_footer();
+	retails_seo_admin_footer();
 }
 
-add_action('wp_ajax_wholesale_seo_bulk_save', function () {
+add_action('wp_ajax_retails_seo_bulk_save', function () {
 	if (!current_user_can('manage_options')) {
 		wp_send_json_error('You are not allowed to change SEO settings.', 403);
 	}
-	check_ajax_referer('wholesale_seo_bulk', 'nonce');
+	check_ajax_referer('retails_seo_bulk', 'nonce');
 
 	$object_type = isset($_POST['object_type']) && 'term' === $_POST['object_type'] ? 'term' : 'post';
 	$object_id = isset($_POST['object_id']) ? (int) $_POST['object_id'] : 0;
@@ -299,16 +299,16 @@ add_action('wp_ajax_wholesale_seo_bulk_save', function () {
 		wp_send_json_error('That page no longer exists.');
 	}
 
-	wholesale_seo_save_object_values($object_type, $object_id, array(
+	retails_seo_save_object_values($object_type, $object_id, array(
 		'title' => isset($_POST['title']) ? wp_unslash($_POST['title']) : '',
 		'description' => isset($_POST['description']) ? wp_unslash($_POST['description']) : '',
 	));
 
-	$now = wholesale_seo_admin_effective($object_type, $object_id);
+	$now = retails_seo_admin_effective($object_type, $object_id);
 	wp_send_json_success(array(
 		'title' => isset($now['title']) ? $now['title'] : '',
 		'description' => isset($now['description']) ? $now['description'] : '',
-		'storedTitle' => wholesale_seo_stored_value($object_type, $object_id, 'title'),
-		'storedDescription' => wholesale_seo_stored_value($object_type, $object_id, 'description'),
+		'storedTitle' => retails_seo_stored_value($object_type, $object_id, 'title'),
+		'storedDescription' => retails_seo_stored_value($object_type, $object_id, 'description'),
 	));
 });

@@ -14,16 +14,16 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-function wholesale_refund_capability()
+function retails_refund_capability()
 {
-	return apply_filters('wholesale_refund_capability', 'manage_options');
+	return apply_filters('retails_refund_capability', 'manage_options');
 }
 
 /**
  * Every refund attempt on the order, oldest first. Each entry: time, user, amount,
  * method (void|return), result (approved|declined|unknown), reference, message, reason, emailed.
  */
-function wholesale_order_refund_log($post_id)
+function retails_order_refund_log($post_id)
 {
 	$log = array_values(array_filter(get_post_meta($post_id, '_refund_log'), static function ($entry) {
 		return is_array($entry) && !empty($entry['time']);
@@ -37,14 +37,14 @@ function wholesale_order_refund_log($post_id)
 /**
  * @return array{charged:float,refunded:float,remaining:float}
  */
-function wholesale_order_refund_totals($post_id)
+function retails_order_refund_totals($post_id)
 {
 	$charged = (float) get_post_meta($post_id, '_payment_amount', true);
 	if ($charged <= 0) {
-		$charged = wholesale_order_total($post_id);
+		$charged = retails_order_total($post_id);
 	}
 	$refunded = 0.0;
-	foreach (wholesale_order_refund_log($post_id) as $entry) {
+	foreach (retails_order_refund_log($post_id) as $entry) {
 		if ('approved' === ($entry['result'] ?? '')) {
 			$refunded += (float) $entry['amount'];
 		}
@@ -56,16 +56,16 @@ function wholesale_order_refund_totals($post_id)
 	);
 }
 
-function wholesale_refund_money($amount)
+function retails_refund_money($amount)
 {
 	return '$' . number_format((float) $amount, 2);
 }
 
-function wholesale_refund_activity_text($entry)
+function retails_refund_activity_text($entry)
 {
 	$user = !empty($entry['user']) ? get_userdata((int) $entry['user']) : null;
 	$by = $user ? ' by ' . $user->display_name : '';
-	$amount = wholesale_refund_money($entry['amount'] ?? 0);
+	$amount = retails_refund_money($entry['amount'] ?? 0);
 	switch ($entry['result'] ?? '') {
 		case 'approved':
 			return ('void' === ($entry['method'] ?? '') ? 'Payment voided: ' : 'Refunded: ') . $amount . $by . (!empty($entry['emailed']) ? ' (customer emailed)' : '');
@@ -77,7 +77,7 @@ function wholesale_refund_activity_text($entry)
 }
 
 add_action('after_setup_theme', static function () {
-	if (!function_exists('wholesale_render_refund_panel')) {
+	if (!function_exists('retails_render_refund_panel')) {
 		require_once __DIR__ . '/payment-gateway-missing.php';
 	}
 }, 20);

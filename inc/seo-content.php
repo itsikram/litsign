@@ -15,10 +15,10 @@
  *
  * @return array
  */
-function wholesale_seo_category_meta()
+function retails_seo_category_meta()
 {
 	$link = static function ($slug, $text) {
-		return '<a href="' . esc_url(wholesale_category_url($slug)) . '">' . esc_html($text) . '</a>';
+		return '<a href="' . esc_url(retails_category_url($slug)) . '">' . esc_html($text) . '</a>';
 	};
 	$storefront = '<a href="' . esc_url(home_url('/storefront-signs/')) . '">storefront signs</a>';
 
@@ -159,10 +159,10 @@ function wholesale_seo_category_meta()
  *
  * @return array List of array('q' => question, 'a' => answer HTML), or empty.
  */
-function wholesale_seo_category_faq($slug)
+function retails_seo_category_faq($slug)
 {
 	$link = static function ($slug, $text) {
-		return '<a href="' . esc_url(wholesale_category_url($slug)) . '">' . esc_html($text) . '</a>';
+		return '<a href="' . esc_url(retails_category_url($slug)) . '">' . esc_html($text) . '</a>';
 	};
 	$shipping = array(
 		'q' => 'How fast will my order ship?',
@@ -460,7 +460,7 @@ function wholesale_seo_category_faq($slug)
  *
  * @return string Empty when the product has no variant ending.
  */
-function wholesale_seo_product_variant_label($product_id)
+function retails_seo_product_variant_label($product_id)
 {
 	$slug = (string) get_post_field('post_name', $product_id);
 	$slug = preg_replace('/-\d+$/', '', $slug);
@@ -505,7 +505,7 @@ function wholesale_seo_product_variant_label($product_id)
  * The product that an exact duplicate (same name, "-2"/"-3" slug) should
  * point search engines at, or 0.
  */
-function wholesale_seo_product_duplicate_of($product_id)
+function retails_seo_product_duplicate_of($product_id)
 {
 	$slug = (string) get_post_field('post_name', $product_id);
 
@@ -515,6 +515,13 @@ function wholesale_seo_product_duplicate_of($product_id)
 		// Grouped as "Frame Only" but sells only the 24" x 36" replacement graphic,
 		// with the kit's name and description.
 		'standard-signicade-white-frame-only' => 'standard-signicade-white-frame-graphic',
+		// 2024 leftovers of the same stand, still published with older prices and
+		// a slightly different name; GSC (Nov 2026) had all three competing.
+		'tension-fabric-stand-hardware-only-old' => 'tension-fabric-stand-hardware-only',
+		'tension-fabric-stand-hardware-only-old-2' => 'tension-fabric-stand-hardware-only',
+		// Same pairing as the Standard and Deluxe retractables, but its name has
+		// " - Insert Only" so the same-name variant match misses it.
+		'sd-retractable-sd-retractable-insert-only' => 'sd-retractable-sd-retractable-insert-stand',
 	);
 
 	if (isset($copies[$slug])) {
@@ -530,7 +537,8 @@ function wholesale_seo_product_duplicate_of($product_id)
 		return 0;
 	}
 
-	return get_the_title($original) === get_the_title($product_id) ? (int) $original->ID : 0;
+	// Listed copies are checked by hand; "-2" slugs must also share the name.
+	return isset($copies[$slug]) || get_the_title($original) === get_the_title($product_id) ? (int) $original->ID : 0;
 }
 
 /**
@@ -538,7 +546,7 @@ function wholesale_seo_product_duplicate_of($product_id)
  *
  * @return int[]
  */
-function wholesale_seo_duplicate_product_ids()
+function retails_seo_duplicate_product_ids()
 {
 	static $ids = null;
 	if (null !== $ids) {
@@ -558,7 +566,7 @@ function wholesale_seo_duplicate_product_ids()
 	_prime_post_caches($products, false, false);
 
 	foreach ($products as $product_id) {
-		if (wholesale_seo_product_duplicate_of($product_id)) {
+		if (retails_seo_product_duplicate_of($product_id)) {
 			$ids[] = (int) $product_id;
 		}
 	}
@@ -575,7 +583,7 @@ function wholesale_seo_duplicate_product_ids()
  * buyable, in the merchant feed and in related products; only its canonical
  * and sitemap entry change.
  */
-function wholesale_seo_product_variant_primary_of($product_id)
+function retails_seo_product_variant_primary_of($product_id)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
@@ -585,7 +593,7 @@ function wholesale_seo_product_variant_primary_of($product_id)
 
 	$partial = array('Graphic Only', 'Flag Only', 'Sign Only', 'Banner Only', 'Hardware Only', 'Half Wall');
 	$cache[$product_id] = 0;
-	if (!in_array(wholesale_seo_product_variant_label($product_id), $partial, true)) {
+	if (!in_array(retails_seo_product_variant_label($product_id), $partial, true)) {
 		return 0;
 	}
 
@@ -602,8 +610,8 @@ function wholesale_seo_product_variant_primary_of($product_id)
 	));
 
 	foreach ($siblings as $sibling_id) {
-		$label = wholesale_seo_product_variant_label($sibling_id);
-		if ($label && !in_array($label, $partial, true) && !wholesale_seo_product_duplicate_of($sibling_id)) {
+		$label = retails_seo_product_variant_label($sibling_id);
+		if ($label && !in_array($label, $partial, true) && !retails_seo_product_duplicate_of($sibling_id)) {
 			$cache[$product_id] = (int) $sibling_id;
 			break;
 		}
@@ -615,11 +623,11 @@ function wholesale_seo_product_variant_primary_of($product_id)
 /**
  * The product whose URL a product's canonical tag should use, or 0 for itself.
  */
-function wholesale_seo_product_canonical_of($product_id)
+function retails_seo_product_canonical_of($product_id)
 {
-	$original = wholesale_seo_product_duplicate_of($product_id);
+	$original = retails_seo_product_duplicate_of($product_id);
 
-	return $original ? $original : wholesale_seo_product_variant_primary_of($product_id);
+	return $original ? $original : retails_seo_product_variant_primary_of($product_id);
 }
 
 /**
@@ -628,7 +636,7 @@ function wholesale_seo_product_canonical_of($product_id)
  *
  * @return int[]
  */
-function wholesale_seo_sitemap_excluded_product_ids()
+function retails_seo_sitemap_excluded_product_ids()
 {
 	static $ids = null;
 	if (null !== $ids) {
@@ -645,26 +653,26 @@ function wholesale_seo_sitemap_excluded_product_ids()
 	));
 
 	foreach ($products as $product_id) {
-		if (wholesale_seo_product_canonical_of($product_id)) {
+		if (retails_seo_product_canonical_of($product_id)) {
 			$ids[] = (int) $product_id;
 		}
 	}
 
 	// Plus products set to noindex or "exclude from sitemap" under SEO (inc/seo-admin/).
-	$ids = (array) apply_filters('wholesale_seo_sitemap_excluded_product_ids', $ids);
+	$ids = (array) apply_filters('retails_seo_sitemap_excluded_product_ids', $ids);
 
 	return $ids;
 }
 
-function wholesale_seo_sitemap_exclude_duplicate_products($args, $post_type)
+function retails_seo_sitemap_exclude_duplicate_products($args, $post_type)
 {
-	if ('product' === $post_type && ($duplicates = wholesale_seo_sitemap_excluded_product_ids())) {
+	if ('product' === $post_type && ($duplicates = retails_seo_sitemap_excluded_product_ids())) {
 		$args['post__not_in'] = array_merge(isset($args['post__not_in']) ? (array) $args['post__not_in'] : array(), $duplicates);
 	}
 
 	return $args;
 }
-add_filter('wp_sitemaps_posts_query_args', 'wholesale_seo_sitemap_exclude_duplicate_products', 20, 2);
+add_filter('wp_sitemaps_posts_query_args', 'retails_seo_sitemap_exclude_duplicate_products', 20, 2);
 
 /**
  * The listed product that a hidden "-2"/"-3" copy should send shoppers to, or 0.
@@ -676,7 +684,7 @@ add_filter('wp_sitemaps_posts_query_args', 'wholesale_seo_sitemap_exclude_duplic
  * Nov 2026). A copy that is still listed, or that differs in name, stays open:
  * it may be a new product that happens to share a name.
  */
-function wholesale_seo_product_copy_redirect_target($product_id)
+function retails_seo_product_copy_redirect_target($product_id)
 {
 	$product_id = (int) $product_id;
 	if (!preg_match('/-\d+$/', (string) get_post_field('post_name', $product_id))
@@ -684,7 +692,7 @@ function wholesale_seo_product_copy_redirect_target($product_id)
 		return 0;
 	}
 
-	$original = wholesale_seo_product_duplicate_of($product_id);
+	$original = retails_seo_product_duplicate_of($product_id);
 
 	return $original && 'on' === get_post_meta($original, '_show_in_list', true) ? (int) $original : 0;
 }
@@ -693,13 +701,13 @@ function wholesale_seo_product_copy_redirect_target($product_id)
  * Send shoppers on a hidden copy to the listed original (301, query string kept
  * so ad and tracking parameters survive). Previews are left alone.
  */
-function wholesale_seo_redirect_product_copies()
+function retails_seo_redirect_product_copies()
 {
 	if (is_admin() || is_preview() || !is_singular('product')) {
 		return;
 	}
 
-	$original = wholesale_seo_product_copy_redirect_target(get_queried_object_id());
+	$original = retails_seo_product_copy_redirect_target(get_queried_object_id());
 	if (!$original) {
 		return;
 	}
@@ -709,15 +717,15 @@ function wholesale_seo_redirect_product_copies()
 	wp_safe_redirect('' !== $query ? $target . '?' . $query : $target, 301);
 	exit;
 }
-add_action('template_redirect', 'wholesale_seo_redirect_product_copies', 2);
+add_action('template_redirect', 'retails_seo_redirect_product_copies', 2);
 
 /**
  * Hidden copies that redirect stay out of search results (the results page and
  * the live search box), so a search shows one card per product.
  */
-function wholesale_seo_search_exclude_product_copies($query)
+function retails_seo_search_exclude_product_copies($query)
 {
-	if (is_admin() || !$query->is_search() || $query->get('wholesale_copy_check')) {
+	if (is_admin() || !$query->is_search() || $query->get('retails_copy_check')) {
 		return;
 	}
 
@@ -730,10 +738,10 @@ function wholesale_seo_search_exclude_product_copies($query)
 			'posts_per_page' => -1,
 			'fields' => 'ids',
 			'no_found_rows' => true,
-			'wholesale_copy_check' => true,
+			'retails_copy_check' => true,
 		));
 		foreach ($ids as $id) {
-			if (preg_match('/-\d+$/', (string) get_post_field('post_name', $id)) && wholesale_seo_product_copy_redirect_target($id)) {
+			if (preg_match('/-\d+$/', (string) get_post_field('post_name', $id)) && retails_seo_product_copy_redirect_target($id)) {
 				$copies[] = (int) $id;
 			}
 		}
@@ -743,13 +751,13 @@ function wholesale_seo_search_exclude_product_copies($query)
 		$query->set('post__not_in', array_merge((array) $query->get('post__not_in'), $copies));
 	}
 }
-add_action('pre_get_posts', 'wholesale_seo_search_exclude_product_copies');
+add_action('pre_get_posts', 'retails_seo_search_exclude_product_copies');
 
 /**
  * Plain-text description from product meta: list items become sentences and
  * the result is cut at a word boundary to fit a search snippet.
  */
-function wholesale_seo_trim_description($text, $limit = 155)
+function retails_seo_trim_description($text, $limit = 155)
 {
 	$text = preg_replace('#</(li|p|h[1-6])>#i', '. ', (string) $text);
 	$text = html_entity_decode(wp_strip_all_tags($text), ENT_QUOTES, 'UTF-8');
@@ -784,7 +792,7 @@ function wholesale_seo_trim_description($text, $limit = 155)
  *
  * @return array
  */
-function wholesale_seo_product_search_names()
+function retails_seo_product_search_names()
 {
 	return array(
 		// Adhesive vinyl (AV 1–12).
@@ -854,7 +862,7 @@ function wholesale_seo_product_search_names()
  *
  * @return array
  */
-function wholesale_seo_category_title_suffixes()
+function retails_seo_category_title_suffixes()
 {
 	return array(
 		'banners' => 'Custom Printed Banners',
@@ -884,7 +892,7 @@ function wholesale_seo_category_title_suffixes()
  * The product's catalog name as plain text, without the "Copy" suffix that
  * duplicated products carry.
  */
-function wholesale_seo_product_name($product_id)
+function retails_seo_product_name($product_id)
 {
 	$name = html_entity_decode(wp_strip_all_tags(get_the_title($product_id)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
@@ -895,11 +903,11 @@ function wholesale_seo_product_name($product_id)
  * The name a shopper would search for: the catalog name without its "AV n –"
  * code, swapped for a clearer name when one is listed.
  */
-function wholesale_seo_product_search_name($product_id)
+function retails_seo_product_search_name($product_id)
 {
-	$name = wholesale_seo_product_name($product_id);
+	$name = retails_seo_product_name($product_id);
 	$name = preg_replace('/^AV\s*\d+\s*[\x{2013}\x{2014}-]\s*/u', '', $name);
-	$names = wholesale_seo_product_search_names();
+	$names = retails_seo_product_search_names();
 
 	return isset($names[$name]) ? $names[$name] : $name;
 }
@@ -908,10 +916,10 @@ function wholesale_seo_product_search_name($product_id)
  * Title suffix for a product's category. A product in a parent and a child
  * category takes the child's, which is the more specific.
  */
-function wholesale_seo_product_title_suffix($product_id)
+function retails_seo_product_title_suffix($product_id)
 {
 	$terms = get_the_terms($product_id, 'product_category');
-	$suffixes = wholesale_seo_category_title_suffixes();
+	$suffixes = retails_seo_category_title_suffixes();
 	$suffix = '';
 
 	foreach ($terms && !is_wp_error($terms) ? $terms : array() as $term) {
@@ -932,19 +940,19 @@ function wholesale_seo_product_title_suffix($product_id)
  *
  * @return array
  */
-function wholesale_seo_product_meta($product_id)
+function retails_seo_product_meta($product_id)
 {
 	// Hand-written title and description (data/product-pages/), when there are any.
-	$page_title = function_exists('wholesale_product_page_title') ? wholesale_product_page_title($product_id) : '';
-	$page_description = function_exists('wholesale_product_page_description') ? wholesale_product_page_description($product_id) : '';
+	$page_title = function_exists('retails_product_page_title') ? retails_product_page_title($product_id) : '';
+	$page_description = function_exists('retails_product_page_description') ? retails_product_page_description($product_id) : '';
 	if ($page_title && $page_description) {
 		return array('title' => $page_title, 'description' => $page_description);
 	}
 
-	$name = wholesale_seo_product_search_name($product_id);
-	$variant = wholesale_seo_product_variant_label($product_id);
+	$name = retails_seo_product_search_name($product_id);
+	$variant = retails_seo_product_variant_label($product_id);
 	$label = $variant ? sprintf('%s (%s)', $name, $variant) : $name;
-	$suffix = wholesale_seo_product_title_suffix($product_id);
+	$suffix = retails_seo_product_title_suffix($product_id);
 	if ($suffix && false !== stripos($label, $suffix)) {
 		$suffix = '';
 	}
@@ -966,9 +974,9 @@ function wholesale_seo_product_meta($product_id)
 
 	// The catalog name ("AV 12 – Dry Erase Adhesive Vinyl") keeps the snippet
 	// distinct from the same material listed in another category.
-	$catalog_name = wholesale_seo_product_name($product_id);
+	$catalog_name = retails_seo_product_name($product_id);
 	$prefix = $variant ? $catalog_name . ', ' . strtolower($variant) . ': ' : $catalog_name . ': ';
-	$description = wholesale_seo_trim_description($source, 155 - mb_strlen($prefix));
+	$description = retails_seo_trim_description($source, 155 - mb_strlen($prefix));
 
 	return array(
 		'title' => $page_title ? $page_title : $title,
@@ -979,9 +987,9 @@ function wholesale_seo_product_meta($product_id)
 /**
  * A published product by slug, or null.
  */
-function wholesale_seo_product($slug)
+function retails_seo_product($slug)
 {
-	$primed = $GLOBALS['wholesale_seo_primed_products'] ?? array();
+	$primed = $GLOBALS['retails_seo_primed_products'] ?? array();
 	if (isset($primed[$slug])) {
 		return $primed[$slug];
 	}
@@ -993,10 +1001,10 @@ function wholesale_seo_product($slug)
 
 /**
  * Load the published products a page shows in one query (posts, meta and featured
- * images), so wholesale_seo_product() and get_post_meta() don't query per slug.
- * Slugs that aren't published fall back to wholesale_seo_product()'s own lookup.
+ * images), so retails_seo_product() and get_post_meta() don't query per slug.
+ * Slugs that aren't published fall back to retails_seo_product()'s own lookup.
  */
-function wholesale_seo_prime_products(array $slugs)
+function retails_seo_prime_products(array $slugs)
 {
 	$slugs = array_values(array_unique(array_filter(array_map('sanitize_title', $slugs))));
 	if (!$slugs) {
@@ -1012,16 +1020,16 @@ function wholesale_seo_prime_products(array $slugs)
 	));
 	update_post_thumbnail_cache($query);
 	foreach ($query->posts as $post) {
-		$GLOBALS['wholesale_seo_primed_products'][$post->post_name] = $post;
+		$GLOBALS['retails_seo_primed_products'][$post->post_name] = $post;
 	}
 }
 
 /**
  * The "starting at" price text a product card shows (may contain <del>), or ''.
  */
-function wholesale_seo_product_starting_text($slug)
+function retails_seo_product_starting_text($slug)
 {
-	$product = wholesale_seo_product($slug);
+	$product = retails_seo_product($slug);
 
 	return $product ? trim((string) get_post_meta($product->ID, '_starting_at_text', true)) : '';
 }
@@ -1039,7 +1047,7 @@ function wholesale_seo_product_starting_text($slug)
  *               "From" (a dated sale keeps its <del> everyday price), 'price' => float,
  *               'unit' => 'sqft'|'item', 'product_id' => int), or an empty array.
  */
-function wholesale_seo_category_from($slugs)
+function retails_seo_category_from($slugs)
 {
 	static $cache = array();
 	$slugs = array_values(array_unique(array_filter(array_map('sanitize_title', (array) $slugs))));
@@ -1077,13 +1085,13 @@ function wholesale_seo_category_from($slugs)
 	)), 'ID');
 
 	foreach ($ids as $id) {
-		if (wholesale_product_is_channel_letter($id) || (function_exists('wholesale_product_stock_status') && 'outofstock' === wholesale_product_stock_status($id))) {
+		if (retails_product_is_channel_letter($id) || (function_exists('retails_product_stock_status') && 'outofstock' === retails_product_stock_status($id))) {
 			continue;
 		}
 		// Add-ons, unprinted hardware and per-ft² fabric-only items don't set a category
 		// card's price: "Event Tents From $98.16" was a tent flag and "Feather & Teardrop
 		// Flags From $5.77 per ft²" a custom pole flag (2026-11-09).
-		if (in_array(get_post_field('post_name', $id), wholesale_seo_category_from_skipped(), true)) {
+		if (in_array(get_post_field('post_name', $id), retails_seo_category_from_skipped(), true)) {
 			continue;
 		}
 		$text = trim(preg_replace('/^\s*from\s+/i', '', (string) get_post_meta($id, '_starting_at_text', true)));
@@ -1114,7 +1122,7 @@ function wholesale_seo_category_from($slugs)
  *
  * @return string[] Product slugs.
  */
-function wholesale_seo_category_from_skipped()
+function retails_seo_category_from_skipped()
 {
 	// Owner 2026-11-11: a category card's "From" must be the lowest price shown on that
 	// category page, add-ons included, so nothing is skipped any more. The 11-09 list was
@@ -1126,13 +1134,13 @@ function wholesale_seo_category_from_skipped()
 
 /**
  * A category's "From" price for a sign-type card, as the category page shows its
- * cheapest product: the exact amount without ".00" (wholesale_whole_dollars(), no
+ * cheapest product: the exact amount without ".00" (retails_whole_dollars(), no
  * rounding since 2026-11-12) plus the unit, e.g. array('$1.58', '/sq ft'), array('$42', '').
  * Channel letters: the cheapest per-letter price of any style in the category.
  *
  * @return array array(amount, unit), or an empty array.
  */
-function wholesale_category_card_from($category)
+function retails_category_card_from($category)
 {
 	static $cache = array();
 	if (isset($cache[$category])) {
@@ -1150,10 +1158,10 @@ function wholesale_category_card_from($category)
 			'no_found_rows' => true,
 			'tax_query' => array(array('taxonomy' => 'product_category', 'field' => 'slug', 'terms' => $category)),
 		)) as $id) {
-			if (!wholesale_product_is_channel_letter($id) || (function_exists('wholesale_product_stock_status') && 'outofstock' === wholesale_product_stock_status($id))) {
+			if (!retails_product_is_channel_letter($id) || (function_exists('retails_product_stock_status') && 'outofstock' === retails_product_stock_status($id))) {
 				continue;
 			}
-			$from = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($id) : null;
+			$from = function_exists('retails_cl_from_inch_rate') ? retails_cl_from_inch_rate($id) : null;
 			if ($from && $from['price'] > 0 && (!$low || $from['price'] < $low)) {
 				$low = (float) $from['price'];
 			}
@@ -1165,22 +1173,22 @@ function wholesale_category_card_from($category)
 		return $cache[$category];
 	}
 
-	$from = wholesale_seo_category_from($category);
+	$from = retails_seo_category_from($category);
 	if ($from) {
-		$cache[$category] = array(wholesale_whole_dollars($from['price']), 'sqft' === $from['unit'] ? '/sq ft' : '');
+		$cache[$category] = array(retails_whole_dollars($from['price']), 'sqft' === $from['unit'] ? '/sq ft' : '');
 	}
 
 	return $cache[$category];
 }
 
 /**
- * A category card's "Starting at" text (see wholesale_seo_category_from()), or ''.
+ * A category card's "Starting at" text (see retails_seo_category_from()), or ''.
  *
  * @param string|string[] $slugs product_category slug(s).
  */
-function wholesale_seo_category_starting_text($slugs)
+function retails_seo_category_starting_text($slugs)
 {
-	$from = wholesale_seo_category_from($slugs);
+	$from = retails_seo_category_from($slugs);
 
 	return $from ? $from['text'] : '';
 }
@@ -1190,9 +1198,9 @@ function wholesale_seo_category_starting_text($slugs)
  *
  * @return int[] array(min, max) in inches, or an empty array.
  */
-function wholesale_seo_letter_height_range($slug)
+function retails_seo_letter_height_range($slug)
 {
-	$product = wholesale_seo_product($slug);
+	$product = retails_seo_product($slug);
 	$attrs = $product ? json_decode((string) get_post_meta($product->ID, 'product_attr', true), true) : null;
 	$heights = array();
 
@@ -1222,33 +1230,36 @@ function wholesale_seo_letter_height_range($slug)
  *                    (SFS B2Sign Sync prices proposed values before saving them).
  * @return float 0 when the product has no online price.
  */
-function wholesale_seo_product_lowest_price($product_id, $fresh = false)
+function retails_seo_product_lowest_price($product_id, $fresh = false)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
 	if (!$fresh && isset($cache[$product_id])) {
 		return $cache[$product_id];
 	}
-	unset($GLOBALS['wholesale_seo_lowest_quote'][$product_id]);
+	unset($GLOBALS['retails_seo_lowest_quote'][$product_id]);
 
 	$cache[$product_id] = 0.0;
-	if (!function_exists('wholesale_price_quote')) {
+	if (!function_exists('retails_price_quote')) {
 		return 0.0;
 	}
 	// Channel letters: the cheapest letter height, the same "Starting at" price the page shows. With
 	// B2Sign's per-letter minimums the smallest height is not always the cheapest (8" costs more than 14").
-	if (function_exists('wholesale_product_is_channel_letter') && wholesale_product_is_channel_letter($product_id) && function_exists('wholesale_cl_from_price')) {
-		$from = wholesale_cl_from_price($product_id);
+	if (function_exists('retails_product_is_channel_letter') && retails_product_is_channel_letter($product_id) && function_exists('retails_cl_from_price')) {
+		$from = retails_cl_from_price($product_id);
 		if ($from && $from['price'] > 0) {
 			$cache[$product_id] = (float) $from['price'];
+			// The dated sale's share, so feeds and structured data show the everyday price with
+			// the sale price (no 'request': retails_product_cheapest_quote() must not re-price it).
+			$GLOBALS['retails_seo_lowest_quote'][$product_id] = array('promo_discount' => max(0.0, round((float) $from['everyday'] - (float) $from['price'], 2)));
 			return $cache[$product_id];
 		}
 	}
 
 	$request = array('letters' => 'A', 'product_quantity' => 1);
 	$choices = array();
-	foreach (wholesale_product_price_attrs($product_id) as $attr) {
-		$options = wholesale_attr_options($attr);
+	foreach (retails_product_price_attrs($product_id) as $attr) {
+		$options = retails_attr_options($attr);
 		if (!empty($attr['name']) && $options) {
 			$request[$attr['name']] = $options[0]['value'];
 			$choices[$attr['name']] = wp_list_pluck($options, 'value');
@@ -1257,25 +1268,25 @@ function wholesale_seo_product_lowest_price($product_id, $fresh = false)
 
 	// The smallest size the calculator accepts (or the minimum sq ft, when larger):
 	// a square side rounded up to a tenth of an inch, by a width giving exactly that area.
-	$min_sqft = max(0, (float) get_post_meta($product_id, '_min_sqft', true), wholesale_product_min_area($product_id));
+	$min_sqft = max(0, (float) get_post_meta($product_id, '_min_sqft', true), retails_product_min_area($product_id));
 	$side_ft = ($min_sqft > 0 ? ceil(round(sqrt($min_sqft) * 12, 6) * 10) / 10 : 12) / 12;
 	$request['height-ft'] = $side_ft;
 	$request['width-ft'] = $min_sqft > 0 ? $min_sqft / $side_ft : $side_ft;
 	// Rigid Signs and Magnets: the smallest width and height (the minimum charge applies).
-	$min_sides = wholesale_product_min_sides($product_id);
+	$min_sides = retails_product_min_sides($product_id);
 	// A side minimum of 0 means "no minimum": a 0" side can't be quoted, so use the
 	// size the calculator opens with, which costs the minimum charge.
 	if ($min_sides && min($min_sides) <= 0) {
-		$min_sides = wholesale_product_default_size($product_id);
+		$min_sides = retails_product_default_size($product_id);
 	}
 	if ($min_sides) {
 		$request['width-ft'] = $min_sides[0] / 12;
 		$request['height-ft'] = $min_sides[1] / 12;
 	}
 
-	$quote = wholesale_price_quote($product_id, $request);
+	$quote = retails_price_quote($product_id, $request);
 	if (!empty($quote['ok']) && $quote['total'] > 0) {
-		$GLOBALS['wholesale_seo_lowest_quote'][$product_id] = $quote + array('request' => $request);
+		$GLOBALS['retails_seo_lowest_quote'][$product_id] = $quote + array('request' => $request);
 		return $cache[$product_id] = (float) $quote['total'];
 	}
 
@@ -1284,9 +1295,9 @@ function wholesale_seo_product_lowest_price($product_id, $fresh = false)
 	if ($min_height > $side_ft) {
 		$request['height-ft'] = $min_height;
 		$request['width-ft'] = max((float) get_post_meta($product_id, '_min_width', true), $min_sqft / $min_height);
-		$quote = wholesale_price_quote($product_id, $request);
+		$quote = retails_price_quote($product_id, $request);
 		if (!empty($quote['ok']) && $quote['total'] > 0) {
-			$GLOBALS['wholesale_seo_lowest_quote'][$product_id] = $quote + array('request' => $request);
+			$GLOBALS['retails_seo_lowest_quote'][$product_id] = $quote + array('request' => $request);
 			return $cache[$product_id] = (float) $quote['total'];
 		}
 	}
@@ -1295,9 +1306,9 @@ function wholesale_seo_product_lowest_price($product_id, $fresh = false)
 	// cheapest option that can.
 	foreach ($choices as $name => $values) {
 		foreach (array_slice($values, 1) as $value) {
-			$quote = wholesale_price_quote($product_id, array_merge($request, array($name => $value)));
+			$quote = retails_price_quote($product_id, array_merge($request, array($name => $value)));
 			if (!empty($quote['ok']) && $quote['total'] > 0 && (!$cache[$product_id] || $quote['total'] < $cache[$product_id])) {
-				$GLOBALS['wholesale_seo_lowest_quote'][$product_id] = $quote + array('request' => array_merge($request, array($name => $value)));
+				$GLOBALS['retails_seo_lowest_quote'][$product_id] = $quote + array('request' => array_merge($request, array($name => $value)));
 				$cache[$product_id] = (float) $quote['total'];
 			}
 		}
@@ -1312,15 +1323,15 @@ function wholesale_seo_product_lowest_price($product_id, $fresh = false)
  * before a dated sale, 'sale_ends' => timestamp or null, 'sale_starts' => Y-m-d or ''). Empty when the
  * product has no online price.
  */
-function wholesale_seo_product_lowest_offer($product_id)
+function retails_seo_product_lowest_offer($product_id)
 {
 	$product_id = (int) $product_id;
-	$price = wholesale_seo_product_lowest_price($product_id);
+	$price = retails_seo_product_lowest_price($product_id);
 	if ($price <= 0) {
 		return array();
 	}
-	$quote = isset($GLOBALS['wholesale_seo_lowest_quote'][$product_id]) ? $GLOBALS['wholesale_seo_lowest_quote'][$product_id] : array();
-	$promo = !empty($quote['promo_discount']) && $quote['promo_discount'] > 0 ? wholesale_product_promotion($product_id) : null;
+	$quote = isset($GLOBALS['retails_seo_lowest_quote'][$product_id]) ? $GLOBALS['retails_seo_lowest_quote'][$product_id] : array();
+	$promo = !empty($quote['promo_discount']) && $quote['promo_discount'] > 0 ? retails_product_promotion($product_id) : null;
 
 	return array(
 		'price' => $price,
@@ -1329,9 +1340,9 @@ function wholesale_seo_product_lowest_offer($product_id)
 		// The configuration priced: the submitted form fields (width-ft, height-ft, options).
 		'request' => isset($quote['request']) ? $quote['request'] : array(),
 		// Start date (Y-m-d, Pacific) of whichever dated sale applies: the product's own, else the site-wide one.
-		'sale_starts' => $promo ? (string) (wholesale_dated_sale_window(get_post_meta($product_id, '_promo_percent', true), get_post_meta($product_id, '_promo_start', true), get_post_meta($product_id, '_promo_end', true))
+		'sale_starts' => $promo ? (string) (retails_dated_sale_window(get_post_meta($product_id, '_promo_percent', true), get_post_meta($product_id, '_promo_start', true), get_post_meta($product_id, '_promo_end', true))
 			? get_post_meta($product_id, '_promo_start', true)
-			: wholesale_get_setting('promo_start')) : '',
+			: retails_get_setting('promo_start')) : '',
 	);
 }
 
@@ -1341,17 +1352,17 @@ function wholesale_seo_product_lowest_offer($product_id)
  *
  * @param array $items List of array('q' => question, 'a' => answer HTML).
  */
-function wholesale_seo_set_page_faq($items)
+function retails_seo_set_page_faq($items)
 {
-	$GLOBALS['wholesale_page_faq'] = $items;
+	$GLOBALS['retails_page_faq'] = $items;
 }
 
 /**
  * FAQPage entity for the FAQ registered on this request, or null.
  */
-function wholesale_seo_faq_schema()
+function retails_seo_faq_schema()
 {
-	$items = isset($GLOBALS['wholesale_page_faq']) ? (array) $GLOBALS['wholesale_page_faq'] : array();
+	$items = isset($GLOBALS['retails_page_faq']) ? (array) $GLOBALS['retails_page_faq'] : array();
 	if (!$items) {
 		return null;
 	}
@@ -1370,7 +1381,7 @@ function wholesale_seo_faq_schema()
 
 	return array(
 		'@type' => 'FAQPage',
-		'@id' => trailingslashit(wholesale_seo_url()) . '#faq',
+		'@id' => trailingslashit(retails_seo_url()) . '#faq',
 		'mainEntity' => $questions,
 	);
 }
@@ -1378,9 +1389,9 @@ function wholesale_seo_faq_schema()
 /**
  * Print the registered FAQ as the site's expandable question list.
  */
-function wholesale_seo_render_faq($open_first = false)
+function retails_seo_render_faq($open_first = false)
 {
-	$items = isset($GLOBALS['wholesale_page_faq']) ? (array) $GLOBALS['wholesale_page_faq'] : array();
+	$items = isset($GLOBALS['retails_page_faq']) ? (array) $GLOBALS['retails_page_faq'] : array();
 
 	foreach ($items as $index => $item) {
 		printf(
@@ -1395,21 +1406,21 @@ function wholesale_seo_render_faq($open_first = false)
 /**
  * Add the page FAQ to Rank Math's graph when Rank Math owns the head.
  */
-function wholesale_seo_rank_math_faq($data)
+function retails_seo_rank_math_faq($data)
 {
-	$faq = is_array($data) ? wholesale_seo_faq_schema() : null;
+	$faq = is_array($data) ? retails_seo_faq_schema() : null;
 	if ($faq) {
 		foreach ($data as $entity) {
 			if (is_array($entity) && in_array('FAQPage', (array) ($entity['@type'] ?? array()), true)) {
 				return $data;
 			}
 		}
-		$data['wholesale-faq'] = $faq;
+		$data['retails-faq'] = $faq;
 	}
 
 	return $data;
 }
-add_filter('rank_math/json_ld', 'wholesale_seo_rank_math_faq', 25);
+add_filter('rank_math/json_ld', 'retails_seo_rank_math_faq', 25);
 
 /**
  * Style guide copy for each channel letter product page. Keys are product
@@ -1417,7 +1428,7 @@ add_filter('rank_math/json_ld', 'wholesale_seo_rank_math_faq', 25);
  *
  * @return array
  */
-function wholesale_seo_channel_letter_guides()
+function retails_seo_channel_letter_guides()
 {
 	return array(
 		'standard-channel-letter-front-lit' => array(
@@ -1461,19 +1472,19 @@ function wholesale_seo_channel_letter_guides()
 /**
  * Print the style guide section on a channel letter product page.
  */
-function wholesale_seo_render_channel_letter_guide($product_id)
+function retails_seo_render_channel_letter_guide($product_id)
 {
 	$slug = (string) get_post_field('post_name', $product_id);
-	$guides = wholesale_seo_channel_letter_guides();
-	$seo = wholesale_seo_channel_letter_product($product_id);
+	$guides = retails_seo_channel_letter_guides();
+	$seo = retails_seo_channel_letter_product($product_id);
 	if (!isset($guides[$slug]) || empty($seo['heading'])) {
 		return;
 	}
 
 	$guide = $guides[$slug];
 	$heading = $seo['heading'];
-	$heights = wholesale_seo_letter_height_range($slug);
-	$storefront_url = function_exists('wholesale_seo_storefront_signs_url') ? wholesale_seo_storefront_signs_url() : '';
+	$heights = retails_seo_letter_height_range($slug);
+	$storefront_url = function_exists('retails_seo_storefront_signs_url') ? retails_seo_storefront_signs_url() : '';
 	?>
 	<section class="cl-style-guide" aria-labelledby="cl-style-guide-title">
 		<h2 id="cl-style-guide-title"><?php echo esc_html(sprintf('%s: Style Guide', $heading)); ?></h2>
@@ -1496,17 +1507,17 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 			<?php endif; ?>
 			<?php
 			// The same starting price the product's structured data gives Google.
-			$from_price = wholesale_seo_product_lowest_price($product_id);
+			$from_price = retails_seo_product_lowest_price($product_id);
 			// Only a dated sale is described as a discount; the everyday price is just the price.
-			$promotion = wholesale_product_promotion($product_id);
+			$promotion = retails_product_promotion($product_id);
 			if ($from_price > 0 && $heights) :
 				?>
 				<?php
-				$from_cl = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($product_id) : null;
+				$from_cl = function_exists('retails_cl_from_inch_rate') ? retails_cl_from_inch_rate($product_id) : null;
 				$from_height = $from_cl && !empty($from_cl['height']) ? (int) $from_cl['height'] : $heights[0];
 				$from_rate = $from_cl ? (float) $from_cl['price'] : 0.0;
 				echo '<strong>' . esc_html(sprintf('Starting rate: $%s per inch of letter height at %d inches tall', number_format($from_rate, 2), $from_height)) . '</strong>'
-					. esc_html($promotion ? sprintf(', including the %s%% sale that ends %s,', rtrim(rtrim(number_format($promotion['percent'], 2), '0'), '.'), wholesale_promotion_end_text($promotion)) : ',')
+					. esc_html($promotion ? sprintf(', including the %s%% sale that ends %s,', rtrim(rtrim(number_format($promotion['percent'], 2), '0'), '.'), retails_promotion_end_text($promotion)) : ',')
 					. ' before options such as a power supply or raceway.';
 				$cost_page = get_page_by_path('channel-letter-cost');
 				if ($cost_page && 'publish' === $cost_page->post_status) {
@@ -1519,12 +1530,12 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 
 		<h3>Compare other channel letter styles</h3>
 		<ul>
-			<?php foreach (wholesale_seo_channel_letter_products() as $other_slug => $other) : ?>
+			<?php foreach (retails_seo_channel_letter_products() as $other_slug => $other) : ?>
 				<?php
 				if ($other_slug === $slug) {
 					continue;
 				}
-				$other_product = wholesale_seo_product($other_slug);
+				$other_product = retails_seo_product($other_slug);
 				if (!$other_product) {
 					continue;
 				}
@@ -1533,7 +1544,7 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 			<?php endforeach; ?>
 		</ul>
 		<p>
-			See all styles side by side on the <a href="<?php echo esc_url((wholesale_channel_letters_landing_id() ? get_permalink(wholesale_channel_letters_landing_id()) : home_url('/custom-channel-letters/')) . '#cl-compare-title'); ?>">custom channel letters page</a><?php if ($storefront_url) : ?>, or compare every sign type in our <a href="<?php echo esc_url($storefront_url); ?>">storefront signs guide</a><?php endif; ?>.
+			See all styles side by side on the <a href="<?php echo esc_url((retails_channel_letters_landing_id() ? get_permalink(retails_channel_letters_landing_id()) : home_url('/custom-channel-letters/')) . '#cl-compare-title'); ?>">custom channel letters page</a><?php if ($storefront_url) : ?>, or compare every sign type in our <a href="<?php echo esc_url($storefront_url); ?>">storefront signs guide</a><?php endif; ?>.
 		</p>
 	</section>
 	<?php
@@ -1548,7 +1559,7 @@ function wholesale_seo_render_channel_letter_guide($product_id)
  * loading here: the stored tags point at full-size uploads (a 3449px, 1.7 MB
  * PNG shown at 443px on the channel letter pages).
  */
-function wholesale_seo_fill_missing_alt($html, $label)
+function retails_seo_fill_missing_alt($html, $label)
 {
 	$html = (string) $html;
 	if ('' === $html || false === stripos($html, '<img')) {
@@ -1579,7 +1590,7 @@ function wholesale_seo_fill_missing_alt($html, $label)
  * facilities the business does not have and repeated the same text on every
  * product page. The stored content is left as it is.
  */
-function wholesale_seo_strip_facility_block($html)
+function retails_seo_strip_facility_block($html)
 {
 	$html = (string) $html;
 	if (!preg_match('#(?:<h\d[^>]*>\s*)?Available (?:Production|Distribution) Facility#i', $html, $start, PREG_OFFSET_CAPTURE)) {
@@ -1613,11 +1624,11 @@ function wholesale_seo_strip_facility_block($html)
  * pickup?". The business has no pickup and no California store. The supplier's
  * pickup-only note for rigid boards over 46" x 38" (or 48" x 30") becomes a
  * call-first note, since boards that size are too big to ship by parcel.
- * Run it before wholesale_seo_strip_facility_block(), so the pickup line no
+ * Run it before retails_seo_strip_facility_block(), so the pickup line no
  * longer sits between the facility list and its divider. The stored content is
  * left as it is.
  */
-function wholesale_seo_strip_pickup_claims($html)
+function retails_seo_strip_pickup_claims($html)
 {
 	$html = (string) $html;
 	if (!preg_match('/pick\s?-?up/i', $html)) {
@@ -1654,9 +1665,9 @@ function wholesale_seo_strip_pickup_claims($html)
  * supplier copy (a <dt> followed by another <dt> or the end of the list)
  * dropped. 15 products had such unanswered questions.
  */
-function wholesale_seo_clean_product_content($html)
+function retails_seo_clean_product_content($html)
 {
-	$html = wholesale_seo_strip_pickup_claims($html);
+	$html = retails_seo_strip_pickup_claims($html);
 
 	$clean = preg_replace(
 		array(
@@ -1668,17 +1679,17 @@ function wholesale_seo_clean_product_content($html)
 	);
 	$html = null === $clean ? $html : $clean;
 
-	return wholesale_seo_strip_facility_block($html);
+	return retails_seo_strip_facility_block($html);
 }
 
 /**
  * Readable alt text for a media library image, or '' when nothing reliable is
  * known (for example customer design uploads with generated file names).
  */
-function wholesale_seo_attachment_alt($attachment_id)
+function retails_seo_attachment_alt($attachment_id)
 {
 	$product_title = static function ($product_id) {
-		$seo = wholesale_seo_channel_letter_product($product_id);
+		$seo = retails_seo_channel_letter_product($product_id);
 		if (!empty($seo['heading'])) {
 			return $seo['heading'];
 		}
@@ -1721,7 +1732,7 @@ function wholesale_seo_attachment_alt($attachment_id)
  * Pages print their title as the H1, so an H1 typed into the page content
  * (the Terms page has one) becomes a second H1. Demote those to H2.
  */
-function wholesale_seo_demote_content_h1($content)
+function retails_seo_demote_content_h1($content)
 {
 	if (!is_page() || false === stripos($content, '<h1')) {
 		return $content;
@@ -1729,7 +1740,7 @@ function wholesale_seo_demote_content_h1($content)
 
 	return preg_replace(array('/<h1(\s|>)/i', '/<\/h1>/i'), array('<h2$1', '</h2>'), $content);
 }
-add_filter('the_content', 'wholesale_seo_demote_content_h1', 20);
+add_filter('the_content', 'retails_seo_demote_content_h1', 20);
 
 /**
  * "More {category}" links under a product: up to eight other listed products
@@ -1737,9 +1748,9 @@ add_filter('the_content', 'wholesale_seo_demote_content_h1', 20);
  * can move between related products (Coroplast to aluminum and PVC signs,
  * Graphic Only to Graphic & Frame). Channel letters have their own style list.
  */
-function wholesale_seo_render_related_products($product_id)
+function retails_seo_render_related_products($product_id)
 {
-	if (wholesale_seo_channel_letter_product($product_id)) {
+	if (retails_seo_channel_letter_product($product_id)) {
 		return;
 	}
 
@@ -1761,7 +1772,7 @@ function wholesale_seo_render_related_products($product_id)
 		'post_status' => 'publish',
 		'posts_per_page' => 8,
 		// Products whose only photos carry sample sale artwork stay out (inc/product-photo-overrides.php).
-		'post__not_in' => array_merge(array((int) $product_id), wholesale_seo_duplicate_product_ids(), function_exists('wholesale_card_hidden_product_ids') ? wholesale_card_hidden_product_ids() : array()),
+		'post__not_in' => array_merge(array((int) $product_id), retails_seo_duplicate_product_ids(), function_exists('retails_card_hidden_product_ids') ? retails_card_hidden_product_ids() : array()),
 		'no_found_rows' => true,
 		'orderby' => array('menu_order' => 'ASC', 'title' => 'ASC'),
 		'tax_query' => array(
@@ -1778,20 +1789,20 @@ function wholesale_seo_render_related_products($product_id)
 	<section class="related-products" aria-labelledby="related-products-title">
 		<div class="related-products-head">
 			<h2 id="related-products-title"><?php echo esc_html(sprintf('More %s', $term->name)); ?></h2>
-			<a href="<?php echo esc_url(wholesale_category_url($term->slug)); ?>"><?php echo esc_html(sprintf('See all %s', $term->name)); ?> &rarr;</a>
+			<a href="<?php echo esc_url(retails_category_url($term->slug)); ?>"><?php echo esc_html(sprintf('See all %s', $term->name)); ?> &rarr;</a>
 		</div>
 		<ul class="related-products-grid">
 			<?php foreach ($related as $item) : ?>
 				<?php
-				$name = wholesale_seo_product_name($item->ID);
+				$name = retails_seo_product_name($item->ID);
 				// The product's own Starting at, as its other cards show it: whole dollars rounded
 				// up, per ft² for size-calculator products, a dated sale struck through. Not
-				// wholesale_seo_product_lowest_price(), the default-choice price Google gets.
+				// retails_seo_product_lowest_price(), the default-choice price Google gets.
 				$price = trim(preg_replace('/^\s*from\s+/i', '', (string) get_post_meta($item->ID, '_starting_at_text', true)));
-				$price = preg_match('/\$\s?\d/', wp_strip_all_tags($price)) ? wholesale_price_no_cents($price) : '';
+				$price = preg_match('/\$\s?\d/', wp_strip_all_tags($price)) ? retails_price_no_cents($price) : '';
 				?>
 				<li class="related-product">
-					<?php echo wholesale_admin_edit_product_link($item->ID); // Escaped in helper. ?>
+					<?php echo retails_admin_edit_product_link($item->ID); // Escaped in helper. ?>
 					<a href="<?php echo esc_url(get_permalink($item)); ?>">
 						<span class="related-product-image">
 							<?php
@@ -1806,6 +1817,7 @@ function wholesale_seo_render_related_products($product_id)
 							?>
 						</span>
 						<span class="related-product-name"><?php echo esc_html($name); ?></span>
+						<?php echo function_exists('retails_card_trust') ? retails_card_trust($item->ID) : ''; // Escaped in helper. ?>
 						<?php if ($price) : ?>
 							<span class="related-product-price"><?php echo wp_kses('From ' . $price, array('sup' => array(), 'del' => array())); ?></span>
 						<?php endif; ?>
@@ -1824,7 +1836,7 @@ function wholesale_seo_render_related_products($product_id)
  *
  * @return array Page slug => Y-m-d.
  */
-function wholesale_guide_page_revisions()
+function retails_guide_page_revisions()
 {
 	return array(
 		'sign-permits' => '2026-10-24',
@@ -1837,12 +1849,12 @@ function wholesale_guide_page_revisions()
 /**
  * The revision date of the current guide page, or an empty string.
  */
-function wholesale_guide_page_revised()
+function retails_guide_page_revised()
 {
 	if (!is_page()) {
 		return '';
 	}
-	$revisions = wholesale_guide_page_revisions();
+	$revisions = retails_guide_page_revisions();
 	$slug = (string) get_post_field('post_name', get_queried_object_id());
 
 	return isset($revisions[$slug]) ? $revisions[$slug] : '';
@@ -1852,9 +1864,9 @@ function wholesale_guide_page_revised()
  * "Updated <date> · By the Storefront Sign Online team" under a guide's
  * heading. The team links to the About page; no individual author is named.
  */
-function wholesale_guide_byline()
+function retails_guide_byline()
 {
-	$revised = wholesale_guide_page_revised();
+	$revised = retails_guide_page_revised();
 	if (!$revised) {
 		return;
 	}
@@ -1875,8 +1887,8 @@ function wholesale_guide_byline()
 }
 
 // The guide's dates, and the company as its author and publisher.
-add_filter('wholesale_seo_webpage_schema', function ($page) {
-	$revised = wholesale_guide_page_revised();
+add_filter('retails_seo_webpage_schema', function ($page) {
+	$revised = retails_guide_page_revised();
 	if (!$revised) {
 		return $page;
 	}

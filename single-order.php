@@ -1,29 +1,29 @@
 <?php
 /**
- * Order detail for anyone with the order's link, no login needed (see wholesale_protect_order_pages()).
+ * Order detail for anyone with the order's link, no login needed (see retails_protect_order_pages()).
  *
  * @package litsign
  */
 
 $post_id = get_the_ID();
-$items = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
-$cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
-$billing = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
-$shipping = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
+$items = retails_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
+$cost = retails_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
+$billing = retails_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+$shipping = retails_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
 $status = get_post_status($post_id);
-$status_info = wholesale_order_status_info($post_id);
-$noun = wholesale_items_noun($items);
+$status_info = retails_order_status_info($post_id);
+$noun = retails_items_noun($items);
 $step = isset($status_info[$status]) ? $status_info[$status]['step'] : 1;
 $note = isset($status_info[$status]) ? $status_info[$status]['note'] : '';
 $tracking = get_post_meta($post_id, '_tracking_number', true);
 $carrier = get_post_meta($post_id, '_tracking_carrier', true);
-$tracking_url = $tracking ? wholesale_tracking_url($carrier, $tracking) : '';
+$tracking_url = $tracking ? retails_tracking_url($carrier, $tracking) : '';
 $is_staff = current_user_can('edit_post', $post_id);
 // Review prompts wait until the package arrives.
-$on_the_way = wholesale_order_on_the_way($status);
-$review_links = $on_the_way ? array() : wholesale_order_unreviewed_products($post_id);
-$can_collect_reviews = !$on_the_way && wholesale_order_is_shipped($status) && wholesale_setting_enabled('allow_verified_reviews');
-$google_review_url = $on_the_way ? '' : wholesale_order_google_review_url($post_id);
+$on_the_way = retails_order_on_the_way($status);
+$review_links = $on_the_way ? array() : retails_order_unreviewed_products($post_id);
+$can_collect_reviews = !$on_the_way && retails_order_is_shipped($status) && retails_setting_enabled('allow_verified_reviews');
+$google_review_url = $on_the_way ? '' : retails_order_google_review_url($post_id);
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
 };
@@ -54,7 +54,7 @@ get_header();
 
         <header class="acct-head">
             <div>
-                <h1>Order #<?php echo esc_html(wholesale_order_number($post_id)); ?> <?php echo wholesale_order_status_badge($status, $post_id); // Escaped in the helper. ?></h1>
+                <h1>Order #<?php echo esc_html(retails_order_number($post_id)); ?> <?php echo retails_order_status_badge($status, $post_id); // Escaped in the helper. ?></h1>
                 <p>Placed <?php echo esc_html(get_the_date('F j, Y', $post_id)); ?><?php echo $note ? ' &middot; ' . esc_html($note) : ''; ?></p>
             </div>
             <?php if ($is_staff) : ?>
@@ -62,9 +62,9 @@ get_header();
             <?php endif; ?>
         </header>
 
-        <?php echo wholesale_order_steps_html($post_id); // Every stage, step by step; escaped in the helper. ?>
+        <?php echo retails_order_steps_html($post_id); // Every stage, step by step; escaped in the helper. ?>
 
-        <?php $artwork_missing = !$is_staff && function_exists('wholesale_order_artwork_is_owner') && wholesale_order_artwork_is_owner($post_id) ? wholesale_order_artwork_missing_lines($post_id) : array(); ?>
+        <?php $artwork_missing = !$is_staff && function_exists('retails_order_artwork_is_owner') && retails_order_artwork_is_owner($post_id) ? retails_order_artwork_missing_lines($post_id) : array(); ?>
         <?php if ($artwork_missing) : ?>
             <p class="order-artwork-alert checkout-card" role="note">
                 <strong><?php echo esc_html(1 === count($artwork_missing) ? 'An item on this order has no artwork yet.' : count($artwork_missing) . ' items on this order have no artwork yet.'); ?></strong>
@@ -72,7 +72,7 @@ get_header();
             </p>
         <?php endif; ?>
 
-        <?php $shipments_html = (string) apply_filters('wholesale_order_shipments_html', '', $post_id, 'order'); ?>
+        <?php $shipments_html = (string) apply_filters('retails_order_shipments_html', '', $post_id, 'order'); ?>
         <?php if ('' !== $shipments_html) : ?>
             <?php echo $shipments_html; // Every package with live status, escaped by the tracking sync plugin. ?>
         <?php elseif ($tracking) : ?>
@@ -89,7 +89,7 @@ get_header();
         <?php
         if ($is_staff) {
             // Staff-only B2Sign order number + tracking number box from the tracking sync plugin.
-            do_action('wholesale_order_staff_tools', $post_id);
+            do_action('retails_order_staff_tools', $post_id);
         }
         ?>
 
@@ -99,7 +99,7 @@ get_header();
                     <strong>How did your <?php echo esc_html($noun); ?> turn out?</strong>
                     <p>A quick Google review helps other business owners find us.</p>
                 </div>
-                <a class="order-google-review-btn" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo wholesale_google_logo_svg(18); ?> Review us on Google</a>
+                <a class="order-google-review-btn" href="<?php echo esc_url($google_review_url); ?>" target="_blank" rel="noopener"><?php echo retails_google_logo_svg(18); ?> Review us on Google</a>
             </div>
         <?php endif; ?>
 
@@ -108,9 +108,9 @@ get_header();
                 <?php foreach ($items as $line_index => $item) :
                     $details = (array) ($item['product_details'] ?? array());
                     $image = !empty($details['Design Url']) ? $details['Design Url'] : ($item['product_thumbnail'] ?? '');
-                    $specs = wholesale_item_specs($item);
+                    $specs = retails_item_specs($item);
                     // Artwork box: the file, and an upload for a missing file (inc/order-artwork.php).
-                    $artwork_box = function_exists('wholesale_order_artwork_box_html') && is_array($item) ? wholesale_order_artwork_box_html($post_id, $line_index, $item, 'site') : '';
+                    $artwork_box = function_exists('retails_order_artwork_box_html') && is_array($item) ? retails_order_artwork_box_html($post_id, $line_index, $item, 'site') : '';
                     if ('' !== $artwork_box) {
                         unset($specs['My Artwork']);
                     }
@@ -157,7 +157,7 @@ get_header();
                                     </div>
                                 <?php endif; ?>
                                 <ul class="cart-line-design">
-                                    <?php foreach (wholesale_cl_design_summary($design) as $line) : ?>
+                                    <?php foreach (retails_cl_design_summary($design) as $line) : ?>
                                         <li><?php echo esc_html($line); ?></li>
                                     <?php endforeach; ?>
                                 </ul>
@@ -165,16 +165,16 @@ get_header();
 
                             <?php if ($specs) : ?>
                                 <details class="cart-line-specs"<?php echo $is_staff ? ' open' : ''; ?>>
-                                    <summary><?php echo esc_html(ucfirst(wholesale_product_noun((int) ($item['product_id'] ?? 0)))); ?> details</summary>
+                                    <summary><?php echo esc_html(ucfirst(retails_product_noun((int) ($item['product_id'] ?? 0)))); ?> details</summary>
                                     <dl>
                                         <?php foreach ($specs as $label => $value) : ?>
-                                            <div><dt><?php echo esc_html($label); ?></dt><dd><?php echo $value; // Escaped in wholesale_item_specs(). ?></dd></div>
+                                            <div><dt><?php echo esc_html($label); ?></dt><dd><?php echo $value; // Escaped in retails_item_specs(). ?></dd></div>
                                         <?php endforeach; ?>
                                     </dl>
                                 </details>
                             <?php endif; ?>
 
-                            <?php echo $artwork_box; // Escaped in wholesale_order_artwork_box_html(). ?>
+                            <?php echo $artwork_box; // Escaped in retails_order_artwork_box_html(). ?>
 
                             <?php if ($product_url) : ?>
                                 <div class="cart-line-actions">
@@ -182,8 +182,8 @@ get_header();
                                     <small class="order-again-note" style="flex-basis:100%;order:9;color:#55606b;font-size:.8rem" id="order-again-note-<?php echo esc_attr($product_id); ?>">Opens the product at today&rsquo;s price. Choose your size and options and upload or confirm your artwork before adding it to the cart.</small>
                                     <?php if (isset($review_links[$product_id])) : ?>
                                         <a class="order-write-review" href="<?php echo esc_url($review_links[$product_id]); ?>">&#9733; Write a review</a>
-                                    <?php elseif ($can_collect_reviews && wholesale_order_review_id($post_id, $product_id)) : ?>
-                                        <span class="order-reviewed"><?php echo 'publish' === get_post_status(wholesale_order_review_id($post_id, $product_id)) ? 'Reviewed &middot; thank you!' : 'Review submitted &middot; awaiting approval'; ?></span>
+                                    <?php elseif ($can_collect_reviews && retails_order_review_id($post_id, $product_id)) : ?>
+                                        <span class="order-reviewed"><?php echo 'publish' === get_post_status(retails_order_review_id($post_id, $product_id)) ? 'Reviewed &middot; thank you!' : 'Review submitted &middot; awaiting approval'; ?></span>
                                     <?php endif; ?>
                                 </div>
                             <?php endif; ?>
@@ -198,7 +198,7 @@ get_header();
                     <div><dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd></div>
                     <div><dt>Shipping</dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
                     <div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd></div>
-                    <?php $net = function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($post_id) : null; // inc/order-net-total.php ?>
+                    <?php $net = function_exists('retails_order_net_amounts') ? retails_order_net_amounts($post_id) : null; // inc/order-net-total.php ?>
                     <?php if ($net && $net['has_refund']) : ?>
                         <div><dt>Order total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
                         <div class="checkout-refund" style="color:#1a7f37;"><dt>Refunded</dt><dd>&minus;<?php echo esc_html($money($net['refunded'])); ?></dd></div>
@@ -208,7 +208,7 @@ get_header();
                     <?php endif; ?>
                 </dl>
                 <dl class="confirmation-meta">
-                    <div><dt>Payment</dt><dd><?php echo esc_html(wholesale_payment_customer_text($post_id)); ?></dd></div>
+                    <div><dt>Payment</dt><dd><?php echo esc_html(retails_payment_customer_text($post_id)); ?></dd></div>
                     <?php if (!empty($cost['shipping_method'])) : ?>
                         <div><dt>Shipping method</dt><dd><?php echo esc_html($cost['shipping_method']); ?></dd></div>
                     <?php endif; ?>
@@ -218,7 +218,7 @@ get_header();
                         <div><dt>Order notes</dt><dd><?php echo nl2br(esc_html(get_post_meta($post_id, 'order_comment', true))); ?></dd></div>
                     <?php endif; ?>
                 </dl>
-                <p class="account-help">Questions? Call <a href="tel:+18664362101">866-436-2101</a> with order #<?php echo esc_html(wholesale_order_number($post_id)); ?>.</p>
+                <p class="account-help">Questions? Call <a href="tel:+18664362101">866-436-2101</a> with order #<?php echo esc_html(retails_order_number($post_id)); ?>.</p>
             </aside>
         </div>
     </div>

@@ -132,7 +132,7 @@
 		{ token: 'size-height-inch', label: 'This is the height in inches', help: 'Its chosen value is the sign height; used with a width dropdown to work out square feet.' },
 	];
 
-	// Same rules as wholesale_parse_option_price() in inc/pricing.php.
+	// Same rules as retails_parse_option_price() in inc/pricing.php.
 	function parseOptionValue(value) {
 		const parts = String(value).split('/');
 		if (!isNum(parts[0])) {
@@ -1089,9 +1089,9 @@
 		{ id: 'options', label: 'Options', boxes: ['product_attr'] },
 		{ id: 'cl', label: 'Channel letters', boxes: ['product_cl_data', 'product_extra_options'], fields: ['_trimcap_color', '_return_color', '_info_content_face_text', '_info_content_face_image', '_info_content_return_text', '_info_content_return_image', '_info_content_trimcap_text', '_info_content_trimcap_image'] },
 		{ id: 'descriptions', label: 'Descriptions and FAQ', boxes: ['product_additional_info'], fields: ['_product_short_desc', '_product_list_desc', '_product_review_text'] },
-		{ id: 'images', label: 'Images', fields: ['_product_gallery'], boxes: ['wholesale-product-image-alt', 'product-image-alt', 'postimagediv'] },
+		{ id: 'images', label: 'Images', fields: ['_product_gallery'], boxes: ['retails-product-image-alt', 'product-image-alt', 'postimagediv'] },
 		{ id: 'settings', label: 'Visibility and settings', fields: ['_show_in_list', '_stock_status', '_backorder_date', '_has_upload_artwork', '_artwork_after_order', '_artwork_size', '_product_turnaround', '_order_by_index', '_product_group_data'] },
-		{ id: 'seo', label: 'SEO', boxes: ['wholesale-seo'] },
+		{ id: 'seo', label: 'SEO', boxes: ['retails-seo'] },
 		{ id: 'all', label: 'All fields' },
 	];
 
@@ -1246,7 +1246,7 @@
 
 	/* ============================================================= PRICE PREVIEW */
 
-	// A copy of wholesale_price_quote() / wholesale_cl_design_quote() in inc/pricing.php,
+	// A copy of retails_price_quote() / retails_cl_design_quote() in inc/pricing.php,
 	// run on the values on screen (including unsaved ones).
 	const Preview = {
 		input: { width: '24', height: '36', qty: '1', letters: 'OPEN', clHeight: '12', face: '', ps: false, lit: false, cable: false, picks: {} },
@@ -1313,7 +1313,7 @@
 
 			attrs.forEach((attr) => {
 				if (attr.options.length < 2 || /avoid-price/.test(attr.cssClass) || (attr.name === 'height' && isCl)) return;
-				// The calculator's typed size replaces a preset "size" dropdown (wholesale_attr_is_preset_size()).
+				// The calculator's typed size replaces a preset "size" dropdown (retails_attr_is_preset_size()).
 				if (isSqftCalc && String(attr.name).trim().toLowerCase() === 'size' && !/size-(width|height)-inch/.test(attr.cssClass)) return;
 				const option = this.chosen(attr);
 				const price = this.parse(option.value);
@@ -1331,7 +1331,7 @@
 			});
 
 			if (running <= 0) return { error: 'This works out to $0. Check the price per sq ft and options.', lines };
-			// wholesale_price_quote(): the printed size (without flat options such as grommets)
+			// retails_price_quote(): the printed size (without flat options such as grommets)
 			// costs at least the minimum and at most the full sheet price, after the everyday
 			// price adjustment; flat options are added on top. Empty minimum = site default, 0 = none.
 			const minField = fieldVal('_min_order_price').trim();

@@ -1870,14 +1870,17 @@ $logo_id = get_theme_mod('custom_logo');
 				border-bottom: 1px solid var(--m-line);
 			}
 
+			/* Logo fills the drawer's top row next to the close button (owner
+			   2026-11-21: "full width of the hamburger menu"): up to 314px. */
 			.ssxm__logo {
 				display: block;
+				flex: 1 1 auto;
 				min-width: 0;
 			}
 
 			.ssxm__logo img {
 				display: block;
-				width: 170px;
+				width: 100%;
 				max-width: 100%;
 				height: auto;
 			}
@@ -2269,7 +2272,8 @@ $logo_id = get_theme_mod('custom_logo');
 							'alt'      => get_bloginfo('name'),
 							'loading'  => 'lazy',
 							'decoding' => 'async',
-							'sizes'    => '170px',
+							// Drawer min(90vw, 400px) minus padding, gap and close button.
+							'sizes'    => '(max-width: 444px) calc(90vw - 86px), 314px',
 						));
 					} else {
 						echo retails_logo_fallback_html();

@@ -379,8 +379,20 @@ function retails_product_group_assets()
 		. '.pgs-spinner{position:fixed;left:50%;top:50%;z-index:99990;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 20px;border-radius:12px;background:rgba(255,255,255,.96);box-shadow:0 8px 30px rgba(15,23,42,.18);color:#0f172a;font-size:14px;font-weight:600;transform:translate(-50%,-50%) scale(.92);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease,transform .12s ease,visibility 0s linear .12s}'
 		. '.pgs-spinner.is-on{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1);transition:opacity .12s ease,transform .12s ease}'
 		. '.pgs-spinner__ring{width:38px;height:38px;border:4px solid rgba(31,168,222,.2);border-top-color:#1fa8de;border-radius:50%;animation:pgs-spin .7s linear infinite}'
+		// Animated header logo in place of the ring (owner 2026-11-21). No scale on the box
+		// while it is the logo: js/logo-motion.js measures the picture when it starts playing.
+		// The picture's own tagline rows are masked off (like the header, cut at 86.5%) and
+		// its animation copies at 86.2%; the spare transparent rows are pulled up.
+		. '.pgs-spinner:has(.pgs-spinner__logo),.pgs-spinner:has(.pgs-spinner__logo).is-on{transform:translate(-50%,-50%)}'
+		. '.pgs-spinner:has(.pgs-spinner__logo){gap:2px;padding:18px 24px 14px}'
+		. '.pgs-spinner__logo{position:relative;display:block;width:min(280px,calc(100vw - 96px));overflow:visible}'
+		. '.pgs-spinner__logo img{display:block;width:100%;height:auto;margin-bottom:-2.2%;-webkit-mask-image:linear-gradient(#000 86.5%,transparent 86.5%);mask-image:linear-gradient(#000 86.5%,transparent 86.5%)}'
+		. '.pgs-spinner__logo .lm-l,.pgs-spinner__logo .lm-sign{-webkit-mask-image:linear-gradient(#000 86.2%,transparent 86.2%);mask-image:linear-gradient(#000 86.2%,transparent 86.2%)}'
+		. '.pgs-spinner__text{color:#475467;font-size:13px;letter-spacing:.02em}'
+		. '.pgs-spinner.is-still.is-on .pgs-spinner__logo img{animation:pgs-pulse 1.1s ease-in-out infinite alternate}'
+		. '@keyframes pgs-pulse{from{opacity:1}to{opacity:.55}}'
 		. '@keyframes pgs-spin{to{transform:rotate(360deg)}}'
-		. '@media (prefers-reduced-motion:reduce){.product-details.is-swapping #product-options,.product-details.is-swapping .pd-hero,.pgs-spinner{transition:none}.pgs-spinner__ring,.product-group-item.is-loading .product-group-item-link::after{animation-duration:1.6s}}'
+		. '@media (prefers-reduced-motion:reduce){.product-details.is-swapping #product-options,.product-details.is-swapping .pd-hero,.pgs-spinner{transition:none}.pgs-spinner__ring,.product-group-item.is-loading .product-group-item-link::after{animation-duration:1.6s}.pgs-spinner.is-still.is-on .pgs-spinner__logo img{animation:none}}'
 	);
 }
 add_action('wp_enqueue_scripts', 'retails_product_group_assets', 110); // After css/ui-polish.css (100).

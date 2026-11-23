@@ -144,18 +144,70 @@
 
   // The screen-centre spinner (styles: inc/product-group-swap.php). Fixed to the viewport, so
   // it shows wherever the visitor has scrolled; it never takes clicks.
+  // Since 2026-11-21 it shows the animated header logo instead of a ring (owner: "show the
+  // header animated logo instead of loader spinner"): a copy of the header's own picture
+  // (already in the browser cache), animated by js/logo-motion.js and replayed while the
+  // swap loads. Without that script (calm pages, reduced motion) the logo gently pulses
+  // (or stays still); without a logo picture on the page the old ring shows.
   var SPIN_MIN = 350;
   var spinnerEl = null;
-  var spinner = function (on) {
-    if (on && !spinnerEl) {
-      spinnerEl = document.createElement('div');
-      spinnerEl.className = 'pgs-spinner';
-      spinnerEl.setAttribute('role', 'status');
-      spinnerEl.innerHTML = '<span class="pgs-spinner__ring" aria-hidden="true"></span><span class="pgs-spinner__text">Loading…</span>';
-      document.body.appendChild(spinnerEl);
+  var spinnerLogo = null;
+  var spinnerLoop = 0;
+  var logoSrc = function () {
+    var imgs = document.querySelectorAll('.ssx-logo img.header-logo, .sh-logo img.header-logo, .ssxm__logo img');
+    var fallback = '';
+    for (var i = 0; i < imgs.length; i++) {
+      var src = imgs[i].currentSrc || imgs[i].src || '';
+      if (!src || !imgs[i].complete || !imgs[i].naturalWidth) continue;
+      if (imgs[i].offsetWidth) return src;
+      fallback = fallback || src;
     }
-    if (spinnerEl) spinnerEl.classList.toggle('is-on', Boolean(on));
+    return fallback;
   };
+  var buildSpinner = function () {
+    if (spinnerEl) return;
+    var src = logoSrc();
+    spinnerEl = document.createElement('div');
+    spinnerEl.className = 'pgs-spinner';
+    spinnerEl.setAttribute('role', 'status');
+    spinnerEl.innerHTML = (src
+      ? '<span class="pgs-spinner__logo lm-box" aria-hidden="true"><img alt="" width="1910" height="323" decoding="async"></span>'
+      : '<span class="pgs-spinner__ring" aria-hidden="true"></span>')
+      + '<span class="pgs-spinner__text">Loading…</span>';
+    if (src) {
+      spinnerLogo = spinnerEl.querySelector('img');
+      spinnerLogo.src = src;
+    }
+    document.body.appendChild(spinnerEl);
+  };
+  var playLogo = function () {
+    var motion = window.retailsLogoMotion;
+    if (!spinnerLogo || !motion || !spinnerEl.classList.contains('is-on')) return;
+    // Not ready yet (picture still decoding): try again shortly.
+    var played = motion.play(spinnerLogo, 1);
+    spinnerLoop = window.setTimeout(playLogo, played ? (motion.length || 1900) + 150 : 120);
+  };
+  var spinner = function (on) {
+    if (on) buildSpinner();
+    if (!spinnerEl) return;
+    spinnerEl.classList.toggle('is-still', !window.retailsLogoMotion);
+    var was = spinnerEl.classList.contains('is-on');
+    spinnerEl.classList.toggle('is-on', Boolean(on));
+    if (on && !was) {
+      playLogo();
+    } else if (!on && was) {
+      window.clearTimeout(spinnerLoop);
+      if (spinnerLogo && window.retailsLogoMotion) window.retailsLogoMotion.stop();
+    }
+  };
+  // Built ahead (hidden) once the page is quiet, so the logo copy is decoded before the
+  // first tap and the animation can start at once.
+  var prebuild = function () {
+    if (window.requestIdleCallback) window.requestIdleCallback(buildSpinner, { timeout: 4000 });
+    else window.setTimeout(buildSpinner, 1500);
+  };
+  if (document.readyState === 'complete') prebuild();
+  else window.addEventListener('load', prebuild);
 
   var latest = 0;
   // url: the group link the address bar shows; from: the page that has its product block.

@@ -148,9 +148,10 @@ function retails_brand_logo_html($html, $attachment_id, $size = '', $icon = fals
 	}
 	// Phone menu (header.php .ssxm__logo): WordPress adds its own size class
 	// and "auto, " to the sizes of lazy images.
-	if (isset($attr['sizes']) && preg_match('/^(auto,\s*)?170px$/', (string) $attr['sizes'])) {
+	// Since 2026-11-21 it fills the drawer's top row (was 170px).
+	if (isset($attr['sizes']) && preg_match('/^(auto,\s*)?(170px|\(max-width: 444px\) calc\(90vw - 86px\), 314px)$/', (string) $attr['sizes'])) {
 		$attr['class'] = '';
-		return retails_brand_logo_picture($attr, '170px');
+		return retails_brand_logo_picture($attr, '(max-width: 444px) calc(90vw - 86px), 314px');
 	}
 	// Footer (footer.php .sf-brand__logo, dark background): the light-tagline copy.
 	if (isset($attr['sizes']) && preg_match('/^(auto,\s*)?260px$/', (string) $attr['sizes']) && retails_brand_logo_dark_ready()) {
@@ -268,9 +269,11 @@ function retails_logo_tagline_style($desktop, $original)
 		// header (owner 2026-11-21: tagline from the S tile to the end of
 		// "StorefrontSign"): mask the picture's tagline rows, draw the words as
 		// text up to 86.4% of the logo width.
-		. 'html body .ssxm__logo{position:relative;width:170px;max-width:100%;container-type:inline-size}'
+		// Owner 2026-11-21: the logo now fills the drawer's top row next to the
+		// close button (was 170px wide); the tagline follows via cqw.
+		. 'html body .ssxm__logo{position:relative;flex:1 1 auto;width:auto;max-width:100%;container-type:inline-size}'
 		. 'html body .ssxm__logo img{width:100%;-webkit-mask-image:' . $mask . ';mask-image:' . $mask . '}'
-		. 'html body .ssxm__logo::after{' . $text . ';right:13.6%;top:calc(100% * 281 / 323);font-size:4.9px;font-size:calc(100cqw / 34.4);letter-spacing:.02em}'
+		. 'html body .ssxm__logo::after{' . $text . ';right:13.6%;top:calc(100% * 281 / 323);font-size:8px;font-size:calc(100cqw / 34.4);letter-spacing:.02em}'
 		. '}';
 }
 add_action('wp_head', 'retails_logo_size_style', 20);

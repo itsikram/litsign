@@ -236,7 +236,7 @@
 		// A given logo (the footer's, possibly not ready: then nothing plays),
 		// otherwise the header logo on screen.
 		var img = undefined === which ? current() : which;
-		var host = img && img.closest('a');
+		var host = img && img.closest('a, .lm-box');
 		if (!host) {
 			return false;
 		}
@@ -350,6 +350,21 @@
 	}
 	window.addEventListener('resize', stop);
 	d.addEventListener('visibilitychange', stop);
+
+	// For other scripts: play the animation on any copy of the logo picture
+	// inside an element with class "lm-box" (or a link). Used by
+	// js/product-group-swap.js for its loading screen (owner 2026-11-21: "show
+	// the header animated logo instead of loader spinner"). play() ends a run
+	// in progress first; returns false when the picture is not ready.
+	window.retailsLogoMotion = {
+		length: LENGTH,
+		ready: ready,
+		play: function (img, strength) {
+			stop();
+			return play(undefined === strength ? 1 : strength, img || null);
+		},
+		stop: stop
+	};
 
 	// Footer logo: plays once each time it scrolls into view (mostly visible),
 	// at full strength; waits its turn if the header logo is still playing.

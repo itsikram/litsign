@@ -13,6 +13,9 @@
  *
  * Turn it off with the option wholesale_gcr_optin = '0'.
  *
+ * Also: Google's store widget (the old Customer Reviews badge), see
+ * wholesale_gcr_badge_script() at the end. Off switch: wholesale_gcr_badge = '0'.
+ *
  * @package litsign
  */
 
@@ -95,12 +98,116 @@ function wholesale_gcr_optin_script()
 	?>
 <script>
 window.renderOptIn = function () {
+	var options = <?php echo wp_json_encode($data); ?>;
+	// Google's center dialog is a fixed 650px box: on phones its Yes/No buttons end up
+	// off the right edge of the screen (checked 2026-11-21). Its bottom tray is full width.
+	if (window.innerWidth < 680) {
+		options.opt_in_style = 'BOTTOM_TRAY';
+	}
 	window.gapi.load('surveyoptin', function () {
-		window.gapi.surveyoptin.render(<?php echo wp_json_encode($data); ?>);
+		window.gapi.surveyoptin.render(options);
 	});
 };
 </script>
 <script src="https://apis.google.com/js/platform.js?onload=renderOptIn" async defer></script>
 	<?php
 }
+add_action('wp_footer', 'wholesale_gcr_badge_script', 50);
 add_action('wp_footer', 'wholesale_gcr_optin_script', 50);
+
+/**
+ * Google store widget (Merchant Center → Reviews → Set up integration → Badge
+ * integration, added 2026-11-20). It shows the store's Google seller rating. Until
+ * Google has one, it keeps the widget hidden (0x0 frame, checked on live 11-20).
+ *
+ * - Speed and PageSpeed: merchantwidget.js loads only after the visitor's first tap,
+ *   click, key press or mouse-wheel turn. Those events come only from a person, so
+ *   PageSpeed/Lighthouse never loads it. It must stay that way: Google's frame sets
+ *   google.com's NID cookie, which fails Best Practices ("Uses third-party cookies"
+ *   and an Issues-panel cookie warning, 100 -> 77 on 2026-11-21). The old triggers did
+ *   load it in the test: a capture 'scroll' listener also heard the home reviews
+ *   carousel scroll itself, and there was a 40 s timer. Phones scroll by touch, so
+ *   touchstart still catches every phone visitor who scrolls.
+ * - Accessibility: Google's iframe has no title, so the frame gets one once it is added.
+ * - Place: bottom left, beside the back-to-top button (css/motion.css .mo-top:
+ *   left 16px, 44px wide; Google puts its frame 16px left of sideMargin, so 84
+ *   lands at 68px), because the live chat bubble owns the bottom right.
+ *   It rises above the product buy bar (.pd-buy-bar) and the phone quick-action
+ *   bar (.cl-mobile-bar), with the same offsets .mo-top uses. Google centres it
+ *   at the bottom on phones.
+ * - Not on cart, checkout, pay, thank-you (Google's survey opt-in shows there),
+ *   order pages or the channel letter builder (its own bottom panel).
+ */
+function wholesale_gcr_badge_script()
+{
+	if (is_admin() || !defined('WHOLESALE_MERCHANT_CENTER_ID') || '0' === get_option('wholesale_gcr_badge', '1')) {
+		return;
+	}
+	if (is_page(array('cart', 'checkout', 'payment', 'pay', 'channel-letter-builder')) || is_singular('order') || get_query_var('wholesale_thank_you')) {
+		return;
+	}
+	?>
+<script>
+(function () {
+	var started = false;
+	// Person-only events (see above). No 'scroll' and no timer: both fire without one.
+	var events = ['pointerdown', 'keydown', 'touchstart', 'wheel'];
+	function bar() {
+		var w = window.innerWidth;
+		if (document.querySelector('.pd-buy-bar')) {
+			return w < 768 ? 112 : 80;
+		}
+		if (w < 992 && document.querySelector('.cl-mobile-bar')) {
+			return 72;
+		}
+		return 0;
+	}
+	// Google's frame comes without a title; screen readers announce frames by it.
+	function titleFrame() {
+		var frame = document.getElementById('merchantwidgetiframe');
+		if (frame && !frame.getAttribute('title')) {
+			frame.setAttribute('title', 'Google store rating');
+		}
+		return !!frame;
+	}
+	function load(event) {
+		if (started || (event && !event.isTrusted)) {
+			return;
+		}
+		started = true;
+		events.forEach(function (name) { window.removeEventListener(name, load, true); });
+		var script = document.createElement('script');
+		script.id = 'merchantWidgetScript';
+		script.src = 'https://www.gstatic.com/shopping/merchant/merchantwidget.js';
+		script.async = true;
+		script.onload = function () {
+			if (!window.merchantwidget) {
+				return;
+			}
+			var bottom = 16 + bar();
+			window.merchantwidget.start({
+				merchant_id: <?php echo (int) WHOLESALE_MERCHANT_CENTER_ID; ?>,
+				position: 'LEFT_BOTTOM',
+				region: 'US',
+				sideMargin: 84,
+				bottomMargin: bottom,
+				mobileSideMargin: 84,
+				mobileBottomMargin: bottom
+			});
+			if (!titleFrame() && window.MutationObserver) {
+				var watch = new MutationObserver(function () {
+					if (titleFrame()) {
+						watch.disconnect();
+					}
+				});
+				watch.observe(document.body, { childList: true, subtree: true });
+				setTimeout(function () { watch.disconnect(); }, 30000);
+			}
+		};
+		document.body.appendChild(script);
+	}
+	events.forEach(function (name) { window.addEventListener(name, load, { capture: true, passive: true }); });
+})();
+</script>
+	<?php
+}

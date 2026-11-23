@@ -1495,8 +1495,10 @@ function drawWidthArrows(startY, textValue) {
   let middleX = stage.width() / 2;
   let arrowWidth = stage.width() / 3;
 
+  // Not listening: a finger on the size arrows scrolls the page like the empty canvas does.
   let widthArrow = new Konva.Group({
     draggable: false,
+    listening: false,
   });
 
   const leftArrow = new Konva.Arrow({
@@ -1545,6 +1547,7 @@ function drawHeightArrows(startX, textValue = 0) {
 
   let heightArrow = new Konva.Group({
     draggable: false,
+    listening: false,
   });
 
   const topArrow = new Konva.Arrow({
@@ -1895,6 +1898,41 @@ let updatePreview = (type = null, node = null) => {
   previewLayer.batchDraw();
 };
 
+// While a finger or the mouse drags, resizes or pinches on the canvas and the side preview is out
+// of sight (in the closed sheet on phones), the preview is redrawn at most every 300 ms and once
+// more right after the last change; redrawing it on every frame made resizing stutter on phones.
+const CL_GESTURE_REFRESH_MS = 300;
+{
+  const drawPreviewNow = updatePreview;
+  let previewTimer = null;
+  let previewAt = 0;
+  let previewArgs = [];
+  const runPreview = () => {
+    clearTimeout(previewTimer);
+    previewTimer = null;
+    previewAt = performance.now();
+    drawPreviewNow(...previewArgs);
+  };
+  const previewOutOfSight = () => {
+    const box = previewStage.container().getBoundingClientRect();
+    return !(box.width > 0 && box.height > 0 && box.bottom > 0 && box.top < window.innerHeight);
+  };
+  updatePreview = (...args) => {
+    previewArgs = args;
+    const wait =
+      clCanvasGestureActive() && previewOutOfSight()
+        ? CL_GESTURE_REFRESH_MS - (performance.now() - previewAt)
+        : 0;
+    if (wait > 0) {
+      if (previewTimer === null) {
+        previewTimer = setTimeout(runPreview, wait);
+      }
+      return;
+    }
+    runPreview();
+  };
+}
+
 // update text node
 
 function updateNode(sNode, meta = null) {
@@ -2066,7 +2104,8 @@ function syncCanvasBackground() {
 // Function to zoom the stage with center focus
 function zoomStage(scaleFactor) {
   const oldScale = stage.scaleX();
-  const newScale = Math.min(3, Math.max(0.3, oldScale * scaleFactor));
+  // Auto zoom-out may go below the buttons' 30% floor; Zoom out then stays put there.
+  const newScale = Math.min(3, Math.max(Math.min(0.3, oldScale), oldScale * scaleFactor));
   const scaleRatio = newScale / oldScale;
   const oldPos = stage.position();
   const center = {
@@ -2078,6 +2117,25 @@ function zoomStage(scaleFactor) {
     y: center.y - (center.y - oldPos.y) * scaleRatio,
   };
 
+  setStageView(newScale, newPos);
+}
+
+// True while a finger or the mouse drags, resizes or pinch-zooms on the canvas.
+let clPinchActive = false;
+function clCanvasGestureActive() {
+  try {
+    return (
+      clPinchActive ||
+      !!(Konva.DD && Konva.DD.isDragging) ||
+      layer.getChildren((child) => child instanceof Konva.Transformer && child.isTransforming()).length > 0
+    );
+  } catch (err) {
+    return false; // called before the canvas exists
+  }
+}
+
+// Puts the canvas at a zoom and position, then refreshes everything that follows the view.
+function setStageView(newScale, newPos) {
   stage.scale({ x: newScale, y: newScale });
   stage.position(newPos);
 
@@ -2095,6 +2153,266 @@ function zoomStage(scaleFactor) {
 
   updateHeightWidthDisplay();
 }
+
+// Auto zoom-out. When an element (or a Select-all group) gets wider or taller than the visible
+// canvas (dragging a resize handle, typing more letters, a bigger size in the size boxes, a
+// duplicate, a restored design), the canvas zooms out just enough to show all of it with its
+// handles; while it still fits, the view only slides so a dragged handle never leaves the
+// canvas. It never zooms in, so the zoom buttons work as before.
+const clAutoZoom = {
+  frame: null,
+  ids: new Set(), // elements that grew since the last check (store / node ids)
+  sizes: new Map(), // store element id -> { width, height } in inches, as last seen
+  minScale: 0.05,
+  movedView: false, // auto zoom moved the view (an emptied design then gets the start view back)
+};
+
+function getAutoZoomMargin() {
+  // Room for the size arrows along the top and left edges and for the handles.
+  return window.matchMedia("(max-width: 767.98px)").matches ? 24 : 44;
+}
+
+// Box around the nodes in canvas pixels, trimcap and return included.
+function getScreenBoundsOfNodes(nodes) {
+  let left = Infinity;
+  let top = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  nodes.forEach((node) => {
+    if (!node || !node.getLayer() || !node.isVisible()) {
+      return;
+    }
+    const box = node.getClientRect();
+    if (![box.x, box.y, box.width, box.height].every(Number.isFinite)) {
+      return;
+    }
+    left = Math.min(left, box.x);
+    top = Math.min(top, box.y);
+    right = Math.max(right, box.x + box.width);
+    bottom = Math.max(bottom, box.y + box.height);
+  });
+  return left === Infinity
+    ? null
+    : { x: left, y: top, width: right - left, height: bottom - top };
+}
+
+function getActiveTransformer() {
+  return stage.find("Transformer").find((transformer) => transformer.isTransforming()) || null;
+}
+
+// A resize handle can follow a zoom mid-drag only when Konva's drag state is there to re-measure.
+function canZoomDuringTransform(transformer) {
+  return !!(
+    transformer._movingAnchorName &&
+    transformer._movingAnchorName !== "rotater" &&
+    transformer._anchorDragOffset
+  );
+}
+
+// Konva moves the dragged handle to "pointer minus a fixed offset"; after a zoom the handle sits
+// somewhere else on screen, so measure the offset again. The size then carries on from where it
+// is instead of jumping.
+function syncTransformerDragOffset(transformer) {
+  const anchor = transformer.findOne("." + transformer._movingAnchorName);
+  const pointer = stage.getPointerPosition();
+  if (!anchor || !pointer) {
+    return;
+  }
+  const position = anchor.getAbsolutePosition();
+  transformer._anchorDragOffset = {
+    x: pointer.x - position.x,
+    y: pointer.y - position.y,
+  };
+}
+
+function autoZoomToFit(nodes, transformer = null) {
+  const width = stage.width();
+  const height = stage.height();
+  const margin = getAutoZoomMargin();
+  const roomWidth = width - margin * 2;
+  const roomHeight = height - margin * 2;
+  if (roomWidth < 60 || roomHeight < 60) {
+    return false;
+  }
+  const box = getScreenBoundsOfNodes(nodes);
+  if (!box) {
+    return false;
+  }
+  const fitsSize = box.width <= roomWidth + 1 && box.height <= roomHeight + 1;
+  // While a handle is dragged the element is kept inside the margin (so the handle never goes
+  // off the canvas); after other changes only when part of it is actually cut off.
+  const edge = transformer ? margin : 4;
+  const inView =
+    box.x >= edge - 1 &&
+    box.y >= edge - 1 &&
+    box.x + box.width <= width - edge + 1 &&
+    box.y + box.height <= height - edge + 1;
+  if (fitsSize && inView) {
+    return false;
+  }
+
+  const oldScale = stage.scaleX() || 1;
+  let newScale = oldScale;
+  if (!fitsSize) {
+    const fit = Math.min(
+      roomWidth / Math.max(1, box.width),
+      roomHeight / Math.max(1, box.height),
+    );
+    // While a handle is dragged the zoom follows it frame by frame; otherwise leave a little room.
+    newScale = Math.min(
+      oldScale,
+      Math.max(clAutoZoom.minScale, oldScale * fit * (transformer ? 1 : 0.95)),
+    );
+  }
+  const ratio = newScale / oldScale;
+
+  // Zoom around the finger or mouse while dragging, so the handle stays under it; otherwise
+  // around the element. Then slide the element fully into view.
+  const pointer = transformer ? stage.getPointerPosition() : null;
+  const focus = {
+    x: Math.min(width - margin, Math.max(margin, pointer ? pointer.x : box.x + box.width / 2)),
+    y: Math.min(height - margin, Math.max(margin, pointer ? pointer.y : box.y + box.height / 2)),
+  };
+  const oldPosition = stage.position();
+  const position = {
+    x: focus.x - (focus.x - oldPosition.x) * ratio,
+    y: focus.y - (focus.y - oldPosition.y) * ratio,
+  };
+  const slideIntoView = (start, size, view) => {
+    if (size > view - margin * 2 + 1) {
+      return (view - size) / 2 - start;
+    }
+    if (start < margin) {
+      return margin - start;
+    }
+    if (start + size > view - margin) {
+      return view - margin - (start + size);
+    }
+    return 0;
+  };
+  position.x += slideIntoView(focus.x + (box.x - focus.x) * ratio, box.width * ratio, width);
+  position.y += slideIntoView(focus.y + (box.y - focus.y) * ratio, box.height * ratio, height);
+  if (
+    ratio > 0.999 &&
+    Math.abs(position.x - oldPosition.x) < 0.5 &&
+    Math.abs(position.y - oldPosition.y) < 0.5
+  ) {
+    return false;
+  }
+
+  stage.scale({ x: newScale, y: newScale });
+  stage.position(position);
+  clAutoZoom.movedView = true;
+  syncCanvasBackground();
+  stage.find("Transformer").forEach((item) => item.update());
+  if (transformer) {
+    syncTransformerDragOffset(transformer);
+  }
+  updateHeightWidthDisplay(true);
+  stage.batchDraw();
+  return true;
+}
+
+// The middle of what the canvas shows, in design coordinates; new elements go there. It is the
+// stage middle until auto zoom moves the view, so the starting view places them as before.
+function getVisibleStageCenter() {
+  const scale = stage.scaleX() || 1;
+  return {
+    x: (stage.width() / 2 - stage.x()) / scale,
+    y: (stage.height() / 2 - stage.y()) / scale,
+  };
+}
+
+// An emptied design gets the starting view back, if auto zoom had moved it.
+function resetAutoZoomView() {
+  if (!clAutoZoom.movedView) {
+    return;
+  }
+  clAutoZoom.movedView = false;
+  const scale = window.matchMedia("(max-width: 767.98px)").matches ? mobileDefaultZoom : 1;
+  stage.scale({ x: scale, y: scale });
+  stage.position({
+    x: (stage.width() * (1 - scale)) / 2,
+    y: (stage.height() * (1 - scale)) / 2,
+  });
+  syncCanvasBackground();
+  updateHeightWidthDisplay(true);
+  stage.batchDraw();
+}
+
+// Checks once per frame. `nodes` are elements that just grew (optional).
+function scheduleAutoZoom(nodes = null) {
+  if (nodes) {
+    nodes.forEach((node) => {
+      if (node) {
+        clAutoZoom.ids.add(String(node._id));
+      }
+    });
+  }
+  if (clAutoZoom.frame !== null) {
+    return;
+  }
+  clAutoZoom.frame = requestAnimationFrame(() => {
+    clAutoZoom.frame = null;
+    const ids = new Set(clAutoZoom.ids);
+    clAutoZoom.ids.clear();
+    if (!nodeLists.length) {
+      resetAutoZoomView();
+      return;
+    }
+    const transformer = getActiveTransformer();
+    if (transformer) {
+      // Rotating waits for the release (transformend checks again).
+      if (canZoomDuringTransform(transformer)) {
+        autoZoomToFit(transformer.nodes(), transformer);
+      }
+      return;
+    }
+    const grown = nodeLists
+      .map((item) => item.node)
+      .filter((node) => node && ids.has(String(node._id)));
+    if (grown.length) {
+      autoZoomToFit(grown);
+    }
+  });
+}
+
+// Each resize handle set (letters, shapes, raceways, duplicates, Select all) calls this.
+function watchTransformerForAutoZoom(transformer) {
+  transformer.on("transform", () => scheduleAutoZoom());
+  transformer.on("transformend", () => scheduleAutoZoom(transformer.nodes()));
+}
+
+// Growth that does not come from a handle: letters typed, size boxes, font, duplicate, restore.
+store.subscribe(() => {
+  const elements = store.getState().elements || [];
+  const seen = new Set();
+  const grown = [];
+  elements.forEach((element) => {
+    const id = String(element.id);
+    const size = {
+      width: parseFloat(element.width) || 0,
+      height: parseFloat(element.height) || 0,
+    };
+    const last = clAutoZoom.sizes.get(id);
+    seen.add(id);
+    clAutoZoom.sizes.set(id, size);
+    if (!last || size.width > last.width + 0.05 || size.height > last.height + 0.05) {
+      grown.push(id);
+    }
+  });
+  clAutoZoom.sizes.forEach((size, id) => {
+    if (!seen.has(id)) {
+      clAutoZoom.sizes.delete(id);
+    }
+  });
+  if (grown.length) {
+    grown.forEach((id) => clAutoZoom.ids.add(id));
+    scheduleAutoZoom();
+  } else if (!elements.length) {
+    scheduleAutoZoom();
+  }
+});
 
 function triggerTransformEvent() {
   if (selectedNode == null) {
@@ -2209,6 +2527,10 @@ function updateNodeDimensionInputs(node, type = null) {
           ? "raceway"
           : null);
   updateHeightWidthInput(bounds.height, bounds.width, inputType);
+  // The "W x H" under Selected element follows resizing too, not only selection.
+  if (node === selectedNode && elementDimenstionContainer && !isMultiSelectActive()) {
+    elementDimenstionContainer.innerHTML = getTextDimensions(node);
+  }
 }
 
 let heightWidthDisplayFrame = null;
@@ -2223,49 +2545,85 @@ function scheduleHeightWidthDisplayUpdate() {
   });
 }
 
+// The size arrows sit in the zoomed canvas but keep one on-screen look at every zoom (line
+// width, arrow heads, label size, room around the label); only their length follows the design.
+function getSizeArrowLook() {
+  const zoom = stage.scaleX() || 1;
+  // Phones: the size they had at the phone's starting zoom (0.6).
+  const k = window.matchMedia("(max-width: 767.98px)").matches ? 0.65 : 1;
+  return { unit: 1 / zoom, stroke: 2 * k, pointer: 10 * k, font: Math.round(20 * k), gap: 6 * k };
+}
+
+// Places both arrows: `middle*` and `half*` are the design's center and half size (canvas units).
+function placeSizeArrows(look, middleX, halfWidth, middleY, halfHeight, insetX, insetY) {
+  const unit = look.unit;
+  [heightArrows, widthArrows].forEach((group) => {
+    group.children.forEach((child) => {
+      if (child.getClassName() === "Text") {
+        child.fontSize(look.font);
+        child.scale({ x: unit, y: unit });
+      } else {
+        child.strokeWidth(look.stroke * unit);
+        child.pointerLength(look.pointer * unit);
+        child.pointerWidth(look.pointer * unit);
+      }
+    });
+  });
+
+  // Labels are measured in screen px (their scale cancels the zoom).
+  const heightLabel = { width: heightDisplay.width(), height: heightDisplay.height() };
+  const widthLabel = { width: widhtDisplay.width(), height: widhtDisplay.height() };
+  // Far enough from the canvas edge for the whole label to show.
+  const arrowX = (Math.max(insetX, heightLabel.width / 2 + 4) - stage.x()) * unit;
+  const arrowY = (Math.max(insetY, widthLabel.height / 2 + 4) - stage.y()) * unit;
+  // The label sits in a gap in the middle of its arrow; when the design is too small on screen
+  // for that, the arrow runs unbroken and the label moves beside it.
+  const gapY = (heightLabel.height / 2 + look.gap) * unit;
+  const gapX = (widthLabel.width / 2 + look.gap) * unit;
+  const heightInGap = halfHeight - gapY > look.pointer * unit;
+  const widthInGap = halfWidth - gapX > look.pointer * unit;
+  const tooSmall = 2 * unit; // under 2 screen px: no arrow heads to draw
+
+  const [topArrow, bottomArrow] = heightArrows.children;
+  const [leftArrow, rightArrow] = widthArrows.children;
+  const fromY = heightInGap ? gapY : 0;
+  topArrow.points([arrowX, middleY - fromY, arrowX, middleY - halfHeight]);
+  bottomArrow.points([arrowX, middleY + fromY, arrowX, middleY + halfHeight]);
+  topArrow.visible(halfHeight > tooSmall);
+  bottomArrow.visible(halfHeight > tooSmall);
+  heightDisplay.position({
+    x: heightInGap ? arrowX - (heightLabel.width / 2) * unit : arrowX + look.gap * unit,
+    y: middleY - (heightLabel.height / 2) * unit,
+  });
+  const fromX = widthInGap ? gapX : 0;
+  leftArrow.points([middleX - fromX, arrowY, middleX - halfWidth, arrowY]);
+  rightArrow.points([middleX + fromX, arrowY, middleX + halfWidth, arrowY]);
+  leftArrow.visible(halfWidth > tooSmall);
+  rightArrow.visible(halfWidth > tooSmall);
+  widhtDisplay.position({
+    x: middleX - (widthLabel.width / 2) * unit,
+    y: widthInGap ? arrowY - (widthLabel.height / 2) * unit : arrowY + look.gap * unit,
+  });
+}
+
 function updateHeightWidthDisplay(skipDraw = false) {
   const isMobileEditor = window.matchMedia("(max-width: 767.98px)").matches;
   const viewportInsetX = isMobileEditor ? 15 : 30;
   const viewportInsetY = isMobileEditor ? 15 : 20;
-  const verticalArrowX = (viewportInsetX - stage.x()) / stage.scaleX();
-  const horizontalArrowY = (viewportInsetY - stage.y()) / stage.scaleY();
+  const look = getSizeArrowLook();
 
   if (nodeLists.length < 1) {
-    const middleX = stage.width() / 2;
-    const middleY = stage.height() / 2;
-    const arrowWidth = stage.width() / 3;
-    const arrowHeight = stage.height() / 3;
-
-    heightArrows.children[0].points([
-      verticalArrowX,
-      middleY - 15,
-      verticalArrowX,
-      middleY - arrowHeight,
-    ]);
-    heightArrows.children[1].points([
-      verticalArrowX,
-      middleY + 15,
-      verticalArrowX,
-      middleY + arrowHeight,
-    ]);
-    heightDisplay.x(verticalArrowX - 20);
-    heightDisplay.y(middleY - 10);
-    widthArrows.children[0].points([
-      middleX - 35,
-      horizontalArrowY,
-      middleX - arrowWidth,
-      horizontalArrowY,
-    ]);
-    widthArrows.children[1].points([
-      middleX + 35,
-      horizontalArrowY,
-      middleX + arrowWidth,
-      horizontalArrowY,
-    ]);
-    widhtDisplay.x(middleX - 25);
-    widhtDisplay.y(horizontalArrowY - 10);
     widhtDisplay.text(`0"`);
     heightDisplay.text(`0"`);
+    placeSizeArrows(
+      look,
+      stage.width() / 2,
+      stage.width() / 3,
+      stage.height() / 2,
+      stage.height() / 3,
+      viewportInsetX,
+      viewportInsetY,
+    );
     if (!skipDraw) {
       layer.batchDraw();
     }
@@ -2299,44 +2657,19 @@ function updateHeightWidthDisplay(skipDraw = false) {
   contentHeight = (minBottom - minTop) / dpi || 0;
   contentWidth = (minRight - minLeft) / dpi || 0;
 
-  let topArrow = heightArrows.children[0];
-  let bottomArrow = heightArrows.children[1];
-  let leftArrow = widthArrows.children[0];
-  let rightArrow = widthArrows.children[1];
-  let xArrowHeight = (contentHeight * dpi) / 2;
-  let xArrowWidth = (contentWidth * dpi) / 2;
-  let middleY = minTop + xArrowHeight;
-  let middleX = minLeft + xArrowWidth;
-  topArrow.points([
-    verticalArrowX,
-    middleY - 15,
-    verticalArrowX,
-    middleY - xArrowHeight,
-  ]);
-  bottomArrow.points([
-    verticalArrowX,
-    middleY + 15,
-    verticalArrowX,
-    middleY + xArrowHeight,
-  ]);
-  heightDisplay.x(verticalArrowX - 20);
-  heightDisplay.y(middleY - 10);
-  leftArrow.points([
-    middleX - 35,
-    horizontalArrowY,
-    middleX - xArrowWidth,
-    horizontalArrowY,
-  ]);
-  rightArrow.points([
-    middleX + 35,
-    horizontalArrowY,
-    middleX + xArrowWidth,
-    horizontalArrowY,
-  ]);
-  widhtDisplay.x(middleX - 25);
-  widhtDisplay.y(horizontalArrowY - 10);
+  const xArrowHeight = (contentHeight * dpi) / 2;
+  const xArrowWidth = (contentWidth * dpi) / 2;
   widhtDisplay.text(`${contentWidth.toFixed(1)}"`);
   heightDisplay.text(`${contentHeight.toFixed(1)}"`);
+  placeSizeArrows(
+    look,
+    minLeft + xArrowWidth,
+    xArrowWidth,
+    minTop + xArrowHeight,
+    xArrowHeight,
+    viewportInsetX,
+    viewportInsetY,
+  );
   if (!skipDraw) {
     layer.batchDraw();
   }
@@ -3280,13 +3613,14 @@ let updateLeftsideBar = () => {
   updateDimenstionDisplay();
 };
 
-// Money to the cent as the cart rounds it (PHP round(), see phpRound()).
-const formatMoney = (amount) =>
-  "$" +
-  phpRound(amount, 2).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+// Money to the cent as the cart rounds it (PHP round(), see phpRound()). One formatter for every
+// call: toLocaleString() built a new one each time, and the price table formats many amounts on
+// every frame of a resize, which made resizing stutter on phones.
+const moneyFormat = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const formatMoney = (amount) => "$" + moneyFormat.format(phpRound(amount, 2));
 
 // An amount at the everyday price, and after any dated sale, worked out as wholesale_price_quote()
 // does: the product discount taken off the amount, then the sale off the everyday price in cents.
@@ -3871,6 +4205,9 @@ var background = new Konva.Rect({
   width: stage.width(),
   height: stage.height(),
   fill: "#fff", // background color
+  // A finger that lands on empty canvas scrolls the page (css/cl.css: touch-action pan-y);
+  // letters, shapes and handles still hold the page still while they are dragged.
+  preventDefault: false,
 });
 
 const layer = new Konva.Layer();
@@ -3888,6 +4225,159 @@ if (window.matchMedia("(max-width: 767.98px)").matches) {
   syncCanvasBackground();
   stage.batchDraw();
 }
+
+// Two fingers on the canvas zoom the design (pinch) and move it (both fingers together) on
+// phones and tablets, within the Zoom buttons' range. A one-finger drag or resize that is under
+// way when the second finger lands ends where it is.
+(function () {
+  const content = stage.content;
+  if (!content || !("ontouchstart" in window || navigator.maxTouchPoints > 0)) {
+    return;
+  }
+  let pinch = null;
+  let frame = null;
+  let fingersNow = null;
+
+  function fingerPoints(evt) {
+    const box = content.getBoundingClientRect();
+    return [evt.touches[0], evt.touches[1]].map((touch) => ({
+      x: touch.clientX - box.left,
+      y: touch.clientY - box.top,
+    }));
+  }
+
+  function endElementGestures(evt) {
+    layer
+      .getChildren((child) => child instanceof Konva.Transformer && child.isTransforming())
+      .forEach((transformer) => transformer.stopTransform());
+    // Konva only ends a drag on its own finger's touchend, so end them here.
+    Konva.DD._dragElements.forEach((elem, key) => {
+      Konva.DD._dragElements.delete(key);
+      if (elem.dragStatus === "dragging") {
+        elem.node.fire("dragend", { type: "dragend", target: elem.node, evt }, true);
+      }
+    });
+    Konva.DD.justDragged = true;
+    Konva._touchListenClick = false;
+    Konva._pointerListenClick = false;
+  }
+
+  function applyPinch() {
+    frame = null;
+    if (!pinch || !fingersNow) {
+      return;
+    }
+    const [a, b] = fingersNow;
+    const distance = Math.max(10, Math.hypot(a.x - b.x, a.y - b.y));
+    const scale = Math.min(3, Math.max(pinch.min, (pinch.scale * distance) / pinch.distance));
+    const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    // The design point that was under the fingers stays under them.
+    setStageView(scale, { x: middle.x - pinch.point.x * scale, y: middle.y - pinch.point.y * scale });
+  }
+
+  function endPinch() {
+    if (!pinch) {
+      return;
+    }
+    if (frame !== null) {
+      cancelAnimationFrame(frame);
+    }
+    applyPinch();
+    pinch = null;
+    fingersNow = null;
+    clPinchActive = false;
+    layer.batchDraw();
+  }
+
+  content.addEventListener(
+    "touchstart",
+    (evt) => {
+      // Only a fresh two-finger touch; a page scroll that already started keeps going.
+      if (evt.touches.length !== 2 || !evt.cancelable) {
+        return;
+      }
+      evt.preventDefault();
+      endElementGestures(evt);
+      const [a, b] = fingerPoints(evt);
+      const scale = stage.scaleX() || 1;
+      const middle = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      pinch = {
+        distance: Math.max(10, Math.hypot(a.x - b.x, a.y - b.y)),
+        scale,
+        // Auto zoom-out may have gone below the buttons' 30% floor; pinching never goes lower.
+        min: Math.min(0.3, scale),
+        point: { x: (middle.x - stage.x()) / scale, y: (middle.y - stage.y()) / scale },
+      };
+      fingersNow = [a, b];
+      clPinchActive = true;
+    },
+    { passive: false },
+  );
+
+  content.addEventListener(
+    "touchmove",
+    (evt) => {
+      if (!pinch) {
+        return;
+      }
+      if (evt.cancelable) {
+        evt.preventDefault();
+      }
+      if (evt.touches.length < 2) {
+        return;
+      }
+      fingersNow = fingerPoints(evt);
+      if (frame === null) {
+        frame = requestAnimationFrame(applyPinch);
+      }
+    },
+    { passive: false },
+  );
+
+  ["touchend", "touchcancel"].forEach((type) => {
+    content.addEventListener(type, (evt) => {
+      if (pinch && evt.touches.length < 2) {
+        endPinch();
+      }
+    });
+  });
+})();
+
+// The start form ("Type the letters for your sign") gets its handler when the page has fully
+// loaded (images, fonts, chat). On a slow phone connection a visitor can type and tap "Add letters"
+// (or Enter) before that; the form then submitted natively, which reloaded the page and lost the
+// letters. It never submits now; letters typed early are added as soon as the builder is ready.
+(function () {
+  const form = document.getElementById("clStartForm");
+  if (!form) {
+    return;
+  }
+  let ready = document.readyState === "complete";
+  let waiting = false;
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (!ready) {
+      waiting = true;
+      form.setAttribute("aria-busy", "true");
+    }
+  });
+  window.addEventListener("load", () => {
+    ready = true;
+    // After every load handler, so the builder's own submit handler is in place.
+    setTimeout(() => {
+      form.removeAttribute("aria-busy");
+      if (!waiting) {
+        return;
+      }
+      waiting = false;
+      if (typeof form.requestSubmit === "function") {
+        form.requestSubmit();
+      } else {
+        form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+      }
+    }, 0);
+  });
+})();
 
 window.addEventListener("load", function (e) {
   // document.getElementById('addPatternButton').addEventListener('click', function () {
@@ -3911,8 +4401,8 @@ window.addEventListener("load", function (e) {
   //   });
   function addText(
     text,
-    x = stage.width() / 2,
-    y = stage.height() / 2,
+    x = getVisibleStageCenter().x,
+    y = getVisibleStageCenter().y,
     isUpdateId = false,
   ) {
     // The dual-color pattern is only fetched when it is used (hasDualColor).
@@ -4010,6 +4500,7 @@ window.addEventListener("load", function (e) {
     layer.add(tr);
 
     textNode.setAttr("transformer", tr);
+    watchTransformerForAutoZoom(tr);
 
     let textTransformFrame = null;
     let scheduleTextTransformUpdate = () => {
@@ -4329,11 +4820,12 @@ window.addEventListener("load", function (e) {
 
     // Center each new shape using the current stage size, including on mobile.
     const shapeBounds = shape.getClientRect({ skipTransform: true });
+    const viewCenter = getVisibleStageCenter();
     shape.x(
-      shape.x() + stage.width() / 2 - (shapeBounds.x + shapeBounds.width / 2),
+      shape.x() + viewCenter.x - (shapeBounds.x + shapeBounds.width / 2),
     );
     shape.y(
-      shape.y() + stage.height() / 2 - (shapeBounds.y + shapeBounds.height / 2),
+      shape.y() + viewCenter.y - (shapeBounds.y + shapeBounds.height / 2),
     );
 
     selectedNodeType = shape.getClassName();
@@ -4396,6 +4888,7 @@ window.addEventListener("load", function (e) {
     });
     layer.add(tr);
     shape.setAttr("transformer", tr);
+    watchTransformerForAutoZoom(tr);
     selectedNode = shape;
 
     let persistShape = () => {
@@ -4787,9 +5280,10 @@ window.addEventListener("load", function (e) {
     // Create the rectangle
     var rectWidth = Math.min(600, Math.max(80, stage.width() - 24));
     var rectHeight = 80;
+    var racewayCenter = getVisibleStageCenter();
     var raceway = new Konva.Rect({
-      x: (stage.width() - rectWidth) / 2,
-      y: (stage.height() - rectHeight) / 2,
+      x: racewayCenter.x - rectWidth / 2,
+      y: racewayCenter.y - rectHeight / 2,
       width: rectWidth,
       height: rectHeight,
       fill: "#D3D3D3",
@@ -4821,6 +5315,7 @@ window.addEventListener("load", function (e) {
     });
 
     raceway.setAttr("transformer", tr);
+    watchTransformerForAutoZoom(tr);
 
     layer.add(tr);
     layer.add(raceway);
@@ -5322,6 +5817,11 @@ window.addEventListener("load", function (e) {
       x: selectedNode.x() + 100, // Adjust position of the cloned arrow
       y: selectedNode.y() + 100, // Adjust position of the cloned arrow
     });
+    // Konva's clone() also copies the original's handlers, and those act on the original: while
+    // the copy was resized or tapped they selected the original and showed its colors and size
+    // (and saved it with the copy's position). The copy gets its own handlers below. Konva's
+    // internal listeners are kept by off().
+    cloneNode.off();
 
     let enabledAnchors = undefined;
 
@@ -5352,32 +5852,25 @@ window.addEventListener("load", function (e) {
       keepRatio: true,
       rotationSnaps: false,
       boundBoxFunc: function (oldBoundBox, newBoundBox) {
-        // Set minimum and maximum size constraints
-        var minWidth = 82;
-        var minHeight = 82;
-        var maxWidth = 455;
-        var maxHeight = 455;
-
-        if (cloneNode.getClassName() == "Text") {
-          // Constrain height
-          if (newBoundBox.height < minHeight) {
-            oldBoundBox.height = minHeight;
-
-            return oldBoundBox;
-          } else if (newBoundBox.height > maxHeight) {
-            oldBoundBox.height = maxHeight;
-
-            return oldBoundBox;
-          }
-        } else {
-          // Constrain width
-          if (newBoundBox.width < minWidth) {
-            oldBoundBox.width = minWidth;
-            return oldBoundBox;
-          } else if (newBoundBox.width > maxWidth) {
-            oldBoundBox.width = maxWidth;
-            return oldBoundBox;
-          }
+        // The original element's limits, in inches at any zoom (the boxes are screen pixels):
+        // letters by height, shapes by height and width, raceways unlimited here (their height is
+        // clamped in the transform handler). At a limit the copy stops at its last size.
+        if (cloneNode.getAttr("textIndex")) {
+          return newBoundBox;
+        }
+        const zoom = stage.scaleX() || 1;
+        const reduction =
+          cloneNode.getClassName() == "RegularPolygon" ? triangleReduction : 1;
+        const heightInch = (newBoundBox.height / zoom / dpi) * reduction;
+        const widthInch = (newBoundBox.width / zoom / dpi) * reduction;
+        if (heightInch > maxHeight || heightInch < minHeight) {
+          return oldBoundBox;
+        }
+        if (
+          cloneNode.getClassName() != "Text" &&
+          (widthInch > maxWidth || widthInch < minWidth)
+        ) {
+          return oldBoundBox;
         }
         return newBoundBox;
       },
@@ -5392,6 +5885,7 @@ window.addEventListener("load", function (e) {
     });
 
     cloneNode.setAttr("transformer", tr);
+    watchTransformerForAutoZoom(tr);
 
     layer.add(cloneNode);
 
@@ -5445,6 +5939,10 @@ window.addEventListener("load", function (e) {
     cloneNode.on("dragmove", () => {
       updateNodeDimensionInputs(cloneNode);
       scheduleHeightWidthDisplayUpdate();
+      // A raceway copy's label follows while dragging, not only on release.
+      if (clonedRacewayText) {
+        scheduleCloneUpdate();
+      }
     });
 
     cloneNode.on("dragend", () => {
@@ -5534,6 +6032,19 @@ window.addEventListener("load", function (e) {
 
     cloneNode.on("click tap", (e) => {
       selectedNode = cloneNode;
+      selectedNodeType = cloneNode.getClassName();
+      if (selectedNodeType === "Text") {
+        textInput.value = cloneNode.text();
+      }
+      updatePreview(
+        cloneNode.getAttr("textIndex")
+          ? "raceway"
+          : selectedNodeType === "Text"
+            ? "text"
+            : "shape",
+        cloneNode,
+      );
+      updateLeftsideBar();
       updateFocusedTransformer(cloneNode);
       updateNodeDimensionInputs(cloneNode);
     });
@@ -5859,6 +6370,8 @@ window.addEventListener("load", function (e) {
             return sizeHeightInput.dispatchEvent(changeEvent);
           }
 
+          // Keep the current width when the scale is folded back to 1 (mid-drag it is not 1).
+          selectedNode.width(widhtInPx);
           selectedNode.scaleX(1);
           selectedNode.scaleY(1);
           selectedNode.height(heightInPx);
@@ -6240,10 +6753,10 @@ window.addEventListener("load", function (e) {
             totalRectColorCost = heightInInch * parseFloat(colorCost);
           }
 
-          selectedNode.width(widthInPx * selectedNode.scaleX());
-          selectedNode.height(
-            sizeHeightInput.value * dpi * selectedNode.scaleY(),
-          );
+          // The typed width and height at scale 1. (Multiplying by the current scale made a
+          // drag that reached the largest width jump past it, e.g. 45" to 98.5".)
+          selectedNode.width(widthInPx);
+          selectedNode.height(heightInPx);
           selectedNode.scaleX(1);
           //selectedNode.height(newSizeByHeight.height);
           updateHeightWidthInput(selectedNode.height(), selectedNode.width());
@@ -6788,6 +7301,8 @@ window.addEventListener("load", function (e) {
       }
     });
     stage.height(container.clientHeight);
+    // The picture is what the canvas shows: bring the whole design into view first.
+    autoZoomToFit(nodeLists.map((item) => item.node));
     layer.draw();
     const dataURL = stage.toDataURL({ mimeType: "image/png" });
     transformers.forEach((transformer) => transformer.visible(true));
@@ -6923,7 +7438,8 @@ window.addEventListener("load", function (e) {
     });
 
     stage.height(container.clientHeight);
-    layer.draw();
+    // The picture is what the canvas shows: bring the whole design into view first.
+    autoZoomToFit(nodeLists.map((item) => item.node));
 
     var dataURL = stage.toDataURL({ mimeType: "image/png" });
     hiddenTransformers.forEach((transformer) => transformer.visible(true));
@@ -7084,7 +7600,28 @@ window.addEventListener("load", function (e) {
   const displayRegularCost = document.getElementById("displayRegularCost");
   const displaySaving = document.getElementById("displaySaving");
 
+  // While a finger or the mouse drags or resizes an element the design changes every frame; the
+  // price table is then rebuilt at most every 300 ms (and right away once the gesture ends), so
+  // the canvas keeps up with the finger on phones. Every other change updates the prices at once.
+  const PRICE_GESTURE_MS = CL_GESTURE_REFRESH_MS;
+  let pricesTimer = null;
+  let pricesAt = 0;
+
   store.subscribe(() => {
+    const wait = clCanvasGestureActive() ? PRICE_GESTURE_MS - (performance.now() - pricesAt) : 0;
+    if (wait > 0) {
+      if (pricesTimer === null) {
+        pricesTimer = setTimeout(renderPrices, wait);
+      }
+      return;
+    }
+    renderPrices();
+  });
+
+  function renderPrices() {
+    clearTimeout(pricesTimer);
+    pricesTimer = null;
+    pricesAt = performance.now();
     let elements = store.getState()["elements"];
     let extras = store.getState()["extras"];
     const totals = updateDetailTable(elements, extras);
@@ -7102,7 +7639,7 @@ window.addEventListener("load", function (e) {
     }
 
     document.querySelector("#totalObject .value").innerText = elements.length;
-  });
+  }
   updateDetailTable(store.getState()["elements"], store.getState()["extras"]);
   console.log(editDesignElements);
 
@@ -8169,7 +8706,7 @@ function renderMultiSelectionSize() {
 function renderMultiSelectionHeading() {
   const box = getMultiSelectionBounds();
   elementIndexContainer.textContent = clMultiSelect.nodes.length + " items";
-  elementDimenstionContainer.textContent = "H:" + pxToIn(box.height) + " x W:" + pxToIn(box.width);
+  elementDimenstionContainer.textContent = "W:" + pxToIn(box.width) + " x H:" + pxToIn(box.height);
 }
 
 // Shows the shared choice on an option row, or "Mixed" when the elements differ.
@@ -8283,6 +8820,7 @@ function selectAllElements() {
     },
   });
   layer.add(transformer);
+  watchTransformerForAutoZoom(transformer);
   transformer.on("transformstart", () => {
     clMultiSelect.transforming = true;
   });

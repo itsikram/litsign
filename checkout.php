@@ -472,6 +472,29 @@ get_header();
                         <?php endforeach; ?>
                     </ul>
 
+                    <?php if ($promo_live || $promo_result) : ?>
+                        <div class="checkout-promo">
+                            <?php if ($promo_applied) : ?>
+                                <p class="checkout-promo__applied" role="status">
+                                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+                                    <span>Code <strong><?php echo esc_html($promo_applied); ?></strong> applied: <?php echo $promo_by_code ? 'free standard shipping' : 'this order already ships free'; ?>.</span>
+                                    <button type="submit" form="promoForm" name="promo_code" value="" class="checkout-promo__remove">Remove</button>
+                                </p>
+                            <?php elseif ($promo_live) : ?>
+                                <label class="checkout-promo__label" for="promoCode">Promo code</label>
+                                <span class="checkout-promo__row">
+                                    <input type="text" id="promoCode" name="promo_code" form="promoForm" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30" placeholder="Enter code"<?php echo 'invalid' === $promo_result ? ' aria-invalid="true" aria-describedby="promoMessage"' : ''; ?>>
+                                    <button type="submit" form="promoForm" class="checkout-promo__apply">Apply</button>
+                                </span>
+                            <?php endif; ?>
+                            <?php if ('invalid' === $promo_result && !$promo_applied) : ?>
+                                <p class="checkout-promo__message is-error" id="promoMessage" role="alert">That code isn't valid. Check the spelling and try again.</p>
+                            <?php elseif ('removed' === $promo_result && !$promo_applied) : ?>
+                                <p class="checkout-promo__message" role="status">Promo code removed.</p>
+                            <?php endif; ?>
+                        </div>
+                    <?php endif; ?>
+
                     <dl class="checkout-totals" data-subtotal="<?php echo esc_attr($sub_total); ?>" data-tax="<?php echo esc_attr($tax); ?>">
                         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($sub_total)); ?></dd></div>
                         <div><dt>Shipping <small class="checkout-totals__method" data-summary-shipping><?php echo $default_method ? esc_html($shipping_methods[$default_method]['label']) : ($pickup ? 'Store pickup' : ''); ?></small></dt><dd data-shipping-total><?php echo esc_html($first_shipping > 0 ? $money($first_shipping) : 'FREE'); ?></dd></div>
@@ -499,6 +522,8 @@ get_header();
                 </div>
             </aside>
         </form>
+        <?php // The promo code box's own form (its fields sit in the order summary with form="promoForm"). ?>
+        <form id="promoForm" method="get" action="<?php echo esc_url(home_url('/checkout/')); ?>" hidden></form>
     </div>
 </main>
 

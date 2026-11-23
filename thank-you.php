@@ -43,7 +43,7 @@ get_header();
             <?php endif; ?>
         </section>
 
-        <div class="confirmation-grid">
+        <div class="confirmation-grid<?php echo $order ? '' : ' is-single'; ?>">
             <section class="checkout-card" aria-labelledby="next-steps">
                 <h2 id="next-steps">What happens next</h2>
                 <?php // Ordered without artwork: it can still be uploaded from the order page (inc/order-artwork.php). ?>
@@ -100,7 +100,14 @@ get_header();
                         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd></div>
                         <div><dt>Shipping</dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
                         <div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd></div>
-                        <div class="checkout-grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+                        <?php $net = $order && function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($order) : null; // inc/order-net-total.php ?>
+                        <?php if ($net && $net['has_refund']) : ?>
+                            <div><dt>Order total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+                            <div class="checkout-refund" style="color:#1a7f37;"><dt>Refunded</dt><dd>&minus;<?php echo esc_html($money($net['refunded'])); ?></dd></div>
+                            <div class="checkout-grand"><dt>Total after refund</dt><dd><?php echo esc_html($money($net['net'])); ?></dd></div>
+                        <?php else : ?>
+                            <div class="checkout-grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+                        <?php endif; ?>
                     </dl>
                     <dl class="confirmation-meta">
                         <div>

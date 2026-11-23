@@ -521,6 +521,13 @@ function wholesale_seo_product_duplicate_of($product_id)
 		// Grouped as "Frame Only" but sells only the 24" x 36" replacement graphic,
 		// with the kit's name and description.
 		'standard-signicade-white-frame-only' => 'standard-signicade-white-frame-graphic',
+		// 2024 leftovers of the same stand, still published with older prices and
+		// a slightly different name; GSC (Nov 2026) had all three competing.
+		'tension-fabric-stand-hardware-only-old' => 'tension-fabric-stand-hardware-only',
+		'tension-fabric-stand-hardware-only-old-2' => 'tension-fabric-stand-hardware-only',
+		// Same pairing as the Standard and Deluxe retractables, but its name has
+		// " - Insert Only" so the same-name variant match misses it.
+		'sd-retractable-sd-retractable-insert-only' => 'sd-retractable-sd-retractable-insert-stand',
 	);
 
 	if (isset($copies[$slug])) {
@@ -537,11 +544,12 @@ function wholesale_seo_product_duplicate_of($product_id)
 		return 0;
 	}
 
-	// Same name, ignoring case and punctuation ("Stand (Hardware Only)" = "Stand Hardware Only").
+	// Listed copies are checked by hand; "-2" slugs must also share the name,
+	// ignoring case and punctuation ("Stand (Hardware Only)" = "Stand Hardware Only").
 	$name = static function ($id) {
 		return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', html_entity_decode(get_the_title($id), ENT_QUOTES, 'UTF-8')));
 	};
-	return $name($original->ID) === $name($product_id) ? (int) $original->ID : 0;
+	return isset($copies[$slug]) || $name($original->ID) === $name($product_id) ? (int) $original->ID : 0;
 }
 
 /**
@@ -1282,6 +1290,9 @@ function wholesale_seo_product_lowest_price($product_id, $fresh = false)
 		$from = wholesale_cl_from_price($product_id);
 		if ($from && $from['price'] > 0) {
 			$cache[$product_id] = (float) $from['price'];
+			// The dated sale's share, so feeds and structured data show the everyday price with
+			// the sale price (no 'request': wholesale_product_cheapest_quote() must not re-price it).
+			$GLOBALS['wholesale_seo_lowest_quote'][$product_id] = array('promo_discount' => max(0.0, round((float) $from['everyday'] - (float) $from['price'], 2)));
 			return $cache[$product_id];
 		}
 	}
@@ -1847,9 +1858,11 @@ function wholesale_seo_render_related_products($product_id)
 							?>
 						</span>
 						<span class="related-product-name"><?php echo esc_html($name); ?></span>
+						<?php echo function_exists('wholesale_card_trust') ? wholesale_card_trust($item->ID) : ''; // Escaped in helper. ?>
 						<?php if ($price) : ?>
-							<span class="related-product-price"><?php echo wp_kses('From ' . $price, array('sup' => array(), 'del' => array())); ?></span>
+							<span class="related-product-price"><?php echo wp_kses('<small>From</small> ' . wholesale_card_unit($price), array('sup' => array(), 'del' => array(), 'small' => array())); ?></span>
 						<?php endif; ?>
+						<span class="related-product-cta" aria-hidden="true">Shop now <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
 					</a>
 				</li>
 			<?php endforeach; ?>

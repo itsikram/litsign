@@ -1,0 +1,186 @@
+/*
+ * Toolbar (admin bar) on phones and small tablets, on store pages AND in wp-admin
+ * (loaded by inc/admin-mobile.php wherever the toolbar shows; js/admin-bar-mobile.js
+ * does the measuring). Every rule is inside max-width: 782px, WordPress's own phone
+ * breakpoint, so the desktop toolbar is unchanged.
+ *
+ *  1. Every item is shown (WordPress hides all but a few on phones); the bar wraps
+ *     to a second row when they don't fit, and the page is pushed down to match.
+ *  2. Items that only had a text label get an icon.
+ *  3. Dropdowns open under the bar, stay inside the screen (the script nudges
+ *     them in from the right edge), and scroll inside themselves when taller
+ *     than the screen.
+ */
+@media screen and (max-width: 782px) {
+
+	/* ---- 1. Show every item, wrap to a second row ------------------------- */
+	#wpadminbar {
+		height: auto !important;
+		min-height: 46px;
+	}
+	#wpadminbar .quicklinks,
+	#wpadminbar #wp-toolbar {
+		height: auto;
+	}
+	#wpadminbar .quicklinks::after {
+		content: "";
+		display: table;
+		clear: both;
+	}
+	#wpadminbar #wp-toolbar > ul > li {
+		display: block;
+		/* Dropdowns line up with the bar, not with the item (core does this for its own items only). */
+		position: static;
+	}
+	/* The toolbar search box (store pages) has its own search in the site header. */
+	#wpadminbar #wp-toolbar > ul > li#wp-admin-bar-search {
+		display: none;
+	}
+
+	/* Page content sits below the bar however many rows it takes (--wam-bar-h set by the script). */
+	html.wp-toolbar.wam-tall {
+		padding-top: var(--wam-bar-h, 46px) !important;
+	}
+	html.wam-tall .auto-fold #adminmenu {
+		top: var(--wam-bar-h, 46px);
+	}
+	/* Block editor (pages, posts, widgets, site editor) is pinned under the toolbar. */
+	html.wam-tall .interface-interface-skeleton {
+		top: var(--wam-bar-h, 46px);
+	}
+	/* Store pages: WordPress pushes the page down by a fixed 46px. */
+	html.wam-tall:not(.wp-toolbar) {
+		--wp-admin--admin-bar--height: var(--wam-bar-h, 46px);
+		margin-top: var(--wam-bar-h, 46px) !important;
+	}
+
+	/* ---- 2. Icons for items that only had a text label --------------------- */
+	#wpadminbar li#wp-admin-bar-wudt-diagnostics > .ab-item,
+	#wpadminbar li#wp-admin-bar-wholesale-visitor-insights > .ab-item,
+	#wpadminbar li#wp-admin-bar-wholesale-store-admin > .ab-item,
+	#wpadminbar li#wp-admin-bar-wholesale-edit-product-category > .ab-item {
+		display: block;
+		width: 52px !important;
+		padding: 0 !important;
+		overflow: hidden;
+		font-size: 0 !important;
+		text-align: center;
+	}
+	#wpadminbar li#wp-admin-bar-wudt-diagnostics > .ab-item > *,
+	#wpadminbar li#wp-admin-bar-wholesale-visitor-insights > .ab-item > *,
+	#wpadminbar li#wp-admin-bar-wholesale-store-admin > .ab-item > *,
+	#wpadminbar li#wp-admin-bar-wholesale-edit-product-category > .ab-item > * {
+		display: none !important;
+	}
+	#wpadminbar li#wp-admin-bar-wudt-diagnostics > .ab-item::before,
+	#wpadminbar li#wp-admin-bar-wholesale-visitor-insights > .ab-item::before,
+	#wpadminbar li#wp-admin-bar-wholesale-store-admin > .ab-item::before,
+	#wpadminbar li#wp-admin-bar-wholesale-edit-product-category > .ab-item::before {
+		display: inline-block;
+		float: none;
+		top: 0;
+		width: 52px;
+		margin: 0;
+		padding: 0;
+		font: normal 28px/46px dashicons !important;
+		text-align: center;
+		color: #a7aaad;
+		-webkit-font-smoothing: antialiased;
+	}
+	#wpadminbar li#wp-admin-bar-wudt-diagnostics > .ab-item::before {
+		content: "\f311"; /* performance gauge */
+	}
+	#wpadminbar li#wp-admin-bar-wholesale-visitor-insights > .ab-item::before {
+		content: "\f185"; /* bar chart */
+	}
+	#wpadminbar li#wp-admin-bar-wholesale-store-admin > .ab-item::before {
+		content: "\f513"; /* store */
+	}
+	#wpadminbar li#wp-admin-bar-wholesale-edit-product-category > .ab-item::before {
+		content: "\f318"; /* category folder */
+	}
+	/* Clear Cache shares the refresh icon with Updates: tint it so they differ. */
+	#wpadminbar #wp-admin-bar-wholesale-clear-cache:not(.is-done):not(.is-failed) .ab-icon::before {
+		color: #72aee6;
+	}
+	/* Items from other plugins without an icon get a short text label instead (class set by the script). */
+	#wpadminbar li.wam-text-item > .ab-item {
+		width: auto !important;
+		max-width: 60vw;
+		padding: 0 10px !important;
+		overflow: hidden;
+		font-size: 13px !important;
+		line-height: 46px !important;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+		text-indent: 0 !important;
+	}
+	#wpadminbar li.wam-text-item > .ab-item .ab-label {
+		display: inline !important;
+	}
+	/* Comment / update counts, and the Live Chat count when there is an unread chat. */
+	#wpadminbar #wp-admin-bar-comments .ab-label,
+	#wpadminbar #wp-admin-bar-updates .ab-label,
+	#wpadminbar #wp-admin-bar-sfs-live-chat.sfs-chat-has-unread .ab-label {
+		position: static;
+		display: inline-block !important;
+		width: auto;
+		height: auto;
+		margin: 0 0 0 -8px;
+		clip-path: none;
+		overflow: visible;
+		font-size: 12px !important;
+		line-height: 46px;
+	}
+	#wpadminbar #wp-admin-bar-comments > .ab-item,
+	#wpadminbar #wp-admin-bar-updates > .ab-item,
+	#wpadminbar #wp-admin-bar-sfs-live-chat.sfs-chat-has-unread > .ab-item {
+		width: auto !important;
+		padding-right: 8px !important;
+	}
+}
+
+@media screen and (max-width: 600px) {
+	/* The WordPress.org menu stays hidden on phones (as WordPress does). */
+	#wpadminbar #wp-toolbar > ul > li#wp-admin-bar-wp-logo {
+		display: none;
+	}
+	/* WordPress moves the toolbar offset from the page to #wpbody here. */
+	html.wp-toolbar.wam-tall {
+		padding-top: 0 !important;
+	}
+	html.wam-tall #wpbody {
+		padding-top: var(--wam-bar-h, 46px);
+	}
+}
+
+/*
+ * Large phones / small tablets (601-782px): the bar stays pinned at the top, so a
+ * dropdown taller than the screen could never be scrolled to its last links.
+ * Each one scrolls inside itself, and nested menus open inline (as on phones)
+ * so the scroll box can't cut them off.
+ */
+@media screen and (min-width: 601px) and (max-width: 782px) {
+	#wpadminbar .ab-top-menu > .menupop > .ab-sub-wrapper,
+	#wpadminbar .ab-top-secondary > .menupop > .ab-sub-wrapper {
+		max-height: calc(100vh - var(--wam-bar-h, 46px) - 8px);
+		max-height: calc(100dvh - var(--wam-bar-h, 46px) - 8px);
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		-webkit-overflow-scrolling: touch;
+	}
+	#wpadminbar .menupop .menupop > .ab-item:before {
+		display: none;
+	}
+	#wpadminbar .ab-top-menu > .menupop li > .ab-sub-wrapper,
+	#wpadminbar .ab-top-secondary > .menupop li > .ab-sub-wrapper {
+		position: static;
+		width: 100%;
+		margin: 0 !important;
+		box-shadow: none;
+	}
+	#wpadminbar li:hover ul li ul li,
+	#wpadminbar li.hover ul li ul li {
+		display: list-item;
+	}
+}

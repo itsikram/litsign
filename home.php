@@ -638,7 +638,7 @@ ob_start();
         <div class="col-md-2">
             <div class="category-filter-menu-wrapper">
                 <button type="button" class="category-filter-toggler" aria-expanded="false" aria-controls="category-filter-menu">
-                    <span class="category-filter-toggler-label">Browse categories</span>
+                    <span class="category-filter-toggler-label"><?php echo esc_html($current_term && !is_wp_error($current_term) ? $current_term->name : 'Browse categories'); ?></span>
                     <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
                 </button>
                 <?php
@@ -732,6 +732,7 @@ ob_start();
                                     <div class="pb-description-list">
                                         <?php echo wp_kses_post($short_desc); ?>
                                     </div>
+                                    <?php echo function_exists('wholesale_card_trust') ? wholesale_card_trust(get_the_ID()) : ''; // Escaped in helper. ?>
                                     <hr>
                                     <div class="start-at-pricing<?php echo $starting_at_options ? ' start-at-pricing--table' : ''; ?>">
 
@@ -749,8 +750,8 @@ ob_start();
                                         ?>
                                             <?php if ($size_prices || trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
                                                 <p class="pb-price-summary">
-                                                    <span class="pb-title-short">Starting at</span>
-                                                    <span class="pb-price"><?php echo trim(wp_strip_all_tags((string) $starting_at_text)) !== '' ? wholesale_emphasize_price(wholesale_price_no_cents($starting_at_text)) : '<strong>' . esc_html(wholesale_whole_dollars(min($size_prices))) . '</strong>'; ?></span>
+                                                    <span class="pb-title-short">From</span>
+                                                    <span class="pb-price"><?php echo trim(wp_strip_all_tags((string) $starting_at_text)) !== '' ? wholesale_card_unit(wholesale_emphasize_price(wholesale_price_no_cents($starting_at_text))) : '<strong>' . esc_html(wholesale_whole_dollars(min($size_prices))) . '</strong>'; ?></span>
                                                 </p>
                                             <?php endif; ?>
                                             <table class="table">
@@ -786,20 +787,18 @@ ob_start();
 
                                         } else {
                                         ?>
-                                            <span class="pb-title-short fs-6">
-                                                Starting at
-                                            </span>
+                                            <span class="pb-title-short fs-6">From</span>
                                             <span class="pb-price">
-                                                <?php echo $is_channel_letters ? wholesale_price_no_cents($starting_at_text) : wholesale_emphasize_price(wholesale_price_no_cents($starting_at_text)); ?>
+                                                <?php echo wholesale_card_unit($is_channel_letters ? wholesale_price_no_cents($starting_at_text) : wholesale_emphasize_price(wholesale_price_no_cents($starting_at_text))); ?>
                                             </span>
                                         <?php
                                         }; ?>
 
                                     </div>
                                     <?php if ($is_channel_letters) : ?>
-                                        <span class="pb-cta">Get your price <?php echo wholesale_home_icon('arrow'); ?></span>
+                                        <span class="pb-cta">Shop now <?php echo wholesale_home_icon('arrow'); ?></span>
                                     <?php else : ?>
-                                        <span class="pb-shop-cta" aria-hidden="true">Choose size &amp; options <?php echo wholesale_home_icon('arrow'); ?></span>
+                                        <span class="pb-shop-cta" aria-hidden="true">Shop now <?php echo wholesale_home_icon('arrow'); ?></span>
                                     <?php endif; ?>
 
                                 </div>
@@ -1028,7 +1027,7 @@ ob_start();
                             <h3><a href="<?php echo esc_url($item[1]); ?>"><?php echo esc_html($item[2]); ?></a></h3>
                             <p><?php echo wp_kses_post($item[3]); ?></p>
                             <?php if ($item_price) : ?>
-                                <p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($item_price); ?></p>
+                                <p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post(wholesale_card_unit($item_price)); ?></p>
                             <?php endif; ?>
                         </div>
                     </article>

@@ -94,6 +94,43 @@ if ($product_id > 0) {
     wp_redirect(home_url());
 }
 
+// Wall backgrounds and the day/night view over the canvas (js/cl-scene.js, css/cl-scene.css).
+// Each wall is a seamless tile in img/cl-backgrounds drawn at 16 px per inch; the size is the
+// piece of real wall one tile covers (W x H inches), so the walls zoom with the letters at real size.
+$cl_scene_walls = array(
+    'red-brick'       => array('Red brick', '48x31.5'),
+    'white-brick'     => array('White brick', '48x31.5'),
+    'charcoal-stucco' => array('Charcoal stucco', '48x48'),
+    'sand-stucco'     => array('Sand stucco', '48x48'),
+    'cedar-wood'      => array('Cedar wood', '72x36'),
+    'concrete'        => array('Concrete', '96x48'),
+    'black-metal'     => array('Black metal', '96x48'),
+    'limestone'       => array('Limestone', '96x48'),
+);
+// Night view: offered when the product sells LED lights (the "LED lights" option below). The
+// lighting drawn follows the product (Type 1's "Front and Back Lit" option is handled in the script).
+$cl_scene_title = strtolower(html_entity_decode(wp_strip_all_tags((string) $product_title), ENT_QUOTES, 'UTF-8'));
+if (false !== strpos($cl_scene_title, 'front & back') || false !== strpos($cl_scene_title, 'front and back')) {
+    $cl_scene_lighting = 'dual';
+} elseif (false !== strpos($cl_scene_title, 'halo')) {
+    $cl_scene_lighting = 'halo';
+} elseif (false !== strpos($cl_scene_title, 'back lit') || false !== strpos($cl_scene_title, 'back-lit')) {
+    $cl_scene_lighting = 'back';
+} else {
+    $cl_scene_lighting = 'front';
+}
+$cl_scene_version = static function ($path) {
+    $file = get_template_directory() . $path;
+    return file_exists($file) ? (string) filemtime($file) : null;
+};
+wp_enqueue_style('cl-scene', get_template_directory_uri() . '/css/cl-scene.css', array('cl'), $cl_scene_version('/css/cl-scene.css'));
+wp_enqueue_script('cl-scene', get_template_directory_uri() . '/js/cl-scene.js', array('cl'), $cl_scene_version('/js/cl-scene.js'), array('in_footer' => true, 'strategy' => 'defer'));
+
+// "How to order" video under the builder (not in the admin payment-ticket builder).
+require_once get_template_directory() . '/inc/cl-how-to-video.php';
+if (!$ticket_builder) {
+    wholesale_cl_how_to_video_enqueue();
+}
 
 get_header();
 
@@ -350,6 +387,60 @@ get_header();
         </div>
         <div class="cl-canvas-wrap">
             <div id="container" aria-label="Design canvas"></div>
+            <?php // Background + day/night controls; js/cl-scene.js moves them over the canvas. ?>
+            <div class="cl-scene" id="clScene" data-lighting="<?php echo esc_attr($cl_scene_lighting); ?>"<?php echo $is_cable_option ? ' data-led' : ''; ?> hidden>
+                <div class="cl-scene-bg">
+                    <button type="button" class="cl-scene-btn" id="clSceneBgBtn" aria-haspopup="dialog" aria-expanded="false" aria-controls="clScenePanel" title="Change the background">
+                        <span class="cl-scene-swatch is-white" aria-hidden="true"></span>
+                        <span class="cl-scene-bg-name">White</span>
+                        <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false"><path d="M4 10l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div class="cl-scene-panel" id="clScenePanel" role="dialog" aria-labelledby="clScenePanelTitle" hidden>
+                        <p class="cl-scene-panel-title" id="clScenePanelTitle">Background</p>
+                        <div class="cl-scene-grid" role="group" aria-labelledby="clScenePanelTitle">
+                            <button type="button" class="cl-scene-opt" data-bg="white" data-name="White" aria-pressed="true">
+                                <span class="cl-scene-thumb" aria-hidden="true"></span>
+                                <span>White</span>
+                            </button>
+                            <?php foreach ($cl_scene_walls as $cl_wall_slug => $cl_wall) :
+                                $cl_wall_base = get_template_directory_uri() . '/img/cl-backgrounds/' . $cl_wall_slug; ?>
+                                <button type="button" class="cl-scene-opt" data-bg="<?php echo esc_attr($cl_wall_slug); ?>" data-name="<?php echo esc_attr($cl_wall[0]); ?>" data-tile="<?php echo esc_attr($cl_wall[1]); ?>" data-src="<?php echo esc_url($cl_wall_base . '.webp'); ?>" data-thumb="<?php echo esc_url($cl_wall_base . '-thumb.webp'); ?>" aria-pressed="false">
+                                    <span class="cl-scene-thumb" aria-hidden="true"><img src="<?php echo esc_url($cl_wall_base . '-thumb.webp'); ?>" alt="" width="120" height="80" loading="lazy" decoding="async"></span>
+                                    <span><?php echo esc_html($cl_wall[0]); ?></span>
+                                </button>
+                            <?php endforeach; ?>
+                            <button type="button" class="cl-scene-opt" data-bg="photo" data-name="Your photo" aria-pressed="false" hidden>
+                                <span class="cl-scene-thumb" aria-hidden="true"></span>
+                                <span>Your photo</span>
+                            </button>
+                            <label class="cl-scene-upload" for="clScenePhotoInput">
+                                <span class="cl-scene-thumb" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" focusable="false"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                                <span>Upload photo</span>
+                                <input type="file" id="clScenePhotoInput" class="visually-hidden" accept="image/*">
+                            </label>
+                        </div>
+                        <div class="cl-scene-photo-actions" hidden>
+                            <button type="button" class="cl-scene-link" data-scene-action="fit-photo">Fit photo to view</button>
+                            <button type="button" class="cl-scene-link is-danger" data-scene-action="remove-photo">Remove photo</button>
+                        </div>
+                        <p class="cl-scene-status" id="clSceneStatus" role="status" hidden></p>
+                        <p class="cl-scene-note">Walls are shown at real size, so you can judge your letter size. A photo of your storefront stays on this device; it is not uploaded.</p>
+                    </div>
+                </div>
+                <?php if ($is_cable_option) : ?>
+                    <div class="cl-scene-time" role="group" aria-label="Day or night view">
+                        <button type="button" data-time="day" aria-pressed="true">
+                            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            <span class="cl-scene-time-label">Day</span>
+                        </button>
+                        <button type="button" data-time="night" aria-pressed="false">
+                            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a8.5 8.5 0 1 0 11.1 11.1Z" fill="currentColor"/></svg>
+                            <span class="cl-scene-time-label">Night</span>
+                        </button>
+                    </div>
+                    <span class="cl-scene-caption" aria-live="polite" hidden></span>
+                <?php endif; ?>
+            </div>
             <?php // js/cl.js keeps this next to the selected element's transformer. ?>
             <button type="button" class="cl-edit-pill" id="clEditPill" aria-label="Edit selected element" title="Edit" aria-controls="leftSidebar" aria-expanded="false" hidden>
                 <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16v4Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="m13.5 6.5 4 4" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>
@@ -537,6 +628,8 @@ get_header();
     </div>
 </div>
 
+<?php if (!$ticket_builder) { wholesale_render_cl_how_to_video('builder', $product_id); } ?>
+
 <p id="fontFamilyLoader" style="color: transparent" class="text-center mt-3">
     Loading Fonts.....
 </p>
@@ -550,7 +643,7 @@ get_header();
                     <p class="cost-modal-subtitle"><?php echo esc_html($product_title); ?></p>
                 </div>
                 <?php if (!empty($promo_percent)) : ?>
-                    <span class="cl-sale-badge cl-sale-badge--lg"><?php echo esc_html(round($promo_percent, 2) . '% off sale, ends ' . $promo_ends); ?></span>
+                    <span class="cl-sale-badge cl-sale-badge--lg"><?php echo esc_html('' !== wholesale_promotion_label($promotion, '') ? wholesale_promotion_label($promotion) . ': ' . round($promo_percent, 2) . '% off, ends ' . $promo_ends : round($promo_percent, 2) . '% off sale, ends ' . $promo_ends); ?></span>
                 <?php endif; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

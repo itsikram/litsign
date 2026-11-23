@@ -1,16 +1,9 @@
 <?php
 /**
- * Card payments through Converge Hosted Payments (Lightbox).
- *
- * Card details are typed into Converge's own secure window and never reach this server:
- *  1. wholesale_payment_start: the server validates the order, fixes the amount, and asks
- *     Converge for a one-time session token for exactly that amount.
- *  2. The browser opens PayWithConverge.open() with the token.
- *  3. wholesale_payment_complete: on approval the server looks the transaction up with
- *     Converge (txnquery), checks amount + invoice, and only then creates the order.
- *
- * Settings → Storefront Sign → "Card payment method" can instead use the older direct
- * method: card fields on our own page, charged server-to-server (wholesale_converge_direct_sale).
+ * Checkout: the form check against the cart (wholesale_checkout_build), shipping options and
+ * dates, order creation, checkout accounts, the thank-you page and the purchase conversion tag.
+ * Also used by the SFS Wallet Payments plugin (Apple Pay, Google Pay, PayPal and, since
+ * 2026-11-12, the Converge card payments that used to be in this file).
  *
  * @package litsign
  */
@@ -501,8 +494,100 @@ function wholesale_free_shipping_threshold($cart)
 function wholesale_cart_qualifies_free_shipping($cart)
 {
 	$threshold = wholesale_free_shipping_threshold($cart);
-	return $threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold;
+	return ($threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold) || '' !== wholesale_applied_ship_code();
 }
+
+/**
+ * The free shipping promo code (Settings > Storefront Sign > Sales) when today is within
+ * its Pacific dates, else ''. An empty start means it already runs; an empty end, that it
+ * has no last day.
+ */
+function wholesale_ship_code_window()
+{
+	$code = wholesale_sanitize_ship_code(wholesale_get_setting('ship_code'));
+	if ('' === $code) {
+		return '';
+	}
+	$zone = new DateTimeZone('America/Los_Angeles');
+	$start = DateTime::createFromFormat('!Y-m-d', (string) wholesale_get_setting('ship_code_start'), $zone);
+	$end = DateTime::createFromFormat('!Y-m-d', (string) wholesale_get_setting('ship_code_end'), $zone);
+	if ($start && time() < $start->getTimestamp()) {
+		return '';
+	}
+	if ($end && time() > $end->modify('+1 day')->getTimestamp() - 1) {
+		return '';
+	}
+	return $code;
+}
+
+/**
+ * The promo code this visitor applied at checkout (cookie sfs_promo), while it runs, else ''.
+ * With it, every cart gets Free Shipping (standard speed): checkout, the cart page, the mini
+ * cart and the wallet window all ask wholesale_cart_qualifies_free_shipping().
+ */
+function wholesale_applied_ship_code()
+{
+	$code = wholesale_ship_code_window();
+	$typed = isset($_COOKIE['sfs_promo']) ? wholesale_sanitize_ship_code(wp_unslash($_COOKIE['sfs_promo'])) : '';
+	return '' !== $code && '' !== $typed && hash_equals($code, $typed) ? $code : '';
+}
+
+/**
+ * The applied code when it is what makes this cart ship free (below the minimum), else ''.
+ */
+function wholesale_cart_ship_code($cart)
+{
+	$threshold = wholesale_free_shipping_threshold($cart);
+	if ($threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold) {
+		return '';
+	}
+	return wholesale_applied_ship_code();
+}
+
+/**
+ * Merchant Center promotion id for the code ("freeship_blackfriday") from the day it is set
+ * until its last day (the promotion is reviewed before it starts), else ''. The feed puts it
+ * on items that don't already ship free (inc/merchant-feed.php).
+ */
+function wholesale_ship_code_promotion_id()
+{
+	$code = wholesale_sanitize_ship_code(wholesale_get_setting('ship_code'));
+	if ('' === $code) {
+		return '';
+	}
+	$end = DateTime::createFromFormat('!Y-m-d', (string) wholesale_get_setting('ship_code_end'), new DateTimeZone('America/Los_Angeles'));
+	if ($end && time() > $end->modify('+1 day')->getTimestamp() - 1) {
+		return '';
+	}
+	return 'freeship_' . strtolower($code);
+}
+
+/**
+ * ?promo_code=BLACKFRIDAY on the checkout or cart page (the promo code box) stores a valid
+ * code in the sfs_promo cookie; an empty one removes it. Redirects back without the code,
+ * with promo=applied|invalid|removed for the message.
+ */
+function wholesale_handle_promo_code()
+{
+	if (!isset($_GET['promo_code']) || is_admin()) {
+		return;
+	}
+	$typed = wholesale_sanitize_ship_code(wp_unslash($_GET['promo_code']));
+	$code = wholesale_ship_code_window();
+	$path = COOKIEPATH ? COOKIEPATH : '/';
+	if ('' === $typed) {
+		setcookie('sfs_promo', '', time() - 3600, $path, COOKIE_DOMAIN, is_ssl(), true);
+		$result = 'removed';
+	} elseif ('' !== $code && hash_equals($code, $typed)) {
+		setcookie('sfs_promo', $code, time() + 30 * DAY_IN_SECONDS, $path, COOKIE_DOMAIN, is_ssl(), true);
+		$result = 'applied';
+	} else {
+		$result = 'invalid';
+	}
+	wp_safe_redirect(add_query_arg('promo', $result, remove_query_arg(array('promo_code', 'promo'))));
+	exit;
+}
+add_action('template_redirect', 'wholesale_handle_promo_code', 1);
 
 /**
  * A free shipping minimum for display ("$100", "$1,000"; cents only when
@@ -528,9 +613,11 @@ function wholesale_shipping_from_amount($channel_letters = false)
 	return '$' . number_format($amount, floor($amount) == $amount ? 0 : 2);
 }
 
-function wholesale_free_shipping_label()
+function wholesale_free_shipping_label($cart = null)
 {
-	return 'Free Shipping (3–6 business days)';
+	// "Free Shipping, code BLACKFRIDAY": the order and its emails show which code made it free.
+	$code = $cart ? wholesale_cart_ship_code($cart) : '';
+	return '' !== $code ? 'Free Shipping, code ' . $code . ' (3–6 business days)' : 'Free Shipping (3–6 business days)';
 }
 
 function wholesale_shipping_label($index)

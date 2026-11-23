@@ -307,7 +307,8 @@
       linear-gradient(180deg, rgba(5, 21, 38, 0.62), rgba(5, 21, 38, 0.34) 62%, rgba(5, 21, 38, 0.1)),
       linear-gradient(90deg, rgba(5, 21, 38, 0.66), rgba(5, 21, 38, 0.2) 78%, transparent),
       var(--hc-hero-mobile);
-    background-position: 65% 66%;
+    /* A Media Library phone photo (Settings > Images) sets its own framing. */
+    background-position: var(--hc-hero-mobile-pos, 65% 66%);
   }
 
   @supports (background-image: image-set(url("a.avif") type("image/avif"))) {
@@ -1566,7 +1567,7 @@
 }
 
 .hc-gal-flag--sale {
-  background: #b91c1c;
+  background: #E95402;
 }
 
 .hc-pcard-chip {
@@ -1648,6 +1649,10 @@
   font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.3;
+}
+
+.hc-pcard-meta .hc-meta-short {
+  display: none;
 }
 
 .hc-pcard-meta svg {
@@ -1840,17 +1845,33 @@
     font-size: 0.95rem;
   }
 
+  /* No short description on phone grid cards (Nov 21 2026). */
   .hc-pcard-desc {
-    display: -webkit-box;
-    overflow: hidden;
-    font-size: 0.8rem;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
+    display: none;
   }
 
+  /* Turnaround stays on one line; the short wording is swapped in. */
   .hc-pcard-meta {
-    align-items: flex-start;
+    align-items: center;
     font-size: 0.74rem;
+    white-space: nowrap;
+  }
+
+  .hc-pcard-meta .hc-meta-long {
+    display: none;
+  }
+
+  .hc-pcard-meta .hc-meta-short {
+    display: inline;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Line break after the regular (struck) price. */
+  .hc-pcard-price del::after {
+    content: "";
+    display: block;
   }
 
   .hc-pcard-meta svg {
@@ -1883,6 +1904,42 @@
   .hc-pcard-button svg {
     width: 15px;
     height: 15px;
+  }
+}
+
+/* Quick picks on phones (Nov 21 2026): match the other product cards. The kicker
+   box wrapped onto two lines in a 170px card and the filled button set these cards
+   apart, so the kicker becomes the grey line under the name (like .hc-pcard-desc)
+   and the button is the same outline button as the cards above. */
+@media (max-width: 767px) {
+  .hc-order-picks .hc-pcard-name {
+    order: -1;
+  }
+
+  .hc-order-picks .hc-pcard-kicker {
+    align-self: stretch;
+    margin: 6px 0 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    color: #4b5a6b;
+    font-size: 0.8rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.45;
+    text-transform: none;
+  }
+
+  .hc-order-picks .hc-pcard-button {
+    border-color: #0b74a3;
+    background: #ffffff;
+    color: #0b74a3;
+  }
+
+  .hc-order-picks .hc-pcard-body:is(:hover, :focus-visible) .hc-pcard-button {
+    border-color: #0b74a3;
+    background: #0b74a3;
+    color: #ffffff;
   }
 }
 
@@ -2266,98 +2323,22 @@
   transform: translateX(3px);
 }
 
-/* Pricing band: the same night sky as the channel letter grid above. */
-.hc-cats-band {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 14px 18px;
-  margin-top: 20px;
-  padding: 18px 20px;
-  border-radius: 16px;
-  background:
-    radial-gradient(520px 200px at 100% 0%, rgba(31, 168, 222, 0.22), transparent 70%),
-    linear-gradient(160deg, #0b1724, #0f2232);
-  color: #c3d0dc;
-}
-
-.hc-cats-band-icon {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: rgba(31, 168, 222, 0.18);
-  color: #7fd3f5;
-}
-
-.hc-cats-band-icon .cl-icon {
-  width: 22px;
-  height: 22px;
-}
-
-.hc-cats-band-text {
-  flex: 1 1 260px;
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.5;
-}
-
-.hc-cats-band-text strong {
+/* One panel of rows (2026-11-23): the list runs in columns instead of the groups. */
+.hc-dir--more {
   display: block;
-  color: #ffffff;
-  font-size: 16px;
 }
 
-.hc-cats-band-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+@media (min-width: 640px) {
+  .hc-dir--more .hc-dir-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
 }
 
-.hc-cats-band-primary,
-.hc-cats-band-ghost {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 46px;
-  padding: 10px 18px;
-  border: 2px solid transparent;
-  border-radius: 10px;
-  font-size: 0.95rem;
-  font-weight: 800;
-  line-height: 1.2;
-  white-space: nowrap;
-  text-decoration: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.15s, border-color 0.15s;
-}
-
-.hc-cats-band-primary {
-  background: #ffffff;
-  color: #0b1724;
-}
-
-.hc-cats-band-primary:hover,
-.hc-cats-band-primary:focus-visible {
-  color: #0b1724;
-  text-decoration: none;
-  transform: translateY(-2px);
-  box-shadow: 0 0 28px rgba(127, 211, 245, 0.45);
-}
-
-.hc-cats-band-ghost {
-  border-color: rgba(255, 255, 255, 0.55);
-  color: #ffffff;
-}
-
-.hc-cats-band-ghost:hover,
-.hc-cats-band-ghost:focus-visible {
-  border-color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-  text-decoration: none;
+@media (min-width: 992px) {
+  .hc-dir--more .hc-dir-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 640px) {
@@ -2441,9 +2422,6 @@
     aspect-ratio: 1 / 1;
   }
 
-  .hc-cats-band {
-    padding: 20px 24px;
-  }
 }
 
 @media (min-width: 1100px) {
@@ -2456,15 +2434,73 @@
   .hc-feature-link,
   .hc-feature-media img,
   .hc-dir-thumb img,
-  .hc-cats-band-primary,
   .hc-cats .cl-icon {
     transition: none;
   }
 
   .hc-feature-link:hover,
   .hc-feature-link:hover .hc-feature-media img,
-  .hc-dir-item:hover .hc-dir-thumb img,
-  .hc-cats-band-primary:hover {
+  .hc-dir-item:hover .hc-dir-thumb img {
     transform: none;
+  }
+}
+
+/* Speed (Nov 20 2026): sections far below the first screen skip layout and paint
+   until they come near. The first-paint CSS is inline (inc/performance.php), so the
+   page paints before the rest of its 2,900 elements are laid out; without this,
+   that layout ran as long tasks after the paint (lab: Total Blocking Time 623 ms
+   -> 319 ms). "auto" remembers each section's real height once shown. The script
+   at the top of <main> (template-parts/home-catalog.php) marks sections within
+   1,250px of the screen .hc-cv-near, so their photos load as early as before, and
+   sets html.hc-cv-off before any in-page jump so it lands on the exact spot. */
+html:not(.hc-cv-off) .hc-page > section:not(.hc-hero):not(.hc-cv-near) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 1500px;
+}
+
+/* ------------------------------------------------------------------
+   Phones (2026-11-23): channel letter card photos are taller (4:5
+   instead of square), and small arrows sit beside the photo counter at
+   the bottom ("< 1/6 >"), so shoppers can change the photo with a tap
+   as well as a swipe. They stay out of the middle of the photo, where
+   swipes start; a tap on the photo itself still opens the product.
+   ------------------------------------------------------------------ */
+@media (max-width: 575px) {
+  .hc-shop-cl-media {
+    aspect-ratio: 4 / 5;
+  }
+
+  .hc-shop-cl-media .hc-gal-arrow {
+    display: inline-flex;
+    top: auto;
+    bottom: 7px;
+    width: 26px;
+    height: 26px;
+    margin-top: 0;
+    font-size: 0.6rem;
+    opacity: 0.94;
+    transform: none;
+  }
+
+  /* 38px touch target around the 26px button. */
+  .hc-shop-cl-media .hc-gal-arrow::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+
+  .hc-shop-cl-media .hc-gal-arrow--prev {
+    left: calc(50% - 56px);
+  }
+
+  .hc-shop-cl-media .hc-gal-arrow--next {
+    right: calc(50% - 56px);
+  }
+
+  .hc-shop-cl-media .hc-gal-count {
+    right: auto;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
   }
 }

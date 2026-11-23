@@ -50,3 +50,29 @@ function wholesale_admin_mobile_assets()
 }
 // Late so these rules load after plugin and theme admin styles.
 add_action('admin_enqueue_scripts', 'wholesale_admin_mobile_assets', 999);
+
+/**
+ * Toolbar (admin bar) on phones, 2026-11-21: every item shown, wraps to a second
+ * row, dropdowns stay on screen. Loads on wp-admin AND on store pages, but only
+ * for signed-in users who see the toolbar, so visitors never download it.
+ * Files: css/admin-bar-mobile.css + js/admin-bar-mobile.js.
+ */
+function wholesale_admin_bar_mobile_assets()
+{
+	if (!is_admin_bar_showing()) {
+		return;
+	}
+	$dir = get_template_directory();
+	$uri = get_template_directory_uri();
+	$css = $dir . '/css/admin-bar-mobile.css';
+	$js = $dir . '/js/admin-bar-mobile.js';
+
+	if (is_file($css)) {
+		wp_enqueue_style('wholesale-admin-bar-mobile', $uri . '/css/admin-bar-mobile.css', array('admin-bar'), (string) filemtime($css));
+	}
+	if (is_file($js)) {
+		wp_enqueue_script('wholesale-admin-bar-mobile', $uri . '/js/admin-bar-mobile.js', array(), (string) filemtime($js), true);
+	}
+}
+add_action('admin_enqueue_scripts', 'wholesale_admin_bar_mobile_assets', 999);
+add_action('wp_enqueue_scripts', 'wholesale_admin_bar_mobile_assets', 999);

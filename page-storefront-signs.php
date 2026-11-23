@@ -141,8 +141,9 @@ get_header();
 						<div class="sf-type-body">
 							<h3><a href="<?php echo esc_url($type[1]); ?>"><?php echo wp_kses_post($type[2]); ?></a></h3>
 							<p><?php echo wp_kses_post($type[3]); ?></p>
+							<?php echo function_exists('wholesale_card_trust') ? wholesale_card_trust($type_product ? $type_product->ID : 0, $type_product ? '' : 'ship') : ''; // Escaped in helper. ?>
 							<?php if ($type_price) : ?>
-								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($type_price); ?></p>
+								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post(wholesale_card_unit($type_price)); ?></p>
 							<?php endif; ?>
 						</div>
 					</article>

@@ -1,6 +1,7 @@
 <?php
 /**
- * Settings > Storefront Sign. One form (options.php, group wholesale_settings)
+ * Storefront Sign (own top-level admin menu, admin.php?page=wholesale-settings;
+ * it was under Settings until 2026-11-20). One form (options.php, group wholesale_settings)
  * split into panels with a side menu; css/admin-settings.css and
  * js/admin-settings.js add the tabs, search, image pickers and the save bar.
  * Without JavaScript every panel shows, one after the other.
@@ -16,6 +17,7 @@ function wholesale_settings_panels()
 {
 	return array(
 		'general' => array('Store', 'dashicons-store'),
+		'design' => array('Design', 'dashicons-art'),
 		'images' => array('Images', 'dashicons-format-image'),
 		'sales' => array('Sale promotion', 'dashicons-tag'),
 		'reviews' => array('Reviews', 'dashicons-star-filled'),
@@ -119,6 +121,7 @@ function wholesale_settings_page()
 			</div>
 		</header>
 		<hr class="wp-header-end">
+		<?php settings_errors(); // Under Settings, options-head.php printed "Settings saved."; a top-level page must do it itself. ?>
 
 		<?php if (isset($_GET['images_imported'])) : ?>
 			<?php $imported = absint($_GET['images_imported']); $failed = absint($_GET['images_failed'] ?? 0); ?>
@@ -148,14 +151,7 @@ function wholesale_settings_page()
 				<p class="wss-no-results" hidden>No settings match your search.</p>
 
 				<section class="wss-panel" id="wss-panel-general" data-wss-panel="general" role="tabpanel">
-					<div class="wss-card">
-						<div class="wss-card__head"><h2>Brand colors</h2><p>Used for buttons, links, star ratings and sale prices across the site.</p></div>
-						<table class="form-table" role="presentation">
-							<tr><th><label for="wholesale_primary_color">Primary color</label></th><td><input type="color" id="wholesale_primary_color" name="wholesale_primary_color" value="<?php echo esc_attr(wholesale_get_setting('primary_color')); ?>"></td></tr>
-							<tr><th><label for="wholesale_accent_color">Rating/accent color</label></th><td><input type="color" id="wholesale_accent_color" name="wholesale_accent_color" value="<?php echo esc_attr(wholesale_get_setting('accent_color')); ?>"></td></tr>
-							<tr><th><label for="wholesale_sale_price_color">Sale price color</label></th><td><input type="color" id="wholesale_sale_price_color" name="wholesale_sale_price_color" value="<?php echo esc_attr(wholesale_get_setting('sale_price_color')); ?>"></td></tr>
-						</table>
-					</div>
+					<?php // Brand colors moved to the Design panel (inc/design-settings.php) on 2026-11-23. ?>
 					<div class="wss-card">
 						<div class="wss-card__head"><h2>Page loader</h2></div>
 						<table class="form-table" role="presentation">
@@ -198,38 +194,26 @@ function wholesale_settings_page()
 					</div>
 				</section>
 
+				<section class="wss-panel" id="wss-panel-design" data-wss-panel="design" role="tabpanel">
+					<?php wholesale_design_panel(); ?>
+				</section>
+
 				<section class="wss-panel" id="wss-panel-images" data-wss-panel="images" role="tabpanel">
 					<div class="wss-card">
 						<div class="wss-card__head" id="images"><h2>Site images</h2><p>These photos are stored in the <a href="<?php echo esc_url(admin_url('upload.php')); ?>">Media Library</a> rather than inside the theme, which keeps the theme small. Upload a new image or pick one already in the library, then save.</p></div>
 						<?php if ($missing_images) : ?>
 							<div class="notice notice-warning inline"><p><strong>Missing:</strong> <?php echo esc_html(implode(', ', $missing_images)); ?>. Those spots show no image until one is chosen.</p></div>
 						<?php endif; ?>
+						<p class="description">The site logo, footer logo and site icon are under <a href="#design" data-wss-goto="design">Design &rsaquo; Logo &amp; site icon</a>.</p>
 						<div class="wss-image-grid">
 							<?php
-							$logo_id = (int) get_theme_mod('custom_logo');
-							$logo_id = $logo_id && wp_attachment_is_image($logo_id) ? $logo_id : 0;
-							$logo_default = wholesale_image_default_id('site_logo');
-							$logo_default_url = $logo_default ? wp_get_attachment_image_url($logo_default, 'medium_large') : '';
-							wholesale_settings_image_field(array(
-								'name' => 'wholesale_site_logo',
-								'value' => $logo_id,
-								'title' => 'Site logo',
-								'help' => 'Header, footer and the ads landing pages. A wide PNG, SVG or WebP with a transparent background, at least 800 px wide. Without one, the default logo is shown (or the site name as text). Same setting as Appearance &rsaquo; Customize &rsaquo; Site Identity.',
-								'preview' => $logo_id ? wp_get_attachment_image_url($logo_id, 'medium_large') : $logo_default_url,
-								'fallback' => $logo_default_url,
-								'fallback_label' => $logo_default_url ? 'Default image' : 'Not set',
-								'source' => $logo_id ? 'library' : ($logo_default_url ? 'default' : 'none'),
-								'ratio' => '4 / 1',
-								'contain' => true,
-							));
-
 							$hero_image_id = (int) wholesale_get_setting('default_hero_image');
 							$hero_built_in = get_template_directory_uri() . '/img/hero-1920.webp';
 							wholesale_settings_image_field(array(
 								'name' => 'wholesale_default_hero_image',
 								'value' => $hero_image_id,
 								'title' => 'Default hero image',
-								'help' => 'Hero background for product categories and pages that have no image of their own. The home page and the Channel Letters page use the Channel Letters page\'s featured image instead. Best size: at least 2400 &times; 1000 px, landscape, with the main subject on the right and a darker, quiet left side where the headline sits. Phones show the right-hand part of the photo. A smaller AVIF copy is made automatically a few seconds after the first page view.',
+								'help' => 'Hero background for pages without a featured image and product categories without their own hero photo. The Home page uses its own featured image when set. Guide pages with a separate guide hero photo keep that photo. Best size: at least 2400 &times; 1000 px, landscape, with the main subject on the right and a darker, quiet left side where the headline sits. A smaller AVIF copy is made automatically a few seconds after the first page view.',
 								'preview' => $hero_image_id ? wp_get_attachment_image_url($hero_image_id, 'medium_large') : $hero_built_in,
 								'fallback' => $hero_built_in,
 								'fallback_label' => 'Built-in photo',
@@ -269,6 +253,7 @@ function wholesale_settings_page()
 							<p>Products always sell at their everyday price, with no sale badge or crossed-out price. A sale set here takes its percentage off the everyday price, in the cart and on every page, only from the start date through the end date (Pacific time). During the sale, pages show the everyday price crossed out, the sale price and a &ldquo;Sale x% off&rdquo; badge. Run a sale only when the everyday price is what customers actually paid before it. After you change these settings, clear the page cache so cached pages update.</p>
 						</div>
 						<table class="form-table" role="presentation">
+							<tr><th><label for="wholesale_promo_name">Sale name</label></th><td><input type="text" class="regular-text" maxlength="40" id="wholesale_promo_name" name="wholesale_promo_name" value="<?php echo esc_attr(wholesale_get_setting('promo_name')); ?>" placeholder="Black Friday Sale"> <p class="description">Shown on product pages and the channel letter builder, e.g. &ldquo;Black Friday Sale: 15% off, ends Nov 30&rdquo;. Leave empty to say &ldquo;Sale&rdquo;.</p></td></tr>
 							<tr><th><label for="wholesale_promo_percent">Sale percentage</label></th><td><input type="number" class="small-text" min="0" max="90" step="0.01" id="wholesale_promo_percent" name="wholesale_promo_percent" value="<?php echo esc_attr(wholesale_get_setting('promo_percent')); ?>"> % off <p class="description">0 turns the sale off.</p></td></tr>
 							<tr><th><label for="wholesale_promo_start">Starts</label></th><td><input type="date" id="wholesale_promo_start" name="wholesale_promo_start" value="<?php echo esc_attr(wholesale_get_setting('promo_start')); ?>"></td></tr>
 							<tr><th><label for="wholesale_promo_end">Ends (last day of the sale)</label></th><td><input type="date" id="wholesale_promo_end" name="wholesale_promo_end" value="<?php echo esc_attr(wholesale_get_setting('promo_end')); ?>"></td></tr>
@@ -277,7 +262,20 @@ function wholesale_settings_page()
 									<option value="<?php echo esc_attr($scope); ?>" <?php selected(wholesale_get_setting('promo_scope'), $scope); ?>><?php echo esc_html($label); ?></option>
 								<?php endforeach; ?>
 							</select>
-							<p class="description"><?php echo $promo_now ? esc_html(sprintf('A %s%% sale is running now, through %s.', $promo_now['percent'], wholesale_promotion_end_text($promo_now))) : 'No sale is running now.'; ?></p></td></tr>
+							<p class="description"><?php echo $promo_now ? esc_html(sprintf('%s: %s%% off is running now, through %s.', wholesale_promotion_label($promo_now), $promo_now['percent'], wholesale_promotion_end_text($promo_now))) : 'No sale is running now.'; ?></p></td></tr>
+						</table>
+					</div>
+					<?php $ship_code_now = function_exists('wholesale_ship_code_window') ? wholesale_ship_code_window() : ''; ?>
+					<div class="wss-card">
+						<div class="wss-card__head" id="free-shipping-code">
+							<h2>Free shipping promo code <span class="wss-badge <?php echo $ship_code_now ? 'is-ok' : 'is-info'; ?>"><?php echo $ship_code_now ? 'Running' : 'Off'; ?></span></h2>
+							<p>A code customers type in the checkout&rsquo;s order summary. It makes standard shipping free on orders below the free shipping minimum, from the start date through the end date (Pacific time). The order&rsquo;s shipping line names the code. While a code is set, the Merchant Center feed tags the items that don&rsquo;t already ship free with promotion id <code>freeship_&lt;code&gt;</code>, for a Merchant Center promotion with the same id.</p>
+						</div>
+						<table class="form-table" role="presentation">
+							<tr><th><label for="wholesale_ship_code">Code</label></th><td><input type="text" class="regular-text" maxlength="30" id="wholesale_ship_code" name="wholesale_ship_code" value="<?php echo esc_attr(wholesale_get_setting('ship_code')); ?>" placeholder="BLACKFRIDAY" style="text-transform: uppercase"> <p class="description">Letters, numbers, - and _. Empty turns the code off.</p></td></tr>
+							<tr><th><label for="wholesale_ship_code_start">Starts</label></th><td><input type="date" id="wholesale_ship_code_start" name="wholesale_ship_code_start" value="<?php echo esc_attr(wholesale_get_setting('ship_code_start')); ?>"> <p class="description">Empty: works as soon as you save.</p></td></tr>
+							<tr><th><label for="wholesale_ship_code_end">Ends (last day)</label></th><td><input type="date" id="wholesale_ship_code_end" name="wholesale_ship_code_end" value="<?php echo esc_attr(wholesale_get_setting('ship_code_end')); ?>">
+							<p class="description"><?php echo $ship_code_now ? esc_html(sprintf('Code %s works at checkout now%s.', $ship_code_now, wholesale_get_setting('ship_code_end') ? ', through ' . wp_date('M j', strtotime(wholesale_get_setting('ship_code_end') . ' 12:00'), new DateTimeZone('America/Los_Angeles')) : '')) : 'No code works at checkout now.'; ?></p></td></tr>
 						</table>
 					</div>
 				</section>
@@ -544,7 +542,7 @@ function wholesale_settings_page()
 
 function wholesale_settings_page_scripts($hook)
 {
-	if ('settings_page_wholesale-settings' !== $hook) {
+	if ('toplevel_page_wholesale-settings' !== $hook) {
 		return;
 	}
 
@@ -556,8 +554,32 @@ function wholesale_settings_page_scripts($hook)
 }
 add_action('admin_enqueue_scripts', 'wholesale_settings_page_scripts');
 
+/**
+ * Link to the settings page, e.g. wholesale_settings_url('images') for a panel.
+ */
+function wholesale_settings_url($panel = '')
+{
+	return admin_url('admin.php?page=wholesale-settings') . ($panel ? '#' . $panel : '');
+}
+
 function wholesale_add_settings_page()
 {
-	add_options_page('Storefront Sign Settings', 'Storefront Sign', 'manage_options', 'wholesale-settings', 'wholesale_settings_page');
+	add_menu_page('Storefront Sign Settings', 'Storefront Sign', 'manage_options', 'wholesale-settings', 'wholesale_settings_page', 'dashicons-store', '3.1');
 }
 add_action('admin_menu', 'wholesale_add_settings_page');
+
+/**
+ * The page used to live under Settings. Send old links and bookmarks
+ * (options-general.php?page=wholesale-settings...) to the new address,
+ * keeping the rest of the query string.
+ */
+function wholesale_settings_old_url_redirect()
+{
+	global $pagenow;
+	if ('options-general.php' !== $pagenow || !isset($_GET['page']) || 'wholesale-settings' !== $_GET['page']) {
+		return;
+	}
+	wp_safe_redirect(admin_url('admin.php?' . $_SERVER['QUERY_STRING']));
+	exit;
+}
+add_action('admin_menu', 'wholesale_settings_old_url_redirect', 1);

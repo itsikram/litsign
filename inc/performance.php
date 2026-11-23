@@ -280,6 +280,19 @@ function wholesale_dequeue_unused_jquery_ui()
 add_action('wp_enqueue_scripts', 'wholesale_dequeue_unused_jquery_ui', 100);
 
 /**
+ * The home page no longer uses the quote form styles (css/cl-quote.css, printed
+ * inline in the <head>): none of its 64 rules match there (checked 2026-11-20).
+ * Leaving them out makes the home HTML about 1 KB (gzip) smaller.
+ */
+function wholesale_home_skip_quote_styles()
+{
+	if (is_front_page() && !is_admin()) {
+		wp_dequeue_style('cl-quote');
+	}
+}
+add_action('wp_enqueue_scripts', 'wholesale_home_skip_quote_styles', 100);
+
+/**
  * Add a 480px-wide copy of the header logo to its srcset. The logo shows at
  * about 240px on phones, so on 2x screens the browser otherwise picks the
  * 768px file. The copy is made once, next to the uploaded original.
@@ -319,6 +332,55 @@ function wholesale_logo_srcset($sources, $size_array, $image_src, $image_meta, $
 	return $sources;
 }
 add_filter('wp_calculate_image_srcset', 'wholesale_logo_srcset', 10, 5);
+
+/**
+ * Whether a first-paint subset built by utils/critical-css still matches the
+ * stylesheet it was cut from. Subsets that record the source's md5 in their
+ * first comment ("source-md5: ...") are checked against it. File times are not
+ * enough for those: a push or pull rewrites files in name order, so
+ * "x-critical.css" is written just before "x.css" and looks older than it.
+ * Subsets without the stamp still compare file times.
+ */
+function wholesale_critical_css_fresh($subset, $source)
+{
+	static $fresh = array();
+	$key = $subset . '|' . $source;
+	if (isset($fresh[$key])) {
+		return $fresh[$key];
+	}
+
+	if (!is_readable($subset) || !is_readable($source)) {
+		return $fresh[$key] = false;
+	}
+
+	$head = (string) file_get_contents($subset, false, null, 0, 600);
+	if (preg_match('/source-md5: ([0-9a-f]{32})/', $head, $match)) {
+		return $fresh[$key] = hash_equals($match[1], (string) md5_file($source));
+	}
+
+	return $fresh[$key] = filemtime($subset) >= filemtime($source);
+}
+
+/**
+ * A first-paint subset's CSS for an inline <style> block, or '' when it cannot
+ * be inlined safely (the caller then links the file as before).
+ *
+ * The home page prints its subsets inline. As separate files the phone could
+ * neither paint nor read past them until both had arrived, so the hero photos
+ * and scripts were not even requested until then (PageSpeed mobile, Nov 20
+ * 2026: blank screen until 2.8 s, Speed Index 5.5 s, while bootstrap-critical.css
+ * shared the connection with the fonts and the hero photo).
+ */
+function wholesale_critical_css_inline($file)
+{
+	$css = is_readable($file) ? (string) file_get_contents($file) : '';
+	if ('' === trim($css) || false !== stripos($css, '</style')) {
+		return '';
+	}
+
+	// The subset's relative URLs point from css/; inline they would resolve against the page.
+	return (string) preg_replace('#url\(\s*(["\']?)\.\./#', 'url($1' . get_template_directory_uri() . '/', $css);
+}
 
 /**
  * Pages that use css/bootstrap-critical.css instead of the full Bootstrap
@@ -395,10 +457,21 @@ function wholesale_critical_bootstrap_tag($tag, $handle, $href)
 	if (function_exists('wholesale_cache_bust_asset_src')) {
 		$critical = wholesale_cache_bust_asset_src($critical);
 	}
+	// Inline on the home page only (see wholesale_critical_css_inline()); other
+	// pages keep the file, which the browser then reuses from its cache.
+	$inline = is_front_page() ? wholesale_critical_css_inline($file) : '';
 
 	ob_start();
-	?>
+	if ('' !== $inline) :
+		?>
+<style id="bootsrap-critical-css"><?php echo $inline; // phpcs:ignore WordPress.Security.EscapeOutput -- theme CSS file. ?></style>
+		<?php
+	else :
+		?>
 <link rel="stylesheet" id="bootsrap-critical-css" href="<?php echo esc_url($critical); ?>" media="all">
+		<?php
+	endif;
+	?>
 <script>
 	window.addEventListener('load', function () {
 		var critical = document.getElementById('bootsrap-critical-css');
@@ -446,10 +519,19 @@ function wholesale_critical_home_style_tag($tag, $handle, $href)
 	if (function_exists('wholesale_cache_bust_asset_src')) {
 		$critical = wholesale_cache_bust_asset_src($critical);
 	}
+	$inline = wholesale_critical_css_inline($dir . 'style-home-critical.css');
 
 	ob_start();
-	?>
+	if ('' !== $inline) :
+		?>
+<style id="custom-style-critical-css"><?php echo $inline; // phpcs:ignore WordPress.Security.EscapeOutput -- theme CSS file. ?></style>
+		<?php
+	else :
+		?>
 <link rel="stylesheet" id="custom-style-critical-css" href="<?php echo esc_url($critical); ?>" media="all">
+		<?php
+	endif;
+	?>
 <script>
 	window.addEventListener('load', function () {
 		var critical = document.getElementById('custom-style-critical-css');
@@ -468,6 +550,58 @@ function wholesale_critical_home_style_tag($tag, $handle, $href)
 	return ob_get_clean();
 }
 add_filter('style_loader_tag', 'wholesale_critical_home_style_tag', 10, 3);
+
+/**
+ * css/ui-polish.css is 16 KB (gzipped) of render-blocking CSS, but only 18 of
+ * its rules match anything on the home page (header, hero button, steps list,
+ * footer bar). On the front page print just those rules inline
+ * (css/ui-polish-home-critical.css, under 1 KB gzipped), so the first paint no
+ * longer waits for the file, and add the full file in the same cascade
+ * position once the page has loaded.
+ *
+ * Built with utils/critical-css (keep-ui-polish-home.txt). Any later edit to
+ * ui-polish.css changes its md5, and the home page then loads the full file as
+ * before until the subset is rebuilt.
+ */
+function wholesale_critical_home_ui_polish_tag($tag, $handle, $href)
+{
+	if ('wholesale-ui-polish' !== $handle || is_admin() || is_customize_preview() || is_user_logged_in() || !is_front_page()) {
+		return $tag;
+	}
+
+	$dir = get_template_directory() . '/css/';
+	if (!wholesale_critical_css_fresh($dir . 'ui-polish-home-critical.css', $dir . 'ui-polish.css')) {
+		return $tag;
+	}
+
+	$css = (string) file_get_contents($dir . 'ui-polish-home-critical.css');
+	if ('' === trim($css) || false !== stripos($css, '</style')) {
+		return $tag;
+	}
+	// The subset's relative URLs point from css/; inline they would resolve against the page.
+	$css = preg_replace('#url\(\s*(["\']?)\.\./#', 'url($1' . get_template_directory_uri() . '/', $css);
+
+	ob_start();
+	?>
+<style id="wholesale-ui-polish-critical-css"><?php echo $css; // phpcs:ignore WordPress.Security.EscapeOutput -- theme CSS file. ?></style>
+<script>
+	window.addEventListener('load', function () {
+		var critical = document.getElementById('wholesale-ui-polish-critical-css');
+		var full = document.createElement('link');
+		full.rel = 'stylesheet';
+		full.id = 'wholesale-ui-polish-css';
+		full.href = <?php echo wp_json_encode($href); ?>;
+		// media="print" until it has loaded, so it never holds a paint back.
+		full.media = 'print';
+		full.onload = function () { this.media = 'all'; };
+		critical.parentNode.insertBefore(full, critical.nextSibling);
+	});
+</script>
+<noscript><?php echo trim($tag); ?></noscript>
+	<?php
+	return ob_get_clean();
+}
+add_filter('style_loader_tag', 'wholesale_critical_home_ui_polish_tag', 10, 3);
 
 /**
  * Offer AVIF copies of the header logo (about 40% smaller than its WebP; the

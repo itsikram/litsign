@@ -242,6 +242,65 @@ function wholesale_review_display_name($name)
 }
 
 /**
+ * Whether a Google review belongs on the channel letters landing page. A review linked in
+ * wp-admin > Reviews > Google reviews (inc/google-review-links.php) fits when it is linked
+ * to the channel-letters category or a channel letter product, and not when it is linked
+ * only to other products. An unlinked review fits when it talks about signs (the brand
+ * name "Storefront Sign Online" does not count), so photo print reviews stay off.
+ */
+function wholesale_google_review_fits_channel_letters($review)
+{
+	if (function_exists('wholesale_google_review_list')) {
+		$key = function_exists('wholesale_google_review_key') ? wholesale_google_review_key(isset($review['author']) ? $review['author'] : '', isset($review['text']) ? $review['text'] : '') : '';
+		foreach (wholesale_google_review_list() as $entry) {
+			$same = (!empty($review['id']) && !empty($entry['google_id']) && $review['id'] === $entry['google_id'])
+				|| ($key && !empty($entry['key']) && $key === $entry['key']);
+			if (!$same) {
+				continue;
+			}
+			$products = array_map('absint', (array) $entry['products']);
+			$categories = (array) $entry['categories'];
+			if ($products || $categories) {
+				if (in_array('channel-letters', $categories, true)) {
+					return true;
+				}
+				foreach ($products as $product_id) {
+					if (wholesale_product_is_channel_letter($product_id)) {
+						return true;
+					}
+				}
+				return false;
+			}
+			break;
+		}
+	}
+
+	$text = preg_replace('/storefront\s*sign\s*online(?:\.com)?/i', '', isset($review['text']) ? (string) $review['text'] : '');
+	return (bool) preg_match('/\bsigns?\b|\bsignage\b|channel letter/i', $text);
+}
+
+/**
+ * Whether a site review and a Google review are the same customer telling the same
+ * story: same first name and at least three shared words of five letters or more.
+ */
+function wholesale_reviews_look_same($site_review, $google_review)
+{
+	$first_name = static function ($author) {
+		$parts = preg_split('/\s+/u', mb_strtolower(trim((string) $author)));
+		return $parts ? rtrim($parts[0], '.') : '';
+	};
+	$site_name = $first_name(isset($site_review['author']) ? $site_review['author'] : '');
+	if ('' === $site_name || $site_name !== $first_name(isset($google_review['author']) ? $google_review['author'] : '')) {
+		return false;
+	}
+	$words = static function ($text) {
+		preg_match_all('/\p{L}{5,}/u', mb_strtolower((string) $text), $found);
+		return array_unique($found[0]);
+	};
+	return count(array_intersect($words(isset($site_review['text']) ? $site_review['text'] : ''), $words(isset($google_review['text']) ? $google_review['text'] : ''))) >= 3;
+}
+
+/**
  * Everything the footer slider needs, Google and site reviews interleaved.
  */
 function wholesale_review_slider_data()
@@ -255,6 +314,31 @@ function wholesale_review_slider_data()
 			return $review['product_id'] && !wholesale_product_is_channel_letter($review['product_id']);
 		}));
 	}
+	// The channel letters landing page (/custom-channel-letters/) shows only reviews about signs.
+	if (function_exists('wholesale_is_channel_letters_landing') && wholesale_is_channel_letters_landing()) {
+		$google_reviews = array_values(array_filter($google_reviews, 'wholesale_google_review_fits_channel_letters'));
+		$site_reviews = array_values(array_filter($site_reviews, static function ($review) {
+			return !$review['product_id'] || wholesale_product_is_channel_letter($review['product_id']);
+		}));
+	}
+	// A customer who reviewed on Google and on the site shows once (the Google copy).
+	$site_reviews = array_values(array_filter($site_reviews, static function ($review) use ($google_reviews) {
+		foreach ($google_reviews as $google_review) {
+			if (wholesale_reviews_look_same($review, $google_review)) {
+				return false;
+			}
+		}
+		return true;
+	}));
+	// Each card already shows the star rating, so star emojis typed at the start of the text go.
+	$strip_stars = static function ($list) {
+		foreach ($list as $index => $review) {
+			$list[$index]['text'] = trim(preg_replace('/^[\s\x{2B50}\x{2605}\x{2606}\x{1F31F}\x{FE0F}]+/u', '', (string) $review['text']));
+		}
+		return $list;
+	};
+	$google_reviews = $strip_stars($google_reviews);
+	$site_reviews = $strip_stars($site_reviews);
 
 	$reviews = array();
 	$max = max(count($google_reviews), count($site_reviews));
@@ -420,7 +504,7 @@ function wholesale_handle_refresh_google_reviews()
 	}
 	check_admin_referer('wholesale_refresh_google_reviews');
 	wholesale_fetch_google_reviews(true);
-	wp_safe_redirect(add_query_arg('google_reviews_refreshed', '1', admin_url('options-general.php?page=wholesale-settings')) . '#google-reviews');
+	wp_safe_redirect(add_query_arg('google_reviews_refreshed', '1', admin_url('admin.php?page=wholesale-settings')) . '#google-reviews');
 	exit;
 }
 add_action('admin_post_wholesale_refresh_google_reviews', 'wholesale_handle_refresh_google_reviews');

@@ -440,6 +440,8 @@ function wholesale_vi_enqueue_tracker()
 		// Admin "Take screenshot" (inc/visitor-snaps.php): loaded only when asked.
 		'snap' => $snap_scripts ? $snap_scripts['capture'] : '',
 		'snapEndpoint' => $snap_scripts ? rest_url('wholesale/v1/vi-snap') : '',
+		// Automatic screenshots on errors and leaving (inc/screenshots.php).
+		'shots' => function_exists('wholesale_shots_tracker_config') ? wholesale_shots_tracker_config() : '',
 	), static function ($value) {
 		return '' !== $value;
 	}));
@@ -3615,6 +3617,13 @@ function wholesale_vi_event_text($event)
 			return array('format-chat', 'Submitted a quote request — ' . $label, 'good');
 		case 'exit_survey':
 			return array('feedback', 'Answered the exit survey: “' . $label . '”', 'warn');
+		case 'sa_view':
+		case 'sa_click':
+			// Recorded by the SFS Shopping Assistant plugin.
+			if (function_exists('wholesale_sa_event_text')) {
+				return wholesale_sa_event_text($event);
+			}
+			break;
 	}
 
 	return array('marker', $event->type . ' ' . $label, '');
@@ -5412,3 +5421,4 @@ function wholesale_vi_render_export_bar($period, $filters)
 require_once __DIR__ . '/visitor-insights-leads.php';
 require_once __DIR__ . '/visitor-insights-chat-ai.php';
 require_once __DIR__ . '/visitor-snaps.php';
+require_once __DIR__ . '/screenshots.php';

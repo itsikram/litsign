@@ -54,7 +54,9 @@ function wholesale_page_loader_head()
 			opacity: 1;
 			visibility: visible;
 			pointer-events: auto;
-			transition-delay: 0s;
+			/* Comes in fast on a click (owner 2026-11-23: show instantly);
+			   leaving still fades over 420 ms (rule above). */
+			transition: opacity 140ms ease-out, visibility 0s linear 0s;
 		}
 		.wholesale-page-loader.is-hidden {
 			opacity: 0;
@@ -66,6 +68,19 @@ function wholesale_page_loader_head()
 		   display:none also keeps its animations from running. */
 		html.wholesale-page-loader-landing .wholesale-page-loader {
 			display: none;
+		}
+		/* Once the landing page has loaded, or the visitor moves, scrolls or
+		   touches, page-loader.js adds -warm: the loader is laid out but stays
+		   invisible (.is-hidden), so the browser downloads the logo picture
+		   before any link click. With display:none the picture was only
+		   requested on the click, so the loader showed with no logo for a
+		   second or more (owner 2026-11-23). */
+		html.wholesale-page-loader-landing.wholesale-page-loader-warm .wholesale-page-loader {
+			display: grid;
+		}
+		/* Nothing runs while the loader is hidden. */
+		.wholesale-page-loader.is-hidden .wholesale-page-loader__progress span {
+			animation-play-state: paused;
 		}
 		.wholesale-page-loader .screen-reader-text {
 			position: absolute;
@@ -142,6 +157,57 @@ function wholesale_page_loader_head()
 		.spl3-mark .spl3-d,
 		.spl3-tag .spl3-d,
 		.spl3-badge .spl3-d {
+			filter: brightness(.42);
+		}
+		/* Brand picture version (wholesale_page_loader_brand_logo()): every layer
+		   shows its piece of one picture; side layers are darker copies. */
+		/* Same size as the header logo on computers (396px after the owner's
+		   10% reduction; owner 2026-11-20: "make sure that preloader logo is
+		   matching with main header logo"). */
+		.wholesale-page-loader__logo-wrap.is-brand {
+			--spl-w: min(396px, calc(100vw - 48px));
+			width: var(--spl-w);
+			aspect-ratio: 1910 / 323;
+		}
+		/* Tagline as sharp text, like the header's (wholesale_logo_tagline_style()
+		   in inc/logo-motion.php), in the dark copy's off-white for the navy
+		   overlay. The tag piece spans picture rows 279-323; the text starts at
+		   row 281. Plus Jakarta Sans may not be loaded yet when the loader
+		   paints; the fallbacks fit the same width. */
+		.spl3--img .spl3-p.spl3-tag > i {
+			background-image: none;
+		}
+		.spl3-tagtext {
+			position: absolute;
+			left: 0;
+			/* S tile to the end of "StorefrontSign", like the header (owner
+			   2026-11-21): letters end at x=1648 of 1910, so 13.6% stays clear
+			   of the sign and the font is x0.864 (was / 32.8). */
+			right: 13.6%;
+			top: calc(100% * 2 / 44);
+			display: block;
+			font: 800 13px/1 "Plus Jakarta Sans", Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+			font-size: calc(var(--spl-w) / 38);
+			font-style: normal;
+			letter-spacing: .08em;
+			text-transform: uppercase;
+			color: #ecf1f7;
+			white-space: nowrap;
+			text-align: justify;
+			text-align-last: justify;
+		}
+		.spl3--img .spl3-p > i {
+			position: absolute;
+			inset: 0;
+			background-repeat: no-repeat;
+			background-size: var(--bs);
+			background-position: var(--bp);
+			-webkit-clip-path: var(--clip, none);
+			clip-path: var(--clip, none);
+			-webkit-backface-visibility: hidden;
+			backface-visibility: hidden;
+		}
+		.spl3--img .spl3-d {
 			filter: brightness(.42);
 		}
 		.spl3-letter { transform-origin: 50% 100%; }
@@ -322,6 +388,14 @@ function wholesale_page_loader_head()
 				var stamp = Number(window.sessionStorage.getItem(key));
 				if (stamp && now >= stamp && now - stamp < 20000) {
 					root.classList.add('wholesale-page-loader-handoff');
+					// Start reading the logo picture (cached by the page the
+					// visitor clicked on) now, so it is ready when the loader
+					// paints instead of arriving a moment later.
+					var logo = window.sessionStorage.getItem(key + '-logo');
+					if (logo && 0 === logo.indexOf(location.origin + '/')) {
+						window.wholesalePageLoaderLogo = new Image();
+						window.wholesalePageLoaderLogo.src = logo;
+					}
 				}
 				window.sessionStorage.removeItem(key);
 			} catch (error) {
@@ -365,20 +439,29 @@ function wholesale_page_loader_markup()
 		return;
 	}
 
-	$logo_path = get_template_directory() . '/img/loader-logo.svg';
-	if (!is_readable($logo_path)) {
-		return;
-	}
-	$logo_svg = file_get_contents($logo_path);
-	if (false === $logo_svg) {
-		return;
+	// The brand artwork (img/brand, same as the header and footer) when it is in
+	// the theme; the older traced SVG logo otherwise.
+	$brand = function_exists('wholesale_brand_logo_dark_ready') && wholesale_brand_logo_dark_ready();
+	$logo_svg = '';
+	if (!$brand) {
+		$logo_path = get_template_directory() . '/img/loader-logo.svg';
+		if (!is_readable($logo_path)) {
+			return;
+		}
+		$logo_svg = file_get_contents($logo_path);
+		if (false === $logo_svg) {
+			return;
+		}
 	}
 	?>
 	<div class="wholesale-page-loader is-intro" role="status" aria-live="polite" aria-atomic="true" aria-hidden="false">
 		<span class="screen-reader-text">Loading...</span>
 		<div class="wholesale-page-loader__content">
-			<div class="wholesale-page-loader__logo-wrap">
+			<div class="wholesale-page-loader__logo-wrap<?php echo $brand ? ' is-brand' : ''; ?>">
 				<span class="wholesale-page-loader__halo" aria-hidden="true"></span>
+				<?php if ($brand) : ?>
+					<?php wholesale_page_loader_brand_logo(); ?>
+				<?php else : ?>
 				<span class="wholesale-page-loader__src" aria-hidden="true">
 					<?php
 					// Source shapes for the 3D pieces below; never shown directly.
@@ -387,6 +470,7 @@ function wholesale_page_loader_markup()
 					?>
 				</span>
 				<?php wholesale_page_loader_3d_logo(); ?>
+				<?php endif; ?>
 			</div>
 			<div class="wholesale-page-loader__progress" aria-hidden="true"><span></span></div>
 		</div>
@@ -482,6 +566,114 @@ function wholesale_page_loader_3d_logo()
 				echo '<use href="#' . esc_attr($id) . '"' . ($fill ? ' fill="' . esc_attr($fill) . '"' : '') . '/>';
 			}
 			echo '</svg>';
+		}
+		echo '</span>';
+	}
+	echo '</div>';
+}
+
+/**
+ * The same 3D pieces cut from the brand picture (img/brand/sfs-logo-dark-*,
+ * the header artwork with a light tagline for the dark overlay). Each layer
+ * is an <i> that shows its piece of the picture as a background; letters are
+ * cut along the lines between them with clip-path, so a neighbour never
+ * shows. Side layers are darker copies stacked behind (see .spl3--img CSS).
+ *
+ * Numbers are picture pixels (1910 x 323), the same as js/logo-motion.js
+ * (made by utils/logo-motion/slice.py). Re-measure if the artwork changes.
+ */
+function wholesale_page_loader_brand_logo()
+{
+	$width = 1910;
+	$height = 323;
+	$top = 32;
+	$base = 279;
+	$word_left = 252;
+	$sign_left = 1656;
+	$seams = array(
+		array(array(380, 32), array(380, 278)),
+		array(array(460, 32), array(461, 125), array(458, 144), array(458, 180), array(461, 209), array(460, 278)),
+		array(array(583, 32), array(583, 278)),
+		array(array(663, 32), array(665, 125), array(659, 128), array(657, 134), array(657, 136), array(660, 137), array(660, 180), array(662, 186), array(662, 278)),
+		array(array(774, 32), array(773, 128), array(778, 130), array(775, 183), array(775, 278)),
+		array(array(860, 32), array(858, 89), array(859, 278)),
+		array(array(933, 32), array(933, 86), array(937, 89), array(937, 118), array(930, 123), array(929, 127), array(929, 181), array(933, 192), array(933, 278)),
+		array(array(1053, 32), array(1053, 278)),
+		array(array(1163, 32), array(1162, 120), array(1166, 123), array(1166, 141), array(1164, 142), array(1163, 278)),
+		array(array(1243, 32), array(1244, 278)),
+		array(array(1365, 32), array(1365, 278)),
+		array(array(1412, 32), array(1412, 278)),
+		array(array(1535, 32), array(1535, 278)),
+	);
+	// Outer edges of the first and last letter, as straight lines.
+	array_unshift($seams, array(array($word_left, $top), array($word_left, $base)));
+	$seams[] = array(array($sign_left, $top), array($sign_left, $base));
+
+	// kind, box (x, y, w, h), depth layers, clip polygon in picture pixels.
+	$pieces = array(array('mark', array(0, 0, $word_left, $base), 4, null));
+	for ($i = 0; $i < 14; $i++) {
+		$left = $seams[$i];
+		$right = $seams[$i + 1];
+		$xs = array_merge(array_column($left, 0), array_column($right, 0));
+		$x0 = min($xs);
+		$x1 = max($xs);
+		// Down the left cut line, back up the right one, stretched to the full band.
+		$poly = array(array($left[0][0], $top));
+		foreach ($left as $point) {
+			$poly[] = $point;
+		}
+		$poly[] = array(end($left)[0], $base);
+		$poly[] = array(end($right)[0], $base);
+		foreach (array_reverse($right) as $point) {
+			$poly[] = $point;
+		}
+		$poly[] = array($right[0][0], $top);
+		$pieces[] = array('letter', array($x0, $top, $x1 - $x0, $base - $top), 3, $poly);
+	}
+	$pieces[] = array('tag', array(0, $base, $width, $height - $base), 0, null);
+	$pieces[] = array('badge', array($sign_left, 0, $width - $sign_left, $base), 3, null);
+
+	$pct = static function ($value, $total) {
+		return round($value / $total * 100, 3) . '%';
+	};
+
+	$dir = get_template_directory_uri() . '/img/brand/sfs-logo-dark-640.';
+	$version = (string) filemtime(get_template_directory() . '/img/brand/sfs-logo-dark-960.webp');
+	$webp = esc_url($dir . 'webp?v=' . $version);
+	$avif = esc_url($dir . 'avif?v=' . $version);
+	// One picture for every layer; image-set() is skipped by browsers that
+	// do not know it, so they keep the WebP line.
+	echo '<style>.spl3--img .spl3-p>i{background-image:url("' . $webp . '");background-image:image-set(url("' . $avif . '") type("image/avif"),url("' . $webp . '") type("image/webp"))}</style>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- URLs escaped above.
+
+	echo '<div class="spl3 spl3--img" role="img" aria-label="' . esc_attr__('Storefront Sign Online', 'litsign') . '">';
+	$letter_index = 0;
+	foreach ($pieces as $piece) {
+		list($kind, $box, $depth, $poly) = $piece;
+		list($x, $y, $w, $h) = $box;
+		$style = sprintf(
+			'--x:%s;--y:%s;--w:%s;--h:%s;--i:%d;--bs:%s %s;--bp:%s %s',
+			$pct($x, $width),
+			$pct($y, $height),
+			$pct($w, $width),
+			$pct($h, $height),
+			'letter' === $kind ? $letter_index++ : 0,
+			$pct($width, $w),
+			$pct($height, $h),
+			$width > $w ? $pct($x, $width - $w) : '0%',
+			$height > $h ? $pct($y, $height - $h) : '0%'
+		);
+		if ($poly) {
+			$points = array();
+			foreach ($poly as $point) {
+				$points[] = $pct($point[0] - $x, $w) . ' ' . $pct($point[1] - $y, $h);
+			}
+			$style .= ';--clip:polygon(' . implode(',', $points) . ')';
+		}
+		echo '<span class="spl3-p spl3-' . esc_attr($kind) . '" style="' . esc_attr($style) . '">';
+		for ($layer = $depth; $layer >= 0; $layer--) {
+			// The tagline is text, not a piece of the picture (see .spl3-tagtext).
+			$inner = ('tag' === $kind && 0 === $layer) ? '<span class="spl3-tagtext">' . esc_html__('Channel letters & large format prints since 2002', 'litsign') . '</span>' : '';
+			echo '<i class="' . (0 === $layer ? 'spl3-f' : 'spl3-d') . '" style="--k:' . (int) $layer . '">' . $inner . '</i>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
 		}
 		echo '</span>';
 	}

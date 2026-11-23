@@ -297,12 +297,14 @@ function wholesale_shop_products()
 		}
 
 		$reviews = function_exists('wholesale_product_review_data') ? wholesale_product_review_data($id) : array('rating' => 0, 'count' => 0);
+		$gallery = get_post_meta($id, '_product_gallery', true);
 
 		$products[] = array(
 			'id' => $id,
 			'title' => html_entity_decode(get_the_title($id), ENT_QUOTES, 'UTF-8'),
 			'url' => get_permalink($id),
 			'thumb' => (int) get_post_thumbnail_id($id),
+			'gallery' => is_array($gallery) ? array_values(array_filter($gallery, 'is_string')) : array(),
 			'cats' => $cats,
 			'cat_name' => $primary ? $primary->name : '',
 			'price' => $price,
@@ -320,8 +322,25 @@ function wholesale_shop_products()
 		);
 	}
 
-	// One query for every card photo, instead of two per card.
-	_prime_post_caches(array_values(array_unique(array_filter(wp_list_pluck($products, 'thumb')))), false, true);
+	// Card galleries: gallery URLs map to library photos in one query, and one
+	// more query loads every card photo, instead of a few per card.
+	$gallery_urls = array();
+	foreach ($products as $product) {
+		foreach ($product['gallery'] as $url) {
+			$gallery_urls[$url] = true;
+		}
+	}
+	$url_ids = $gallery_urls && function_exists('wholesale_product_image_alt_attachment_ids_by_url')
+		? wholesale_product_image_alt_attachment_ids_by_url(array_keys($gallery_urls))
+		: array();
+	$photo_ids = array_merge(wp_list_pluck($products, 'thumb'), array_values(array_map('intval', $url_ids)));
+	_prime_post_caches(array_values(array_unique(array_filter($photo_ids))), false, true);
+
+	foreach ($products as &$product) {
+		$product['photos'] = wholesale_shop_card_photos($product, $url_ids);
+		unset($product['gallery']);
+	}
+	unset($product);
 
 	usort($products, static function ($a, $b) {
 		return strcmp($a['order'], $b['order']);
@@ -379,6 +398,90 @@ function wholesale_shop_filter($products, $state)
 }
 
 /**
+ * A card's photos: the product photo, then the product page gallery, at most $max.
+ * Each is array('id' => attachment ID or 0, 'url' => file URL).
+ *
+ * @return array[]
+ */
+function wholesale_shop_card_photos($product, $url_ids, $max = 4)
+{
+	$photos = array();
+	if ($product['thumb']) {
+		$photos[] = array('id' => (int) $product['thumb'], 'url' => (string) wp_get_attachment_url($product['thumb']));
+	}
+	foreach ($product['gallery'] as $url) {
+		if (count($photos) >= $max) {
+			break;
+		}
+		$photo = array('id' => !empty($url_ids[$url]) ? (int) $url_ids[$url] : 0, 'url' => $url);
+		foreach ($photos as $shown) {
+			if (wholesale_card_same_photo($shown, $photo)) {
+				continue 2;
+			}
+		}
+		$photos[] = $photo;
+	}
+	return $photos;
+}
+
+/**
+ * Whether two card photos are the same picture. Galleries often repeat the
+ * product photo as a resized or edited copy ("photo-300x300.jpg",
+ * "photo-e1733640963626.jpg") or an upload copy with the same bytes
+ * ("photo-1.jpg"). "banner-1.jpg" and "banner-2.jpg" stay two photos.
+ * $a and $b: array('id' => attachment ID or 0, 'url' => file URL). Also used by
+ * the home page cards (template-parts/home-catalog.php).
+ */
+function wholesale_card_same_photo($a, $b)
+{
+	if ($a['id'] && $a['id'] === $b['id']) {
+		return true;
+	}
+	$key = static function ($url) {
+		$name = strtolower(pathinfo((string) wp_parse_url((string) $url, PHP_URL_PATH), PATHINFO_FILENAME));
+		$name = preg_replace('/\.(png|jpe?g|webp)$/', '', $name);
+		$name = preg_replace('/-\d+x\d+$/', '', $name);
+		return preg_replace('/-e\d{10,}$/', '', $name);
+	};
+	$key_a = $key($a['url']);
+	$key_b = $key($b['url']);
+	if ($key_a === $key_b) {
+		return true;
+	}
+	if (preg_replace('/-\d$/', '', $key_a) !== preg_replace('/-\d$/', '', $key_b)) {
+		return false;
+	}
+	$bytes = wholesale_card_photo_bytes($a);
+	return $bytes > 0 && $bytes === wholesale_card_photo_bytes($b);
+}
+
+/**
+ * Size of a card photo's uploaded file, or 0 when it is not on this server. For a
+ * photo edited in the media library ("photo-e1733640963626.jpg") it is the size
+ * of the unedited upload, which is what an upload copy ("photo-1.jpg") matches.
+ */
+function wholesale_card_photo_bytes($photo)
+{
+	static $basedir = null;
+	$file = $photo['id'] ? (string) get_attached_file($photo['id']) : '';
+	if ('' === $file && $photo['url']) {
+		if (null === $basedir) {
+			$basedir = wp_get_upload_dir()['basedir'];
+		}
+		$path = (string) wp_parse_url($photo['url'], PHP_URL_PATH);
+		$file = false !== strpos($path, '/wp-content/uploads/') ? $basedir . '/' . preg_replace('#^.*?/wp-content/uploads/#', '', $path) : '';
+	}
+	if ('' === $file) {
+		return 0;
+	}
+	$unedited = preg_replace('/-e\d{10,}(\.[a-z0-9]+)$/i', '$1', $file);
+	if ($unedited !== $file && is_file($unedited)) {
+		$file = $unedited;
+	}
+	return is_file($file) ? (int) filesize($file) : 0;
+}
+
+/**
  * Format a price the way the product pages show it: $11.70, $194.98, $2.2 → $2.20.
  */
 function wholesale_shop_money($amount, $unit = '')
@@ -403,22 +506,7 @@ function wholesale_shop_render_card($product, $index)
 		data-order="<?php echo esc_attr($product['order']); ?>"
 >
 		<article class="sc-card-inner">
-			<div class="sc-card-media">
-				<?php
-				if ($product['thumb']) {
-					echo wp_get_attachment_image($product['thumb'], 'product-card', false, array(
-						'alt' => $product['title'],
-						'loading' => $index < 4 ? 'eager' : 'lazy',
-						'fetchpriority' => $index < 2 ? 'high' : 'auto',
-						'decoding' => 'async',
-						'sizes' => '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 290px',
-					));
-				} else {
-					echo '<span class="sc-card-placeholder" aria-hidden="true"></span>';
-				}
-				?>
-				<?php wholesale_render_sale_badge($product['id']); ?>
-			</div>
+			<?php wholesale_shop_render_card_media($product, $index); ?>
 			<?php echo wholesale_admin_edit_product_link($product['id']); // Escaped in helper. ?>
 			<div class="sc-card-body">
 				<?php if ($product['cat_name']) : ?>
@@ -438,23 +526,144 @@ function wholesale_shop_render_card($product, $index)
 						<?php endforeach; ?>
 					</ul>
 				<?php endif; ?>
+				<?php echo function_exists('wholesale_card_trust') ? wholesale_card_trust($product['id']) : ''; // Escaped in helper. ?>
 				<div class="sc-card-foot">
 					<?php if ($product['price'] > 0) : ?>
 						<p class="sc-card-price">
-							<span class="sc-card-price-label"><?php esc_html_e('Starting at', 'litsign'); ?></span>
+							<span class="sc-card-price-label"><?php esc_html_e('From', 'litsign'); ?></span>
 							<span class="sc-card-price-value">
 								<?php if ($product['was'] && wholesale_shop_money($product['was'], $product['unit']) !== wholesale_shop_money($product['price'], $product['unit'])) : ?><del><?php echo esc_html(wholesale_shop_money($product['was'], $product['unit'])); ?></del><?php endif; ?>
-								<strong><?php echo esc_html(wholesale_shop_money($product['price'], $product['unit'])); ?></strong><small><?php echo esc_html($units[$product['unit']][2]); ?></small>
+								<strong><?php echo esc_html(wholesale_shop_money($product['price'], $product['unit'])); ?></strong><small><?php echo esc_html('sqft' === $product['unit'] ? '/ft²' : $units[$product['unit']][2]); ?></small>
 							</span>
 						</p>
 					<?php else : ?>
 						<p class="sc-card-price"><span class="sc-card-price-label"><?php esc_html_e('Price', 'litsign'); ?></span><strong><?php esc_html_e('Get a quote', 'litsign'); ?></strong></p>
 					<?php endif; ?>
-					<span class="sc-card-cta" aria-hidden="true"><?php esc_html_e('Customize', 'litsign'); ?> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+					<span class="sc-card-cta" aria-hidden="true"><?php esc_html_e('Shop now', 'litsign'); ?> <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
 				</div>
 			</div>
 		</article>
 	</li>
+	<?php
+}
+
+/**
+ * A card photo as an <img>: library photos get srcset, other files a plain tag.
+ */
+function wholesale_shop_photo_tag($photo, $alt, $attr, $size = 'product-card')
+{
+	$attr = array_merge(array('alt' => $alt, 'loading' => 'lazy', 'decoding' => 'async'), $attr);
+	if ($photo['id']) {
+		$img = wp_get_attachment_image($photo['id'], $size, false, $attr);
+		if ($img) {
+			return $img;
+		}
+	}
+	if (!$photo['url']) {
+		return '';
+	}
+	$described = function_exists('wholesale_product_photo_alt') ? wholesale_product_photo_alt($photo['url'], '') : '';
+	return sprintf(
+		'<img src="%s" alt="%s" width="290" height="290" loading="%s" decoding="async">',
+		esc_url(function_exists('wholesale_webp_url') ? wholesale_webp_url($photo['url']) : $photo['url']),
+		esc_attr($described ? $described : $alt),
+		esc_attr($attr['loading'])
+	);
+}
+
+/**
+ * <img> tags for a card's later photos, waiting in data-sc-src/srcset. They use
+ * the 300px file (product-card crops are missing on many gallery photos, which
+ * would fall back to the original) and srcset up to 768w, enough for a 290px
+ * card on 3x phone screens.
+ *
+ * Building ~400 of these takes about a second, so they are kept for 12 hours in
+ * one transient. An entry is rebuilt when the product's photos, name or this
+ * file change; the site address and the photo alt list are part of the key, so
+ * a database copied to another site never serves this site's URLs.
+ *
+ * @return string[]
+ */
+function wholesale_shop_gallery_extras($product, $sizes)
+{
+	static $cache = null;
+	static $version = '';
+	static $dirty = false;
+	if (null === $cache) {
+		$alts = get_template_directory() . '/data/image-alts.php';
+		$version = md5(home_url() . '|' . filemtime(__FILE__) . '|' . (is_file($alts) ? filemtime($alts) : 0));
+		$stored = get_transient('wholesale_shop_gallery');
+		$cache = is_array($stored) && isset($stored['version'], $stored['cards']) && $version === $stored['version'] ? $stored['cards'] : array();
+		add_action('shutdown', static function () use (&$cache, &$version, &$dirty) {
+			if ($dirty) {
+				set_transient('wholesale_shop_gallery', array('version' => $version, 'cards' => $cache), 12 * HOUR_IN_SECONDS);
+			}
+		});
+	}
+
+	$key = md5(wp_json_encode(array($product['photos'], $product['title'], $sizes)));
+	$id = (int) $product['id'];
+	if (isset($cache[$id]['key'], $cache[$id]['html']) && $key === $cache[$id]['key']) {
+		return $cache[$id]['html'];
+	}
+
+	$extra = array();
+	$cap = static function () {
+		return 768;
+	};
+	add_filter('max_srcset_image_width', $cap);
+	foreach (array_slice($product['photos'], 1) as $photo) {
+		$img = wholesale_shop_photo_tag($photo, sprintf('%s, photo %d', $product['title'], count($extra) + 2), array('sizes' => $sizes, 'class' => 'sc-gal-photo'), 'medium');
+		if ($img) {
+			$img = preg_replace('/\s(srcset|src)="/', ' data-sc-$1="', $img);
+			$extra[] = preg_replace('/^<img /', '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" ', $img);
+		}
+	}
+	remove_filter('max_srcset_image_width', $cap);
+
+	$cache[$id] = array('key' => $key, 'html' => $extra);
+	$dirty = true;
+	return $extra;
+}
+
+/**
+ * The card photo. Cards with more photos get a swipe gallery with arrows and a
+ * 1/N counter, like the home page cards. Only the first photo loads with the
+ * page: the others wait in data-sc-src/srcset until the visitor reaches for the
+ * gallery (hover, touch or focus; js/shop-catalog.js), so 200+ cards download
+ * nothing extra up front.
+ */
+function wholesale_shop_render_card_media($product, $index)
+{
+	$photos = $product['photos'];
+	$count = count($photos);
+	$sizes = '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 290px';
+	$first = $photos ? wholesale_shop_photo_tag($photos[0], $product['title'], array(
+		'loading' => $index < 4 ? 'eager' : 'lazy',
+		'fetchpriority' => $index < 2 ? 'high' : 'auto',
+		'sizes' => $sizes,
+	)) : '';
+
+	$extra = $first && $count > 1 ? wholesale_shop_gallery_extras($product, $sizes) : array();
+
+	if (!$extra) {
+		echo '<div class="sc-card-media">';
+		echo $first ? $first : '<span class="sc-card-placeholder" aria-hidden="true"></span>'; // Escaped in helper.
+		wholesale_render_sale_badge($product['id']);
+		echo '</div>';
+		return;
+	}
+
+	$slides = '<span class="sc-gal-slide">' . $first . '</span><span class="sc-gal-slide">' . implode('</span><span class="sc-gal-slide">', $extra) . '</span>';
+	$count = 1 + count($extra);
+	?>
+	<div class="sc-card-media sc-gal" data-sc-gallery>
+		<a class="sc-gal-track" href="<?php echo esc_url($product['url']); ?>" tabindex="-1" aria-hidden="true"><?php echo $slides; // Escaped in helper. ?></a>
+		<?php wholesale_render_sale_badge($product['id']); ?>
+		<button type="button" class="sc-gal-arrow sc-gal-arrow--prev" data-sc-prev aria-label="<?php echo esc_attr(sprintf(__('Previous %s photo', 'litsign'), $product['title'])); ?>"></button>
+		<button type="button" class="sc-gal-arrow sc-gal-arrow--next" data-sc-next aria-label="<?php echo esc_attr(sprintf(__('Next %s photo', 'litsign'), $product['title'])); ?>"></button>
+		<span class="sc-gal-count" aria-hidden="true"><span data-sc-index>1</span>/<?php echo (int) $count; ?></span>
+	</div>
 	<?php
 }
 
@@ -507,3 +716,6 @@ function wholesale_shop_tree_has_selected($node, $selected)
 	}
 	return false;
 }
+
+// Trust badges on product cards (shop cards here, and the other card templates).
+require_once __DIR__ . '/card-trust.php';

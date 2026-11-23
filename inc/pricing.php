@@ -230,6 +230,41 @@ function wholesale_product_price_attrs($product_id)
 }
 
 /**
+ * The price of one item of a product with nothing to choose (owner 2026-11-21: "products that don't
+ * have any option can also be added to cart and continue to checkout"): no size calculator, no price
+ * per sq ft and no option that changes the price (Laser Cut Metal Sign). One item costs the amount in
+ * its stored "Starting at" text ("$20.00 per item"), the price its page shows. That amount is the
+ * everyday price (after the product's own discount, before a dated sale), as everywhere else.
+ *
+ * @return float 0 for any other product, and when the text names no amount or another unit (per ft²).
+ */
+function wholesale_product_fixed_item_price($product_id)
+{
+	$product_id = (int) $product_id;
+	if (!$product_id || wholesale_product_is_channel_letter($product_id)) {
+		return 0.0;
+	}
+	// All meta at once: a single-key read of _starting_at_text goes through the storefront filter,
+	// which works the "Starting at" text out from this very price.
+	$meta = get_post_meta($product_id);
+	if (empty($meta['_hide_calculator'][0]) || (float) ($meta['_price_per_sqft'][0] ?? 0) > 0) {
+		return 0.0;
+	}
+	foreach (wholesale_product_price_attrs($product_id) as $attr) {
+		$options = wholesale_attr_options($attr);
+		if (count($options) > 1 || ($options && 0.0 !== round(wholesale_parse_option_price($options[0]['value'])['amount'], 2))) {
+			return 0.0;
+		}
+	}
+	$text = trim(wp_strip_all_tags(preg_replace('/<del\b[^>]*>.*?<\/del>/is', '', (string) ($meta['_starting_at_text'][0] ?? ''))));
+	if (preg_match('/per\s*(ft|sq)/i', $text) || !preg_match('/\$\s?([\d,]+(?:\.\d+)?)/', $text, $match)) {
+		return 0.0;
+	}
+
+	return max(0.0, (float) str_replace(',', '', $match[1]));
+}
+
+/**
  * Flattens [{"Label": "value"}, ...] into [['label' => ..., 'value' => ...], ...].
  */
 function wholesale_attr_options($attr)
@@ -1490,6 +1525,17 @@ function wholesale_price_quote($product_id, $request, $design = null)
 		$running = round($running, 2);
 	}
 
+	// Nothing to choose and no price per sq ft (Laser Cut Metal Sign): one item costs its "Starting at"
+	// price (wholesale_product_fixed_item_price()), so it can be added to the cart and bought.
+	if ($running <= 0 && !$is_cl) {
+		$fixed_item = wholesale_product_fixed_item_price($product_id);
+		$fixed_keep = (100 - min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)))) / 100;
+		if ($fixed_item > 0 && $fixed_keep > 0) {
+			$running = $fixed_item / $fixed_keep;
+			$lines = array(array('label' => 'Price per item', 'amount' => $running));
+		}
+	}
+
 	if (!is_finite($running) || $running <= 0) {
 		return $fail('Please choose your product options so we can calculate a price.');
 	}
@@ -1898,7 +1944,17 @@ function wholesale_product_promotion($product_id)
 		}
 	}
 
-	return array('percent' => $window['percent'], 'ends' => $window['ends']);
+	return array('percent' => $window['percent'], 'ends' => $window['ends'], 'name' => $window['name']);
+}
+
+/**
+ * "Black Friday Sale": the site-wide sale's name from Settings, or $fallback when it has
+ * none (a product's own dated sale never has a name).
+ */
+function wholesale_promotion_label($promotion, $fallback = 'Sale')
+{
+	$name = is_array($promotion) ? trim((string) ($promotion['name'] ?? '')) : '';
+	return '' !== $name ? $name : $fallback;
 }
 
 /**
@@ -1912,6 +1968,7 @@ function wholesale_promotion_window()
 		$window = wholesale_dated_sale_window(wholesale_get_setting('promo_percent'), wholesale_get_setting('promo_start'), wholesale_get_setting('promo_end'));
 		if ($window) {
 			$window['scope'] = (string) wholesale_get_setting('promo_scope');
+			$window['name'] = trim((string) wholesale_get_setting('promo_name'));
 		}
 	}
 
@@ -2117,7 +2174,7 @@ function wholesale_cl_starting_price_note()
 
 	$promotion = wholesale_product_promotion($product->ID);
 	if ($promotion && $from['price'] < $from['everyday']) {
-		$note .= sprintf(' Struck-through prices are everyday prices; the lower price is our current sale, which ends %s.', wholesale_promotion_end_text($promotion));
+		$note .= sprintf(' Struck-through prices are everyday prices; the lower price is our %s, which ends %s.', esc_html(wholesale_promotion_label($promotion, 'current sale')), wholesale_promotion_end_text($promotion));
 	}
 
 	return $note;

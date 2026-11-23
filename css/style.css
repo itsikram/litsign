@@ -4120,7 +4120,7 @@ a.review-author-name:hover {
     /* margin: 14px 0 24px; */
     margin: 0 !important;
     padding: 8px;
-    border-radius: 8px;
+    border-radius: 0 0 8px 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
   }
 
@@ -7104,8 +7104,30 @@ a.review-author-name:hover {
 }
 
 /* Category hero: breadcrumb, category H1 and description replace the old shop header card. */
+/* Same container as the home page hero (.hc-hero-copy: min(55%, 640px) on desktop, full
+   width at 991px and below); the lead and intro fill it instead of stopping at 600px. */
 .home-hero--category .home-hero-copy {
+  width: min(55%, 640px);
   max-width: 640px;
+}
+
+.home-hero--category .home-hero-lead,
+.home-hero--category .home-hero-intro {
+  max-width: 100%;
+}
+
+@media only screen and (max-width: 991px) {
+  .home-hero--category .home-hero-copy {
+    width: 100%;
+    max-width: 100%;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .home-hero--category .home-hero-copy .home-hero-title,
+  .home-hero--category .home-hero-lead {
+    max-width: 560px;
+  }
 }
 
 .home-hero-breadcrumb ol {
@@ -7143,7 +7165,6 @@ a.review-author-name:hover {
 }
 
 .home-hero--category .home-hero-lead {
-  max-width: 600px;
   margin-bottom: 12px;
 }
 
@@ -7178,7 +7199,7 @@ a.review-author-name:hover {
   }
 
   .home-hero--category .home-hero-copy {
-    padding: 40px 16px 44px;
+    padding: 40px 0 44px;
   }
 
   .home-hero--category .home-hero-copy .home-hero-title {
@@ -7476,7 +7497,7 @@ a.review-author-name:hover {
   }
 }
 
-/* Sale badge on discounted product images (wholesale_render_sale_badge). */
+/* Sale badge on discounted product images (wholesale_render_sale_badge). Logo orange #f96005; #b54100 = readable orange text on white. */
 .sale-badge {
   position: absolute;
   top: 12px;
@@ -7495,7 +7516,7 @@ a.review-author-name:hover {
   white-space: nowrap;
   pointer-events: none;
   box-shadow:
-    0 4px 12px rgba(185, 28, 28, 0.28),
+    0 4px 12px rgba(233, 84, 2, 0.3),
     0 1px 2px rgba(15, 23, 42, 0.12);
 }
 .sale-badge__label,
@@ -7506,12 +7527,12 @@ a.review-author-name:hover {
   padding: 6px 9px;
 }
 .sale-badge__label {
-  background: linear-gradient(135deg, #dc2626, #b91c1c);
+  background: #E95402;
   color: #fff;
 }
 .sale-badge__value {
   background: #fff;
-  color: #b91c1c;
+  color: #b54100;
 }
 .sale-badge--out-of-stock {
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
@@ -7598,6 +7619,15 @@ a.review-author-name:hover {
     background-position: center center;
     background-repeat: no-repeat;
     pointer-events: none;
+    /* The storefront photo has a hard building corner about a third of the way in.
+       Fade the photo into the navy across that corner, just before the CAFE sign.
+       The mask is a 2048×1153 SVG sized like the photo (cover, centered), so the
+       fade stays on the same spot of the photo at every desktop width. It is
+       base64 because the theme's CSS url() rewriter breaks the SVG's inner url(#f).
+       Fade stops (opacity at photo width): .27 0, .31 .03, .335 .08, .355 .24,
+       .375 .54, .393 .85, .405 1. */
+    -webkit-mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDQ4IiBoZWlnaHQ9IjExNTMiPjxsaW5lYXJHcmFkaWVudCBpZD0iZiI+PHN0b3Agb2Zmc2V0PSIuMjciIHN0b3Atb3BhY2l0eT0iMCIvPjxzdG9wIG9mZnNldD0iLjMxIiBzdG9wLW9wYWNpdHk9Ii4wMyIvPjxzdG9wIG9mZnNldD0iLjMzNSIgc3RvcC1vcGFjaXR5PSIuMDgiLz48c3RvcCBvZmZzZXQ9Ii4zNTUiIHN0b3Atb3BhY2l0eT0iLjI0Ii8+PHN0b3Agb2Zmc2V0PSIuMzc1IiBzdG9wLW9wYWNpdHk9Ii41NCIvPjxzdG9wIG9mZnNldD0iLjM5MyIgc3RvcC1vcGFjaXR5PSIuODUiLz48c3RvcCBvZmZzZXQ9Ii40MDUiLz48L2xpbmVhckdyYWRpZW50PjxyZWN0IHdpZHRoPSIyMDQ4IiBoZWlnaHQ9IjExNTMiIGZpbGw9InVybCgjZikiLz48L3N2Zz4=") center / cover no-repeat;
+    mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMDQ4IiBoZWlnaHQ9IjExNTMiPjxsaW5lYXJHcmFkaWVudCBpZD0iZiI+PHN0b3Agb2Zmc2V0PSIuMjciIHN0b3Atb3BhY2l0eT0iMCIvPjxzdG9wIG9mZnNldD0iLjMxIiBzdG9wLW9wYWNpdHk9Ii4wMyIvPjxzdG9wIG9mZnNldD0iLjMzNSIgc3RvcC1vcGFjaXR5PSIuMDgiLz48c3RvcCBvZmZzZXQ9Ii4zNTUiIHN0b3Atb3BhY2l0eT0iLjI0Ii8+PHN0b3Agb2Zmc2V0PSIuMzc1IiBzdG9wLW9wYWNpdHk9Ii41NCIvPjxzdG9wIG9mZnNldD0iLjM5MyIgc3RvcC1vcGFjaXR5PSIuODUiLz48c3RvcCBvZmZzZXQ9Ii40MDUiLz48L2xpbmVhckdyYWRpZW50PjxyZWN0IHdpZHRoPSIyMDQ4IiBoZWlnaHQ9IjExNTMiIGZpbGw9InVybCgjZikiLz48L3N2Zz4=") center / cover no-repeat;
   }
 }
 

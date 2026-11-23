@@ -1,8 +1,7 @@
 /*
  * Phone-friendly wp-admin (inc/admin-mobile.php + css/admin-mobile.css).
  * Only acts at phone width (<= 782px); desktop is left alone.
- *  1. Toolbar can wrap to two rows: page content is pushed down to match.
- *  2. Toolbar items with no phone icon show their text label.
+ *  1 + 2. Toolbar: moved to js/admin-bar-mobile.js (loads on store pages too).
  *  3. List screens get a "Sort by" box (WordPress hides the sortable columns on phones).
  *  4. Anything wider than the phone is fixed: tables scroll inside their own box,
  *     flex rows wrap, other boxes shrink to fit.
@@ -17,49 +16,7 @@
 		return mq.matches;
 	}
 
-	/* ---- 1 + 2. Toolbar ---------------------------------------------------- */
-	function iconless(li) {
-		var a = li.querySelector(':scope > .ab-item');
-		if (!a) {
-			return false;
-		}
-		if (a.querySelector('img, svg')) {
-			return false;
-		}
-		var icon = a.querySelector('.ab-icon');
-		if (!icon) {
-			return true;
-		}
-		var before = window.getComputedStyle(icon, '::before').content;
-		return !before || before === 'none' || before === 'normal' || before === '""';
-	}
-
-	function syncToolbar() {
-		var bar = document.getElementById('wpadminbar');
-		if (!bar) {
-			return;
-		}
-		var items = bar.querySelectorAll('.ab-top-menu > li');
-		for (var i = 0; i < items.length; i++) {
-			var li = items[i];
-			// Core items, and store items that get an icon in css/admin-mobile.css.
-			if (/^wp-admin-bar-(menu-toggle|my-account|site-name|wp-logo|updates|comments|new-content|command-palette|search|wudt-diagnostics|wholesale-visitor-insights|wholesale-store-admin|wholesale-clear-cache|sfs-live-chat)$/.test(li.id)) {
-				continue;
-			}
-			li.classList.toggle('wam-text-item', isPhone() && iconless(li));
-		}
-		if (!document.body.classList.contains('wp-admin')) {
-			return;
-		}
-		var h = bar.offsetHeight;
-		if (isPhone() && h > 46) {
-			root.style.setProperty('--wam-bar-h', h + 'px');
-			root.classList.add('wam-tall');
-		} else {
-			root.style.removeProperty('--wam-bar-h');
-			root.classList.remove('wam-tall');
-		}
-	}
+	/* ---- 1 + 2. Toolbar: js/admin-bar-mobile.js (store pages use it too) ---- */
 
 	/* ---- 3. Sort by box ----------------------------------------------------- */
 	function buildSort() {
@@ -205,7 +162,6 @@
 	/* ---- Run ------------------------------------------------------------------ */
 	var timer = null;
 	function run() {
-		syncToolbar();
 		if (!isPhone()) {
 			return;
 		}
@@ -243,9 +199,5 @@
 				run();
 			}, 600);
 		}).observe(body, { childList: true, subtree: true });
-	}
-	var bar = document.getElementById('wpadminbar');
-	if (bar && window.ResizeObserver) {
-		new ResizeObserver(syncToolbar).observe(bar);
 	}
 })();

@@ -9,10 +9,13 @@
  *    - Desktop: the photo column (photo, thumbnails, price box) sticks below the
  *      sticky header while the options scroll, only when the whole column fits in
  *      the window, so its price box is never cut off.
- *    - Phones: a bar fixed to the bottom of the screen shows the live Grand Total, a
- *      cart button and Buy Now while the real pricing box is off screen. Its buttons
- *      click the real ones, so the form's own checks (sign text, size, required
- *      fields) run.
+ *    - Every width: a bar fixed to the bottom of the screen shows the live Grand
+ *      Total, a cart button and Buy Now above and below the Grand Total section
+ *      (hidden only while the Grand Total and the real buttons are on screen).
+ *      Tablets and desktops also show the photo, name and a one-line summary of the
+ *      chosen options (a tap goes back to the options). A price change counts up to
+ *      the new total and shows the difference. Its buttons click the real ones, so
+ *      the form's own checks (sign text, size, required fields) run.
  *    - Channel letters: before the sign text is typed, the Grand Total shows the
  *      starting price instead of $0.00.
  * 4. Delivered price. 5. One-tap size chips.
@@ -131,15 +134,19 @@ wholesaleProductSection((signal) => {
   // The desktop header (#ssxHeader) from 992px, the .ssx-legacy header below that.
   const visibleHeader = () =>
     [document.getElementById('ssxHeader'), document.querySelector('.main-header.ssx-legacy')].find((el) => el && el.offsetHeight > 0);
+  // Space the sticky header covers at the top of the window.
+  const headerSpace = () => {
+    const header = visibleHeader();
+    if (!header || getComputedStyle(header).position !== 'sticky') return 0;
+    return Math.max(0, (parseFloat(getComputedStyle(header).top) || 0) + header.offsetHeight);
+  };
+  // Height of the price bar at the bottom (css/ui-polish.css 8d), so the column never sits under it.
+  const BAR_SPACE = 84;
   const fitColumn = () => {
     if (!column) return;
-    const header = visibleHeader();
-    let top = 16;
-    if (header && getComputedStyle(header).position === 'sticky') {
-      top += Math.max(0, (parseFloat(getComputedStyle(header).top) || 0) + header.offsetHeight);
-    }
+    const top = 16 + headerSpace();
     column.style.setProperty('--pd-sticky-top', top + 'px');
-    column.classList.toggle('pd-col-sticky', desktop.matches && column.offsetHeight + top + 16 <= window.innerHeight);
+    column.classList.toggle('pd-col-sticky', desktop.matches && column.offsetHeight + top + 16 + BAR_SPACE <= window.innerHeight);
   };
   if (column) {
     fitColumn();
@@ -155,15 +162,25 @@ wholesaleProductSection((signal) => {
   const totalEl = form.querySelector('.price-total');
   if (!pricingBox || !totalEl || !('IntersectionObserver' in window)) return;
 
-  // Buy bar (phones).
-  const phone = window.matchMedia('(max-width: 767.98px)');
+  // Buy bar / sticky price preview (every width; the item block shows from 768px).
   const pill = document.querySelector('.product-details .product-mobile-price');
-  // "Starting at $133.20 per letter" from the price line under the title.
-  const fromText = pill && pill.firstElementChild
-    ? pill.firstElementChild.textContent.replace(/\s+/g, ' ').replace(/^\s*Starting at\s*/i, '').trim()
+  // "Starting at $133.20 per letter" from the price line under the title. During a sale
+  // that line also has the everyday price struck through (<del>), kept apart so the bar
+  // can strike it too instead of running the two prices together.
+  const fromCopy = pill && pill.firstElementChild ? pill.firstElementChild.cloneNode(true) : null;
+  const fromDel = fromCopy ? fromCopy.querySelector('del') : null;
+  const fromWas = fromDel ? fromDel.textContent.replace(/\s+/g, ' ').trim() : '';
+  if (fromDel) fromDel.remove();
+  const fromText = fromCopy
+    ? fromCopy.textContent.replace(/\s+/g, ' ').replace(/^\s*Starting at\s*/i, '').trim()
     : '';
   // Channel letters: the starting price printed in the Grand Total row (single-product.php).
   const totalFrom = pricingBox.querySelector('.price-total-from');
+
+  const title = document.querySelector('.product-details h1');
+  const photo = column ? column.querySelector('img') : null;
+  const optionsEl = form.querySelector('#product-options');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
   const bar = document.createElement('div');
   bar.className = 'pd-buy-bar';
@@ -171,20 +188,186 @@ wholesaleProductSection((signal) => {
   bar.setAttribute('role', 'region');
   bar.setAttribute('aria-label', 'Order total');
   bar.innerHTML =
-    '<p class="pd-buy-bar__price"><span class="pd-buy-bar__label"></span><strong class="pd-buy-bar__total"></strong></p>' +
+    '<button type="button" class="pd-buy-bar__item">' +
+    '<img class="pd-buy-bar__thumb" alt="" width="52" height="52" decoding="async" hidden>' +
+    '<span class="pd-buy-bar__text"><span class="pd-buy-bar__title"><span class="pd-buy-bar__name"></span>' +
+    '<span class="pd-buy-bar__edit">Change options</span></span><span class="pd-buy-bar__summary"></span></span></button>' +
+    '<p class="pd-buy-bar__price"><span class="pd-buy-bar__label"></span>' +
+    '<span class="pd-buy-bar__was" hidden><s class="pd-buy-bar__regular"></s><span class="pd-buy-bar__save"></span></span>' +
+    '<span class="pd-buy-bar__amount"><strong class="pd-buy-bar__total"></strong><span class="pd-buy-bar__delta" aria-hidden="true" hidden></span></span></p>' +
     '<div class="pd-buy-bar__actions">' +
     (buyButton
-      ? '<button type="button" class="pd-buy-bar__cart" aria-label="Add to cart"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.76L20 8H6.2M9.5 19.5a1 1 0 1 0 0-.01M17 19.5a1 1 0 1 0 0-.01M15 4v4M13 6h4"/></svg></button>'
+      ? '<button type="button" class="pd-buy-bar__cart" aria-label="Add to cart"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" d="M3 4h2l2.4 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.76L20 8H6.2M9.5 19.5a1 1 0 1 0 0-.01M17 19.5a1 1 0 1 0 0-.01M15 4v4M13 6h4"/></svg><span class="pd-buy-bar__cart-text" aria-hidden="true">Add to Cart</span></button>'
       : '') +
     '<button type="button" class="pd-buy-bar__button"></button></div>';
+  const barItem = bar.querySelector('.pd-buy-bar__item');
+  const barThumb = bar.querySelector('.pd-buy-bar__thumb');
+  const barName = bar.querySelector('.pd-buy-bar__name');
+  const barSummary = bar.querySelector('.pd-buy-bar__summary');
   const barLabel = bar.querySelector('.pd-buy-bar__label');
   const barTotal = bar.querySelector('.pd-buy-bar__total');
+  const barDelta = bar.querySelector('.pd-buy-bar__delta');
   const barButton = bar.querySelector('.pd-buy-bar__button');
   const barCart = bar.querySelector('.pd-buy-bar__cart');
+  const barWas = bar.querySelector('.pd-buy-bar__was');
+  const barRegular = bar.querySelector('.pd-buy-bar__regular');
+  const barSave = bar.querySelector('.pd-buy-bar__save');
+  // A dated sale (single-product.php data-sale-* on the pricing box): a strip across the
+  // top of the phone bar with its name, percent and last day, and the everyday price
+  // struck through with the saving above the total (2026-11-21).
+  const salePercent = pricingBox.dataset.salePercent || '';
+  if (salePercent) {
+    bar.classList.add('pd-buy-bar--sale');
+    const strip = document.createElement('p');
+    strip.className = 'pd-buy-bar__sale';
+    strip.innerHTML =
+      '<span class="pd-buy-bar__sale-name"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor"/></svg><span></span></span>' +
+      '<span class="pd-buy-bar__sale-pct"></span><span class="pd-buy-bar__sale-ends"></span>';
+    strip.querySelector('.pd-buy-bar__sale-name > span').textContent = pricingBox.dataset.saleName || 'Sale';
+    strip.querySelector('.pd-buy-bar__sale-pct').textContent = salePercent + '% off';
+    strip.querySelector('.pd-buy-bar__sale-ends').textContent = pricingBox.dataset.saleEnds ? 'Ends ' + pricingBox.dataset.saleEnds : '';
+    bar.prepend(strip);
+  }
   // The bar's main button is Buy Now when there is one, else Add To Cart.
   const mainButton = buyButton || addButton;
   if (buyButton) bar.classList.add('pd-buy-bar--buy');
+  // The product name without the admin edit link inside the H1.
+  if (title) {
+    const copy = title.cloneNode(true);
+    copy.querySelectorAll('a, button, svg, .screen-reader-text, .sr-only, .visually-hidden').forEach((el) => el.remove());
+    barName.textContent = copy.textContent.replace(/\s+/g, ' ').trim();
+  }
   document.body.appendChild(bar);
+
+  // One line of what is chosen: size (W x H), quantity, each option that is on,
+  // production time. "No pole pockets"-style choices are left out to keep it short.
+  const clean = (text) => (text || '').replace(/\s+/g, ' ').trim();
+  // Some labels are lower case and capitalized by CSS (text-capitalize).
+  const labelOf = (el) => {
+    const label = el.id ? form.querySelector('label[for="' + CSS.escape(el.id) + '"]') : null;
+    const text = label ? clean(label.textContent).replace(/^Size\s*-\s*/i, '') : '';
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  };
+  const inches = (n) => String(Math.round(n * 100) / 100);
+  const summaryText = () => {
+    const parts = [];
+    const options = [];
+    let size = '';
+    // Channel letters: the sign text first.
+    const letters = form.querySelector('input[name="letters"]');
+    if (letters && clean(letters.value)) parts.push('“' + clean(letters.value).slice(0, 40) + '”');
+    form.querySelectorAll('select').forEach((select) => {
+      if (!select.offsetParent || select.selectedIndex < 0 || select.value === '') return;
+      const text = clean(select.options[select.selectedIndex].text);
+      if (!text || /^(no|none|select|choose)\b/i.test(text)) return;
+      const label = labelOf(select);
+      if (/^size\b/i.test(label) && !size) size = text;
+      else options.push(label ? label + ': ' + text : text);
+    });
+    const width = parseFloat((form.querySelector('input[name="width-in"]') || {}).value) || 0;
+    const height = parseFloat((form.querySelector('input[name="height-in"]') || {}).value) || 0;
+    if (!size && width > 0 && height > 0) {
+      size = width % 12 || height % 12 ? inches(width) + ' × ' + inches(height) + ' in' : width / 12 + ' × ' + height / 12 + ' ft';
+    }
+    if (size) parts.push(size);
+    const qty = form.querySelector('input[name="product_quantity"]');
+    if (qty && parseInt(qty.value, 10) > 0) parts.push('Qty ' + parseInt(qty.value, 10));
+    parts.push(...options);
+    const turn = form.querySelector('input[name="turnaround_option"]:checked');
+    if (turn && turn.offsetParent) {
+      // B2Sign-style choices (inc/product-buy-box.php) name the speed in their section
+      // title; the default Next Day / Same Day labels start with it.
+      const section = turn.closest('[data-turnaround-section]');
+      const sectionTitle = section ? section.querySelector('.pb-turn-title') : null;
+      const label = turn.id ? form.querySelector('label[for="' + CSS.escape(turn.id) + '"]') : null;
+      const name = sectionTitle ? clean(sectionTitle.textContent) : label && label.firstChild ? clean(label.firstChild.textContent) : '';
+      if (name) parts.push(name + ' production');
+    }
+    return parts.join(' · ');
+  };
+  let summaryTimer = 0;
+  const queueSummary = () => {
+    if (summaryTimer) return;
+    summaryTimer = setTimeout(() => {
+      summaryTimer = 0;
+      const text = summaryText();
+      barSummary.textContent = text;
+      barItem.title = text ? 'Change options: ' + text : 'Change options';
+    }, 30);
+  };
+  form.addEventListener('change', queueSummary, { signal });
+  form.addEventListener('input', queueSummary, { signal });
+
+  // A price change counts up to the new total and shows the difference beside it.
+  const money = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  let shownValue = null; // the total the bar shows; null while it shows "Starting at"
+  let shownText = '';
+  let tween = 0;
+  let tweenEnd = 0;
+  let deltaTimer = 0;
+  const showDelta = (diff) => {
+    clearTimeout(deltaTimer);
+    barDelta.hidden = true;
+    void barDelta.offsetWidth; // restarts its animation
+    barDelta.textContent = (diff > 0 ? '+' : '−') + money(Math.abs(diff));
+    barDelta.classList.toggle('is-down', diff < 0);
+    barDelta.hidden = false;
+    deltaTimer = setTimeout(() => {
+      barDelta.hidden = true;
+    }, 2400);
+  };
+  const setTotal = (value, text) => {
+    if (text === shownText) return;
+    cancelAnimationFrame(tween);
+    clearTimeout(tweenEnd);
+    const from = shownValue;
+    shownValue = value;
+    shownText = text;
+    const changed = !bar.hidden && from > 0 && value > 0 && Math.abs(value - from) >= 0.005;
+    if (changed) showDelta(value - from);
+    if (!changed || reduceMotion.matches) {
+      barTotal.textContent = text;
+      return;
+    }
+    // Timed from the first frame: a frame's timestamp can be older than the change.
+    let start = 0;
+    const step = (now) => {
+      if (!start) start = now;
+      const t = Math.max(0, Math.min(1, (now - start) / 420));
+      barTotal.textContent = t < 1 ? money(from + (value - from) * (1 - Math.pow(1 - t, 3))) : text;
+      if (t < 1) tween = requestAnimationFrame(step);
+    };
+    tween = requestAnimationFrame(step);
+    // Frames can pause (a background window); the exact total always lands.
+    tweenEnd = setTimeout(() => {
+      cancelAnimationFrame(tween);
+      barTotal.textContent = text;
+    }, 600);
+  };
+  // js/main.js can show a quick estimate and correct it ~0.2 s later (e.g. before the
+  // minimum charge applies); the bar waits for the settled price and animates once.
+  let pendingText = '';
+  let settleTimer = 0;
+  const queueTotal = (value, text) => {
+    if (text === pendingText) return;
+    pendingText = text;
+    clearTimeout(settleTimer);
+    if (bar.hidden || shownValue === null || text === shownText) {
+      setTotal(value, text);
+      return;
+    }
+    settleTimer = setTimeout(() => setTotal(value, text), 220);
+  };
+  const clearTotal = (text) => {
+    pendingText = '';
+    clearTimeout(settleTimer);
+    cancelAnimationFrame(tween);
+    clearTimeout(tweenEnd);
+    shownValue = null;
+    shownText = '';
+    barDelta.hidden = true;
+    barTotal.textContent = text;
+  };
 
   const render = () => {
     const total = parseFloat(totalEl.textContent.replace(/[^0-9.]/g, '')) || 0;
@@ -197,14 +380,36 @@ wholesaleProductSection((signal) => {
     const priced = !noPrice || !fromText;
     if (priced) {
       barLabel.textContent = 'Grand Total';
-      barTotal.textContent = '$' + totalEl.textContent.trim();
+      queueTotal(total, '$' + totalEl.textContent.trim());
       barButton.textContent = mainButton.textContent.trim();
     } else {
       // The bar button takes the visitor to the text box (the real button's own handler).
       barLabel.textContent = 'Starting at';
-      barTotal.textContent = fromText;
+      if (fromWas) {
+        const was = document.createElement('s');
+        was.className = 'pd-buy-bar__from-was';
+        was.textContent = fromWas;
+        barLabel.append(' ', was);
+      }
+      clearTotal(fromText);
       barButton.textContent = 'Get your price';
     }
+    // Sale: "$13.98 (struck) Save $2.10" from the pricing box rows js/main.js fills.
+    const amountOf = (selector) => {
+      const el = pricingBox.querySelector(selector);
+      return el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) || 0 : 0;
+    };
+    const regular = salePercent ? amountOf('.price-subtotal') : 0;
+    const saving = salePercent ? amountOf('.price-saving') : 0;
+    const showWas = priced && saving >= 0.01 && regular > total;
+    if (showWas) {
+      barRegular.textContent = money(regular);
+      barSave.textContent = 'Save ' + money(saving);
+    }
+    barWas.hidden = !showWas;
+    bar.classList.toggle('has-was', showWas);
+    // Option resets made in code (js/main.js) fire no change event; the price follows them.
+    queueSummary();
     // The real buttons run the mini cart request (js: .is-adding while it runs).
     const buying = Boolean(buyButton && buyButton.classList.contains('is-adding'));
     const adding = buying || addButton.classList.contains('is-adding');
@@ -222,43 +427,97 @@ wholesaleProductSection((signal) => {
   if (buyButton) wholesaleWatch(signal, buyButton, { attributes: true, attributeFilter: ['disabled', 'class'] }, render);
   // The box's own class (.is-updating) and the hint message inside it (hidden / .is-hint).
   wholesaleWatch(signal, pricingBox, { attributes: true, attributeFilter: ['class', 'hidden'], subtree: true }, render);
+  // The sale saving can be written after the total.
+  const savingEl = salePercent ? pricingBox.querySelector('.price-saving') : null;
+  if (savingEl) wholesaleWatch(signal, savingEl, { childList: true, characterData: true, subtree: true }, render);
 
   barButton.addEventListener('click', () => mainButton.click());
   if (barCart) barCart.addEventListener('click', () => addButton.click());
+  // Photo, name and summary (768px+): back to the top of the options.
+  barItem.addEventListener('click', () => {
+    const target = optionsEl || form;
+    window.scrollTo({
+      top: target.getBoundingClientRect().top + window.scrollY - headerSpace() - 16,
+      behavior: reduceMotion.matches ? 'auto' : 'smooth',
+    });
+  });
 
   // The chat launcher (sfs-live-chat, Shadow DOM) is placed by its --y offset;
   // lift it above the bar while the bar shows.
+  // The chat launcher can load after the bar shows (the bar can show on page load), so
+  // this runs on every check and only writes when the offset differs.
   const liftChat = (on) => {
     const chat = document.getElementById('sfs-chat-root');
     if (!chat) return;
     if (on) {
       const base = window.SFSChatConfig && window.SFSChatConfig.brand ? Number(window.SFSChatConfig.brand.offsetY) || 0 : 20;
-      chat.style.setProperty('--y', (base + bar.offsetHeight) + 'px');
-    } else {
+      const y = (base + bar.offsetHeight) + 'px';
+      if (chat.style.getPropertyValue('--y') !== y) chat.style.setProperty('--y', y);
+    } else if (chat.style.getPropertyValue('--y')) {
       chat.style.removeProperty('--y');
     }
   };
 
-  // Shown while neither the price line under the title nor the pricing box is on screen.
-  const inView = new Map();
+  // Hidden only while the Grand Total section is on screen (owner, 2026-11-20): shown
+  // from the top of the page until the Grand Total row comes up above the bar, and
+  // again once the visitor scrolls down past the real Add To Cart / Buy Now buttons
+  // (under the sticky header counts as past; a tucked phone header covers nothing).
+  // Checked on scroll and resize, and whenever the form changes height (choices that
+  // open move the Grand Total without any scrolling).
+  const totalRow = pricingBox.querySelector('.total-container') || pricingBox;
   const update = () => {
-    const show = phone.matches && !inView.get(pricingBox) && !(pill && inView.get(pill)) && window.scrollY > 120;
-    if (show === !bar.hidden) return;
-    bar.hidden = !show;
-    document.body.classList.toggle('has-pd-buy-bar', show);
+    if (totalRow.offsetParent === null) {
+      if (!bar.hidden) {
+        bar.hidden = true;
+        document.body.classList.remove('has-pd-buy-bar');
+      }
+      liftChat(false);
+      return;
+    }
+    const header = visibleHeader();
+    const covered = header && header.classList.contains('is-tucked') ? 0 : headerSpace();
+    const ends = [addButton, buyButton]
+      .filter((el) => el && el.offsetParent !== null)
+      .map((el) => el.getBoundingClientRect().bottom);
+    const sectionEnd = ends.length ? Math.max(...ends) : totalRow.getBoundingClientRect().bottom;
+    const above = totalRow.getBoundingClientRect().top > window.innerHeight - 80;
+    const below = sectionEnd < covered;
+    const show = above || below;
+    if (show !== !bar.hidden) {
+      if (show && photo && !barThumb.getAttribute('src') && (photo.currentSrc || photo.src)) {
+        barThumb.src = photo.currentSrc || photo.src;
+        barThumb.hidden = false;
+      }
+      bar.hidden = !show;
+      document.body.classList.toggle('has-pd-buy-bar', show);
+    }
     liftChat(show);
   };
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => inView.set(entry.target, entry.isIntersecting));
-    update();
-  });
-  observer.observe(pricingBox);
-  if (pill) observer.observe(pill);
+  update();
   window.addEventListener('scroll', update, { passive: true, signal });
-  phone.addEventListener('change', update, { signal });
+  window.addEventListener('resize', update, { signal });
+  window.addEventListener('load', update, { signal, once: true });
+  let formSize = null;
+  if ('ResizeObserver' in window) {
+    formSize = new ResizeObserver(update);
+    formSize.observe(form);
+  }
+  // Lift the chat launcher as soon as it is added, if the bar is already up.
+  if (!document.getElementById('sfs-chat-root')) {
+    wholesaleWatch(signal, document.body, { childList: true }, (records, watcher) => {
+      if (!document.getElementById('sfs-chat-root')) return;
+      watcher.disconnect();
+      update();
+    });
+  }
   // A product swap builds a new bar for the new product.
   signal.addEventListener('abort', () => {
-    observer.disconnect();
+    if (formSize) formSize.disconnect();
+    cancelAnimationFrame(tween);
+    clearTimeout(tweenEnd);
+    clearTimeout(settleTimer);
+    clearTimeout(summaryTimer);
+    clearTimeout(deltaTimer);
     bar.remove();
     document.body.classList.remove('has-pd-buy-bar');
     liftChat(false);
@@ -616,6 +875,82 @@ wholesaleProductSection(() => {
   });
 });
 
+// ---- 8b. The "Starting at" prices follow the chosen options (single-product.php) ----
+// A visitor picked 10ft on the Straight Tension Fabric Display (graphic only); the Grand Total
+// went to $325.36 but the "Starting at $280.48" box beside the options and the "Graphic Only
+// $280.48" button stayed, and she asked in chat why the price did not change (chat #199,
+// Nov 23 2026). Once an option is changed, those boxes show "Your price" with the live total
+// (sale: the everyday price struck through), and the other group buttons read "from $X",
+// their 8ft / smallest price. Channel letters keep their own "Get your price" flow.
+wholesaleProductSection((signal) => {
+  const form = document.querySelector('.product-details form[data-noun]');
+  const pricingBox = form ? form.querySelector('.product-pricing-box') : null;
+  const totalEl = pricingBox ? pricingBox.querySelector('.price-total') : null;
+  if (!totalEl || form.querySelector('input[name="letters"]')) return;
+  const boxes = [...document.querySelectorAll('.product-details .product-mobile-price > span:first-child, .product-price-per-sqft')]
+    .filter((box) => box.querySelector('.product-price-label'));
+  const tile = document.querySelector('.product-group-item.current .product-group-item-price');
+  const others = [...document.querySelectorAll('.product-group-item:not(.current) .product-group-item-price')];
+  if (!boxes.length && !tile) return;
+  const originals = boxes.map((box) => box.innerHTML);
+  const tileOriginal = tile ? tile.textContent : '';
+  const money = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const amountOf = (selector) => {
+    const el = pricingBox.querySelector(selector);
+    return el ? parseFloat(el.textContent.replace(/[^0-9.]/g, '')) || 0 : 0;
+  };
+  let touched = false;
+  const render = () => {
+    if (!touched) return;
+    const total = parseFloat(totalEl.textContent.replace(/[^0-9.]/g, '')) || 0;
+    const hint = pricingBox.querySelector('.price-quote-message.is-hint:not([hidden])');
+    if (total <= 0 || hint) {
+      boxes.forEach((box, i) => { box.innerHTML = originals[i]; });
+      if (tile) tile.textContent = tileOriginal;
+      return;
+    }
+    const qty = parseInt((form.querySelector('input[name="product_quantity"]') || {}).value, 10) || 1;
+    const regular = pricingBox.dataset.salePercent ? amountOf('.price-subtotal') : 0;
+    const label = qty > 1 ? 'Your price (' + qty + ' items)' : 'Your price';
+    boxes.forEach((box) => {
+      const labelEl = document.createElement('span');
+      labelEl.className = 'product-price-label';
+      labelEl.textContent = label;
+      // Same shape as the server's price: <del>everyday</del> <strong>price</strong>.
+      const value = document.createElement('span');
+      value.className = 'product-price-value';
+      if (regular > total + 0.004) {
+        const del = document.createElement('del');
+        del.textContent = money(regular);
+        value.append(del, ' ');
+      }
+      const strong = document.createElement('strong');
+      strong.textContent = money(total);
+      value.append(strong);
+      // Keep anything else in the box (the "Smallest order" line).
+      const keep = [...box.children].filter((el) => !el.matches('.product-price-label, .product-price-value, del, strong'));
+      box.replaceChildren(labelEl, ' ', value, ...keep);
+    });
+    if (tile) tile.textContent = money(total / qty);
+  };
+  // A choice the visitor makes (the page's own defaults keep the "Starting at" wording):
+  // a select or box they change, or a button they tap (quantity - / +, size chips).
+  const touch = (e) => {
+    if (e.type === 'click' ? !e.target.closest('button') : !e.isTrusted) return;
+    if (e.target.closest('input[type="file"], textarea, input[name="job_name"]')) return;
+    if (!touched) {
+      touched = true;
+      others.forEach((el) => {
+        if (!/^from\b/i.test(el.textContent.trim())) el.textContent = 'from ' + el.textContent.trim();
+      });
+    }
+    window.setTimeout(render, 0);
+  };
+  form.addEventListener('change', touch, { signal });
+  form.addEventListener('click', touch, { signal });
+  wholesaleWatch(signal, totalEl, { childList: true, characterData: true, subtree: true }, render);
+});
+
 // ---- 9. Contact page: a tap on the form heading starts the form (page-contact.php) ----
 // One visitor tapped "Get your free quote" three times, as if it were a button (Nov 8 2026).
 (function () {
@@ -641,3 +976,68 @@ wholesaleProductSection(() => {
     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 })();
+
+// ---- 11. Cards under the product photos (inc/product-hero.php wholesale_render_product_aside) ----
+// 768px and up. The cards fill the space between the photos and the bottom of the options,
+// most useful first (data-aside-priority), skipping any that would run past the options, so
+// the hero never grows and nothing below it moves. The aside stays collapsed until this runs.
+wholesaleProductSection((signal) => {
+  const aside = document.querySelector('.product-details .pd-aside');
+  const column = aside && aside.parentElement;
+  const options = document.getElementById('product-options');
+  const heroTop = document.querySelector('.product-details .pd-hero__top');
+  if (!aside || !column || !options || !heroTop) return;
+  const cards = Array.from(aside.querySelectorAll('[data-aside-card]')).sort(
+    (a, b) => (Number(a.dataset.asidePriority) || 99) - (Number(b.dataset.asidePriority) || 99)
+  );
+  const wide = window.matchMedia('(min-width: 768px)');
+  let frame = 0;
+  const fit = () => {
+    frame = 0;
+    if (!wide.matches) return;
+    cards.forEach((card) => card.classList.remove('is-cut'));
+    aside.classList.remove('is-empty');
+    // The column can be sticky (section 3), so the aside is measured from the column's own
+    // top; the column and the title block both start at the top of the hero grid.
+    const room =
+      options.getBoundingClientRect().bottom -
+      heroTop.getBoundingClientRect().top -
+      (aside.getBoundingClientRect().top - column.getBoundingClientRect().top);
+    const gap = parseFloat(getComputedStyle(aside).rowGap) || 0;
+    let used = 0;
+    let shown = 0;
+    const kept = new Set();
+    cards.forEach((card) => {
+      const need = card.offsetHeight + (shown ? gap : 0);
+      // More reviews only under the first one, which carries the Google rating.
+      const requires = card.dataset.asideRequires;
+      if (used + need <= room && (!requires || kept.has(requires))) {
+        used += need;
+        shown += 1;
+        kept.add(card.dataset.asidePriority);
+      } else {
+        card.classList.add('is-cut');
+      }
+    });
+    aside.classList.toggle('is-empty', !shown);
+    aside.classList.add('is-fit');
+  };
+  const schedule = () => {
+    if (!frame) frame = window.requestAnimationFrame(fit);
+  };
+  schedule();
+  window.addEventListener('resize', schedule, { signal });
+  window.addEventListener('load', schedule, { signal, once: true });
+  if ('ResizeObserver' in window) {
+    // The options grow as choices open and the wallet buttons load; the photos, title and
+    // highlights move the top of the aside or the options; fonts change the cards' heights.
+    const watch = new ResizeObserver(schedule);
+    [options, heroTop, document.querySelector('.product-details .pd-hero__info')]
+      .concat(Array.from(column.children).filter((el) => el !== aside), cards)
+      .forEach((el) => el && watch.observe(el));
+    signal.addEventListener('abort', () => {
+      watch.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+    });
+  }
+});

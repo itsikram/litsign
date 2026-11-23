@@ -235,7 +235,8 @@
   flex: none;
 }
 
-.site-header .sh-icon--call {
+.site-header .sh-icon--call,
+.site-header .sh-icon--sms {
   display: none;
 }
 
@@ -632,6 +633,15 @@ html.sh-lock body {
     display: none;
   }
 
+  /* Phones: Send SMS replaces the call button; the toll-free number sits in the dark bar above. */
+  .site-header .sh-icon--call {
+    display: none;
+  }
+
+  .site-header .sh-icon--sms {
+    display: inline-flex;
+  }
+
   .site-header .sh-menu-toggle {
     padding: 0 11px;
   }
@@ -774,4 +784,10 @@ html.sh-lock body {
   .site-header .logo-container .header-logo {
     transition: none;
   }
+}
+
+/* Mega menu: "All Banners" etc. link to the group's whole category (header.php). */
+.header-bottom-container .megamenu-container #megaMenu .mm-col-container .mm-link.mm-link--all {
+  color: #0b74a3;
+  font-weight: 700;
 }

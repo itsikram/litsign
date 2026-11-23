@@ -87,7 +87,29 @@
       let startX = 0;
       let startY = 0;
       let swiped = false;
+      // 2026-11-23: each photo used to start downloading only once it was shown,
+      // so a swipe showed an empty frame for about a second on a phone network.
+      // The card's other photos now load as soon as the visitor reaches for it,
+      // into detached Image copies: changing the card's own <img> elements while a
+      // finger is down made Chrome drop that whole first swipe. The card shows each
+      // photo from the browser cache when it becomes active (setGalleryImage).
+      let warmed = false;
+      const preloads = [];
+      const warm = () => {
+        if (warmed) return;
+        warmed = true;
+        gallery.querySelectorAll('.pb-gallery-image[data-gallery-src]').forEach((image) => {
+          if (image.getAttribute('src')) return;
+          const copy = new Image();
+          copy.decoding = 'async';
+          copy.src = image.dataset.gallerySrc;
+          preloads.push(copy);
+        });
+      };
+      gallery.addEventListener('pointerenter', warm);
+      gallery.addEventListener('focusin', warm);
       gallery.addEventListener('touchstart', (event) => {
+        warm();
         startX = event.touches[0].clientX;
         startY = event.touches[0].clientY;
         swiped = false;
@@ -95,7 +117,8 @@
       gallery.addEventListener('touchend', (event) => {
         const dx = event.changedTouches[0].clientX - startX;
         const dy = event.changedTouches[0].clientY - startY;
-        if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        // A thumb flick on a half-width card is short: 30px, mostly sideways, is a swipe.
+        if (Math.abs(dx) < 30 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
         swiped = true;
         setGalleryImage(gallery, Number(gallery.dataset.galleryIndex || 0) + (dx < 0 ? 1 : -1));
       }, { passive: true });
@@ -298,7 +321,8 @@
       );
       $('#productQuantity').val(1)
       setTimeout(() => {
-        if ($('#letter-output').text() == 'Enter Your Text') {
+        // No sign text yet: the preview shows its red placeholder.
+        if (!($('#letterInput').val() || '').replace(/\s/g, '').length) {
           $('#letter-output').css('color', 'red');
 
         } else {
@@ -918,12 +942,138 @@
       );
     });
 
+    // ---- Sign text typed in the preview (single-product.php #letter-output) ----
+    // Visitors kept tapping the big "Enter Your Text" preview to type, so the preview
+    // is the text box now (contenteditable). It mirrors every change into #letterInput
+    // (name="letters", visually hidden) and fires that field's input event, so prices,
+    // the cart, quote checks and summaries keep reading #letterInput as before.
+    const letterOutput = document.getElementById('letter-output');
+    const letterField = document.getElementById('letterInput');
+    let letterFromPreview = false;
+    // One line of plain text; no-break spaces count as spaces.
+    const letterPreviewText = () => letterOutput
+      ? letterOutput.textContent.replace(/ /g, ' ').replace(/[\r\n\t]+/g, ' ')
+      : '';
+    // Field -> preview (any script that sets #letterInput and fires input). Skipped while
+    // the change came from the preview itself, so the caret never jumps.
+    const showLetterText = (text) => {
+      if (!letterOutput || letterFromPreview) return;
+      const shown = text.replace(/\s/g, '').length ? text : '';
+      if (letterOutput.textContent !== shown) letterOutput.textContent = shown;
+    };
+    if (letterOutput && letterField && letterOutput.classList.contains('is-typeable')) {
+      // Plain text only where the browser supports it; markup says "true" as the fallback.
+      try { letterOutput.contentEditable = 'plaintext-only'; } catch (err) { /* older browsers */ }
+      if (letterOutput.contentEditable !== 'plaintext-only') letterOutput.contentEditable = 'true';
+
+      const letterError = document.createElement('p');
+      letterError.className = 'cl-letter-error';
+      letterError.id = 'letter-output-error';
+      letterError.hidden = true;
+      letterError.textContent = 'Type your sign text in the box above.';
+      letterOutput.after(letterError);
+      letterOutput.setAttribute('aria-describedby', letterError.id);
+
+      const caretToEnd = () => {
+        const selection = window.getSelection();
+        if (!selection || document.activeElement !== letterOutput) return;
+        const range = document.createRange();
+        range.selectNodeContents(letterOutput);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      };
+      const hideLetterError = () => {
+        letterError.hidden = true;
+        letterOutput.classList.remove('is-invalid');
+        letterOutput.removeAttribute('aria-invalid');
+      };
+      const sendLetterText = (text) => {
+        if (letterField.value === text) return;
+        letterField.value = text;
+        letterFromPreview = true;
+        try {
+          letterField.dispatchEvent(new Event('input', { bubbles: true }));
+        } finally {
+          letterFromPreview = false;
+        }
+      };
+
+      letterOutput.addEventListener('input', (e) => {
+        // The field's own input event is the one the page listens to.
+        e.stopPropagation();
+        const text = letterPreviewText();
+        // An emptied box can keep a <br>, and pasted or dropped markup can add tags:
+        // keep plain text only (and an empty box, so the placeholder shows again).
+        if (letterOutput.children.length && !e.isComposing) {
+          letterOutput.textContent = text.replace(/\s/g, '').length ? text : '';
+          caretToEnd();
+        }
+        if (text.replace(/\s/g, '').length) hideLetterError();
+        sendLetterText(text);
+      });
+      // One line: Enter (or a phone keyboard's Done) finishes typing.
+      letterOutput.addEventListener('beforeinput', (e) => {
+        if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak') e.preventDefault();
+      });
+      letterOutput.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' || e.isComposing) return;
+        e.preventDefault();
+        letterOutput.blur();
+      });
+      letterOutput.addEventListener('paste', (e) => {
+        const data = e.clipboardData || window.clipboardData;
+        if (!data) return;
+        e.preventDefault();
+        const text = (data.getData('text') || '').replace(/[\r\n\t]+/g, ' ');
+        if (text && !document.execCommand('insertText', false, text)) {
+          letterOutput.textContent = letterPreviewText() + text;
+          caretToEnd();
+          letterOutput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+      letterOutput.addEventListener('drop', (e) => e.preventDefault());
+      letterOutput.addEventListener('blur', () => {
+        // Only spaces left: show the placeholder again.
+        if (!letterPreviewText().replace(/\s/g, '').length && letterOutput.textContent !== '') {
+          letterOutput.textContent = '';
+          sendLetterText('');
+        }
+      });
+
+      // Scripts that send the visitor to the text box (Add To Cart with no text, the
+      // phone "Get your price" box) focus #letterInput: hand that to the preview.
+      letterField.addEventListener('focus', () => letterOutput.focus({ preventScroll: true }));
+      // Required field left empty: our own message under the preview instead of the
+      // browser bubble, which would point at the hidden field.
+      letterField.addEventListener('invalid', (e) => {
+        e.preventDefault();
+        letterError.hidden = false;
+        letterOutput.classList.remove('is-invalid');
+        void letterOutput.offsetWidth; // restart the shake
+        letterOutput.classList.add('is-invalid');
+        letterOutput.setAttribute('aria-invalid', 'true');
+        if (document.activeElement !== letterOutput) {
+          letterOutput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          letterOutput.focus({ preventScroll: true });
+        }
+      });
+
+      // Text typed before this script loaded, or a value the browser restored.
+      const typedEarly = letterPreviewText();
+      if (typedEarly.replace(/\s/g, '').length && !letterField.value) {
+        $(() => sendLetterText(typedEarly));
+      } else {
+        showLetterText(letterField.value);
+      }
+    }
+
     // letter input change action
     $("#letterInput").on('input',(e) => {
       let updatedText = e.target.value;
       let letterCharacters = e.target.value.replace(/\s/g, "").length;
       //let minInchPrice = $('#select-size option:nth-child(1)').attr('value') || 0;
-      $("#letter-output").text(letterCharacters ? updatedText : "ENTER YOUR TEXT");
+      showLetterText(updatedText);
       let letterPricePerInch = $("#select-height").val()
         ? parseFloat($("#select-height").val())
         : 0;
@@ -1404,12 +1554,6 @@
     $("#select-face").parents(".select-row").hide();
     $("#select-trimcap").parents(".select-row").hide();
     $("#select-return").parents(".select-row").hide();
-
-    // The big "Enter Your Text" preview looks like the place to type; visitors
-    // tapped it repeatedly. Send them to the real text box.
-    $('#letter-output').css('cursor', 'text').on('click', () => {
-      $('#letterInput').trigger('focus');
-    });
 
     $('.option-info-button').click(e => {
       $(e.currentTarget).siblings('.option-info-content').toggle();

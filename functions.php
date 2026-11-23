@@ -9,7 +9,9 @@ if (!defined('WHOLESALE_CONVERGE_USER_ID')) {
 }
 
 if (!defined('WHOLESALE_CONVERGE_PIN')) {
-	define('WHOLESALE_CONVERGE_PIN', 'C2UZW43BPDVLYKUS4ZV0V1OUZWUTHGD66BIR65V4UFRFN8N8VB7OJV6CZOSDKHIW');
+	// The PIN is never kept in theme code. It is saved on Settings > Wallet Payments > Card
+	// (option wholesale_gateway_pin), or defined in wp-config.php.
+	define('WHOLESALE_CONVERGE_PIN', '');
 }
 
 if (!defined('WHOLESALE_CONVERGE_TEST_MODE')) {
@@ -100,10 +102,12 @@ require_once(dirname(__FILE__) . '/inc/shop-catalog.php');
 require_once(dirname(__FILE__) . '/inc/home-catalog-directory.php');
 require_once(dirname(__FILE__) . '/inc/theme-images.php');
 require_once(dirname(__FILE__) . '/inc/settings-page.php');
+require_once(dirname(__FILE__) . '/inc/design-settings.php');
 require_once(dirname(__FILE__) . '/inc/media-sync.php');
 require_once(dirname(__FILE__) . '/inc/media-source-tabs.php');
 require_once(dirname(__FILE__) . '/inc/theme-zip.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
+require_once(dirname(__FILE__) . '/inc/image-cache.php');
 require_once(dirname(__FILE__) . '/inc/page-loader.php');
 require_once(dirname(__FILE__) . '/inc/motion.php');
 require_once(dirname(__FILE__) . '/inc/cache-clear.php');
@@ -462,7 +466,8 @@ add_action('after_setup_theme', 'wholesale_hide_admin_bar_for_subscribers');
 
 function wholesale_setting_defaults()
 {
-	return array(
+	// Filtered: inc/design-settings.php adds the colors, typography and logo defaults.
+	return apply_filters('wholesale_setting_defaults', array(
 		'primary_color' => '#1fa8de',
 		'default_hero_image' => 0,
 		'accent_color' => '#f5ad27',
@@ -515,6 +520,14 @@ function wholesale_setting_defaults()
 		'promo_start' => '',
 		'promo_end' => '',
 		'promo_scope' => 'all',
+		// Shown instead of "Sale" while it runs, e.g. "Black Friday Sale". Empty = "Sale".
+		'promo_name' => '',
+		// Free shipping promo code (inc/payments.php wholesale_ship_code_window()): typed at
+		// checkout, it unlocks free standard shipping below the free shipping minimum
+		// between these Pacific dates (empty start = now, empty end = no end). Empty code = off.
+		'ship_code' => '',
+		'ship_code_start' => '',
+		'ship_code_end' => '',
 		'email_status_updates' => 1,
 		'payment_method' => 'lightbox',
 		'ticket_business_name' => 'Lit Sign Manufacturing',
@@ -534,7 +547,7 @@ function wholesale_setting_defaults()
 		'domain_redirect_enabled' => 1,
 		'domain_redirect_domains' => "storefrontsignwholesale.com\nstorefrontsignwholesales.com\nonlinestorefrontsigns.com\nmystorefrontsigns.com\nmystorefrontsign.com",
 		'domain_redirect_status' => '301',
-	);
+	));
 }
 
 function wholesale_get_setting($key)
@@ -601,6 +614,10 @@ function wholesale_setting_sanitizer($key)
 		'promo_start' => 'wholesale_sanitize_date',
 		'promo_end' => 'wholesale_sanitize_date',
 		'promo_scope' => 'wholesale_sanitize_promo_scope',
+		'promo_name' => 'wholesale_sanitize_promo_name',
+		'ship_code' => 'wholesale_sanitize_ship_code',
+		'ship_code_start' => 'wholesale_sanitize_date',
+		'ship_code_end' => 'wholesale_sanitize_date',
 		'google_places_api_key' => 'wholesale_sanitize_google_api_key',
 		'google_reviews_min_rating' => 'wholesale_sanitize_star_rating',
 		'domain_redirect_enabled' => 'wholesale_sanitize_page_loader_enabled',
@@ -608,7 +625,7 @@ function wholesale_setting_sanitizer($key)
 		'domain_redirect_status' => 'wholesale_sanitize_redirect_status',
 	);
 
-	return $sanitizers[$key] ?? 'sanitize_text_field';
+	return apply_filters('wholesale_setting_sanitizer', $sanitizers[$key] ?? 'sanitize_text_field', $key);
 }
 
 /**
@@ -676,6 +693,18 @@ function wholesale_sanitize_promo_scope($value)
 	return in_array($value, array('all', 'channel-letters', 'other'), true) ? $value : 'all';
 }
 
+// "Black Friday Sale": plain text, at most 40 characters.
+function wholesale_sanitize_promo_name($value)
+{
+	return trim(mb_substr(sanitize_text_field((string) $value), 0, 40));
+}
+
+// "BLACKFRIDAY": upper-case letters, digits, - and _, at most 30 characters.
+function wholesale_sanitize_ship_code($value)
+{
+	return substr(preg_replace('/[^A-Z0-9_-]/', '', strtoupper((string) $value)), 0, 30);
+}
+
 function wholesale_sanitize_payment_method($value)
 {
 	return 'direct' === $value ? 'direct' : 'lightbox';
@@ -701,7 +730,7 @@ function wholesale_admin_bar_store_shortcuts($admin_bar)
 	$shortcuts = array(
 		'orders' => array(__('Orders', 'litsign'), admin_url('edit.php?post_type=order')),
 		'products' => array(__('Products', 'litsign'), admin_url('edit.php?post_type=product')),
-		'settings' => array(__('Storefront Sign Settings', 'litsign'), admin_url('options-general.php?page=wholesale-settings')),
+		'settings' => array(__('Storefront Sign Settings', 'litsign'), admin_url('admin.php?page=wholesale-settings')),
 		'contact-submissions' => array(__('Contact Submissions', 'litsign'), admin_url('edit.php?post_type=contact_submission')),
 		'seo-settings' => array(__('SEO Settings', 'litsign'), admin_url('admin.php?page=wholesale-seo-general')),
 	);
@@ -896,8 +925,13 @@ function wholesale_output_dynamic_settings()
 	$primary = wholesale_get_setting('primary_color');
 	$accent = wholesale_get_setting('accent_color');
 	$sale = wholesale_get_setting('sale_price_color');
+	// Left at its default (the old brand blue) the sale price follows the brand color.
+	if (0 === strcasecmp((string) $sale, '#1fa8de')) {
+		$sale = $primary;
+	}
+	// data-wholesale-colors: already the new colors, so inc/design-settings.php leaves this block alone.
 	?>
-	<style id="wholesale-dynamic-settings">:root{--bs-primary:<?php echo esc_html($primary); ?>;--bs-link-color:<?php echo esc_html($primary); ?>;--bs-link-hover-color:<?php echo esc_html($primary); ?>}.text-primary,.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($primary); ?>!important}.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($accent); ?>!important}.pb-price span{color:<?php echo esc_html($sale); ?>!important}</style>
+	<style id="wholesale-dynamic-settings" data-wholesale-colors="final">:root{--bs-primary:<?php echo esc_html($primary); ?>;--bs-link-color:<?php echo esc_html($primary); ?>;--bs-link-hover-color:<?php echo esc_html($primary); ?>}.text-primary,.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($primary); ?>!important}.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($accent); ?>!important}.pb-price span{color:<?php echo esc_html($sale); ?>!important}</style>
 	<?php
 }
 add_action('wp_head', 'wholesale_output_dynamic_settings', 99);
@@ -1833,14 +1867,21 @@ function wholesale_preload_front_page_hero()
 
 	$mobile = $GLOBALS['wholesale_hero_mobile_image'] ?? '';
 	if ($mobile) {
-		// Match the viewport rule in css/home-catalog.css.
-		if (!empty($GLOBALS['wholesale_hero_image_avif']) && !empty($GLOBALS['wholesale_hero_mobile_avif'])) {
-			printf('<link rel="preload" as="image" href="%s" type="image/avif" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($GLOBALS['wholesale_hero_mobile_avif']));
-			printf('<link rel="preload" as="image" href="%s" type="image/avif" media="not all and (max-width: 767px)" fetchpriority="high">' . "\n", esc_url($GLOBALS['wholesale_hero_image_avif']));
-			return;
+		// Match the viewport rule in css/home-catalog.css. Each size preloads its AVIF when
+		// it has one (browsers without AVIF skip that preload), else its WebP. The home
+		// page's phone photo can come from the Media Library before its AVIF copy exists.
+		$preloads = array(
+			'(max-width: 767px)' => $GLOBALS['wholesale_hero_mobile_avif'] ?? '',
+			'not all and (max-width: 767px)' => $GLOBALS['wholesale_hero_image_avif'] ?? '',
+		);
+		foreach ($preloads as $media => $avif) {
+			$fallback = '(max-width: 767px)' === $media ? $mobile : $image;
+			if ($avif) {
+				printf('<link rel="preload" as="image" href="%s" type="image/avif" media="%s" fetchpriority="high">' . "\n", esc_url($avif), esc_attr($media));
+			} elseif ($fallback) {
+				printf('<link rel="preload" as="image" href="%s" media="%s" fetchpriority="high">' . "\n", esc_url($fallback), esc_attr($media));
+			}
 		}
-		printf('<link rel="preload" as="image" href="%s" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($mobile));
-		printf('<link rel="preload" as="image" href="%s" media="not all and (max-width: 767px)" fetchpriority="high">' . "\n", esc_url($image));
 		return;
 	}
 
@@ -1971,6 +2012,7 @@ function wholesale_inline_small_styles($tag, $handle)
 		'wholesale-home-catalog' => '/css/home-catalog.css',
 		'wholesale-banners-displays' => '/css/banners-displays.css',
 		'wholesale-typography' => '/css/typography.css',
+		'wholesale-hero-phone' => '/css/hero-phone.css',
 	);
 
 	if (is_admin() || is_rtl() || !isset($files[$handle])) {
@@ -2158,6 +2200,9 @@ function wholesale_normalize_category_menu_urls($items, $args)
 		return $items;
 	}
 
+	$current = get_query_var('category_slug');
+	$current = $current ? sanitize_title($current) : (isset($_REQUEST['category_slug']) ? sanitize_title(wp_unslash($_REQUEST['category_slug'])) : '');
+
 	foreach ($items as $item) {
 		$query = wp_parse_url($item->url, PHP_URL_QUERY);
 		parse_str((string) $query, $query_vars);
@@ -2169,6 +2214,11 @@ function wholesale_normalize_category_menu_urls($items, $args)
 		$term = get_term_by('slug', sanitize_title($query_vars['category_slug']), 'product_category');
 		if ($term && !is_wp_error($term)) {
 			$item->url = wholesale_category_url($term->slug);
+			// Mark the category being viewed (styled by .current-item in style.css).
+			if ($current && $term->slug === $current) {
+				$item->classes[] = 'current-item';
+				$item->classes[] = 'current-menu-item';
+			}
 		}
 	}
 
@@ -2260,7 +2310,7 @@ add_filter('query_vars', function ($vars) {
  * sitemap lastmod and its dateModified in structured data. Bump it by hand when
  * that template's copy or product lists change.
  */
-define('WHOLESALE_HOME_PAGE_REVISED', '2026-11-05T17:30:00+00:00');
+define('WHOLESALE_HOME_PAGE_REVISED', '2026-11-23T16:00:00+00:00');
 
 /**
  * Render /sitemap.xml (the index) and /page-sitemap.xml: the home page, pages
@@ -3217,6 +3267,40 @@ function wholesale_tablet_assets()
 	wp_enqueue_style('wholesale-tablet', get_template_directory_uri() . $path, array('wholesale-ui-polish'), (string) filemtime(get_template_directory() . $path), '(min-width: 768px) and (max-width: 1199.98px)');
 }
 add_action('wp_enqueue_scripts', 'wholesale_tablet_assets', 120);
+
+/**
+ * Phone hero layer (css/hero-phone.css): gives the hero band of every page but
+ * the home page the home hero's spacing and width under 768px. The file wraps
+ * itself in that media query and is printed inline (wholesale_inline_small_styles),
+ * so it costs no request. Priority 125: after ui-polish.css and tablet.css.
+ */
+function wholesale_hero_phone_assets()
+{
+	if (is_admin() || is_front_page() || is_page('channel-letter-builder')) {
+		return;
+	}
+	if (!is_page() && !get_query_var('category_slug')) {
+		return;
+	}
+	$path = '/css/hero-phone.css';
+	wp_enqueue_style('wholesale-hero-phone', get_template_directory_uri() . $path, array('wholesale-ui-polish'), (string) filemtime(get_template_directory() . $path));
+}
+add_action('wp_enqueue_scripts', 'wholesale_hero_phone_assets', 125);
+
+/**
+ * One product card design for the whole site (css/product-cards.css, 2026-11-23):
+ * home, shop, category, related and search cards all match the home page's Full
+ * catalog tiles. Priority 130: prints after every other card stylesheet.
+ */
+function wholesale_product_cards_assets()
+{
+	if (is_admin() || is_page('channel-letter-builder')) {
+		return;
+	}
+	$path = '/css/product-cards.css';
+	wp_enqueue_style('wholesale-product-cards', get_template_directory_uri() . $path, array('wholesale-ui-polish'), (string) filemtime(get_template_directory() . $path));
+}
+add_action('wp_enqueue_scripts', 'wholesale_product_cards_assets', 130);
 
 /**
  * Preload both font files: body text and the hero heading use them above the fold.
@@ -5862,6 +5946,32 @@ function start_session()
 	$read_only = ($is_rest && false === strpos($uri . ' ' . $rest_route, '/wholesale/v1/vi'))
 		|| (wp_doing_ajax() && 'wholesale_price_quote' === ($_REQUEST['action'] ?? ''));
 	session_start($read_only ? array('read_and_close' => true) : array());
+}
+
+/**
+ * Requests that never write the session:
+ * - the product page's price quote (reads a saved builder design);
+ * - REST calls (live chat, Visitor Insights, exit survey, search). The chat's AI "add to cart"
+ *   call starts the session again itself before it writes (sfs-live-chat Ai/Controller.php);
+ * - wp-admin screens opened with GET. With the lock held there, WordPress's own loopback
+ *   requests (Site Health's REST check, plugin/theme editor saves), which carry the same
+ *   session cookie, waited for the admin page that sent them and timed out after 10 s, and
+ *   Site Health reported "An active PHP session was detected" and "The REST API encountered
+ *   an error" (live, 2026-11-17).
+ * admin-ajax, admin-post and every front-end page or form post keep the session open as before.
+ */
+function wholesale_session_read_only_request()
+{
+	if (wp_doing_ajax()) {
+		return 'wholesale_price_quote' === ($_POST['action'] ?? '');
+	}
+	$uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+	if (false !== strpos($uri, '/' . rest_get_url_prefix() . '/') || isset($_GET['rest_route'])) {
+		return true;
+	}
+	return is_admin()
+		&& 'admin-post.php' !== ($GLOBALS['pagenow'] ?? '')
+		&& in_array(strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET'), array('GET', 'HEAD'), true);
 }
 
 /**

@@ -159,7 +159,14 @@ function render_order_attr_meta_box($post)
         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($cost['sub_total'] ?? 0)); ?></dd></div>
         <div><dt>Shipping<?php echo !empty($cost['shipping_method']) ? ' <small>' . esc_html($cost['shipping_method']) . '</small>' : ''; ?></dt><dd><?php echo esc_html($money($cost['shipping_cost'] ?? 0)); ?></dd></div>
         <div><dt>Tax</dt><dd><?php echo esc_html($money($cost['tax'] ?? 0)); ?></dd></div>
-        <div class="wo-totals__grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+        <?php $net = function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
+        <?php if ($net && $net['has_refund']) : ?>
+            <div><dt>Order total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+            <div class="ont-refund"><dt>Refunded</dt><dd>&minus;<?php echo esc_html($money($net['refunded'])); ?></dd></div>
+            <div class="wo-totals__grand"><dt>Total after refunds</dt><dd><?php echo esc_html($money($net['net'])); ?></dd></div>
+        <?php else : ?>
+            <div class="wo-totals__grand"><dt>Total</dt><dd><?php echo esc_html($money($cost['grand_total'] ?? 0)); ?></dd></div>
+        <?php endif; ?>
     </dl>
     <?php
 }

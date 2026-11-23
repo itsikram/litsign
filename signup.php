@@ -12,10 +12,30 @@ $signup_error = static function ($message) {
     exit;
 };
 
+// Bot sign-ups (6 of the 14 newest accounts on live, 2026-11-17, mostly @unomafu.fr) fill every
+// field, the hidden one too, and post within a second of loading the form. "Opened at" is signed
+// so it can't be made up. Only a minimum is checked, so a form left open for hours still works
+// (this page is never page-cached: inc/performance.php lists it).
+$signup_opened = static function () {
+    $t = (string) time();
+    return $t . '.' . substr(wp_hash('wholesale_signup_t' . $t), 0, 12);
+};
+
 if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['email'])) {
     check_admin_referer('wholesale_signup', 'wholesale_signup_nonce');
 
+    $opened = explode('.', isset($_POST['sso_signup_t']) ? (string) wp_unslash($_POST['sso_signup_t']) : '');
+    $opened_ok = 2 === count($opened) && ctype_digit($opened[0])
+        && hash_equals(substr(wp_hash('wholesale_signup_t' . $opened[0]), 0, 12), $opened[1])
+        && time() - (int) $opened[0] >= 2;
+    if (!$opened_ok || '' !== trim((string) ($_POST['sso_signup_note'] ?? ''))) {
+        $signup_error('Please wait a moment, then press Sign Up again.');
+    }
+
     $email = sanitize_email(wp_unslash($_POST['email']));
+    if (in_array(strtolower((string) substr(strrchr($email, '@'), 1)), array('unomafu.fr', 'lie.mxdood.com', 'mxdood.com'), true)) {
+        $signup_error('Please sign up with your business or personal email address.');
+    }
     $username = isset($_POST['username']) ? sanitize_user(wp_unslash($_POST['username']), true) : '';
     $password = isset($_POST['password']) ? (string) wp_unslash($_POST['password']) : '';
     $confirm_password = isset($_POST['confirm_password']) ? (string) wp_unslash($_POST['confirm_password']) : '';
@@ -85,6 +105,10 @@ get_header();
                 <div class="card-body">
                     <form method="POST">
                         <?php wp_nonce_field('wholesale_signup', 'wholesale_signup_nonce'); ?>
+                        <input type="hidden" name="sso_signup_t" value="<?php echo esc_attr($signup_opened()); ?>">
+                        <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
+                            <label>Leave this empty <input type="text" name="sso_signup_note" value="" tabindex="-1" autocomplete="off"></label>
+                        </div>
                         <div class="form-group mb-2">
                             <label class="form-label">Email</label>
                             <input type="email" required name="email" placeholder="Enter your Email" class="form-control">

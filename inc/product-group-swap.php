@@ -176,6 +176,148 @@ function wholesale_product_group_fetch_url(array $member, array $members)
 }
 
 /**
+ * Group members whose page heading repeated another member's ("Yard Sign and H-Stake" on
+ * both the kit and the sign-only page), by slug. Others get "Name (Button)" when they repeat.
+ */
+function wholesale_product_group_fixed_titles()
+{
+	return array(
+		'yard-sign-only' => 'Yard Sign Only (No H-Stake)',
+		'standard-signicade-white-frame-only' => 'Replacement Graphic for the Standard Signicade A-Frame (White)',
+		'sd-retractable-sd-retractable-insert-only' => 'Replacement Graphic for the SD Retractable Banner Stand',
+	);
+}
+
+/**
+ * A product's heading before group titles: its channel letter heading or search name, or
+ * the partial product's own ("Replacement Graphic for the X-Stand Banner", inc/product-kit.php).
+ * Same order as single-product.php.
+ */
+function wholesale_product_base_heading($product_id)
+{
+	$kit = function_exists('wholesale_product_kit_info') ? wholesale_product_kit_info($product_id) : null;
+	if ($kit && !empty($kit['heading'])) {
+		return $kit['heading'];
+	}
+	$channel_letter = function_exists('wholesale_seo_channel_letter_product') ? wholesale_seo_channel_letter_product($product_id) : null;
+	if (!empty($channel_letter['heading'])) {
+		return $channel_letter['heading'];
+	}
+
+	return function_exists('wholesale_seo_product_search_name') ? wholesale_seo_product_search_name($product_id) : get_the_title($product_id);
+}
+
+/**
+ * Each member's own title in the product's group: the "Title in its product group" field
+ * when filled in, else the fixed title above, else its heading, with the button title added
+ * when an earlier member already has that heading ("Real Estate A-Frame (Sign Only)").
+ *
+ * @return array product ID => plain-text title. Empty when the product has no group.
+ */
+function wholesale_product_group_titles($product_id)
+{
+	static $cache = array();
+	$product_id = (int) $product_id;
+	if (isset($cache[$product_id])) {
+		return $cache[$product_id];
+	}
+
+	$fixed = wholesale_product_group_fixed_titles();
+	$titles = array();
+	$used = array();
+	foreach (wholesale_product_group($product_id) as $member) {
+		$title = trim(wp_strip_all_tags((string) get_post_meta($member['id'], '_product_group_title', true)));
+		if ('' === $title && isset($fixed[$member['slug']])) {
+			$title = $fixed[$member['slug']];
+		}
+		if ('' === $title) {
+			$title = trim(html_entity_decode(wp_strip_all_tags(wholesale_product_base_heading($member['id'])), ENT_QUOTES, 'UTF-8'));
+			$button = trim(wp_strip_all_tags((string) $member['title']));
+			if (isset($used[mb_strtolower($title)]) && '' !== $button && 'null' !== $button) {
+				// "Standard Signicade A-Frame (White) – Graphic Only", not "(White) (Graphic Only)".
+				$title = ')' === substr($title, -1) ? $title . ' – ' . $button : sprintf('%s (%s)', $title, $button);
+			}
+		}
+		$titles[$member['id']] = $title;
+		$used[mb_strtolower($title)] = true;
+	}
+
+	return $cache[$product_id] = $titles;
+}
+
+/**
+ * The title a product's page heading, cart line and order show: its own group title, else
+ * $fallback (the heading the page already worked out, or the product title).
+ */
+function wholesale_product_group_title($product_id, $fallback = '')
+{
+	$titles = wholesale_product_group_titles($product_id);
+
+	return isset($titles[(int) $product_id]) && '' !== $titles[(int) $product_id] ? $titles[(int) $product_id] : $fallback;
+}
+
+/**
+ * The cart line name: the group title (so "Sign Only" doesn't reach the order as the kit's
+ * name), else the product title. HTML-safe like get_the_title().
+ */
+function wholesale_product_cart_title($product_id)
+{
+	$title = wholesale_product_group_title($product_id);
+
+	return '' !== $title ? esc_html($title) : get_the_title($product_id);
+}
+
+/**
+ * Admin: the "Title in its product group" box under the group links, showing the title used
+ * now as its placeholder.
+ */
+function wholesale_product_group_title_field()
+{
+	$box = function_exists('cmb2_get_metabox') ? cmb2_get_metabox('product_details') : null;
+	if (!$box) {
+		return;
+	}
+	$post_id = isset($_GET['post']) ? absint($_GET['post']) : 0;
+	$current = $post_id && 'product' === get_post_type($post_id) ? wholesale_product_group_title($post_id) : '';
+	$fields = array_keys((array) $box->prop('fields'));
+	$after = array_search('_product_group_data', $fields, true);
+	$box->add_field(
+		array(
+			'name' => 'Title in its product group',
+			'desc' => 'Shown as the page heading, in the cart and on the order when this product has group buttons, so each product of the group has its own title. Leave empty for the automatic title (shown greyed). The product name above, the URL and the Google feed stay as they are.',
+			'id' => '_product_group_title',
+			'type' => 'text',
+			'attributes' => array(
+				'placeholder' => $current ? $current : 'Only used for products with group buttons',
+				'autocomplete' => 'off',
+			),
+		),
+		false === $after ? 0 : $after + 2
+	);
+}
+add_action('cmb2_admin_init', 'wholesale_product_group_title_field', 15); // After functions.php adds the box, before inc/admin-product-editor.php (20).
+
+/**
+ * Admin product list: "X-Stand — Graphic Only", so products sharing a name can be told apart.
+ */
+function wholesale_product_group_post_state($states, $post)
+{
+	if (!$post || 'product' !== $post->post_type || !is_admin()) {
+		return $states;
+	}
+	foreach (wholesale_product_group($post->ID) as $member) {
+		$button = trim(wp_strip_all_tags((string) $member['title']));
+		if ((int) $member['id'] === (int) $post->ID && '' !== $button && 'null' !== $button) {
+			$states['sfs_product_group'] = esc_html($button);
+			break;
+		}
+	}
+
+	return $states;
+}
+add_filter('display_post_states', 'wholesale_product_group_post_state', 10, 2);
+
+/**
  * ?graphic_only=true (any member's key) on a product URL shows that member there.
  */
 function wholesale_product_group_request($vars)
@@ -237,8 +379,20 @@ function wholesale_product_group_assets()
 		. '.pgs-spinner{position:fixed;left:50%;top:50%;z-index:99990;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 20px;border-radius:12px;background:rgba(255,255,255,.96);box-shadow:0 8px 30px rgba(15,23,42,.18);color:#0f172a;font-size:14px;font-weight:600;transform:translate(-50%,-50%) scale(.92);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease,transform .12s ease,visibility 0s linear .12s}'
 		. '.pgs-spinner.is-on{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1);transition:opacity .12s ease,transform .12s ease}'
 		. '.pgs-spinner__ring{width:38px;height:38px;border:4px solid rgba(31,168,222,.2);border-top-color:#1fa8de;border-radius:50%;animation:pgs-spin .7s linear infinite}'
+		// Animated header logo in place of the ring (owner 2026-11-21). No scale on the box
+		// while it is the logo: js/logo-motion.js measures the picture when it starts playing.
+		// The picture's own tagline rows are masked off (like the header, cut at 86.5%) and
+		// its animation copies at 86.2%; the spare transparent rows are pulled up.
+		. '.pgs-spinner:has(.pgs-spinner__logo),.pgs-spinner:has(.pgs-spinner__logo).is-on{transform:translate(-50%,-50%)}'
+		. '.pgs-spinner:has(.pgs-spinner__logo){gap:2px;padding:18px 24px 14px}'
+		. '.pgs-spinner__logo{position:relative;display:block;width:min(280px,calc(100vw - 96px));overflow:visible}'
+		. '.pgs-spinner__logo img{display:block;width:100%;height:auto;margin-bottom:-2.2%;-webkit-mask-image:linear-gradient(#000 86.5%,transparent 86.5%);mask-image:linear-gradient(#000 86.5%,transparent 86.5%)}'
+		. '.pgs-spinner__logo .lm-l,.pgs-spinner__logo .lm-sign{-webkit-mask-image:linear-gradient(#000 86.2%,transparent 86.2%);mask-image:linear-gradient(#000 86.2%,transparent 86.2%)}'
+		. '.pgs-spinner__text{color:#475467;font-size:13px;letter-spacing:.02em}'
+		. '.pgs-spinner.is-still.is-on .pgs-spinner__logo img{animation:pgs-pulse 1.1s ease-in-out infinite alternate}'
+		. '@keyframes pgs-pulse{from{opacity:1}to{opacity:.55}}'
 		. '@keyframes pgs-spin{to{transform:rotate(360deg)}}'
-		. '@media (prefers-reduced-motion:reduce){.product-details.is-swapping #product-options,.product-details.is-swapping .pd-hero,.pgs-spinner{transition:none}.pgs-spinner__ring,.product-group-item.is-loading .product-group-item-link::after{animation-duration:1.6s}}'
+		. '@media (prefers-reduced-motion:reduce){.product-details.is-swapping #product-options,.product-details.is-swapping .pd-hero,.pgs-spinner{transition:none}.pgs-spinner__ring,.product-group-item.is-loading .product-group-item-link::after{animation-duration:1.6s}.pgs-spinner.is-still.is-on .pgs-spinner__logo img{animation:none}}'
 	);
 }
 add_action('wp_enqueue_scripts', 'wholesale_product_group_assets', 110); // After css/ui-polish.css (100).

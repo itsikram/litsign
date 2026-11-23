@@ -1,0 +1,113 @@
+/*
+ * Channel letter product page: the big letter preview is the text box
+ * (single-product.php #letter-output.is-typeable, js/main.js "Sign text typed
+ * in the preview"). Printed inline by single-product.php on channel letter
+ * pages only, after style.css and ui-polish.css, so equal selectors win here.
+ * Kept out of style.css / ui-polish.css so their home critical-CSS stamps stay fresh.
+ */
+.product-attibute-box #letter-output.is-typeable {
+  display: block;
+  position: relative;
+  min-height: 0;
+  /* One line fills the old 88px box, centered; long text grows it. */
+  padding: max(12px, calc((88px - 1.1em) / 2)) 16px !important;
+  line-height: 1.1;
+  white-space: pre-wrap;
+  /* Wrap between words ("Golden Dragon / Restaurant"); split a word only
+     when it alone is wider than the box. */
+  word-break: normal;
+  overflow-wrap: anywhere;
+  cursor: text;
+  caret-color: #1fa8de;
+  outline: none;
+  box-shadow: inset 0 0 0 1.5px #c3e5f2;
+  transition: box-shadow 0.15s ease;
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: hover) {
+  .product-attibute-box #letter-output.is-typeable:hover {
+    box-shadow: inset 0 0 0 1.5px #7cc8e6;
+  }
+}
+
+.product-attibute-box #letter-output.is-typeable:focus {
+  box-shadow: inset 0 0 0 2px #1fa8de, 0 0 0 4px rgba(31, 168, 222, 0.16);
+}
+
+/* Empty: the placeholder in the preview's own colors and font, with a blinking
+   caret after it so the box reads as the place to type. */
+.product-attibute-box #letter-output.is-typeable:empty::before {
+  content: attr(data-placeholder);
+}
+
+.product-attibute-box #letter-output.is-typeable:empty::after {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 0.82em;
+  margin-left: 0.08em;
+  vertical-align: -0.04em;
+  border-radius: 2px;
+  background: #1fa8de;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  animation: clTypeCaret 1.1s steps(1, end) infinite;
+}
+
+/* Typing: the real caret takes over and the placeholder fades behind it,
+   like a centered input's placeholder (out of the flow, so the caret sits
+   in the middle of the box). */
+.product-attibute-box #letter-output.is-typeable:focus:empty::before {
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  left: 16px;
+  transform: translateY(-50%);
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.product-attibute-box #letter-output.is-typeable:focus:empty::after {
+  content: none;
+}
+
+/* Add To Cart with no text yet. */
+.product-attibute-box #letter-output.is-typeable.is-invalid {
+  box-shadow: inset 0 0 0 2px #dc2626, 0 0 0 4px rgba(220, 38, 38, 0.14);
+  animation: clTypeShake 0.4s ease;
+}
+
+.product-attibute-box .cl-letter-error {
+  margin: -10px 0 4px;
+  color: #b91c1c;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+@keyframes clTypeCaret {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes clTypeShake {
+  20%,
+  60% {
+    transform: translateX(-6px);
+  }
+  40%,
+  80% {
+    transform: translateX(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-attibute-box #letter-output.is-typeable:empty::after,
+  .product-attibute-box #letter-output.is-typeable.is-invalid {
+    animation: none;
+  }
+}

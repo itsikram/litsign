@@ -114,6 +114,28 @@ function wholesale_whole_dollars($amount)
  * e.g. "<del>$2.26</del> $1.98 per ft<sup>2</sup>" stays as it is and "$16.00 per item"
  * reads "$16 per item". A struck-through price equal to the current price is removed.
  */
+/**
+ * Short units on product card prices (owner 2026-11-23): "$1.34 per ft²" ->
+ * "$1.34/ft²", "$37.38 per item" -> "$37.38/item", "per sq ft" -> "/ft²".
+ * Cards only: product pages, cart and checkout keep their wording. A plain
+ * "per ft" (linear feet) stays "/ft"; only square-foot wording becomes ft².
+ */
+function wholesale_card_unit($html)
+{
+	$html = (string) $html;
+	if ('' === trim($html)) {
+		return $html;
+	}
+	$sqft = '/ft<sup>2</sup>';
+	// "per sq ft", "per square foot", "per ft²", "per ft<sup>2</sup>", "per ft2", "/sq ft".
+	$html = preg_replace('/\s*(?:\bper\s+|\/\s*)(?:sq(?:uare)?\.?\s*(?:ft|feet|foot)\.?(?:\s*<sup>\s*2\s*<\/sup>|²)?|ft\s*(?:<sup>\s*2\s*<\/sup>|²|2\b))/iu', $sqft, $html);
+	// Any other "per <unit>": "per item" -> "/item", "per Inch" -> "/inch".
+	$html = preg_replace_callback('/\s+per\s+([a-z]+)/i', static function ($m) {
+		return '/' . strtolower($m[1]);
+	}, $html);
+	return $html;
+}
+
 function wholesale_price_no_cents($html)
 {
 	if (preg_match('/per\s*inch|\/\s*inch/i', wp_strip_all_tags((string) $html))) {

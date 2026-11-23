@@ -62,22 +62,22 @@ $bd_lines = array(
 
 // Everyday banners & displays: product slug => short label. Products the hero and
 // the line cards above already show are left out, so this grid adds new choices.
+// Trimmed to four on 2026-11-23 (the grid repeated the categories just above). Kept:
+// the products the header menu doesn't link, so each keeps a link from every visit
+// to the home page. 18oz blockout, mesh, indoor banner and step & repeat are in the
+// mega menu; 9oz fabric and X-stand were already out (sample sale artwork photos).
 $everyday = array(
-	'18oz-blockout-banner' => 'Seen from both sides',
-	'mesh-banner' => 'Fences &amp; windy spots',
-	'fabric-banner-9oz-wrinkle-free-copy' => 'Wrinkle-free indoor fabric',
-	'x-stand-graphic-stand' => 'Lightest indoor stand',
 	'table-top-banner-stand' => 'Counters &amp; check-in desks',
+	'deluxe-retractable-insert-stand' => 'Frequent travel &amp; heavy use',
 	'teardrop-flag-pole' => 'Curved roadside flag',
-	'step-and-repeat-backdrop-graphic-frame' => 'Photo &amp; press backdrop',
 	'stretch-table-cover' => 'Fitted booth table',
 );
-// Products whose only photos carry sample sale artwork (9oz fabric, X-stand) sit out
-// until they have new photos; these fill their places (inc/product-photo-overrides.php).
+// A product hidden from cards (inc/product-photo-overrides.php) gives its place to
+// the next of these.
 if (function_exists('wholesale_card_picks')) {
 	$everyday = wholesale_card_picks($everyday, array(
-		'indoor-banner-super-smooth' => 'Crisp photos up close',
-		'deluxe-retractable-insert-stand' => 'Frequent travel &amp; heavy use',
+		'step-and-repeat-backdrop-graphic-frame' => 'Photo &amp; press backdrop',
+		'18oz-blockout-banner' => 'Seen from both sides',
 	));
 }
 
@@ -108,6 +108,17 @@ $photo_key = static function ($url) {
 	return preg_replace('/-\d$/', '', $name);
 };
 
+// Whether two photos (array('id' => attachment ID or 0, 'url' => file URL)) are
+// the same picture. wholesale_card_same_photo() (inc/shop-catalog.php) keeps
+// "banner-2.jpg" apart from "banner-1.jpg" unless the files are byte copies; the
+// file-name key above is only the fallback, as it merges every "-1", "-2", "-3".
+$same_photo = static function (array $a, array $b) use ($photo_key) {
+	if (function_exists('wholesale_card_same_photo')) {
+		return wholesale_card_same_photo($a, $b);
+	}
+	return ($a['id'] && $a['id'] === $b['id']) || $photo_key($a['url']) === $photo_key($b['url']);
+};
+
 // <img> tags for a list of photos: array('id' => attachment ID or 0, 'url' => file
 // URL when there is no ID, 'alt' => fallback alt text). Library files get srcset.
 $photo_tags = static function (array $photos, $sizes) {
@@ -130,9 +141,12 @@ $photo_tags = static function (array $photos, $sizes) {
 		// Only the first photo loads with the page. Browsers fetch lazy images in a
 		// side-scrolling card as if they were on screen, so the others wait in data
 		// attributes until the visitor reaches the card (warm() in the script below).
-		if ($img && $position > 0) {
+		// The first photo waits too, but only until the page has loaded, the visitor
+		// scrolls or touches, or it is on screen (release() in the script below), so
+		// photos below the first screen do not slow down the hero photo.
+		if ($img) {
 			$img = preg_replace('/\s(srcset|src)="/', ' data-hc-$1="', $img);
-			$img = str_replace('<img ', '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" ', $img);
+			$img = str_replace('<img ', '<img src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" ' . (0 === $position ? 'data-hc-first ' : ''), $img);
 		}
 		if ($img) {
 			$html[] = $img;
@@ -143,7 +157,7 @@ $photo_tags = static function (array $photos, $sizes) {
 
 // A product's photo, then its gallery (as on the product page), at most $max.
 $gallery_ids = array();
-$card_photos = static function ($product, $name, $sizes, $max = 6) use ($photo_key, $photo_tags, &$gallery_ids) {
+$card_photos = static function ($product, $name, $sizes, $max = 6) use ($same_photo, $photo_tags, &$gallery_ids) {
 	if (!$product) {
 		return array();
 	}
@@ -156,23 +170,21 @@ $card_photos = static function ($product, $name, $sizes, $max = 6) use ($photo_k
 	}
 	$ids = $gallery_ids;
 
-	$seen = array();
 	$photos = array();
 	if ($featured) {
-		$photos[] = array('id' => $featured, 'url' => '', 'alt' => $name);
-		$seen[$photo_key(wp_get_attachment_url($featured))] = true;
+		$photos[] = array('id' => $featured, 'url' => (string) wp_get_attachment_url($featured), 'alt' => $name);
 	}
 	foreach ($gallery as $url) {
 		if (count($photos) >= $max) {
 			break;
 		}
-		$id = !empty($ids[$url]) ? (int) $ids[$url] : 0;
-		$key = $photo_key($url);
-		if (($id && $id === $featured) || isset($seen[$key])) {
-			continue;
+		$photo = array('id' => !empty($ids[$url]) ? (int) $ids[$url] : 0, 'url' => $url, 'alt' => sprintf('%s, photo %d', $name, count($photos) + 1));
+		foreach ($photos as $shown) {
+			if ($same_photo($shown, $photo)) {
+				continue 2;
+			}
 		}
-		$seen[$key] = true;
-		$photos[] = array('id' => $id, 'url' => $url, 'alt' => sprintf('%s, photo %d', $name, count($photos) + 1));
+		$photos[] = $photo;
 	}
 
 	return $photo_tags($photos, $sizes);
@@ -214,21 +226,24 @@ if ($term_lines) {
 
 // A product line: the representative product's photo, then the main photos of the
 // other products in that category, at most $max, so the card previews the range.
-$category_photos = static function ($category, $product, $sizes, $max = 5) use ($photo_key, $photo_tags, &$line_products) {
+$category_photos = static function ($category, $product, $sizes, $max = 5) use ($same_photo, $photo_tags, &$line_products) {
 	$photos = array();
-	$seen = array();
-	$add = static function ($item) use (&$photos, &$seen, $photo_key) {
+	$add = static function ($item) use (&$photos, $same_photo) {
 		// Products whose only photos carry sample sale artwork add none (inc/product-photo-overrides.php).
 		if ($item && function_exists('wholesale_product_card_hidden') && wholesale_product_card_hidden($item)) {
 			return;
 		}
 		$id = $item && has_post_thumbnail($item) ? (int) get_post_thumbnail_id($item) : 0;
-		$key = $id ? $photo_key(wp_get_attachment_url($id)) : '';
-		if (!$id || isset($seen[$key])) {
+		if (!$id) {
 			return;
 		}
-		$seen[$key] = true;
-		$photos[] = array('id' => $id, 'url' => '', 'alt' => wp_strip_all_tags(get_the_title($item)));
+		$photo = array('id' => $id, 'url' => (string) wp_get_attachment_url($id), 'alt' => wp_strip_all_tags(get_the_title($item)));
+		foreach ($photos as $shown) {
+			if ($same_photo($shown, $photo)) {
+				return;
+			}
+		}
+		$photos[] = $photo;
 	};
 	$add($product);
 	// The next 12 products in the line that have a photo (see $line_products).
@@ -332,6 +347,13 @@ $card_turnaround = static function ($product) {
 	if (!$product || !function_exists('wholesale_product_turnaround')) {
 		return '';
 	}
+	// The product's fastest real production-time choice (inc/card-trust.php, 2026-11-21):
+	// wholesale_product_turnaround() alone said "next day" for 7-day-only products.
+	if (function_exists('wholesale_card_trust_turnaround')) {
+		$fast = wholesale_card_trust_turnaround($product->ID);
+		$map = array('Ships same day' => 'In stock, ships same day', 'Same-day available' => 'Same-day turnaround available');
+		return isset($map[$fast]) ? $map[$fast] : $fast;
+	}
 	$t = wholesale_product_turnaround($product->ID);
 	if ($t['stock'] && $t['same_day']) {
 		return 'In stock, ships same day';
@@ -364,7 +386,6 @@ $render_card = static function (array $card) {
 					<?php endforeach; ?>
 				</span>
 			<?php endif; ?>
-			<?php if (!empty($card['chip'])) : ?><span class="hc-pcard-chip"><?php echo esc_html($card['chip']); ?></span><?php endif; ?>
 			<?php if ($count > 1) : ?>
 				<button type="button" class="hc-gal-arrow hc-gal-arrow--prev" data-hc-prev aria-label="Previous <?php echo esc_attr($name); ?> photo"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
 				<button type="button" class="hc-gal-arrow hc-gal-arrow--next" data-hc-next aria-label="Next <?php echo esc_attr($name); ?> photo"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></button>
@@ -373,16 +394,27 @@ $render_card = static function (array $card) {
 			<?php endif; ?>
 		</div>
 		<a class="hc-pcard-body" href="<?php echo esc_url($card['url']); ?>">
-			<?php if (!empty($card['kicker'])) : ?><span class="hc-pcard-kicker"><?php echo wp_kses_post($card['kicker']); ?></span><?php endif; ?>
+			<?php // Pill above the name, like the Full catalog tiles: the product count, else the kicker. ?>
+			<?php if (!empty($card['chip'])) : ?><span class="hc-pcard-kicker pc-pill"><?php echo esc_html($card['chip']); ?></span><?php elseif (!empty($card['kicker'])) : ?><span class="hc-pcard-kicker pc-pill"><?php echo wp_kses_post($card['kicker']); ?></span><?php endif; ?>
 			<h3 class="hc-pcard-name"><?php echo wp_kses_post($card['name']); ?></h3>
 			<?php if (!empty($card['desc'])) : ?><span class="hc-pcard-desc"><?php echo wp_kses_post($card['desc']); ?></span><?php endif; ?>
-			<?php if (!empty($card['meta'])) : ?><span class="hc-pcard-meta"><?php echo wholesale_home_icon('clock'); ?> <?php echo esc_html($card['meta']); ?></span><?php endif; ?>
+			<?php if (!empty($card['meta'])) : ?><span class="hc-pcard-meta"><?php echo wholesale_home_icon('clock'); ?> <?php
+					// Phones show a shorter wording so the line never wraps (css/home-catalog.css).
+					$meta_short = str_ireplace(array('Same-day turnaround available', 'In stock, ships same day', ' business days', ' business day'), array('Same-day available', 'Ships same day', ' days', ' day'), (string) $card['meta']);
+					if ($meta_short !== (string) $card['meta']) :
+						?><span class="hc-meta-long"><?php echo esc_html($card['meta']); ?></span><span class="hc-meta-short" aria-hidden="true"><?php echo esc_html($meta_short); ?></span><?php
+					else :
+						echo esc_html($card['meta']);
+					endif; ?></span><?php endif; ?>
+			<?php // Shipping pill only: the clock line above already gives the production time. ?>
+			<?php echo !empty($card['trust']) ? $card['trust'] : ''; // Built by wholesale_card_trust(), escaped there. ?>
 			<span class="hc-pcard-foot">
 				<?php if (!empty($card['price'])) : ?>
-					<span class="hc-pcard-price"><small>From</small> <?php echo wp_kses_post(function_exists('wholesale_emphasize_price') ? wholesale_emphasize_price($card['price']) : $card['price']); ?></span>
+					<span class="hc-pcard-price"><small>From</small> <?php echo wp_kses_post(wholesale_card_unit(function_exists('wholesale_emphasize_price') ? wholesale_emphasize_price($card['price']) : $card['price'])); ?></span>
 				<?php endif; ?>
 				<?php // Narrow cards show button_short (when given) so the label never runs past the button; see css/home-catalog.css. ?>
-				<span class="hc-pcard-button"><span class="hc-pcard-button-text<?php echo !empty($card['button_short']) ? ' hc-pcard-button-long' : ''; ?>"><?php echo esc_html($card['button']); ?></span><?php if (!empty($card['button_short'])) : ?><span class="hc-pcard-button-text hc-pcard-button-short" aria-hidden="true"><?php echo esc_html($card['button_short']); ?></span><?php endif; ?> <?php echo wholesale_home_icon('arrow'); ?></span>
+				<?php // Every product card ends in the same "Shop now" link as the Full catalog tiles (css/product-cards.css). ?>
+				<span class="hc-pcard-button pc-cta"><span class="hc-pcard-button-text">Shop now</span> <?php echo wholesale_home_icon('arrow'); ?></span>
 			</span>
 		</a>
 	</article>
@@ -404,6 +436,7 @@ $line_card = static function ($line) use ($category_price, $category_photos, $ca
 		'chip' => $range['count'] > 1 ? sprintf('%d products', $range['count']) : '',
 		'desc' => $line[3],
 		'meta' => $card_turnaround($product),
+		'trust' => function_exists('wholesale_card_trust') ? wholesale_card_trust($product ? $product->ID : 0, 'ship') : '',
 		'price' => $price,
 		'button' => 'Explore Options',
 		'button_short' => 'Shop Now',
@@ -505,18 +538,37 @@ wholesale_seo_set_page_faq(array_values(array_filter(array(
 // Set both URLs before get_header() so the head can preload the matching image.
 $hero_image = get_template_directory_uri() . '/img/home-hero-desktop.webp';
 $hero_mobile_image = get_template_directory_uri() . '/img/home-hero-mobile.webp';
+$hero_mobile_avif = file_exists(get_template_directory() . '/img/home-hero-mobile.avif') ? get_template_directory_uri() . '/img/home-hero-mobile.avif' : '';
+$hero_mobile_position = '';
+
+// Phones: the photo chosen under Storefront Sign > Images > "Home page hero on phones"
+// (Media Library) replaces the built-in one (owner, Nov 21 2026). Its WebP copy is made on
+// first use and its AVIF copy by a background job; until that exists phones get the WebP.
+$hero_mobile_id = function_exists('wholesale_image_slot_id') ? wholesale_image_slot_id('home_hero_mobile') : 0;
+$hero_mobile_src = $hero_mobile_id ? (string) wp_get_attachment_image_url($hero_mobile_id, '1536x1536') : '';
+if ($hero_mobile_src) {
+	$hero_mobile_image = function_exists('wholesale_webp_url') ? wholesale_webp_url($hero_mobile_src) : $hero_mobile_src;
+	$hero_mobile_avif = function_exists('wholesale_hero_avif_url') ? wholesale_hero_avif_url($hero_mobile_src) : '';
+	// The built-in photo's subject sits low and right; a library photo is framed on its centre.
+	$hero_mobile_position = '50% 50%';
+}
+
 $GLOBALS['wholesale_hero_image'] = $hero_image;
 $GLOBALS['wholesale_hero_mobile_image'] = $hero_mobile_image;
 $hero_background = "--hc-hero-desktop: url('" . esc_url($hero_image) . "'); --hc-hero-mobile: url('" . esc_url($hero_mobile_image) . "');";
+if ($hero_mobile_position) {
+	$hero_background .= ' --hc-hero-mobile-pos: ' . $hero_mobile_position . ';';
+}
 
 // AVIF copies are about a third of the size. css/home-catalog.css uses the sets only in
 // browsers that understand them; the head preloads the AVIF, which other browsers skip.
-if (file_exists(get_template_directory() . '/img/home-hero-desktop.avif') && file_exists(get_template_directory() . '/img/home-hero-mobile.avif')) {
+if (file_exists(get_template_directory() . '/img/home-hero-desktop.avif')) {
 	$hero_image_avif = get_template_directory_uri() . '/img/home-hero-desktop.avif';
-	$hero_mobile_avif = get_template_directory_uri() . '/img/home-hero-mobile.avif';
 	$GLOBALS['wholesale_hero_image_avif'] = $hero_image_avif;
-	$GLOBALS['wholesale_hero_mobile_avif'] = $hero_mobile_avif;
 	$hero_background .= " --hc-hero-desktop-set: image-set(url('" . esc_url($hero_image_avif) . "') type('image/avif'), url('" . esc_url($hero_image) . "') type('image/webp'));";
+}
+if ($hero_mobile_avif) {
+	$GLOBALS['wholesale_hero_mobile_avif'] = $hero_mobile_avif;
 	$hero_background .= " --hc-hero-mobile-set: image-set(url('" . esc_url($hero_mobile_avif) . "') type('image/avif'), url('" . esc_url($hero_mobile_image) . "') type('image/webp'));";
 }
 
@@ -564,9 +616,15 @@ $pick_photos = static function ($products) {
 		if ($product && function_exists('wholesale_product_card_hidden') && wholesale_product_card_hidden($product)) {
 			continue;
 		}
-		$url = $product ? wp_get_attachment_image_url(get_post_thumbnail_id($product), 'medium') : '';
-		if ($url) {
-			$urls[] = $url;
+		$id = $product ? (int) get_post_thumbnail_id($product) : 0;
+		$medium = $id ? wp_get_attachment_image_src($id, 'medium') : false;
+		if ($medium) {
+			$thumb = wp_get_attachment_image_src($id, 'thumbnail');
+			$urls[] = array(
+				'src' => $medium[0],
+				'width' => (int) $medium[1],
+				'thumb' => $thumb && $thumb[0] !== $medium[0] ? $thumb[0] : '',
+			);
 		}
 	}
 	return $urls;
@@ -600,6 +658,59 @@ if ($pick_cl_from && $pick_cl_product) {
 ?>
 
 <main id="primary" class="site-main hc-page">
+	<script>
+	/* Sections far below the first screen skip layout until they come near
+	   (content-visibility in css/home-catalog.css). Lay them out 1,250px early, so
+	   their photos load as before, and all at once before an in-page jump, so
+	   #channel-letters and the other jumps land on the exact spot. A reload or Back
+	   restores the scroll position, so those load with every section laid out. */
+	(function (root) {
+		var off = function () { root.classList.add('hc-cv-off'); };
+		var nav = window.performance && performance.getEntriesByType ? performance.getEntriesByType('navigation')[0] : null;
+		if (location.hash || !('IntersectionObserver' in window) || (nav && (nav.type === 'reload' || nav.type === 'back_forward'))) {
+			off();
+			return;
+		}
+		document.addEventListener('click', function (e) {
+			var a = e.target.closest ? e.target.closest('a[href*="#"]') : null;
+			if (a && a.hash && a.pathname === location.pathname && a.hostname === location.hostname) {
+				off();
+			}
+		}, true);
+		window.addEventListener('hashchange', off);
+		document.addEventListener('DOMContentLoaded', function () {
+			var io = new IntersectionObserver(function (entries) {
+				entries.forEach(function (entry) {
+					if (entry.isIntersecting) {
+						entry.target.classList.add('hc-cv-near');
+						io.unobserve(entry.target);
+					}
+				});
+			}, { rootMargin: '1250px 0px' });
+			var sections = [].slice.call(document.querySelectorAll('.hc-page > section:not(.hc-hero)'));
+			sections.forEach(function (section) {
+				io.observe(section);
+			});
+			// Once the page has loaded, lay out the rest one section per idle moment
+			// (no long task), so no section keeps its 1,500px placeholder height.
+			window.addEventListener('load', function () {
+				var idle = window.requestIdleCallback || function (fn) { return setTimeout(fn, 50); };
+				var next = function () {
+					var section = sections.shift();
+					while (section && section.classList.contains('hc-cv-near')) {
+						section = sections.shift();
+					}
+					if (section) {
+						section.classList.add('hc-cv-near');
+						io.unobserve(section);
+						idle(next, { timeout: 1000 });
+					}
+				};
+				idle(next, { timeout: 1000 });
+			});
+		});
+	})(document.documentElement);
+	</script>
 	<section class="bd-hero hc-hero" aria-labelledby="home-hero-title" style="<?php echo esc_attr($hero_background); ?>">
 		<div class="container">
 			<div class="hc-hero-copy">
@@ -612,7 +723,15 @@ if ($pick_cl_from && $pick_cl_product) {
 							<a class="hc-hero-pick" href="<?php echo esc_url($pick['url']); ?>">
 								<?php if ($pick['photos']) : ?>
 									<span class="hc-hero-pick-photos" data-count="<?php echo esc_attr(count($pick['photos'])); ?>" aria-hidden="true">
-										<?php foreach ($pick['photos'] as $pick_photo) : ?><img src="<?php echo esc_url(wholesale_webp_url($pick_photo)); ?>" alt="" width="150" height="150" decoding="async" fetchpriority="low"><?php endforeach; ?>
+										<?php
+										// Shown at 72-93px. The 150px copy is enough up to about 1.75x screens
+										// (PageSpeed's phone, desktops); sharper screens still pick the 300px one.
+										foreach ($pick['photos'] as $pick_photo) :
+											$pick_src = wholesale_webp_url($pick_photo['src']);
+											$pick_srcset = $pick_photo['thumb'] ? wholesale_webp_url($pick_photo['thumb']) . ' 150w, ' . $pick_src . ' ' . $pick_photo['width'] . 'w' : '';
+											?><img src="<?php echo esc_url($pick_src); ?>"<?php if ($pick_srcset) : ?> srcset="<?php echo esc_attr($pick_srcset); ?>" sizes="(max-width: 991px) 85px, 72px"<?php endif; ?> alt="" width="150" height="150" decoding="async" fetchpriority="low"><?php
+										endforeach;
+										?>
 									</span>
 								<?php endif; ?>
 								<span class="hc-hero-pick-text"><strong><?php echo esc_html($pick['name']); ?></strong><small>From <?php echo wp_kses($pick['price'], array('sup' => array())); ?></small><?php echo wholesale_home_icon('arrow'); ?></span>
@@ -675,38 +794,6 @@ if ($pick_cl_from && $pick_cl_product) {
 		</div>
 	</section>
 
-	<section class="sf-section sf-section--tint hc-product-section hc-order-picks" id="everyday-displays" aria-labelledby="hc-everyday-title">
-		<div class="container">
-			<p class="cl-kicker">Quick picks</p>
-			<h2 id="hc-everyday-title" class="cl-section-title">Everyday Banners &amp; Displays</h2>
-			<p class="cl-section-lead">Single products for a specific job, from fence banners to photo backdrops.</p>
-			<div class="hc-pcard-grid">
-				<?php foreach ($everyday as $slug => $label) : ?>
-					<?php
-					$product = wholesale_seo_product($slug);
-					if (!$product) {
-						continue;
-					}
-					$name = wp_strip_all_tags(get_the_title($product));
-					$price = $price_of($slug);
-					$render_card(array(
-						'url' => get_permalink($product),
-						'name' => esc_html($name),
-						'photos' => $card_photos($product, $name, '(max-width: 575px) 46vw, (max-width: 991px) 46vw, 280px'),
-						'tags' => $card_tags($product, $price, isset($sales[$product->ID]) ? $sales[$product->ID] : 0),
-						'kicker' => $label,
-						'meta' => $card_turnaround($product),
-						'price' => $price,
-						'button' => 'Customize & Order',
-						// Phones and narrow columns: the same short label as the channel letter cards.
-						'button_short' => 'Order Now',
-					));
-					?>
-				<?php endforeach; ?>
-			</div>
-		</div>
-	</section>
-
 	<?php
 	// Channel letter styles with their prices; the cheapest one gets the "Lowest price" flag.
 	$cl_cards = array();
@@ -752,7 +839,8 @@ if ($pick_cl_from && $pick_cl_product) {
 					if ($is_lowest) {
 						$flags['Lowest price'] = 'price';
 					}
-					$photos = $card_photos(wholesale_seo_product($card['slug']), $style_name . ' channel letters', '(max-width: 575px) 46vw, (max-width: 991px) 31vw, 280px');
+					// Phones: 58vw, because the taller 4:5 photo frame (css/home-catalog.css) shows a square photo about 1.25x the card width.
+					$photos = $card_photos(wholesale_seo_product($card['slug']), $style_name . ' channel letters', '(max-width: 575px) 58vw, (max-width: 991px) 31vw, 280px');
 					$photo_count = count($photos);
 					?>
 					<article class="hc-shop-cl-card">
@@ -814,15 +902,57 @@ if ($pick_cl_from && $pick_cl_product) {
 	</section>
 	<?php endif; ?>
 
+	<section class="sf-section sf-section--tint hc-product-section hc-order-picks" id="everyday-displays" aria-labelledby="hc-everyday-title">
+		<div class="container">
+			<p class="cl-kicker">Quick picks</p>
+			<h2 id="hc-everyday-title" class="cl-section-title">Everyday Banners &amp; Displays</h2>
+			<p class="cl-section-lead">Single products for a specific job, from check-in counters to roadside flags.</p>
+			<div class="hc-pcard-grid">
+				<?php foreach ($everyday as $slug => $label) : ?>
+					<?php
+					$product = wholesale_seo_product($slug);
+					if (!$product) {
+						continue;
+					}
+					$name = wp_strip_all_tags(get_the_title($product));
+					$price = $price_of($slug);
+					$render_card(array(
+						'url' => get_permalink($product),
+						'name' => esc_html($name),
+						'photos' => $card_photos($product, $name, '(max-width: 575px) 46vw, (max-width: 991px) 46vw, 280px'),
+						'tags' => $card_tags($product, $price, isset($sales[$product->ID]) ? $sales[$product->ID] : 0),
+						'kicker' => $label,
+						'meta' => $card_turnaround($product),
+						'trust' => function_exists('wholesale_card_trust') ? wholesale_card_trust($product->ID, 'ship') : '',
+						'price' => $price,
+						'button' => 'Customize & Order',
+						// Phones and narrow columns: the same short label as the channel letter cards.
+						'button_short' => 'Order Now',
+					));
+					?>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</section>
+
 	<?php
 	// The full catalog (inc/home-catalog-directory.php): five photo tiles for lines
-	// without a card above, then every category by group. Ported from the trade
+	// without a card above, then one panel of the categories nothing else links. Ported from the trade
 	// site's home page, with the copy written for business owners instead of
 	// resellers.
 	if ($directory['groups']) :
 		$dir_img = static function ($id, $size, $sizes) {
 			return $id ? wp_get_attachment_image($id, $size, false, array('alt' => '', 'sizes' => $sizes, 'loading' => 'lazy', 'decoding' => 'async')) : '';
 		};
+		// Rows only for categories with no card higher up (2026-11-23 trim): the
+		// banners & displays cards and the five tiles below already link to the rest,
+		// so every category page keeps a link from the home page.
+		$dir_linked = array_merge(array_column($bd_lines, 0), array_keys($directory['featured']));
+		$dir_more = array();
+		foreach ($directory['groups'] as $group) {
+			$dir_more += array_diff_key($group['items'], array_flip($dir_linked));
+		}
+		$dir_more_count = array_sum(array_column($dir_more, 'count'));
 		?>
 	<section class="sf-section sf-section--tint hc-cats" id="shop-by-category" aria-labelledby="hc-cats-title">
 		<div class="container">
@@ -830,9 +960,9 @@ if ($pick_cl_from && $pick_cl_product) {
 				<div>
 					<p class="cl-kicker">Full catalog</p>
 					<h2 id="hc-cats-title" class="cl-section-title">Print, Display &amp; Event Products for Your Business</h2>
-					<p class="cl-section-lead">Window graphics, rigid signs, wall art, hardware and every other category, grouped by use.</p>
+					<p class="cl-section-lead">Window graphics, rigid signs and wall art from our <?php echo $home_link(wholesale_category_url('large-format'), 'large format print'); ?> line, <?php echo $home_link(wholesale_category_url('indoor-outdoor-displays'), 'outdoor displays'); ?>, plus the hardware and specialty materials not shown above.</p>
 				</div>
-				<a class="hc-cats-link" href="#hc-cats-all"><?php echo wholesale_home_icon('grid'); ?>Browse all <?php echo (int) $directory['total']; ?> categories</a>
+				<a class="hc-cats-link" href="<?php echo esc_url(wholesale_shop_url()); ?>"><?php echo wholesale_home_icon('grid'); ?>See every product</a>
 			</div>
 
 			<?php if ($directory['featured']) : ?>
@@ -853,7 +983,7 @@ if ($pick_cl_from && $pick_cl_product) {
 									<h3 class="hc-feature-name"><?php echo esc_html($item['name']); ?></h3>
 									<span class="hc-feature-blurb"><?php echo esc_html($item['blurb']); ?></span>
 									<?php $tile_price = $category_price($slug); ?>
-									<?php if ($tile_price) : ?><span class="hc-feature-price"><small>From</small> <?php echo wp_kses_post($tile_price); ?></span><?php endif; ?>
+									<?php if ($tile_price) : ?><span class="hc-feature-price"><small>From</small> <?php echo wp_kses_post(wholesale_card_unit($tile_price)); ?></span><?php endif; ?>
 									<span class="hc-feature-cta">Shop now <?php echo wholesale_home_icon('arrow'); ?></span>
 								</span>
 							</a>
@@ -862,18 +992,18 @@ if ($pick_cl_from && $pick_cl_product) {
 				</ul>
 			<?php endif; ?>
 
-			<div class="hc-dir" id="hc-cats-all">
-				<?php foreach ($directory['groups'] as $key => $group) : ?>
-					<section class="hc-dir-group" aria-labelledby="hc-dir-<?php echo esc_attr($key); ?>">
+			<?php if ($dir_more) : ?>
+				<div class="hc-dir hc-dir--more" id="hc-cats-all">
+					<section class="hc-dir-group" aria-labelledby="hc-dir-more">
 						<div class="hc-dir-head">
-							<span class="hc-dir-icon"><?php echo wholesale_home_icon($group['icon']); ?></span>
+							<span class="hc-dir-icon"><?php echo wholesale_home_icon('grid'); ?></span>
 							<div>
-								<h3 class="hc-dir-title" id="hc-dir-<?php echo esc_attr($key); ?>"><?php echo esc_html($group['title']); ?></h3>
-								<p class="hc-dir-meta"><?php echo esc_html(sprintf('%d categories · %d products', count($group['items']), $group['count'])); ?></p>
+								<h3 class="hc-dir-title" id="hc-dir-more">Hardware &amp; Specialty Materials</h3>
+								<p class="hc-dir-meta"><?php echo esc_html(sprintf('%d categories · %d products', count($dir_more), $dir_more_count)); ?></p>
 							</div>
 						</div>
 						<ul class="hc-dir-list">
-							<?php foreach ($group['items'] as $item) : ?>
+							<?php foreach ($dir_more as $item) : ?>
 								<li>
 									<a class="hc-dir-item" href="<?php echo esc_url($item['url']); ?>">
 										<span class="hc-dir-thumb"><?php echo $dir_img($item['image'], 'thumbnail', '52px'); ?></span>
@@ -886,25 +1016,9 @@ if ($pick_cl_from && $pick_cl_product) {
 								</li>
 							<?php endforeach; ?>
 						</ul>
-						<?php if ($group['all']) : ?>
-							<a class="hc-dir-all" href="<?php echo esc_url($group['all']); ?>">View all <?php echo esc_html(strtolower($group['title'])); ?> <?php echo wholesale_home_icon('arrow'); ?></a>
-						<?php endif; ?>
 					</section>
-				<?php endforeach; ?>
-			</div>
-
-			<p class="hc-more-link"><a href="<?php echo esc_url(wholesale_shop_url()); ?>">Browse every product <?php echo wholesale_home_icon('arrow'); ?></a></p>
-
-			<div class="hc-cats-band">
-				<span class="hc-cats-band-icon" aria-hidden="true"><?php echo wholesale_home_icon('check'); ?></span>
-				<p class="hc-cats-band-text">
-					<strong>Every product is priced online.</strong> Choose a size and options, see your total and check out. Need a size or material you don&rsquo;t see? Ask us for a quote.
-				</p>
-				<div class="hc-cats-band-actions">
-					<a class="hc-cats-band-primary" href="<?php echo esc_url($contact_url); ?>">Request a Quote <?php echo wholesale_home_icon('arrow'); ?></a>
-					<a class="hc-cats-band-ghost" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> 866-436-2101</a>
 				</div>
-			</div>
+			<?php endif; ?>
 		</div>
 	</section>
 	<?php endif; ?>
@@ -1011,6 +1125,71 @@ if ($pick_cl_from && $pick_cl_product) {
 	</section>
 
 	<script>
+	/* The first photo of each card waits in data attributes ($photo_tags) until the
+	   page has loaded, the visitor scrolls, touches or types, or the photo is on
+	   screen. Then it loads lazily, as before, so the hero photo comes first. */
+	(function () {
+		var firsts = [].slice.call(document.querySelectorAll('img[data-hc-first]'));
+		var events = ['scroll', 'wheel', 'touchstart', 'pointerdown', 'keydown'];
+		var io = null;
+		var release = function (img) {
+			if (!img.hasAttribute('data-hc-first')) {
+				return;
+			}
+			img.removeAttribute('data-hc-first');
+			if (img.dataset.hcSrcset) {
+				img.srcset = img.dataset.hcSrcset;
+			}
+			img.src = img.dataset.hcSrc;
+			// Back to a plain lazy image, so warm() below leaves it alone.
+			img.removeAttribute('data-hc-srcset');
+			img.removeAttribute('data-hc-src');
+		};
+		var all = function () {
+			events.forEach(function (type) {
+				window.removeEventListener(type, all, 'scroll' !== type);
+			});
+			if (io) {
+				io.disconnect();
+			}
+			firsts.forEach(release);
+		};
+		if (!firsts.length) {
+			return;
+		}
+		if (!('IntersectionObserver' in window)) {
+			all();
+			return;
+		}
+		io = new IntersectionObserver(function (entries) {
+			entries.forEach(function (entry) {
+				if (entry.isIntersecting) {
+					release(entry.target);
+					io.unobserve(entry.target);
+				}
+			});
+		});
+		firsts.forEach(function (img) {
+			io.observe(img);
+		});
+		// Page scrolls only: the reviews carousel scrolling itself is not the visitor.
+		events.forEach(function (type) {
+			window.addEventListener(type, all, { capture: 'scroll' !== type, passive: true });
+		});
+		var later = function () {
+			if (window.requestIdleCallback) {
+				window.requestIdleCallback(all, { timeout: 1000 });
+			} else {
+				setTimeout(all, 50);
+			}
+		};
+		if ('complete' === document.readyState) {
+			later();
+		} else {
+			window.addEventListener('load', later);
+		}
+	})();
+
 	/* Card photo galleries (channel letters and the product grids): swipe on touch screens, arrows on hover, dots and a
 	   1/N counter follow the visible photo. Later photos start loading once the
 	   visitor reaches for the gallery (hover, touch or keyboard focus). */
@@ -1030,7 +1209,7 @@ if ($pick_cl_from && $pick_cl_product) {
 					return;
 				}
 				warmed = true;
-				media.querySelectorAll('img[data-hc-src]').forEach(function (img) {
+				media.querySelectorAll('img[data-hc-src]:not([data-hc-first])').forEach(function (img) {
 					img.loading = 'eager';
 					// "auto" only works on lazy images; left in, browsers size for the full window.
 					img.sizes = img.sizes.replace(/^auto,\s*/, '');
@@ -1073,6 +1252,61 @@ if ($pick_cl_from && $pick_cl_product) {
 			media.addEventListener('focusin', warm);
 			media.querySelector('[data-hc-prev]').addEventListener('click', function () { go(-1); });
 			media.querySelector('[data-hc-next]').addEventListener('click', function () { go(1); });
+			// Phones (2026-11-23): scroll snapping alone sends any swipe shorter than half
+			// a photo back to where it started, and a thumb flick on a half-width card is
+			// usually shorter. A clearly sideways swipe of 30px or more moves one photo.
+			// If the browser ignores the scroll while it is still settling (iOS momentum),
+			// it is sent again once the strip stops.
+			var touchX = 0;
+			var touchY = 0;
+			var touchFrom = 0;
+			var touchOn = false;
+			var touchTurn = 0;
+			var whenSettled = function (turn, done) {
+				var timer = 0;
+				var finish = function () {
+					track.removeEventListener('scroll', onScroll);
+					if (turn === touchTurn) {
+						done();
+					}
+				};
+				var onScroll = function () {
+					window.clearTimeout(timer);
+					timer = window.setTimeout(finish, 140);
+				};
+				track.addEventListener('scroll', onScroll, { passive: true });
+				timer = window.setTimeout(finish, 400);
+			};
+			track.addEventListener('touchstart', function (event) {
+				touchTurn++;
+				touchOn = event.touches.length === 1;
+				if (!touchOn) {
+					return;
+				}
+				touchX = event.touches[0].clientX;
+				touchY = event.touches[0].clientY;
+				touchFrom = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+			}, { passive: true });
+			track.addEventListener('touchend', function (event) {
+				if (!touchOn || !event.changedTouches.length) {
+					return;
+				}
+				touchOn = false;
+				var dx = event.changedTouches[0].clientX - touchX;
+				var dy = event.changedTouches[0].clientY - touchY;
+				if (Math.abs(dx) < 30 || Math.abs(dx) < Math.abs(dy) * 1.2) {
+					return;
+				}
+				var target = Math.max(0, Math.min(total - 1, touchFrom + (dx < 0 ? 1 : -1)));
+				var turn = touchTurn;
+				warm();
+				track.scrollTo({ left: target * track.clientWidth, behavior: 'smooth' });
+				whenSettled(turn, function () {
+					if (Math.round(track.scrollLeft / Math.max(1, track.clientWidth)) !== target) {
+						track.scrollTo({ left: target * track.clientWidth, behavior: 'smooth' });
+					}
+				});
+			}, { passive: true });
 		});
 	})();
 	</script>

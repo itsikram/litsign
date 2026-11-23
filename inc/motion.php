@@ -68,6 +68,18 @@
  *   the fold get a span.mo-glow (veil + warm glow; a span because some frames
  *   already use ::after). It powers up once the photo is 25% into the screen
  *   and its image has loaded, otherwise it is removed and the photo shows lit.
+ * - Product card shine (setupShine, 2026-11-21, owner: "products should
+ *   glow on scroll ... attractive"): every other product card photo frame
+ *   (Shop, category listing, home cards, related products, B&D/WG, search,
+ *   guide/location/storefront type cards; not heroes, nav rails or CL frames,
+ *   which keep the light-up) gets a span.mo-shine once 12% into the screen:
+ *   a white gloss band sweeps across (::before, translate) while a blue inner
+ *   ring + soft light fades in and out (::after, opacity). Composited only,
+ *   no layout change; cards in one row stagger 110ms; before window load it
+ *   waits 400ms; plays after the image loads. Runs on 'full' pages without
+ *   reduced motion, independent of the reveals (so phones without view()
+ *   timelines get it too). Desktop hover replays the sweep and the card gets
+ *   a blue glow shadow (css/motion.css 6b).
  * - Loops ([data-motion=loop], the green live dot, card flags) pause off
  *   screen and while the tab is hidden; css/motion.css limits them to 3 runs.
  * - html.mo-loaded is set on load; hero effects in css/motion.css wait for it
@@ -335,3 +347,6 @@ function wholesale_motion_scroll_ui()
 		. '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' . "\n";
 }
 add_action('wp_footer', 'wholesale_motion_scroll_ui', 5);
+
+// Animated header logo. Loaded from here so functions.php needs no change.
+require_once __DIR__ . '/logo-motion.php';

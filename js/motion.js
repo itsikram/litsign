@@ -130,6 +130,28 @@
     });
   }
 
+  function setupShine() {
+    each('.sc-card-media,.pb-image-top,.related-product-image,.hc-pcard-media,.hc-feature-media,.sf-type-image,.bd-product-image,.srp-card__media,.home-types-image', function (f) {
+      if (f.closest('header,nav,.modal,.offcanvas,.home-hero,.bd-hero,.sf-hero,.sc-hero,.cla-hero,.pd-hero,.product-listing-container--cl')) return;
+      observe(f, '0px 0px -12% 0px', function (e, io, batch) {
+        if (!e.isIntersecting) return;
+        io.unobserve(f);
+        var n = batch.get(0) || 0, d = Math.min(n * 110, 660) + (document.readyState === 'complete' ? 0 : 400),
+          s = document.createElement('span'), img = f.querySelector('img'),
+          go = function () {
+            s.style.setProperty('--mo-sd', d + 'ms');
+            s.classList.add('is-on');
+            setTimeout(function () { s.classList.remove('is-on'); }, d + 1700);
+          };
+        batch.set(0, n + 1);
+        s.className = 'mo-shine';
+        s.setAttribute('aria-hidden', 'true');
+        f.appendChild(s);
+        if (!img || (img.complete && img.naturalWidth)) go(); else img.addEventListener('load', go, { once: true });
+      });
+    });
+  }
+
   function nudge(el, kf, ms) {
     if (!red.matches && el.animate) el.animate(kf, { duration: ms, easing: 'cubic-bezier(.22,1,.36,1)' });
   }
@@ -177,6 +199,7 @@
 
   try {
     idle(setupReveals);
+    if (L === 'full' && !red.matches) idle(setupShine);
     addEventListener('load', function () { R.classList.add('mo-loaded'); });
     setupLoops();
     setupFeedback();

@@ -283,8 +283,10 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 							<span class="wg-card-tag"><?php echo wp_kses_post($film[4]); ?></span>
 							<h3><a href="<?php echo esc_url($url); ?>"><?php echo wp_kses_post($film[2]); ?></a></h3>
 							<p><?php echo wp_kses_post($film[3]); ?></p>
+							<?php $film_product = wholesale_seo_product($film[1]); ?>
+							<?php echo function_exists('wholesale_card_trust') ? wholesale_card_trust($film_product ? $film_product->ID : 0, $film_product ? '' : 'ship') : ''; // Escaped in helper. ?>
 							<?php if ($price) : ?>
-								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($price); ?></p>
+								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post(wholesale_card_unit($price)); ?></p>
 							<?php endif; ?>
 							<a class="wg-card-link lp-order" href="<?php echo esc_url($url); ?>">Customize &amp; Order <span aria-hidden="true">&rarr;</span></a>
 						</div>

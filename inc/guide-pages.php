@@ -617,7 +617,7 @@ function wholesale_guide_render_families($place)
 					<p><?php echo wp_kses_post($notes[$key]); ?></p>
 				<?php endif; ?>
 				<?php if ($price) : ?>
-					<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($price); ?></p>
+					<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post(wholesale_card_unit($price)); ?></p>
 				<?php endif; ?>
 				<?php if (!empty($family['more'])) : ?>
 					<p class="gd-family-more">
@@ -761,8 +761,9 @@ function wholesale_guide_render_products($slugs)
 					<?php if ($note) : ?>
 						<p><?php echo wp_kses_post($note); ?></p>
 					<?php endif; ?>
+					<?php echo function_exists('wholesale_card_trust') ? wholesale_card_trust($product->ID) : ''; // Escaped in helper. ?>
 					<?php if ($price) : ?>
-						<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($price); ?></p>
+						<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post(wholesale_card_unit($price)); ?></p>
 					<?php endif; ?>
 				</div>
 			</article>

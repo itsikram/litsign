@@ -131,6 +131,165 @@
 		});
 	}
 
+	/* ---------- Instant search: every product downloaded once, matched in the browser ----------
+	 * /wp-json/ssx/v1/search-index (ssx-live-search.php) is fetched on the first sign of a
+	 * person (pointer, touch, key) and kept in the HTTP cache; each keystroke is then matched
+	 * here in well under a millisecond. Matching follows WordPress search, so the counts agree
+	 * with the results page: every word must appear in the title, excerpt or content. */
+	var STOP = ' about an are as at be by com for from how in is it of on or that the this to was what when where who will with www ',
+		EDGE = /^[.,;:!?()\[\]{}<>"'*|`~\u201C\u201D\u2018\u2019]+|[.,;:!?()\[\]{}<>"'*|`~\u201C\u201D\u2018\u2019]+$/g,
+		idx = null,
+		idxPromise = null,
+		// Product searches only; the index lives next to the /search endpoint.
+		indexUrl = cfg.postType === 'product' && cfg.endpoint ? cfg.endpoint.replace(/\/ssx\/v1\/search(?=$|[?&#])/, '/ssx/v1/search-index') : '',
+		idxFailed = !indexUrl || indexUrl === cfg.endpoint;
+
+	function norm(s) {
+		s = String(s || '').toLowerCase();
+		return s.normalize ? s.normalize('NFD').replace(/[\u0300-\u036F]/g, '') : s;
+	}
+
+	function loadIndex() {
+		if (idxFailed) return null;
+		if (idxPromise) return idxPromise;
+		idxPromise = getJSON(indexUrl).then(function(r) {
+			var j = r.json || {},
+				rows = j.items || [],
+				abs = function(s, base) {
+					return !s || /^(https?:)?\/\//.test(s) || s.charAt(0) === '/' ? s : base + s;
+				};
+			if (!rows.length) throw new Error('Empty index');
+			idx = rows.map(function(x, n) {
+				var tl = norm(x[1]);
+				return {
+					id: x[0],
+					title: String(x[1] || ''),
+					url: abs(x[2], j.home || ''),
+					image: abs(x[3], j.up || ''),
+					tl: tl,
+					// What each part of the title is ("13oz. Vinyl Banner" is a banner,
+					// "Banner Tape - 1in x 164ft" is tape): last word before a dash/bracket.
+					heads: tl.split(/\s[\u2013\u2014-]\s|[(),]/).map(function(part) {
+						var w = part.trim().split(/\s+/);
+						return w[w.length - 1].replace(EDGE, '');
+					}).filter(Boolean),
+					hay: tl + ' ' + norm(x[4]),
+					n: n
+				};
+			});
+			return idx;
+		}).catch(function(err) {
+			idxFailed = true; // The server search below takes over.
+			throw err;
+		});
+		return idxPromise;
+	}
+
+	// Search words the way WordPress splits them: spaces, commas, plus signs and quotes
+	// separate words; single letters and common stopwords are skipped.
+	function terms(q) {
+		var out = [];
+		(q.match(/"[^"]*"?|[^\t ",+]+/g) || []).forEach(function(raw) {
+			norm(raw).replace(/"/g, ' ').split(/\s+/).forEach(function(t) {
+				t = t.replace(EDGE, '');
+				if (!t || (t.length === 1 && /^[a-z\-]$/.test(t)) || STOP.indexOf(' ' + t + ' ') > -1) return;
+				if (out.indexOf(t) < 0) out.push(t);
+			});
+		});
+		if (!out.length || out.length > 9) out = [norm(q).replace(EDGE, '')];
+		return out;
+	}
+
+	// 2 = starts a word in the title, 1 = inside a title word, 0 = not in the title.
+	function titleHit(tl, t) {
+		var i = tl.indexOf(t);
+		if (i < 0) return 0;
+		while (i > -1) {
+			if (i === 0 || /[^a-z0-9]/.test(tl.charAt(i - 1))) return 2;
+			i = tl.indexOf(t, i + 1);
+		}
+		return 1;
+	}
+
+	function searchIndex(q) {
+		var ts = terms(q),
+			phrase = ts.join(' '),
+			hits = [];
+		for (var i = 0; i < idx.length; i++) {
+			var it = idx[i],
+				score = 0,
+				inTitle = 0,
+				ok = true;
+			for (var k = 0; k < ts.length; k++) {
+				if (it.hay.indexOf(ts[k]) < 0) {
+					ok = false;
+					break;
+				}
+				var hit = titleHit(it.tl, ts[k]);
+				if (hit) {
+					inTitle++;
+					score += hit === 2 ? 30 : 12;
+					// The product IS what was searched ("banner" -> banners before banner tape).
+					for (var h = 0; h < it.heads.length; h++) {
+						if (it.heads[h].indexOf(ts[k]) === 0) {
+							score += 25;
+							break;
+						}
+					}
+				}
+			}
+			if (!ok) continue;
+			if (inTitle === ts.length) score += 40;
+			if (it.tl === phrase) score += 200;
+			else if (ts.length > 1 && it.tl.indexOf(phrase) > -1) score += 30;
+			hits.push({
+				it: it,
+				s: score
+			});
+		}
+		// Best title match first; ties keep shop order (listed products by category).
+		hits.sort(function(a, b) {
+			return b.s - a.s || a.it.n - b.it.n;
+		});
+		return {
+			total: hits.length,
+			items: hits.slice(0, cfg.limit || 6).map(function(h) {
+				return {
+					id: h.it.id,
+					title: h.it.title,
+					url: h.it.url,
+					image: h.it.image,
+					type: 'Product',
+					price: ''
+				};
+			})
+		};
+	}
+
+	// Start the download on the first sign of a person (bots and page-speed tests never
+	// move a pointer), so the index is ready before the first letter is typed.
+	if (!idxFailed) {
+		var wake = function() {
+			['pointerdown', 'pointermove', 'touchstart', 'keydown', 'focusin'].forEach(function(t) {
+				window.removeEventListener(t, wake, true);
+			});
+			(window.requestIdleCallback || function(fn) {
+				setTimeout(fn, 1);
+			})(function() {
+				var p = loadIndex();
+				if (p) p.catch(function() {});
+			}, {
+				timeout: 1500
+			});
+		};
+		['pointerdown', 'pointermove', 'touchstart', 'keydown', 'focusin'].forEach(function(t) {
+			window.addEventListener(t, wake, {
+				capture: true,
+				passive: true
+			});
+		});
+	}
+
 	function fetchResults(q, signal) {
 		var key = q.toLowerCase();
 		if (cache.has(key)) return Promise.resolve(cache.get(key));
@@ -266,7 +425,7 @@
 					img.alt = '';
 					img.width = 52;
 					img.height = 52;
-					img.loading = 'lazy';
+					// Eager: six small thumbnails, shown at once (lazy waits for a layout pass).
 					img.decoding = 'async';
 					img.onerror = function() {
 						if (img.parentNode) img.parentNode.removeChild(img);
@@ -368,15 +527,34 @@
 		function run(term) {
 			var token = ++seq;
 			if (ctrl) ctrl.abort();
+			// Instant path: the product index is in memory.
+			if (idx) {
+				show(term, searchIndex(term));
+				return;
+			}
 			var key = term.toLowerCase();
 			if (cache.has(key)) {
 				show(term, cache.get(key));
 				return;
 			}
-			ctrl = window.AbortController ? new AbortController() : null;
 			if (panel.querySelector('.ssx-results__list') && !panel.hidden) panel.classList.add('is-loading');
 			else renderSkeleton();
 
+			// Index still downloading: show results the moment it lands (server search if it fails).
+			var pending = loadIndex();
+			if (pending) {
+				pending.then(function() {
+					if (token === seq) show(term, searchIndex(term));
+				}, function() {
+					if (token === seq) runServer(term, token);
+				});
+				return;
+			}
+			runServer(term, token);
+		}
+
+		function runServer(term, token) {
+			ctrl = window.AbortController ? new AbortController() : null;
 			fetchResults(term, ctrl ? ctrl.signal : undefined).then(function(data) {
 				if (token !== seq) return;
 				show(term, data);
@@ -398,6 +576,11 @@
 			if (ctrl) ctrl.abort();
 			if (term.length < MIN) {
 				reset();
+				return;
+			}
+			// With the index there is nothing to wait for: no typing delay.
+			if (!idxFailed) {
+				run(term);
 				return;
 			}
 			timer = setTimeout(function() {

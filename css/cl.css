@@ -445,11 +445,15 @@
   border-radius: var(--cl-radius);
   box-shadow: var(--cl-shadow);
   overflow: hidden;
-  touch-action: none;
+  /* A finger on empty canvas scrolls the page up and down; js/cl.js holds the page still while a
+     letter, shape or handle is dragged and turns two fingers into a pinch zoom. */
+  touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
 }
-.dt-container #container canvas { touch-action: none; }
+.dt-container #container canvas { touch-action: pan-y; }
+/* "Add letters" tapped before the page finished loading: the letters are added once it has. */
+.cl-empty-card[aria-busy="true"] button[type="submit"] { opacity: 0.7; cursor: progress; }
 
 /* Start panel over the empty canvas (cl.js hides it once something is added). */
 .cl-canvas-wrap { position: relative; min-width: 0; }
@@ -1102,7 +1106,9 @@
   .dt-container .editor-topbar .button-group button i { font-size: 15px; }
   .cl-tool-label { display: block; max-width: 100%; overflow: hidden; font-size: 10px; font-weight: 600; line-height: 1; color: var(--cl-muted); white-space: nowrap; text-overflow: ellipsis; }
   /* Eight tools share the row; labels may use the gap between buttons. */
-  .dt-container .editor-topbar .button-group .cl-tool-label { max-width: calc(100% + 6px); margin: 0 -3px; }
+  /* Slightly tighter letters: "Zoom out" was a fraction of a pixel too wide at 390-430 px and
+     showed as "Zoom ...". */
+  .dt-container .editor-topbar .button-group .cl-tool-label { max-width: calc(100% + 6px); margin: 0 -3px; letter-spacing: -0.02em; }
   .cl-divider { display: none; }
   .dt-container .shape-dropdown { position: static; }
 

@@ -33,7 +33,8 @@
     ?>
     <?php // One compact band (css/footer.css, lead-in band): the shipping cut-off and the channel letters link.
     // Left off the cart and checkout, where its link only led shoppers away from paying. ?>
-    <?php if (!is_page(array('cart', 'checkout'))) : ?>
+    <?php // Also left off /custom-channel-letters/ itself, where the band was only a link to the page being read (2026-11-23). ?>
+    <?php if (!is_page(array('cart', 'checkout')) && !(function_exists('wholesale_is_channel_letters_landing') && wholesale_is_channel_letters_landing())) : ?>
     <div class="footer-prelude<?php echo $is_channel_letter_page ? ' footer-prelude--link-only' : ''; ?>">
         <div class="container footer-prelude__inner">
             <?php if (!$is_channel_letter_page) : ?>
@@ -133,7 +134,9 @@
                 <div class="sf-brand">
                     <a class="sf-brand__logo" href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr(get_bloginfo('name') . ' home'); ?>">
                         <?php
-                        $logo_id = get_theme_mod('custom_logo');
+                        // Settings > Design > Footer logo, else the site logo (brand logo's light copy).
+                        $footer_logo_id = function_exists('wholesale_design_footer_logo_id') ? wholesale_design_footer_logo_id() : 0;
+                        $logo_id = $footer_logo_id ? $footer_logo_id : get_theme_mod('custom_logo');
                         if ($logo_id) {
                             echo wp_get_attachment_image($logo_id, 'header-logo', false, array(
                                 'alt' => get_bloginfo('name'),
@@ -156,13 +159,31 @@
 
                 <nav class="sf-col" aria-labelledby="sf-products-title">
                     <h3 class="sf-col__title" id="sf-products-title">Products</h3>
-                    <?php wp_nav_menu(array(
+                    <?php
+                    // The header menu also carries About, Contact and Track Order, which the
+                    // Company column lists right next to it, so they are left out here (2026-11-23).
+                    $sf_link_key = static function ($url) {
+                        return untrailingslashit((string) strtok((string) $url, '#?'));
+                    };
+                    $sf_company_keys = array_map($sf_link_key, array_keys($footer_company_links));
+                    $sf_skip_company = static function ($items, $args) use ($sf_link_key, $sf_company_keys) {
+                        if (empty($args->menu_class) || 'sf-links' !== $args->menu_class) {
+                            return $items;
+                        }
+                        return array_filter($items, static function ($item) use ($sf_link_key, $sf_company_keys) {
+                            return !in_array($sf_link_key($item->url), $sf_company_keys, true);
+                        });
+                    };
+                    add_filter('wp_nav_menu_objects', $sf_skip_company, 10, 2);
+                    wp_nav_menu(array(
                         'theme_location' => 'header-bottom-menu',
                         'container' => false,
                         'menu_class' => 'sf-links',
                         'depth' => 1,
                         'fallback_cb' => false,
-                    )); ?>
+                    ));
+                    remove_filter('wp_nav_menu_objects', $sf_skip_company, 10);
+                    ?>
                 </nav>
 
                 <nav class="sf-col" aria-labelledby="sf-company-title">
@@ -203,7 +224,7 @@
                             <span class="sf-contact__icon"><?php echo $footer_icon('clock'); // Static SVG. ?></span>
                             <span>
                                 <span class="sf-contact__label">Customer service</span>
-                                Mon&ndash;Fri, 8:00am&ndash;5:00pm PST
+                                Mon&ndash;Fri, 8:00am&ndash;5:00pm PT
                                 <?php
                                 // "Online" only during the hours above (Pacific), not at night or on weekends.
                                 $sf_now = new DateTime('now', new DateTimeZone('America/Los_Angeles'));

@@ -174,12 +174,7 @@ function wholesale_render_cl_style_grid(array $args = array())
 					<p class="hc-shop-cl-lead"><?php echo esc_html($args['lead']); ?></p>
 					<?php echo $args['notice_html']; // Escaped by the caller. ?>
 				</div>
-				<ul class="hc-shop-cl-trust">
-					<li><?php echo wholesale_home_icon('shield'); ?> UL listed for outdoor use</li>
-					<li><?php echo wholesale_home_icon('badge'); ?> 5-year warranty</li>
-					<li><?php echo wholesale_home_icon('plug'); ?> Ships tested with wiring diagram</li>
-					<li><?php echo wholesale_home_icon('flag'); ?> Ships to all 50 states</li>
-				</ul>
+				<?php // 2026-11-23: no trust chips here; the hero's trust strip right above says the same. ?>
 			</div>
 
 			<div class="hc-shop-cl-grid">
@@ -191,7 +186,8 @@ function wholesale_render_cl_style_grid(array $args = array())
 					if ($is_lowest) {
 						$flags['Lowest price'] = 'price';
 					}
-					$photos = wholesale_cl_style_grid_photos($card['product'], $style_name . ' channel letters', '(max-width: 575px) 46vw, (max-width: 991px) 31vw, 280px');
+					// Phones: 58vw, because the taller 4:5 photo frame (css/cl-style-grid.css) shows a square photo about 1.25x the card width.
+					$photos = wholesale_cl_style_grid_photos($card['product'], $style_name . ' channel letters', '(max-width: 575px) 58vw, (max-width: 991px) 31vw, 280px');
 					$photo_count = count($photos);
 					?>
 					<article class="hc-shop-cl-card" id="<?php echo esc_attr($card['style'][4]); ?>">
@@ -245,9 +241,14 @@ function wholesale_render_cl_style_grid(array $args = array())
 				</div>
 			</div>
 
+			<?php
+			// What the card rates cover (and the dated sale behind a struck-through price).
+			// The comparison table below no longer repeats the prices, so this is the one note.
+			$price_note = function_exists('wholesale_cl_starting_price_note') ? wholesale_cl_starting_price_note() : '';
+			?>
 			<p class="hc-shop-cl-note">
-				Rates are per inch of letter height and vary with height and style. Enter your design to see the full price before checkout.
-				<?php if ($args['compare_url']) : ?><a href="<?php echo esc_url($args['compare_url']); ?>">Compare all 7 styles, heights &amp; warranty <?php echo wholesale_home_icon('arrow'); ?></a><?php endif; ?>
+				<?php if ($price_note) : ?><?php echo wp_kses_post($price_note); ?> You&rsquo;ll see your exact price before checkout.<?php else : ?>Rates are per inch of letter height and vary with height and style. Enter your design to see the full price before checkout.<?php endif; ?>
+				<?php if ($args['compare_url']) : ?><a href="<?php echo esc_url($args['compare_url']); ?>">Compare all 7 lighting styles <?php echo wholesale_home_icon('arrow'); ?></a><?php endif; ?>
 			</p>
 		</div>
 	</section>
@@ -314,6 +315,61 @@ function wholesale_render_cl_style_grid(array $args = array())
 			media.addEventListener('focusin', warm);
 			media.querySelector('[data-hc-prev]').addEventListener('click', function () { go(-1); });
 			media.querySelector('[data-hc-next]').addEventListener('click', function () { go(1); });
+			// Phones (2026-11-23): scroll snapping alone sends any swipe shorter than half
+			// a photo back to where it started, and a thumb flick on a half-width card is
+			// usually shorter. A clearly sideways swipe of 30px or more moves one photo.
+			// If the browser ignores the scroll while it is still settling (iOS momentum),
+			// it is sent again once the strip stops.
+			var touchX = 0;
+			var touchY = 0;
+			var touchFrom = 0;
+			var touchOn = false;
+			var touchTurn = 0;
+			var whenSettled = function (turn, done) {
+				var timer = 0;
+				var finish = function () {
+					track.removeEventListener('scroll', onScroll);
+					if (turn === touchTurn) {
+						done();
+					}
+				};
+				var onScroll = function () {
+					window.clearTimeout(timer);
+					timer = window.setTimeout(finish, 140);
+				};
+				track.addEventListener('scroll', onScroll, { passive: true });
+				timer = window.setTimeout(finish, 400);
+			};
+			track.addEventListener('touchstart', function (event) {
+				touchTurn++;
+				touchOn = event.touches.length === 1;
+				if (!touchOn) {
+					return;
+				}
+				touchX = event.touches[0].clientX;
+				touchY = event.touches[0].clientY;
+				touchFrom = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+			}, { passive: true });
+			track.addEventListener('touchend', function (event) {
+				if (!touchOn || !event.changedTouches.length) {
+					return;
+				}
+				touchOn = false;
+				var dx = event.changedTouches[0].clientX - touchX;
+				var dy = event.changedTouches[0].clientY - touchY;
+				if (Math.abs(dx) < 30 || Math.abs(dx) < Math.abs(dy) * 1.2) {
+					return;
+				}
+				var target = Math.max(0, Math.min(total - 1, touchFrom + (dx < 0 ? 1 : -1)));
+				var turn = touchTurn;
+				warm();
+				track.scrollTo({ left: target * track.clientWidth, behavior: 'smooth' });
+				whenSettled(turn, function () {
+					if (Math.round(track.scrollLeft / Math.max(1, track.clientWidth)) !== target) {
+						track.scrollTo({ left: target * track.clientWidth, behavior: 'smooth' });
+					}
+				});
+			}, { passive: true });
 		});
 	})();
 	</script>

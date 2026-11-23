@@ -176,6 +176,7 @@ $logo_id = get_theme_mod('custom_logo');
 		$icon = static function ($name) {
 			$paths = array(
 				'phone' => '<path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25c1.1.37 2.3.57 3.6.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/>',
+				'sms' => '<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v11H9l-5 4z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M8.5 10.5h.01M12 10.5h.01M15.5 10.5h.01"/>',
 				'cart' => '<path fill="currentColor" d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM1 2v2h2l3.6 7.6-1.35 2.4A2 2 0 0 0 7 17h12v-2H7.4a.25.25 0 0 1-.22-.37l.9-1.63h7.45a2 2 0 0 0 1.75-1.03l3.58-6.5A1 1 0 0 0 20 4H5.2l-.94-2H1zm16 16a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>',
 				'grid' => '<path fill="currentColor" d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>',
 				'arrow' => '<path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/>',
@@ -186,6 +187,110 @@ $logo_id = get_theme_mod('custom_logo');
 		$ship_has = (bool) ($ship_min || $ship_cl_min);
 		// A separate channel-letter minimum makes the offer twice as long; both top bars then drop lower-priority items to stay on one row.
 		$ship_two = $ship_min && $ship_cl_min && $ship_cl_min !== $ship_min;
+
+		// "All Products" mega menu, shared by the phone menu (#megaMenu), the desktop
+		// menu (#ssxMega) and the phone drawer: three columns of titled groups.
+		// Each link is array(label, url, category slug or '', is "shop all" link).
+		$mm_cat = static function ($label, $slug, $all = false) {
+			return array($label, wholesale_category_url($slug), $slug, $all);
+		};
+		$mm_prod = static function ($label, $path) {
+			return array($label, home_url($path), '', false);
+		};
+		$mm_signs_url = function_exists('wholesale_seo_storefront_signs_url') ? wholesale_seo_storefront_signs_url() : '';
+		$mega_columns = array(
+			array(
+				array('title' => 'Signs / Letters', 'links' => array(
+					$mm_cat('Custom Channel Letter Signs', 'channel-letters'),
+					// /signs-letters/ redirects to the Storefront Signs guide when it is published.
+					array('Storefront Signs', $mm_signs_url ? $mm_signs_url : wholesale_category_url('signs-letters'), 'signs-letters', true),
+				)),
+				array('title' => 'Indoor / Outdoor Displays', 'links' => array(
+					$mm_cat('Advertising Flags', 'advertising-flags'),
+					$mm_cat('Banner Stands', 'banner-stands'),
+					$mm_prod('Step and Repeat Backdrop', '/product/step-and-repeat-backdrop-graphic-frame/'),
+					$mm_cat('Real Estate Products', 'real-estate-products'),
+					$mm_cat('A Frame and Sign Holders', 'a-frame-and-sign-holders'),
+					$mm_cat('Signicade A-Frames', 'signicade-a-frames'),
+					$mm_cat('SEG Products', 'seg-products'),
+					$mm_cat('Trade Show Products', 'trade-show-products'),
+					$mm_cat('Custom Event Tents', 'custom-event-tents'),
+					$mm_cat('Table Throws', 'table-throws'),
+					$mm_cat('All Indoor / Outdoor Displays', 'indoor-outdoor-displays', true),
+				)),
+			),
+			array(
+				array('title' => 'Banners', 'links' => array(
+					$mm_prod('13oz Vinyl Banner', '/product/13oz-vinyl-banner/'),
+					$mm_prod('18oz Blockout Banner', '/product/18oz-blockout-banner/'),
+					$mm_prod('Backlit Banner', '/product/backlit-banner/'),
+					$mm_prod('Mesh Banner', '/product/mesh-banner/'),
+					$mm_prod('Indoor Banner', '/product/indoor-banner-super-smooth/'),
+					$mm_prod('Pole Banner', '/product/pole-banner-set-banner-hardware/'),
+					$mm_prod('9oz Fabric Banner', '/product/fabric-banner-9oz-wrinkle-free-copy/'),
+					$mm_prod('Blockout Fabric Banner', '/product/blockout-fabric-banner/'),
+					$mm_prod('Tension Fabric', '/product/tension-fabric/'),
+					$mm_cat('All Banners', 'banners', true),
+				)),
+				array('title' => 'Display Hardware', 'links' => array(
+					$mm_cat('Display Hardware Only', 'hardware-only'),
+					$mm_cat('Banner Stand Hardware', 'banner-stand-hardware'),
+					$mm_cat('Flag Poles, Bases & Hardware', 'flag-hardware'),
+					$mm_cat('A Frame and Sign Holder Hardware', 'a-frame-and-sign-holder-hardware'),
+					$mm_cat('Signicade A-Frame Hardware', 'signicade-a-frame-hardware'),
+					$mm_cat('Event Tent Hardware', 'event-tent-hardware-only'),
+				)),
+			),
+			array(
+				array('title' => 'Large Format', 'links' => array(
+					$mm_cat('Adhesive Vinyl & Window Graphics', 'adhesive-products'),
+					$mm_cat('Wall Art', 'wall-art'),
+					$mm_cat('Rigid Signs and Magnets', 'rigid-signs-and-magnets'),
+					$mm_cat('Reflective Products', 'reflective-products'),
+					$mm_cat('Dry Erase Products', 'dry-erase-products'),
+					$mm_cat('Clear Acrylic Prints', 'clear-acrylic-prints-custom-sizes-storefront-sign-online'),
+					$mm_prod('DTF', '/product/dtf/'),
+					$mm_prod('Backlit Film', '/product/backlit-film/'),
+					$mm_prod('Prem. Window Cling', '/product/premium-window-cling/'),
+					$mm_prod('Posters', '/product/posters/'),
+					$mm_prod('Styrene', '/product/styrene/'),
+					$mm_prod('Popup', '/product/popup/'),
+					$mm_prod('Canvas Roll', '/product/canvas-roll/'),
+					$mm_cat('All Large Format Printing', 'large-format', true),
+				)),
+			),
+		);
+		// Any category with products that the lists above miss (e.g. one added later
+		// in Products > Categories) still shows, under "More Categories".
+		$mm_listed = array();
+		foreach ($mega_columns as $mm_column) {
+			foreach ($mm_column as $mm_group) {
+				foreach ($mm_group['links'] as $mm_link) {
+					if ($mm_link[2]) {
+						$mm_listed[$mm_link[2]] = true;
+					}
+				}
+			}
+		}
+		$mm_terms = get_terms(array('taxonomy' => 'product_category', 'hide_empty' => false, 'orderby' => 'name'));
+		$mm_more = array();
+		foreach (is_wp_error($mm_terms) ? array() : $mm_terms as $mm_term) {
+			if (isset($mm_listed[$mm_term->slug])) {
+				continue;
+			}
+			if (function_exists('wholesale_seo_category_has_products') ? !wholesale_seo_category_has_products($mm_term) : !$mm_term->count) {
+				continue;
+			}
+			// Names are stored HTML-escaped; drop an SEO suffix such as " | Storefront Sign Online".
+			$mm_name = trim(preg_replace('/\s+\|.*$/', '', wp_specialchars_decode($mm_term->name, ENT_QUOTES)));
+			$mm_more[] = $mm_cat($mm_name, $mm_term->slug);
+		}
+		if ($mm_more) {
+			$mega_columns[count($mega_columns) - 1][] = array('title' => 'More Categories', 'links' => $mm_more);
+		}
+		// The trade site swaps in its own menu (inc/trade/content.php).
+		$mega_columns = apply_filters('wholesale_mega_columns', $mega_columns);
+		unset($mm_listed, $mm_terms, $mm_more, $mm_term, $mm_name, $mm_column, $mm_group, $mm_link);
 		?>
 		<?php // Dark contact bar for phones and tablets (below 992px), matching the desktop top bar: call/text on the left, free shipping on the right. It sits above the sticky header, so it scrolls away. ?>
 		<style>
@@ -274,25 +379,51 @@ $logo_id = get_theme_mod('custom_logo');
 			}
 
 			@media (max-width: 599.98px) {
-				.sso-mbar .sso-mbar__in {
-					justify-content: center;
-					gap: 6px 12px;
-					min-height: 38px;
-					padding-left: 12px;
-					padding-right: 12px;
+				/* Phones: free shipping and the toll-free number sit inline on one row. */
+				.sso-mbar {
+					font-size: 12px;
 				}
 
-				/* Phones: free shipping first, then the call number; text and labels move to the menu. */
+				.sso-mbar .sso-mbar__in {
+					flex-wrap: nowrap;
+					justify-content: center;
+					gap: 10px;
+					min-height: 36px;
+					padding-left: 10px;
+					padding-right: 10px;
+				}
+
+				.sso-mbar__contact {
+					flex: none;
+				}
+
+				.sso-mbar a {
+					gap: 4px;
+				}
+
+				.sso-mbar svg {
+					width: 13px;
+					height: 13px;
+				}
+
+				/* Phones: free shipping first, then the toll-free number (labelled like the desktop top bar); the text number moves to the header SMS button and the menu. */
 				.sso-mbar a.sso-mbar__ship {
 					order: -1;
-					height: 26px;
-					padding: 0 10px 0 9px;
+					flex: 0 1 auto;
+					min-width: 0;
+					gap: 5px;
+					height: 24px;
+					padding: 0 8px 0 7px;
+				}
+
+				.sso-mbar a.sso-mbar__ship > span {
+					overflow: hidden;
+					text-overflow: ellipsis;
 				}
 
 				.sso-mbar__long,
-				.sso-mbar__label,
-				.sso-mbar__text,
-				.sso-mbar--long-offer .sso-mbar__contact {
+				.sso-mbar__label:not(.sso-mbar__label--toll),
+				.sso-mbar__text {
 					display: none !important;
 				}
 			}
@@ -396,6 +527,10 @@ $logo_id = get_theme_mod('custom_logo');
 							<?php echo $icon('phone'); // Static SVG. ?>
 							<span class="sh-icon__text"><?php echo esc_html($phone_display); ?></span>
 						</a>
+						<?php // Phones: Send SMS replaces the call button (the toll-free number is in the dark bar above). ?>
+						<a class="sh-icon sh-icon--sms" href="<?php echo esc_attr($text_href); ?>" aria-label="<?php echo esc_attr('Send us an SMS at ' . $text_display); ?>">
+							<?php echo $icon('sms'); // Static SVG. ?>
+						</a>
 						<a class="sh-icon sh-icon--cart" href="<?php echo esc_url(home_url('/cart/')); ?>" data-cart-link aria-label="<?php esc_attr_e('Cart', 'litsign'); ?>">
 							<?php echo $icon('cart'); // Static SVG. ?>
 							<span class="sh-icon__text">Cart</span>
@@ -477,209 +612,21 @@ $logo_id = get_theme_mod('custom_logo');
 								<?php if (has_action('wholesale_legacy_mega_menu')) : do_action('wholesale_legacy_mega_menu'); else : ?>
 								<div class="container p-3">
 									<div class="row">
-										<div class="col-md-4">
-											<div class="mm-col-container">
-												<h4 class="mm-heading">
-													Signs / Letters
-												</h4>
-												<a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="mm-link">
-													<span>
-														Custom Channel Letter Signs
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
+										<?php foreach ($mega_columns as $column) : ?>
+											<div class="col-md-4">
+												<?php foreach ($column as $group_i => $group) : ?>
+													<div class="mm-col-container<?php echo $group_i ? ' mt-3' : ''; ?>">
+														<h4 class="mm-heading"><?php echo esc_html($group['title']); ?></h4>
+														<?php foreach ($group['links'] as $link) : ?>
+															<a href="<?php echo esc_url($link[1]); ?>" class="mm-link<?php echo !empty($link[3]) ? ' mm-link--all' : ''; ?>">
+																<span><?php echo esc_html($link[0]); ?></span>
+																<?php if (!empty($link[2])) : ?><i class="fa-solid fa-chevron-right"></i><?php endif; ?>
+															</a>
+														<?php endforeach; ?>
+													</div>
+												<?php endforeach; ?>
 											</div>
-											<div class="mm-col-container mt-3">
-												<h4 class="mm-heading">
-													Indoor / Outdoor Displays
-												</h4>
-												<a href="<?php echo esc_url(wholesale_category_url('advertising-flags')); ?>" class="mm-link">
-													<span>
-														Advertising Flags
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('banner-stands')); ?>" class="mm-link">
-													<span>
-														Banner Stands
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/step-and-repeat-backdrop-graphic-frame/')); ?>" class="mm-link">
-													<span>
-														Step and Repeat Backdrop
-													</span>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('real-estate-products')); ?>" class="mm-link">
-													<span>
-														Real Estate Products
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('a-frame-and-sign-holders')); ?>" class="mm-link">
-													<span>
-														A Frame and Sign Holders
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('signicade-a-frames')); ?>" class="mm-link">
-													<span>
-														Signicade A-Frames
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('seg-products')); ?>" class="mm-link">
-													<span>
-														SEG Products
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('trade-show-products')); ?>" class="mm-link">
-													<span>
-														Trade Show Products
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('custom-event-tents')); ?>" class="mm-link">
-													<span>
-														Custom Event Tents
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('table-throws')); ?>" class="mm-link">
-													<span>
-														Table Throws
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('hardware-only')); ?>" class="mm-link">
-													<span>
-														Hardware Only
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-											</div>
-
-
-										</div>
-										<div class="col-md-4">
-											<div class="mm-col-container">
-												<h4 class="mm-heading">
-													Banners
-												</h4>
-												<a href="<?php echo esc_url(home_url('/product/13oz-vinyl-banner/')); ?>" class="mm-link">
-													<span>
-														13oz Vinyl Banner
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/18oz-blockout-banner/')); ?>" class="mm-link">
-													<span>
-														18oz Blockout Banner
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/backlit-banner/')); ?>" class="mm-link">
-													<span>
-														Backlit Banner
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/mesh-banner/')); ?>" class="mm-link">
-													<span>
-														Mesh Banner
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/indoor-banner-super-smooth/')); ?>" class="mm-link">
-													<span>
-														Indoor Banner
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/pole-banner-set-banner-hardware/')); ?>" class="mm-link">
-													<span>
-														Pole Banner
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/fabric-banner-9oz-wrinkle-free-copy/')); ?>" class="mm-link">
-													<span>
-														9oz Fabric Banner
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/blockout-fabric-banner/')); ?>" class="mm-link">
-													<span>
-														Blockout Fabric Banner
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/tension-fabric/')); ?>" class="mm-link">
-													<span>
-														Tension Fabric
-													</span>
-												</a>
-											</div>
-										</div>
-										<div class="col-md-4">
-											<div class="mm-col-container">
-												<h4 class="mm-heading">
-													Large Format
-												</h4>
-												<a href="<?php echo esc_url(wholesale_category_url('wall-art')); ?>" class="mm-link">
-													<span>
-														Wall Art
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('rigid-signs-and-magnets')); ?>" class="mm-link">
-													<span>
-														Rigid Signs and Magnets
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('reflective-products')); ?>" class="mm-link">
-													<span>
-														Reflective Products
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(wholesale_category_url('dry-erase-products')); ?>" class="mm-link">
-													<span>
-														Dry Erase Products
-													</span>
-													<i class="fa-solid fa-chevron-right"></i>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/dtf/')); ?>" class="mm-link">
-													<span>
-														DTF
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/backlit-film/')); ?>" class="mm-link">
-													<span>
-														Backlit Film
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/premium-window-cling/')); ?>" class="mm-link">
-													<span>
-														Prem. Window Cling
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/posters/')); ?>" class="mm-link">
-													<span>
-														Posters
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/styrene/')); ?>" class="mm-link">
-													<span>
-														Styrene
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/popup/')); ?>" class="mm-link">
-													<span>
-														Popup
-													</span>
-												</a>
-												<a href="<?php echo esc_url(home_url('/product/canvas-roll/')); ?>" class="mm-link">
-													<span>
-														Canvas Roll
-													</span>
-												</a>
-											</div>
-										</div>
+										<?php endforeach; ?>
 										<div class="mega-menu-footer">
 											<a class="mega-menu-builder-cta" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">
 												<span>Start building</span>
@@ -753,61 +700,17 @@ $logo_id = get_theme_mod('custom_logo');
 				'sms'     => '<path ' . $s . ' stroke-width="2" d="M4 5h16v11H9l-5 4z"/>',
 				'mail'    => '<rect x="3" y="5" width="18" height="14" rx="2" ' . $s . ' stroke-width="2"/><path ' . $s . ' stroke-width="2" d="m3 7 9 6 9-6"/>',
 				'next'    => '<path ' . $s . ' stroke-width="2.4" d="m9 6 6 6-6 6"/>',
+				// Outline icons for the phone menu (.ssxm), drawn to match 'mail' / 'sms'.
+				'phone-o' => '<path ' . $s . ' stroke-width="1.8" d="M21 16.4v2.8a1.9 1.9 0 0 1-2.1 1.9 18.8 18.8 0 0 1-8.2-2.9 18.5 18.5 0 0 1-5.7-5.7A18.8 18.8 0 0 1 2.1 4.2 1.9 1.9 0 0 1 4 2.1h2.8a1.9 1.9 0 0 1 1.9 1.6c.12.9.34 1.8.66 2.65a1.9 1.9 0 0 1-.43 2L7.7 9.5a15.2 15.2 0 0 0 5.7 5.7l1.2-1.2a1.9 1.9 0 0 1 2-.43c.86.32 1.75.54 2.65.66A1.9 1.9 0 0 1 21 16.4z"/>',
+				'cart-o'  => '<circle cx="9" cy="20" r="1.3" ' . $s . ' stroke-width="1.8"/><circle cx="18" cy="20" r="1.3" ' . $s . ' stroke-width="1.8"/><path ' . $s . ' stroke-width="1.8" d="M2.5 3h2.4l2.5 11.4a1.8 1.8 0 0 0 1.8 1.4h8.5a1.8 1.8 0 0 0 1.75-1.35L21.5 7H5.8"/>',
+				'card'    => '<rect x="2.5" y="5" width="19" height="14" rx="2.5" ' . $s . ' stroke-width="1.8"/><path ' . $s . ' stroke-width="1.8" d="M2.5 10h19M6.5 15h4"/>',
+				'arrow'   => '<path ' . $s . ' stroke-width="2" d="M5 12h14M13 6l6 6-6 6"/>',
 				'truck'   => '<path ' . $s . ' stroke-width="2" d="M2.5 6.5h11v9h-11zM13.5 9.5h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/>',
 			);
 			return '<svg class="ssx-svg" viewBox="0 0 24 24" width="' . (int) $size . '" height="' . (int) $size . '" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
 		};
 
-		// "All Products" mega menu: three columns, each with one or more titled groups.
-		$mega_columns = array(
-			array(
-				array('title' => 'Signs / Letters', 'links' => array(
-					array('Custom Channel Letter Signs', wholesale_category_url('channel-letters')),
-				)),
-				array('title' => 'Indoor / Outdoor Displays', 'links' => array(
-					array('Advertising Flags', wholesale_category_url('advertising-flags')),
-					array('Banner Stands', wholesale_category_url('banner-stands')),
-					array('Step and Repeat Backdrop', home_url('/product/step-and-repeat-backdrop-graphic-frame/')),
-					array('Real Estate Products', wholesale_category_url('real-estate-products')),
-					array('A Frame and Sign Holders', wholesale_category_url('a-frame-and-sign-holders')),
-					array('Signicade A-Frames', wholesale_category_url('signicade-a-frames')),
-					array('SEG Products', wholesale_category_url('seg-products')),
-					array('Trade Show Products', wholesale_category_url('trade-show-products')),
-					array('Custom Event Tents', wholesale_category_url('custom-event-tents')),
-					array('Table Throws', wholesale_category_url('table-throws')),
-					array('Hardware Only', wholesale_category_url('hardware-only')),
-				)),
-			),
-			array(
-				array('title' => 'Banners', 'links' => array(
-					array('13oz Vinyl Banner', home_url('/product/13oz-vinyl-banner/')),
-					array('18oz Blockout Banner', home_url('/product/18oz-blockout-banner/')),
-					array('Backlit Banner', home_url('/product/backlit-banner/')),
-					array('Mesh Banner', home_url('/product/mesh-banner/')),
-					array('Indoor Banner', home_url('/product/indoor-banner-super-smooth/')),
-					array('Pole Banner', home_url('/product/pole-banner-set-banner-hardware/')),
-					array('9oz Fabric Banner', home_url('/product/fabric-banner-9oz-wrinkle-free-copy/')),
-					array('Blockout Fabric Banner', home_url('/product/blockout-fabric-banner/')),
-					array('Tension Fabric', home_url('/product/tension-fabric/')),
-				)),
-			),
-			array(
-				array('title' => 'Large Format', 'links' => array(
-					array('Wall Art', wholesale_category_url('wall-art')),
-					array('Rigid Signs and Magnets', wholesale_category_url('rigid-signs-and-magnets')),
-					array('Reflective Products', wholesale_category_url('reflective-products')),
-					array('Dry Erase Products', wholesale_category_url('dry-erase-products')),
-					array('DTF', home_url('/product/dtf/')),
-					array('Backlit Film', home_url('/product/backlit-film/')),
-					array('Prem. Window Cling', home_url('/product/premium-window-cling/')),
-					array('Posters', home_url('/product/posters/')),
-					array('Styrene', home_url('/product/styrene/')),
-					array('Popup', home_url('/product/popup/')),
-					array('Canvas Roll', home_url('/product/canvas-roll/')),
-				)),
-			),
-		);
-		$mega_columns = apply_filters('wholesale_mega_columns', $mega_columns);
+		// "All Products" mega menu: $mega_columns is set at the top of this file (shared with the phone menu).
 		?>
 
 		<style>
@@ -1021,9 +924,15 @@ $logo_id = get_theme_mod('custom_logo');
 				transform: translateX(2px);
 			}
 
+			/* Hours sit left of the free-shipping pill, with the divider between them. */
 			.ssx-tb--hours {
-				padding-left: 18px;
-				border-left: 1px solid rgba(255, 255, 255, .16);
+				padding-right: 18px;
+				border-right: 1px solid rgba(255, 255, 255, .16);
+			}
+
+			.ssx-tb--hours:last-child {
+				padding-right: 0;
+				border-right: 0;
 			}
 
 			/* Narrower desktops keep one row: hours drop first (they're on the Contact page and in the menu). */
@@ -1033,7 +942,14 @@ $logo_id = get_theme_mod('custom_logo');
 				}
 			}
 
-			/* The longer two-minimum offer: hours go below 1500px, the email below 1100px. */
+			/* The longer two-minimum offer: the "Toll Free:" / "Text:" labels go (the icons stay), since the bar is capped at 1320px
+			   and needs ~1360px with them; then the hours go below 1500px and the email below 1100px. */
+			@media (min-width: 992px) {
+				.ssx-topbar--long-offer .ssx-tb__label {
+					display: none;
+				}
+			}
+
 			@media (min-width: 992px) and (max-width: 1499px) {
 				.ssx-topbar--long-offer .ssx-tb--hours {
 					display: none;
@@ -1453,6 +1369,12 @@ $logo_id = get_theme_mod('custom_logo');
 				color: var(--ssx-blue-text);
 			}
 
+			/* "All Banners" etc.: the group's whole category. */
+			.ssx-mega__list a.is-all {
+				color: var(--ssx-blue-text);
+				font-weight: 700;
+			}
+
 			.ssx-mega__foot {
 				background: var(--ssx-soft);
 				border-top: 1px solid var(--ssx-line);
@@ -1551,6 +1473,10 @@ $logo_id = get_theme_mod('custom_logo');
 						</a>
 					</div>
 					<div class="ssx-topbar__right">
+						<span class="ssx-tb ssx-tb--muted ssx-tb--hours">
+							<?php echo $ssx_icon('clock', 16); // Static SVG. ?>
+							Mon&ndash;Fri 8am&ndash;5pm PT
+						</span>
 						<?php if ($ship_has) : ?>
 							<a class="ssx-ship" href="<?php echo esc_url($ship_url); ?>" title="<?php esc_attr_e('See free shipping details', 'litsign'); ?>">
 								<?php echo $ssx_icon('truck', 18); // Static SVG. ?>
@@ -1655,7 +1581,7 @@ $logo_id = get_theme_mod('custom_logo');
 											<h3 class="ssx-mega__title"><?php echo esc_html($group['title']); ?></h3>
 											<ul class="ssx-mega__list">
 												<?php foreach ($group['links'] as $link) : ?>
-													<li><a href="<?php echo esc_url($link[1]); ?>"><?php echo esc_html($link[0]); ?></a></li>
+													<li><a href="<?php echo esc_url($link[1]); ?>"<?php echo !empty($link[3]) ? ' class="is-all"' : ''; ?>><?php echo esc_html($link[0]); ?></a></li>
 												<?php endforeach; ?>
 											</ul>
 										</div>
@@ -1864,10 +1790,10 @@ $logo_id = get_theme_mod('custom_logo');
 				position: fixed;
 				inset: 0;
 				z-index: 100000;
-				background: rgba(10, 24, 40, .55);
+				background: rgba(15, 23, 32, .42);
 				opacity: 0;
 				visibility: hidden;
-				transition: opacity .25s, visibility 0s .25s;
+				transition: opacity .28s ease, visibility 0s .28s;
 				-webkit-tap-highlight-color: transparent;
 			}
 
@@ -1877,16 +1803,21 @@ $logo_id = get_theme_mod('custom_logo');
 				transition-delay: 0s;
 			}
 
+			/* Phone menu: one type scale (12 / 14 / 15 / 16), one radius, hairlines only. */
 			.ssxm {
-				--m-blue: #1fa8de;
-				--m-blue-hover: #1790c0;
-				--m-blue-text: #0e7aa6;
-				--m-blue-tint: #e6f6fc;
-				--m-navy: #0d2236;
-				--m-ink: #17222e;
-				--m-muted: #5c6b7a;
-				--m-line: #e2e8ee;
-				--m-soft: #f3f6f9;
+				--m-accent: #1fa8de;
+				--m-accent-strong: #0e7aa6;
+				--m-accent-strong-hover: #0b6a91;
+				--m-accent-tint: #eef8fc;
+				--m-ink: #101828;
+				--m-body: #344054;
+				--m-muted: #667085;
+				--m-faint: #98a2b3;
+				--m-line: #eaecf0;
+				--m-border: #d0d5dd;
+				--m-hover: #f4f6f8;
+				--m-radius: 10px;
+				--m-pad: 20px;
 
 				position: fixed;
 				top: 0;
@@ -1898,13 +1829,17 @@ $logo_id = get_theme_mod('custom_logo');
 				width: min(90vw, 400px);
 				background: #fff;
 				color: var(--m-ink);
-				font-family: var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
+				font-family: var(--font-sans, "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
 				font-size: 16px;
-				line-height: 1.4;
-				box-shadow: -12px 0 40px rgba(13, 34, 54, .28);
-				transform: translateX(104%);
+				line-height: 1.5;
+				letter-spacing: -.011em;
+				-webkit-font-smoothing: antialiased;
+				-moz-osx-font-smoothing: grayscale;
+				text-rendering: optimizeLegibility;
+				box-shadow: -16px 0 48px rgba(16, 24, 40, .16);
+				transform: translateX(100%);
 				visibility: hidden;
-				transition: transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s .3s;
+				transition: transform .34s cubic-bezier(.32, .72, 0, 1), visibility 0s .34s;
 			}
 
 			.ssxm.is-open {
@@ -1922,6 +1857,7 @@ $logo_id = get_theme_mod('custom_logo');
 			.ssxm a {
 				color: inherit;
 				text-decoration: none;
+				-webkit-tap-highlight-color: transparent;
 			}
 
 			.ssxm ul {
@@ -1938,10 +1874,11 @@ $logo_id = get_theme_mod('custom_logo');
 			.ssxm button {
 				font-family: inherit;
 				margin: 0;
+				-webkit-tap-highlight-color: transparent;
 			}
 
 			.ssxm :focus-visible {
-				outline: 3px solid #7ccdee;
+				outline: 2px solid var(--m-accent);
 				outline-offset: 2px;
 			}
 
@@ -1949,9 +1886,18 @@ $logo_id = get_theme_mod('custom_logo');
 				display: none !important;
 			}
 
-			.ssxm-svg {
+			.ssxm .ssx-svg {
 				display: block;
 				flex: none;
+			}
+
+			/* One line weight for every outline icon in the menu. */
+			.ssxm .ssx-svg [stroke-width] {
+				stroke-width: 1.8px;
+			}
+
+			.ssxm__search button .ssx-svg [stroke-width] {
+				stroke-width: 2.2px;
 			}
 
 			.ssxm-vh {
@@ -1971,18 +1917,22 @@ $logo_id = get_theme_mod('custom_logo');
 				align-items: center;
 				justify-content: space-between;
 				gap: 12px;
-				padding: 12px 12px 12px 18px;
+				min-height: 64px;
+				padding: 8px 10px 8px var(--m-pad);
 				border-bottom: 1px solid var(--m-line);
 			}
 
+			/* Logo fills the drawer's top row next to the close button (owner
+			   2026-11-21: "full width of the hamburger menu"): up to 314px. */
 			.ssxm__logo {
 				display: block;
+				flex: 1 1 auto;
 				min-width: 0;
 			}
 
 			.ssxm__logo img {
 				display: block;
-				width: 170px;
+				width: 100%;
 				max-width: 100%;
 				height: auto;
 			}
@@ -1993,16 +1943,19 @@ $logo_id = get_theme_mod('custom_logo');
 				place-items: center;
 				width: 44px;
 				height: 44px;
+				padding: 0;
 				border: 0;
-				border-radius: 50%;
-				background: var(--m-soft);
-				color: var(--m-ink);
+				border-radius: var(--m-radius);
+				background: transparent;
+				color: var(--m-muted);
 				cursor: pointer;
-				transition: background-color .15s;
+				transition: background-color .15s, color .15s;
 			}
 
-			.ssxm__close:hover {
-				background: var(--m-line);
+			.ssxm__close:hover,
+			.ssxm__close:active {
+				background: var(--m-hover);
+				color: var(--m-ink);
 			}
 
 			/* Body */
@@ -2011,25 +1964,27 @@ $logo_id = get_theme_mod('custom_logo');
 				overflow-y: auto;
 				overscroll-behavior: contain;
 				-webkit-overflow-scrolling: touch;
-				padding: 16px 18px 24px;
+				scrollbar-width: thin;
+				padding: 16px var(--m-pad) 28px;
 			}
 
 			.ssxm__search {
 				display: flex;
 				align-items: center;
-				gap: 8px;
-				height: 50px;
-				padding: 0 6px 0 16px;
-				border: 1.5px solid #cfd9e2;
-				border-radius: 999px;
-				background: #fff;
+				gap: 10px;
+				height: 46px;
+				padding: 0 6px 0 14px;
+				border: 1px solid transparent;
+				border-radius: var(--m-radius);
+				background: var(--m-hover);
 				color: var(--m-muted);
-				transition: border-color .15s, box-shadow .15s;
+				transition: border-color .15s, background-color .15s, box-shadow .15s;
 			}
 
 			.ssxm__search:focus-within {
-				border-color: var(--m-blue);
-				box-shadow: 0 0 0 4px rgba(31, 168, 222, .18);
+				border-color: var(--m-accent);
+				background: #fff;
+				box-shadow: 0 0 0 3px rgba(31, 168, 222, .16);
 			}
 
 			.ssxm__search input[type="search"] {
@@ -2044,12 +1999,13 @@ $logo_id = get_theme_mod('custom_logo');
 				color: var(--m-ink);
 				font: inherit;
 				font-size: 16px;
+				letter-spacing: inherit;
 				-webkit-appearance: none;
 				appearance: none;
 			}
 
 			.ssxm__search input::placeholder {
-				color: #7d8b99;
+				color: var(--m-muted);
 				opacity: 1;
 			}
 
@@ -2058,17 +2014,26 @@ $logo_id = get_theme_mod('custom_logo');
 				display: none;
 			}
 
+			/* Submit arrow: only shown once something is typed (Enter / the keyboard's Search key also submit). */
 			.ssxm__search button {
 				flex: none;
 				display: grid;
 				place-items: center;
-				width: 38px;
-				height: 38px;
+				width: 34px;
+				height: 34px;
+				padding: 0;
 				border: 0;
-				border-radius: 50%;
-				background: var(--m-blue);
+				border-radius: 8px;
+				background: var(--m-ink);
 				color: #fff;
 				cursor: pointer;
+				transition: opacity .15s, transform .15s;
+			}
+
+			.ssxm__search input:placeholder-shown~button {
+				opacity: 0;
+				visibility: hidden;
+				transform: scale(.85);
 			}
 
 			.ssxm__cta {
@@ -2076,226 +2041,251 @@ $logo_id = get_theme_mod('custom_logo');
 				align-items: center;
 				justify-content: center;
 				gap: 8px;
-				min-height: 52px;
-				margin-top: 14px;
-				border-radius: 999px;
-				background: var(--m-blue);
+				min-height: 48px;
+				margin-top: 12px;
+				padding: 0 16px;
+				border-radius: var(--m-radius);
+				background: var(--m-accent-strong);
 				color: #fff !important;
-				font-weight: 700;
-				box-shadow: 0 8px 18px rgba(31, 168, 222, .32);
+				font-size: 15px;
+				font-weight: 600;
+				letter-spacing: -.006em;
 				transition: background-color .15s;
 			}
 
-			.ssxm__cta:hover {
-				background: var(--m-blue-hover);
+			.ssxm__cta:hover,
+			.ssxm__cta:active {
+				background: var(--m-accent-strong-hover);
 			}
 
-			.ssxm__label {
-				margin: 36px 0 16px;
+			.ssxm__cta .ssx-svg {
+				transition: transform .15s;
+			}
+
+			.ssxm__cta:hover .ssx-svg {
+				transform: translateX(2px);
+			}
+
+			.ssxm .ssxm__label {
+				margin: 28px 0 4px;
 				color: var(--m-muted);
-				font-size: 13px;
-				font-weight: 700;
+				font-size: 12px;
+				font-weight: 600;
+				line-height: 1.4;
+				letter-spacing: .06em;
+				text-transform: uppercase;
 			}
 
-			/* Rows: links, accordion summary */
+			/* Rows: links, accordion summary. Text lines up with the search box; the hover fill bleeds 12px out. */
 			.ssxm__row,
 			.ssxm__list a,
 			.ssxm-acc>summary {
 				display: flex;
 				align-items: center;
-				gap: 12px;
-				min-height: 54px;
-				padding: 0 4px;
-				border-bottom: 1px solid var(--m-line);
+				gap: 14px;
+				min-height: 48px;
+				margin: 0 -12px;
+				padding: 0 12px;
+				border-radius: var(--m-radius);
 				color: var(--m-ink);
-				font-weight: 600;
-				transition: color .15s, background-color .15s;
+				font-size: 16px;
+				font-weight: 500;
+				line-height: 1.25;
+				transition: background-color .15s, color .15s;
 			}
 
 			.ssxm__row:hover,
+			.ssxm__row:active,
 			.ssxm__list a:hover,
-			.ssxm-acc>summary:hover {
-				color: var(--m-blue-text);
+			.ssxm__list a:active,
+			.ssxm-acc>summary:hover,
+			.ssxm-acc>summary:active {
+				background: var(--m-hover);
 			}
 
-			.ssxm__row .ssxm__next,
-			.ssxm-acc>summary .ssxm__next {
-				margin-left: auto;
-				color: #9aa9b7;
-			}
-
-			.ssxm__list a::after {
-				content: "";
-				flex: none;
-				width: 8px;
-				height: 8px;
-				margin-left: auto;
-				margin-right: 4px;
-				border-top: 2px solid #9aa9b7;
-				border-right: 2px solid #9aa9b7;
-				transform: rotate(45deg);
+			.ssxm__row .ssx-svg {
+				color: var(--m-muted);
 			}
 
 			.ssxm__list .current-menu-item>a,
 			.ssxm__list .current_page_item>a {
-				color: var(--m-blue-text);
-				box-shadow: inset 3px 0 0 var(--m-blue);
-				padding-left: 12px;
+				background: var(--m-accent-tint);
+				color: var(--m-accent-strong);
+				font-weight: 600;
 			}
 
 			.ssxm__badge {
-				min-width: 22px;
-				height: 22px;
-				padding: 0 7px;
-				border-radius: 11px;
+				min-width: 20px;
+				height: 20px;
+				margin-left: auto;
+				padding: 0 6px;
+				border-radius: 10px;
 				background: #f04e23;
 				color: #fff;
-				font-size: 12px;
-				font-weight: 700;
-				line-height: 22px;
+				font-size: 11px;
+				font-weight: 600;
+				line-height: 20px;
+				letter-spacing: 0;
 				text-align: center;
+				font-variant-numeric: tabular-nums;
 			}
 
 			/* All Products accordion */
 			.ssxm-acc>summary {
 				cursor: pointer;
 				list-style: none;
-				font-weight: 700;
 			}
 
 			.ssxm-acc>summary::-webkit-details-marker {
 				display: none;
 			}
 
-			.ssxm-acc>summary .ssxm__ico {
-				display: grid;
-				place-items: center;
-				width: 34px;
-				height: 34px;
-				border-radius: 10px;
-				background: var(--m-blue-tint);
-				color: var(--m-blue-text);
-			}
-
 			.ssxm-acc>summary .ssxm__next {
-				transition: transform .2s;
-				transform: rotate(90deg);
+				display: flex;
+				margin-left: auto;
+				color: var(--m-faint);
+				transition: transform .2s ease;
 			}
 
 			.ssxm-acc[open]>summary .ssxm__next {
-				transform: rotate(-90deg);
+				transform: rotate(180deg);
 			}
 
 			.ssxm-acc__body {
-				padding: 4px 0 14px;
-				border-bottom: 1px solid var(--m-line);
-				background: linear-gradient(180deg, #fafdff, #fff);
+				margin: 4px 0 12px;
+				padding: 0 0 4px 14px;
+				border-left: 1px solid var(--m-line);
 			}
 
-			.ssxm-group__title {
-				margin: 16px 0 4px 4px;
-				font-size: 15px;
-				font-weight: 800;
+			.ssxm .ssxm-group__title {
+				margin: 18px 0 2px;
+				color: var(--m-ink);
+				font-size: 14px;
+				font-weight: 600;
+				line-height: 1.4;
 			}
 
-			.ssxm-sub {
-				margin-left: 6px;
-				border-left: 2px solid var(--m-line);
+			.ssxm .ssxm-acc__body>.ssxm-group__title:first-child {
+				margin-top: 8px;
 			}
 
 			.ssxm-sub a {
-				display: block;
-				padding: 10px 14px;
-				border-radius: 0 8px 8px 0;
-				color: #2c3a49;
+				display: flex;
+				align-items: center;
+				min-height: 40px;
+				margin: 0 -10px;
+				padding: 8px 10px;
+				border-radius: 8px;
+				color: var(--m-body);
 				font-size: 15px;
+				font-weight: 400;
+				line-height: 1.35;
+				transition: background-color .15s, color .15s;
 			}
 
-			.ssxm-sub a:hover {
-				background: var(--m-blue-tint);
-				color: var(--m-blue-text);
+			.ssxm-sub a:hover,
+			.ssxm-sub a:active {
+				background: var(--m-hover);
+				color: var(--m-ink);
+			}
+
+			.ssxm-sub a.is-all {
+				color: var(--m-accent-strong);
+				font-weight: 500;
 			}
 
 			/* Account */
 			.ssxm__pair {
 				display: grid;
 				grid-template-columns: 1fr 1fr;
-				gap: 10px;
-				margin-bottom: 4px;
+				gap: 8px;
+				margin: 8px 0 6px;
 			}
 
 			.ssxm__btn {
 				display: flex;
 				align-items: center;
 				justify-content: center;
-				gap: 8px;
-				min-height: 48px;
-				padding: 0 10px;
-				border: 1.5px solid var(--m-line);
-				border-radius: 12px;
+				min-height: 44px;
+				padding: 0 12px;
+				border: 1px solid var(--m-border);
+				border-radius: var(--m-radius);
+				color: var(--m-ink);
 				font-size: 15px;
-				font-weight: 700;
+				font-weight: 500;
 				text-align: center;
-				transition: border-color .15s, color .15s, background-color .15s;
+				transition: border-color .15s, background-color .15s;
 			}
 
-			.ssxm__btn:hover {
-				border-color: var(--m-blue);
-				background: var(--m-blue-tint);
-				color: var(--m-blue-text);
+			.ssxm__btn:hover,
+			.ssxm__btn:active {
+				border-color: #c4cad3;
+				background: var(--m-hover);
+			}
+
+			.ssxm__row--mail {
+				color: var(--m-body);
+				font-size: 15px;
+				font-weight: 400;
+				overflow-wrap: anywhere;
 			}
 
 			/* Footer: always-visible contact */
 			.ssxm__foot {
-				padding: 12px 18px calc(14px + env(safe-area-inset-bottom, 0px));
+				padding: 10px var(--m-pad) calc(10px + env(safe-area-inset-bottom, 0px));
 				border-top: 1px solid var(--m-line);
-				background: var(--m-soft);
+				background: #fafbfc;
+			}
+
+			.ssxm .ssxm__hours {
+				display: flex;
+				align-items: baseline;
+				justify-content: space-between;
+				gap: 12px;
+				margin-bottom: 2px;
+				color: var(--m-muted);
+				font-size: 12px;
+				line-height: 1.4;
+			}
+
+			.ssxm__hours b {
+				font-weight: 600;
+				letter-spacing: .06em;
+				text-transform: uppercase;
 			}
 
 			.ssxm__contact {
 				display: flex;
 				align-items: center;
 				gap: 12px;
-				min-height: 46px;
-				padding: 0 14px;
-				border-radius: 12px;
-				background: #fff;
-				border: 1px solid var(--m-line);
-				font-weight: 600;
-				transition: border-color .15s;
+				min-height: 44px;
+				margin: 0 -12px;
+				padding: 0 12px;
+				border-radius: var(--m-radius);
+				transition: background-color .15s;
 			}
 
-			.ssxm__contact+.ssxm__contact {
-				margin-top: 8px;
+			.ssxm__contact:hover,
+			.ssxm__contact:active {
+				background: var(--m-hover);
 			}
 
-			.ssxm__contact:hover {
-				border-color: var(--m-blue);
-			}
-
-			.ssxm__contact .ssxm-svg {
-				color: var(--m-blue);
+			.ssxm__contact .ssx-svg {
+				color: var(--m-accent-strong);
 			}
 
 			.ssxm__contact span {
-				color: var(--m-muted);
-				font-weight: 600;
+				color: var(--m-body);
+				font-size: 15px;
+				font-weight: 400;
 			}
 
 			.ssxm__contact strong {
 				margin-left: auto;
-				font-size: 16px;
-				font-weight: 800;
-			}
-
-			.ssxm__hours {
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				gap: 6px;
-				margin-top: 10px;
-				color: var(--m-muted);
-				font-size: 13px;
+				color: var(--m-ink);
+				font-size: 15px;
+				font-weight: 600;
+				white-space: nowrap;
 			}
 
 			@media (min-width: 992px) {
@@ -2306,7 +2296,7 @@ $logo_id = get_theme_mod('custom_logo');
 				}
 			}
 
-			@media (max-width: 360px) {
+			@media (max-width: 300px) {
 				.ssxm__pair {
 					grid-template-columns: 1fr;
 				}
@@ -2334,7 +2324,8 @@ $logo_id = get_theme_mod('custom_logo');
 							'alt'      => get_bloginfo('name'),
 							'loading'  => 'lazy',
 							'decoding' => 'async',
-							'sizes'    => '170px',
+							// Drawer min(90vw, 400px) minus padding, gap and close button.
+							'sizes'    => '(max-width: 444px) calc(90vw - 86px), 314px',
 						));
 					} else {
 						echo wholesale_logo_fallback_html();
@@ -2342,29 +2333,28 @@ $logo_id = get_theme_mod('custom_logo');
 					?>
 				</a>
 				<button type="button" class="ssxm__close" id="ssxmClose" aria-label="<?php esc_attr_e('Close menu', 'litsign'); ?>">
-					<?php echo $ssx_icon('close', 22); // Static SVG. ?>
+					<?php echo $ssx_icon('close', 20); // Static SVG. ?>
 				</button>
 			</div>
 
 			<div class="ssxm__body">
 				<form class="ssxm__search" id="ssxmSearch" role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
 					<label class="ssxm-vh" for="ssxmSearchInput"><?php esc_html_e('Search products', 'litsign'); ?></label>
-					<?php echo $ssx_icon('search', 20); // Static SVG. ?>
+					<?php echo $ssx_icon('search', 18); // Static SVG. ?>
 					<input id="ssxmSearchInput" type="search" name="s" placeholder="<?php esc_attr_e('Search products…', 'litsign'); ?>" autocomplete="off" enterkeyhint="search">
 					<?php if ($search_post_type) : ?>
 						<input type="hidden" name="post_type" value="<?php echo esc_attr($search_post_type); ?>">
 					<?php endif; ?>
-					<button type="submit" aria-label="<?php esc_attr_e('Search', 'litsign'); ?>"><?php echo $ssx_icon('search', 18); // Static SVG. ?></button>
+					<button type="submit" aria-label="<?php esc_attr_e('Search', 'litsign'); ?>"><?php echo $ssx_icon('arrow', 16); // Static SVG. ?></button>
 				</form>
 
-				<a class="ssxm__cta" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($ssxm_cta_label); ?></a>
+				<a class="ssxm__cta" href="<?php echo esc_url($cta_url); ?>"><?php echo esc_html($ssxm_cta_label); ?><?php echo $ssx_icon('arrow', 18); // Static SVG. ?></a>
 
-				<p class="ssxm__label my-3">Shop</p>
+				<p class="ssxm__label">Shop</p>
 				<details class="ssxm-acc">
 					<summary>
-						<span class="ssxm__ico"><?php echo $ssx_icon('grid', 18); // Static SVG. ?></span>
 						All Products
-						<span class="ssxm__next"><?php echo $ssx_icon('next', 18); // Static SVG. ?></span>
+						<span class="ssxm__next"><?php echo $ssx_icon('chevron', 18); // Static SVG. ?></span>
 					</summary>
 					<div class="ssxm-acc__body">
 						<?php foreach ($mega_columns as $column) : ?>
@@ -2372,7 +2362,7 @@ $logo_id = get_theme_mod('custom_logo');
 								<p class="ssxm-group__title"><?php echo esc_html($group['title']); ?></p>
 								<ul class="ssxm-sub">
 									<?php foreach ($group['links'] as $link) : ?>
-										<li><a href="<?php echo esc_url($link[1]); ?>"><?php echo esc_html($link[0]); ?></a></li>
+										<li><a href="<?php echo esc_url($link[1]); ?>"<?php echo !empty($link[3]) ? ' class="is-all"' : ''; ?>><?php echo esc_html($link[0]); ?></a></li>
 									<?php endforeach; ?>
 								</ul>
 							<?php endforeach; ?>
@@ -2389,37 +2379,37 @@ $logo_id = get_theme_mod('custom_logo');
 					'depth'           => 1,
 				)); ?>
 
-				<p class="ssxm__label my-3">Your account</p>
+				<p class="ssxm__label">Your account</p>
 				<div class="ssxm__pair">
 					<?php foreach ($account_links as $url => $label) : ?>
 						<a class="ssxm__btn" href="<?php echo esc_url($url); ?>"><?php echo esc_html($label); ?></a>
 					<?php endforeach; ?>
 				</div>
 				<a class="ssxm__row" href="<?php echo esc_url(home_url('/cart/')); ?>">
-					<?php echo $ssx_icon('cart', 20); // Static SVG. ?>
+					<?php echo $ssx_icon('cart-o', 20); // Static SVG. ?>
 					Cart
 					<span class="ssxm__badge" data-cart-count hidden></span>
-					<span class="ssxm__next"><?php echo $ssx_icon('next', 18); // Static SVG. ?></span>
 				</a>
 				<a class="ssxm__row" href="<?php echo esc_url(home_url('/checkout/')); ?>">
+					<?php echo $ssx_icon('card', 20); // Static SVG. ?>
 					Checkout
-					<span class="ssxm__next"><?php echo $ssx_icon('next', 18); // Static SVG. ?></span>
 				</a>
-				<a class="ssxm__row" href="<?php echo esc_url('mailto:' . $ssx_email); ?>">
+				<a class="ssxm__row ssxm__row--mail" href="<?php echo esc_url('mailto:' . $ssx_email); ?>">
 					<?php echo $ssx_icon('mail', 20); // Static SVG. ?>
 					<?php echo esc_html($ssx_email); ?>
 				</a>
 			</div>
 
 			<div class="ssxm__foot">
+				<p class="ssxm__hours"><b>Need help?</b> Mon&ndash;Fri 8am&ndash;5pm PT</p>
 				<a class="ssxm__contact" href="<?php echo esc_url($phone_href); ?>">
-					<?php echo $ssx_icon('phone', 18); // Static SVG. ?>
-					<span>Toll Free:</span>
+					<?php echo $ssx_icon('phone-o', 18); // Static SVG. ?>
+					<span>Call toll-free</span>
 					<strong><?php echo esc_html($phone_display); ?></strong>
 				</a>
 				<a class="ssxm__contact" href="<?php echo esc_url($text_href); ?>">
 					<?php echo $ssx_icon('sms', 18); // Static SVG. ?>
-					<span>Text:</span>
+					<span>Text us</span>
 					<strong><?php echo esc_html($text_display); ?></strong>
 				</a>
 				<p class="ssxm__hours"><?php echo $ssx_icon('clock', 14); // Static SVG. ?> Mon&ndash;Fri 8am&ndash;5pm PST</p>

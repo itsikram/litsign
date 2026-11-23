@@ -27,29 +27,47 @@ $variants = array(
 	'default' => array(
 		'title' => 'Custom LED Channel Letters',
 		'accent' => 'for Your Storefront',
-		'lead' => 'UL listed channel letter signs, made in the USA, tested before shipping and ready to install. Get a free quote from a sign specialist or price your sign online in minutes.',
+		'lead' => 'UL listed channel letter signs, built in WA and CA and tested before shipping. Send your logo or sign text for a free quote.',
 	),
 	'front-lit' => array(
 		'title' => 'Front Lit Channel Letters',
 		'accent' => 'Built to Get Noticed',
-		'lead' => 'Bold, direct LED light that keeps your name bright day and night. UL listed, made in the USA and tested before shipping.',
+		'lead' => 'Bold, direct LED light that keeps your name bright day and night. UL listed, built in WA and CA and tested before shipping.',
 	),
 	'back-lit' => array(
 		'title' => 'Back Lit Channel Letters',
 		'accent' => 'with a Glowing Halo',
-		'lead' => 'Letters that wash the wall behind them in soft light for a clean, upscale look. UL listed, made in the USA and tested before shipping.',
+		'lead' => 'Letters that wash the wall behind them in soft light for a clean, upscale look. UL listed, built in WA and CA and tested before shipping.',
 	),
 	'halo' => array(
 		'title' => 'Halo Lit Channel Letters',
 		'accent' => 'for a Premium Storefront',
-		'lead' => 'Welded stainless steel letters with a halo glow that sets your brand apart. UL listed, made in the USA and tested before shipping.',
+		'lead' => 'Letters that glow onto the wall behind them for a refined, upscale look. UL listed, built in WA and CA and tested before shipping.',
 	),
 	'dual' => array(
 		'title' => 'Front &amp; Back Lit Letters',
 		'accent' => 'Twice the Glow',
-		'lead' => 'Letters that light up the face and the wall behind them for maximum visibility after dark. UL listed, made in the USA and tested before shipping.',
+		'lead' => 'Letters that light up the face and the wall behind them for maximum visibility after dark. UL listed, built in WA and CA and tested before shipping.',
+	),
+	// ?type=trade (sign shops and contractors) overrides the ?style= headline.
+	'trade' => array(
+		'title' => 'Retail Channel Letters',
+		'accent' => 'for Sign Shops &amp; Contractors',
+		'lead' => 'We build and ship UL listed channel letters, tested, with a wiring diagram and install pattern; you install and keep your customer.',
 	),
 );
+// What the visitor is promised and told on every variant (prompt 06 settings; the
+// reply promise must be one the team keeps).
+$reply_promise = 'A sign specialist replies with your price within 1 business day.';
+$next_steps = array(
+	array('Send your logo or sign text', 'Use the form above, or call or text us.'),
+	array('We reply with a price and a layout', 'A sign specialist sizes your letters and sends the price with a layout to approve.'),
+	array('Approve it, and we build, test and ship', 'Your letters are built in WA or CA, lit up and tested, and shipped with a wiring diagram and install pattern for your electrician or sign installer.'),
+);
+$trade_line = 'Sign shops and contractors: we build and ship, you install and keep your customer.';
+$lit_styles = array('Front lit', 'Back lit / halo', 'Front and back lit', 'Non-lit', 'Not sure');
+$timelines = array('Not sure', 'As soon as possible', 'Within 1 month', '1 to 3 months', 'Just getting prices');
+$letter_heights = array('Not sure', '8 in', '12 in', '18 in', '24 in', '30 in', '36 in or taller');
 
 if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 	$field = static function ($key) {
@@ -59,8 +77,10 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 	// Keep the ad group variant and click ID when the page reloads after submit.
 	$variant_key = sanitize_key($field('cla_variant'));
 	$gclid = preg_replace('/[^A-Za-z0-9_-]/', '', $field('cla_gclid'));
+	$is_trade = 'trade' === $variant_key;
 	$return_url = add_query_arg(array_filter(array(
-		'style' => isset($variants[$variant_key]) && 'default' !== $variant_key ? $variant_key : '',
+		'style' => isset($variants[$variant_key]) && !in_array($variant_key, array('default', 'trade'), true) ? $variant_key : '',
+		'type' => $is_trade ? 'trade' : '',
 		'gclid' => $gclid,
 	)), $page_url ? $page_url : home_url('/'));
 	$fail = static function ($status = 'error') use ($return_url) {
@@ -76,13 +96,26 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 	$email = isset($_POST['cla_email']) ? sanitize_email(wp_unslash($_POST['cla_email'])) : '';
 	$phone = $field('cla_phone');
 	$business = $field('cla_business');
-	$style = $field('cla_style');
+	$pick = static function ($key, $allowed) use ($field) {
+		$value = $field($key);
+		return in_array($value, $allowed, true) ? $value : '';
+	};
+	$style = $pick('cla_style', $lit_styles);
+	$sign_text = $field('cla_sign_text');
+	$wall_width = $field('cla_wall_width');
+	$letter_height = $pick('cla_letter_height', $letter_heights);
+	$timeline = $pick('cla_timeline', $timelines);
 	$zip = $field('cla_zip');
 	$details = isset($_POST['cla_details']) ? sanitize_textarea_field(wp_unslash($_POST['cla_details'])) : '';
+	$has_logo = !empty($_POST['cla_logo_token']) || (!empty($_FILES['cla_logo']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['cla_logo']['error']);
 
-	// Bots fill the hidden website field; people never see it.
+	// Bots fill the hidden website field; people never see it. A quote needs the
+	// sign's wording or a logo to price.
 	if ($field('cla_website') || !$name || !$phone || !is_email($email)) {
 		$fail();
+	}
+	if ('' === $sign_text && !$has_logo) {
+		$fail('need_text');
 	}
 
 	$logo_path = '';
@@ -111,7 +144,15 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 		$logo_url = $upload['url'];
 	}
 
-	$project_type = 'Channel letters (Google Ads)' . ($style ? ': ' . $style : '');
+	$project_type = 'Channel letters (Google Ads' . ($is_trade ? ', sign shop / contractor' : '') . ')' . ($style ? ': ' . $style : '');
+	// One readable block for the quote record and the email.
+	$details = implode("\n", array_filter(array(
+		$sign_text ? 'Sign text: ' . $sign_text : '',
+		$wall_width ? 'Wall width: ' . $wall_width . ' ft' : '',
+		$letter_height ? 'Letter height: ' . $letter_height : '',
+		$timeline ? 'Timeline: ' . $timeline : '',
+		$details ? "Notes:\n" . $details : '',
+	)));
 	$source = implode(', ', array_filter(array(
 		$field('cla_utm_campaign') ? 'Campaign: ' . $field('cla_utm_campaign') : '',
 		$field('cla_utm_term') ? 'Keyword: ' . $field('cla_utm_term') : '',
@@ -146,7 +187,8 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 		. "Business: {$business}\n"
 		. "Phone: {$phone}\n"
 		. "Email: {$email}\n"
-		. "Letter style: " . ($style ? $style : 'Not sure yet') . "\n"
+		. ($is_trade ? "Customer type: Sign shop / contractor\n" : '')
+		. "Lit style: " . ($style ? $style : 'Not sure yet') . "\n"
 		. "ZIP code: {$zip}\n"
 		. 'Logo: ' . ($logo_url ? $logo_url : 'Not uploaded') . "\n"
 		. ($source ? "Ad source: {$source}\n" : '')
@@ -170,7 +212,22 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 }
 
 $variant_key = isset($_GET['style']) ? sanitize_key(wp_unslash($_GET['style'])) : 'default';
-$variant_key = isset($variants[$variant_key]) ? $variant_key : 'default';
+$variant_key = isset($variants[$variant_key]) && 'trade' !== $variant_key ? $variant_key : 'default';
+if (isset($_GET['type']) && 'trade' === sanitize_key(wp_unslash($_GET['type']))) {
+	$variant_key = 'trade';
+}
+// Real totals from the cart's own pricing code (inc/pricing.php), so they follow price changes.
+$cl_examples = array();
+foreach (array(
+	array('standard-channel-letter-front-lit', 6, 12, 'Front lit, 6 letters (for example DENTAL), 12 in tall'),
+	array('standard-channel-letter-front-lit', 10, 18, 'Front lit, 10 letters, 18 in tall'),
+	array('hidden-back-halo-lit', 8, 12, 'Halo lit, 8 letters, 12 in tall'),
+) as $cl_example) {
+	$cl_example_price = wholesale_cl_example_price($cl_example[0], $cl_example[1], $cl_example[2]);
+	if ($cl_example_price) {
+		$cl_examples[] = array('label' => $cl_example[3], 'total' => $cl_example_price['total']);
+	}
+}
 $variant = $variants[$variant_key];
 $quote_status = isset($_GET['quote_status']) ? sanitize_key(wp_unslash($_GET['quote_status'])) : '';
 $gclid = isset($_GET['gclid']) ? preg_replace('/[^A-Za-z0-9_-]/', '', wp_unslash($_GET['gclid'])) : '';
@@ -279,13 +336,14 @@ if (!function_exists('wholesale_cla_icon')) {
 		<section class="cla-hero" aria-labelledby="cla-title">
 			<div class="cla-shell cla-hero-inner">
 				<div class="cla-hero-copy">
-					<p class="cla-eyebrow">Made in USA &middot; UL listed &middot; 5-year LED warranty</p>
+					<p class="cla-eyebrow">UL listed &middot; 5-year warranty &middot; Built in WA &amp; CA</p>
 					<h1 id="cla-title"><?php echo wp_kses_post($variant['title']); ?> <span><?php echo wp_kses_post($variant['accent']); ?></span></h1>
+					<p class="cla-promise"><?php echo wholesale_cla_icon('clock'); ?> <?php echo esc_html($reply_promise); ?></p>
 					<p class="cla-lead"><?php echo esc_html($variant['lead']); ?></p>
 					<ul class="cla-hero-points">
-						<li><?php echo wholesale_cla_icon('check'); ?> Free quote &amp; design help from a real person</li>
-						<li><?php echo wholesale_cla_icon('check'); ?> See your exact price online before you order</li>
-						<li><?php echo wholesale_cla_icon('check'); ?> Ships ready to install, with wiring diagram &amp; pattern</li>
+						<li><?php echo wholesale_cla_icon('check'); ?> Free quote &amp; layout from a real person</li>
+						<li><?php echo wholesale_cla_icon('check'); ?> Making signs since 2002, shipped to all 50 states</li>
+						<li><?php echo wholesale_cla_icon('check'); ?> Ships tested, with a wiring diagram and install pattern for your electrician or sign installer</li>
 					</ul>
 					<div class="cla-hero-actions">
 						<a class="cla-button cla-button--primary" href="#quote">Get my free quote <?php echo wholesale_cla_icon('arrow'); ?></a>
@@ -330,6 +388,8 @@ if (!function_exists('wholesale_cla_icon')) {
 						<form class="cla-form" action="<?php echo esc_url($page_url); ?>" method="post" enctype="multipart/form-data" data-cla-form>
 							<?php if ('error' === $quote_status) : ?>
 								<p class="cla-form-alert" role="alert">We couldn&rsquo;t send your request. Please check your name, email and phone, then try again.</p>
+							<?php elseif ('need_text' === $quote_status) : ?>
+								<p class="cla-form-alert" role="alert">Please type what your sign should say, or upload your logo, so we can price it.</p>
 							<?php elseif ('file_error' === $quote_status) : ?>
 								<p class="cla-form-alert" role="alert">Your logo couldn&rsquo;t be uploaded. Please use a JPG, PNG or PDF under <?php echo esc_html($logo_max_mb); ?>&nbsp;MB, or send the form without it.</p>
 							<?php endif; ?>
@@ -348,55 +408,115 @@ if (!function_exists('wholesale_cla_icon')) {
 									<input type="text" name="cla_name" autocomplete="name" required>
 								</label>
 								<label class="cla-field">
-									<span>Business name</span>
-									<input type="text" name="cla_business" autocomplete="organization">
+									<span>Email <b aria-hidden="true">*</b></span>
+									<input type="email" name="cla_email" autocomplete="email" required>
 								</label>
 								<label class="cla-field">
 									<span>Phone <b aria-hidden="true">*</b></span>
 									<input type="tel" name="cla_phone" autocomplete="tel" inputmode="tel" required>
 								</label>
 								<label class="cla-field">
-									<span>Email <b aria-hidden="true">*</b></span>
-									<input type="email" name="cla_email" autocomplete="email" required>
-								</label>
-								<label class="cla-field">
-									<span>Letter style</span>
-									<select name="cla_style">
-										<option value="">Not sure &ndash; help me choose</option>
-										<?php foreach ($style_names as $style_name) : ?>
-											<option><?php echo esc_html($style_name); ?></option>
-										<?php endforeach; ?>
-									</select>
-								</label>
-								<label class="cla-field">
-									<span>Install ZIP code</span>
-									<input type="text" name="cla_zip" autocomplete="postal-code" inputmode="numeric" maxlength="10">
+									<span>Business name</span>
+									<input type="text" name="cla_business" autocomplete="organization">
 								</label>
 								<label class="cla-field cla-field--wide">
-									<span>What should your sign say? Size, colors, anything else</span>
-									<textarea name="cla_details" rows="3" placeholder="e.g. &ldquo;BELLA NAILS&rdquo;, about 12 ft wide, red letters, mounted on a raceway"></textarea>
+									<span>Sign text <b aria-hidden="true">*</b> <small>(or upload your logo below)</small></span>
+									<input type="text" name="cla_sign_text" maxlength="200" placeholder="e.g. BELLA NAILS">
 								</label>
 								<label class="cla-upload cla-field--wide">
 									<input type="file" name="cla_logo" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-cla-file data-async-upload="quote" data-async-field="cla_logo_token">
 									<span class="cla-upload-icon"><?php echo wholesale_cla_icon('upload'); ?></span>
-									<span class="cla-upload-text"><strong data-cla-file-name>Upload your logo (optional)</strong><small>JPG, PNG or PDF up to <?php echo esc_html($logo_max_mb); ?>&nbsp;MB</small></span>
+									<span class="cla-upload-text"><strong data-cla-file-name>Upload your logo</strong><small>JPG, PNG or PDF up to <?php echo esc_html($logo_max_mb); ?>&nbsp;MB</small></span>
+								</label>
+								<label class="cla-field">
+									<span>Wall width (ft)</span>
+									<input type="text" name="cla_wall_width" inputmode="decimal" maxlength="10" placeholder="e.g. 20">
+								</label>
+								<label class="cla-field">
+									<span>Letter height</span>
+									<select name="cla_letter_height">
+										<?php foreach ($letter_heights as $height_option) : ?>
+											<option><?php echo esc_html($height_option); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</label>
+								<label class="cla-field">
+									<span>Lit style</span>
+									<select name="cla_style">
+										<?php foreach (array_merge(array('Not sure'), array_diff($lit_styles, array('Not sure'))) as $lit_option) : ?>
+											<option><?php echo esc_html($lit_option); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</label>
+								<label class="cla-field">
+									<span>Timeline</span>
+									<select name="cla_timeline">
+										<?php foreach ($timelines as $timeline_option) : ?>
+											<option><?php echo esc_html($timeline_option); ?></option>
+										<?php endforeach; ?>
+									</select>
+								</label>
+								<label class="cla-field">
+									<span>ZIP code</span>
+									<input type="text" name="cla_zip" autocomplete="postal-code" inputmode="numeric" maxlength="10">
+								</label>
+								<label class="cla-field cla-field--wide">
+									<span>Notes</span>
+									<textarea name="cla_details" rows="2" placeholder="Colors, raceway, anything else"></textarea>
 								</label>
 							</div>
 
 							<button class="cla-button cla-button--primary cla-submit" type="submit">Get my free quote <?php echo wholesale_cla_icon('arrow'); ?></button>
-							<p class="cla-form-note">Prefer to talk? Call <a href="<?php echo esc_attr($phone_link); ?>"><?php echo esc_html($phone_display); ?></a> or text <a href="<?php echo esc_attr($text_link); ?>"><?php echo esc_html($text_display); ?></a>.</p>
+							<div class="cla-contact-buttons">
+								<a class="cla-button cla-button--outline" href="<?php echo esc_attr($phone_link); ?>"><?php echo wholesale_cla_icon('phone'); ?> Call <?php echo esc_html($phone_display); ?></a>
+								<a class="cla-button cla-button--outline" href="<?php echo esc_attr($text_link); ?>"><?php echo wholesale_cla_icon('message'); ?> Text <?php echo esc_html($text_display); ?></a>
+							</div>
+							<p class="cla-form-note">Calls Mon&ndash;Fri 8am&ndash;5pm PT.</p>
 						</form>
 					<?php endif; ?>
 				</div>
 			</div>
 		</section>
 
+		<?php if ($cl_examples) : ?>
+			<section class="cla-section cla-examples" aria-labelledby="cla-examples-title">
+				<div class="cla-shell">
+					<header class="cla-heading">
+						<p class="cla-kicker">Real prices</p>
+						<h2 id="cla-examples-title">What a Sign Costs</h2>
+						<p>White acrylic faces, standard power supply, no raceway. Your quote is priced for your exact wording, size and style.</p>
+					</header>
+					<ul class="cla-example-list">
+						<?php foreach ($cl_examples as $cl_example) : ?>
+							<li><span><?php echo esc_html($cl_example['label']); ?></span><strong>$<?php echo esc_html(number_format($cl_example['total'], 2)); ?></strong></li>
+						<?php endforeach; ?>
+					</ul>
+					<p class="cla-example-note">Prices before shipping and tax. <?php echo esc_html(wholesale_cl_shipping_rule_text()); ?> Installation is not included.</p>
+				</div>
+			</section>
+		<?php endif; ?>
+
+		<section class="cla-section cla-section--tint" aria-labelledby="cla-next-title">
+			<div class="cla-shell">
+				<header class="cla-heading">
+					<p class="cla-kicker">Simple from start to finish</p>
+					<h2 id="cla-next-title">What Happens Next</h2>
+				</header>
+				<ol class="cla-steps">
+					<?php foreach ($next_steps as $step_index => $step) : ?>
+						<li><b><?php echo (int) $step_index + 1; ?></b><h3><?php echo esc_html($step[0]); ?></h3><p><?php echo esc_html($step[1]); ?></p></li>
+					<?php endforeach; ?>
+				</ol>
+				<p class="cla-trade-line"><?php echo esc_html($trade_line); ?></p>
+			</div>
+		</section>
+
 		<section class="cla-trust" aria-label="Why customers choose us">
 			<div class="cla-shell cla-trust-grid">
-				<div><?php echo wholesale_cla_icon('flag'); ?><span><strong>Made in USA</strong><small>Built to order for your business</small></span></div>
+				<div><?php echo wholesale_cla_icon('flag'); ?><span><strong>Built in WA &amp; CA</strong><small>Made to order for your business</small></span></div>
 				<div><?php echo wholesale_cla_icon('badge'); ?><span><strong>UL Listed</strong><small>Outdoor signs ship with UL labels</small></span></div>
-				<div><?php echo wholesale_cla_icon('shield'); ?><span><strong>5-Year LED Warranty</strong><small>On listed LED modules &amp; power supplies</small></span></div>
-				<div><?php echo wholesale_cla_icon('plug'); ?><span><strong>Tested Before Shipping</strong><small>Arrives ready to install</small></span></div>
+				<div><?php echo wholesale_cla_icon('shield'); ?><span><strong>5-Year Warranty</strong><small>On all 7 channel letter styles</small></span></div>
+				<div><?php echo wholesale_cla_icon('plug'); ?><span><strong>Tested Before Shipping</strong><small>With a wiring diagram and install pattern</small></span></div>
 			</div>
 		</section>
 
@@ -432,21 +552,6 @@ if (!function_exists('wholesale_cla_icon')) {
 			</section>
 		<?php endif; ?>
 
-		<section class="cla-section cla-section--tint" aria-labelledby="cla-steps-title">
-			<div class="cla-shell">
-				<header class="cla-heading">
-					<p class="cla-kicker">Simple from start to finish</p>
-					<h2 id="cla-steps-title">How It Works</h2>
-				</header>
-				<ol class="cla-steps">
-					<li><b>1</b><h3>Tell us about your sign</h3><p>Send the quote form with your logo, or build your letters online and see the price instantly.</p></li>
-					<li><b>2</b><h3>Approve your design</h3><p>A sign specialist confirms sizes, colors and lighting with you before anything is made.</p></li>
-					<li><b>3</b><h3>We build &amp; test it</h3><p>Your letters are made to order in the USA and lit up and tested before they leave.</p></li>
-					<li><b>4</b><h3>Install &amp; shine</h3><p>Your sign arrives ready to install, with a wiring diagram and installation pattern.</p></li>
-				</ol>
-			</div>
-		</section>
-
 		<section class="cla-section cla-dark" aria-labelledby="cla-why-title">
 			<div class="cla-shell cla-why">
 				<div class="cla-why-copy">
@@ -458,7 +563,7 @@ if (!function_exists('wholesale_cla_icon')) {
 				<ul class="cla-why-list">
 					<li><?php echo wholesale_cla_icon('badge'); ?><span><strong>UL listed</strong> outdoor channel letter signs with sign section labels.</span></li>
 					<li><?php echo wholesale_cla_icon('shield'); ?><span><strong>5-year warranty</strong> on all 7 channel letter styles, plus the LED modules and power supplies.</span></li>
-					<li><?php echo wholesale_cla_icon('flag'); ?><span><strong>Made in USA</strong> with .040 aluminum or welded stainless steel returns and acrylic faces.</span></li>
+					<li><?php echo wholesale_cla_icon('flag'); ?><span><strong>Built in WA and CA</strong>, made to order with aluminum returns and acrylic faces.</span></li>
 					<li><?php echo wholesale_cla_icon('truck'); ?><span><strong>Fast shipping options</strong>: standard, 3-day, 2-day or overnight after manufacturing.</span></li>
 				</ul>
 			</div>
@@ -489,8 +594,8 @@ if (!function_exists('wholesale_cla_icon')) {
 						<p>Every sign is made to order. Your estimated ship date is shown at checkout, and after manufacturing you can choose standard (3&ndash;6 business days), 3-day, 2-day or overnight shipping.</p>
 					</details>
 					<details>
-						<summary>Is my sign ready to install when it arrives?</summary>
-						<p>Yes. Every sign is tested before shipping and includes a wiring diagram and an installation pattern for your installer.</p>
+						<summary>Do you install the sign?</summary>
+						<p>No. We build and ship. Every sign is tested before shipping and comes with a wiring diagram and an install pattern for your electrician or sign installer.</p>
 					</details>
 					<details>
 						<summary>What warranty do I get?</summary>

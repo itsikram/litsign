@@ -1,0 +1,200 @@
+/* Storefront Sign settings > Design (inc/design-settings.php, js/admin-design.js). */
+
+.wsd-roles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 4px 0 8px;
+}
+
+.wsd-role {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid #dcdcde;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.wsd-role.is-changed {
+  border-color: #2271b1;
+  box-shadow: 0 0 0 1px #2271b1;
+}
+
+.wsd-role__pick {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.wsd-role__pick input[type="color"],
+#wholesale_sale_price_color {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  padding: 2px;
+  border: 1px solid #c3c4c7;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.wsd-role__pick label {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.wsd-hex {
+  width: 92px;
+  padding: 0 6px;
+  min-height: 28px;
+  font-size: 12px;
+}
+
+.wsd-reset {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.wsd-role .description {
+  margin: 0;
+  font-size: 12px;
+}
+
+.wsd-scale {
+  display: flex;
+  overflow: hidden;
+  height: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.wsd-scale span {
+  flex: 1 1 0;
+}
+
+.wsd-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.wsd-chip {
+  display: inline-flex;
+  flex-direction: column;
+  overflow: hidden;
+  width: 22px;
+  height: 28px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 5px;
+}
+
+.wsd-chip i {
+  flex: 1 1 50%;
+}
+
+.wsd-chip .wsd-chip__new {
+  display: none;
+}
+
+.wsd-chip.is-moved .wsd-chip__new {
+  display: block;
+}
+
+.wsd-all-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 8px 0 12px;
+}
+
+.wsd-all-tools input[type="search"] {
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+
+.wsd-group {
+  margin: 0 0 8px;
+  border: 1px solid #dcdcde;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.wsd-group > summary {
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.wsd-group[open] > summary {
+  border-bottom: 1px solid #dcdcde;
+}
+
+.wsd-table {
+  border: 0;
+}
+
+.wsd-table td {
+  vertical-align: middle;
+}
+
+.wsd-table input[type="color"] {
+  width: 40px;
+  height: 28px;
+  padding: 1px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.wsd-swatch {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin-right: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+  vertical-align: middle;
+}
+
+.wsd-table tr.is-overridden td:first-child code {
+  background: #dff0d8;
+}
+
+.wsd-files {
+  color: #646970;
+  font-size: 12px;
+}
+
+.wsd-type-preview {
+  max-width: 620px;
+  padding: 18px 20px;
+  border: 1px solid #dcdcde;
+  border-radius: 8px;
+  background: #fff;
+  color: #172027;
+}
+
+.wsd-type-preview p {
+  margin: 0 0 8px;
+}
+
+.wsd-type-preview__h1 {
+  font-size: 30px;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+}
+
+.wsd-type-preview__h2 {
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+@media (max-width: 782px) {
+  .wsd-table thead th:nth-child(4),
+  .wsd-table td.wsd-files {
+    display: none;
+  }
+}

@@ -315,7 +315,11 @@ add_action('edit_form_top', function ($post) {
 			Placed <?php echo esc_html(get_the_date('M j, Y \a\t g:ia', $post)); ?>
 			<?php if ($name) : ?>&middot; <?php echo esc_html($name); ?><?php endif; ?>
 			<?php if (!empty($billing['billing_company'])) : ?>(<?php echo esc_html($billing['billing_company']); ?>)<?php endif; ?>
-			&middot; <strong>$<?php echo esc_html(number_format(wholesale_order_total($post->ID), 2)); ?></strong>
+			<?php $net = function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
+			&middot; <strong>$<?php echo esc_html(number_format($net ? $net['net'] : wholesale_order_total($post->ID), 2)); ?></strong>
+			<?php if ($net && $net['has_refund']) : ?>
+				<span class="ont-was">(was <del>$<?php echo esc_html(number_format($net['total'], 2)); ?></del>, $<?php echo esc_html(number_format($net['refunded'], 2)); ?> refunded)</span>
+			<?php endif; ?>
 		</p>
 		<div class="wo-header__actions">
 			<?php if (is_email($email)) : ?>
@@ -398,7 +402,7 @@ function wholesale_render_status_box($post)
 				<p class="description wo-status__hint"></p>
 			</div>
 		<?php else : ?>
-			<p class="description">Status emails are off. <a href="<?php echo esc_url(admin_url('options-general.php?page=wholesale-settings')); ?>">Settings</a></p>
+			<p class="description">Status emails are off. <a href="<?php echo esc_url(admin_url('admin.php?page=wholesale-settings')); ?>">Settings</a></p>
 		<?php endif; ?>
 	</div>
 	<div class="wo-status__footer">
@@ -421,7 +425,11 @@ function wholesale_render_fulfillment_box($post)
 	$verified_by = (int) get_post_meta($post->ID, '_payment_verified_by', true);
 	?>
 	<div class="wholesale-fulfillment">
-		<p class="wo-pay__total"><span class="wo-pay__amount">$<?php echo esc_html(number_format(wholesale_order_total($post->ID), 2)); ?></span> <?php echo wholesale_payment_badge($post->ID); // Escaped in the helper. ?></p>
+		<?php $net = function_exists('wholesale_order_net_amounts') ? wholesale_order_net_amounts($post->ID) : null; // inc/order-net-total.php ?>
+		<p class="wo-pay__total"><span class="wo-pay__amount">$<?php echo esc_html(number_format($net ? $net['net'] : wholesale_order_total($post->ID), 2)); ?></span> <?php echo wholesale_payment_badge($post->ID); // Escaped in the helper. ?></p>
+		<?php if ($net && $net['has_refund']) : ?>
+			<p class="wo-pay__net">Order total $<?php echo esc_html(number_format($net['total'], 2)); ?> &middot; <span class="ont-refunded">Refunded &minus;$<?php echo esc_html(number_format($net['refunded'], 2)); ?></span></p>
+		<?php endif; ?>
 		<?php if ($txn || $last4 || $approval) : ?>
 			<dl class="wo-pay__facts">
 				<?php if ($txn) : ?><dt>Converge txn</dt><dd><code><?php echo esc_html($txn); ?></code></dd><?php endif; ?>
@@ -764,6 +772,9 @@ function wholesale_send_order_email($post_id, $subject, $body_html)
 		return false;
 	}
 
+	// Refund emails add the new order total here (inc/order-net-total.php).
+	$body_html = (string) apply_filters('wholesale_order_email_body', $body_html, $post_id, $subject);
+
 	$font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
 	$html = '<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#f5f8fb;">'
 		. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px;"><tr><td align="center">'
@@ -876,7 +887,8 @@ function wholesale_render_sales_widget()
 	$today_count = 0;
 	$today_date = current_time('Y-m-d');
 	foreach ($recent as $id) {
-		$total = wholesale_order_total($id);
+		// After refunds (inc/order-net-total.php).
+		$total = function_exists('wholesale_order_net_total') ? wholesale_order_net_total($id) : wholesale_order_total($id);
 		$revenue += $total;
 		if (get_the_date('Y-m-d', $id) === $today_date) {
 			$today += $total;
@@ -906,7 +918,7 @@ function wholesale_render_sales_widget()
 					<?php echo wholesale_order_status_badge(get_post_status($id), $id); // Escaped in the helper. ?>
 					<?php echo wholesale_order_review_late_badge($id); // Escaped in the helper. ?>
 					<?php echo wholesale_payment_badge($id); // Escaped in the helper. ?>
-					<span><?php echo esc_html($money(wholesale_order_total($id))); ?></span>
+					<span><?php echo function_exists('wholesale_order_net_cell_html') ? wholesale_order_net_cell_html($id) : esc_html($money(wholesale_order_total($id))); // Escaped in the helper. ?></span>
 				</li>
 			<?php endforeach; ?>
 		</ul>
@@ -920,7 +932,7 @@ function wholesale_render_sales_widget()
 				<a href="<?php echo esc_url(get_edit_post_link($order->ID)); ?>">#<?php echo esc_html(wholesale_order_number($order->ID)); ?></a>
 				<span><?php echo esc_html(trim(($billing['billing_fname'] ?? '') . ' ' . ($billing['billing_lname'] ?? ''))); ?></span>
 				<?php echo wholesale_order_status_badge($order->post_status, $order->ID); // Escaped in the helper. ?>
-				<span><?php echo esc_html($money(wholesale_order_total($order->ID))); ?></span>
+				<span><?php echo function_exists('wholesale_order_net_cell_html') ? wholesale_order_net_cell_html($order->ID) : esc_html($money(wholesale_order_total($order->ID))); // Escaped in the helper. ?></span>
 			</li>
 		<?php endforeach; ?>
 	</ul>

@@ -1,0 +1,426 @@
+/* "Try your name/brand on this wall" lit preview on /custom-channel-letters/
+   (inc/cl-lit-preview.php). Cloned from the wholesale home page's lit preview
+   (tr-wholesale css/trade-home.css, "Lit preview"). Printed inline by
+   wholesale_render_cl_lit_preview(). */
+.clp {
+  --clp-glow: #ffb547;
+  --clp-glow-soft: rgba(255, 181, 71, 0.18);
+  --clp-blue: #1fa8de;
+  padding: 56px 0;
+  background: radial-gradient(900px 420px at 78% 50%, rgba(255, 181, 71, 0.12), transparent 62%), linear-gradient(160deg, #0a1826, #0f2438);
+  color: #c3d0dc;
+  scroll-margin-top: 80px;
+}
+
+.clp *,
+.clp *::before,
+.clp *::after {
+  box-sizing: border-box;
+}
+
+.clp-eyebrow {
+  margin: 0 0 10px;
+  color: var(--clp-glow);
+  font-size: clamp(17px, 2.4vw, 22px);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.clp-title {
+  margin: 0 0 12px;
+  color: #fff;
+  font-family: var(--font-display, inherit);
+  font-size: clamp(26px, 3.2vw, 36px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+/* Phones: heading, stage, then controls, so every change shows right above
+   the control that made it. From 992px: copy and controls left, stage right. */
+.clp-in {
+  display: grid;
+  gap: 20px;
+}
+
+.clp-text {
+  max-width: 520px;
+  margin: 0;
+  color: #c3d0dc;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.clp-controls {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 26px;
+}
+
+.clp-controls[hidden] {
+  display: none;
+}
+
+.clp-label {
+  margin: 8px 0 0;
+  color: #9fb1c2;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.clp-input {
+  width: 100%;
+  max-width: 420px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.clp-input:focus {
+  border-color: var(--clp-blue);
+  outline: 3px solid rgba(31, 168, 222, 0.45);
+  outline-offset: 0;
+}
+
+.clp-seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.clp-seg-btn,
+.clp-daynight {
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  color: #dbe5ee;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.clp-seg-btn:hover,
+.clp-daynight:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.clp-seg-btn[aria-checked="true"] {
+  border-color: var(--clp-glow);
+  background: var(--clp-glow);
+  color: #1d1300;
+}
+
+.clp-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.clp-swatch {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  background: var(--sw);
+  cursor: pointer;
+  transition: transform 0.15s, opacity 0.15s;
+}
+
+.clp-swatch:hover {
+  transform: scale(1.08);
+}
+
+.clp-swatch[aria-checked="true"] {
+  outline: 3px solid #fff;
+  outline-offset: 2px;
+}
+
+.clp-swatch:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.clp-daynight {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 10px;
+  margin-top: 10px;
+  padding-left: 6px;
+}
+
+.clp-daynight-knob {
+  position: relative;
+  width: 40px;
+  height: 24px;
+  border-radius: 999px;
+  background: #1e3348;
+  transition: background-color 0.2s;
+}
+
+.clp-daynight-knob::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #9fb1c2;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.clp-daynight[aria-pressed="true"] .clp-daynight-knob {
+  background: #f0b54a;
+}
+
+.clp-daynight[aria-pressed="true"] .clp-daynight-knob::after {
+  background: #fff;
+  transform: translateX(16px);
+}
+
+.clp-seg-btn:focus-visible,
+.clp-swatch:focus-visible,
+.clp-daynight:focus-visible {
+  outline: 3px solid var(--clp-blue);
+  outline-offset: 2px;
+}
+
+.clp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+}
+
+.clp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 12px 22px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: var(--clp-glow);
+  box-shadow: 0 0 0 0 var(--clp-glow-soft);
+  color: #1d1300;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+
+.clp-btn:hover,
+.clp-btn:focus-visible {
+  background: #ffc265;
+  box-shadow: 0 0 0 6px var(--clp-glow-soft);
+  color: #1d1300;
+  text-decoration: none;
+}
+
+.clp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #9fd4ec;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.clp-link:hover,
+.clp-link:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.clp-link svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  transition: transform 0.2s;
+}
+
+.clp-link:hover svg {
+  transform: translateX(3px);
+}
+
+.clp-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 280px;
+  padding: 40px 18px 56px;
+  border-radius: 18px;
+  background: #120c0a;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+  --face: #ffffff;
+}
+
+.clp-wall {
+  position: absolute;
+  inset: 0;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='32' viewBox='0 0 64 32'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='.38' stroke-width='2'%3E%3Cpath d='M0 1h64M0 17h64M1 1v16M33 17v16'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 64px 32px,
+    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.06), transparent 60%),
+    #7a4330;
+  filter: brightness(0.38) saturate(0.85);
+  transition: filter 0.5s;
+}
+
+.clp-wall::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 46%, transparent 25%, rgba(0, 0, 0, 0.65) 100%);
+}
+
+.clp-stage[data-time="day"] .clp-wall {
+  filter: brightness(1.05) saturate(0.9);
+}
+
+.clp-stage[data-time="day"] .clp-wall::after {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 45%, rgba(0, 0, 0, 0.18));
+}
+
+.clp-sign {
+  position: relative;
+  max-width: 100%;
+  margin: 0;
+  color: var(--face);
+  font-family: var(--font-display, "Plus Jakarta Sans"), system-ui, sans-serif;
+  font-size: clamp(34px, 7vw, 76px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 0.03em;
+  text-align: center;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  transition: color 0.35s, text-shadow 0.35s;
+  /* Front lit at night: face color glow over dark returns. */
+  text-shadow:
+    1px 1px 0 #26292e, 2px 2px 0 #202328, 3px 3px 0 #1a1d21, 4px 4px 0 #15171a,
+    0 0 6px var(--face), 0 0 22px var(--face), 0 0 46px var(--face);
+}
+
+.clp-sign.is-fit {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.clp-stage[data-style="back"] .clp-sign {
+  color: #1d2025;
+  text-shadow:
+    0 0 2px rgba(255, 255, 255, 0.95), 0 0 12px rgba(255, 255, 255, 0.85),
+    0 0 30px rgba(255, 255, 255, 0.65), 0 0 64px rgba(255, 255, 255, 0.4);
+}
+
+.clp-stage[data-style="dual"] .clp-sign {
+  text-shadow:
+    1px 1px 0 #26292e, 2px 2px 0 #202328,
+    0 0 6px var(--face), 0 0 18px var(--face),
+    0 0 40px rgba(255, 255, 255, 0.75), 0 0 80px rgba(255, 255, 255, 0.45);
+}
+
+.clp-stage[data-style="halo"] .clp-sign {
+  color: #2a2d33;
+  text-shadow:
+    0 0 1px #8b9099,
+    0 0 6px rgba(255, 232, 196, 0.95), 0 0 20px rgba(255, 226, 180, 0.8),
+    0 0 44px rgba(255, 214, 150, 0.55);
+}
+
+/* Daytime: no glow, just the face color and the letter depth. */
+.clp-stage[data-time="day"] .clp-sign {
+  text-shadow: 1px 1px 0 #3a3d42, 2px 2px 0 #34373c, 3px 3px 0 #2e3136, 4px 4px 0 #282b30, 6px 8px 12px rgba(0, 0, 0, 0.35);
+}
+
+.clp-stage[data-time="day"][data-style="halo"] .clp-sign {
+  color: #c9ced6;
+  text-shadow: 1px 1px 0 #8d939c, 2px 2px 0 #7b818a, 3px 3px 0 #6c7179, 6px 8px 12px rgba(0, 0, 0, 0.35);
+}
+
+.clp-cap {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  left: 12px;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.clp-cap span {
+  color: #fff;
+  font-weight: 700;
+}
+
+@media (min-width: 992px) {
+  .clp {
+    padding: 88px 0;
+  }
+
+  .clp-in {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-areas: "head stage" "panel stage";
+    gap: 24px 56px;
+  }
+
+  .clp-head {
+    grid-area: head;
+    align-self: end;
+  }
+
+  .clp-panel {
+    grid-area: panel;
+    align-self: start;
+  }
+
+  .clp-stage {
+    grid-area: stage;
+    align-self: center;
+    min-height: 400px;
+  }
+}
+
+@media (max-width: 575px) {
+  .clp-stage {
+    min-height: 200px;
+    padding: 28px 14px 48px;
+  }
+
+  .clp-controls {
+    margin-bottom: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clp-sign,
+  .clp-wall,
+  .clp-link svg {
+    transition: none;
+  }
+}

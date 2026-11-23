@@ -726,7 +726,7 @@ function wholesale_product_guide_fit_sizes($guide, $product_id)
  * so sitemap <lastmod> tells Google the page is new. (A file time would change
  * on every upload and make lastmod meaningless.)
  */
-define('WHOLESALE_PRODUCT_GUIDES_REVISED', '2026-11-15T00:00:00+00:00');
+define('WHOLESALE_PRODUCT_GUIDES_REVISED', '2026-11-20T00:00:00+00:00');
 
 /**
  * Sitemap lastmod for a product: its own modified time, or the guide revision

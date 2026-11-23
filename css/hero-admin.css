@@ -1,0 +1,32 @@
+.sfs-hero-fields { max-width: 980px; color: #1d2939; }
+.sfs-hero-intro { margin: 0 0 16px; color: #526273; }
+.sfs-hero-source, .sfs-hero-preset { padding: 15px; margin: 0 0 12px; border: 1px solid #dbe3ea; border-radius: 10px; background: #f8fafc; }
+.sfs-hero-source strong, .sfs-hero-preset strong { display: block; margin-bottom: 8px; }
+.sfs-hero-source-image, .sfs-hero-prev { max-width: 280px; margin: 8px 0; overflow: hidden; border-radius: 7px; background: #e7edf3; }
+.sfs-hero-source-image img, .sfs-hero-prev img { display: block; width: 100%; height: auto; }
+.sfs-hero-source .description, .sfs-hero-preset .description { margin: 7px 0 0; }
+.sfs-hero-preset select { display: block; max-width: 460px; width: 100%; }
+.sfs-hero-tabs { display: flex; gap: 6px; padding: 5px; margin-top: 22px; border-radius: 10px; background: #e9eef4; }
+.sfs-hero-tab { flex: 1; padding: 10px 14px; border: 0; border-radius: 7px; background: transparent; color: #34465a; font-weight: 600; cursor: pointer; }
+.sfs-hero-tab.is-active { background: #fff; color: #075b86; box-shadow: 0 1px 4px #1526371c; }
+.sfs-hero-tab:focus-visible { outline: 2px solid #2271b1; outline-offset: 1px; }
+.sfs-hero-panel { padding: 17px; border: 1px solid #dbe3ea; border-radius: 0 0 10px 10px; }
+.sfs-hero-panel[hidden] { display: none; }
+.sfs-hero-panel h3 { margin: 0 0 12px; font-size: 15px; }
+.sfs-hero-preview { display: flex; align-items: center; justify-content: flex-start; min-height: 210px; padding: 28px; border-radius: 9px; color: #fff; background-color: #031835; box-shadow: inset 0 0 0 1px #15263722; }
+.sfs-hero-preview.is-phone { max-width: 270px; min-height: 320px; align-items: flex-start; }
+.sfs-hero-preview span { max-width: 14ch; font-size: clamp(20px, 4vw, 34px); line-height: 1.05; font-weight: 800; text-shadow: 0 2px 5px #001626aa; }
+.sfs-hero-controls { display: grid; gap: 16px; margin-top: 16px; }
+.sfs-hero-control-group { min-width: 0; padding: 15px; margin: 0; border: 1px solid #dbe3ea; border-radius: 9px; }
+.sfs-hero-control-group legend { padding: 0 5px; font-weight: 700; color: #23374a; }
+.sfs-hero-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 14px 18px; }
+.sfs-hero-grid label { display: flex; flex-direction: column; gap: 5px; min-width: 0; font-weight: 600; }
+.sfs-hero-grid label small { font-weight: 400; color: #637487; }
+.sfs-hero-grid input[type="number"], .sfs-hero-grid input[type="text"], .sfs-hero-grid select { width: 100%; max-width: none; min-height: 36px; }
+.sfs-hero-grid input[type="color"] { width: 80px; height: 38px; padding: 2px; cursor: pointer; }
+.sfs-hero-grid input[type="range"] { width: 100%; }
+.sfs-hero-grid output { display: inline; font-weight: 400; }
+.sfs-hero-panel[data-overlay-type="preset"] .sfs-hero-custom,
+.sfs-hero-panel[data-overlay-type="preset"] .sfs-hero-gradient,
+.sfs-hero-panel[data-overlay-type="solid"] .sfs-hero-gradient { display: none; }
+@media (min-width: 900px) { .sfs-hero-controls { grid-template-columns: 1fr 1fr; align-items: start; } }

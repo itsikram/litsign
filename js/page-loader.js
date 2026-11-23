@@ -88,6 +88,15 @@
 
 		try {
 			window.sessionStorage.setItem( storageKey, String( Date.now() ) );
+			// The logo file this browser picked (AVIF or WebP); the next page's
+			// head script starts reading it from the cache before its <body>
+			// arrives, so the logo is there on the first frame (inc/page-loader.php).
+			const logo = performance.getEntriesByType( 'resource' ).filter( function( entry ) {
+				return /\/img\/brand\/sfs-logo-dark-640\.(?:avif|webp)/.test( entry.name );
+			} ).pop();
+			if ( logo ) {
+				window.sessionStorage.setItem( storageKey + '-logo', logo.name );
+			}
 		} catch ( error ) {
 			console.warn( 'Page loader hand-off storage is unavailable.', error );
 		}
@@ -244,10 +253,50 @@
 	}
 	root.classList.remove( 'wholesale-page-loader-handoff' );
 
+	/**
+	 * Lay out the hidden loader so the browser downloads the logo picture
+	 * now, not on the link click (see the -warm rule in inc/page-loader.php).
+	 * The browser picks AVIF or WebP from the image-set() itself. The picture
+	 * is cached for a year, so the next page reads it from the cache too.
+	 */
+	function warmLogo() {
+		const warmEvents = [ 'pointermove', 'pointerdown', 'touchstart', 'keydown', 'scroll', 'wheel' ];
+		let warmed = false;
+		const warm = function() {
+			if ( warmed ) {
+				return;
+			}
+			warmed = true;
+			warmEvents.forEach( function( type ) {
+				window.removeEventListener( type, warm, true );
+			} );
+			root.classList.add( 'wholesale-page-loader-warm' );
+		};
+		// Before the first-screen photos are in, only a sign that the visitor
+		// is using the page (a click usually follows) starts the download,
+		// so it never competes with the hero photo on first load.
+		warmEvents.forEach( function( type ) {
+			window.addEventListener( type, warm, { capture: true, passive: true } );
+		} );
+		const afterLoad = function() {
+			if ( window.requestIdleCallback ) {
+				window.requestIdleCallback( warm, { timeout: 1500 } );
+			} else {
+				window.setTimeout( warm, 300 );
+			}
+		};
+		if ( 'complete' === document.readyState ) {
+			afterLoad();
+		} else {
+			window.addEventListener( 'load', afterLoad, { once: true } );
+		}
+	}
+
 	if ( isLanding ) {
 		initialHidden = true;
 		loader.classList.remove( 'is-intro', 'is-idle' );
 		setHidden( true );
+		warmLogo();
 	} else {
 		maximumTimer = window.setTimeout( function() {
 			hideInitialLoader();

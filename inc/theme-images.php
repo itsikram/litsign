@@ -22,6 +22,12 @@ if (!defined('ABSPATH')) {
 function wholesale_image_slots()
 {
 	return array(
+		'home_hero_mobile' => array(
+			'label' => 'Home page hero on phones',
+			'help' => 'Background photo of the home page hero on screens under 768 px. Portrait, about 1024 &times; 1536 px. The headline sits on the top third and the product cards and buttons cover the middle, so keep the top quiet and dark. Phones show the middle two-thirds of the width. A WebP and an AVIF copy are made automatically. Empty: the built-in photo.',
+			'legacy' => 'img/home-hero-mobile.webp',
+			'size' => '1536x1536',
+		),
 		'landing_hero' => array(
 			'label' => 'Landing page hero',
 			'help' => 'Background photo of the Sign Company landing page. Landscape, at least 1440 &times; 600 px. The left side sits under the headline, so keep it darker and quiet.',
@@ -252,7 +258,7 @@ function wholesale_handle_import_theme_images()
 		'page' => 'wholesale-settings',
 		'images_imported' => $imported,
 		'images_failed' => count($failed),
-	), admin_url('options-general.php')) . '#images');
+	), admin_url('admin.php')) . '#images');
 	exit;
 }
 add_action('admin_post_wholesale_import_theme_images', 'wholesale_handle_import_theme_images');
@@ -264,7 +270,7 @@ function wholesale_missing_image_slots()
 {
 	$missing = array();
 	foreach (wholesale_image_slots() as $key => $slot) {
-		if ('' === wholesale_image_slot_url($key) && !in_array($key, array('landing_hero_mobile', 'hero_fallback', 'hero_fallback_mobile'), true)) {
+		if ('' === wholesale_image_slot_url($key) && !in_array($key, array('home_hero_mobile', 'landing_hero_mobile', 'hero_fallback', 'hero_fallback_mobile'), true)) {
 			$missing[$key] = $slot['label'];
 		}
 	}
@@ -284,7 +290,7 @@ function wholesale_missing_images_notice()
 		return;
 	}
 	$screen = get_current_screen();
-	if (!$screen || !in_array($screen->id, array('dashboard', 'settings_page_wholesale-settings'), true)) {
+	if (!$screen || !in_array($screen->id, array('dashboard', 'toplevel_page_wholesale-settings'), true)) {
 		return;
 	}
 	$missing = wholesale_missing_image_slots();
@@ -294,7 +300,7 @@ function wholesale_missing_images_notice()
 	printf(
 		'<div class="notice notice-warning"><p><strong>Site images missing:</strong> %s. <a href="%s">Upload them under Storefront Sign &rsaquo; Images</a>.</p></div>',
 		esc_html(implode(', ', $missing)),
-		esc_url(admin_url('options-general.php?page=wholesale-settings#images'))
+		esc_url(admin_url('admin.php?page=wholesale-settings#images'))
 	);
 }
 add_action('admin_notices', 'wholesale_missing_images_notice');

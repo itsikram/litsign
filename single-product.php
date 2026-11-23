@@ -150,6 +150,12 @@ if ($product_category_slug  == 'channel-letters') {
 $initial_product_cost = $product_min_price > 0 ? $product_min_price : $product_price;
 
 $product_gallery_images = get_post_meta(get_the_ID(), '_product_gallery', true);
+
+// "How to order" video on channel letter product pages (inc/cl-how-to-video.php).
+if ('channel-letters' === $product_category_slug) {
+    require_once get_template_directory() . '/inc/cl-how-to-video.php';
+    wholesale_cl_how_to_video_enqueue();
+}
 get_header();
 
 ?>
@@ -169,6 +175,8 @@ get_header();
     if ($product_kit_info && $product_kit_info['heading']) {
         $product_heading = $product_kit_info['heading'];
     }
+    // Each product of a group has its own title ("Real Estate A-Frame (Sign Only)"), inc/product-group-swap.php.
+    $product_heading = wholesale_product_group_title(get_the_ID(), $product_heading);
     $product_image_label = $product_heading;
     $product_catalog_name = wholesale_seo_product_name(get_the_ID());
     ?>
@@ -192,6 +200,10 @@ get_header();
                     <?php echo esc_html($product_heading); ?>
                     <?php echo wholesale_admin_edit_product_link(get_the_ID(), 'page'); // Escaped in helper. ?>
                 </h1>
+                <?php // "Graphic only. Frame not included." sits above the rating line (owner request 2026-11-20). ?>
+                <?php if ($product_kit_info) : ?>
+                    <p class="product-kit-note"><?php echo esc_html($product_kit_info['line']); ?></p>
+                <?php endif; ?>
                 <?php wholesale_render_product_proof(get_the_ID()); ?>
                 <?php // On a phone the price box sits under the photo, so ad visitors would otherwise see no price on the first screen. ?>
                 <?php if (trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
@@ -210,9 +222,6 @@ get_header();
                 <?php endif; ?>
             </div>
             <div class="pd-hero__info">
-                <?php if ($product_kit_info) : ?>
-                    <p class="product-kit-note"><?php echo esc_html($product_kit_info['line']); ?></p>
-                <?php endif; ?>
                 <?php if (!empty($product_seo['intro'])) : ?>
                     <p class="product-seo-intro"><?php echo esc_html($product_seo['intro']); ?></p>
                 <?php endif; ?>
@@ -339,6 +348,8 @@ get_header();
                 <?php elseif ('backorder' === $product_stock_status) : ?>
                     <p class="product-stock product-stock--backorder text-end">Backordered: ships around <?php echo esc_html((new DateTimeImmutable(wholesale_product_backorder_date(get_the_ID()), wp_timezone()))->format('F j')); ?></p>
                 <?php endif; ?>
+                <?php // How it works, a Google review, help and store facts under the photos (inc/product-hero.php; 768px and up). ?>
+                <?php wholesale_render_product_aside(get_the_ID()); ?>
             </div>
             <div class="col-md-8" id="product-options">
 
@@ -398,11 +409,18 @@ get_header();
                             <input type="hidden" value="<?php echo $product_trimcap_color; ?>" name="default_trimcap_color" id="trimcapColor">
                             <input type="hidden" value="<?php echo $is_same_return_color; ?>" name="is_same_return_color" id="returnColorSame">
                             <input type="hidden" name="total_cost" value="<?php echo $product_min_price > 0 ? $product_min_price : $product_price; ?>" id="totalCost">
+                            <?php
+                            // Visitors type the sign text straight into the big preview (js/main.js
+                            // "Sign text typed in the preview"); #letterInput below stays the form
+                            // field (prices, cart, quote checks) and is only visually hidden.
+                            $cl_type_css = @file_get_contents(get_template_directory() . '/css/cl-type-preview.css');
+                            if ($cl_type_css) {
+                                echo '<style id="cl-type-preview-css">' . preg_replace('#/\*.*?\*/#s', '', $cl_type_css) . '</style>';
+                            }
+                            ?>
                             <div class="row">
                                 <div class="col mobile-s-0">
-                                    <div id="letter-output" class=" text-center fs-1 py-3">
-                                        Enter Your Text
-                                    </div>
+                                    <div id="letter-output" class=" text-center fs-1 py-3 is-typeable" contenteditable="true" role="textbox" aria-label="Your sign text" aria-multiline="false" aria-required="true" spellcheck="false" autocorrect="off" enterkeyhint="done" inputmode="text" data-placeholder="Enter Your Text"></div>
 
                                 </div>
                             </div>
@@ -411,8 +429,8 @@ get_header();
                                     <div class="form-group">
 
                                     </div>
-                                    <input type="text" id="letterInput" name="letters" required placeholder="Enter Your Text Here" class="form-control fw-bold">
-                                    <p class="form-text m-0">For an instant quote - under 30 seconds</p>
+                                    <input type="text" id="letterInput" name="letters" required placeholder="Enter Your Text Here" class="form-control fw-bold visually-hidden" tabindex="-1" aria-hidden="true" autocomplete="off">
+                                    <p class="form-text m-0">Type in the box above for an instant quote - under 30 seconds</p>
                                     <?php // 7 of 8 visitors who started Front Lit options stopped at this box (Visitor Insights, Nov 8-14 2026): many have a logo, not plain text. ?>
                                     <p class="form-text m-0 cl-logo-quote">Have a logo or a photo of your storefront instead? <a href="<?php echo esc_url(function_exists('wholesale_quote_url') ? wholesale_quote_url('channel-letters', get_post_field('post_name', get_the_ID())) : home_url('/contact/')); ?>">Send it for a free quote</a></p>
                                 </div>
@@ -1209,11 +1227,19 @@ get_header();
                 // Channel letters have no price until the sign text is typed; the Grand Total
                 // row shows the starting price instead of $0.00 (js/ui-polish.js keeps the class in step).
                 $total_from_text = ($product_category_slug == 'channel-letters' && trim(wp_strip_all_tags((string) $starting_at_text)) !== '') ? $starting_at_text : '';
+                // A dated sale's name, percent and last day, for the sale row below and the
+                // phone buy bar (js/ui-polish.js section 3 reads the data-sale-* attributes).
+                $sale_name = $product_promo_percent > 0 ? wholesale_promotion_label($product_promotion) : '';
+                $sale_percent_text = $product_promo_percent > 0 ? rtrim(rtrim(number_format($product_promo_percent, 2, '.', ''), '0'), '.') : '';
+                $sale_ends_text = $product_promo_percent > 0 ? wholesale_promotion_end_text($product_promotion) : '';
                 ?>
-                <div class="product-pricing-box<?php echo $total_from_text && !$has_cl_design ? ' pd-total-empty' : ''; ?>">
+                <div class="product-pricing-box<?php echo $total_from_text && !$has_cl_design ? ' pd-total-empty' : ''; ?>"<?php if ($product_promo_percent > 0) : ?> data-sale-name="<?php echo esc_attr($sale_name); ?>" data-sale-percent="<?php echo esc_attr($sale_percent_text); ?>" data-sale-ends="<?php echo esc_attr($sale_ends_text); ?>"<?php endif; ?>>
                     <div class="container">
-                        <?php // The everyday price only shows (as "Regular price") during a dated sale. ?>
-                        <div class="row subtotal-container"<?php echo $product_promo_percent > 0 ? '' : ' hidden'; ?>>
+                        <?php if ($product_promo_percent > 0) : ?>
+                            <p class="pd-sale-head"><span class="pd-sale-chip"><span class="pd-sale-chip__name"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor"/></svg><?php echo esc_html($sale_name); ?></span><span class="pd-sale-chip__pct"><?php echo esc_html($sale_percent_text . '% off'); ?></span></span><span class="pd-sale-ends"><?php echo esc_html('Ends ' . $sale_ends_text); ?></span></p>
+                        <?php endif; ?>
+                        <?php // The everyday price only shows (as "Regular price", struck through) during a dated sale. ?>
+                        <div class="row subtotal-container<?php echo $product_promo_percent > 0 ? ' pd-sale-was' : ''; ?>"<?php echo $product_promo_percent > 0 ? '' : ' hidden'; ?>>
                             <div class="col-6">
                                 <span class="fs-6"><?php echo $product_promo_percent > 0 ? 'Regular price' : 'Total'; ?></span>
                             </div>
@@ -1238,12 +1264,12 @@ get_header();
                             </div>
                         </div>
                         <?php if ($product_promo_percent > 0) { ?>
-                            <div class="row totalSaving-container" style="color: gray">
-                                <div class="col-6">
-                                    <span class="fs-6"><?php echo esc_html(sprintf('Sale: %s%% off, ends %s', rtrim(rtrim(number_format($product_promo_percent, 2, '.', ''), '0'), '.'), wholesale_promotion_end_text($product_promotion))); ?></span>
+                            <div class="row totalSaving-container pd-sale-row">
+                                <div class="col">
+                                    <span class="fs-6"><?php echo esc_html('You save ' . $sale_percent_text . '%'); ?></span>
                                 </div>
-                                <div class="col-6 price-subtotal-container">
-                                    <span class="fs-6 d-block "><span>You save $</span><span class="price-saving"><?php echo format_price(!$size_link && !empty($initial_box['price']) ? max(0, (isset($initial_box['regular']) ? $initial_box['regular'] : $initial_box['price']) - $initial_box['price']) : get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>
+                                <div class="col-auto price-subtotal-container">
+                                    <span class="fs-6 d-block"><span>−$</span><span class="price-saving"><?php echo format_price(!$size_link && !empty($initial_box['price']) ? max(0, (isset($initial_box['regular']) ? $initial_box['regular'] : $initial_box['price']) - $initial_box['price']) : get_saving($product_min_price > 0 ? $product_min_price : $product_price)); ?></span></span>
                                 </div>
                             </div>
                         <?php } ?>
@@ -1290,7 +1316,8 @@ get_header();
                         // Delivery estimate (filled in by js/ui-polish.js), quantity stepper, Add To Cart
                         // and Buy Now (inc/product-buy-box.php). Guests and signed-in customers get the same buttons.
                         wholesale_render_product_eta($product_id);
-                        wholesale_render_product_actions($product_stock_status, $initial_product_cost);
+                        // A product with nothing to choose (wholesale_product_fixed_item_price()) opens on its item price, so Add To Cart works at once.
+                        wholesale_render_product_actions($product_stock_status, $initial_product_cost > 0 || wholesale_product_fixed_item_price($product_id) <= 0 ? $initial_product_cost : wholesale_product_fixed_item_price($product_id));
                         wholesale_render_product_pay_row();
                         ?>
 
@@ -1316,6 +1343,7 @@ get_header();
             </div>
         </div>
 
+        <?php if ('channel-letters' === $product_category_slug && function_exists('wholesale_render_cl_how_to_video')) { wholesale_render_cl_how_to_video('product', get_the_ID()); } ?>
         <?php wholesale_seo_render_channel_letter_guide(get_the_ID()); ?>
         <?php wholesale_render_product_guide(get_the_ID()); ?>
 

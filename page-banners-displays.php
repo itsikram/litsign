@@ -322,8 +322,9 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 						<div class="sf-type-body">
 							<h3><a href="<?php echo esc_url($line_url); ?>"><?php echo wp_kses_post($line[2]); ?></a></h3>
 							<p><?php echo wp_kses_post($line[3]); ?></p>
+							<?php echo function_exists('wholesale_card_trust') ? wholesale_card_trust(0, 'ship') : ''; // Category card. Escaped in helper. ?>
 							<?php if ($line_price) : ?>
-								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($line_price); ?></p>
+								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post(wholesale_card_unit($line_price)); ?></p>
 							<?php endif; ?>
 							<a class="lp-order" href="<?php echo esc_url($line_url); ?>">See Sizes &amp; Prices <?php echo wholesale_home_icon('arrow'); ?></a>
 						</div>
@@ -351,6 +352,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 						<span class="bd-product-image"><?php echo $product_image($slug, $name, '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 25vw'); ?></span>
 						<span class="bd-product-tag"><?php echo wp_kses_post($label); ?></span>
 						<span class="bd-product-name"><?php echo esc_html($name); ?></span>
+						<?php echo function_exists('wholesale_card_trust') ? wholesale_card_trust($product->ID) : ''; // Escaped in helper. ?>
 						<?php if ($price) : ?>
 							<span class="bd-product-price"><small>From</small> <?php echo wp_kses_post($price); ?></span>
 						<?php endif; ?>

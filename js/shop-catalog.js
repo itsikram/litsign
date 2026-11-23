@@ -220,6 +220,7 @@
 			fragment.appendChild(item.el);
 		});
 		grid.appendChild(fragment);
+		syncGalleries();
 
 		const total = matches.length;
 		const shown = Math.min(total, visibleLimit);
@@ -339,7 +340,7 @@
 		visibleLimit += pageSize;
 		update({ resetPage: false, url: false });
 		if (firstNew) {
-			const link = firstNew.querySelector('a');
+			const link = firstNew.querySelector('.sc-card-title a');
 			if (link) link.focus({ preventScroll: true });
 		}
 	});
@@ -457,6 +458,121 @@
 		}
 	});
 	drawerQuery.addEventListener('change', (event) => { if (!event.matches) closeDrawer(); });
+
+	/* ---------- Card photo galleries ---------- */
+
+	// Swipe on touch screens, arrows on hover, a 1/N counter that follows the
+	// photo in view. Later photos wait in data-sc-src/srcset (inc/shop-catalog.php)
+	// and load once the visitor reaches for the gallery: hover, touch or focus.
+	const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+	const galleries = [];
+	grid.querySelectorAll('[data-sc-gallery]').forEach((media) => {
+		const track = media.querySelector('.sc-gal-track');
+		const counter = media.querySelector('[data-sc-index]');
+		const total = track ? track.children.length : 0;
+		if (!track || total < 2) return;
+
+		let current = 0;
+		let warmed = false;
+		const warm = () => {
+			if (warmed) return;
+			warmed = true;
+			track.querySelectorAll('img[data-sc-src]').forEach((img) => {
+				img.loading = 'eager';
+				// "auto" only works on lazy images; left in, browsers size for the full window.
+				img.sizes = img.sizes.replace(/^auto,\s*/, '');
+				if (img.dataset.scSrcset) img.srcset = img.dataset.scSrcset;
+				img.src = img.dataset.scSrc;
+				img.removeAttribute('data-sc-src');
+				img.removeAttribute('data-sc-srcset');
+			});
+		};
+		const show = (index) => {
+			current = index;
+			if (counter) counter.textContent = String(index + 1);
+		};
+		const sync = () => {
+			const index = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+			if (index !== current && index >= 0 && index < total) show(index);
+		};
+		const go = (step) => {
+			warm();
+			const next = (current + step + total) % total;
+			track.scrollTo({ left: next * track.clientWidth, behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+		};
+
+		let ticking = false;
+		track.addEventListener('scroll', () => {
+			if (ticking) return;
+			ticking = true;
+			requestAnimationFrame(() => {
+				ticking = false;
+				sync();
+			});
+		}, { passive: true });
+		media.addEventListener('pointerenter', warm);
+		media.addEventListener('touchstart', warm, { passive: true });
+		media.addEventListener('focusin', warm);
+		media.querySelector('[data-sc-prev]').addEventListener('click', () => go(-1));
+		media.querySelector('[data-sc-next]').addEventListener('click', () => go(1));
+		// Phones (2026-11-23): scroll snapping alone sends any swipe shorter than half
+		// a photo back to where it started, and a thumb flick on a half-width card is
+		// usually shorter. A clearly sideways swipe of 30px or more moves one photo.
+		// If the browser ignores the scroll while it is still settling (iOS momentum),
+		// it is sent again once the strip stops.
+		const indexNow = () => Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+		const behavior = () => (reduceMotion.matches ? 'auto' : 'smooth');
+		let touchX = 0;
+		let touchY = 0;
+		let touchFrom = 0;
+		let touchOn = false;
+		let touchTurn = 0;
+		const whenSettled = (turn, done) => {
+			let timer = 0;
+			const finish = () => {
+				track.removeEventListener('scroll', onScroll);
+				if (turn === touchTurn) done();
+			};
+			const onScroll = () => {
+				clearTimeout(timer);
+				timer = setTimeout(finish, 140);
+			};
+			track.addEventListener('scroll', onScroll, { passive: true });
+			timer = setTimeout(finish, 400);
+		};
+		track.addEventListener('touchstart', (event) => {
+			touchTurn++;
+			touchOn = event.touches.length === 1;
+			if (!touchOn) return;
+			touchX = event.touches[0].clientX;
+			touchY = event.touches[0].clientY;
+			touchFrom = indexNow();
+		}, { passive: true });
+		track.addEventListener('touchend', (event) => {
+			if (!touchOn || !event.changedTouches.length) return;
+			touchOn = false;
+			const dx = event.changedTouches[0].clientX - touchX;
+			const dy = event.changedTouches[0].clientY - touchY;
+			if (Math.abs(dx) < 30 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+			const target = Math.max(0, Math.min(total - 1, touchFrom + (dx < 0 ? 1 : -1)));
+			const turn = touchTurn;
+			warm();
+			track.scrollTo({ left: target * track.clientWidth, behavior: behavior() });
+			whenSettled(turn, () => {
+				if (indexNow() !== target) track.scrollTo({ left: target * track.clientWidth, behavior: behavior() });
+			});
+		}, { passive: true });
+
+		galleries.push({ moved: () => current !== 0, sync });
+	});
+
+	// Filtering and sorting re-insert the cards, which can reset a gallery's
+	// scroll position; put the counter back in step with the photo in view.
+	function syncGalleries() {
+		galleries.forEach((gallery) => {
+			if (gallery.moved()) gallery.sync();
+		});
+	}
 
 	/* ---------- Init ---------- */
 

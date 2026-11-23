@@ -431,20 +431,16 @@ if ($is_channel_letters) {
             'a' => 'A common sign industry rule of thumb is about 1 inch of letter height for every 10 feet of viewing distance, so letters seen from 120 feet away work best at about 12 inches or taller. Also check the space on your fascia and any size limits in your lease or local sign code.',
         ),
         array(
-            'q' => 'What materials and warranty do I get?',
-            'a' => 'Outdoor channel letter signs are UL listed with sign section labels. All 7 channel letter styles carry a five-year warranty, and the LED modules and power supplies each carry their own five-year warranty.',
+            'q' => 'What warranty do I get?',
+            'a' => 'All 7 channel letter styles carry a five-year warranty, and the LED modules and power supplies each carry their own five-year warranty.',
         ),
         array(
             'q' => 'How long will it take to get my sign?',
             'a' => 'Every sign is made to order. Your estimated ship date is shown at checkout, and after manufacturing you can choose standard (3&ndash;6 business days), 3-day, 2-day or overnight shipping.',
         ),
         array(
-            'q' => 'Is my sign ready to install when it arrives?',
-            'a' => 'Yes. Every sign is tested before shipment and includes a wiring diagram and an installation pattern for your installer.',
-        ),
-        array(
             'q' => 'Who installs my channel letters?',
-            'a' => 'We build, test and ship your sign; we don&rsquo;t install. A licensed electrician or sign installer near you mounts and connects it using the included wiring diagram and installation pattern.',
+            'a' => 'We build, test and ship your sign; we don&rsquo;t install. It arrives tested and ready to install, and a licensed electrician or sign installer near you mounts and connects it using the included wiring diagram and installation pattern.',
         ),
         array(
             'q' => 'Do I need a permit for channel letters?',
@@ -481,25 +477,17 @@ get_header();
                     <?php else : ?>
                         <h1 id="home-hero-title" class="home-hero-title">Custom Channel Letter Signs, <span>Priced Online &amp; Made in USA</span></h1>
                     <?php endif; ?>
+                    <?php if ($google_rating) : ?>
                     <p class="home-hero-proof">
-                        <?php if ($google_rating) : ?>
-                            <a class="home-hero-rating" href="#customer-reviews"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
-                        <?php endif; ?>
-                        <span><?php echo wholesale_home_icon('flag'); ?> Made in Washington &amp; California &middot; ships to all 50 states &middot; order online 24/7</span>
+                        <a class="home-hero-rating" href="#customer-reviews"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
                     </p>
-                    <p class="home-hero-lead">UL listed LED channel letters, built to order in Washington and California. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
-                    <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
+                    <?php endif; ?>
+                    <p class="home-hero-lead">UL listed LED channel letters, built to order in Washington and California and shipped to all 50 states. Choose your style and see your exact price now, or send your logo for a free quote.</p>
                     <div class="home-hero-actions home-hero-actions--cl">
                         <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
                         <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
                     </div>
                     <?php $cl_example_text = function_exists('wholesale_cl_worked_example_text') ? wholesale_cl_worked_example_text() : ''; ?><?php if ($cl_example_text) : ?><p class="home-hero-example"><?php echo wp_kses_post($cl_example_text); ?></p><?php endif; ?>
-                    <p class="home-hero-logo"><a href="<?php echo esc_url($contact_url); ?>">Have a logo? Send it for a free quote</a> <span>or <a href="sms:+12066186543">text your logo to 206-618-6543</a></span></p>
-                    <p class="home-hero-help">
-                        <?php echo wholesale_home_icon('phone'); ?>
-                        Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
-                        <span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PST &middot; or <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a></span>
-                    </p>
                 <?php else : ?>
                     <p class="home-hero-eyebrow">Premium quality signs &amp; letters</p>
                     <p id="home-hero-title" class="home-hero-title">Make Your Brand <br class="home-hero-mobile-break"><span> Stand Out</span></p>
@@ -596,6 +584,8 @@ get_header();
 </nav>
 <?php endif; ?>
 
+<?php // The video pop-up belongs to the generic hero's "Watch Video" button; the channel letters hero has none (2026-11-23). ?>
+<?php if (!$is_channel_letters) : ?>
 <div class="home-video-modal" id="homeVideoModal" hidden aria-hidden="true">
     <div class="home-video-modal-backdrop" data-video-modal-close></div>
     <div class="home-video-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="homeVideoModalTitle">
@@ -643,6 +633,7 @@ get_header();
     })();
 
 </script>
+<?php endif; ?>
 
 <?php if ($is_channel_letters) : ?>
 <?php
@@ -682,7 +673,6 @@ wholesale_render_cl_style_grid(array(
         $cl_compare_rows[] = array(
             'style' => $cl_style,
             'url' => get_permalink($cl_product),
-            'price' => wholesale_price_no_cents(get_post_meta($cl_product->ID, '_starting_at_text', true)),
         );
     }
     ?>
@@ -691,7 +681,8 @@ wholesale_render_cl_style_grid(array(
         <div class="container">
             <p class="cl-kicker">Compare lighting styles</p>
             <h2 id="cl-compare-title" class="cl-section-title">Front Lit, Back Lit, Halo Lit or Reverse Lit Channel Letters?</h2>
-            <p class="cl-section-lead">Seven lighting styles, each priced by letter height. Compare how they light up at night and where each one starts.</p>
+            <p class="cl-section-lead">Seven lighting styles. Compare how each one lights up at night and which look suits your storefront.</p>
+            <?php // 2026-11-23: no "Starting at" column or price note; the style cards above show the same prices and carry the note. ?>
             <div class="cl-compare-table-wrap">
                 <table class="cl-compare-table">
                     <thead>
@@ -699,7 +690,6 @@ wholesale_render_cl_style_grid(array(
                             <th scope="col">Style</th>
                             <th scope="col">How it lights</th>
                             <th scope="col">Best for</th>
-                            <th scope="col">Starting at</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -708,18 +698,20 @@ wholesale_render_cl_style_grid(array(
                                 <th scope="row"><a href="<?php echo esc_url($cl_row['url']); ?>"><?php echo wp_kses_post($cl_row['style'][0]); ?></a></th>
                                 <td><?php echo esc_html($cl_row['style'][1]); ?></td>
                                 <td><?php echo esc_html($cl_row['style'][2]); ?></td>
-                                <td class="cl-compare-price"><?php echo wp_kses_post($cl_row['price']); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
-            <?php $cl_price_note = function_exists('wholesale_cl_starting_price_note') ? wholesale_cl_starting_price_note() : ''; ?>
-            <p class="cl-compare-note"><?php if ($cl_price_note) : ?><?php echo wp_kses_post($cl_price_note); ?> You&rsquo;ll see your exact price before checkout.<?php else : ?>Your exact price depends on letter height, number of letters and options such as a raceway. You&rsquo;ll see it before checkout.<?php endif; ?></p>
         </div>
     </section>
     <?php endif; ?>
 <?php
+// "Try your name/brand on this wall": the wholesale home page's lit preview
+// (inc/cl-lit-preview.php), just above the real example prices.
+require_once get_template_directory() . '/inc/cl-lit-preview.php';
+wholesale_render_cl_lit_preview();
+
 // Real totals from the same pricing code as the cart (inc/pricing.php), so they track price changes.
 $cl_examples = array();
 foreach (array(12, 18, 24) as $example_inches) {
@@ -786,7 +778,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : wholesale_quote_url('channel-letter
             <li>
                 <span class="cl-step-number" aria-hidden="true">4</span>
                 <h3>Ship &amp; install</h3>
-                <p>Choose standard, 3-day, 2-day or overnight shipping to any of the 50 states. Your licensed installer mounts it with the included pattern and wiring diagram.</p>
+                <p>Choose standard, 3-day, 2-day or overnight shipping to any of the 50 states, then your installer mounts it.</p>
             </li>
         </ol>
         <div class="cll-install">
@@ -816,8 +808,8 @@ $cl_quote_link = $is_cl_landing ? '#quote' : wholesale_quote_url('channel-letter
                 <ul>
                     <li>Power supply: an option on each style (the examples above include the standard one)</li>
                     <li>Raceway, longer cords and mounting accessories: optional add-ons</li>
-                    <li>Wall fasteners and installation: your licensed electrician or sign installer mounts it</li>
-                    <li>Shipping: <?php echo esc_html(lcfirst(wholesale_cl_shipping_rule_text())); ?> Sales tax is added at checkout.</li>
+                    <li>Wall fasteners and installation</li>
+                    <li>Shipping and sales tax, added at checkout</li>
                 </ul>
             </div>
         </div>
@@ -1136,36 +1128,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : wholesale_quote_url('channel-letter
 <?php endif; ?>
 
 <?php if ($is_channel_letters) : ?>
-    <section class="cll-why" aria-labelledby="cll-why-title">
-        <div class="container">
-            <p class="cl-kicker">Why businesses order from us</p>
-            <h2 id="cll-why-title" class="cl-section-title">A Professional Sign Without the Sign-Shop Runaround</h2>
-            <p class="cl-section-lead">Most sign companies make you wait for a site visit and a quote. We show you the price up front, build every sign to order in our Washington and California shops, and ship it ready for your installer.</p>
-            <div class="cll-why-grid">
-                <article class="cll-why-card">
-                    <?php echo wholesale_home_icon('pen'); ?>
-                    <h3>Exact price before you order</h3>
-                    <p>Choose a style, enter your wording and letter height, and the price updates as you go. The total you see is the price you pay, before shipping and tax.</p>
-                </article>
-                <article class="cll-why-card">
-                    <?php echo wholesale_home_icon('message'); ?>
-                    <h3>Logo quotes from a real person</h3>
-                    <p>Have a logo, a custom font or landlord sign criteria? Send it with the form below or text it to <a href="sms:+12066186543">206-618-6543</a>. A sign specialist replies within one business day.</p>
-                </article>
-                <article class="cll-why-card">
-                    <?php echo wholesale_home_icon('badge'); ?>
-                    <h3>Built for inspection</h3>
-                    <p>Outdoor channel letter signs are UL listed and ship with their labels in place, so your electrician and inspector have what they need to sign off.</p>
-                </article>
-                <article class="cll-why-card">
-                    <?php echo wholesale_home_icon('plug'); ?>
-                    <h3>Ready to install on arrival</h3>
-                    <p>Every sign is tested before it ships, with a wiring diagram and an installation pattern, whether it mounts on a raceway or directly to the wall.</p>
-                </article>
-            </div>
-        </div>
-    </section>
-
+    <?php // 2026-11-23: the "Why businesses order from us" cards were removed; each one repeated the hero, style cards, steps or FAQ. ?>
     <section class="cll-specs" aria-labelledby="cll-specs-title">
         <div class="container">
             <p class="cl-kicker">Specifications</p>
@@ -1181,7 +1144,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : wholesale_quote_url('channel-letter
                         <tr><th scope="row">Letter heights</th><td>From <?php echo esc_html($cl_min_height); ?>&rdquo;<?php if ($cl_max_height) : ?> to <?php echo esc_html($cl_max_height); ?>&rdquo; (front lit)<?php endif; ?>; larger letters up to 48&rdquo; by custom order</td></tr>
                         <tr><th scope="row">Mounting</th><td>Direct to the wall with the included installation pattern, or on a 5.5&rdquo; &times; 3.5&rdquo; raceway that holds the wiring and mounts the sign as one unit</td></tr>
                         <tr><th scope="row">Certification</th><td>Outdoor channel letter signs are UL listed with sign section labels<?php $cll_ul = function_exists('wholesale_guide_ul_file_number') ? wholesale_guide_ul_file_number() : ''; if ($cll_ul) : ?> (UL file <?php echo esc_html($cll_ul); ?>)<?php endif; ?></td></tr>
-                        <tr><th scope="row">In the box</th><td>Your tested letters, power supplies, wiring diagram and installation pattern</td></tr>
+                        <tr><th scope="row">In the box</th><td>Your tested letters, a 3 ft power cord, the wiring diagram and installation pattern, plus any power supplies, raceway or accessories you ordered</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1210,14 +1173,13 @@ $cl_quote_link = $is_cl_landing ? '#quote' : wholesale_quote_url('channel-letter
                     <ul class="clq-promise">
                         <li><?php echo wholesale_home_icon('check'); ?> A sign specialist prices your exact letters</li>
                         <li><?php echo wholesale_home_icon('check'); ?> Reply within one business day, no obligation</li>
-                        <li><?php echo wholesale_home_icon('check'); ?> Made in USA, UL listed, ready to install</li>
                     </ul>
                 <?php else : ?>
                     <h2 id="cl-help-title">Talk to a Real Sign Specialist</h2>
                     <p>Have a logo, a storefront photo or a question about sizing? We&rsquo;ll help you pick the right sign before you order.</p>
                 <?php endif; ?>
                 <ul class="cl-help-details">
-                    <li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+                    <li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PT</li>
                     <li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
                 </ul>
                 <?php if ($is_cl_landing) : ?>
@@ -1296,7 +1258,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : wholesale_quote_url('channel-letter
                             </div>
 
                             <button class="clq-submit" type="submit">Get My Free Quote <?php echo wholesale_home_icon('arrow'); ?></button>
-                            <p class="clq-note">Your details stay private. Prefer to talk? Call <a href="tel:+18664362101">866-436-2101</a>.</p>
+                            <p class="clq-note">Your details stay private.</p>
                         </form>
                         <script>
                             (function () {

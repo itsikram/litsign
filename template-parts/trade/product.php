@@ -4,8 +4,8 @@
  * applicants, rejected or suspended accounts). Approved accounts get the shared
  * single-product.php with prices and ordering (inc/trade/gate.php).
  *
- * Channel letter types show the trade copy from data/trade/channel-letters.php
- * and stay indexable; other products are noindex,follow (inc/trade/seo.php).
+ * Channel letter types show the trade copy from data/trade/channel-letters.php;
+ * other products show their own copy. All are indexable (inc/trade/seo.php).
  * No price, option value or discount reaches this page: the price meta reads
  * empty for these visitors, and nothing here prints it anyway.
  *
@@ -130,14 +130,25 @@ get_header();
 		<section class="tw-section tw-section--soft">
 			<div class="tw-wrap tw-wrap--narrow tw-product__content">
 				<?php
-				$content = apply_filters('the_content', get_post_field('post_content', $product_id));
+				// Same cleaner as single-product.php: drops the supplier's facility list,
+				// pickup lines and unanswered FAQ questions.
+				$content = (string) get_post_field('post_content', $product_id);
+				$content = apply_filters('the_content', function_exists('wholesale_seo_clean_product_content') ? wholesale_seo_clean_product_content($content) : $content);
 				// Supplier copy can carry price lines; they never print here.
+				$content = preg_replace('/\.?\s+or\s+(?:a\s+)?minimum charge of\s*\$\s?\d[\d,]*(?:\.\d+)?/i', '', (string) $content);
 				echo preg_replace('/\$\s?\d[\d,]*(\.\d+)?(\s*(per|\/)\s*\w+)?/i', '', (string) $content); // Content filtered by WordPress.
 				?>
 				<p><a href="<?php echo esc_url(home_url('/channel-letters/')); ?>" style="color:var(--tw-blue);font-weight:700">Looking for channel letters? See all 7 types →</a></p>
 			</div>
 		</section>
 	<?php endif; ?>
+
+	<section class="tw-section" aria-labelledby="tw-product-warranty">
+		<div class="tw-wrap tw-wrap--narrow tw-product__content">
+			<h2 class="tw-h2" id="tw-product-warranty">Warranty and order issues</h2>
+			<p>Every product is covered by our <a href="<?php echo esc_url(home_url('/terms-conditions/')); ?>">Terms and Conditions</a>. Report defects or other order issues within five (5) business days of receiving your order. Any additional product warranty and its coverage are stated in the product details.</p>
+		</div>
+	</section>
 
 	<?php if (!$type) {
 		wholesale_trade_render_cta_band();

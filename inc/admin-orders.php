@@ -145,6 +145,9 @@ add_action('admin_footer-edit.php', function () {
 				if (!data.length || !form.length) {
 					return;
 				}
+				if ('pending' !== data.attr('data-order-status')) {
+					form.find('[name="order_status"] option[value="pending"]').remove();
+				}
 				form.find('[name="order_status"]').val(data.attr('data-order-status'));
 				form.find('[name="wholesale_payment_status"]').val(data.attr('data-payment-status'));
 				form.find('[name="wholesale_tracking_carrier"]').val(data.attr('data-carrier'));
@@ -247,6 +250,9 @@ add_filter('posts_search', function ($search, $query) {
 	);
 }, 10, 2);
 
+// Refresh button and live updates for the list above.
+require_once __DIR__ . '/admin-orders-live.php';
+
 // ------------------------------------------------------------------
 // Order edit screen: header, status, payment and activity
 // ------------------------------------------------------------------
@@ -270,6 +276,7 @@ add_action('add_meta_boxes_order', function () {
 function wholesale_status_email_hints()
 {
 	return array(
+		'in-review' => 'No email is sent. New orders start here until the B2Sign order is linked.',
 		'pending' => 'No email is sent.',
 		'processing' => 'Customer is emailed that the order is in production.',
 		'on-hold' => 'Customer is emailed to call or reply with the missing detail.',
@@ -332,14 +339,18 @@ function wholesale_render_status_box($post)
 	$carrier = get_post_meta($post->ID, '_tracking_carrier', true);
 	$tracking = get_post_meta($post->ID, '_tracking_number', true);
 	$tracking_url = wholesale_tracking_url($carrier, $tracking);
-	// "on_hold" is a legacy duplicate of "on-hold"; only offer it on orders that already use it.
+	// "on_hold" and "pending" are legacy duplicates of "on-hold" and "in-review"; only offer them on orders that
+	// already use them.
 	$groups = array(
-		'Before shipping' => array('pending', 'processing', 'finishing', 'ready-for-pickup', 'on-hold'),
+		'Before shipping' => array('in-review', 'processing', 'finishing', 'ready-for-pickup', 'on-hold'),
 		'Shipping & delivery' => wholesale_order_shipped_statuses(),
 		'Closed' => array('cancelled', 'refunded', 'failed'),
 	);
 	if ('on_hold' === $status) {
 		$groups['Before shipping'][array_search('on-hold', $groups['Before shipping'], true)] = 'on_hold';
+	}
+	if ('pending' === $status) {
+		array_unshift($groups['Before shipping'], 'pending');
 	}
 	$options = array_merge(...array_values($groups));
 	wp_nonce_field('wholesale_fulfillment', 'wholesale_fulfillment_nonce');
@@ -757,17 +768,17 @@ function wholesale_send_order_email($post_id, $subject, $body_html)
 	$html = '<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#f5f8fb;">'
 		. '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px;"><tr><td align="center">'
 		. '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#fff;border:1px solid #e3e9ef;border-radius:12px;">'
-		. '<tr><td style="padding:24px 28px;border-bottom:4px solid #1fa8de;' . $font . 'font-size:20px;font-weight:700;color:#0d2e4d;">Storefront Sign Online</td></tr>'
+		. '<tr><td style="padding:24px 28px;border-bottom:4px solid #1fa8de;' . $font . 'font-size:20px;font-weight:700;color:#0d2e4d;">' . (function_exists('wholesale_email_brand') ? esc_html(wholesale_email_brand()['name']) : 'Storefront Sign Online') . '</td></tr>'
 		. '<tr><td style="padding:28px;' . $font . 'color:#172027;font-size:15px;line-height:1.6;">'
 		. '<p style="margin:0 0 12px;">Hi' . (!empty($billing['billing_fname']) ? ' ' . esc_html($billing['billing_fname']) : '') . ',</p>'
 		. $body_html
 		. '<p style="margin:20px 0 0;"><a href="' . esc_url(get_permalink($post_id)) . '" style="display:inline-block;padding:12px 20px;background:#1fa8de;color:#fff;border-radius:6px;text-decoration:none;font-weight:700;">View order #' . esc_html(wholesale_order_number($post_id)) . '</a></p>'
-		. '<p style="margin:20px 0 0;color:#5b6b7b;font-size:14px;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT).</p>'
+		. '<p style="margin:20px 0 0;color:#5b6b7b;font-size:14px;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST).</p>'
 		. '</td></tr></table></td></tr></table></body></html>';
 
 	return wp_mail($email, $subject, $html, array(
 		'Content-Type: text/html; charset=UTF-8',
-		'Reply-To: Storefront Sign Online <TR@StorefrontSignOnline.com>',
+		function_exists('wholesale_email_brand') ? 'Reply-To: ' . wholesale_email_brand()['name'] . ' <' . wholesale_email_brand()['email'] . '>' : 'Reply-To: Storefront Sign Online <Info@StorefrontSignWholesale.com>',
 	));
 }
 
@@ -779,14 +790,62 @@ function wholesale_attention_order_ids()
 {
 	$needs_payment = get_posts(array(
 		'post_type' => 'order',
-		'post_status' => array('pending', 'processing', 'on-hold', 'on_hold'),
+		'post_status' => array('in-review', 'pending', 'processing', 'on-hold', 'on_hold'),
 		'meta_query' => array(array('key' => '_payment_status', 'value' => array('needs_review', 'manual'), 'compare' => 'IN')),
 		'posts_per_page' => 50,
 		'fields' => 'ids',
 	));
-	$on_hold = get_posts(array('post_type' => 'order', 'post_status' => array('on-hold', 'on_hold', 'pending'), 'posts_per_page' => 50, 'fields' => 'ids'));
+	// Orders in review wait for staff to place them with B2Sign and link the B2Sign order number.
+	$on_hold = get_posts(array('post_type' => 'order', 'post_status' => array('on-hold', 'on_hold', 'in-review', 'pending'), 'posts_per_page' => 50, 'fields' => 'ids'));
 	return array_values(array_unique(array_merge($needs_payment, $on_hold)));
 }
+
+/**
+ * When an order in review has waited too long: one business day (Saturday and Sunday don't count, site time zone)
+ * after it was placed. 0 for orders not in review.
+ */
+function wholesale_order_review_due($post_id)
+{
+	if (!in_array(get_post_status($post_id), array('in-review', 'pending'), true)) {
+		return 0;
+	}
+	$due = (int) get_post_time('U', true, $post_id);
+	if (!$due) {
+		return 0;
+	}
+	do {
+		$due += DAY_IN_SECONDS;
+	} while ((int) wp_date('N', $due) >= 6);
+	return $due;
+}
+
+/**
+ * "In review 2 days" warning badge for orders in review past their due time, else ''. Already escaped.
+ */
+function wholesale_order_review_late_badge($post_id)
+{
+	$due = wholesale_order_review_due($post_id);
+	if (!$due || $due > time()) {
+		return '';
+	}
+	$since = human_time_diff((int) get_post_time('U', true, $post_id), time());
+	return '<span class="order-badge order-badge--warn" title="No B2Sign order linked yet">In review ' . esc_html($since) . '</span>';
+}
+
+// The same warning under the status in the order list (after the status badge from functions.php).
+add_action('manage_order_posts_custom_column', function ($column, $post_id) {
+	$late = 'order_status' === $column ? wholesale_order_review_late_badge($post_id) : '';
+	if ('' !== $late) {
+		echo ' ' . $late; // Escaped in the helper.
+	}
+}, 20, 2);
+
+// "pending" is the legacy duplicate of "in-review" (core status: hides the order page from customers), so it is no
+// bulk action, and quick edit offers it only on an order that already has it (script in the order list footer).
+add_filter('bulk_actions-edit-order', function ($actions) {
+	unset($actions['pending']);
+	return $actions;
+}, 20);
 
 add_action('wp_dashboard_setup', function () {
 	if (!current_user_can('edit_posts')) {
@@ -804,7 +863,7 @@ add_action('wp_dashboard_setup', function () {
 
 function wholesale_render_sales_widget()
 {
-	$counted = array_merge(array('pending', 'processing', 'finishing', 'ready-for-pickup', 'on-hold', 'on_hold'), wholesale_order_shipped_statuses());
+	$counted = array_merge(array('in-review', 'pending', 'processing', 'finishing', 'ready-for-pickup', 'on-hold', 'on_hold'), wholesale_order_shipped_statuses());
 	$recent = get_posts(array(
 		'post_type' => 'order',
 		'post_status' => $counted,
@@ -845,6 +904,7 @@ function wholesale_render_sales_widget()
 				<li>
 					<a href="<?php echo esc_url(get_edit_post_link($id)); ?>">#<?php echo esc_html(wholesale_order_number($id)); ?></a>
 					<?php echo wholesale_order_status_badge(get_post_status($id), $id); // Escaped in the helper. ?>
+					<?php echo wholesale_order_review_late_badge($id); // Escaped in the helper. ?>
 					<?php echo wholesale_payment_badge($id); // Escaped in the helper. ?>
 					<span><?php echo esc_html($money(wholesale_order_total($id))); ?></span>
 				</li>

@@ -165,3 +165,53 @@ function wholesale_card_images($urls)
 
 	return $images;
 }
+
+/**
+ * Load the photos of a whole category grid (home.php's product query) in a
+ * few queries when its loop starts. Each card otherwise loads its featured
+ * photo, looks up its gallery URLs and loads every photo's post and meta one
+ * at a time (about 550 queries on /indoor-outdoor-displays/). This only fills
+ * the caches; the cards print the same markup.
+ *
+ * @param WP_Query $query Query whose loop is starting.
+ */
+function wholesale_prime_card_images($query)
+{
+	if (is_admin() || !($query instanceof WP_Query) || 'product' !== $query->get('post_type') || '_order_by_index' !== $query->get('meta_key')
+		|| empty($query->posts) || count($query->posts) < 2 || !function_exists('wholesale_product_image_alt_attachment_ids_by_url')) {
+		return;
+	}
+
+	update_post_thumbnail_cache($query);
+
+	// The same URLs wholesale_render_home_product_gallery() passes to wholesale_card_images().
+	$site_url_parts = wp_parse_url(home_url('/'));
+	$site_origin = ($site_url_parts['scheme'] ?? 'http') . '://' . ($site_url_parts['host'] ?? '');
+	if (!empty($site_url_parts['port'])) {
+		$site_origin .= ':' . $site_url_parts['port'];
+	}
+	$urls = array();
+	foreach ($query->posts as $post) {
+		$post_id = is_object($post) ? (int) $post->ID : (int) $post;
+		$thumbnail_id = get_post_thumbnail_id($post_id);
+		$featured = $thumbnail_id ? wp_get_attachment_image_url($thumbnail_id, 'full') : '';
+		if ($featured) {
+			$urls[] = $featured;
+		}
+		$gallery = get_post_meta($post_id, '_product_gallery', true);
+		foreach (is_array($gallery) ? array_filter($gallery, 'is_string') : array() as $url) {
+			$url = esc_url_raw($url);
+			$host = wp_parse_url($url, PHP_URL_HOST);
+			if ('localhost' === $host || '127.0.0.1' === $host) {
+				$url = $site_origin . wp_parse_url($url, PHP_URL_PATH);
+			}
+			if ($url) {
+				$urls[] = $url;
+			}
+		}
+	}
+
+	$ids = wholesale_product_image_alt_attachment_ids_by_url(array_values(array_unique($urls)));
+	_prime_post_caches(array_values(array_unique(array_filter(array_map('intval', $ids)))), false, true);
+}
+add_action('loop_start', 'wholesale_prime_card_images');

@@ -8,7 +8,7 @@
 
 defined('ABSPATH') || exit;
 
-$crs_110 = 'https://colorado.public.law/statutes/crs_12-115-110';
+$crs_110 = 'https://content.leg.colorado.gov/sites/default/files/images/olls/crs2024-title-12.pdf#page=255';
 $den_cpd = 'https://www.denvergov.org/Government/Agencies-Departments-Offices/Agencies-Departments-Offices-Directory/Community-Planning-and-Development/Plan-Review-Permits-and-Inspections/Zoning-Permits/Signs';
 $den_apply = $den_cpd . '/Apply-for-Sign-Permit';
 
@@ -42,17 +42,18 @@ return array(
 	'licensing' => array(
 		'heading' => 'Who Can Wire a Lit Sign in Colorado',
 		'body' => array(
-			'Under C.R.S. &sect; 12-115-110, the <strong>State Electrical Board</strong> licenses three levels of electrician. A <strong>journeyman</strong> shows four years of apprenticeship or equivalent experience, at least two of them in commercial, industrial or similar work, plus 288 hours of training in safety and the National Electrical Code. A <strong>master</strong> adds supervisory and layout experience, or qualifies through an engineering degree or a trade-school route, and a <strong>residential wireman</strong> is limited to one- to four-family dwellings, so a storefront calls for a journeyman or master.',
+			'For a lit storefront sign, ask the <strong>registered electrical contractor</strong> who will connect the sign and who will supervise the work. The State Electrical Board licenses master and journeyman electricians for this type of work. The residential wireman credential covers wiring in one- to four-family dwellings. Colorado updated the experience and training rules for new electrical license applicants in 2025; the General Assembly summarizes those changes below.',
 			'Any business acting as an <strong>electrical contractor</strong> must register with the board and show workers&rsquo; and unemployment compensation compliance. If an owner holds a master license and supervises the work, that person can be the registered master; otherwise the contractor must employ at least one licensed master electrician to supervise all electrical work, and a master can qualify only one contractor at a time.',
 		),
 		'table' => array(
 			'Licensing agency' => 'Colorado State Electrical Board, Division of Professions and Occupations',
-			'Journeyman' => '4 years&rsquo; experience (2 commercial or industrial) + 288 training hours',
+			'Commercial wiring' => 'Licensed master or journeyman electrician',
 			'Residential wireman' => 'One- to four-family dwellings',
 			'Contractor' => 'Board registration; a licensed master supervises all electrical work',
 		),
 		'sources' => array(
-			array('C.R.S. &sect; 12-115-110: License requirements (Colorado Revised Statutes)', $crs_110),
+			array('Colorado General Assembly: C.R.S. &sect; 12-115-110, including contractor registration (PDF)', $crs_110),
+			array('Colorado General Assembly: 2025 changes to electrician licensing (SB25-165)', 'https://www.leg.colorado.gov/bills/sb25-165'),
 			array('Colorado State Electrical Board: Applications and forms', 'https://dpo.colorado.gov/Electrical/Applications'),
 		),
 	),
@@ -122,7 +123,7 @@ return array(
 		),
 	),
 	'review_notes' => array(
-		'Electrical license levels and contractor registration read 2026-10-27 from C.R.S. &sect; 12-115-110 on colorado.public.law (an unofficial copy of the statutes); dpo.colorado.gov returns 403 to the research PC and its archive copy failed to load. Confirm against the official statute or the board before approval.',
+		'Electrical licensing and contractor registration checked against the General Assembly’s published statute and SB25-165 on 2026-11-05. The board’s application page still blocks automated access.',
 		'Denver sign permit pages read from Internet Archive copies of 2026-06-08 (apply page) and 2026-04-18 (signs page); denvergov.org blocks the research PC. Re-check yearly.',
 		'Whether Denver licenses or registers electrical contractors itself, beyond the state registration, was not confirmed.',
 		'Transit days to Colorado not shown until verified.',

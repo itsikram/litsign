@@ -127,12 +127,12 @@ foreach ($items as $item) {
 	if (null === $ship) {
 		$errors[] = 'missing shipping';
 	} else {
-		$channel = false !== stripos((string) $g->product_type, 'Channel Letters');
-		$free_min = $channel ? 1000 : 100;
-		if ($current >= $free_min && $ship > 0) {
+		// The wholesale site has no free shipping (both minimums 0 = off, 2026-11-20).
+		$free_min = 0;
+		if ($free_min > 0 && $current >= $free_min && $ship > 0) {
 			$errors[] = "charges $ship shipping at a price over the free shipping minimum";
 		}
-		if ($current < $free_min && 0.0 === $ship) {
+		if (($free_min <= 0 || $current < $free_min) && 0.0 === $ship) {
 			$errors[] = 'free shipping below the free shipping minimum';
 		}
 		$s = $g->shipping->children($ns['g']);

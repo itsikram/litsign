@@ -95,8 +95,11 @@ function wholesale_trade_admin_page()
 		$args['meta_query'] = array_merge(array('relation' => 'AND'), $meta);
 	}
 	if ($search) {
-		$args['search'] = '*' . $search . '*';
-		$args['search_columns'] = array('user_login', 'user_email', 'user_url', 'display_name');
+		// Login, email, website and name, plus the application details (business name, DBA, city...).
+		// 'include' with 'search' would intersect the two, so both matches are collected as IDs first.
+		$by_columns = get_users(array('search' => '*' . $search . '*', 'search_columns' => array('user_login', 'user_email', 'user_url', 'display_name'), 'fields' => 'ID', 'number' => -1));
+		$by_profile = get_users(array('meta_query' => array(array('key' => '_trade_profile', 'value' => $search, 'compare' => 'LIKE')), 'fields' => 'ID', 'number' => -1));
+		$args['include'] = array_merge(array(0), array_map('intval', array_unique(array_merge($by_columns, $by_profile))));
 	}
 	$query = new WP_User_Query($args);
 	$users = $query->get_results();
@@ -109,7 +112,27 @@ function wholesale_trade_admin_page()
 		<?php if (!empty($_GET['done'])) : ?>
 			<div class="notice notice-success is-dismissible"><p><?php echo esc_html(sanitize_text_field(wp_unslash($_GET['done']))); ?></p></div>
 		<?php endif; ?>
-		<p>Only <strong>approved</strong> accounts see trade prices and can order. Applicants confirm their email first, then appear under <em>Needs review</em>. Accounts registered before the trade site are under <em>Legacy (unreviewed)</em>: nobody was approved automatically.</p>
+		<?php if (wholesale_trade_auto_approve()) : ?>
+			<p>Only <strong>approved</strong> accounts see trade prices and can order. <strong>Instant access is on</strong> (<a href="<?php echo esc_url(admin_url('admin.php?page=wholesale-trade-settings')); ?>">Settings</a>): new applicants are approved and logged in as soon as they apply, and you get an email for each one. Check them under <em>Approved</em> and Suspend any that are not real trade businesses. Accounts registered before the trade site are under <em>Legacy (unreviewed)</em>.</p>
+		<?php else : ?>
+			<p>Only <strong>approved</strong> accounts see trade prices and can order. Applicants confirm their email first, then appear under <em>Needs review</em>. Accounts registered before the trade site are under <em>Legacy (unreviewed)</em>: nobody was approved automatically.</p>
+		<?php endif; ?>
+		<?php
+		$blocked = function_exists('wholesale_trade_blocked_counts') ? wholesale_trade_blocked_counts(7) : array();
+		if ($blocked) :
+			$reasons = array('honeypot' => 'spam trap filled', 'too_fast' => 'sent too fast', 'nonce' => 'page open too long', 'token_old' => 'page open too long', 'token_bad' => 'broken form');
+			$parts = array();
+			foreach ($blocked as $reason => $count) {
+				$label = $reasons[$reason] ?? $reason;
+				$parts[$label] = ($parts[$label] ?? 0) + (int) $count;
+			}
+			$summary = array();
+			foreach ($parts as $label => $count) {
+				$summary[] = $count . ' ' . $label;
+			}
+			?>
+			<p class="description">Application form, last 7 days: <?php echo esc_html(array_sum($parts) . ' sends turned away (' . implode(', ', $summary) . ')'); ?>. Mostly bots; &ldquo;page open too long&rdquo; and &ldquo;sent too fast&rdquo; are usually real people, who see their details kept and are asked to send again.</p>
+		<?php endif; ?>
 		<ul class="subsubsub">
 			<?php
 			$links = array();
@@ -192,7 +215,7 @@ function wholesale_trade_admin_detail($user_id)
 	$flags = array_filter((array) get_user_meta($user_id, '_trade_flags', true));
 	$notes = get_user_meta($user_id, '_trade_notes', true);
 	$notes = is_array($notes) ? array_reverse($notes) : array();
-	$fields = wholesale_trade_form_fields();
+	$fields = wholesale_trade_form_fields() + wholesale_trade_retired_fields();
 	$types = wholesale_trade_business_types();
 	$volumes = wholesale_trade_volume_options();
 	$attacker = in_array($user_id, wholesale_trade_attacker_user_ids(), true);
@@ -205,6 +228,9 @@ function wholesale_trade_admin_detail($user_id)
 		<?php endif; ?>
 		<?php if ($attacker) : ?>
 			<div class="notice notice-error"><p><strong>This account was created by the attacker in the 2024–2026 hack.</strong> It can never be approved. Delete it on live (attribute its content to your admin first).</p></div>
+		<?php endif; ?>
+		<?php if ('approved' === $status && get_user_meta($user_id, '_trade_auto_approved', true)) : ?>
+			<div class="notice notice-info"><p>Approved automatically on <?php echo esc_html(wp_date('M j, Y g:i a', (int) get_user_meta($user_id, '_trade_auto_approved', true))); ?> (instant access), so nobody has checked this business yet. Suspend it if it isn't a real trade business.</p></div>
 		<?php endif; ?>
 		<?php foreach ($flags as $flag) : ?>
 			<div class="notice notice-warning"><p>⚑ <?php echo esc_html($flag); ?></p></div>
@@ -382,12 +408,18 @@ function wholesale_trade_settings_page()
 			<table class="form-table" role="presentation">
 				<tr>
 					<th scope="row"><label for="wholesale_trade_email">Trade contact email</label></th>
-					<td><input type="email" class="regular-text" id="wholesale_trade_email" name="wholesale_trade_email" value="<?php echo esc_attr(get_option('wholesale_trade_email', '')); ?>" placeholder="TR@StorefrontSignOnline.com">
+					<td><input type="email" class="regular-text" id="wholesale_trade_email" name="wholesale_trade_email" value="<?php echo esc_attr(get_option('wholesale_trade_email', '')); ?>" placeholder="Info@StorefrontSignWholesale.com">
 					<p class="description">Shown in the header and footer, and the reply-to address of trade emails.</p></td>
 				</tr>
 				<tr>
 					<th scope="row"><label for="wholesale_trade_notify_email">New application alerts go to</label></th>
-					<td><input type="email" class="regular-text" id="wholesale_trade_notify_email" name="wholesale_trade_notify_email" value="<?php echo esc_attr(get_option('wholesale_trade_notify_email', '')); ?>" placeholder="<?php echo esc_attr(get_option('admin_email')); ?>"></td>
+					<td><input type="email" class="regular-text" id="wholesale_trade_notify_email" name="wholesale_trade_notify_email" value="<?php echo esc_attr(get_option('wholesale_trade_notify_email', '')); ?>" placeholder="<?php echo esc_attr(function_exists('wholesale_contact_admin_recipients') ? (string) current(wholesale_contact_admin_recipients()) : get_option('admin_email')); ?>">
+					<p class="description">Leave empty to send them to the store notification inboxes, like new orders and reviews: <?php echo esc_html(implode(', ', function_exists('wholesale_contact_admin_recipients') ? wholesale_contact_admin_recipients() : array(get_option('admin_email')))); ?>.</p></td>
+				</tr>
+				<tr>
+					<th scope="row">Instant access</th>
+					<td><label><input type="checkbox" name="wholesale_trade_auto_approve" value="1" <?php checked(wholesale_trade_auto_approve()); ?>> Approve new applications automatically</label>
+					<p class="description">On: an applicant is approved and logged in the moment they send the form, sees trade pricing and can order. You get an email for every new account and can Suspend it from Trade Accounts. Off: applicants confirm their email and wait for your review before they see prices.</p></td>
 				</tr>
 				<tr>
 					<th scope="row">Resale certificate</th>

@@ -20,7 +20,7 @@ $phone_display = '866-436-2101';
 $phone_link = 'tel:+18664362101';
 $text_display = '206-618-6543';
 $text_link = 'sms:+12066186543';
-$email_address = 'TR@StorefrontSignOnline.com';
+$email_address = 'Info@StorefrontSignWholesale.com';
 $logo_max_mb = 10;
 
 $variants = array(
@@ -154,8 +154,11 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['cla_submit'])) {
 	$headers = array(
 		'Content-Type: text/plain; charset=UTF-8',
 		'Reply-To: ' . $name . ' <' . $email . '>',
-		'From: ' . get_option('admin_email'),
 	);
+	// Trade: no forged From (admin_email is a Gmail inbox); same rule as page-contact.php.
+	if (!function_exists('wholesale_is_trade_site') || !wholesale_is_trade_site()) {
+		$headers[] = 'From: ' . get_option('admin_email');
+	}
 
 	list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
 	wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers, $logo_path ? array($logo_path) : array());
@@ -266,7 +269,7 @@ if (!function_exists('wholesale_cla_icon')) {
 				?>
 			</a>
 			<div class="cla-topbar-contact">
-				<span class="cla-topbar-hours"><?php echo wholesale_cla_icon('clock'); ?> Mon&ndash;Fri 8am&ndash;5pm PT</span>
+				<span class="cla-topbar-hours"><?php echo wholesale_cla_icon('clock'); ?> Mon&ndash;Fri 8am&ndash;5pm PST</span>
 				<a class="cla-topbar-phone" href="<?php echo esc_attr($phone_link); ?>"><?php echo wholesale_cla_icon('phone'); ?><span><small>Talk to a sign specialist</small><?php echo esc_html($phone_display); ?></span></a>
 			</div>
 		</div>
@@ -470,7 +473,7 @@ if (!function_exists('wholesale_cla_icon')) {
 				<header class="cla-heading cla-heading--left">
 					<p class="cla-kicker">Before you order</p>
 					<h2 id="cla-faq-title">Frequently Asked Questions</h2>
-					<p>Still have a question? Call <a href="<?php echo esc_attr($phone_link); ?>"><?php echo esc_html($phone_display); ?></a>, Mon&ndash;Fri 8am&ndash;5pm PT.</p>
+					<p>Still have a question? Call <a href="<?php echo esc_attr($phone_link); ?>"><?php echo esc_html($phone_display); ?></a>, Mon&ndash;Fri 8am&ndash;5pm PST.</p>
 				</header>
 				<div class="cla-faq">
 					<details open>

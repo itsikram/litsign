@@ -45,7 +45,7 @@ get_header();
 				<?php else : ?>
 					<a class="cl-button" href="<?php echo esc_url(home_url('/custom-channel-letters/')); ?>">See Channel Letter Prices <?php echo wholesale_home_icon('arrow'); ?></a>
 				<?php endif; ?>
-				<a class="sf-button-outline" href="<?php echo esc_url($contact_url); ?>">Send Your Logo for a Quote</a>
+				<a class="sf-button-outline" href="<?php echo esc_url(wholesale_quote_url('channel-letters')); ?>">Send Your Logo for a Quote</a>
 			</div>
 		</div>
 	</section>

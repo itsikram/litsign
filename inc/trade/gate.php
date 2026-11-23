@@ -40,6 +40,17 @@ function wholesale_trade_price_meta_keys()
 		'_min_order_price' => '0',
 		'_min_order_per_side' => '0',
 		'_size_presets' => '',
+		// Written by SFS B2Sign Sync.
+		'_qty_pricing' => '',
+		'_turnaround_spec' => '',
+		'_margin_floor' => '',
+		'_max_print_price' => '0',
+		'_max_print_extra_side' => '0',
+		'_min_order_extra_side' => '0',
+		'_size_dropdown' => '',
+		'_cl_lexan_percent' => '0',
+		'_cl_trimcap_1in' => '',
+		'_cl_piece_pricing' => '',
 		'product_attr' => '[]',
 		'product_cl_data' => null, // Structure kept, costs zeroed (wholesale_trade_zero_cl_data()).
 	);
@@ -115,7 +126,7 @@ add_filter('wholesale_show_shipping_bar', static function ($show) {
 });
 
 /** Store-wide sale and shipping amounts (Settings > Storefront Sign) are trade prices too. */
-foreach (array('promo_percent' => '0', 'free_shipping_min' => '0', 'free_shipping_channel_min' => '0', 'standard_shipping_options' => '', 'channel_shipping_options' => '') as $wholesale_trade_setting => $wholesale_trade_blank) {
+foreach (array('promo_percent' => '0', 'free_shipping_min' => '0', 'free_shipping_channel_min' => '0', 'standard_shipping_options' => '', 'channel_shipping_options' => '', 'saturday_delivery_fee' => '0', 'early_am_fee' => '0') as $wholesale_trade_setting => $wholesale_trade_blank) {
 	add_filter('option_wholesale_' . $wholesale_trade_setting, static function ($value) use ($wholesale_trade_blank) {
 		return wholesale_trade_hide_prices() ? $wholesale_trade_blank : $value;
 	});
@@ -125,9 +136,49 @@ foreach (array('promo_percent' => '0', 'free_shipping_min' => '0', 'free_shippin
 }
 unset($wholesale_trade_setting, $wholesale_trade_blank);
 
+/**
+ * Whether this request carries a valid payment-ticket token (?t= on /pay/).
+ * Staff send ticket links to any email address, and the 32-character token is
+ * the access check, as on the retail site.
+ */
+function wholesale_trade_valid_ticket_request()
+{
+	static $valid = null;
+	if (null === $valid) {
+		$token = isset($_GET['t']) ? $_GET['t'] : '';
+		$valid = is_string($token) && '' !== $token && function_exists('wholesale_find_ticket_by_token')
+			&& (bool) wholesale_find_ticket_by_token(wp_unslash($token));
+	}
+	return $valid;
+}
+
+/**
+ * Whether this request carries a valid order payment link (?o= on /pay/, inc/order-pay-link.php).
+ * Staff email the link to the order's customer, who may not be signed in on that device; the
+ * token is the access check, as for payment tickets. A paid order still opens (it says "Paid").
+ */
+function wholesale_trade_valid_order_pay_request()
+{
+	static $valid = null;
+	if (null === $valid) {
+		$token = isset($_GET['o']) && is_string($_GET['o']) && !isset($_GET['t']) ? $_GET['o'] : '';
+		$valid = '' !== $token && function_exists('wholesale_find_order_by_pay_token') && function_exists('wholesale_order_pay_clean_token')
+			&& (bool) wholesale_find_order_by_pay_token(wholesale_order_pay_clean_token($token));
+	}
+	return $valid;
+}
+
 /** Pages that take orders or money. */
 function wholesale_trade_is_order_page()
 {
+	// A payment-ticket or order payment link opens for whoever holds it; /pay/ without a valid token stays gated.
+	if ((is_page('pay') || is_page_template('page-pay.php')) && (wholesale_trade_valid_ticket_request() || wholesale_trade_valid_order_pay_request())) {
+		return false;
+	}
+	// The receipt opens for whoever holds the order's private key link (a payment-ticket payer may not have an account).
+	if (get_query_var('wholesale_thank_you') && function_exists('wholesale_thank_you_order') && wholesale_thank_you_order()) {
+		return false;
+	}
 	return is_page(array('cart', 'checkout', 'payment', 'pay', 'my-orders', 'orders'))
 		|| is_page_template(array('cart.php', 'checkout.php', 'payment.php', 'page-pay.php', 'my_orders.php'))
 		|| (bool) get_query_var('wholesale_thank_you');
@@ -139,6 +190,8 @@ function wholesale_trade_is_order_page()
  */
 add_action('template_redirect', static function () {
 	if ((is_page('shop') || is_page_template('page-shop.php')) && !wholesale_trade_can_see_prices()) {
+		// Per visitor (approved accounts get the catalog), so never cacheable.
+		nocache_headers();
 		wp_safe_redirect(home_url('/channel-letters/'), 302);
 		exit;
 	}
@@ -185,15 +238,69 @@ function wholesale_trade_gated_ajax_actions()
 		'wholesale_payment_start',
 		'wholesale_payment_complete',
 		'wholesale_upload_design',
+		// Artwork size check on the product page (inc/artwork-size-check.php): ordering is
+		// for approved accounts only, so the check is too.
+		'wholesale_artwork_check',
+		// SFS Wallet Payments plugin (Apple Pay / Google Pay through Stripe, PayPal / Venmo /
+		// Pay Later): product page quote, express and checkout payments. Its Stripe webhook is a
+		// REST route checked by Stripe's signature, not an AJAX action, so it stays open.
+		'sfs_wallet_product_quote',
+		'sfs_wallet_stripe_start',
+		'sfs_wallet_stripe_complete',
+		'sfs_wallet_paypal_create',
+		'sfs_wallet_paypal_capture',
+		'sfs_wallet_paypal_shipping',
 		// wholesale_async_upload stays open: the contact form uses it for artwork
 		// (no prices; inc/async-uploads.php checks type and size).
 	);
 }
 
+/**
+ * Paying a payment ticket or an order payment link: payment_start with kind=ticket and a valid
+ * ticket token, or kind=order and a valid order payment-link token, or payment_complete for a
+ * pending payment that was started for one of those. Cart payments stay gated. The amount
+ * always comes from the ticket or order on the server (inc/payments.php).
+ *
+ * The same for the wallet plugin: sfs_wallet_stripe_start / sfs_wallet_paypal_create for a
+ * ticket or order link (never the cart page or product page express buttons), and
+ * sfs_wallet_stripe_complete / sfs_wallet_paypal_capture for a wallet payment started for one.
+ */
+function wholesale_trade_ticket_payment_request()
+{
+	$action = preg_replace('/^wp_ajax_(?:nopriv_)?/', '', (string) current_action());
+	if (in_array($action, array('sfs_wallet_stripe_start', 'sfs_wallet_paypal_create'), true)) {
+		if (!empty($_POST['express'])) {
+			return false;
+		}
+		$action = 'wholesale_payment_start'; // Same kind and token fields.
+	}
+	if (in_array($action, array('sfs_wallet_stripe_complete', 'sfs_wallet_paypal_capture'), true)) {
+		$ref = isset($_POST['ref']) && is_string($_POST['ref']) ? substr(preg_replace('/[^A-Z0-9]/', '', strtoupper(wp_unslash($_POST['ref']))), 0, 40) : '';
+		$pending = '' !== $ref ? get_transient('sfs_wallet_p_' . $ref) : false;
+		return is_array($pending) && isset($pending['kind']) && in_array($pending['kind'], array('ticket', 'order'), true);
+	}
+	if ('wholesale_payment_start' === $action) {
+		$kind = isset($_POST['kind']) && is_string($_POST['kind']) ? sanitize_key(wp_unslash($_POST['kind'])) : '';
+		if ('order' === $kind) {
+			$order_token = isset($_POST['order_token']) && is_string($_POST['order_token']) ? $_POST['order_token'] : '';
+			return '' !== $order_token && function_exists('wholesale_find_order_by_pay_token') && function_exists('wholesale_order_pay_clean_token')
+				&& (bool) wholesale_find_order_by_pay_token(wholesale_order_pay_clean_token($order_token));
+		}
+		$token = isset($_POST['ticket_token']) && is_string($_POST['ticket_token']) ? wp_unslash($_POST['ticket_token']) : '';
+		return 'ticket' === $kind && '' !== $token && function_exists('wholesale_find_ticket_by_token') && (bool) wholesale_find_ticket_by_token($token);
+	}
+	if ('wholesale_payment_complete' === $action) {
+		$ref = isset($_POST['ref']) && is_string($_POST['ref']) ? preg_replace('/[^A-Z0-9]/', '', wp_unslash($_POST['ref'])) : '';
+		$pending = '' !== $ref ? get_transient('wholesale_payment_' . $ref) : false;
+		return is_array($pending) && isset($pending['kind']) && in_array($pending['kind'], array('ticket', 'order'), true);
+	}
+	return false;
+}
+
 foreach (wholesale_trade_gated_ajax_actions() as $wholesale_trade_action) {
 	foreach (array('wp_ajax_', 'wp_ajax_nopriv_') as $wholesale_trade_prefix) {
 		add_action($wholesale_trade_prefix . $wholesale_trade_action, static function () {
-			if (wholesale_trade_can_order()) {
+			if (wholesale_trade_can_order() || wholesale_trade_ticket_payment_request()) {
 				return;
 			}
 			wp_send_json(array(
@@ -205,6 +312,21 @@ foreach (wholesale_trade_gated_ajax_actions() as $wholesale_trade_action) {
 	}
 }
 unset($wholesale_trade_action, $wholesale_trade_prefix);
+
+/**
+ * Wallet buttons (SFS Wallet Payments, enqueued at priority 20) only for approved accounts.
+ * Everyone else gets the price-free product template, so the plugin's script, its settings
+ * and Stripe.js are not loaded there. Payment ticket and order links keep them: the token is
+ * the access check, as for card payments.
+ */
+add_action('wp_enqueue_scripts', static function () {
+	if (wholesale_trade_can_order() || wholesale_trade_valid_ticket_request() || wholesale_trade_valid_order_pay_request()) {
+		return;
+	}
+	wp_dequeue_script('sfs-wallet');
+	wp_dequeue_script('sfs-stripe-js');
+	wp_dequeue_style('sfs-wallet');
+}, 21);
 
 /** Live search: strip any price field from results for visitors who can't see prices. */
 add_filter('rest_post_dispatch', static function ($response, $server, $request) {
@@ -227,6 +349,31 @@ add_filter('rest_post_dispatch', static function ($response, $server, $request) 
 	$response->set_data($data);
 	return $response;
 }, 10, 3);
+
+/** Supplier copy can carry price lines ("$50", "$7.43 per sq ft"); remove the amounts. */
+function wholesale_trade_strip_price_text($html)
+{
+	if (!is_string($html) || '' === $html) {
+		return $html;
+	}
+	$out = preg_replace('/\$\s?\d[\d,]*(\.\d+)?(\s*(per|\/)\s*\w+)?/i', '', $html);
+	return null === $out ? $html : $out;
+}
+
+/** REST /wp/v2/product: the same price lines the trade product template strips. */
+add_filter('rest_prepare_product', static function ($response) {
+	if (!($response instanceof WP_REST_Response) || !wholesale_trade_hide_prices()) {
+		return $response;
+	}
+	$data = $response->get_data();
+	foreach (array('content', 'excerpt') as $key) {
+		if (isset($data[$key]['rendered']) && is_string($data[$key]['rendered'])) {
+			$data[$key]['rendered'] = wholesale_trade_strip_price_text($data[$key]['rendered']);
+		}
+	}
+	$response->set_data($data);
+	return $response;
+}, 10, 1);
 
 /** The cart count cookie is meaningless without ordering; drop it for non-approved visitors. */
 add_action('init', static function () {

@@ -47,7 +47,8 @@ function wholesale_insert_order($product_data, $order_cost, $billing_data, $ship
    $new_order = wp_insert_post(array(
        'post_type' => 'order',
        'post_title' => sanitize_text_field($order_slug),
-       'post_status' => 'processing',
+       // Review in progress until the B2Sign order is linked; the tracking sync plugin then moves it to In production.
+       'post_status' => 'in-review',
        'meta_input' => array_merge(array(
            'product_json' => $product_data,
            'shipping_address' => $shipping_data,
@@ -67,6 +68,20 @@ function wholesale_insert_order($product_data, $order_cost, $billing_data, $ship
 
    return $new_order;
 }
+
+// New orders start in "Review in progress" until the B2Sign order is linked (2026-11-12). Registered like the other
+// order statuses (functions.php). Not core "pending": that one hides the order page from customers, gives a new order
+// no slug and resets the placed date when the status changes.
+add_action('init', function () {
+   register_post_status('in-review', array(
+       'label' => _x('Review in progress', 'post'),
+       'public' => true,
+       'exclude_from_search' => false,
+       'show_in_admin_all_list' => true,
+       'show_in_admin_status_list' => true,
+       'label_count' => _n_noop('Review in progress <span class="count">(%s)</span>', 'Review in progress <span class="count">(%s)</span>'),
+   ));
+});
 
 function place_order($product_data, $order_cost, $billing_data, $shipping_data, $order_comment, $estimate_delivery_time, $cart)
 {
@@ -220,6 +235,10 @@ function wholesale_customer_order_email_html($post_id)
     $font = "font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;";
     $noun = wholesale_items_noun($items);
     $build_line = 'sign' === $noun ? 'We build your sign and test it before it ships.' : "We make your {$noun} and check it before it ships.";
+    $shipping = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
+    $handoff_line = wholesale_order_is_pickup($shipping)
+        ? 'We email you when it is ready for pickup at ' . ($shipping['pickup_location'] ?? 'our shop') . '.'
+        : 'You receive tracking details by email when it ships.';
 
     $rows = '';
     foreach ($items as $item) {
@@ -242,11 +261,15 @@ function wholesale_customer_order_email_html($post_id)
     };
 
     $payment_line = wholesale_payment_customer_text($post_id, 'Our team will contact you to arrange payment before production starts.');
+    // Ordered without artwork while signed in: it can be uploaded from the order page (inc/order-artwork.php).
+    $artwork_line = get_post_meta($post_id, 'user_id', true) && function_exists('wholesale_order_artwork_missing_lines') && wholesale_order_artwork_missing_lines($post_id)
+        ? '<p style="margin:12px 0 0;padding:14px 16px;background:#fffaf0;border:1px solid #f0c36d;border-radius:8px;font-size:14px;color:#5c3d00;"><strong>No artwork yet?</strong> Sign in and upload it from <a href="' . esc_url(get_permalink($post_id)) . '" style="color:#8a5a00;font-weight:700;">your order page</a>, so we can start on your order.</p>'
+        : '';
 
     return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head><body style="margin:0;padding:0;background:#f5f8fb;">'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f8fb;padding:24px 12px;"><tr><td align="center">'
         . '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border:1px solid #e3e9ef;border-radius:12px;">'
-        . '<tr><td style="padding:24px 28px;border-bottom:4px solid #1fa8de;' . $font . 'font-size:20px;font-weight:700;color:#0d2e4d;">Storefront Sign Online</td></tr>'
+        . '<tr><td style="padding:24px 28px;border-bottom:4px solid #1fa8de;' . $font . 'font-size:20px;font-weight:700;color:#0d2e4d;">' . (function_exists('wholesale_email_brand') ? esc_html(wholesale_email_brand()['name']) : 'Storefront Sign Online') . '</td></tr>'
         . '<tr><td style="padding:28px;' . $font . 'color:#172027;">'
         . '<h1 style="margin:0 0 8px;font-size:22px;">Thank you' . (!empty($billing['billing_fname']) ? ', ' . esc_html($billing['billing_fname']) : '') . '! Your order is confirmed.</h1>'
         . '<p style="margin:0 0 20px;font-size:15px;color:#5b6b7b;">Order <strong style="color:#172027;">#' . esc_html($number) . '</strong>' . ($ship_by ? ' &middot; Estimated to ship by <strong style="color:#172027;">' . esc_html($ship_by) . '</strong>' : '') . '</p>'
@@ -258,16 +281,17 @@ function wholesale_customer_order_email_html($post_id)
         . $total_row('Total', $money($cost['grand_total'] ?? 0), true)
         . '</table>'
         . '<p style="margin:20px 0 0;padding:14px 16px;background:#eef7fc;border-radius:8px;font-size:14px;color:#0d2e4d;"><strong>Payment:</strong> ' . esc_html($payment_line) . '</p>'
+        . $artwork_line
         . '<h2 style="margin:28px 0 10px;font-size:16px;">What happens next</h2>'
         . '<ol style="margin:0;padding-left:20px;font-size:14px;line-height:1.6;color:#34506a;">'
         . '<li>We review your order and contact you if anything needs a closer look.</li>'
         . '<li>' . esc_html($build_line) . '</li>'
-        . '<li>You receive tracking details by email when it ships.</li>'
+        . '<li>' . esc_html($handoff_line) . '</li>'
         . '</ol>'
         . '<p style="margin:20px 0 0;"><a href="' . esc_url(wholesale_track_order_url($post_id)) . '" style="display:inline-block;padding:12px 22px;background:#1fa8de;border-radius:8px;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;">Track your order</a></p>'
-        . '<p style="margin:24px 0 0;font-size:14px;color:#5b6b7b;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT) or reply to this email with your order number.</p>'
+        . '<p style="margin:24px 0 0;font-size:14px;color:#5b6b7b;">Questions? Call <a href="tel:+18664362101" style="color:#1287b5;">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or reply to this email with your order number.</p>'
         . '</td></tr>'
-        . '<tr><td style="padding:18px 28px;border-top:1px solid #e3e9ef;' . $font . 'font-size:12px;color:#8a97a5;">Storefront Sign Online &middot; 2601 NE 12th St, Renton, WA 98056</td></tr>'
+        . '<tr><td style="padding:18px 28px;border-top:1px solid #e3e9ef;' . $font . 'font-size:12px;color:#8a97a5;">' . (function_exists('wholesale_email_brand') ? esc_html(wholesale_email_brand()['name']) : 'Storefront Sign Online') . ' &middot; 2601 NE 12th St, Renton, WA 98056</td></tr>'
         . '</table></td></tr></table></body></html>';
 }
 
@@ -282,7 +306,9 @@ function wholesale_order_status_info($order_post_id = 0)
     // Notes name what was ordered ("Your banner is being made."); without an order it is just "order".
     $noun = $order_post_id ? wholesale_order_noun($order_post_id) : 'order';
     return array(
-        'pending' => array('label' => 'Pending review', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are reviewing the details.'),
+        'in-review' => array('label' => 'Review in progress', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are checking the details before production.'),
+        // Legacy duplicate of "in-review" (core WordPress status: hides the order page from customers).
+        'pending' => array('label' => 'Review in progress', 'tone' => 'info', 'step' => 1, 'note' => 'We received your order and are checking the details before production.'),
         'processing' => array('label' => 'In production', 'tone' => 'info', 'step' => 2, 'note' => "Your {$noun} is being made."),
         'finishing' => array('label' => 'Finishing', 'tone' => 'info', 'step' => 2, 'note' => "Your {$noun} is printed and is being trimmed and packed for shipping."),
         'ready-for-pickup' => array('label' => 'Ready for pickup', 'tone' => 'success', 'step' => 2, 'note' => "Your {$noun} is ready. Our team will contact you about pickup, or call 866-436-2101."),
@@ -489,6 +515,7 @@ function wholesale_order_steps($order_post_id)
         : array('shipped' => 'Shipped', 'in-transit' => 'In transit', 'out-for-delivery' => 'Out for delivery', 'delivered' => 'Delivered');
     // The step each stored status stands on.
     $at = array(
+        'in-review' => 'received',
         'pending' => 'received',
         'processing' => 'production',
         'finishing' => 'finishing',
@@ -514,7 +541,8 @@ function wholesale_order_steps($order_post_id)
         $dates[$key] = $dates[$key] ?? $event['time'];
         $furthest = max($furthest, $index);
     }
-    // A status an order left was reached too (orders are created In production without a log entry).
+    // A status an order left was reached too (orders are created without a log entry: Review in progress since
+    // 2026-11-12, In production before).
     foreach ((array) get_post_meta($order_post_id, '_status_log') as $entry) {
         $index = array_search($at[$entry['from'] ?? ''] ?? '', $keys, true);
         if (false !== $index) {
@@ -522,7 +550,7 @@ function wholesale_order_steps($order_post_id)
         }
     }
     $current = isset($at[$status]) ? (int) array_search($at[$status], $keys, true) : $furthest;
-    // Paid orders start in production the moment they are placed.
+    // Orders placed before 2026-11-12 started in production the moment they were placed.
     if ($current >= 1 && !isset($dates['production'])) {
         $dates['production'] = $dates['received'] ?? 0;
     }
@@ -547,6 +575,9 @@ function wholesale_order_steps($order_post_id)
         );
     }
     $current_key = $keys[$current];
+    if (in_array($status, array('in-review', 'pending'), true)) {
+        $steps[$current_key]['note'] = 'Checking your details';
+    }
     if (isset($problems[$status])) {
         $steps[$current_key]['label'] = $problems[$status][0];
         $steps[$current_key]['note'] = $problems[$status][1];

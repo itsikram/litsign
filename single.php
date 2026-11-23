@@ -110,7 +110,7 @@ $product_attr_array = json_decode($product_attr_json);
                                         <?php foreach($single_attr -> options as $option){ 
                                             foreach($option as $name => $price){
                                             ?>
-                                        <option  value="<?php echo $price; ?>"><?php echo $name; ?></option>
+                                        <option  value="<?php echo esc_attr($price); ?>"><?php echo esc_html($name); ?></option>
                                         <?php  }};?>
                                     </select>
                                     <?php }else {

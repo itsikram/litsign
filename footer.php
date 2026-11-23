@@ -39,7 +39,7 @@
             <?php if (!$is_channel_letter_page) : ?>
                 <p class="footer-prelude__ship">
                     <span class="footer-prelude__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" focusable="false"><path fill="currentColor" d="M3 5h11a1 1 0 0 1 1 1v2h3.4a1 1 0 0 1 .8.4l2.6 3.5a1 1 0 0 1 .2.6V16a1 1 0 0 1-1 1h-1.2a2.8 2.8 0 0 1-5.6 0H9.8a2.8 2.8 0 0 1-5.6 0H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm12 5v3h4.5L17.9 10H15zM7 15.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm10.4 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg></span>
-                    <span><strong>Adhesive products: orders placed by 4pm PST ship the next business day</strong> Same-day service is also available if ordered by 12pm PST</span>
+                    <span><strong>Printed products: orders placed by 4 pm PT ship the next business day</strong> Same-day service is also available on many items if ordered by 12 pm PT</span>
                 </p>
             <?php endif; ?>
             <a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="footer-prelude__link">Shop All Channel Letters <span aria-hidden="true">&rarr;</span></a>
@@ -54,7 +54,7 @@
     $footer_phone_href = 'tel:+18664362101';
     $footer_text_display = '206-618-6543';
     $footer_text_href = 'sms:+12066186543';
-    $footer_email = 'TR@StorefrontSignOnline.com';
+    $footer_email = 'Info@StorefrontSignWholesale.com';
     // Inline icons: the theme's icon font is a small subset without these glyphs.
     $footer_icon = static function ($name) {
         $paths = array(
@@ -173,10 +173,6 @@
                             <li><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($label); ?></a></li>
                         <?php endforeach; ?>
                     </ul>
-                    <button type="button" class="sf-review-btn" id="feedbackmodalTrigger" data-bs-toggle="modal" data-bs-target="#feedbackModal">
-                        <?php echo $footer_icon('star'); // Static SVG. ?>
-                        Leave a Review
-                    </button>
                 </nav>
 
                 <div class="sf-col sf-contact">
@@ -370,4 +366,4 @@
 
 </body>
 
-</html>
+</html>

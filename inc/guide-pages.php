@@ -13,7 +13,7 @@
  * The WordPress page for each entry is created (or re-parented) on the next
  * admin page load after the registry changes. Each entry has a status:
  * 'review' pages render normally but are noindexed and left out of the
- * sitemaps and footer; 'live' pages are indexed. Switch an entry (or a whole
+ * sitemaps and footer; 'live' pages are eligible for indexing. Switch an entry (or a whole
  * state file) to 'live' only after the content has been checked.
  *
  * @package litsign
@@ -116,51 +116,7 @@ function wholesale_guide_registry()
 		return $registry;
 	}
 
-	$registry = array(
-		'sign-permits' => array(
-			'title' => 'Sign Permits',
-			'template' => 'page-sign-permits.php',
-			'status' => 'live',
-			'seo_title' => 'Sign Permits for Lit Storefront Signs: What You Need',
-			'seo_description' => 'How sign permits work for channel letters: what the city asks for, sign drawings, UL labels and your electrician\'s checklist. Read it, then get a quote.',
-		),
-		'how-to-install-channel-letters' => array(
-			'title' => 'How to Install Channel Letters',
-			'template' => 'page-how-to-install-channel-letters.php',
-			'status' => 'live',
-			'seo_title' => 'How to Install Channel Letters: Raceway vs. Direct Mount',
-			'seo_description' => 'Channel letter installation for your licensed installer, step by step: raceway or direct mount, the install pattern, power and inspection. Read the guide.',
-		),
-		'warranty' => array(
-			'title' => 'Warranty',
-			'template' => 'page-warranty.php',
-			// Owner approved going live 2026-10-11; letter types and labor coverage still unconfirmed.
-			'status' => 'live',
-			'seo_title' => '5-Year Channel Letter Warranty | Storefront Sign Online',
-			'seo_description' => 'What our five-year channel letter warranty covers, what it excludes and how to make a claim. Every sign is tested before it ships. Questions? Call us.',
-		),
-		'shipping-returns' => array(
-			'title' => 'Shipping & Returns',
-			'template' => 'page-shipping-returns.php',
-			'status' => 'live',
-			'seo_title' => 'Shipping & Returns | Storefront Sign Online',
-			'seo_description' => 'Shipping options for made-to-order signs (standard, 3-day, 2-day, overnight) to all 50 states, plus how cancellations, reprints and damage claims work.',
-		),
-		'locations' => array(
-			'title' => 'Locations',
-			'template' => 'page-locations.php',
-			'status' => 'live',
-			'seo_title' => 'Storefront Signs Shipped to Every State | Permit Guides',
-			'seo_description' => 'Channel letters and storefront signs shipped from Washington and California to all 50 states. Find your state\'s sign permit guide and see prices online.',
-		),
-		'industries' => array(
-			'title' => 'Industries',
-			'template' => 'page-industries.php',
-			'status' => 'live',
-			'seo_title' => 'Business Signs by Industry | Storefront Sign Online',
-			'seo_description' => 'Sign ideas and the right products for restaurants, salons, medical offices, retail stores, franchises and events. Find your industry and see prices online.',
-		),
-	);
+	$registry = wholesale_guide_core_registry();
 
 	foreach (wholesale_guide_states() as $state_slug => $state) {
 		$registry['locations/' . $state_slug] = array(
@@ -203,6 +159,90 @@ function wholesale_guide_registry()
 }
 
 /**
+ * Registry entry for one page path, or an empty array. Only state, city and
+ * industry paths need the full registry (and its 51 location data files);
+ * every other path is answered from the hubs and guides alone.
+ *
+ * @return array
+ */
+function wholesale_guide_entry($path)
+{
+	$path = (string) $path;
+	$core = wholesale_guide_core_registry();
+	if (isset($core[$path])) {
+		return $core[$path];
+	}
+	if (0 !== strpos($path, 'locations/') && 0 !== strpos($path, 'industries/')) {
+		return array();
+	}
+
+	$registry = wholesale_guide_registry();
+	return isset($registry[$path]) ? $registry[$path] : array();
+}
+
+/**
+ * The hub and guide pages of the registry (no data files needed).
+ *
+ * @return array
+ */
+function wholesale_guide_core_registry()
+{
+	static $registry = null;
+
+	if (null !== $registry) {
+		return $registry;
+	}
+
+	$registry = array(
+		'sign-permits' => array(
+			'title' => 'Sign Permits',
+			'template' => 'page-sign-permits.php',
+			'status' => 'live',
+			'seo_title' => 'Sign Permits for Lit Storefront Signs: What You Need',
+			'seo_description' => 'How sign permits work for channel letters: what the city asks for, sign drawings, UL labels and your electrician\'s checklist. Read it, then get a quote.',
+		),
+		'how-to-install-channel-letters' => array(
+			'title' => 'How to Install Channel Letters',
+			'template' => 'page-how-to-install-channel-letters.php',
+			'status' => 'live',
+			'seo_title' => 'How to Install Channel Letters: Raceway vs. Direct Mount',
+			'seo_description' => 'Channel letter installation for your licensed installer, step by step: raceway or direct mount, the install pattern, power and inspection. Read the guide.',
+		),
+		'warranty' => array(
+			'title' => 'Warranty',
+			'template' => 'page-warranty.php',
+			// Owner approved going live 2026-10-11; letter types and labor coverage still unconfirmed.
+			'status' => 'live',
+			'seo_title' => 'Product Warranties and Claims | Storefront Sign Online',
+			'seo_description' => 'How to report defects or order issues for any product, plus coverage and claims under our five-year channel letter warranty.',
+		),
+		'shipping-returns' => array(
+			'title' => 'Shipping & Returns',
+			'template' => 'page-shipping-returns.php',
+			'status' => 'live',
+			'seo_title' => 'Shipping & Returns | Storefront Sign Online',
+			'seo_description' => 'UPS and FedEx shipping for made-to-order signs (Ground to Next Day Early AM), free blind drop ship and pickup, plus how cancellations, reprints and damage claims work.',
+		),
+		'locations' => array(
+			'title' => 'Locations',
+			'template' => 'page-locations.php',
+			'status' => 'live',
+			'seo_title' => 'State & City Sign Permit Guides | Storefront Signs',
+			'seo_description' => 'Find sign permit offices and installer licensing rules in our state and city guides. Get custom LED channel letters shipped to any of the 50 states.',
+		),
+		'industries' => array(
+			'title' => 'Industries',
+			'template' => 'page-industries.php',
+			'status' => 'live',
+			'seo_title' => 'Business Signs by Industry | Storefront Sign Online',
+			'seo_description' => 'Sign ideas and the right products for restaurants, salons, medical offices, retail stores, franchises and events. Find your industry and see prices online.',
+		),
+	);
+
+	return $registry;
+}
+
+/**
  * Registry path of the page being viewed, or ''.
  */
 function wholesale_guide_current_path()
@@ -212,7 +252,7 @@ function wholesale_guide_current_path()
 	}
 
 	$path = get_page_uri(get_queried_object_id());
-	return isset(wholesale_guide_registry()[$path]) ? $path : '';
+	return wholesale_guide_entry($path) ? $path : '';
 }
 
 /**
@@ -221,13 +261,13 @@ function wholesale_guide_current_path()
 function wholesale_guide_current()
 {
 	$path = wholesale_guide_current_path();
-	return $path ? wholesale_guide_registry()[$path] : array();
+	return $path ? wholesale_guide_entry($path) : array();
 }
 
 function wholesale_guide_is_live($path)
 {
-	$registry = wholesale_guide_registry();
-	return isset($registry[$path]) && 'live' === $registry[$path]['status'];
+	$entry = wholesale_guide_entry($path);
+	return $entry && 'live' === $entry['status'];
 }
 
 /**
@@ -246,7 +286,7 @@ function wholesale_guide_url($path, $live_only = false)
 	}
 
 	$page = get_page_by_path($path);
-	return $page && 'publish' === $page->post_status ? get_permalink($page) : '';
+	return $page && 'publish' === $page->post_status && '' === $page->post_password ? get_permalink($page) : '';
 }
 
 /**
@@ -335,13 +375,12 @@ function wholesale_guide_seo_meta($value, $object_id, $meta_key, $single)
 		return $value;
 	}
 
-	$registry = wholesale_guide_registry();
-	$path = get_page_uri($post);
-	if (!isset($registry[$path])) {
+	$entry = wholesale_guide_entry(get_page_uri($post));
+	if (!$entry) {
 		return $value;
 	}
 
-	$text = '_seo_title' === $meta_key ? $registry[$path]['seo_title'] : $registry[$path]['seo_description'];
+	$text = '_seo_title' === $meta_key ? $entry['seo_title'] : $entry['seo_description'];
 	return $single ? $text : array($text);
 }
 add_filter('get_post_metadata', 'wholesale_guide_seo_meta', 10, 4);
@@ -497,9 +536,20 @@ function wholesale_guide_updated($place, $date_only = false)
 }
 
 /**
+ * Significant content, link or schema changes, independent of upload times.
+ * Keep the source review date separate for the note shown to readers.
+ */
+function wholesale_location_modified($place = array())
+{
+	return max('2026-11-05', wholesale_guide_updated($place, true));
+}
+
+/**
  * Product families on location pages, in display order: the page each links
- * to, where it is made and the product whose card price is quoted. Only
- * channel letters are called signs.
+ * to, where it is made and the product whose card price is quoted, or for
+ * product categories ('price_categories') the cheapest Starting at among the
+ * categories it links to, as on every other category card. Only channel
+ * letters are called signs.
  *
  * @return array
  */
@@ -510,13 +560,15 @@ function wholesale_guide_product_families()
 			'label' => 'Lit channel letters',
 			'url' => home_url('/custom-channel-letters/'),
 			'made' => 'Built in Washington and California',
-			'price' => 'standard-channel-letter-front-lit',
+			// The cheapest letter style, as every "channel letters from" price.
+			'price' => function_exists('wholesale_seo_cheapest_letter_slug') ? wholesale_seo_cheapest_letter_slug() : 'standard-channel-letter-front-lit',
 		),
 		'banners' => array(
 			'label' => 'Banners and banner stands',
 			'url' => wholesale_category_url('banners'),
 			'made' => 'Made in Renton, WA',
 			'price' => '13oz-vinyl-banner',
+			'price_categories' => array('banners', 'banner-stands'),
 			'more' => array(wholesale_category_url('banner-stands') => 'Banner stands'),
 		),
 		'window-graphics' => array(
@@ -524,12 +576,14 @@ function wholesale_guide_product_families()
 			'url' => home_url('/window-graphics/'),
 			'made' => 'Made in Renton, WA',
 			'price' => 'adhesive-window-perf',
+			'price_categories' => array('adhesive-products'),
 		),
 		'flags-aframes' => array(
 			'label' => 'Flags and A-frames',
 			'url' => wholesale_category_url('advertising-flags'),
 			'made' => 'Made in Renton, WA',
 			'price' => 'feather-angled-flag-pole',
+			'price_categories' => array('advertising-flags', 'signicade-a-frames'),
 			'more' => array(wholesale_category_url('signicade-a-frames') => 'A-frames'),
 		),
 		'displays' => array(
@@ -537,6 +591,7 @@ function wholesale_guide_product_families()
 			'url' => wholesale_category_url('trade-show-products'),
 			'made' => 'Made in Renton, WA',
 			'price' => 'curved-tension-fabric-display-graphic-frame',
+			'price_categories' => array('trade-show-products'),
 		),
 	);
 }
@@ -554,7 +609,7 @@ function wholesale_guide_render_families($place)
 	?>
 	<div class="gd-family-grid">
 		<?php foreach ($families as $key => $family) : ?>
-			<?php $price = wholesale_price_no_cents(wholesale_seo_product_starting_text($family['price'])); ?>
+			<?php $price = wholesale_price_no_cents(!empty($family['price_categories']) ? wholesale_seo_category_starting_text($family['price_categories']) : wholesale_seo_product_starting_text($family['price'])); ?>
 			<article class="gd-family">
 				<h3><a href="<?php echo esc_url($family['url']); ?>"><?php echo esc_html($family['label']); ?></a></h3>
 				<p class="gd-family-made"><?php echo esc_html($family['made']); ?></p>
@@ -659,7 +714,7 @@ function wholesale_guide_render_help($title = 'Talk to a Real Sign Specialist', 
 			<div class="cl-help-actions">
 				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
 				<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text your logo</small>206-618-6543</span></a>
-				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+				<a class="cl-help-action" href="mailto:Info@StorefrontSignWholesale.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>Info@StorefrontSignWholesale.com</span></a>
 				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
 			</div>
 		</div>
@@ -725,7 +780,7 @@ function wholesale_guide_footer_links()
 {
 	$links = array();
 	foreach (array(
-		'locations' => 'Shipping by State',
+		'locations' => 'State & City Sign Permit Guides',
 		'industries' => 'Signs by Industry',
 		'sign-permits' => 'Sign Permit Help',
 		'how-to-install-channel-letters' => 'Installation Guide',

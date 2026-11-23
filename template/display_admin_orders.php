@@ -106,12 +106,21 @@ function render_order_attr_meta_box($post)
     }
     ?>
     <ul class="wo-items">
-        <?php foreach ($items as $item) :
+        <?php foreach ($items as $line_index => $item) :
             $qty = max(1, (int) ($item['product_quantity'] ?? 1));
             $subtotal = (float) ($item['product_subtotal'] ?? 0);
             $specs = wholesale_item_specs($item);
+            // Artwork box with Upload / Replace (inc/order-artwork.php); it shows the file links itself.
+            $artwork_box = function_exists('wholesale_order_artwork_box_html') && is_array($item) ? wholesale_order_artwork_box_html($post->ID, $line_index, $item, 'admin') : '';
+            if ('' !== $artwork_box) {
+                unset($specs['My Artwork']);
+            }
             $design_id = absint($item['design_id'] ?? 0);
-            $design = $design_id ? json_decode(stripslashes((string) get_post_meta($design_id, '_cl_data', true)), true) : null;
+            $design_raw = $design_id ? (string) get_post_meta($design_id, '_cl_data', true) : '';
+            $design = $design_raw !== '' ? json_decode($design_raw, true) : null;
+            if ($design_raw !== '' && !is_array($design)) {
+                $design = json_decode(stripslashes($design_raw), true); // Older saves.
+            }
             $product_id = absint($item['product_id'] ?? 0); ?>
             <li class="wo-item">
                 <?php if (!empty($item['product_thumbnail'])) : ?>
@@ -137,6 +146,7 @@ function render_order_attr_meta_box($post)
                             <?php endforeach; ?>
                         </dl>
                     <?php endif; ?>
+                    <?php echo $artwork_box; // Escaped in wholesale_order_artwork_box_html(). ?>
                     <?php if (is_array($design)) {
                         wholesale_render_cl_breakdown($design);
                     } ?>
@@ -245,10 +255,23 @@ function render_order_meta_box($post)
             </section>
 
             <section>
-                <h3>Ship to</h3>
+                <h3><?php echo wholesale_order_is_pickup($shipping) ? 'Store pickup' : 'Ship to'; ?></h3>
                 <div class="wo-view">
-                    <p><?php echo $address($shipping, $ship_prefix); // Escaped per line. ?></p>
-                    <?php if (!empty($shipping[$ship_prefix . 'tel'])) : ?><p><?php echo esc_html($shipping[$ship_prefix . 'tel']); ?></p><?php endif; ?>
+                    <?php if (wholesale_order_is_pickup($shipping)) : ?>
+                        <p style="padding:8px 10px;border-left:4px solid #1fa8de;background:#eef7fc;"><strong>Customer picks up at</strong><br><?php echo esc_html($shipping['pickup_location'] ?? ''); ?><br><span class="wo-muted">Set the status to &ldquo;Ready for pickup&rdquo; when it&rsquo;s done.</span></p>
+                    <?php else : ?>
+                        <p><?php echo $address($shipping, $ship_prefix); // Escaped per line. ?></p>
+                        <?php if (!empty($shipping[$ship_prefix . 'tel'])) : ?><p><?php echo esc_html($shipping[$ship_prefix . 'tel']); ?></p><?php endif; ?>
+                        <?php if (!empty($shipping['shipping_service'])) : ?><p>Service<br><strong><?php echo esc_html($shipping['shipping_service']); ?></strong></p><?php endif; ?>
+                        <?php if (wholesale_order_is_blind_ship($shipping)) : ?>
+                            <div style="padding:8px 10px;border-left:4px solid #b32d2e;background:#fcf0f1;">
+                                <strong>BLIND DROP SHIP</strong><br>
+                                Use this return address on the label:<br>
+                                <?php echo implode('<br>', array_map('esc_html', wholesale_order_blind_from_lines($shipping))); ?><br>
+                                <span class="wo-muted">No Storefront Sign branding, invoice, packing slip or prices in the box.</span>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
                 </div>
                 <div class="wo-edit">
                     <p><button type="button" class="button-link wo-copy-billing">Copy from customer</button></p>

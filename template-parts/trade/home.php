@@ -23,14 +23,6 @@ $builder_url = home_url('/channel-letter-builder/');
 $hub_url = home_url('/channel-letters/');
 $types = wholesale_trade_cl_types();
 
-/** Good / better / best tiers, same picks as the three-tier quote section. */
-$tiers = array(
-	'standard-channel-letter-front-lit' => 'Good',
-	'standard-channel-letter-front-back-lit' => 'Better',
-	'hidden-back-halo-lit' => 'Best',
-	'inset-acrylic-face-lit-with-border-no-trimcap' => 'Best',
-);
-
 /** Lighting styles in the lit preview, each tied to the letter type it shows. */
 $preview_styles = array(
 	'front' => array('label' => 'Front lit', 'slug' => 'standard-channel-letter-front-lit'),
@@ -59,6 +51,11 @@ $icon = static function ($name, $class = 'th-icon') {
 		'lock' => '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
 		'arrow' => '<path d="M5 12h14M13 6l6 6-6 6"/>',
 		'download' => '<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>',
+		'flag' => '<path d="M5 21V4"/><path d="M5 4h12l-2.5 4.5L17 13H5"/>',
+		'easel' => '<path d="M9.5 3h5L20 21M9.5 3 4 21"/><path d="M6.4 13h11.2"/>',
+		'tent' => '<path d="M3 20 12 4l9 16z"/><path d="m9.5 20 2.5-5 2.5 5"/>',
+		'print' => '<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
+		'grid' => '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
 	);
 	if (empty($paths[$name])) {
 		return '';
@@ -75,17 +72,20 @@ get_header();
 <main id="primary" class="tw-page tw-home th-home">
 
 	<section class="th-hero" aria-labelledby="th-hero-title">
+		<?php $hero = wholesale_trade_hero_image(); ?>
 		<picture class="th-hero__bg">
-			<source type="image/avif" srcset="<?php echo esc_url(get_template_directory_uri() . '/img/hero-1920.avif'); ?>">
-			<img src="<?php echo esc_url(get_template_directory_uri() . '/img/hero-1920.webp'); ?>" alt="" width="1920" height="640" fetchpriority="high" decoding="async">
+			<?php if ($hero['avif']) : ?>
+				<source type="image/avif" srcset="<?php echo esc_url($hero['avif']); ?>">
+			<?php endif; ?>
+			<img src="<?php echo esc_url($hero['src']); ?>"<?php echo $hero['srcset'] ? ' srcset="' . esc_attr($hero['srcset']) . '" sizes="100vw"' : ''; ?> alt="Lit channel letter sign on a storefront at dusk" width="<?php echo (int) $hero['width']; ?>" height="<?php echo (int) $hero['height']; ?>" fetchpriority="high" decoding="async">
 		</picture>
 		<div class="tw-wrap th-hero__in">
 			<div class="th-hero__copy">
 				<p class="th-chip"><span class="th-chip__dot" aria-hidden="true"></span>Trade only · Sign companies &amp; installers</p>
 				<h1 class="th-hero__title" id="th-hero-title">Wholesale channel letters, <em>built for sign shops</em></h1>
-				<p class="th-hero__text">The channel letter manufacturer behind your sign jobs. Seven UL listed types, wired, tested and shipped to all 50 states with a full-size mounting pattern. You keep the client. We never install.</p>
+				<p class="th-hero__text">The channel letter manufacturer behind your sign jobs. UL listed, tested and shipped nationwide with a full-size mounting pattern.</p>
 				<ul class="th-ticks">
-					<li><?php echo $icon('check'); ?>7 UL listed letter types</li>
+					<li><?php echo $icon('check'); ?>UL listed</li>
 					<li><?php echo $icon('check'); ?>Built in WA &amp; CA since <?php echo (int) $brand['since']; ?></li>
 					<li><?php echo $icon('check'); ?>5-year warranty</li>
 				</ul>
@@ -101,7 +101,7 @@ get_header();
 				<?php if ($approved) : ?>
 					<p class="th-hero__micro">Trade pricing is on for your account. Questions on a job? Call <a href="<?php echo esc_url($brand['phone_href']); ?>"><?php echo esc_html($brand['phone']); ?></a>.</p>
 				<?php else : ?>
-					<p class="th-hero__micro">Takes about 3 minutes · Every application reviewed by a real person</p>
+					<p class="th-hero__micro"><?php echo wholesale_trade_auto_approve() ? 'Takes about 3 minutes · Trade pricing opens as soon as you apply' : 'Takes about 3 minutes · Every application reviewed by a real person'; ?></p>
 					<p class="th-hero__note">Already approved? <a href="<?php echo esc_url(wholesale_trade_login_url()); ?>">Log in to see your trade pricing</a></p>
 				<?php endif; ?>
 			</div>
@@ -130,7 +130,6 @@ get_header();
 				<div>
 					<p class="tw-eyebrow">The product line</p>
 					<h2 class="tw-h2" id="th-types-title">Seven channel letter types for every job and budget</h2>
-					<p class="tw-lead">Start with aluminum for most tenant and storefront signs. Step up to stainless steel when the client wants a halo or a metal finish.</p>
 				</div>
 				<a class="th-link" href="<?php echo esc_url($hub_url); ?>">Compare all 7 side by side <?php echo $icon('arrow', 'th-icon th-icon--sm'); ?></a>
 			</div>
@@ -145,15 +144,11 @@ get_header();
 						<a class="th-card__media" href="<?php echo esc_url($url); ?>" tabindex="-1" aria-hidden="true">
 							<?php echo wholesale_trade_type_image($slug, 'medium_large'); // Escaped in core. ?>
 							<span class="th-card__num">Type <?php echo (int) $type['type']; ?></span>
-							<?php if (isset($tiers[$slug])) : ?>
-								<span class="th-card__tier th-card__tier--<?php echo esc_attr(strtolower($tiers[$slug])); ?>"><?php echo esc_html($tiers[$slug]); ?></span>
-							<?php endif; ?>
 						</a>
 						<div class="th-card__body">
 							<p class="th-card__family"><?php echo $is_aluminum ? 'Aluminum · acrylic face' : 'Welded stainless steel'; ?></p>
 							<h3 class="th-card__name"><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($type['name']); ?></a></h3>
 							<p class="th-card__short"><?php echo esc_html($type['short']); ?></p>
-							<p class="th-card__best"><strong>Best for</strong> <?php echo esc_html($type['best_for'][0]); ?></p>
 							<div class="th-card__foot">
 								<a class="th-card__more" href="<?php echo esc_url($url); ?>">Specs<?php echo $approved ? ' &amp; pricing' : ''; ?> <?php echo $icon('arrow', 'th-icon th-icon--sm'); ?></a>
 								<?php if ($approved) : ?>
@@ -181,18 +176,131 @@ get_header();
 		</div>
 	</section>
 
+	<?php
+	// Print, display and event categories: featured tiles, then every category by group.
+	$catalog = wholesale_trade_home_catalog();
+	if ($catalog['groups']) :
+		$img_attrs = static function ($alt, $sizes, $loading = 'lazy') {
+			return array('alt' => $alt, 'sizes' => $sizes, 'loading' => $loading, 'decoding' => 'async');
+		};
+		?>
+	<section class="tw-section tw-section--soft th-cats" id="th-catalog" aria-labelledby="th-cats-title">
+		<div class="tw-wrap">
+			<div class="th-head">
+				<div>
+					<p class="tw-eyebrow">Beyond channel letters</p>
+					<h2 class="tw-h2" id="th-cats-title">Print, display and event products for your clients</h2>
+					<p class="tw-lead">Banners, flags, trade show displays and large format print, ordered on the same trade account as your channel letters.</p>
+				</div>
+				<a class="th-link" href="#th-cats-all"><?php echo $icon('grid', 'th-icon th-icon--sm'); ?>Browse all <?php echo (int) $catalog['total']; ?> categories</a>
+			</div>
+
+			<?php if ($catalog['featured']) : ?>
+				<ul class="th-feature" aria-label="Popular product categories">
+					<?php
+					$n = 0;
+					foreach ($catalog['featured'] as $slug => $item) :
+						$n++;
+						$is_lead = 1 === $n;
+						?>
+						<li class="th-feature__item<?php echo $is_lead ? ' th-feature__item--lead' : ''; ?>" style="--tint:<?php echo esc_attr($item['tint']); ?>">
+							<a class="th-feature__link" href="<?php echo esc_url($item['url']); ?>">
+								<span class="th-feature__media">
+									<?php
+									if ($item['image']) {
+										echo wp_get_attachment_image($item['image'], $is_lead ? 'large' : 'medium_large', false, $img_attrs('', $is_lead ? '(min-width: 992px) 560px, 100vw' : '(min-width: 992px) 280px, 50vw'));
+									}
+									?>
+								</span>
+								<span class="th-feature__body">
+									<span class="th-feature__count"><?php echo esc_html(sprintf(_n('%d product', '%d products', $item['count'], 'litsign'), $item['count'])); ?></span>
+									<h3 class="th-feature__name"><?php echo esc_html($item['name']); ?></h3>
+									<span class="th-feature__blurb"><?php echo esc_html($item['blurb']); ?></span>
+									<span class="th-feature__cta">Shop now <?php echo $icon('arrow', 'th-icon th-icon--sm'); ?></span>
+								</span>
+							</a>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+			<?php endif; ?>
+
+			<div class="th-dir" id="th-cats-all">
+				<?php foreach ($catalog['groups'] as $key => $group) : ?>
+					<section class="th-dir__group" aria-labelledby="th-dir-<?php echo esc_attr($key); ?>">
+						<div class="th-dir__head">
+							<span class="th-dir__icon"><?php echo $icon($group['icon']); ?></span>
+							<div>
+								<h3 class="th-dir__title" id="th-dir-<?php echo esc_attr($key); ?>"><?php echo esc_html($group['title']); ?></h3>
+								<p class="th-dir__meta"><?php echo esc_html(sprintf('%d categories · %d products', count($group['items']), $group['count'])); ?></p>
+							</div>
+						</div>
+						<ul class="th-dir__list">
+							<?php foreach ($group['items'] as $item) : ?>
+								<li>
+									<a class="th-dir__item" href="<?php echo esc_url($item['url']); ?>">
+										<span class="th-dir__thumb">
+											<?php
+											if ($item['image']) {
+												echo wp_get_attachment_image($item['image'], 'thumbnail', false, $img_attrs('', '64px'));
+											}
+											?>
+										</span>
+										<span class="th-dir__text">
+											<span class="th-dir__name"><?php echo esc_html($item['name']); ?></span>
+											<span class="th-dir__count"><?php echo esc_html(sprintf(_n('%d product', '%d products', $item['count'], 'litsign'), $item['count'])); ?></span>
+										</span>
+										<?php echo $icon('arrow', 'th-icon th-icon--sm th-dir__arrow'); ?>
+									</a>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+						<?php if ($group['all']) : ?>
+							<a class="th-dir__all" href="<?php echo esc_url($group['all']); ?>">View all <?php echo esc_html(strtolower($group['title'])); ?> <?php echo $icon('arrow', 'th-icon th-icon--sm'); ?></a>
+						<?php endif; ?>
+					</section>
+				<?php endforeach; ?>
+			</div>
+
+			<div class="th-cats__band">
+				<span class="th-cats__band-icon"><?php echo $icon($approved ? 'check' : 'lock'); ?></span>
+				<p class="th-cats__band-text">
+					<?php if ($approved) : ?>
+						<strong>Your trade pricing applies across the catalog.</strong> Need a size or material you don’t see? Trade sales can quote it.
+					<?php else : ?>
+						<strong>Trade pricing on every category.</strong> Prices open on your login once your business is approved.
+					<?php endif; ?>
+				</p>
+				<div class="th-cats__band-actions">
+					<?php if (!$approved) : ?>
+						<a class="tw-btn tw-btn--glow" href="<?php echo esc_url($apply_url); ?>">Apply for a trade account</a>
+					<?php endif; ?>
+					<a class="tw-btn tw-btn--ghost-light" href="<?php echo esc_url($brand['phone_href']); ?>"><?php echo $icon('phone', 'th-icon th-icon--sm'); ?><?php echo esc_html($brand['phone']); ?></a>
+				</div>
+			</div>
+		</div>
+	</section>
+	<?php endif; ?>
+
 	<section class="th-preview" aria-labelledby="th-preview-title" data-th-preview>
 		<div class="tw-wrap th-preview__in">
-			<div class="th-preview__copy">
-				<p class="tw-eyebrow">Try it</p>
+			<div class="th-preview__head">
+				<p class="tw-eyebrow">Try your name/brand on this wall</p>
 				<h2 class="tw-h2" id="th-preview-title">See your client’s name lit up</h2>
 				<p class="th-preview__text">Type a name and flip between lighting styles to show a client the difference. <?php echo $approved ? 'When it looks right, price the real set in the builder.' : 'Approved accounts price the real set in the builder: font, height, colors and trade pricing.'; ?></p>
+			</div>
 
+			<div class="th-stage" data-style="front" data-time="night" style="--face:#ffffff">
+				<div class="th-stage__wall" aria-hidden="true"></div>
+				<p class="th-stage__sign"><span data-preview-text>OPEN LATE</span></p>
+				<p class="th-stage__cap"><span data-preview-label>Type 1 · Front Lit</span> · Preview only, glow and colors are approximate</p>
+			</div>
+
+			<div class="th-preview__panel">
 				<div class="th-controls" hidden>
-					<label class="th-controls__label" for="th-preview-name">Sign text</label>
+					<label class="th-controls__label" for="th-preview-name">Enter your text here</label>
 					<input class="th-controls__input" id="th-preview-name" type="text" maxlength="16" value="OPEN LATE" autocomplete="off" spellcheck="false">
 
-					<p class="th-controls__label" id="th-style-label">Lighting</p>
+					<p class="th-controls__label" id="th-style-label">Lighting types</p>
 					<div class="th-seg" role="radiogroup" aria-labelledby="th-style-label">
 						<?php
 						$first = true;
@@ -205,10 +313,21 @@ get_header();
 						?>
 					</div>
 
-					<p class="th-controls__label" id="th-color-label">Face color</p>
+					<p class="th-controls__label" id="th-color-label">Face color options</p>
 					<div class="th-swatches" role="radiogroup" aria-labelledby="th-color-label">
 						<?php
-						$colors = array('#ffffff' => 'White', '#ff3b30' => 'Red', '#2f8cff' => 'Blue', '#ffd400' => 'Yellow', '#22c55e' => 'Green');
+						$colors = array(
+								'#ffffff' => 'White',
+								'#111111' => 'Black',
+								'#ffe2a8' => 'Warm white',
+								'#ffd400' => 'Yellow',
+								'#ff8a1f' => 'Orange',
+								'#ff3b30' => 'Red',
+								'#2fd8ff' => 'Light blue',
+								'#2f8cff' => 'Blue',
+								'#0b3a9e' => 'Dark blue',
+								'#22c55e' => 'Green',
+							);
 						$first = true;
 						foreach ($colors as $hex => $name) :
 							?>
@@ -230,12 +349,6 @@ get_header();
 					<?php endif; ?>
 					<a class="th-link th-link--light" href="<?php echo esc_url(wholesale_trade_type_url('standard-channel-letter-front-lit')); ?>" data-preview-type>Type 1 · Front Lit specs <?php echo $icon('arrow', 'th-icon th-icon--sm'); ?></a>
 				</div>
-			</div>
-
-			<div class="th-stage" data-style="front" data-time="night" style="--face:#ffffff">
-				<div class="th-stage__wall" aria-hidden="true"></div>
-				<p class="th-stage__sign"><span data-preview-text>OPEN LATE</span></p>
-				<p class="th-stage__cap"><span data-preview-label>Type 1 · Front Lit</span> · Preview only, glow and colors are approximate</p>
 			</div>
 		</div>
 	</section>
@@ -275,8 +388,13 @@ get_header();
 					<p>Tell us about your business in about three minutes. Add a resale certificate if you buy tax-exempt.</p>
 				</li>
 				<li class="th-step<?php echo $approved ? ' is-done' : ''; ?>">
-					<h3 class="tw-h3">Get approved</h3>
-					<p>A real person reviews every application and emails you the decision. Trade pricing opens on your login.</p>
+					<?php if (wholesale_trade_auto_approve()) : ?>
+						<h3 class="tw-h3">Get instant access</h3>
+						<p>Your account opens the moment you apply and you are logged in, with trade pricing on every page.</p>
+					<?php else : ?>
+						<h3 class="tw-h3">Get approved</h3>
+						<p>A real person reviews every application and emails you the decision. Trade pricing opens on your login.</p>
+					<?php endif; ?>
 				</li>
 				<li class="th-step">
 					<h3 class="tw-h3">Design &amp; price</h3>
@@ -292,7 +410,7 @@ get_header();
 					<a class="tw-btn tw-btn--primary th-btn-lg" href="<?php echo esc_url($builder_url); ?>">You’re approved: open the builder</a>
 				<?php else : ?>
 					<a class="tw-btn tw-btn--primary th-btn-lg" href="<?php echo esc_url($apply_url); ?>">Start step 1: apply now</a>
-					<span>About three minutes. Reviewed by a real person.</span>
+					<span><?php echo wholesale_trade_auto_approve() ? 'About three minutes. Pricing opens right away.' : 'About three minutes. Reviewed by a real person.'; ?></span>
 				<?php endif; ?>
 			</div>
 		</div>
@@ -301,7 +419,7 @@ get_header();
 	<section class="tw-section" aria-labelledby="th-box-title">
 		<div class="tw-wrap th-box">
 			<figure class="th-box__media">
-				<img src="<?php echo esc_url(content_url('uploads/storefront-files/channel-letter-raceway-assembly.jpg')); ?>" alt="Channel letters assembled on a raceway, ready for installation" width="2000" height="1500" loading="lazy" decoding="async">
+				<img src="<?php echo esc_url(content_url('uploads/storefront-files/channel-letter-raceway-assembly.jpg')); ?>" alt="Cutaway drawing of an aluminum channel letter raceway with mounting tabs" width="2000" height="1500" loading="lazy" decoding="async">
 			</figure>
 			<div>
 				<p class="tw-eyebrow">In every box</p>

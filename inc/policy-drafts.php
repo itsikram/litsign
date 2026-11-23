@@ -17,7 +17,7 @@ function wholesale_policy_privacy_draft()
 <p>Last updated: [PLACEHOLDER: date]</p>
 
 <h2>Who we are</h2>
-<p>This website, storefrontsignonline.com, is operated by Storefront Sign Online LLC, also doing business as Lit Sign Manufacturing ("we", "us"). You can reach us at <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a>, by phone at <a href="tel:+12066186543">+1 206-618-6543</a>, or by mail at 707 S. Grady Way, Suite 600, Renton, WA 98057.</p>
+<p>This website, storefrontsignonline.com, is operated by Storefront Sign Online LLC, also doing business as Lit Sign Manufacturing ("we", "us"). You can reach us at <a href="mailto:Info@StorefrontSignWholesale.com">Info@StorefrontSignWholesale.com</a>, by phone at <a href="tel:+12066186543">+1 206-618-6543</a>, or by mail at 707 S. Grady Way, Suite 600, Renton, WA 98057.</p>
 
 <h2>Information we collect</h2>
 <ul>
@@ -59,7 +59,7 @@ function wholesale_policy_privacy_draft()
 <p>[PLACEHOLDER: for example, order records for as long as tax and accounting rules require, and quote requests for [X] years.]</p>
 
 <h2>Your choices and rights</h2>
-<p>You can ask us to show, correct or delete the personal information we hold about you by emailing <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a>. [PLACEHOLDER: add any state-specific rights that apply to your business, such as California.]</p>
+<p>You can ask us to show, correct or delete the personal information we hold about you by emailing <a href="mailto:Info@StorefrontSignWholesale.com">Info@StorefrontSignWholesale.com</a>. [PLACEHOLDER: add any state-specific rights that apply to your business, such as California.]</p>
 
 <h2>Children</h2>
 <p>This site is for businesses and is not directed to children under 13. We do not knowingly collect information from children.</p>
@@ -93,7 +93,7 @@ function wholesale_policy_shipping_draft()
 <p>Orders cannot be stopped or cancelled once they are approved for production, and approved orders are not refundable.</p>
 
 <h2>Problems with your order</h2>
-<p>If something is wrong with your order, report it within 5 business days of delivery by emailing <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a> or calling 866-436-2101 or 866-436-2066 (Option 1).</p>
+<p>If something is wrong with your order, report it within 5 business days of delivery by emailing <a href="mailto:Info@StorefrontSignWholesale.com">Info@StorefrontSignWholesale.com</a> or calling 866-436-2101 or 866-436-2066 (Option 1).</p>
 <ul>
 <li>We will open a claim and may ask for photos of the problem.</li>
 <li>In some cases we may ask you to ship the item back. If a defect is confirmed, we may reimburse that return shipping.</li>

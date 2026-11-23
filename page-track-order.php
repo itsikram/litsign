@@ -61,6 +61,7 @@ if ($order_post_id) {
 
 
     $headline = array(
+        'in-review' => 'We\'re reviewing your order',
         'pending' => 'We\'re reviewing your order',
         'processing' => 'Your order is in production',
         'completed' => 'Your order has shipped',
@@ -214,11 +215,11 @@ get_header();
         <aside class="track-help">
             <div>
                 <h2>Need help with your order?</h2>
-                <p>Our team is available Monday&ndash;Friday, 8am&ndash;5pm PT. Have your order number ready.</p>
+                <p>Our team is available Monday&ndash;Friday, 8am&ndash;5pm PST. Have your order number ready.</p>
             </div>
             <div class="track-help-actions">
                 <a class="checkout-pay" href="tel:+18664362101">Call 866-436-2101</a>
-                <a class="cart-secondary" href="mailto:TR@StorefrontSignOnline.com<?php echo $order_post_id ? '?subject=' . rawurlencode('Order #' . $order_number) : ''; ?>">Email us</a>
+                <a class="cart-secondary" href="mailto:Info@StorefrontSignWholesale.com<?php echo $order_post_id ? '?subject=' . rawurlencode('Order #' . $order_number) : ''; ?>">Email us</a>
             </div>
             <?php if (is_user_logged_in()) : ?>
                 <p class="account-help">Signed in? See every order in <a href="<?php echo esc_url(home_url('/my-orders/')); ?>">My orders</a>.</p>

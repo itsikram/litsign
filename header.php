@@ -148,97 +148,18 @@ $logo_id = get_theme_mod('custom_logo');
 		<a class="skip-link screen-reader-text" href="#primary"><?php esc_html_e('Skip to content', 'litsign'); ?></a>
 
 		<?php
-		// Free shipping bar, above both headers. Amounts come from Settings > Checkout defaults.
+		// Shipping offer amounts come from Settings > Checkout defaults.
 		$ship_min = wholesale_free_shipping_amount();
 		$ship_cl_min = wholesale_free_shipping_amount(true);
 		if (!apply_filters('wholesale_show_shipping_bar', true)) {
 			$ship_min = $ship_cl_min = '';
 		}
-		if ($ship_min || $ship_cl_min) :
-			?>
-			<style>
-				.sso-ship-bar {
-					background: #e6f6fc;
-					border-bottom: 1px solid #c9eaf7;
-					color: #0d2236;
-					font-size: 14px;
-					line-height: 1.35;
-				}
-
-				.sso-ship-bar__in {
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					flex-wrap: wrap;
-					gap: 4px 10px;
-					max-width: 1320px;
-					margin: 0 auto;
-					padding: 8px 16px;
-					text-align: center;
-				}
-
-				.sso-ship-bar svg {
-					flex: none;
-					color: #0e7aa6;
-				}
-
-				.sso-ship-bar strong {
-					font-weight: 800;
-				}
-
-				.sso-ship-bar__sep {
-					color: #7fb9d2;
-				}
-
-				.sso-ship-bar a {
-					color: #0b6f9c; /* 5:1 on the bar; #0e7aa6 was 4.35:1 at phone size */
-					font-weight: 700;
-					text-decoration: underline;
-					text-underline-offset: 2px;
-				}
-
-				.sso-ship-bar a:hover {
-					color: #0d2236;
-				}
-
-				@media (max-width: 575px) {
-					.sso-ship-bar {
-						font-size: 12.5px;
-					}
-
-					.sso-ship-bar__in {
-						gap: 2px 8px;
-						padding: 6px 12px;
-					}
-
-					.sso-ship-bar svg,
-					.sso-ship-bar__long {
-						display: none;
-					}
-				}
-			</style>
-			<div class="sso-ship-bar" role="note" aria-label="<?php esc_attr_e('Free shipping offer', 'litsign'); ?>">
-				<div class="sso-ship-bar__in">
-					<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="M3 5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1.05a2.5 2.5 0 0 0 4.9 0h6.1a2.5 2.5 0 0 0 4.9 0H21a1 1 0 0 0 1-1v-4.38a1 1 0 0 0-.1-.45l-2-4A1 1 0 0 0 19 6.6h-3V6a1 1 0 0 0-1-1H3Zm13 3.6h2.38L19.9 11.6H16V8.6ZM6.5 15.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2Zm11 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z"/></svg>
-					<span>
-						<?php if ($ship_min) : ?>
-							<strong>Free shipping</strong> <span class="sso-ship-bar__long">on orders of </span><?php echo esc_html($ship_min); ?>+
-						<?php else : ?>
-							<strong>Free shipping</strong> on channel letter orders of <?php echo esc_html($ship_cl_min); ?>+
-						<?php endif; ?>
-					</span>
-					<?php if ($ship_min && $ship_cl_min) : ?>
-						<span class="sso-ship-bar__sep" aria-hidden="true">&middot;</span>
-						<span>Channel letters <?php echo esc_html($ship_cl_min); ?>+</span>
-					<?php endif; ?>
-					<span class="sso-ship-bar__sep" aria-hidden="true">&middot;</span>
-					<a href="<?php echo esc_url(home_url('/shipping-returns/#free-shipping')); ?>">Details</a>
-				</div>
-			</div>
-		<?php endif; ?>
-
-
-		<?php
+		$ship_offer = $ship_min
+			? 'Free shipping on orders of ' . $ship_min . '+'
+			: 'Free shipping on channel letter orders of ' . $ship_cl_min . '+';
+		if ($ship_min && $ship_cl_min && $ship_cl_min !== $ship_min) {
+			$ship_offer .= ' · Channel letters ' . $ship_cl_min . '+';
+		}
 		// Account links differ for signed-in customers. The cart count badge is filled in by
 		// JavaScript from the sso_cart_count cookie, because pages are served from cache.
 		$account_links = is_user_logged_in()
@@ -249,6 +170,8 @@ $logo_id = get_theme_mod('custom_logo');
 		$phone_href = 'tel:+18664362101';
 		$text_display = '206-618-6543';
 		$text_href = 'sms:+12066186543';
+		// 866 is toll-free, so trade labels it "Call:"; retail keeps its label.
+		$phone_label = (function_exists('wholesale_is_trade_site') && wholesale_is_trade_site()) ? 'Call:' : 'Cell:';
 		// Inline icons: the theme's icon font is a small subset without these glyphs.
 		$icon = static function ($name) {
 			$paths = array(
@@ -259,7 +182,165 @@ $logo_id = get_theme_mod('custom_logo');
 			);
 			return '<svg class="sh-svg" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
 		};
+		$ship_url = home_url('/shipping-returns/#free-shipping');
+		$ship_has = (bool) ($ship_min || $ship_cl_min);
+		// A separate channel-letter minimum makes the offer twice as long; both top bars then drop lower-priority items to stay on one row.
+		$ship_two = $ship_min && $ship_cl_min && $ship_cl_min !== $ship_min;
 		?>
+		<?php // Dark contact bar for phones and tablets (below 992px), matching the desktop top bar: call/text on the left, free shipping on the right. It sits above the sticky header, so it scrolls away. ?>
+		<style>
+			.sso-mbar {
+				display: none;
+			}
+
+			@media (max-width: 991.98px) {
+				.sso-mbar {
+					display: block;
+					background: #0d2236;
+					color: #d3e0ec;
+					font-size: 13px;
+					line-height: 1.2;
+				}
+
+				.sso-mbar .sso-mbar__in {
+					display: flex;
+					flex-wrap: wrap;
+					align-items: center;
+					justify-content: space-between;
+					gap: 6px 16px;
+					min-height: 40px;
+					padding-top: 6px;
+					padding-bottom: 6px;
+				}
+
+				.sso-mbar__contact {
+					display: flex;
+					align-items: center;
+					gap: 18px;
+				}
+
+				.sso-mbar--long-offer .sso-mbar__text {
+					display: none;
+				}
+
+				.sso-mbar a {
+					display: inline-flex;
+					align-items: center;
+					gap: 6px;
+					color: #fff;
+					text-decoration: none;
+					white-space: nowrap;
+				}
+
+				.sso-mbar svg {
+					flex: none;
+					color: #7ccdee;
+				}
+
+				.sso-mbar__label {
+					color: #9fdcf3;
+					font-weight: 600;
+				}
+
+				.sso-mbar__num {
+					font-weight: 800;
+					letter-spacing: .01em;
+				}
+
+				.sso-mbar a.sso-mbar__ship {
+					gap: 7px;
+					height: 28px;
+					padding: 0 11px 0 10px;
+					border: 1px solid rgba(124, 205, 238, .4);
+					border-radius: 999px;
+					background: rgba(31, 168, 222, .14);
+					color: #e4eef6;
+				}
+
+				.sso-mbar__ship strong,
+				.sso-mbar__ship b {
+					color: #fff;
+					font-weight: 800;
+				}
+
+				.sso-mbar__ship-sep {
+					color: #7ccdee;
+				}
+
+				.sso-mbar a:focus-visible {
+					outline: 3px solid #7ccdee;
+					outline-offset: 2px;
+				}
+			}
+
+			@media (max-width: 599.98px) {
+				.sso-mbar .sso-mbar__in {
+					justify-content: center;
+					gap: 6px 12px;
+					min-height: 38px;
+					padding-left: 12px;
+					padding-right: 12px;
+				}
+
+				/* Phones: free shipping first, then the call number; text and labels move to the menu. */
+				.sso-mbar a.sso-mbar__ship {
+					order: -1;
+					height: 26px;
+					padding: 0 10px 0 9px;
+				}
+
+				.sso-mbar__long,
+				.sso-mbar__label,
+				.sso-mbar__text,
+				.sso-mbar--long-offer .sso-mbar__contact {
+					display: none !important;
+				}
+			}
+
+			@media (max-width: 767.98px) {
+				.sso-mbar--long-offer .sso-mbar__long {
+					display: none;
+				}
+			}
+
+			@media (max-width: 359.98px) {
+				.sso-mbar {
+					font-size: 12px;
+				}
+
+				.sso-mbar a.sso-mbar__ship svg {
+					display: none;
+				}
+			}
+		</style>
+		<div class="sso-mbar<?php echo $ship_two ? ' sso-mbar--long-offer' : ''; ?>">
+			<div class="container sso-mbar__in">
+				<div class="sso-mbar__contact">
+					<a class="sso-mbar__call" href="<?php echo esc_url($phone_href); ?>" aria-label="<?php echo esc_attr('Call us toll free at ' . $phone_display); ?>">
+						<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25c1.1.37 2.3.57 3.6.57a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.57a1 1 0 0 1-.25 1z"/></svg>
+						<span class="sso-mbar__label"><?php echo esc_html($phone_label); ?></span>
+						<span class="sso-mbar__num"><?php echo esc_html($phone_display); ?></span>
+					</a>
+					<a class="sso-mbar__text" href="<?php echo esc_url($text_href); ?>" aria-label="<?php echo esc_attr('Text us at ' . $text_display); ?>">
+						<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 5h16v11H9l-5 4z"/></svg>
+						<span class="sso-mbar__label">Text:</span>
+						<span class="sso-mbar__num"><?php echo esc_html($text_display); ?></span>
+					</a>
+				</div>
+				<?php if ($ship_has) : ?>
+					<a class="sso-mbar__ship" href="<?php echo esc_url($ship_url); ?>" title="<?php esc_attr_e('See free shipping details', 'litsign'); ?>">
+						<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2.5 6.5h11v9h-11zM13.5 9.5h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/></svg>
+						<span>
+							<?php if ($ship_min) : ?>
+								<strong>Free shipping</strong><span class="sso-mbar__long"> on orders of</span> <b><?php echo esc_html($ship_min); ?>+</b><?php if ($ship_two) : ?> <span class="sso-mbar__ship-sep" aria-hidden="true">&middot;</span> Channel letters <b><?php echo esc_html($ship_cl_min); ?>+</b><?php endif; ?>
+							<?php else : ?>
+								<strong>Free shipping</strong> on channel letters <b><?php echo esc_html($ship_cl_min); ?>+</b>
+							<?php endif; ?>
+						</span>
+					</a>
+				<?php endif; ?>
+			</div>
+		</div>
 		<header class="main-header site-header ssx-legacy">
 			<div class="container">
 				<div class="sh-top">
@@ -294,7 +375,7 @@ $logo_id = get_theme_mod('custom_logo');
 						<div class="sh-phone-options" aria-label="<?php esc_attr_e('Call or text us', 'litsign'); ?>">
 							<span class="sh-phone-options__title">Call or text</span>
 							<a class="sh-phone-option" href="<?php echo esc_url($phone_href); ?>">
-								<span class="sh-phone-option__label">Cell:</span>
+								<span class="sh-phone-option__label"><?php echo esc_html($phone_label); ?></span>
 								<span class="sh-phone-option__number"><?php echo esc_html($phone_display); ?></span>
 							</a>
 							<a class="sh-phone-option" href="<?php echo esc_url($text_href); ?>">
@@ -302,7 +383,7 @@ $logo_id = get_theme_mod('custom_logo');
 								<span class="sh-phone-option__number"><?php echo esc_html($text_display); ?></span>
 							</a>
 						</div>
-						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PT</p>
+						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PST</p>
 					</nav>
 
 					<div class="sh-actions">
@@ -366,7 +447,7 @@ $logo_id = get_theme_mod('custom_logo');
 						<div class="sh-phone-options" aria-label="<?php esc_attr_e('Call or text us', 'litsign'); ?>">
 							<span class="sh-phone-options__title">Call or text</span>
 							<a class="sh-phone-option" href="<?php echo esc_url($phone_href); ?>">
-								<span class="sh-phone-option__label">Cell:</span>
+								<span class="sh-phone-option__label"><?php echo esc_html($phone_label); ?></span>
 								<span class="sh-phone-option__number"><?php echo esc_html($phone_display); ?></span>
 							</a>
 							<a class="sh-phone-option" href="<?php echo esc_url($text_href); ?>">
@@ -374,7 +455,10 @@ $logo_id = get_theme_mod('custom_logo');
 								<span class="sh-phone-option__number"><?php echo esc_html($text_display); ?></span>
 							</a>
 						</div>
-						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PT</p>
+						<p class="sh-hours">Mon&ndash;Fri 8am&ndash;5pm PST</p>
+						<?php if ($ship_min || $ship_cl_min) : ?>
+							<a class="sh-shipping-offer" href="<?php echo esc_url(home_url('/shipping-returns/#free-shipping')); ?>"><?php echo esc_html($ship_offer); ?></a>
+						<?php endif; ?>
 					</div>
 				</div>
 
@@ -630,7 +714,7 @@ $logo_id = get_theme_mod('custom_logo');
 						} elseif ($cta_on_page_quote) {
 							$cta_quote = true;
 						}
-						$cta_url   = $cta_quote ? ($cta_on_page_quote ? '#quote' : home_url('/contact/')) : home_url('/channel-letter-builder/');
+						$cta_url   = $cta_quote ? ($cta_on_page_quote ? '#quote' : (is_singular('product') && function_exists('wholesale_quote_url') ? wholesale_quote_url('', get_post_field('post_name', get_queried_object_id())) : home_url('/contact/'))) : home_url('/channel-letter-builder/');
 						$cta_label = $cta_quote ? 'Free Quote' : 'Start Building';
 						list($cta_url, $cta_label) = apply_filters('wholesale_header_cta', array($cta_url, $cta_label));
 						?>
@@ -647,7 +731,7 @@ $logo_id = get_theme_mod('custom_logo');
 		 * Below 992px the original header above is shown, unchanged.
 		 * =================================================================== */
 
-		$ssx_email = apply_filters('wholesale_contact_email', 'TR@StorefrontSignOnline.com');
+		$ssx_email = apply_filters('wholesale_contact_email', 'Info@StorefrontSignWholesale.com');
 
 		// Search: limit results to products. Set to '' to search the whole site instead.
 		$search_post_type = 'product';
@@ -669,6 +753,7 @@ $logo_id = get_theme_mod('custom_logo');
 				'sms'     => '<path ' . $s . ' stroke-width="2" d="M4 5h16v11H9l-5 4z"/>',
 				'mail'    => '<rect x="3" y="5" width="18" height="14" rx="2" ' . $s . ' stroke-width="2"/><path ' . $s . ' stroke-width="2" d="m3 7 9 6 9-6"/>',
 				'next'    => '<path ' . $s . ' stroke-width="2.4" d="m9 6 6 6-6 6"/>',
+				'truck'   => '<path ' . $s . ' stroke-width="2" d="M2.5 6.5h11v9h-11zM13.5 9.5h4l3 3v3h-7"/><circle cx="6.5" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/><circle cx="17" cy="17.5" r="1.8" fill="#0d2236" stroke="currentColor" stroke-width="2"/>',
 			);
 			return '<svg class="ssx-svg" viewBox="0 0 24 24" width="' . (int) $size . '" height="' . (int) $size . '" aria-hidden="true" focusable="false">' . $paths[$name] . '</svg>';
 		};
@@ -884,6 +969,81 @@ $logo_id = get_theme_mod('custom_logo');
 
 			.ssx-tb--muted {
 				color: #cfdbe7;
+			}
+
+			/* Free shipping: a quiet pill on the dark bar that links to the details. */
+			.ssx-topbar__right {
+				gap: 18px;
+			}
+
+			.ssx-topbar .ssx-ship {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				height: 28px;
+				padding: 0 10px 0 11px;
+				border: 1px solid rgba(124, 205, 238, .4);
+				border-radius: 999px;
+				background: rgba(31, 168, 222, .14);
+				color: #e4eef6;
+				font-size: 13.5px;
+				line-height: 1;
+				white-space: nowrap;
+				transition: background-color .15s, border-color .15s;
+			}
+
+			.ssx-topbar .ssx-ship:hover {
+				border-color: rgba(124, 205, 238, .8);
+				background: rgba(31, 168, 222, .26);
+			}
+
+			.ssx-ship .ssx-svg {
+				color: #7ccdee;
+			}
+
+			.ssx-ship strong,
+			.ssx-ship b {
+				color: #fff;
+				font-weight: 800;
+			}
+
+			.ssx-ship__sep {
+				color: #7ccdee;
+			}
+
+			.ssx-ship__go {
+				display: inline-flex;
+				margin-left: -2px;
+				transition: transform .15s;
+			}
+
+			.ssx-ship:hover .ssx-ship__go {
+				transform: translateX(2px);
+			}
+
+			.ssx-tb--hours {
+				padding-left: 18px;
+				border-left: 1px solid rgba(255, 255, 255, .16);
+			}
+
+			/* Narrower desktops keep one row: hours drop first (they're on the Contact page and in the menu). */
+			@media (min-width: 992px) and (max-width: 1299px) {
+				.ssx-tb--hours {
+					display: none;
+				}
+			}
+
+			/* The longer two-minimum offer: hours go below 1500px, the email below 1100px. */
+			@media (min-width: 992px) and (max-width: 1499px) {
+				.ssx-topbar--long-offer .ssx-tb--hours {
+					display: none;
+				}
+			}
+
+			@media (min-width: 992px) and (max-width: 1099px) {
+				.ssx-topbar--long-offer .ssx-tb--email {
+					display: none;
+				}
 			}
 
 			/* ---------- Main row: logo / search / account + cart ---------- */
@@ -1161,6 +1321,22 @@ $logo_id = get_theme_mod('custom_logo');
 				display: none;
 			}
 
+			/* Fade the edge(s) that hide more links, so overflow reads as scrollable. */
+			.ssx-menu.is-clip-end {
+				-webkit-mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+				mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+			}
+
+			.ssx-menu.is-clip-start {
+				-webkit-mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent);
+				mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent);
+			}
+
+			.ssx-menu.is-clip-start.is-clip-end {
+				-webkit-mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+				mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent);
+			}
+
 			.ssx-menu a {
 				position: relative;
 				display: block;
@@ -1243,8 +1419,8 @@ $logo_id = get_theme_mod('custom_logo');
 
 			.ssx-mega__grid {
 				display: grid;
-				grid-template-columns: repeat(3, minmax(0, 1fr));
-				gap: 36px;
+				grid-template-columns: repeat(4, minmax(0, 1fr));
+				gap: 32px;
 				padding-top: 28px;
 				padding-bottom: 24px;
 			}
@@ -1265,7 +1441,7 @@ $logo_id = get_theme_mod('custom_logo');
 			.ssx-mega__list a {
 				display: block;
 				margin: 0 -10px;
-				padding: 7px 10px;
+				padding: 5px 10px;
 				border-radius: 8px;
 				color: #2c3a49;
 				transition: background-color .12s, color .12s, padding-left .12s;
@@ -1333,6 +1509,10 @@ $logo_id = get_theme_mod('custom_logo');
 				.ssx-topbar__right .ssx-tb {
 					font-size: 13px;
 				}
+
+				.ssx-ship__long {
+					display: none;
+				}
 			}
 
 			@media (prefers-reduced-motion: reduce) {
@@ -1346,444 +1526,13 @@ $logo_id = get_theme_mod('custom_logo');
 			}
 		</style>
 
-		<style>
-			/* ===================================================================
-			 * Live search results (async). Used by the desktop header search and
-			 * the mobile menu search. Everything is scoped under .ssx-results.
-			 * =================================================================== */
-			.ssx-results {
-				--r-blue: #1fa8de;
-				--r-blue-text: #0e7aa6;
-				--r-tint: #e6f6fc;
-				--r-ink: #17222e;
-				--r-muted: #5c6b7a;
-				--r-line: #e2e8ee;
-				--r-soft: #f3f6f9;
-				position: absolute;
-				left: 0;
-				right: 0;
-				top: calc(100% + 8px);
-				z-index: 6;
-				overflow: hidden;
-				border: 1px solid var(--r-line);
-				border-radius: 16px;
-				background: #fff;
-				box-shadow: 0 18px 40px rgba(13, 34, 54, .18);
-				color: var(--r-ink);
-				font: 15px/1.4 var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
-				text-align: left;
-				animation: ssx-r-in .14s ease-out;
-			}
-
-			.ssx-results[hidden] {
-				display: none !important;
-			}
-
-			.ssx-results *,
-			.ssx-results *::before,
-			.ssx-results *::after {
-				box-sizing: border-box;
-			}
-
-			.ssx-results--inline {
-				position: relative;
-				top: auto;
-				left: auto;
-				right: auto;
-				margin-top: 12px;
-				box-shadow: 0 8px 24px rgba(13, 34, 54, .12);
-			}
-
-			/* Thin progress bar while a request is in flight */
-			.ssx-results::before {
-				content: "";
-				position: absolute;
-				left: 0;
-				top: 0;
-				z-index: 1;
-				width: 40%;
-				height: 2px;
-				background: var(--r-blue);
-				opacity: 0;
-				pointer-events: none;
-			}
-
-			.ssx-results.is-loading::before {
-				opacity: 1;
-				animation: ssx-r-bar 1s ease-in-out infinite;
-			}
-
-			.ssx-r-vh {
-				position: absolute !important;
-				width: 1px;
-				height: 1px;
-				margin: -1px;
-				overflow: hidden;
-				clip: rect(0 0 0 0);
-				white-space: nowrap;
-				border: 0;
-			}
-
-			.ssx-results .ssx-r-svg {
-				display: block;
-				flex: none;
-			}
-
-			/* Header row */
-			.ssx-results .ssx-results__head {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				gap: 12px;
-				padding: 12px 18px 4px;
-				color: var(--r-muted);
-				font-size: 12px;
-				font-weight: 700;
-				letter-spacing: .04em;
-				text-transform: uppercase;
-			}
-
-			.ssx-results .ssx-results__count {
-				font-weight: 600;
-				letter-spacing: 0;
-				text-transform: none;
-			}
-
-			/* Result rows */
-			.ssx-results .ssx-results__list {
-				list-style: none;
-				margin: 0;
-				padding: 6px;
-				max-height: min(56vh, 420px);
-				overflow-y: auto;
-				overscroll-behavior: contain;
-			}
-
-			.ssx-results .ssx-results__list li {
-				margin: 0;
-				padding: 0;
-				list-style: none;
-			}
-
-			.ssx-results .ssx-res {
-				display: flex;
-				align-items: center;
-				gap: 14px;
-				padding: 8px 10px;
-				border-radius: 12px;
-				color: var(--r-ink);
-				text-decoration: none;
-				transition: background-color .12s;
-			}
-
-			.ssx-results .ssx-res:hover,
-			.ssx-results .ssx-res.is-active {
-				background: var(--r-tint);
-			}
-
-			.ssx-results .ssx-res.is-active {
-				box-shadow: inset 3px 0 0 var(--r-blue);
-			}
-
-			.ssx-results .ssx-res__thumb {
-				flex: none;
-				display: grid;
-				place-items: center;
-				width: 52px;
-				height: 52px;
-				overflow: hidden;
-				border: 1px solid var(--r-line);
-				border-radius: 10px;
-				background: var(--r-soft);
-				color: #9aa9b7;
-			}
-
-			.ssx-results .ssx-res__thumb img {
-				display: block;
-				width: 100%;
-				height: 100%;
-				object-fit: cover;
-			}
-
-			.ssx-results .ssx-res__body {
-				flex: 1;
-				min-width: 0;
-			}
-
-			.ssx-results .ssx-res__title {
-				display: -webkit-box;
-				-webkit-box-orient: vertical;
-				-webkit-line-clamp: 2;
-				overflow: hidden;
-				font-weight: 600;
-				line-height: 1.3;
-			}
-
-			.ssx-results mark {
-				padding: 0 1px;
-				border-radius: 3px;
-				background: rgba(31, 168, 222, .2);
-				color: inherit;
-			}
-
-			.ssx-results .ssx-res__meta {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 4px 10px;
-				margin-top: 2px;
-				color: var(--r-muted);
-				font-size: 13px;
-			}
-
-			.ssx-results .ssx-res__price {
-				color: var(--r-blue-text);
-				font-weight: 700;
-			}
-
-			.ssx-results .ssx-res__go {
-				flex: none;
-				color: var(--r-blue-text);
-				opacity: 0;
-				transform: translateX(-4px);
-				transition: opacity .12s, transform .12s;
-			}
-
-			.ssx-results .ssx-res:hover .ssx-res__go,
-			.ssx-results .ssx-res.is-active .ssx-res__go {
-				opacity: 1;
-				transform: none;
-			}
-
-			/* "See all results" footer */
-			.ssx-results .ssx-results__all {
-				display: flex;
-				align-items: center;
-				justify-content: space-between;
-				gap: 12px;
-				padding: 13px 18px;
-				border-top: 1px solid var(--r-line);
-				background: var(--r-soft);
-				color: var(--r-blue-text);
-				font-weight: 600;
-				text-decoration: none;
-				transition: background-color .12s;
-			}
-
-			.ssx-results .ssx-results__all strong {
-				color: var(--r-ink);
-				font-weight: 700;
-			}
-
-			.ssx-results .ssx-results__all:hover,
-			.ssx-results .ssx-results__all.is-active {
-				background: #dcf1fa;
-			}
-
-			/* Loading skeleton */
-			.ssx-results .ssx-results__skel {
-				padding: 8px 6px 10px;
-			}
-
-			.ssx-results .ssx-sk {
-				display: flex;
-				align-items: center;
-				gap: 14px;
-				padding: 8px 10px;
-			}
-
-			.ssx-results .ssx-sk__img,
-			.ssx-results .ssx-sk__l1,
-			.ssx-results .ssx-sk__l2 {
-				display: block;
-				border-radius: 8px;
-				background: linear-gradient(90deg, #eef2f6 25%, #f8fafc 37%, #eef2f6 63%);
-				background-size: 400% 100%;
-				animation: ssx-r-shimmer 1.3s ease infinite;
-			}
-
-			.ssx-results .ssx-sk__img {
-				flex: none;
-				width: 52px;
-				height: 52px;
-				border-radius: 10px;
-			}
-
-			.ssx-results .ssx-sk__txt {
-				flex: 1;
-				display: grid;
-				gap: 8px;
-			}
-
-			.ssx-results .ssx-sk__l1 {
-				width: 70%;
-				height: 14px;
-			}
-
-			.ssx-results .ssx-sk__l2 {
-				width: 38%;
-				height: 11px;
-			}
-
-			/* Empty + error states */
-			.ssx-results .ssx-results__empty {
-				padding: 26px 22px 22px;
-				text-align: center;
-			}
-
-			.ssx-results .ssx-results__empty-ico {
-				display: inline-grid;
-				place-items: center;
-				width: 48px;
-				height: 48px;
-				margin-bottom: 10px;
-				border-radius: 50%;
-				background: var(--r-soft);
-				color: var(--r-muted);
-			}
-
-			.ssx-results .ssx-results__empty-title {
-				margin: 0;
-				font-size: 16px;
-				font-weight: 700;
-				word-break: break-word;
-			}
-
-			.ssx-results .ssx-results__empty-sub {
-				margin: 4px 0 0;
-				color: var(--r-muted);
-				font-size: 14px;
-			}
-
-			.ssx-results .ssx-results__empty-label {
-				margin: 18px 0 8px;
-				color: var(--r-muted);
-				font-size: 12px;
-				font-weight: 700;
-				letter-spacing: .04em;
-				text-transform: uppercase;
-			}
-
-			.ssx-results .ssx-results__chips {
-				display: flex;
-				flex-wrap: wrap;
-				justify-content: center;
-				gap: 8px;
-			}
-
-			.ssx-results .ssx-results__chip {
-				display: inline-flex;
-				align-items: center;
-				min-height: 34px;
-				padding: 0 13px;
-				border: 1px solid var(--r-line);
-				border-radius: 999px;
-				background: var(--r-soft);
-				color: var(--r-ink);
-				font-size: 14px;
-				font-weight: 600;
-				text-decoration: none;
-				transition: background-color .15s, border-color .15s, color .15s;
-			}
-
-			.ssx-results .ssx-results__chip:hover {
-				border-color: var(--r-blue);
-				background: var(--r-tint);
-				color: var(--r-blue-text);
-			}
-
-			.ssx-results .ssx-results__help {
-				display: inline-block;
-				margin-top: 16px;
-				color: var(--r-blue-text);
-				font-size: 14px;
-				font-weight: 700;
-				text-decoration: none;
-			}
-
-			.ssx-results .ssx-results__help:hover {
-				text-decoration: underline;
-			}
-
-			.ssx-results .ssx-results__retry {
-				display: inline-flex;
-				align-items: center;
-				justify-content: center;
-				min-height: 40px;
-				margin-top: 14px;
-				padding: 0 20px;
-				border: 0;
-				border-radius: 999px;
-				background: var(--r-blue);
-				color: #fff;
-				font: inherit;
-				font-weight: 700;
-				cursor: pointer;
-				transition: background-color .15s;
-			}
-
-			.ssx-results .ssx-results__retry:hover {
-				background: #1790c0;
-			}
-
-			@media (max-width: 575px) {
-				.ssx-results .ssx-res__thumb {
-					width: 46px;
-					height: 46px;
-				}
-
-				.ssx-results .ssx-res__go {
-					display: none;
-				}
-			}
-
-			@keyframes ssx-r-in {
-				from {
-					opacity: 0;
-					transform: translateY(-4px);
-				}
-
-				to {
-					opacity: 1;
-					transform: none;
-				}
-			}
-
-			@keyframes ssx-r-bar {
-				0% {
-					transform: translateX(-100%);
-				}
-
-				100% {
-					transform: translateX(250%);
-				}
-			}
-
-			@keyframes ssx-r-shimmer {
-				0% {
-					background-position: 100% 50%;
-				}
-
-				100% {
-					background-position: 0 50%;
-				}
-			}
-
-			@media (prefers-reduced-motion: reduce) {
-
-				.ssx-results,
-				.ssx-results *,
-				.ssx-results::before {
-					animation-duration: 0s !important;
-					animation-iteration-count: 1 !important;
-					transition-duration: 0s !important;
-				}
-			}
-		</style>
+		<?php // Live search results: styles in css/live-search.css, loaded without blocking the first paint (the panel only appears after typing). ?>
+		<link rel="stylesheet" id="ssx-live-search-css" href="<?php echo esc_url(get_template_directory_uri() . '/css/live-search.css?ver=' . (int) @filemtime(get_template_directory() . '/css/live-search.css')); ?>" media="print" onload="this.media='all'">
 
 		<header class="ssx-header" id="ssxHeader">
 
 			<!-- Top bar: call, text, email, hours -->
-			<div class="ssx-topbar">
+			<div class="ssx-topbar<?php echo $ship_two ? ' ssx-topbar--long-offer' : ''; ?>">
 				<div class="ssx-container ssx-topbar__in">
 					<div class="ssx-topbar__left">
 						<a class="ssx-tb" href="<?php echo esc_url($phone_href); ?>">
@@ -1796,15 +1545,28 @@ $logo_id = get_theme_mod('custom_logo');
 							<span class="ssx-tb__label">Text:</span>
 							<strong><?php echo esc_html($text_display); ?></strong>
 						</a>
-						<a class="ssx-tb" href="<?php echo esc_url('mailto:' . $ssx_email); ?>">
+						<a class="ssx-tb ssx-tb--email" href="<?php echo esc_url('mailto:' . $ssx_email); ?>">
 							<?php echo $ssx_icon('mail', 17); // Static SVG. ?>
 							<strong><?php echo esc_html($ssx_email); ?></strong>
 						</a>
 					</div>
 					<div class="ssx-topbar__right">
-						<span class="ssx-tb ssx-tb--muted">
+						<?php if ($ship_has) : ?>
+							<a class="ssx-ship" href="<?php echo esc_url($ship_url); ?>" title="<?php esc_attr_e('See free shipping details', 'litsign'); ?>">
+								<?php echo $ssx_icon('truck', 18); // Static SVG. ?>
+								<span class="ssx-ship__text">
+									<?php if ($ship_min) : ?>
+										<strong>Free shipping</strong><span class="ssx-ship__long"> on orders of</span> <b><?php echo esc_html($ship_min); ?>+</b><?php if ($ship_two) : ?> <span class="ssx-ship__sep" aria-hidden="true">&middot;</span> Channel letters <b><?php echo esc_html($ship_cl_min); ?>+</b><?php endif; ?>
+									<?php else : ?>
+										<strong>Free shipping</strong> on channel letters <b><?php echo esc_html($ship_cl_min); ?>+</b>
+									<?php endif; ?>
+								</span>
+								<span class="ssx-ship__go"><?php echo $ssx_icon('next', 13); // Static SVG. ?></span>
+							</a>
+						<?php endif; ?>
+						<span class="ssx-tb ssx-tb--muted ssx-tb--hours">
 							<?php echo $ssx_icon('clock', 16); // Static SVG. ?>
-							Mon&ndash;Fri 8am&ndash;5pm PT
+							Mon&ndash;Fri 8am&ndash;5pm PST
 						</span>
 					</div>
 				</div>
@@ -1934,6 +1696,26 @@ $logo_id = get_theme_mod('custom_logo');
 					return document.getElementById(id);
 				};
 				var canHover = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+				/* ---------- Nav overflow fade ---------- */
+				var navMenu = root.querySelector('.ssx-menu');
+				if (navMenu) {
+					var updateClip = function() {
+						var max = navMenu.scrollWidth - navMenu.clientWidth;
+						navMenu.classList.toggle('is-clip-start', navMenu.scrollLeft > 1);
+						navMenu.classList.toggle('is-clip-end', navMenu.scrollLeft < max - 1);
+					};
+					navMenu.addEventListener('scroll', updateClip, { passive: true });
+					// Let a plain mouse wheel scroll the row sideways when it overflows.
+					navMenu.addEventListener('wheel', function(e) {
+						if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+						if (navMenu.scrollWidth <= navMenu.clientWidth) return;
+						navMenu.scrollLeft += e.deltaY;
+						e.preventDefault();
+					}, { passive: false });
+					window.addEventListener('resize', updateClip);
+					updateClip();
+				}
 
 				/* ---------- Mega menu ---------- */
 				var megaBtn = $('ssxMegaBtn'),
@@ -2640,7 +2422,7 @@ $logo_id = get_theme_mod('custom_logo');
 					<span>Text:</span>
 					<strong><?php echo esc_html($text_display); ?></strong>
 				</a>
-				<p class="ssxm__hours"><?php echo $ssx_icon('clock', 14); // Static SVG. ?> Mon&ndash;Fri 8am&ndash;5pm PT</p>
+				<p class="ssxm__hours"><?php echo $ssx_icon('clock', 14); // Static SVG. ?> Mon&ndash;Fri 8am&ndash;5pm PST</p>
 			</div>
 		</div>
 
@@ -2766,469 +2548,52 @@ $logo_id = get_theme_mod('custom_logo');
 		<script>
 			window.ssxLiveSearch = <?php echo wp_json_encode($ssx_live, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 		</script>
-		<script>
-			(function() {
-				var cfg = window.ssxLiveSearch;
-				if (!cfg || !window.fetch || !window.Map) return;
-
-				var MIN = cfg.min || 2,
-					DELAY = 220,
-					cache = new Map(),
-					useCore = false,
-					uid = 0;
-
-				/* ---------- Tiny DOM helpers (all dynamic text goes through textContent) ---------- */
-				function h(tag, cls, text) {
-					var el = document.createElement(tag);
-					if (cls) el.className = cls;
-					if (text != null) el.textContent = text;
-					return el;
-				}
-
-				var ICONS = {
-					arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
-					image: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/>',
-					alert: '<circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/>',
-					search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'
-				};
-
-				function svg(name, size, cls) {
-					var d = document.createElement('div');
-					d.innerHTML = '<svg class="ssx-r-svg' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" width="' + size + '" height="' + size + '" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS[name] + '</svg>';
-					return d.firstChild;
-				}
-
-				function decode(s) {
-					var t = document.createElement('textarea');
-					t.innerHTML = s || '';
-					return t.value;
-				}
-
-				function highlight(node, text, q) {
-					var words = q.split(/\s+/).filter(Boolean).map(function(w) {
-						return w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-					});
-					if (!words.length) {
-						node.textContent = text;
-						return;
-					}
-					text.split(new RegExp('(' + words.join('|') + ')', 'gi')).forEach(function(part, i) {
-						if (!part) return;
-						if (i % 2) node.appendChild(h('mark', null, part));
-						else node.appendChild(document.createTextNode(part));
-					});
-				}
-
-				function withParams(base, params) {
-					var sep = base.indexOf('?') > -1 ? '&' : '?';
-					return base + sep + Object.keys(params).map(function(k) {
-						return k + '=' + encodeURIComponent(params[k]);
-					}).join('&');
-				}
-
-				function searchHref(term) {
-					var p = {
-						s: term
-					};
-					if (cfg.postType) p.post_type = cfg.postType;
-					return withParams(cfg.searchUrl, p);
-				}
-
-				/* ---------- Data ---------- */
-				function getJSON(u, signal) {
-					return fetch(u, {
-						signal: signal,
-						credentials: 'same-origin',
-						headers: {
-							Accept: 'application/json'
-						}
-					}).then(function(res) {
-						if (!res.ok) {
-							var err = new Error('HTTP ' + res.status);
-							err.status = res.status;
-							throw err;
-						}
-						return res.json().then(function(json) {
-							return {
-								json: json,
-								res: res
-							};
-						});
-					});
-				}
-
-				function viaCustom(q, signal) {
-					var p = {
-						q: q,
-						limit: cfg.limit
-					};
-					if (cfg.postType) p.post_type = cfg.postType;
-					return getJSON(withParams(cfg.endpoint, p), signal).then(function(r) {
-						return {
-							total: r.json.total || 0,
-							items: r.json.items || []
-						};
-					});
-				}
-
-				function viaCore(q, signal) {
-					return getJSON(withParams(cfg.fallback, {
-						search: q,
-						per_page: cfg.limit,
-						type: 'post',
-						subtype: cfg.postType || 'any'
-					}), signal).then(function(r) {
-						var items = (r.json || []).map(function(x) {
-							return {
-								id: x.id,
-								title: decode(x.title),
-								url: x.url,
-								image: '',
-								type: '',
-								price: ''
-							};
-						});
-						return {
-							total: parseInt(r.res.headers.get('X-WP-Total'), 10) || items.length,
-							items: items
-						};
-					});
-				}
-
-				function fetchResults(q, signal) {
-					var key = q.toLowerCase();
-					if (cache.has(key)) return Promise.resolve(cache.get(key));
-					var req = useCore ? viaCore(q, signal) : viaCustom(q, signal).catch(function(err) {
-						if (err && err.status === 404) {
-							useCore = true;
-							return viaCore(q, signal);
-						}
-						throw err;
-					});
-					return req.then(function(data) {
-						if (cache.size > 60) cache.delete(cache.keys().next().value);
-						cache.set(key, data);
-						return data;
-					});
-				}
-
-				/* ---------- One controller per search form ---------- */
-				function attach(form, input, inline, clearBtn) {
-					var id = 'ssxRes' + (++uid),
-						panel = h('div', 'ssx-results' + (inline ? ' ssx-results--inline' : '')),
-						live = h('div', 'ssx-r-vh'),
-						options = [],
-						active = -1,
-						seq = 0,
-						timer = null,
-						ctrl = null;
-
-					panel.id = id;
-					panel.hidden = true;
-					live.setAttribute('role', 'status');
-					live.setAttribute('aria-live', 'polite');
-					form.appendChild(live);
-					if (inline) form.parentNode.insertBefore(panel, form.nextSibling);
-					else form.appendChild(panel);
-
-					input.setAttribute('role', 'combobox');
-					input.setAttribute('aria-autocomplete', 'list');
-					input.setAttribute('aria-haspopup', 'listbox');
-					input.setAttribute('aria-expanded', 'false');
-					input.setAttribute('aria-controls', id);
-
-					function setActive(i) {
-						if (active > -1 && options[active]) {
-							options[active].classList.remove('is-active');
-							options[active].setAttribute('aria-selected', 'false');
-						}
-						active = i;
-						if (i > -1 && options[i]) {
-							options[i].classList.add('is-active');
-							options[i].setAttribute('aria-selected', 'true');
-							input.setAttribute('aria-activedescendant', options[i].id);
-							options[i].scrollIntoView({
-								block: 'nearest'
-							});
-						} else {
-							input.removeAttribute('aria-activedescendant');
-						}
-					}
-
-					function open() {
-						panel.hidden = false;
-						input.setAttribute('aria-expanded', 'true');
-					}
-
-					function close() {
-						panel.hidden = true;
-						input.setAttribute('aria-expanded', 'false');
-						setActive(-1);
-					}
-
-					function reset() {
-						clearTimeout(timer);
-						seq++;
-						if (ctrl) ctrl.abort();
-						panel.classList.remove('is-loading');
-						live.textContent = '';
-						close();
-					}
-
-					function empty() {
-						panel.textContent = '';
-						options = [];
-						active = -1;
-						panel.classList.remove('is-loading');
-					}
-
-					/* ----- Renderers ----- */
-					function renderSkeleton() {
-						empty();
-						var wrap = h('div', 'ssx-results__skel');
-						wrap.setAttribute('aria-hidden', 'true');
-						for (var i = 0; i < 3; i++) {
-							var row = h('div', 'ssx-sk'),
-								txt = h('span', 'ssx-sk__txt');
-							row.appendChild(h('span', 'ssx-sk__img'));
-							txt.appendChild(h('span', 'ssx-sk__l1'));
-							txt.appendChild(h('span', 'ssx-sk__l2'));
-							row.appendChild(txt);
-							wrap.appendChild(row);
-						}
-						panel.appendChild(wrap);
-						open();
-					}
-
-					function renderResults(term, data) {
-						empty();
-						var head = h('div', 'ssx-results__head');
-						head.appendChild(h('span', null, cfg.postType === 'product' ? 'Products' : 'Results'));
-						head.appendChild(h('span', 'ssx-results__count', data.total + (data.total === 1 ? ' match' : ' matches')));
-						panel.appendChild(head);
-
-						var ul = h('ul', 'ssx-results__list');
-						ul.setAttribute('role', 'listbox');
-						ul.setAttribute('aria-label', 'Search results');
-
-						data.items.forEach(function(it, i) {
-							var li = h('li'),
-								a = h('a', 'ssx-res'),
-								thumb = h('span', 'ssx-res__thumb'),
-								body = h('span', 'ssx-res__body'),
-								title = h('span', 'ssx-res__title');
-							li.setAttribute('role', 'presentation');
-							a.href = it.url;
-							a.id = id + '-o' + i;
-							a.tabIndex = -1;
-							a.setAttribute('role', 'option');
-							a.setAttribute('aria-selected', 'false');
-
-							if (it.image) {
-								var img = document.createElement('img');
-								img.src = it.image;
-								img.alt = '';
-								img.width = 52;
-								img.height = 52;
-								img.loading = 'lazy';
-								img.decoding = 'async';
-								img.onerror = function() {
-									if (img.parentNode) img.parentNode.removeChild(img);
-									thumb.appendChild(svg('image', 22));
-								};
-								thumb.appendChild(img);
-							} else {
-								thumb.appendChild(svg('image', 22));
-							}
-
-							highlight(title, it.title, term);
-							body.appendChild(title);
-							var showType = it.type && !cfg.postType;
-							if (showType || it.price) {
-								var meta = h('span', 'ssx-res__meta');
-								if (showType) meta.appendChild(h('span', 'ssx-res__type', it.type));
-								if (it.price) meta.appendChild(h('span', 'ssx-res__price', it.price));
-								body.appendChild(meta);
-							}
-
-							a.appendChild(thumb);
-							a.appendChild(body);
-							a.appendChild(svg('arrow', 18, 'ssx-res__go'));
-							li.appendChild(a);
-							ul.appendChild(li);
-							options.push(a);
-						});
-						panel.appendChild(ul);
-
-						var all = h('a', 'ssx-results__all'),
-							label = h('span');
-						all.href = searchHref(term);
-						all.id = id + '-all';
-						all.tabIndex = -1;
-						all.setAttribute('role', 'option');
-						all.setAttribute('aria-selected', 'false');
-						label.appendChild(document.createTextNode('See all ' + (data.total > data.items.length ? data.total + ' ' : '') + 'results for '));
-						label.appendChild(h('strong', null, '\u201C' + term + '\u201D'));
-						all.appendChild(label);
-						all.appendChild(svg('arrow', 18));
-						panel.appendChild(all);
-						options.push(all);
-
-						live.textContent = data.total + (data.total === 1 ? ' result' : ' results') + ' available. Use the up and down arrow keys to review.';
-					}
-
-					function renderEmpty(term) {
-						empty();
-						var box = h('div', 'ssx-results__empty'),
-							ico = h('span', 'ssx-results__empty-ico');
-						ico.appendChild(svg('search', 22));
-						box.appendChild(ico);
-						box.appendChild(h('p', 'ssx-results__empty-title', 'No results for \u201C' + term + '\u201D'));
-						box.appendChild(h('p', 'ssx-results__empty-sub', 'Check the spelling or try a broader keyword.'));
-						if (cfg.popular && cfg.popular.length) {
-							box.appendChild(h('p', 'ssx-results__empty-label', 'Popular searches'));
-							var chips = h('div', 'ssx-results__chips');
-							cfg.popular.forEach(function(t) {
-								var c = h('a', 'ssx-results__chip', t);
-								c.href = searchHref(t);
-								chips.appendChild(c);
-							});
-							box.appendChild(chips);
-						}
-						if (cfg.phone) {
-							var help = h('a', 'ssx-results__help', 'Can\u2019t find it? Call ' + cfg.phone);
-							help.href = cfg.phoneHref;
-							box.appendChild(help);
-						}
-						panel.appendChild(box);
-						live.textContent = 'No results found.';
-					}
-
-					function renderError(term) {
-						empty();
-						var box = h('div', 'ssx-results__empty'),
-							ico = h('span', 'ssx-results__empty-ico'),
-							retry = h('button', 'ssx-results__retry', 'Try again');
-						ico.appendChild(svg('alert', 22));
-						box.appendChild(ico);
-						box.appendChild(h('p', 'ssx-results__empty-title', 'We couldn\u2019t load results'));
-						box.appendChild(h('p', 'ssx-results__empty-sub', 'Check your connection, or press Enter to search all products.'));
-						retry.type = 'button';
-						retry.addEventListener('click', function() {
-							run(term);
-						});
-						box.appendChild(retry);
-						panel.appendChild(box);
-						live.textContent = 'Search failed. Try again.';
-					}
-
-					function show(term, data) {
-						if (data.items.length) renderResults(term, data);
-						else renderEmpty(term);
-						open();
-					}
-
-					/* ----- Request flow ----- */
-					function run(term) {
-						var token = ++seq;
-						if (ctrl) ctrl.abort();
-						var key = term.toLowerCase();
-						if (cache.has(key)) {
-							show(term, cache.get(key));
-							return;
-						}
-						ctrl = window.AbortController ? new AbortController() : null;
-						if (panel.querySelector('.ssx-results__list') && !panel.hidden) panel.classList.add('is-loading');
-						else renderSkeleton();
-
-						fetchResults(term, ctrl ? ctrl.signal : undefined).then(function(data) {
-							if (token !== seq) return;
-							show(term, data);
-						}).catch(function(err) {
-							if ((err && err.name === 'AbortError') || token !== seq) return;
-							renderError(term);
-							open();
-						});
-					}
-
-					function currentTerm() {
-						return input.value.trim().replace(/\s+/g, ' ');
-					}
-
-					input.addEventListener('input', function() {
-						var term = currentTerm();
-						clearTimeout(timer);
-						seq++;
-						if (ctrl) ctrl.abort();
-						if (term.length < MIN) {
-							reset();
-							return;
-						}
-						timer = setTimeout(function() {
-							run(term);
-						}, cache.has(term.toLowerCase()) ? 0 : DELAY);
-					});
-
-					input.addEventListener('focus', function() {
-						if (currentTerm().length >= MIN && panel.firstChild) open();
-					});
-
-					input.addEventListener('keydown', function(e) {
-						var n = options.length;
-						if (e.key === 'ArrowDown') {
-							if (panel.hidden) {
-								if (!panel.firstChild || currentTerm().length < MIN) return;
-								open();
-							}
-							if (!n) return;
-							e.preventDefault();
-							setActive(active + 1 >= n ? 0 : active + 1);
-						} else if (e.key === 'ArrowUp') {
-							if (panel.hidden || !n) return;
-							e.preventDefault();
-							setActive(active <= 0 ? n - 1 : active - 1);
-						} else if (e.key === 'Enter') {
-							if (!panel.hidden && active > -1 && options[active]) {
-								e.preventDefault();
-								window.location.href = options[active].href;
-							}
-						} else if (e.key === 'Escape') {
-							if (!panel.hidden) close();
-						}
-					});
-
-					// Keep focus in the field when clicking inside the panel (Safari), and close when focus leaves.
-					panel.addEventListener('mousedown', function(e) {
-						if (!e.target.closest('a, button')) e.preventDefault();
-						else if (e.target.closest('.ssx-results__retry')) e.preventDefault();
-					});
-
-					function onFocusOut(e) {
-						var next = e.relatedTarget;
-						if (next && (form.contains(next) || panel.contains(next))) return;
-						close();
-					}
-					form.addEventListener('focusout', onFocusOut);
-					panel.addEventListener('focusout', onFocusOut);
-
-					if (clearBtn) clearBtn.addEventListener('click', reset);
-				}
-
-				var f1 = document.getElementById('ssxSearch'),
-					i1 = document.getElementById('ssxSearchInput');
-				if (f1 && i1) attach(f1, i1, false, document.getElementById('ssxSearchClear'));
-
-				var f2 = document.getElementById('ssxmSearch'),
-					i2 = document.getElementById('ssxmSearchInput');
-				if (f2 && i2) attach(f2, i2, true, null);
-			})();
-		</script>
+		<script src="<?php echo esc_url(get_template_directory_uri() . '/js/live-search.js?ver=' . (int) @filemtime(get_template_directory() . '/js/live-search.js')); ?>" defer></script>
 
 		<?php
 		// Notices from redirects (?type=success&message=...). Landing pages also use
 		// ?type= to match an ad (/banners-displays/?type=stands), so an empty message
 		// shows nothing instead of an empty alert bar.
 		$message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
+		// Only show text this site's own redirects send, so a link in an email or on
+		// another site cannot put its own words (fake notices, scam numbers) in the alert.
+		// Fixed notices always show; dynamic ones (cart, checkout and signup errors that
+		// include details) only on a redirect from one of this site's pages. The raw
+		// HTTP_REFERER is used on purpose: wp_get_raw_referer() trusts ?_wp_http_referer=.
+		if ('' !== $message) {
+			$known_notices = array(
+				'Invalid email/username or password.',
+				'Account Created Successfully',
+				'Your cart is currently empty.',
+				'Please enter a valid email address.',
+				'Please choose a username using letters, numbers, spaces, or . - _ @',
+				'Email Already Exist',
+				'Username Already Exist',
+				'Your password must be at least 8 characters.',
+				'Your Password and Confirm Password do not match.',
+				'That email address is already used by another account.',
+				'Account Details Updated Successfully',
+				'Address Updated Successfully',
+				'Your password is incorrect',
+				'Your New Password and Confirm Password is not same',
+				'Your new password must be at least 8 characters.',
+				'Your new password must be at least 10 characters.',
+				'Passwords updated successfully',
+				'This product is no longer available.',
+				'Your artwork could not be uploaded. Please try again.',
+				'Artwork must be a PDF, JPG or PNG file.',
+				'Artwork files must be under 25MB.',
+				'Your artwork could not be saved. Please try again.',
+				'Please enable JavaScript to open our secure card payment window, or call us at 866-436-2101 to order by phone.',
+			);
+			if (!in_array($message, $known_notices, true)) {
+				$notice_referer_host = isset($_SERVER['HTTP_REFERER']) ? (string) wp_parse_url(wp_unslash($_SERVER['HTTP_REFERER']), PHP_URL_HOST) : '';
+				$notice_site_host = (string) wp_parse_url(home_url('/'), PHP_URL_HOST);
+				if ('' === $notice_referer_host || preg_replace('/^www\./', '', strtolower($notice_referer_host)) !== preg_replace('/^www\./', '', strtolower($notice_site_host))) {
+					$message = '';
+				}
+			}
+		}
 		if (isset($_GET['type']) && '' !== $message) {
 			$type = sanitize_key(wp_unslash($_GET['type']));
 			if (!in_array($type, array('success', 'danger', 'warning', 'info'), true)) {

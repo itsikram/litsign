@@ -6,6 +6,12 @@
  * @package litsign
  */
 
+// /pay/?o=<token>: pay an existing order (link sent from the order's "Payment link" box).
+if (isset($_GET['o']) && !isset($_GET['t'])) {
+	require get_template_directory() . '/template-parts/pay-order.php';
+	return;
+}
+
 $token = isset($_GET['t']) ? preg_replace('/[^A-Za-z0-9]/', '', (string) wp_unslash($_GET['t'])) : '';
 $ticket_id = wholesale_find_ticket_by_token($token);
 $ticket = $ticket_id ? wholesale_get_ticket($ticket_id) : null;

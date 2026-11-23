@@ -46,7 +46,7 @@ $product_image = static function ($slug, $alt, $sizes, $eager = false) {
 	));
 };
 
-// Card prices are whole dollars, except per-ft² prices: rounding $3.30 up to $4 would
+// Card prices are whole dollars, except per-ftÂ² prices: rounding $3.30 up to $4 would
 // overstate the price the ads quote, so those keep their cents.
 $card_price = static function ($html) {
 	return preg_match('/per ft/i', wp_strip_all_tags((string) $html)) ? $html : wholesale_price_no_cents($html);
@@ -76,6 +76,11 @@ $best_sellers = array(
 	'feather-angled-flag-pole' => 'Roadside attention',
 	'10ft-seg-fabric-display-graphic-frame' => 'Trade show back wall',
 );
+// The X-stand's photos all carry sample sale artwork: the table top stand fills its place
+// until it has a new photo (inc/product-photo-overrides.php).
+if (function_exists('wholesale_card_picks')) {
+	$best_sellers = wholesale_card_picks($best_sellers, array('table-top-banner-stand' => 'Counters &amp; check-in desks'));
+}
 
 // Picks by occasion: id, heading, intro, array(product slug => label).
 $occasions = array(
@@ -134,7 +139,8 @@ wholesale_seo_prime_products(array_merge(
 	array('banner-a-banner-frame', 'deluxe-retractable-insert-stand', 'teardrop-flag-pole', 'table-top-banner-stand')
 ));
 
-$vinyl_price = wholesale_seo_product_starting_text('13oz-vinyl-banner');
+// Whole dollars like the cards: since 2026-11-12 Starting at is the cheapest real order ("$28.00 per item"), not a per ft² rate.
+$vinyl_price = $card_price(wholesale_seo_product_starting_text('13oz-vinyl-banner'));
 
 // Ad group headlines (?type=key): headline, lead, the product the hero button opens,
 // and the product line card (anchor id) shown first. Anything else shows the default
@@ -156,24 +162,6 @@ if ($type) {
 	usort($lines, static function ($a, $b) use ($types, $type) {
 		return (int) ($b[4] === $types[$type][3]) - (int) ($a[4] === $types[$type][3]);
 	});
-}
-
-// Product slug, label. Each photo opens its product with the price, so a phone
-// visitor can reach a price from the second screen; ad visitors who only saw
-// unlabeled photos there mostly left without opening a product.
-$hero_photos = array(
-	array('13oz-vinyl-banner', 'Vinyl Banners'),
-	array('standard-retractable-insert-stand', 'Banner Stands'),
-	array('feather-angled-flag-pole', 'Feather Flags'),
-	array('10ft-seg-fabric-display-graphic-frame', 'Trade Show Displays'),
-);
-if ($type) {
-	$type_slug = $types[$type][2];
-	$hero_photos = array_values(array_filter($hero_photos, static function ($photo) use ($type_slug) {
-		return $photo[0] !== $type_slug;
-	}));
-	array_unshift($hero_photos, array($type_slug, wp_strip_all_tags(html_entity_decode($types[$type][0], ENT_QUOTES, 'UTF-8'))));
-	$hero_photos = array_slice($hero_photos, 0, 4);
 }
 
 // The best sellers are this page's item list in structured data.
@@ -217,12 +205,13 @@ wholesale_seo_set_page_faq(array(
 	),
 ));
 
-get_header();
+// Register the matching image before the header prints its preload links.
+list($page_hero_image, $page_hero_mobile) = wholesale_landing_page_hero_images('banners');
+$GLOBALS['wholesale_hero_image'] = $page_hero_image;
+$GLOBALS['wholesale_hero_mobile_image'] = $page_hero_mobile;
+$page_hero_background = "--lp-desktop: url('" . esc_url($page_hero_image) . "'); --lp-mobile: url('" . esc_url($page_hero_mobile) . "');";
 
-$page_hero_image = get_the_post_thumbnail_url(get_the_ID(), 'large');
-$page_hero_image = $page_hero_image ? wholesale_webp_url(esc_url_raw($page_hero_image)) : '';
-$default_page_hero_image = wholesale_default_hero_url();
-$page_hero_background = wholesale_hero_background_style($page_hero_image, $default_page_hero_image);
+get_header();
 
 // Hero proof point: the Google rating, linked to the reviews page (this page has no reviews section).
 $google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
@@ -262,25 +251,10 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 					<p class="home-hero-help">
 						<?php echo wholesale_home_icon('phone'); ?>
 						Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
-						<span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT</span>
+						<span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PST</span>
 					</p>
 				</div>
-				<div class="bd-hero-media">
-					<?php foreach ($hero_photos as $index => $photo) : ?>
-						<?php
-						$image = $product_image($photo[0], '', '(max-width: 575px) 45vw, (max-width: 991px) 22vw, 260px', 0 === $index ? 'high' : true);
-						$url = $product_url($photo[0]);
-						if (!$image || !$url) {
-							continue;
-						}
-						$price = $card_price(wholesale_seo_product_starting_text($photo[0]));
-						?>
-						<a class="bd-hero-tile bd-hero-tile--<?php echo (int) $index + 1; ?>" href="<?php echo esc_url($url); ?>">
-							<span class="bd-hero-tile-image"><?php echo $image; ?></span>
-							<span class="bd-hero-tile-label"><?php echo esc_html($photo[1]); ?><?php if ($price) : ?><small>From <?php echo wp_kses_post($price); ?></small><?php endif; ?></span>
-						</a>
-					<?php endforeach; ?>
-				</div>
+
 			</div>
 		</div>
 	</section>
@@ -306,6 +280,17 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 		</div>
 	</div>
 
+	<nav class="lp-jump" aria-label="Browse display types">
+		<div class="container">
+			<p>Find your display</p>
+			<div class="lp-jump-links">
+				<?php foreach ($lines as $item) : ?>
+					<a href="#<?php echo esc_attr($item[4]); ?>"><?php echo wp_kses_post($item[2]); ?></a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</nav>
+
 	<section class="sf-section" id="products" aria-labelledby="bd-lines-title">
 		<div class="container">
 			<p class="cl-kicker">Shop by product</p>
@@ -315,12 +300,24 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 				<?php foreach ($lines as $line) : ?>
 					<?php
 					$line_url = wholesale_category_url($line[0]);
-					$line_price = $card_price(wholesale_seo_product_starting_text($line[1]));
+					// A category card: the cheapest Starting at in the category it links to, as on every other
+					// category card (wholesale_seo_category_starting_text()); the line's product if it has none.
+					$line_text = wholesale_seo_category_starting_text($line[0]);
+					$line_price = $card_price($line_text ? $line_text : wholesale_seo_product_starting_text($line[1]));
 					$line_name = wp_strip_all_tags(html_entity_decode($line[2], ENT_QUOTES, 'UTF-8'));
 					?>
 					<article class="sf-type-card bd-card<?php echo $type && $types[$type][3] === $line[4] ? ' is-highlighted' : ''; ?>" id="<?php echo esc_attr($line[4]); ?>">
 						<a class="sf-type-image" href="<?php echo esc_url($line_url); ?>" tabindex="-1" aria-hidden="true">
-							<?php echo $product_image($line[1], $line_name, '(max-width: 575px) 112px, (max-width: 991px) 50vw, 25vw'); ?>
+							<?php
+							// Phone rows show the photo as a full-height strip (about 100 x 230px,
+							// css/banners-displays.css), so the file is picked by the strip's
+							// height: no WordPress sizes="auto", which would pick by the 100px width.
+							// Wider screens: the card widths measured at each container breakpoint
+							// (same picks as "auto" gave there).
+							add_filter('wp_img_tag_add_auto_sizes', '__return_false');
+							echo $product_image($line[1], $line_name, '(max-width: 575px) 240px, (max-width: 767px) 246px, (max-width: 991px) 336px, (max-width: 1199px) 217px, (max-width: 1399px) 262px, 307px');
+							remove_filter('wp_img_tag_add_auto_sizes', '__return_false');
+							?>
 						</a>
 						<div class="sf-type-body">
 							<h3><a href="<?php echo esc_url($line_url); ?>"><?php echo wp_kses_post($line[2]); ?></a></h3>
@@ -328,6 +325,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 							<?php if ($line_price) : ?>
 								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($line_price); ?></p>
 							<?php endif; ?>
+							<a class="lp-order" href="<?php echo esc_url($line_url); ?>">See Sizes &amp; Prices <?php echo wholesale_home_icon('arrow'); ?></a>
 						</div>
 					</article>
 				<?php endforeach; ?>
@@ -335,7 +333,35 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 		</div>
 	</section>
 
-	<section class="sf-section sf-section--tint" aria-labelledby="bd-occasion-title">
+	<section class="sf-section sf-section--tint" aria-labelledby="bd-best-title">
+		<div class="container">
+			<p class="cl-kicker">Best sellers</p>
+			<h2 id="bd-best-title" class="cl-section-title">Popular Banners &amp; Displays</h2>
+			<div class="bd-product-grid">
+				<?php foreach ($best_sellers as $slug => $label) : ?>
+					<?php
+					$product = wholesale_seo_product($slug);
+					if (!$product) {
+						continue;
+					}
+					$name = wp_strip_all_tags(get_the_title($product));
+					$price = $card_price(wholesale_seo_product_starting_text($slug));
+					?>
+					<a class="bd-product" href="<?php echo esc_url(get_permalink($product)); ?>">
+						<span class="bd-product-image"><?php echo $product_image($slug, $name, '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 25vw'); ?></span>
+						<span class="bd-product-tag"><?php echo wp_kses_post($label); ?></span>
+						<span class="bd-product-name"><?php echo esc_html($name); ?></span>
+						<?php if ($price) : ?>
+							<span class="bd-product-price"><small>From</small> <?php echo wp_kses_post($price); ?></span>
+						<?php endif; ?>
+						<span class="lp-order">Customize &amp; Order <?php echo wholesale_home_icon('arrow'); ?></span>
+					</a>
+				<?php endforeach; ?>
+			</div>
+		</div>
+	</section>
+
+	<section class="sf-section" aria-labelledby="bd-occasion-title">
 		<div class="container">
 			<p class="cl-kicker">Shop by occasion</p>
 			<h2 id="bd-occasion-title" class="cl-section-title">The Right Display for Every Campaign</h2>
@@ -360,33 +386,6 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 							<?php endforeach; ?>
 						</ul>
 					</article>
-				<?php endforeach; ?>
-			</div>
-		</div>
-	</section>
-
-	<section class="sf-section" aria-labelledby="bd-best-title">
-		<div class="container">
-			<p class="cl-kicker">Best sellers</p>
-			<h2 id="bd-best-title" class="cl-section-title">Popular Banners &amp; Displays</h2>
-			<div class="bd-product-grid">
-				<?php foreach ($best_sellers as $slug => $label) : ?>
-					<?php
-					$product = wholesale_seo_product($slug);
-					if (!$product) {
-						continue;
-					}
-					$name = wp_strip_all_tags(get_the_title($product));
-					$price = $card_price(wholesale_seo_product_starting_text($slug));
-					?>
-					<a class="bd-product" href="<?php echo esc_url(get_permalink($product)); ?>">
-						<span class="bd-product-image"><?php echo $product_image($slug, $name, '(max-width: 575px) 50vw, (max-width: 991px) 33vw, 25vw'); ?></span>
-						<span class="bd-product-tag"><?php echo wp_kses_post($label); ?></span>
-						<span class="bd-product-name"><?php echo esc_html($name); ?></span>
-						<?php if ($price) : ?>
-							<span class="bd-product-price"><small>From</small> <?php echo wp_kses_post($price); ?></span>
-						<?php endif; ?>
-					</a>
 				<?php endforeach; ?>
 			</div>
 		</div>
@@ -549,7 +548,7 @@ $reviews_url = function_exists('wholesale_reviews_page_url') ? wholesale_reviews
 				<div class="clq-contact">
 					<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
 					<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-					<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+					<a class="cl-help-action" href="mailto:Info@StorefrontSignWholesale.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>Info@StorefrontSignWholesale.com</span></a>
 				</div>
 			</div>
 			<?php wholesale_quote_form_render($quote_form); ?>

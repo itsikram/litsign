@@ -17,6 +17,8 @@ $money = static function ($value) {
 };
 $noun = $items ? wholesale_items_noun($items) : 'order';
 $ship_prefix = isset($shipping['shipping_fname']) ? 'shipping_' : 'billing_';
+// Trade: without a valid order link, do not claim an order was confirmed.
+$order_link_missing = !$order && function_exists('wholesale_is_trade_site') && wholesale_is_trade_site();
 
 get_header();
 ?>
@@ -27,9 +29,15 @@ get_header();
             <span class="confirmation-check" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="30" height="30"><path fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7"/></svg>
             </span>
-            <h1>Thank you<?php echo !empty($billing['billing_fname']) ? ', ' . esc_html($billing['billing_fname']) : ''; ?>! Your order is confirmed.</h1>
+            <?php if ($order_link_missing) : ?>
+                <h1>Order confirmation</h1>
+            <?php else : ?>
+                <h1>Thank you<?php echo !empty($billing['billing_fname']) ? ', ' . esc_html($billing['billing_fname']) : ''; ?>! Your order is confirmed.</h1>
+            <?php endif; ?>
             <?php if ($order) : ?>
                 <p>Order <strong>#<?php echo esc_html($order_number); ?></strong>. A confirmation has been emailed to <strong><?php echo esc_html($billing['billing_email'] ?? ''); ?></strong>.</p>
+            <?php elseif ($order_link_missing) : ?>
+                <p>We couldn&rsquo;t find that order link. Check your confirmation email, see <a href="<?php echo esc_url(home_url('/my-orders/')); ?>">My Orders</a>, or call <a href="tel:+18664362101">866-436-2101</a>.</p>
             <?php else : ?>
                 <p>We've received your order and emailed you a confirmation.</p>
             <?php endif; ?>
@@ -38,6 +46,14 @@ get_header();
         <div class="confirmation-grid">
             <section class="checkout-card" aria-labelledby="next-steps">
                 <h2 id="next-steps">What happens next</h2>
+                <?php // Ordered without artwork: it can still be uploaded from the order page (inc/order-artwork.php). ?>
+                <?php $artwork_missing = $order && function_exists('wholesale_order_artwork_is_owner') && wholesale_order_artwork_is_owner($order) ? wholesale_order_artwork_missing_lines($order) : array(); ?>
+                <?php if ($artwork_missing) : ?>
+                    <p class="order-artwork-alert" role="note">
+                        <strong>No artwork yet?</strong> You can upload it from your order page now or later:
+                        <a class="order-artwork-needed" href="<?php echo esc_url(get_permalink($order) . '#artwork-line-' . $artwork_missing[0]); ?>">Upload artwork</a>
+                    </p>
+                <?php endif; ?>
                 <ol class="confirmation-steps">
                     <li><strong>We review your order.</strong> Our team checks your <?php echo esc_html($noun); ?> details and contacts you if anything needs a closer look.</li>
                     <?php if ('sign' === $noun) : ?>
@@ -45,9 +61,13 @@ get_header();
                     <?php else : ?>
                         <li><strong>We make your <?php echo esc_html($noun); ?>.</strong> Everything is made to order and checked before it ships.</li>
                     <?php endif; ?>
-                    <li><strong>Your <?php echo esc_html($noun); ?> ships.</strong><?php echo $ship_by ? ' Estimated to ship by <strong>' . esc_html($ship_by) . '</strong>.' : ''; ?> You'll get tracking details by email.</li>
+                    <?php if (wholesale_order_is_pickup($shipping)) : ?>
+                        <li><strong>Pick up your <?php echo esc_html($noun); ?>.</strong><?php echo $ship_by ? ' Estimated ready by <strong>' . esc_html($ship_by) . '</strong>.' : ''; ?> We&rsquo;ll email you when it&rsquo;s ready at <?php echo esc_html($shipping['pickup_location'] ?? 'our shop'); ?>.</li>
+                    <?php else : ?>
+                        <li><strong>Your <?php echo esc_html($noun); ?> ships.</strong><?php echo $ship_by ? ' Estimated to ship by <strong>' . esc_html($ship_by) . '</strong>.' : ''; ?> You'll get tracking details by email.</li>
+                    <?php endif; ?>
                 </ol>
-                <p class="confirmation-help">Questions about your order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT) or email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a><?php echo $order ? ' with order #' . esc_html($order_number) : ''; ?>.</p>
+                <p class="confirmation-help">Questions about your order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or email <a href="mailto:Info@StorefrontSignWholesale.com">Info@StorefrontSignWholesale.com</a><?php echo $order ? ' with order #' . esc_html($order_number) : ''; ?>.</p>
                 <div class="confirmation-actions">
                     <?php if (is_user_logged_in()) : ?>
                         <a class="checkout-pay" href="<?php echo esc_url(home_url('/my-orders/')); ?>">View my orders</a>

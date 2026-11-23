@@ -322,13 +322,27 @@ function wholesale_ads_click_tracking_script()
 	if (!$labels && !$ga4) {
 		return;
 	}
+	// This product page's feed item IDs, so add_to_cart names the item as the feed does. Group
+	// buttons swap the other products of the group into the page (inc/product-group-swap.php).
+	$feed_ids = array();
+	if (is_singular('product')) {
+		$feed_product_ids = array((int) get_queried_object_id());
+		if (function_exists('wholesale_product_group_for_page')) {
+			foreach (wholesale_product_group_for_page() as $group_member) {
+				$feed_product_ids[] = (int) $group_member['id'];
+			}
+		}
+		foreach (array_unique($feed_product_ids) as $feed_product_id) {
+			$feed_ids[(string) $feed_product_id] = wholesale_ads_item_id($feed_product_id);
+		}
+	}
 	?>
 	<script>
 		(function () {
 			var labels = <?php echo wp_json_encode((object) $labels); ?>;
 			var ga4 = <?php echo $ga4 ? 'true' : 'false'; ?>;
-			// This product page's feed item ID, so add_to_cart names it as the feed does.
-			var feedIds = <?php echo wp_json_encode(is_singular('product') ? array((string) get_queried_object_id() => wholesale_ads_item_id(get_queried_object_id())) : (object) array()); ?>;
+			// This product page's feed item IDs (with its group's, which a group button can swap in).
+			var feedIds = <?php echo wp_json_encode($feed_ids ? $feed_ids : (object) array()); ?>;
 			window.dataLayer = window.dataLayer || [];
 			function gtag() { window.dataLayer.push(arguments); }
 			function convert(key, params) {

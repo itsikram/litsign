@@ -293,11 +293,24 @@ add_action('wp_ajax_nopriv_wholesale_mini_cart_restore', 'wholesale_ajax_mini_ca
  */
 function wholesale_ajax_mini_cart_add()
 {
-	$before = count(wholesale_mini_cart_fresh()->get_items());
+	$before_items = wholesale_mini_cart_fresh()->get_items();
+	$before = count($before_items);
 	wholesale_mini_cart_fresh()->add_item();
 	$items = wholesale_mini_cart_fresh()->get_items();
 	$added = count($items) > $before ? end($items) : null;
+	// Buy Now (js/mini-cart.js) for an item already in the cart exactly as configured, e.g.
+	// back from checkout and Buy Now again: keep one line and go to checkout. Lines with
+	// uploaded artwork are always kept (each upload is its own file).
+	$existing = null;
+	if ($added && !empty($_POST['buy_now']) && empty($added->artwork_id)) {
+		$existing = wholesale_cart_same_item($before_items, $added);
+		if ($existing) {
+			wholesale_mini_cart_fresh()->remove_item($added->cart_id);
+			$added = null;
+		}
+	}
 	wholesale_mini_cart_send(array(
+		'existing' => $existing ? (string) $existing->cart_id : '',
 		'added' => $added ? array(
 			'cart_id' => (string) $added->cart_id,
 			// get_the_title() is HTML-encoded; the script shows this as plain text.
@@ -339,10 +352,12 @@ add_action('wp_ajax_nopriv_wholesale_cl_builder_add', 'wholesale_ajax_cl_builder
 
 /**
  * The cart and checkout pages show the cart themselves, so the header icon stays a link there.
+ * On the trade site visitors who can't order get the plain link too (the cart endpoints answer
+ * 403 for them, and /cart/ sends them to sign-in or the application).
  */
 function wholesale_mini_cart_enabled()
 {
-	return !is_admin() && !is_page(array('cart', 'checkout', 'payment', 'pay')) && !get_query_var('wholesale_thank_you');
+	return !is_admin() && (!function_exists('wholesale_trade_can_order') || wholesale_trade_can_order()) && !is_page(array('cart', 'checkout', 'payment', 'pay')) && !get_query_var('wholesale_thank_you');
 }
 
 function wholesale_mini_cart_assets()
@@ -358,6 +373,7 @@ function wholesale_mini_cart_assets()
 	wp_localize_script('wholesale-mini-cart', 'wholesaleMiniCart', array(
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'cartUrl' => home_url('/cart/'),
+		'checkoutUrl' => home_url('/checkout/'), // Buy Now.
 	));
 }
 add_action('wp_enqueue_scripts', 'wholesale_mini_cart_assets', 20);

@@ -33,9 +33,13 @@ $locations_url = wholesale_guide_url('locations');
 // Ground transit is shown once verified in the data file;
 // until then the page states the checkout's own standard range.
 $transit = isset($place['transit']) ? $place['transit'] : (isset($state['transit']) ? $state['transit'] : array());
-$transit_text = !empty($transit['verified']) && !empty($transit['days'])
-	? sprintf('Standard shipping to %s usually takes %s business days in transit.', $place_name, $transit['days'])
-	: 'Standard shipping takes 3&ndash;6 business days in transit; 3-day, 2-day and overnight shipping are available at checkout.';
+if (!empty($transit['verified']) && !empty($transit['days'])) {
+	$transit_text = sprintf('Standard shipping to %s usually takes %s business days in transit.', $place_name, $transit['days']);
+} elseif (in_array($state['abbr'], array('AK', 'HI'), true)) {
+	$transit_text = 'Enter your ZIP code at checkout to see the shipping options and estimated delivery for your address.';
+} else {
+	$transit_text = 'Standard shipping takes 3&ndash;6 business days in transit; 3-day, 2-day and overnight shipping are available at checkout.';
+}
 
 $faq = isset($place['faq']) ? $place['faq'] : array();
 wholesale_seo_set_page_faq($faq);
@@ -57,19 +61,18 @@ $GLOBALS['wholesale_page_entities'][] = $place_entity;
 
 wholesale_guide_add_service_schema(
 	sprintf('Channel letters and storefront signs shipped to %s', $place_name),
-	sprintf('Custom LED channel letters built in Washington and California, plus banners, window graphics, flags and displays made in Renton, WA, shipped to %s for a licensed local installer.', $place_name),
+	sprintf('We ship custom LED channel letters, banners, window graphics, flags and displays to %s. Channel letters are built in Washington and California and ship tested for your licensed local installer.', $place_name),
 	array('@id' => $place_entity['@id']),
 	array('hasOfferCatalog' => wholesale_guide_offer_catalog($place_name))
 );
 
-add_filter('wholesale_seo_webpage_schema', static function ($page) use ($place_entity, $is_city, $state, $updated) {
+add_filter('wholesale_seo_webpage_schema', static function ($page) use ($place_entity, $is_city, $state, $place, $page_url) {
 	$page['about'] = array('@id' => $place_entity['@id']);
+	$page['mentions'] = array(array('@id' => $page_url . '#service'));
 	if ($is_city) {
-		$page['mentions'] = array(wholesale_guide_place_entity($state));
+		$page['mentions'][] = wholesale_guide_place_entity($state);
 	}
-	if ($updated) {
-		$page['dateModified'] = $updated;
-	}
+	$page['dateModified'] = wholesale_location_modified($place);
 	return $page;
 });
 
@@ -112,6 +115,13 @@ get_header();
 				<a class="sf-button-outline" href="<?php echo esc_url($contact_url); ?>">Get a Free Quote</a>
 				<a class="gd-hero-call" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> 866-436-2101</a>
 			</div>
+			<nav class="gd-jump-links" aria-label="On this page">
+				<?php if (!empty($place['permits'])) : ?><a href="#gd-permit-title">Sign permits</a><?php endif; ?>
+				<?php if (!empty($place['licensing'])) : ?><a href="#gd-license-title">Installer licensing</a><?php endif; ?>
+				<?php if (!empty($place['temporary_signs'])) : ?><a href="#gd-temporary_signs-title">Temporary signs</a><?php endif; ?>
+				<?php if (!empty($place['window_signs'])) : ?><a href="#gd-window_signs-title">Window graphics rules</a><?php endif; ?>
+				<a href="#gd-order-title">Ordering and shipping</a>
+			</nav>
 			<?php if ($facts) : ?>
 				<ul class="gd-facts">
 					<?php foreach ($facts as $label => $value) : ?>
@@ -343,7 +353,7 @@ get_header();
 			<?php
 			// Nearby places: on a city page the cities named in 'nearby' (or every
 			// other city guide in the state), on a state page the neighbouring
-			// states (or every other state guide until neighbours exist).
+			// states. The directory link below covers all other guides.
 			$nearby = array();
 			if ($is_city) {
 				$candidates = !empty($place['nearby']) ? (array) $place['nearby'] : array_keys($state['cities']);
@@ -366,13 +376,6 @@ get_header();
 						$nearby[$url] = $states[$slug]['name'];
 					}
 				}
-				if (!$nearby) {
-					foreach ($states as $slug => $other) {
-						if ($slug !== $state['slug'] && ($url = wholesale_guide_url('locations/' . $slug))) {
-							$nearby[$url] = $other['name'];
-						}
-					}
-				}
 			}
 			?>
 			<?php if ($nearby) : ?>
@@ -384,12 +387,12 @@ get_header();
 				</ul>
 			<?php endif; ?>
 			<?php if ($locations_url) : ?>
-				<p class="gd-all-link"><a href="<?php echo esc_url($locations_url); ?>">All state guides <?php echo wholesale_home_icon('arrow'); ?></a></p>
+				<p class="gd-all-link"><a href="<?php echo esc_url($locations_url); ?>">All state and city sign permit guides <?php echo wholesale_home_icon('arrow'); ?></a></p>
 			<?php endif; ?>
 		</div>
 	</section>
 
-	<?php wholesale_guide_render_help(sprintf('Planning a Sign in %s?', $place_name), sprintf('Send your storefront photo, logo and your landlord&rsquo;s sign criteria. We&rsquo;ll suggest a size and style that fits %s rules and give you a price before you order.', esc_html($short_name))); ?>
+	<?php wholesale_guide_render_help(sprintf('Planning a Sign in %s?', $place_name), 'Send a storefront photo, your logo and the size and lighting limits confirmed by your landlord or installer. We can suggest options and give you a price before you order.'); ?>
 </main>
 
 <?php

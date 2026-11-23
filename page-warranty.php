@@ -2,10 +2,8 @@
 /**
  * Warranty page (/warranty/).
  *
- * Restates the five-year warranty already published on channel letter
- * product pages (template-parts/cl-content-1.php, Warranty tab) in plain
- * language. Change the terms there and here together; add nothing the owner
- * hasn't confirmed.
+ * The order-issue policy applies to every product; channel letters also have
+ * the product-specific five-year warranty described below.
  *
  * @package litsign
  */
@@ -17,8 +15,17 @@ $shipping_url = wholesale_guide_url('shipping-returns');
 $terms_page = get_page_by_path('terms-conditions');
 $terms_url = $terms_page ? get_permalink($terms_page) : home_url('/terms-conditions/');
 $ul_number = wholesale_guide_ul_file_number();
+$is_trade_warranty = function_exists('wholesale_is_trade_site') && wholesale_is_trade_site();
+$warranty_name = $is_trade_warranty ? 'Storefront Sign Wholesale' : 'Storefront Sign Online LLC';
+$warranty_company = function_exists('wholesale_is_trade_site') && wholesale_is_trade_site()
+	? wholesale_trade_brand()['legal_name']
+	: 'Storefront Sign Online LLC';
 
 wholesale_seo_set_page_faq(array(
+	array(
+		'q' => 'Are all products covered?',
+		'a' => 'Yes. Report a defect or other order issue within five business days of receiving your order. Additional warranty terms, where offered, are stated in the product details.',
+	),
 	array(
 		'q' => 'How long is the channel letter warranty?',
 		'a' => 'Five years from the date your sign ships, on all 7 channel letter styles, against defects in materials and workmanship.',
@@ -37,7 +44,7 @@ wholesale_seo_set_page_faq(array(
 	),
 	array(
 		'q' => 'How do I make a warranty claim?',
-		'a' => 'Email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a> or call <a href="tel:+18664362101">866-436-2101</a> with your order number, a description of the problem and photos or a short video, before anyone works on the sign.',
+		'a' => 'Email <a href="mailto:Info@StorefrontSignWholesale.com">Info@StorefrontSignWholesale.com</a> or call <a href="tel:+18664362101">866-436-2101</a> with your order number, a description of the problem and photos or a short video, before anyone works on the sign.',
 	),
 ));
 
@@ -49,8 +56,8 @@ get_header();
 		<div class="container">
 			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">Warranty</p>
-			<h1 id="gd-title" class="sf-hero-title">Our 5-Year Channel Letter Warranty</h1>
-			<p class="sf-hero-lead">Every lit sign is tested before it ships, and our channel letters are backed for five years against defects in materials and workmanship. Here&rsquo;s what that means, in plain language.</p>
+			<h1 id="gd-title" class="sf-hero-title">Product Warranties and Claims</h1>
+			<p class="sf-hero-lead">Every product is covered by our order-issue policy. Our channel letters also carry a five-year warranty against defects in materials and workmanship.</p>
 			<ul class="gd-facts">
 				<li><strong>Length</strong><span>5 years from the date your sign ships</span></li>
 				<li><strong>Covers</strong><span>Defects in materials and workmanship</span></li>
@@ -60,17 +67,25 @@ get_header();
 		</div>
 	</section>
 
+	<section class="sf-section sf-section--tint" aria-labelledby="gd-all-products-title">
+		<div class="container sf-prose">
+			<p class="cl-kicker">Every product</p>
+			<h2 id="gd-all-products-title" class="cl-section-title">Defects and Order Issues</h2>
+			<p>Report any defect or other order issue within five (5) business days of receiving your order. Contact us by phone or email with your order number and photos of the problem. We document the claim and review the appropriate remedy under our <a href="<?php echo esc_url($terms_url); ?>">Terms &amp; Conditions</a>. Additional product-specific warranty coverage, where offered, is stated in the product details.</p>
+		</div>
+	</section>
+
 	<section class="sf-section" aria-labelledby="gd-covered-title">
 		<div class="container sf-prose">
-			<p class="cl-kicker">The terms</p>
-			<h2 id="gd-covered-title" class="cl-section-title">What&rsquo;s Covered</h2>
-			<p>Storefront Sign Online LLC warrants all 7 of its channel letter styles (front lit, back lit, front &amp; back lit (dual lit), halo lit, reverse lit, trimless and borderless) and its lit logo shapes to be free from defects in materials and workmanship for five years from the date of shipment. The LED modules and standard power supplies used in our letters each carry their own five-year warranty, as listed in the sign builder.</p>
+			<p class="cl-kicker">Channel letters</p>
+			<h2 id="gd-covered-title" class="cl-section-title">Five-Year Warranty Coverage</h2>
+			<p><?php echo esc_html($warranty_company); ?> warrants all 7 of its channel letter styles (front lit, back lit, front &amp; back lit (dual lit), halo lit, reverse lit, trimless and borderless) and its lit logo shapes to be free from defects in materials and workmanship for five years from the date of shipment. The LED modules and standard power supplies used in our letters each carry their own five-year warranty, as listed in the sign builder.</p>
 			<p>If a covered product proves defective during the warranty period, we will, at our option:</p>
 			<ul class="gd-checklist">
 				<li>repair the product, at no charge for parts or for phone and email support, or</li>
 				<li>replace it with an equivalent product, which may be new or refurbished.</li>
 			</ul>
-			<p>Repair or replacement is the sole remedy under this warranty, and it is given in place of any other warranty, express or implied. The full wording is in the Warranty tab on each channel letter product page and in our <a href="<?php echo esc_url($terms_url); ?>">Terms &amp; Conditions</a>.</p>
+			<p>Repair or replacement is the sole remedy under this warranty, and it is given in place of any other warranty, express or implied. See the product details for the full channel letter warranty and our <a href="<?php echo esc_url($terms_url); ?>">Terms &amp; Conditions</a> for the order-issue policy.</p>
 
 			<h2 class="cl-section-title">What&rsquo;s Not Covered</h2>
 			<ul class="gd-checklist">
@@ -90,7 +105,7 @@ get_header();
 			<ol class="gd-steps">
 				<li>
 					<h3>Stop and contact us first</h3>
-					<p>Don&rsquo;t open, rewire or repair the sign yet. Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT) or email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a>.</p>
+					<p>Don&rsquo;t open, rewire or repair the sign yet. Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or email <a href="mailto:Info@StorefrontSignWholesale.com">Info@StorefrontSignWholesale.com</a>.</p>
 				</li>
 				<li>
 					<h3>Send your order number and photos</h3>

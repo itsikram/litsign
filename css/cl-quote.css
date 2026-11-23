@@ -316,9 +316,11 @@
   margin-top: 4px;
 }
 
-/* Real example prices, under the hero */
+/* Real example prices, under the style comparison: a tinted band between the
+   white comparison and "How ordering works" sections. */
 .cl-examples {
-  padding: 40px 0 8px;
+  padding: 48px 0 40px;
+  background: #f7f8fc;
   text-align: center;
 }
 
@@ -353,7 +355,7 @@
 }
 
 .cl-examples-note a {
-  color: #0c7fae;
+  color: #0e6b91;
   font-weight: 700;
 }
 

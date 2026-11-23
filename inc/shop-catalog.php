@@ -62,6 +62,17 @@ add_action('wp_enqueue_scripts', function () {
 }, 20);
 
 /**
+ * Mark the page as scripted before anything paints. On phones the CSS then keeps
+ * the filter panel off-canvas from the start, instead of laying it out in the page
+ * and moving it away when the script finishes (a large layout shift).
+ */
+add_action('wp_head', function () {
+	if (wholesale_is_shop_page()) {
+		echo "<script>document.documentElement.classList.add('sc-js');</script>\n";
+	}
+}, 1);
+
+/**
  * Filtered views (?cat=, ?sort=, ...) canonicalize to /shop/ and stay out of
  * the index; their product links are still followed.
  */
@@ -136,7 +147,7 @@ function wholesale_shop_pricing_labels()
 	return array(
 		'sqft' => array(__('Priced per sq ft', 'litsign'), __('Printed to your size', 'litsign'), '/sq ft'),
 		'item' => array(__('Priced per item', 'litsign'), __('Set sizes & kits', 'litsign'), '/item'),
-		'inch' => array(__('Priced per letter', 'litsign'), __('Channel letters', 'litsign'), '/letter'),
+		'inch' => array(__('Rate per inch', 'litsign'), __('Channel letters', 'litsign'), '/inch'),
 	);
 }
 
@@ -309,6 +320,9 @@ function wholesale_shop_products()
 		);
 	}
 
+	// One query for every card photo, instead of two per card.
+	_prime_post_caches(array_values(array_unique(array_filter(wp_list_pluck($products, 'thumb')))), false, true);
+
 	usort($products, static function ($a, $b) {
 		return strcmp($a['order'], $b['order']);
 	});
@@ -367,9 +381,9 @@ function wholesale_shop_filter($products, $state)
 /**
  * Format a price the way the product pages show it: $11.70, $194.98, $2.2 → $2.20.
  */
-function wholesale_shop_money($amount)
+function wholesale_shop_money($amount, $unit = '')
 {
-	return wholesale_whole_dollars($amount);
+	return 'inch' === $unit ? '$' . number_format((float) $amount, 2) : wholesale_whole_dollars($amount);
 }
 
 /**
@@ -429,8 +443,8 @@ function wholesale_shop_render_card($product, $index)
 						<p class="sc-card-price">
 							<span class="sc-card-price-label"><?php esc_html_e('Starting at', 'litsign'); ?></span>
 							<span class="sc-card-price-value">
-								<?php if ($product['was'] && wholesale_shop_money($product['was']) !== wholesale_shop_money($product['price'])) : ?><del><?php echo esc_html(wholesale_shop_money($product['was'])); ?></del><?php endif; ?>
-								<strong><?php echo esc_html(wholesale_shop_money($product['price'])); ?></strong><small><?php echo esc_html($units[$product['unit']][2]); ?></small>
+								<?php if ($product['was'] && wholesale_shop_money($product['was'], $product['unit']) !== wholesale_shop_money($product['price'], $product['unit'])) : ?><del><?php echo esc_html(wholesale_shop_money($product['was'], $product['unit'])); ?></del><?php endif; ?>
+								<strong><?php echo esc_html(wholesale_shop_money($product['price'], $product['unit'])); ?></strong><small><?php echo esc_html($units[$product['unit']][2]); ?></small>
 							</span>
 						</p>
 					<?php else : ?>

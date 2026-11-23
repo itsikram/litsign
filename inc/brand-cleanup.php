@@ -92,7 +92,7 @@ function wholesale_clean_supplier_html($html, $files)
 	$html = preg_replace('#<a\b[^>]*href=["\']https?://(?:www\.)?b\x32sign\.com[^"\']*["\'][^>]*>(.*?)</a>#is', '$1', $html);
 
 	// The supplier's email address becomes this business's.
-	$html = preg_replace('/[A-Za-z0-9._%+-]+@b\x32sign\.com/i', 'TR@StorefrontSignOnline.com', $html);
+	$html = preg_replace('/[A-Za-z0-9._%+-]+@b\x32sign\.com/i', 'Info@StorefrontSignWholesale.com', $html);
 
 	// Product compatibility notes refer to "our" hardware; everything else names the business.
 	// The lookarounds skip the supplier's domain, which is handled below.

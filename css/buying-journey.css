@@ -1,0 +1,98 @@
+/* Buying journey (inc/buying-journey.php, js/buying-journey.js), 2026-11-05. */
+
+/* ---- Product-aware quote form (/contact/) ---- */
+.contact-step { border: 0; padding: 0; margin: 0 0 1.25rem; min-width: 0; }
+.contact-step > legend { font-size: 1.05rem; font-weight: 700; margin-bottom: .6rem; float: none; width: auto; padding: 0; }
+.contact-optional { font-weight: 400; color: #55606b; font-size: .85em; }
+.contact-field-hint { color: #55606b; font-size: .9rem; margin: 0 0 .6rem; }
+.contact-context { background: #eef6fb; border: 1px solid #cfe3ef; border-radius: 8px; padding: .6rem .8rem; margin: 0 0 1rem; }
+.contact-interest-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .5rem; }
+.contact-interest-option { display: flex; align-items: center; gap: .55rem; border: 1px solid #c9d2da; border-radius: 8px; padding: .65rem .75rem; cursor: pointer; background: #fff; min-height: 48px; font-weight: 500; }
+.contact-interest-option input { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; margin: 0; accent-color: #0b74a3; }
+.contact-interest-option:has(input:checked) { border-color: #0b74a3; background: #eef6fb; box-shadow: 0 0 0 1px #0b74a3 inset; }
+.contact-interest-option:focus-within { outline: 2px solid #0b74a3; outline-offset: 2px; }
+.contact-spec-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem 1rem; margin-bottom: .9rem; }
+.contact-spec-group[hidden] { display: none; }
+.contact-spec-group > .contact-field-hint, .contact-spec-group > .contact-checks { grid-column: 1 / -1; }
+.contact-spec-group label, .contact-specs > label { display: flex; flex-direction: column; gap: .3rem; font-weight: 500; }
+.contact-checks { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .4rem 1.1rem; }
+.contact-checks legend { font-weight: 500; margin-bottom: .35rem; float: none; width: 100%; padding: 0; font-size: 1rem; }
+.contact-checks label { flex-direction: row; align-items: center; gap: .4rem; font-weight: 400; min-height: 32px; }
+.contact-sent { outline: none; }
+.contact-sent h3 { font-size: 1.05rem; margin: 1.1rem 0 .4rem; }
+.contact-next-steps { padding-left: 1.3rem; margin: 0 0 1rem; }
+.contact-next-steps li { margin-bottom: .35rem; }
+.contact-sent-link { font-weight: 600; }
+.contact-info-links { margin-top: 1rem; font-size: .95rem; }
+
+/* The contact form's base rules (css/style.css) style every label as a block and every
+   label > span red (for the asterisk); these choices need their own layout. */
+.contact-form .contact-interest-option { display: flex; align-items: center; font-size: 14px; color: #263746; }
+.contact-form .contact-interest-option > span { color: #263746; }
+.contact-form .contact-interest-option input,
+.contact-form .contact-checks input { display: inline-block; width: 1.1rem; height: 1.1rem; min-height: 0; margin: 0; padding: 0; flex: 0 0 auto; accent-color: #0b74a3; }
+.contact-form .contact-checks label { display: flex; font-weight: 500; font-size: 14px; }
+.contact-form .contact-spec-group label,
+.contact-form .contact-specs > label { display: flex; }
+.contact-form .contact-step > legend .contact-optional,
+.contact-form label .contact-optional { color: #55606b; font-weight: 400; }
+.contact-form .contact-submit { background: #0b74a3; }
+.contact-form .contact-submit:hover, .contact-form .contact-submit:focus-visible { background: #095f86; }
+@media (max-width: 575px) {
+  .contact-interest-grid { grid-template-columns: 1fr 1fr; }
+  .contact-form .contact-interest-option { font-size: 13px; padding: .55rem .6rem; }
+}
+
+/* ---- Calculator option help + advanced finishing (single-product.php) ---- */
+.pb-attr-help { display: block; color: #55606b; font-size: .78rem; line-height: 1.3; margin-top: .15rem; text-transform: none; font-weight: 400; }
+.pb-advanced-finishing { margin-top: .75rem; border: 1px solid #dde3e8; border-radius: 8px; padding: .25rem .75rem .6rem; background: #fafcfd; }
+.pb-advanced-finishing > summary { cursor: pointer; font-weight: 600; padding: .5rem 0; min-height: 44px; display: flex; align-items: center; }
+.pb-advanced-finishing__note { font-weight: 400; color: #55606b; margin-left: .25rem; }
+
+/* ---- Channel letter "what's included" + journey (page-channel-letters.php) ---- */
+.cl-journey { padding: 2rem 0; }
+.cl-journey-steps { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .75rem; counter-reset: cljourney; }
+.cl-journey-steps li { background: #fff; border: 1px solid #dde3e8; border-radius: 10px; padding: .9rem 1rem; counter-increment: cljourney; }
+.cl-journey-steps li::before { content: counter(cljourney); display: inline-flex; width: 1.7rem; height: 1.7rem; border-radius: 50%; background: #0b74a3; color: #fff; align-items: center; justify-content: center; font-weight: 700; margin-bottom: .4rem; }
+.cl-journey-steps strong { display: block; }
+.cl-included { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1.25rem; }
+.cl-included > div { background: #fff; border: 1px solid #dde3e8; border-radius: 10px; padding: 1rem 1.1rem; }
+.cl-included h3 { font-size: 1.05rem; margin: 0 0 .5rem; }
+.cl-included ul { margin: 0; padding-left: 1.1rem; }
+.cl-included li { margin-bottom: .3rem; }
+.cl-journey-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.25rem; }
+.cl-journey-actions a { display: inline-flex; align-items: center; min-height: 48px; padding: .6rem 1.2rem; border-radius: 8px; font-weight: 700; text-decoration: none; }
+.cl-journey-actions .is-primary { background: #0b74a3; color: #fff; }
+.cl-journey-actions .is-primary:hover, .cl-journey-actions .is-primary:focus { background: #095f86; color: #fff; }
+.cl-journey-actions .is-secondary { border: 2px solid #0b74a3; color: #0b74a3; background: #fff; }
+
+/* ---- Packages (/sign-packages/) ---- */
+.pkg-page { padding: 1.5rem 0 3rem; }
+.pkg-hero { max-width: 780px; margin-bottom: 1.5rem; }
+.pkg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem; }
+.pkg-card { background: #fff; border: 1px solid #dde3e8; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; scroll-margin-top: 120px; }
+.pkg-card h2 { font-size: 1.35rem; margin: 0 0 .3rem; }
+.pkg-items { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: .75rem; }
+.pkg-item { display: grid; grid-template-columns: 72px 1fr; gap: .75rem; align-items: start; }
+.pkg-item img { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; background: #f1f4f6; }
+.pkg-item strong { display: block; }
+.pkg-item small { color: #55606b; display: block; }
+.pkg-card h3 { font-size: .95rem; margin: .5rem 0 .3rem; }
+.pkg-card ul.pkg-excludes { padding-left: 1.1rem; margin: 0 0 .75rem; color: #3d4852; font-size: .92rem; }
+.pkg-card .pkg-cta { margin-top: auto; display: inline-flex; justify-content: center; min-height: 48px; align-items: center; background: #0b74a3; color: #fff; font-weight: 700; border-radius: 8px; text-decoration: none; padding: .6rem 1rem; }
+.pkg-card .pkg-cta:hover, .pkg-card .pkg-cta:focus { background: #095f86; color: #fff; }
+.pkg-note { margin-top: 1.5rem; color: #3d4852; }
+
+/* ---- Case studies (data/case-studies.php; shown only when published with permission) ---- */
+.case-studies { padding: 2rem 0; }
+.case-study-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+.case-study { background: #fff; border: 1px solid #dde3e8; border-radius: 12px; padding: 1rem; }
+.case-study figure { margin: 0 0 .75rem; }
+.case-study img { width: 100%; height: auto; border-radius: 8px; }
+.case-study figcaption { font-size: .8rem; color: #55606b; }
+.case-study dl { display: grid; grid-template-columns: auto 1fr; gap: .25rem .75rem; margin: 0 0 .75rem; }
+.case-study dt { font-weight: 600; }
+.case-study dd { margin: 0; }
+.case-study blockquote { border-left: 3px solid #0b74a3; margin: 0 0 .75rem; padding-left: .75rem; }
+.case-study cite { display: block; font-size: .85rem; color: #55606b; }
+.case-study-links { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }

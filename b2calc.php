@@ -1,5 +1,10 @@
 <?php
 //Template Name: b2 caculator
+
+// Staff-only markup tool: everyone else gets the normal 404 page.
+if (!current_user_can('edit_posts')) {
+    wholesale_render_404();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

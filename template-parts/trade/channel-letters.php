@@ -19,27 +19,32 @@ get_header();
 ?>
 <main id="primary" class="tw-page tw-hub">
 
-	<section class="tw-hero">
+	<section class="tw-hero tw-hub-hero" aria-labelledby="tw-hub-hero-title">
 		<div class="tw-wrap">
 			<?php wholesale_trade_render_crumbs(); ?>
 		</div>
-		<div class="tw-wrap tw-hero__in" style="padding-top:28px">
-			<div>
-				<p class="tw-eyebrow">Wholesale channel letters</p>
-				<h1 class="tw-hero__title">Wholesale channel letters: <em>7 types</em> for your sign jobs</h1>
-				<p class="tw-hero__text">Pick the construction your client's job calls for. Every type is UL listed, built in Washington or California, and ships with a wiring diagram and a full-size mounting pattern for your installer.</p>
+		<div class="tw-wrap tw-hero__in tw-hero__in--crumbs">
+			<div class="tw-hub-hero__copy">
+				<p class="tw-eyebrow">Made in the USA <span aria-hidden="true">·</span> UL listed <span aria-hidden="true">·</span> Built for sign shops</p>
+				<h1 class="tw-hero__title" id="tw-hub-hero-title">Wholesale channel letters, <em>built for sign shops.</em></h1>
+				<p class="tw-hub-hero__proof">7 channel letter styles <span aria-hidden="true">·</span> Built in Washington &amp; California <span aria-hidden="true">·</span> Ships nationwide</p>
+				<p class="tw-hero__text">From bright front lit letters to refined halo and trimless styles, find the right construction for your client's storefront. We fabricate, wire and test every set, ready for your crew to install.</p>
 				<div class="tw-hero__actions">
-					<a class="tw-btn tw-btn--glow" href="#tw-compare">Compare the 7 types</a>
+					<a class="tw-btn tw-btn--glow" href="#tw-compare">Compare all 7 types <span aria-hidden="true">→</span></a>
 					<?php if ($approved) : ?>
 						<a class="tw-btn tw-btn--ghost-light" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Open the builder</a>
 					<?php else : ?>
-						<a class="tw-btn tw-btn--ghost-light" href="<?php echo esc_url(wholesale_trade_apply_url()); ?>">Get trade pricing</a>
+						<a class="tw-btn tw-btn--ghost-light" href="<?php echo esc_url(wholesale_trade_apply_url()); ?>">Apply for trade pricing</a>
 					<?php endif; ?>
 				</div>
+				<p class="tw-hub-hero__detail">Every set includes a wiring diagram and full-size mounting pattern for your installer.</p>
 			</div>
-			<div class="tw-hero__media">
-				<?php echo wholesale_trade_type_image('standard-channel-letter-front-lit', 'large', array('loading' => 'eager', 'fetchpriority' => 'high', 'alt' => 'Front lit LED channel letters on a brick wall')); // Escaped in core. ?>
-				<span class="tw-hero__badge">Type 1 · Front lit aluminum</span>
+		</div>
+		<div class="tw-hub-hero__benefits">
+			<div class="tw-wrap tw-hub-hero__benefits-in">
+				<p><strong>UL listed</strong><span>Sign section labels on every set</span></p>
+				<p><strong>5-year warranty</strong><span>Coverage across all 7 styles</span></p>
+				<p><strong>Tested before shipping</strong><span>Ready for your installation crew</span></p>
 			</div>
 		</div>
 	</section>

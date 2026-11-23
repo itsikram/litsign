@@ -65,7 +65,7 @@ wholesale_seo_set_page_faq(array(
 	),
 	array(
 		'q' => 'What file should I upload with my order?',
-		'a' => 'A single-page PDF or a JPG at 150 dpi at full print size, in CMYK color, without crop marks or bleed. Delete the template guide layers before you save. For DTF transfers, upload a PNG with a transparent background. Files can be up to 300MB.',
+		'a' => 'A single-page PDF or a JPG at 150 dpi at full print size, in CMYK color, without crop marks or bleed. Delete the template guide layers before you save. For DTF transfers, upload a PNG with a transparent background. Files can be up to ' . wholesale_artwork_max_text() . '. ' . wholesale_large_file_help(),
 	),
 	array(
 		'q' => 'Can you set up my artwork for me?',
@@ -132,7 +132,7 @@ get_header();
 						<tr><th scope="row">Size</th><td>Exactly the template or ordered size; very large graphics (over 200&Prime;) may be scaled proportionally</td></tr>
 						<tr><th scope="row">Fonts &amp; effects</th><td>Text outlined; gradients and transparencies flattened</td></tr>
 						<tr><th scope="row">Marks</th><td>No crop marks, bleed or template guide layers</td></tr>
-						<tr><th scope="row">Max upload</th><td>300MB per file</td></tr>
+						<tr><th scope="row">Max upload</th><td><?php echo esc_html(wholesale_artwork_max_text()); ?> per file (larger: email a download link)</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -206,7 +206,7 @@ get_header();
 			<div class="cl-help-actions">
 				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
 				<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+				<a class="cl-help-action" href="mailto:Info@StorefrontSignWholesale.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>Info@StorefrontSignWholesale.com</span></a>
 				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
 			</div>
 		</div>

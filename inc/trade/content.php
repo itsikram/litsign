@@ -48,7 +48,7 @@ add_action('template_redirect', static function () {
 	exit;
 }, 6);
 
-/** Trade templates for the home page, the channel letters hub and About. */
+/** Trade templates for the home page, the channel letters hub, About and Terms. */
 add_filter('template_include', static function ($template) {
 	$dir = get_template_directory() . '/template-parts/trade/';
 	if (is_front_page()) {
@@ -59,6 +59,9 @@ add_filter('template_include', static function ($template) {
 	}
 	if (is_page('about')) {
 		return $dir . 'about.php';
+	}
+	if (is_page('terms-conditions')) {
+		return $dir . 'terms.php';
 	}
 	return $template;
 }, 60);
@@ -100,12 +103,34 @@ function wholesale_trade_nav_items()
 {
 	$items = array(
 		array('Channel Letters', home_url('/channel-letters/')),
-		array('Halo Lit', wholesale_trade_type_url('hidden-back-halo-lit')),
-		array('Trimless', wholesale_trade_type_url('inset-acrylic-face-lit-with-border-no-trimcap')),
+	);
+	// Every other non-empty product category. The 7 letter types live in "All Products".
+	$categories = array(
+		'Banners'       => 'banners',
+		'Flags'         => 'advertising-flags',
+		'Banner Stands' => 'banner-stands',
+		'Trade Show'    => 'trade-show-products',
+		'SEG'           => 'seg-products',
+		'Tents'         => 'custom-event-tents',
+		'Table Throws'  => 'table-throws',
+		'A-Frames'      => 'a-frame-and-sign-holders',
+		'Signicade'     => 'signicade-a-frames',
+		'Real Estate'   => 'real-estate-products',
+		'Rigid Signs'   => 'rigid-signs-and-magnets',
+		'Adhesive'      => 'adhesive-products',
+		'Wall Art'      => 'wall-art',
+		'Reflective'    => 'reflective-products',
+		'Dry Erase'     => 'dry-erase-products',
+		'Hardware'      => 'hardware-only',
+	);
+	foreach ($categories as $label => $slug) {
+		$items[] = array($label, wholesale_category_url($slug));
+	}
+	$items = array_merge($items, array(
 		array('For Sign Companies', home_url('/for-sign-companies/')),
 		array('Builder', home_url('/channel-letter-builder/')),
-	);
-	// The header button already says "Apply for Trade", so the row stays short enough for 992px.
+	));
+	// The header row scrolls sideways (with an edge fade) when these do not fit.
 	return $items;
 }
 
@@ -140,7 +165,10 @@ add_filter('pre_wp_nav_menu', static function ($output, $args) {
 	return $nav;
 }, 10, 2);
 
-/** The product menu: channel letters first, the rest behind one link. */
+/**
+ * The "All Products" menu, four columns: channel letters, displays,
+ * events + large format print, then trade tools and company links.
+ */
 function wholesale_trade_mega_columns()
 {
 	$types = wholesale_trade_cl_types();
@@ -153,22 +181,76 @@ function wholesale_trade_mega_columns()
 			$stainless[] = $link;
 		}
 	}
+	$aluminum[] = array('Compare all 7 letter types →', home_url('/channel-letters/'));
+
+	$cat = static function ($label, $slug) {
+		return array($label, wholesale_category_url($slug));
+	};
+
+	$can_order = wholesale_trade_can_order();
+	$tools = array(
+		array('Channel letter builder', home_url('/channel-letter-builder/')),
+		array('Outsource fabrication', home_url('/for-sign-companies/')),
+		array('Install manual (PDF)', content_url('uploads/storefront-files/channel-letter-installation-manual.pdf')),
+	);
+	if ($can_order) {
+		$tools[] = array('My orders', home_url('/my-orders/'));
+	} else {
+		$tools[] = array('Apply for a trade account', wholesale_trade_apply_url());
+		$tools[] = array('Trade sign in', home_url('/login/'));
+	}
+	if (wholesale_trade_can_see_prices()) {
+		$tools[] = array('Full trade catalog', home_url('/shop/'));
+	}
+
+	// Link the reviews page only once it has an approved review to show.
+	$company = array(array('About us', home_url('/about/')));
+	$review_counts = wp_count_posts('review_submission');
+	if (!empty($review_counts->publish)) {
+		$company[] = array('Customer reviews', function_exists('wholesale_reviews_page_url') ? wholesale_reviews_page_url() : home_url('/reviews/'));
+	}
+	$company[] = array('Contact', home_url('/contact/'));
+
 	return array(
 		array(
 			array('title' => 'Aluminum channel letters', 'links' => $aluminum),
-			array('title' => 'Compare', 'links' => array(array('All 7 letter types', home_url('/channel-letters/')))),
-		),
-		array(
 			array('title' => 'Stainless steel channel letters', 'links' => $stainless),
 		),
 		array(
-			array('title' => 'Trade tools', 'links' => array(
-				array('Channel letter builder', home_url('/channel-letter-builder/')),
-				array('Outsource fabrication', home_url('/for-sign-companies/')),
-				array('Install manual (PDF)', content_url('uploads/storefront-files/channel-letter-installation-manual.pdf')),
-				array(wholesale_trade_can_order() ? 'My orders' : 'Apply for a trade account', wholesale_trade_can_order() ? home_url('/my-orders/') : wholesale_trade_apply_url()),
+			array('title' => 'Banners & flags', 'links' => array(
+				$cat('Vinyl & fabric banners', 'banners'),
+				$cat('Advertising flags', 'advertising-flags'),
+				$cat('Banner stands', 'banner-stands'),
+				$cat('Banner stand hardware', 'banner-stand-hardware'),
 			)),
-		) + (wholesale_trade_can_see_prices() ? array(1 => array('title' => 'More', 'links' => array(array('Other trade products', home_url('/shop/'))))) : array()),
+			array('title' => 'Outdoor displays', 'links' => array(
+				$cat('A-frames & sign holders', 'a-frame-and-sign-holders'),
+				$cat('Signicade A-frames', 'signicade-a-frames'),
+				$cat('Real estate signs', 'real-estate-products'),
+				$cat('Hardware only', 'hardware-only'),
+				$cat('All indoor / outdoor displays →', 'indoor-outdoor-displays'),
+			)),
+		),
+		array(
+			array('title' => 'Trade show & events', 'links' => array(
+				$cat('Trade show displays', 'trade-show-products'),
+				$cat('SEG fabric frames', 'seg-products'),
+				$cat('Event tents', 'custom-event-tents'),
+				$cat('Table throws', 'table-throws'),
+			)),
+			array('title' => 'Large format print', 'links' => array(
+				$cat('Adhesive vinyl & decals', 'adhesive-products'),
+				$cat('Rigid signs & magnets', 'rigid-signs-and-magnets'),
+				$cat('Wall art', 'wall-art'),
+				$cat('Reflective', 'reflective-products'),
+				$cat('Dry erase', 'dry-erase-products'),
+				$cat('All large format →', 'large-format'),
+			)),
+		),
+		array(
+			array('title' => 'Trade tools', 'links' => $tools),
+			array('title' => 'Company', 'links' => $company),
+		),
 	);
 }
 add_filter('wholesale_mega_columns', 'wholesale_trade_mega_columns');
@@ -176,7 +258,7 @@ add_filter('wholesale_mega_columns', 'wholesale_trade_mega_columns');
 add_action('wholesale_legacy_mega_menu', static function () {
 	echo '<div class="container p-3"><div class="row">';
 	foreach (wholesale_trade_mega_columns() as $column) {
-		echo '<div class="col-md-4">';
+		echo '<div class="col-md-3">';
 		foreach ($column as $group) {
 			echo '<div class="mm-col-container mt-3"><h4 class="mm-heading">' . esc_html($group['title']) . '</h4>';
 			foreach ($group['links'] as $link) {
@@ -231,10 +313,56 @@ add_action('wp_enqueue_scripts', static function () {
 	}
 }, 120);
 
-/** Hero photo on the trade home page: preload it so it paints with the headline. */
+/**
+ * Hero photo on the trade home page: the front page's featured image (WebP copy
+ * when one exists), or the built-in hero photo when the page has none.
+ *
+ * @return array{src:string,srcset:string,width:int,height:int,avif:string}
+ */
+function wholesale_trade_hero_image()
+{
+	static $hero = null;
+	if (null !== $hero) {
+		return $hero;
+	}
+
+	$thumb_id = (int) get_post_thumbnail_id((int) get_option('page_on_front'));
+	$full_url = $thumb_id ? wp_get_attachment_url($thumb_id) : '';
+	$meta = $thumb_id ? wp_get_attachment_metadata($thumb_id) : array();
+	if ($full_url && !empty($meta['width'])) {
+		// One full-size file: the hero is cropped to cover a tall box on phones, so
+		// smaller widths would look soft. The WebP copy keeps it light.
+		return $hero = array(
+			'src'    => wholesale_webp_url($full_url),
+			'srcset' => '',
+			'width'  => (int) $meta['width'],
+			'height' => (int) $meta['height'],
+			// Full-size AVIF copy when one is already on disk; '' falls back to the WebP.
+			'avif'   => function_exists('wholesale_hero_avif_url') ? wholesale_hero_avif_url($full_url) : '',
+		);
+	}
+
+	return $hero = array(
+		'src'    => get_template_directory_uri() . '/img/hero-1920.webp',
+		'srcset' => '',
+		'width'  => 1920,
+		'height' => 640,
+		'avif'   => get_template_directory_uri() . '/img/hero-1920.avif',
+	);
+}
+
+/** Preload the hero photo so it paints with the headline. */
 add_action('wp_head', static function () {
-	if (is_front_page()) {
-		printf('<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n", esc_url(get_template_directory_uri() . '/img/hero-1920.avif'));
+	if (!is_front_page()) {
+		return;
+	}
+	$hero = wholesale_trade_hero_image();
+	if ($hero['avif']) {
+		printf('<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n", esc_url($hero['avif']));
+	} elseif ($hero['srcset']) {
+		printf('<link rel="preload" as="image" href="%s" imagesrcset="%s" imagesizes="100vw" fetchpriority="high">' . "\n", esc_url($hero['src']), esc_attr($hero['srcset']));
+	} else {
+		printf('<link rel="preload" as="image" href="%s" fetchpriority="high">' . "\n", esc_url($hero['src']));
 	}
 }, 2);
 
@@ -242,12 +370,12 @@ add_action('wp_head', static function () {
 function wholesale_trade_faq()
 {
 	return array(
-		array('q' => 'Who can open a trade account?', 'a' => 'Sign companies, sign installers, print shops, ad and marketing agencies, general contractors, architects and multi-location brands. We review every application by hand and may ask for a resale certificate or business license.'),
+		array('q' => 'Who can open a trade account?', 'a' => 'Sign companies, sign installers, print shops, ad and marketing agencies, general contractors, architects and multi-location brands. ' . (wholesale_trade_auto_approve() ? 'Your account opens as soon as you apply. We look over every new account and may ask for a resale certificate or business license.' : 'We review every application by hand and may ask for a resale certificate or business license.')),
 		array('q' => 'Do you install signs or sell to my clients?', 'a' => 'No. We never install, and this site is trade only. Every set ships wired, tested and UL labeled with a wiring diagram and a full-size mounting pattern, so your installer or a licensed electrician mounts it.'),
 		array('q' => 'Where are the letters built?', 'a' => 'In our Washington and California facilities. We ship to all 50 states.'),
 		array('q' => 'Are the letters UL listed?', 'a' => 'Yes. All 7 types are UL listed and carry a sign section label for outdoor installation, which most permit inspectors look for.'),
 		array('q' => 'What warranty do the letters carry?', 'a' => 'A 5-year warranty covers all 7 channel letter types.'),
-		array('q' => 'How do I see prices?', 'a' => 'Apply for a trade account. Once approved, you see trade pricing on every type, price full sign sets in the online builder and check out like any web order.'),
+		array('q' => 'How do I see prices?', 'a' => 'Apply for a trade account. ' . (wholesale_trade_auto_approve() ? 'As soon as you send the application' : 'Once approved') . ', you see trade pricing on every type, price full sign sets in the online builder and check out like any web order.'),
 		array('q' => 'What artwork do you need?', 'a' => 'A vector file (AI, EPS or PDF) at final size with text outlined. For logos and complex marks, send the file with your request and our team checks stroke widths before production.'),
 	);
 }
@@ -366,3 +494,166 @@ add_action('template_redirect', static function () {
 		));
 	});
 }, 20);
+
+/**
+ * Print and display catalog on the home page, under the channel letter types.
+ * Same four groups as the "All Products" menu. Featured tiles name the product
+ * whose photo reads best at a large size; directory cards use a picked photo
+ * or, failing that, the first published product photo in the category.
+ *
+ * Counts and photo IDs are cached for 12 hours and cleared when a product or a
+ * product category is saved. URLs are built on each request.
+ *
+ * @return array{featured:array,groups:array,total:int}
+ */
+function wholesale_trade_home_catalog()
+{
+	$featured = array(
+		'banners'             => array('blurb' => 'Vinyl, mesh, fabric and backlit banners printed full color for storefronts, events and job sites.', 'photo' => 680, 'tint' => '#eef2fb'),
+		'custom-event-tents'  => array('blurb' => 'Full color tents, walls and tent flags for markets and outdoor events.', 'photo' => 1115, 'tint' => '#ecf6ee'),
+		'advertising-flags'   => array('blurb' => 'Feather, teardrop, rectangle and pole flags that catch the street.', 'photo' => 821, 'tint' => '#fff5e1'),
+		'signicade-a-frames'  => array('blurb' => 'Sidewalk A-frames with printed inserts for menus and specials.', 'photo' => 1011, 'tint' => '#fbeff0'),
+		'trade-show-products' => array('blurb' => 'Tension fabric and pop up displays that set up fast on the floor.', 'photo' => 1092, 'tint' => '#e9f4fa'),
+	);
+
+	$groups = array(
+		'banners-flags' => array(
+			'title' => 'Banners & flags',
+			'icon'  => 'flag',
+			'all'   => '',
+			'categories' => array(
+				'banners'               => array('Vinyl & fabric banners', 680),
+				'advertising-flags'     => array('Advertising flags', 0),
+				'banner-stands'         => array('Banner stands', 685),
+				'banner-stand-hardware' => array('Banner stand hardware', 0),
+			),
+		),
+		'outdoor-displays' => array(
+			'title' => 'Outdoor displays',
+			'icon'  => 'easel',
+			'all'   => 'indoor-outdoor-displays',
+			'categories' => array(
+				'a-frame-and-sign-holders' => array('A-frames & sign holders', 0),
+				'signicade-a-frames'       => array('Signicade A-frames', 1011),
+				'real-estate-products'     => array('Real estate signs', 0),
+				'hardware-only'            => array('Hardware only', 0),
+			),
+		),
+		'trade-show-events' => array(
+			'title' => 'Trade show & events',
+			'icon'  => 'tent',
+			'all'   => '',
+			'categories' => array(
+				'trade-show-products' => array('Trade show displays', 1092),
+				'seg-products'        => array('SEG fabric frames', 0),
+				'custom-event-tents'  => array('Event tents', 1115),
+				'table-throws'        => array('Table throws', 0),
+			),
+		),
+		'large-format' => array(
+			'title' => 'Large format print',
+			'icon'  => 'print',
+			'all'   => 'large-format',
+			'categories' => array(
+				'adhesive-products'       => array('Adhesive vinyl & decals', 0),
+				'rigid-signs-and-magnets' => array('Rigid signs & magnets', 920),
+				'wall-art'                => array('Wall art', 0),
+				'reflective-products'     => array('Reflective', 0),
+				'dry-erase-products'      => array('Dry erase', 0),
+			),
+		),
+	);
+
+	$data = get_transient('wholesale_trade_home_catalog');
+	if (!is_array($data) || empty($data['v']) || 1 !== $data['v']) {
+		$data = array('v' => 1, 'terms' => array(), 'groups' => array(), 'featured' => array());
+		$photo = static function ($product_id) {
+			$product_id = (int) $product_id;
+			return $product_id && 'publish' === get_post_status($product_id) ? (int) get_post_thumbnail_id($product_id) : 0;
+		};
+		foreach ($groups as $key => $group) {
+			$slugs = array();
+			foreach ($group['categories'] as $slug => $category) {
+				$term = get_term_by('slug', $slug, 'product_category');
+				if (!$term || !$term->count) {
+					continue;
+				}
+				$slugs[] = $slug;
+				$image = $photo($category[1]);
+				if (!$image) {
+					$first = get_posts(array(
+						'post_type'      => 'product',
+						'post_status'    => 'publish',
+						'posts_per_page' => 1,
+						'fields'         => 'ids',
+						'orderby'        => array('menu_order' => 'ASC', 'date' => 'DESC'),
+						'meta_key'       => '_thumbnail_id',
+						'no_found_rows'  => true,
+						'tax_query'      => array(array('taxonomy' => 'product_category', 'field' => 'slug', 'terms' => $slug, 'include_children' => false)),
+					));
+					$image = $first ? (int) get_post_thumbnail_id($first[0]) : 0;
+				}
+				$data['terms'][$slug] = array('count' => (int) $term->count, 'image' => $image);
+			}
+			// Unique products across the group: a stand can sit in two of its categories.
+			$data['groups'][$key] = $slugs ? count(get_posts(array(
+				'post_type'      => 'product',
+				'post_status'    => 'publish',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+				'tax_query'      => array(array('taxonomy' => 'product_category', 'field' => 'slug', 'terms' => $slugs, 'include_children' => false)),
+			))) : 0;
+		}
+		foreach ($featured as $slug => $item) {
+			$data['featured'][$slug] = $photo($item['photo']);
+		}
+		set_transient('wholesale_trade_home_catalog', $data, 12 * HOUR_IN_SECONDS);
+	}
+
+	$out = array('featured' => array(), 'groups' => array(), 'total' => 0);
+	foreach ($groups as $key => $group) {
+		$items = array();
+		foreach ($group['categories'] as $slug => $category) {
+			if (empty($data['terms'][$slug])) {
+				continue;
+			}
+			$items[$slug] = array(
+				'name'  => $category[0],
+				'url'   => wholesale_category_url($slug),
+				'count' => $data['terms'][$slug]['count'],
+				'image' => $data['terms'][$slug]['image'],
+			);
+		}
+		if (!$items) {
+			continue;
+		}
+		$out['total'] += count($items);
+		$out['groups'][$key] = array(
+			'title' => $group['title'],
+			'icon'  => $group['icon'],
+			'count' => isset($data['groups'][$key]) ? (int) $data['groups'][$key] : 0,
+			'items' => $items,
+			'all'   => $group['all'] ? wholesale_category_url($group['all']) : '',
+		);
+		foreach ($featured as $slug => $item) {
+			if (isset($items[$slug])) {
+				$out['featured'][$slug] = array_merge($items[$slug], array(
+					'blurb' => $item['blurb'],
+					'tint'  => $item['tint'],
+					'image' => !empty($data['featured'][$slug]) ? $data['featured'][$slug] : $items[$slug]['image'],
+				));
+			}
+		}
+	}
+	// Keep the featured order as listed above (the first tile is the large one).
+	$out['featured'] = array_merge(array_intersect_key($featured, $out['featured']), $out['featured']);
+	return $out;
+}
+
+/** A saved product or category can change the home catalog counts and photos. */
+foreach (array('save_post_product', 'deleted_post', 'created_product_category', 'edited_product_category', 'delete_product_category') as $wholesale_trade_hook) {
+	add_action($wholesale_trade_hook, static function () {
+		delete_transient('wholesale_trade_home_catalog');
+	});
+}

@@ -78,6 +78,11 @@ get_header();
                                 <a class="order-write-review" href="<?php echo esc_url(get_permalink($order) . '#shipments'); ?>">Track package</a>
                             <?php endif; ?>
                             <a href="<?php echo esc_url(get_permalink($order)); ?>">View details</a>
+                            <?php // Items ordered without artwork that can still get it (inc/order-artwork.php). ?>
+                            <?php $artwork_missing = function_exists('wholesale_order_artwork_missing_lines') ? wholesale_order_artwork_missing_lines($order->ID) : array(); ?>
+                            <?php if ($artwork_missing) : ?>
+                                <a class="order-artwork-needed" href="<?php echo esc_url(get_permalink($order) . '#artwork-line-' . $artwork_missing[0]); ?>">Upload artwork</a>
+                            <?php endif; ?>
                             <?php // Review prompts wait until the package arrives. ?>
                             <?php $review_links = wholesale_order_on_the_way($order->post_status) ? array() : wholesale_order_unreviewed_products($order->ID); ?>
                             <?php if ($review_links) : ?>
@@ -93,7 +98,7 @@ get_header();
             </ul>
         <?php endif; ?>
 
-        <p class="account-help">Questions about an order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT).</p>
+        <p class="account-help">Questions about an order? Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST).</p>
     </div>
 </main>
 

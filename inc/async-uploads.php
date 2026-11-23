@@ -40,14 +40,8 @@ function wholesale_async_upload_contexts()
 			'max' => WHOLESALE_QUOTE_FORM_MAX_MB * MB_IN_BYTES,
 		),
 		'artwork' => array(
-			'mimes' => array(
-				'jpg|jpeg|jpe' => 'image/jpeg',
-				'png' => 'image/png',
-				'gif' => 'image/gif',
-				'webp' => 'image/webp',
-				'pdf' => 'application/pdf',
-			),
-			'max' => 25 * MB_IN_BYTES,
+			'mimes' => wholesale_artwork_mimes(), // inc/artwork-size-check.php: PDF, JPG, PNG.
+			'max' => wholesale_artwork_max_bytes(), // inc/buying-journey.php
 		),
 	);
 }
@@ -61,7 +55,12 @@ function wholesale_async_upload_dir()
 	$dir = trailingslashit($uploads['basedir']) . 'wholesale-pending';
 	if (!is_dir($dir)) {
 		wp_mkdir_p($dir);
+	}
+	// Re-checked on every call, so a deleted deny file comes back.
+	if (!file_exists($dir . '/.htaccess')) {
 		@file_put_contents($dir . '/.htaccess', "Require all denied\nDeny from all\n");
+	}
+	if (!file_exists($dir . '/index.php')) {
 		@file_put_contents($dir . '/index.php', "<?php\n// Silence is golden.\n");
 	}
 	return $dir;
@@ -81,6 +80,11 @@ function wholesale_ajax_async_upload()
 		wholesale_async_upload_fail('Unknown upload.');
 	}
 	$rules = $contexts[$context];
+	// Trade site: artwork goes with an add to cart, so only accounts that can order may send it.
+	if ('artwork' === $context && function_exists('wholesale_is_trade_site') && wholesale_is_trade_site()
+		&& function_exists('wholesale_trade_can_order') && !wholesale_trade_can_order()) {
+		wholesale_async_upload_fail('Uploads open once your trade account is approved.', 403);
+	}
 
 	// 60 files an hour per IP is plenty for a person and stops a script filling the disk.
 	$ip_key = 'wholesale_async_up_' . md5((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
@@ -99,7 +103,7 @@ function wholesale_ajax_async_upload()
 	}
 	$checked = wp_check_filetype_and_ext($file['tmp_name'], $file['name'], $rules['mimes']);
 	if (empty($checked['ext']) || empty($checked['type'])) {
-		wholesale_async_upload_fail('That file type isn’t supported.');
+		wholesale_async_upload_fail('artwork' === $context ? 'Artwork must be a ' . wholesale_artwork_types_text() . ' file.' : 'That file type isn’t supported.');
 	}
 
 	$dir = wholesale_async_upload_dir();
@@ -214,7 +218,10 @@ function wholesale_async_upload_script()
 		// Byte limits per context, so a file that is too large is turned away before it uploads.
 		'max' => wp_list_pluck(wholesale_async_upload_contexts(), 'max'),
 	));
-	if (is_singular('product') || is_page(array('contact', 'banners-displays', 'window-graphics')) || is_page_template(array('page-channel-letters.php', 'page-channel-letters-ads.php'))) {
+	// Product pages carry only the artwork field, which the trade site shows to accounts that can order.
+	$product_upload = is_singular('product') && (!function_exists('wholesale_is_trade_site') || !wholesale_is_trade_site()
+		|| !function_exists('wholesale_trade_can_order') || wholesale_trade_can_order());
+	if ($product_upload || is_page(array('contact', 'banners-displays', 'window-graphics')) || is_page_template(array('page-channel-letters.php', 'page-channel-letters-ads.php'))) {
 		wp_enqueue_script('wholesale-async-upload');
 	}
 }

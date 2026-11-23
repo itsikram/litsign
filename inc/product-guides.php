@@ -665,7 +665,59 @@ function wholesale_product_guide($product_id)
 		$slug = (string) get_post_field('post_name', $primary);
 	}
 
-	return isset($guides[$slug]) ? $guides[$slug] : array();
+	return isset($guides[$slug]) ? wholesale_product_guide_fit_sizes($guides[$slug], $product_id) : array();
+}
+
+/**
+ * Size claims in guide copy follow the sizes the cart accepts. B2Sign Sync mirrors
+ * B2Sign's limits (_max_size 36x48 on coroplast, PVC, foam board, aluminum...), but
+ * the copy said "up to 48" x 96"" / "up to 4 ft x 8 ft" and "from 3" x 4"", so a
+ * visitor asking for a bigger panel met "Maximum width" on the page (Nov 2026).
+ * Only claims beyond the product's own limits change; parcel notes stay.
+ *
+ * @param array $guide      Guide entry (strings and nested arrays).
+ * @param int   $product_id Product shown.
+ * @return array
+ */
+function wholesale_product_guide_fit_sizes($guide, $product_id)
+{
+	$max = function_exists('wholesale_product_max_sides') ? wholesale_product_max_sides($product_id) : null;
+	$min = function_exists('wholesale_product_min_sides') ? wholesale_product_min_sides($product_id) : null;
+	if (!$max) {
+		return $guide;
+	}
+	$num = static function ($n) {
+		return rtrim(rtrim(number_format((float) $n, 2, '.', ''), '0'), '.');
+	};
+	$min_short = $min ? min($min) : 0;
+	$fit = static function ($text) use (&$fit, $max, $min_short, $num) {
+		if (is_array($text)) {
+			return array_map($fit, $text);
+		}
+		if (!is_string($text) || false === stripos($text, 'up to')) {
+			return $text;
+		}
+		// "up to 4 ft x 8 ft" -> inches first.
+		$text = preg_replace_callback('/(up to) (\d+(?:\.\d+)?) ft x (\d+(?:\.\d+)?) ft/i', static function ($m) use ($num) {
+			return sprintf('%s %s" x %s"', $m[1], $num($m[2] * 12), $num($m[3] * 12));
+		}, $text);
+
+		return preg_replace_callback('/(from (\d+(?:\.\d+)?)" x (\d+(?:\.\d+)?)" )?(up to) (\d+(?:\.\d+)?)" x (\d+(?:\.\d+)?)"/i', static function ($m) use ($max, $min_short, $num) {
+			$long = max((float) $m[5], (float) $m[6]);
+			if ($long <= $max[1] + 0.01) {
+				return $m[0];
+			}
+			$from = '';
+			if ('' !== $m[1]) {
+				$claimed_min = min((float) $m[2], (float) $m[3]);
+				$from = $min_short > $claimed_min ? sprintf('from %s" x %s" ', $num($min_short), $num($min_short)) : $m[1];
+			}
+
+			return sprintf('%s%s %s" x %s"', $from, $m[4], $num($max[1]), $num($max[0]));
+		}, $text);
+	};
+
+	return $fit($guide);
 }
 
 /**
@@ -674,7 +726,7 @@ function wholesale_product_guide($product_id)
  * so sitemap <lastmod> tells Google the page is new. (A file time would change
  * on every upload and make lastmod meaningless.)
  */
-define('WHOLESALE_PRODUCT_GUIDES_REVISED', '2026-10-19T00:00:00+00:00');
+define('WHOLESALE_PRODUCT_GUIDES_REVISED', '2026-11-15T00:00:00+00:00');
 
 /**
  * Sitemap lastmod for a product: its own modified time, or the guide revision
@@ -690,6 +742,10 @@ function wholesale_product_content_modified($product)
 	// Copy in data/product-pages/ (inc/product-page-content.php) changes the page too.
 	if ($product && defined('WHOLESALE_PRODUCT_PAGES_REVISED') && wholesale_product_page($product->ID) && strtotime(WHOLESALE_PRODUCT_PAGES_REVISED) > strtotime($modified)) {
 		$modified = WHOLESALE_PRODUCT_PAGES_REVISED;
+	}
+	// So do the group option buttons (inc/product-group-swap.php).
+	if ($product && defined('WHOLESALE_PRODUCT_GROUPS_REVISED') && function_exists('wholesale_product_group') && wholesale_product_group($product->ID) && strtotime(WHOLESALE_PRODUCT_GROUPS_REVISED) > strtotime($modified)) {
+		$modified = WHOLESALE_PRODUCT_GROUPS_REVISED;
 	}
 
 	return $modified;

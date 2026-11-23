@@ -3,8 +3,9 @@
  * Emails admin menu: a log of every email the site sends (with its delivery
  * result), and the SMTP settings used to send them.
  *
- * SMTP settings are saved in the `wholesale_mail_settings` option; until they are
- * saved once, the WHOLESALE_SMTP_* constants in wp-config.php are used.
+ * SMTP settings are saved in the `wholesale_mail_settings` option only; until they
+ * are saved, the site uses the default WordPress mailer. WHOLESALE_SMTP_* constants
+ * in wp-config.php are ignored (owner's choice, 2026-11-11).
  *
  * @package litsign
  */
@@ -107,7 +108,8 @@ function wholesale_smtp_decrypt($stored)
 
 /**
  * The settings in effect: saved from the Emails → SMTP Settings page, or the
- * wp-config.php constants when nothing has been saved yet.
+ * default WordPress mailer when nothing has been saved yet. SMTP details are
+ * never read from wp-config.php.
  *
  * `password` is decrypted; `password_unreadable` is true when a saved one could not be.
  */
@@ -130,27 +132,75 @@ function wholesale_mail_settings()
 		return $settings;
 	}
 
-	$settings = array_merge($defaults, array(
-		'enabled' => defined('WHOLESALE_SMTP_HOST') && WHOLESALE_SMTP_HOST,
-		'provider' => defined('WHOLESALE_SMTP_HOST') && 'smtp.gmail.com' === WHOLESALE_SMTP_HOST ? 'gmail' : 'custom',
-		'host' => defined('WHOLESALE_SMTP_HOST') ? (string) WHOLESALE_SMTP_HOST : '',
-		'port' => defined('WHOLESALE_SMTP_PORT') ? (int) WHOLESALE_SMTP_PORT : 465,
-		'encryption' => defined('WHOLESALE_SMTP_SECURE') && WHOLESALE_SMTP_SECURE ? (string) WHOLESALE_SMTP_SECURE : 'ssl',
-		'username' => defined('WHOLESALE_SMTP_USERNAME') ? (string) WHOLESALE_SMTP_USERNAME : '',
-		'password' => defined('WHOLESALE_SMTP_PASSWORD') && 'your-google-workspace-app-password' !== WHOLESALE_SMTP_PASSWORD ? (string) WHOLESALE_SMTP_PASSWORD : '',
-		'from_email' => defined('WHOLESALE_SMTP_FROM') ? (string) WHOLESALE_SMTP_FROM : '',
-	));
+	// Nothing saved: the default WordPress mailer.
+	$settings = array_merge($defaults, array('enabled' => false));
 	$settings['password_unreadable'] = false;
-	$settings['source'] = 'wp-config';
+	$settings['source'] = 'none';
 
 	return $settings;
 }
 
+/**
+ * True for free webmail inboxes (Gmail, Yahoo, Outlook.com...). The default mailer
+ * hands email to this web host, and Gmail rejects or spam-folders mail that claims
+ * to be from one of these domains but comes from another server. That is why the
+ * trade site's notifications went missing while From was admin_email (a Gmail inbox).
+ */
+function wholesale_mail_is_free_inbox($email)
+{
+	$at = strrpos((string) $email, '@');
+	$domain = false === $at ? '' : strtolower(substr($email, $at + 1));
+
+	// The provider name plus a plain TLD (gmail.com, yahoo.co.uk), so mail.yourcompany.com is not caught.
+	return (bool) preg_match('/^(gmail|googlemail|yahoo|ymail|rocketmail|hotmail|outlook|live|msn|aol|icloud|me|mac|proton|protonmail|pm|gmx|mail|yandex|zoho)\.[a-z]{2,3}(\.[a-z]{2})?$/', $domain);
+}
+
+/**
+ * The From address when nothing usable is saved: the store's own sales inbox
+ * (Info@StorefrontSignWholesale.com, or Trade Accounts > Settings > Trade contact email).
+ * The domain's SPF record allows this host (secureserver.net), so the default mailer can use it.
+ */
+function wholesale_mail_default_from_email()
+{
+	$brand = function_exists('wholesale_email_brand') ? (string) wholesale_email_brand()['email'] : '';
+	if (is_email($brand) && !wholesale_mail_is_free_inbox($brand)) {
+		return $brand;
+	}
+
+	return 'Info@StorefrontSignWholesale.com';
+}
+
+/** Why the saved SMTP settings can't be used, or '' when they can. */
+function wholesale_mail_smtp_problem($settings)
+{
+	if ('' === $settings['host']) {
+		return 'No SMTP server is set in Emails → SMTP Settings.';
+	}
+	if ($settings['auth'] && $settings['password_unreadable']) {
+		return 'The saved SMTP password can no longer be read (the site security keys changed). Enter it again in Emails → SMTP Settings.';
+	}
+	if ($settings['auth'] && ('' === $settings['username'] || '' === $settings['password'])) {
+		return 'The SMTP username or password is missing in Emails → SMTP Settings.';
+	}
+
+	return '';
+}
+
+/**
+ * The From address on every email. Through SMTP: the saved From email, else the
+ * SMTP login. Through the default mailer (this web host): the saved From email
+ * unless it is a free webmail inbox, else the store's sales inbox.
+ */
 function wholesale_mail_from_email()
 {
 	$settings = wholesale_mail_settings();
+	$saved = is_email($settings['from_email']) ? $settings['from_email'] : '';
 
-	return is_email($settings['from_email']) ? $settings['from_email'] : get_option('admin_email');
+	if ($settings['enabled'] && '' === wholesale_mail_smtp_problem($settings)) {
+		return $saved ? $saved : (is_email($settings['username']) ? $settings['username'] : wholesale_mail_default_from_email());
+	}
+
+	return ($saved && !wholesale_mail_is_free_inbox($saved)) ? $saved : wholesale_mail_default_from_email();
 }
 
 function wholesale_mail_from_name()
@@ -183,13 +233,7 @@ function wholesale_mail_status()
 		);
 	}
 
-	if ('' === $settings['host']) {
-		$problem = 'No SMTP server is set in Emails → SMTP Settings.';
-	} elseif ($settings['auth'] && $settings['password_unreadable']) {
-		$problem = 'The saved SMTP password can no longer be read (the site security keys changed). Enter it again in Emails → SMTP Settings.';
-	} elseif ($settings['auth'] && ('' === $settings['username'] || '' === $settings['password'])) {
-		$problem = 'The SMTP username or password is missing in Emails → SMTP Settings.';
-	}
+	$problem = wholesale_mail_smtp_problem($settings);
 
 	return array(
 		'mode' => $problem ? 'php_mail' : 'smtp',
@@ -231,15 +275,15 @@ function wholesale_configure_smtp_mailer($phpmailer)
 }
 add_action('phpmailer_init', 'wholesale_configure_smtp_mailer');
 
-add_filter('wp_mail_from', function ($from_email) {
-	$settings = wholesale_mail_settings();
-
-	return is_email($settings['from_email']) ? $settings['from_email'] : $from_email;
-});
+// Priority 99: after the Diagnostics Toolkit plugin, which sets From to admin_email (a Gmail
+// inbox), and after any "From:" header a form adds. Gmail drops that From from this host.
+add_filter('wp_mail_from', function () {
+	return wholesale_mail_from_email();
+}, 99);
 
 add_filter('wp_mail_from_name', function () {
 	return wholesale_mail_from_name();
-});
+}, 99);
 
 /* ---------------------------------------------------------------------------
  * Log storage
@@ -295,7 +339,7 @@ add_action('init', 'wholesale_email_log_install');
  */
 function wholesale_email_log_source()
 {
-	$skip = array('wp_mail', 'wholesale_send_html_mail');
+	$skip = array('wp_mail', 'wholesale_send_html_mail', 'wholesale_mail_team');
 	$frames = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 15);
 	$file = '';
 	$line = 0;
@@ -543,7 +587,9 @@ function wholesale_email_log_resend($id)
 
 function wholesale_email_admin_url($tab = 'log', $args = array())
 {
-	return add_query_arg($args, admin_url('admin.php?page=' . ('smtp' === $tab ? 'wholesale-emails-smtp' : 'wholesale-emails')));
+	$pages = array('smtp' => 'wholesale-emails-smtp', 'compose' => 'wholesale-emails-compose');
+
+	return add_query_arg($args, admin_url('admin.php?page=' . (isset($pages[$tab]) ? $pages[$tab] : 'wholesale-emails')));
 }
 
 function wholesale_email_failed_recent_count()
@@ -561,6 +607,7 @@ function wholesale_email_add_admin_menu()
 
 	add_menu_page('Email Log', 'Emails' . $badge, 'manage_options', 'wholesale-emails', 'wholesale_email_admin_page', 'dashicons-email', 27);
 	add_submenu_page('wholesale-emails', 'Email Log', 'Email Log', 'manage_options', 'wholesale-emails', 'wholesale_email_admin_page');
+	add_submenu_page('wholesale-emails', 'Send Email', 'Send Email', 'manage_options', 'wholesale-emails-compose', 'wholesale_email_admin_page');
 	add_submenu_page('wholesale-emails', 'SMTP Settings', 'SMTP Settings', 'manage_options', 'wholesale-emails-smtp', 'wholesale_email_admin_page');
 }
 add_action('admin_menu', 'wholesale_email_add_admin_menu');
@@ -581,7 +628,11 @@ function wholesale_email_redirect($tab, $notice, $type = 'success', $extra = arr
 {
 	set_transient('wholesale_email_notice_' . get_current_user_id(), array('type' => $type, 'message' => $notice), MINUTE_IN_SECONDS);
 	$back = wp_get_referer();
-	$url = $back && false !== strpos($back, 'page=wholesale-emails') ? remove_query_arg(array('_wpnonce'), $back) : wholesale_email_admin_url($tab);
+	$target = wholesale_email_admin_url($tab);
+	parse_str((string) wp_parse_url($target, PHP_URL_QUERY), $target_query);
+	parse_str((string) wp_parse_url((string) $back, PHP_URL_QUERY), $back_query);
+	$same_page = $back && isset($back_query['page'], $target_query['page']) && $back_query['page'] === $target_query['page'];
+	$url = $same_page ? remove_query_arg(array('_wpnonce'), $back) : $target;
 	wp_safe_redirect(add_query_arg($extra, $url));
 	exit;
 }
@@ -825,7 +876,8 @@ function wholesale_email_admin_page()
 		return;
 	}
 
-	$tab = isset($_GET['page']) && 'wholesale-emails-smtp' === $_GET['page'] ? 'smtp' : 'log';
+	$page_slug = isset($_GET['page']) ? sanitize_key(wp_unslash($_GET['page'])) : '';
+	$tab = 'wholesale-emails-smtp' === $page_slug ? 'smtp' : ('wholesale-emails-compose' === $page_slug ? 'compose' : 'log');
 	$notice_key = 'wholesale_email_notice_' . get_current_user_id();
 	$notice = get_transient($notice_key);
 	delete_transient($notice_key);
@@ -852,6 +904,7 @@ function wholesale_email_admin_page()
 
 		<nav class="wsm-tabs">
 			<a href="<?php echo esc_url(wholesale_email_admin_url('log')); ?>" class="<?php echo 'log' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-list-view"></span> Email Log</a>
+			<a href="<?php echo esc_url(wholesale_email_admin_url('compose')); ?>" class="<?php echo 'compose' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-edit"></span> Send Email</a>
 			<a href="<?php echo esc_url(wholesale_email_admin_url('smtp')); ?>" class="<?php echo 'smtp' === $tab ? 'is-active' : ''; ?>"><span class="dashicons dashicons-admin-generic"></span> SMTP Settings</a>
 		</nav>
 
@@ -870,6 +923,8 @@ function wholesale_email_admin_page()
 		<?php
 		if ('smtp' === $tab) {
 			wholesale_email_smtp_tab($status);
+		} elseif ('compose' === $tab) {
+			wholesale_email_compose_tab();
 		} else {
 			wholesale_email_log_tab();
 		}
@@ -1192,6 +1247,101 @@ function wholesale_email_log_tab()
 	<?php
 }
 
+/**
+ * Send a custom email to chosen people. Each recipient gets their own copy so
+ * nobody sees the other addresses.
+ */
+function wholesale_handle_compose_email()
+{
+	wholesale_email_require_admin('wholesale_compose_email');
+
+	$post = wp_unslash($_POST);
+	$input = preg_split('/[\s,;]+/', isset($post['to']) ? (string) $post['to'] : '', -1, PREG_SPLIT_NO_EMPTY);
+	$recipients = array_values(array_unique(array_filter(array_map('sanitize_email', $input), 'is_email')));
+	$subject = trim(sanitize_text_field(isset($post['subject']) ? $post['subject'] : ''));
+	$body = isset($post['message']) ? wp_kses_post((string) $post['message']) : '';
+	$reply_to = sanitize_email(isset($post['reply_to']) ? $post['reply_to'] : '');
+
+	// Keep what was typed so a mistake does not lose the message.
+	set_transient('wholesale_email_compose_' . get_current_user_id(), array('to' => isset($post['to']) ? (string) $post['to'] : '', 'subject' => $subject, 'message' => $body, 'reply_to' => $reply_to), 10 * MINUTE_IN_SECONDS);
+
+	if (!$recipients) {
+		wholesale_email_redirect('compose', 'Enter at least one valid recipient email address.', 'error');
+	}
+	if (count($recipients) > 50) {
+		wholesale_email_redirect('compose', 'Send to 50 addresses or fewer at a time.', 'error');
+	}
+	if ('' === $subject || '' === trim(wp_strip_all_tags($body))) {
+		wholesale_email_redirect('compose', 'Add a subject and a message.', 'error');
+	}
+
+	$headers = array('Content-Type: text/html; charset=UTF-8');
+	if ($reply_to) {
+		$headers[] = 'Reply-To: ' . $reply_to;
+	}
+	$html = '<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1d2327;max-width:620px;">' . wpautop($body) . '</div>';
+
+	$sent = 0;
+	$errors = array();
+	foreach ($recipients as $to) {
+		$result = wholesale_send_html_mail($to, $subject, $html, $headers);
+		if (true === $result) {
+			$sent++;
+		} else {
+			$errors[] = $to . ' (' . $result . ')';
+		}
+	}
+
+	if (!$errors) {
+		delete_transient('wholesale_email_compose_' . get_current_user_id());
+		wholesale_email_redirect('log', sprintf(_n('Email sent to %d recipient.', 'Email sent to %d recipients.', $sent, 'litsign'), $sent));
+	}
+	wholesale_email_redirect('compose', sprintf('%d sent, %d failed: %s', $sent, count($errors), implode('; ', $errors)), $sent ? 'warning' : 'error');
+}
+add_action('admin_post_wholesale_compose_email', 'wholesale_handle_compose_email');
+
+function wholesale_email_compose_tab()
+{
+	$key = 'wholesale_email_compose_' . get_current_user_id();
+	$saved = get_transient($key);
+	delete_transient($key);
+	$saved = is_array($saved) ? $saved : array('to' => '', 'subject' => '', 'message' => '', 'reply_to' => '');
+	$status = wholesale_mail_status();
+	?>
+	<form class="wsm-card wsm-form wsm-compose" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+		<input type="hidden" name="action" value="wholesale_compose_email">
+		<?php wp_nonce_field('wholesale_compose_email'); ?>
+		<div class="wsm-section">
+			<div class="wsm-section-head">
+				<div>
+					<h2>Send a custom email</h2>
+					<p>Write your own message and send it from <strong><?php echo esc_html($status['from']); ?></strong>. Each person gets a separate copy, and it appears in the Email Log.</p>
+				</div>
+			</div>
+			<p><label for="wsm-compose-to"><strong>To</strong></label><br>
+				<textarea id="wsm-compose-to" name="to" rows="2" class="large-text" placeholder="name@example.com, another@example.com" required><?php echo esc_textarea($saved['to']); ?></textarea>
+				<span class="description">Separate several addresses with commas, spaces or new lines (up to 50).</span></p>
+			<p><label for="wsm-compose-reply"><strong>Reply-To</strong> (optional)</label><br>
+				<input type="email" id="wsm-compose-reply" name="reply_to" value="<?php echo esc_attr($saved['reply_to']); ?>" placeholder="Where replies should go"></p>
+			<p><label for="wsm-compose-subject"><strong>Subject</strong></label><br>
+				<input type="text" id="wsm-compose-subject" name="subject" value="<?php echo esc_attr($saved['subject']); ?>" required></p>
+			<p><strong>Message</strong></p>
+			<?php
+			wp_editor($saved['message'], 'wsm_compose_message', array(
+				'textarea_name' => 'message',
+				'textarea_rows' => 12,
+				'media_buttons' => false,
+				'teeny' => true,
+			));
+			?>
+		</div>
+		<div class="wsm-form-foot">
+			<button type="submit" class="button button-primary button-large">Send email</button>
+		</div>
+	</form>
+	<?php
+}
+
 function wholesale_email_smtp_tab($status)
 {
 	$settings = wholesale_mail_settings();
@@ -1211,8 +1361,8 @@ function wholesale_email_smtp_tab($status)
 			<input type="hidden" name="action" value="wholesale_save_smtp">
 			<?php wp_nonce_field('wholesale_save_smtp'); ?>
 
-			<?php if ('wp-config' === $settings['source']) : ?>
-				<div class="wsm-alert is-info">These values come from <code>wp-config.php</code>. Once you save here, this page's settings are used instead.</div>
+			<?php if ('none' === $settings['source']) : ?>
+				<div class="wsm-alert is-info">Nothing is saved here yet, so the site uses the default WordPress mailer. SMTP details are only taken from this page, never from <code>wp-config.php</code>.</div>
 			<?php endif; ?>
 
 			<div class="wsm-section">
@@ -1311,7 +1461,8 @@ function wholesale_email_smtp_tab($status)
 				<div class="wsm-row">
 					<div class="wsm-field wsm-grow">
 						<label class="wsm-label" for="wsm-from-email">From email</label>
-						<input type="email" id="wsm-from-email" name="from_email" value="<?php echo esc_attr($settings['from_email']); ?>" placeholder="<?php echo esc_attr(get_option('admin_email')); ?>">
+						<input type="email" id="wsm-from-email" name="from_email" value="<?php echo esc_attr($settings['from_email']); ?>" placeholder="<?php echo esc_attr(wholesale_mail_default_from_email()); ?>">
+						<p class="wsm-muted">With the default mailer, a Gmail, Yahoo or Outlook.com address here is replaced by <?php echo esc_html(wholesale_mail_default_from_email()); ?>: those providers reject mail that claims to be from them but is sent by this web server.</p>
 					</div>
 					<div class="wsm-field wsm-grow">
 						<label class="wsm-label" for="wsm-from-name">From name</label>
@@ -1357,7 +1508,7 @@ function wholesale_email_smtp_tab($status)
 				</div>
 				<label class="wsm-label" for="wsm-recipients">Notification recipients</label>
 				<textarea id="wsm-recipients" name="notify_recipients" rows="3" class="wsm-textarea" spellcheck="false"><?php echo esc_textarea(implode("\n", wholesale_contact_admin_recipients())); ?></textarea>
-				<p class="wsm-muted">One email address per line (or separated by commas).</p>
+				<p class="wsm-muted">One email address per line (or separated by commas). Contact forms and quote requests send each address its own copy, so each one shows as its own row in the Email Log.</p>
 			</div>
 
 			<div class="wsm-form-foot">
@@ -1385,7 +1536,7 @@ function wholesale_email_smtp_tab($status)
 				</div>
 				<dl class="wsm-kv">
 					<div><dt>From</dt><dd><?php echo esc_html(wholesale_mail_from_name() . ' <' . $status['from'] . '>'); ?></dd></div>
-					<div><dt>Settings from</dt><dd><?php echo 'admin' === $status['source'] ? 'This page' : 'wp-config.php'; ?></dd></div>
+					<div><dt>Settings from</dt><dd><?php echo 'admin' === $status['source'] ? 'This page' : 'Not saved yet (default mailer)'; ?></dd></div>
 				</dl>
 				<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
 					<input type="hidden" name="action" value="wholesale_test_smtp">
@@ -1606,6 +1757,7 @@ function wholesale_email_admin_styles()
 		.wsm-switch.is-small .wsm-switch-ui::after{width:14px;height:14px}
 		.wsm-switch.is-small input:checked+.wsm-switch-ui::after{transform:translateX(16px)}
 		.is-disabled{opacity:.45;pointer-events:none}
+		.wsm-compose{max-width:860px}.wsm-compose .wsm-section{padding:20px 24px}.wsm-compose textarea.large-text{width:100%;border-radius:6px}.wsm-compose .description{color:var(--wsm-muted)}
 		.wsm-form-foot{padding:16px 24px;background:#fbfbfc;border-radius:0 0 var(--wsm-radius) var(--wsm-radius);position:sticky;bottom:0}
 		.wsm-side{display:flex;flex-direction:column;gap:16px}
 		.wsm-side .wsm-card{padding:18px}

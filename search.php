@@ -24,6 +24,10 @@ global $wp_query;
 $phone_display = '866-436-2101';
 $phone_href    = 'tel:+18664362101';
 $sms_href      = 'sms:+18664362101';
+// Trade texts go to the text line the header and footer use (206-618-6543), not the 866 call line.
+if (function_exists('wholesale_is_trade_site') && wholesale_is_trade_site()) {
+	$sms_href = 'sms:+12066186543';
+}
 $popular       = array('Channel letters', '13oz vinyl banner', 'Flags', 'Adhesive vinyl', 'Trade show');
 
 /* ---------------------------------------------------------------------
@@ -467,17 +471,23 @@ $icon = static function ($name, $size = 20) {
 		position: relative;
 		display: grid;
 		place-items: center;
-		aspect-ratio: 4 / 3;
+		grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+		/* Product photos are square, so a square frame shows them whole. */
+		aspect-ratio: 1 / 1;
+		overflow: hidden;
 		border-bottom: 1px solid var(--srp-line);
 		background: #f6f9fb;
 		color: #a9b8c5;
 	}
 
+	/* The photo fills the whole thumbnail, edge to edge. */
 	.srp-card__img {
+		align-self: stretch;
+		justify-self: stretch;
 		width: 100%;
 		height: 100%;
-		padding: 10px;
-		object-fit: contain;
+		object-fit: cover;
+		object-position: center;
 	}
 
 	.srp-badge {
@@ -1053,7 +1063,7 @@ $icon = static function ($name, $size = 20) {
 			<aside class="srp-help" aria-label="<?php esc_attr_e('Need help', 'litsign'); ?>">
 				<div>
 					<h2>Can&rsquo;t find the right sign?</h2>
-					<p>Our team is happy to help with sizes, materials and quotes. Mon&ndash;Fri 8am&ndash;5pm PT.</p>
+					<p>Our team is happy to help with sizes, materials and quotes. Mon&ndash;Fri 8am&ndash;5pm PST.</p>
 				</div>
 				<div class="srp-help__actions">
 					<a class="srp-btn srp-btn--solid" href="<?php echo esc_url($phone_href); ?>"><?php echo $icon('phone', 18); // Static SVG. ?> Call <?php echo esc_html($phone_display); ?></a>

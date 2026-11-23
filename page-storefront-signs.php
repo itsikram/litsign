@@ -11,7 +11,7 @@
 
 $builder_url = home_url('/channel-letter-builder/');
 $contact_page = get_page_by_path('contact');
-$contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
+$contact_url = function_exists('wholesale_quote_url') ? wholesale_quote_url('channel-letters', '', false) : ($contact_page ? get_permalink($contact_page) : home_url('/contact/'));
 $channel_letters_url = home_url('/');
 
 $product_url = static function ($slug, $fallback) {
@@ -24,17 +24,22 @@ $halo_heights = wholesale_seo_letter_height_range('hidden-back-halo-lit');
 $min_height = $front_lit_heights ? $front_lit_heights[0] : 8;
 $max_height = $front_lit_heights ? $front_lit_heights[1] : 0;
 
-// Sign types: product slug (image and starting price), link, name, summary, lit?, typical use.
+// Sign types: product slug (image and starting price), link, name, summary, lit?, typical use,
+// and for a product category link, its slug: the card then starts at the category's cheapest
+// Starting at, as on every other category card.
 $sign_types = array(
 	array('standard-channel-letter-front-lit', $channel_letters_url, 'LED Channel Letters', 'Individually built, LED lit letters mounted on your building or on a raceway. The most popular lit storefront sign for retail stores, restaurants and offices.', true, 'Primary building sign'),
 	array('hidden-back-halo-lit', $product_url('hidden-back-halo-lit', $channel_letters_url), 'Halo &amp; Reverse Lit Letters', 'Letters with solid metal faces that glow onto the wall behind them, for an upscale look at salons, boutiques, clinics and professional offices.', true, 'Premium building sign'),
 	array('exposed-acrylic-face-lit-borderless-no-trimcap', $product_url('exposed-acrylic-face-lit-borderless-no-trimcap', $channel_letters_url), 'Trimless &amp; Borderless Letters', 'Face lit letters without a plastic trimcap for a clean, modern edge that suits contemporary brands.', true, 'Modern building sign'),
-	array('adhesive-window-perf', wholesale_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted and clear films and removable clings that turn your glass into advertising for hours, offers and branding.', false, 'Windows and doors'),
-	array('deluxe-signicade-graphic-frame', wholesale_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street, with printed graphics you can swap as promotions change.', false, 'Sidewalk and entrance'),
-	array('13oz-vinyl-banner', wholesale_category_url('banners'), 'Banners', 'Fast, affordable signs for grand openings and sales, or a temporary sign while your permanent storefront sign is being made.', false, 'Openings and promotions'),
-	array('feather-angled-flag-pole', wholesale_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that move in the wind and catch drivers&rsquo; attention from the road.', false, 'Roadside visibility'),
-	array('aluminum-sign', wholesale_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours, parking and wayfinding around your building.', false, 'Doors, hours and parking'),
+	array('adhesive-window-perf', wholesale_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted and clear films and removable clings that turn your glass into advertising for hours, offers and branding.', false, 'Windows and doors', 'adhesive-products'),
+	array('deluxe-signicade-graphic-frame', wholesale_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street, with printed graphics you can swap as promotions change.', false, 'Sidewalk and entrance', 'signicade-a-frames'),
+	array('13oz-vinyl-banner', wholesale_category_url('banners'), 'Banners', 'Fast, affordable signs for grand openings and sales, or a temporary sign while your permanent storefront sign is being made.', false, 'Openings and promotions', 'banners'),
+	array('feather-angled-flag-pole', wholesale_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that move in the wind and catch drivers&rsquo; attention from the road.', false, 'Roadside visibility', 'advertising-flags'),
+	array('aluminum-sign', wholesale_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours, parking and wayfinding around your building.', false, 'Doors, hours and parking', 'rigid-signs-and-magnets'),
 );
+$type_starting_text = static function ($type) {
+	return isset($type[6]) ? wholesale_seo_category_starting_text($type[6]) : wholesale_seo_product_starting_text($type[0]);
+};
 
 // Channel letter styles and where each starts, for the pricing section.
 $cl_styles = array(
@@ -58,7 +63,7 @@ wholesale_seo_set_page_faq(array(
 	),
 	array(
 		'q' => 'How much does a storefront sign cost?',
-		'a' => 'Channel letters are priced per letter by letter height, so the total depends on how many letters you need, how tall they are and the style. Each style shows its starting price, and the <a href="' . esc_url($builder_url) . '">online sign builder</a> shows your full price as you design. Window graphics and banners are priced per square foot.',
+		'a' => 'Channel letter starting rates are shown per inch of letter height. The full price depends on how many letters you need, how tall they are and the style. Each style shows its starting rate, and the <a href="' . esc_url($builder_url) . '">online sign builder</a> shows your full price as you design. Window graphics and banners are priced per square foot.',
 	),
 	array(
 		'q' => 'What size should my storefront sign letters be?',
@@ -118,7 +123,7 @@ get_header();
 				<?php foreach ($sign_types as $type) : ?>
 					<?php
 					$type_product = wholesale_seo_product($type[0]);
-					$type_price = wholesale_price_no_cents(wholesale_seo_product_starting_text($type[0]));
+					$type_price = wholesale_price_no_cents($type_starting_text($type));
 					?>
 					<article class="sf-type-card">
 						<a class="sf-type-image" href="<?php echo esc_url($type[1]); ?>" tabindex="-1" aria-hidden="true">
@@ -167,7 +172,7 @@ get_header();
 								<th scope="row"><a href="<?php echo esc_url($type[1]); ?>"><?php echo wp_kses_post($type[2]); ?></a></th>
 								<td><?php echo $type[4] ? 'Yes, LED' : 'No'; ?></td>
 								<td><?php echo esc_html($type[5]); ?></td>
-								<td class="cl-compare-price"><?php echo wp_kses_post(wholesale_seo_product_starting_text($type[0])); ?></td>
+								<td class="cl-compare-price"><?php echo wp_kses_post($type_starting_text($type)); ?></td>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
@@ -253,7 +258,7 @@ get_header();
 		<div class="container sf-prose">
 			<p class="cl-kicker">Pricing guidance</p>
 			<h2 id="sf-pricing-title" class="cl-section-title">How Much Does a Storefront Sign Cost?</h2>
-			<p>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, so a short name in smaller letters costs far less than a long name in tall letters. You see the full price before checkout.<?php $cost_page = get_page_by_path('channel-letter-cost'); if ($cost_page && 'publish' === $cost_page->post_status) : ?> See prices for every style and height, with example signs, in our <a href="<?php echo esc_url(get_permalink($cost_page)); ?>">channel letter cost guide</a>.<?php endif; ?></p>
+			<p>Starting rates are shown per inch of letter height. Your total depends on the number of letters, the height you choose and options such as a raceway, so a short name in smaller letters costs far less than a long name in tall letters. You see the full price before checkout.<?php $cost_page = get_page_by_path('channel-letter-cost'); if ($cost_page && 'publish' === $cost_page->post_status) : ?> See prices for every style and height, with example signs, in our <a href="<?php echo esc_url(get_permalink($cost_page)); ?>">channel letter cost guide</a>.<?php endif; ?></p>
 			<div class="cl-compare-table-wrap">
 				<table class="cl-compare-table sf-price-table" aria-label="Channel letter starting prices by style">
 					<thead>
@@ -302,7 +307,7 @@ get_header();
 			<div class="cl-help-actions">
 				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
 				<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+				<a class="cl-help-action" href="mailto:Info@StorefrontSignWholesale.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>Info@StorefrontSignWholesale.com</span></a>
 				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
 			</div>
 		</div>

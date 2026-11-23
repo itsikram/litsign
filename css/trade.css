@@ -194,6 +194,22 @@
 	}
 }
 
+/* Hero that sits under breadcrumbs: the crumb row already adds space above, so
+   the content needs less top padding than the bottom. Keeps the space above
+   and below the content even (replaces an inline padding-top:28px that left 28px
+   above and 80px below on desktop). */
+.tw-hero__in--crumbs {
+	padding-top: 24px;
+	padding-bottom: 48px;
+}
+
+@media (min-width: 992px) {
+	.tw-hero__in--crumbs {
+		padding-top: 44px;
+		padding-bottom: 64px;
+	}
+}
+
 .tw-hero .tw-eyebrow {
 	color: var(--tw-glow);
 }
@@ -265,6 +281,195 @@
 	font-size: 13px;
 	font-weight: 600;
 	backdrop-filter: blur(4px);
+}
+
+/* Channel letter hub: let the storefront photo carry the right side of the hero. */
+.tw-hub-hero {
+	background: #061b34;
+}
+
+.tw-hub-hero::before,
+.tw-hub-hero::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.tw-hub-hero::before {
+	background: url("../img/hero-1920.webp") center center / cover no-repeat;
+}
+
+.tw-hub-hero::after {
+	background: linear-gradient(90deg, #061b34 0%, rgba(6, 27, 52, .98) 26%, rgba(6, 27, 52, .84) 47%, rgba(6, 27, 52, .18) 78%, rgba(6, 27, 52, .08) 100%);
+}
+
+.tw-hub-hero > .tw-wrap,
+.tw-hub-hero__benefits {
+	position: relative;
+	z-index: 1;
+}
+
+.tw-hub-hero .tw-hero__in {
+	display: flex;
+	min-height: 570px;
+	padding-top: 48px;
+	padding-bottom: 62px;
+}
+
+.tw-hub-hero__copy {
+	width: 100%;
+	min-width: 0;
+	max-width: 690px;
+}
+
+.tw-hub-hero .tw-eyebrow {
+	display: inline-block;
+	max-width: 100%;
+	margin-bottom: 22px;
+	padding: 7px 13px;
+	border: 1px solid rgba(255, 255, 255, .3);
+	border-radius: 999px;
+	background: rgba(255, 255, 255, .08);
+	color: #fff;
+	font-size: 12px;
+	letter-spacing: .06em;
+}
+
+.tw-hub-hero .tw-eyebrow span,
+.tw-hub-hero__proof span {
+	padding: 0 3px;
+	color: #59cafa;
+}
+
+.tw-hub-hero .tw-hero__title {
+	max-width: 680px;
+	margin-bottom: 17px;
+	font-size: clamp(38px, 4.1vw, 58px);
+	line-height: 1.08;
+	letter-spacing: -.035em;
+}
+
+.tw-hub-hero .tw-hero__title em {
+	color: #4bc4f4;
+	text-shadow: none;
+}
+
+.tw-hub-hero__proof {
+	margin: 0 0 23px;
+	color: #f1f6fa;
+	font-size: 15px;
+	font-weight: 700;
+}
+
+.tw-hub-hero .tw-hero__text {
+	max-width: 620px;
+	margin-bottom: 27px;
+	color: #e0eaf2;
+	font-size: 18px;
+	line-height: 1.55;
+}
+
+.tw-hub-hero .tw-hero__actions {
+	margin-bottom: 14px;
+}
+
+.tw-hub-hero .tw-btn {
+	min-height: 54px;
+	padding-inline: 24px;
+}
+
+.tw-hub-hero .tw-btn--ghost-light {
+	background: rgba(6, 27, 52, .22);
+}
+
+.tw-hub-hero__detail {
+	margin: 0;
+	color: #d5e3ed;
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+.tw-hub-hero__benefits {
+	border-top: 1px solid rgba(255, 255, 255, .22);
+	background: rgba(5, 20, 38, .8);
+}
+
+.tw-hub-hero__benefits-in {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 24px;
+	padding-top: 17px;
+	padding-bottom: 18px;
+}
+
+.tw-hub-hero__benefits p {
+	margin: 0;
+}
+
+.tw-hub-hero__benefits strong,
+.tw-hub-hero__benefits span {
+	display: block;
+}
+
+.tw-hub-hero__benefits strong {
+	color: #fff;
+	font-size: 15px;
+	line-height: 1.3;
+}
+
+.tw-hub-hero__benefits span {
+	color: #bdd0df;
+	font-size: 13px;
+	line-height: 1.4;
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+	.tw-hub-hero::after {
+		background: linear-gradient(90deg, #061b34 0%, rgba(6, 27, 52, .96) 50%, rgba(6, 27, 52, .68) 100%);
+	}
+}
+
+@media (max-width: 767px) {
+	.tw-hub-hero::before {
+		background-position: 70% center;
+	}
+
+	.tw-hub-hero::after {
+		background: linear-gradient(180deg, rgba(6, 27, 52, .84), rgba(6, 27, 52, .96) 42%, #061b34 100%);
+	}
+
+	.tw-hub-hero .tw-hero__in {
+		display: block;
+		min-height: 0;
+		padding-top: 38px;
+		padding-bottom: 48px;
+	}
+
+	.tw-hub-hero .tw-hero__title {
+		font-size: clamp(36px, 9vw, 48px);
+	}
+
+	.tw-hub-hero__proof {
+		font-size: 14px;
+		line-height: 1.5;
+	}
+
+	.tw-hub-hero .tw-hero__text {
+		font-size: 16px;
+	}
+
+	.tw-hub-hero__benefits-in {
+		grid-template-columns: 1fr;
+		gap: 10px;
+	}
+}
+
+@media (max-width: 440px) {
+	.tw-hub-hero .tw-hero__actions {
+		flex-direction: column;
+		align-items: stretch;
+	}
 }
 
 /* Proof strip */
@@ -994,12 +1199,10 @@
 	flex: 0 0 20px;
 }
 
+/* Spam trap on the trade application. display:none (not just off-screen) so
+   browser autofill and password managers skip it: off-screen fields get filled. */
 .tw-hp {
-	position: absolute !important;
-	left: -10000px !important;
-	width: 1px;
-	height: 1px;
-	overflow: hidden;
+	display: none !important;
 }
 
 .tw-alert {
@@ -1268,4 +1471,152 @@
 .tw-related__list a:hover {
 	border-color: var(--tw-blue);
 	color: var(--tw-blue);
+}
+
+/* Terms and Conditions (template-parts/trade/terms.php) */
+.tw-legal__intro {
+	padding-top: 28px;
+	padding-bottom: 44px;
+}
+
+.tw-terms .tw-hero__title {
+	font-size: clamp(30px, 4.4vw, 46px);
+}
+
+.tw-terms .tw-hero__text {
+	margin-bottom: 12px;
+}
+
+.tw-legal__updated {
+	margin: 0;
+	color: #9fb1c2;
+	font-size: 14px;
+}
+
+.tw-legal {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 24px;
+	padding-top: 24px;
+	padding-bottom: 64px;
+}
+
+.tw-legal__toc {
+	border: 1px solid var(--tw-line);
+	border-radius: var(--tw-radius);
+	background: var(--tw-soft);
+}
+
+.tw-legal__toc summary {
+	padding: 12px 16px;
+	color: var(--tw-navy);
+	font-size: 15px;
+	font-weight: 700;
+	cursor: pointer;
+}
+
+.tw-legal__toc ol {
+	margin: 0;
+	padding: 0 16px 14px 36px;
+	font-size: 15px;
+}
+
+.tw-legal__toc li {
+	padding: 4px 0;
+}
+
+.tw-legal__toc li::marker {
+	color: var(--tw-muted);
+}
+
+.tw-legal__toc a {
+	color: var(--tw-ink);
+	text-decoration: none;
+}
+
+.tw-legal__toc a:hover {
+	color: var(--tw-blue);
+	text-decoration: underline;
+}
+
+.tw-legal__body {
+	min-width: 0;
+	max-width: 760px;
+	text-align: left;
+}
+
+.tw-legal__heading {
+	margin: 36px 0 12px;
+	padding-top: 28px;
+	border-top: 1px solid var(--tw-line);
+	color: var(--tw-navy);
+	font-size: 22px;
+	font-weight: 800;
+	line-height: 1.25;
+	letter-spacing: -.005em;
+	scroll-margin-top: 130px;
+}
+
+.tw-legal__heading:first-child {
+	margin-top: 0;
+	padding-top: 0;
+	border-top: 0;
+}
+
+.tw-legal__num {
+	color: var(--tw-blue);
+}
+
+.tw-legal__body p {
+	margin: 0 0 14px;
+}
+
+.tw-legal__body ul {
+	margin: 0 0 14px;
+	padding-left: 22px;
+}
+
+.tw-legal__body li {
+	margin-bottom: 8px;
+}
+
+.tw-legal__body a {
+	color: var(--tw-blue);
+	text-decoration: underline;
+	overflow-wrap: anywhere;
+}
+
+.tw-legal__body a:hover {
+	color: var(--tw-blue-hover);
+}
+
+.tw-legal__contact {
+	display: grid;
+	gap: 14px;
+}
+
+.tw-legal__contact p {
+	margin: 0;
+	color: var(--tw-ink);
+}
+
+@media (min-width: 640px) {
+	.tw-legal__contact {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 992px) {
+	.tw-legal {
+		grid-template-columns: 270px minmax(0, 1fr);
+		gap: 56px;
+		padding-top: 48px;
+		padding-bottom: 88px;
+	}
+
+	.tw-legal__aside {
+		position: sticky;
+		top: 150px;
+		align-self: start;
+	}
 }

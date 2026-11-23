@@ -553,14 +553,15 @@ function wholesale_ticket_builder_context($product_id)
 }
 
 /**
- * The builder's Save button uploads the design image and then redirects to its
- * "product permalink" with ?save_design=1&design_data=…&design_id=…. In ticket
+ * The builder's Save button uploads the design image and then posts
+ * save_design, design_data and design_id to its "product permalink" (POST, since
+ * the design JSON can be longer than a URL allows; GET still works). In ticket
  * mode that permalink is admin-post.php with no action, which WordPress
  * routes to the `admin_post` hook for logged-in users.
  */
 function wholesale_ticket_save_builder_design()
 {
-    if (!isset($_GET['save_design'], $_GET['design_id'], $_GET['design_data'])) {
+    if (!isset($_REQUEST['save_design'], $_REQUEST['design_id'], $_REQUEST['design_data'])) {
         return;
     }
 
@@ -572,9 +573,9 @@ function wholesale_ticket_save_builder_design()
 
     $ticket_id = (int) $pending['ticket'];
     $product_id = (int) $pending['product'];
-    $design_id = absint($_GET['design_id']);
+    $design_id = absint($_REQUEST['design_id']);
     $uploads = isset($_SESSION['wholesale_design_uploads']) && is_array($_SESSION['wholesale_design_uploads']) ? array_map('absint', $_SESSION['wholesale_design_uploads']) : array();
-    $design = json_decode(wp_unslash((string) $_GET['design_data']), true);
+    $design = json_decode(wp_unslash((string) $_REQUEST['design_data']), true);
     $ticket = current_user_can('edit_post', $ticket_id) ? wholesale_get_ticket($ticket_id) : null;
     $index = $ticket ? wholesale_ticket_find_line($ticket, $pending['line']) : null;
 

@@ -64,6 +64,14 @@ get_header();
 
         <?php echo wholesale_order_steps_html($post_id); // Every stage, step by step; escaped in the helper. ?>
 
+        <?php $artwork_missing = !$is_staff && function_exists('wholesale_order_artwork_is_owner') && wholesale_order_artwork_is_owner($post_id) ? wholesale_order_artwork_missing_lines($post_id) : array(); ?>
+        <?php if ($artwork_missing) : ?>
+            <p class="order-artwork-alert checkout-card" role="note">
+                <strong><?php echo esc_html(1 === count($artwork_missing) ? 'An item on this order has no artwork yet.' : count($artwork_missing) . ' items on this order have no artwork yet.'); ?></strong>
+                <a href="#artwork-line-<?php echo esc_attr($artwork_missing[0]); ?>">Upload it below</a> so we can start on your order.
+            </p>
+        <?php endif; ?>
+
         <?php $shipments_html = (string) apply_filters('wholesale_order_shipments_html', '', $post_id, 'order'); ?>
         <?php if ('' !== $shipments_html) : ?>
             <?php echo $shipments_html; // Every package with live status, escaped by the tracking sync plugin. ?>
@@ -97,10 +105,15 @@ get_header();
 
         <div class="confirmation-grid">
             <section class="cart-items" aria-label="Items">
-                <?php foreach ($items as $item) :
+                <?php foreach ($items as $line_index => $item) :
                     $details = (array) ($item['product_details'] ?? array());
                     $image = !empty($details['Design Url']) ? $details['Design Url'] : ($item['product_thumbnail'] ?? '');
                     $specs = wholesale_item_specs($item);
+                    // Artwork box: the file, and an upload for a missing file (inc/order-artwork.php).
+                    $artwork_box = function_exists('wholesale_order_artwork_box_html') && is_array($item) ? wholesale_order_artwork_box_html($post_id, $line_index, $item, 'site') : '';
+                    if ('' !== $artwork_box) {
+                        unset($specs['My Artwork']);
+                    }
                     $design = !empty($item['design_id']) ? json_decode((string) get_post_meta((int) $item['design_id'], '_cl_data', true), true) : null;
                     $quantity = max(1, (int) ($item['product_quantity'] ?? 1));
                     $product_id = absint($item['product_id'] ?? ($details['Product Id'] ?? 0));
@@ -161,9 +174,12 @@ get_header();
                                 </details>
                             <?php endif; ?>
 
+                            <?php echo $artwork_box; // Escaped in wholesale_order_artwork_box_html(). ?>
+
                             <?php if ($product_url) : ?>
                                 <div class="cart-line-actions">
-                                    <a class="order-view-product" href="<?php echo esc_url($product_url); ?>">View product</a>
+                                    <a class="order-view-product" href="<?php echo esc_url($product_url); ?>" aria-describedby="order-again-note-<?php echo esc_attr($product_id); ?>">Order again</a>
+                                    <small class="order-again-note" style="flex-basis:100%;order:9;color:#55606b;font-size:.8rem" id="order-again-note-<?php echo esc_attr($product_id); ?>">Opens the product at today&rsquo;s price. Choose your size and options and upload or confirm your artwork before adding it to the cart.</small>
                                     <?php if (isset($review_links[$product_id])) : ?>
                                         <a class="order-write-review" href="<?php echo esc_url($review_links[$product_id]); ?>">&#9733; Write a review</a>
                                     <?php elseif ($can_collect_reviews && wholesale_order_review_id($post_id, $product_id)) : ?>

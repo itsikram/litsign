@@ -1,0 +1,437 @@
+/**
+ * Live search results (async), used by the desktop header search and the
+ * mobile menu search. Moved out of header.php on 2026-11-11 so every page's
+ * HTML is ~9 KB lighter; header.php loads it without blocking the first paint
+ * (the results panel is built by js/live-search.js, only after typing).
+ */
+/* ===================================================================
+ * Live search results (async). Used by the desktop header search and
+ * the mobile menu search. Everything is scoped under .ssx-results.
+ * =================================================================== */
+.ssx-results {
+	--r-blue: #1fa8de;
+	--r-blue-text: #0e7aa6;
+	--r-tint: #e6f6fc;
+	--r-ink: #17222e;
+	--r-muted: #5c6b7a;
+	--r-line: #e2e8ee;
+	--r-soft: #f3f6f9;
+	position: absolute;
+	left: 0;
+	right: 0;
+	top: calc(100% + 8px);
+	z-index: 6;
+	overflow: hidden;
+	border: 1px solid var(--r-line);
+	border-radius: 16px;
+	background: #fff;
+	box-shadow: 0 18px 40px rgba(13, 34, 54, .18);
+	color: var(--r-ink);
+	font: 15px/1.4 var(--font-sans, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif);
+	text-align: left;
+	animation: ssx-r-in .14s ease-out;
+}
+
+.ssx-results[hidden] {
+	display: none !important;
+}
+
+.ssx-results *,
+.ssx-results *::before,
+.ssx-results *::after {
+	box-sizing: border-box;
+}
+
+.ssx-results--inline {
+	position: relative;
+	top: auto;
+	left: auto;
+	right: auto;
+	margin-top: 12px;
+	box-shadow: 0 8px 24px rgba(13, 34, 54, .12);
+}
+
+/* Thin progress bar while a request is in flight */
+.ssx-results::before {
+	content: "";
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: 1;
+	width: 40%;
+	height: 2px;
+	background: var(--r-blue);
+	opacity: 0;
+	pointer-events: none;
+}
+
+.ssx-results.is-loading::before {
+	opacity: 1;
+	animation: ssx-r-bar 1s ease-in-out infinite;
+}
+
+.ssx-r-vh {
+	position: absolute !important;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0 0 0 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.ssx-results .ssx-r-svg {
+	display: block;
+	flex: none;
+}
+
+/* Header row */
+.ssx-results .ssx-results__head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 12px 18px 4px;
+	color: var(--r-muted);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+}
+
+.ssx-results .ssx-results__count {
+	font-weight: 600;
+	letter-spacing: 0;
+	text-transform: none;
+}
+
+/* Result rows */
+.ssx-results .ssx-results__list {
+	list-style: none;
+	margin: 0;
+	padding: 6px;
+	max-height: min(56vh, 420px);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.ssx-results .ssx-results__list li {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.ssx-results .ssx-res {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 8px 10px;
+	border-radius: 12px;
+	color: var(--r-ink);
+	text-decoration: none;
+	transition: background-color .12s;
+}
+
+.ssx-results .ssx-res:hover,
+.ssx-results .ssx-res.is-active {
+	background: var(--r-tint);
+}
+
+.ssx-results .ssx-res.is-active {
+	box-shadow: inset 3px 0 0 var(--r-blue);
+}
+
+.ssx-results .ssx-res__thumb {
+	flex: none;
+	display: grid;
+	place-items: center;
+	width: 52px;
+	height: 52px;
+	overflow: hidden;
+	border: 1px solid var(--r-line);
+	border-radius: 10px;
+	background: var(--r-soft);
+	color: #9aa9b7;
+}
+
+.ssx-results .ssx-res__thumb img {
+	display: block;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.ssx-results .ssx-res__body {
+	flex: 1;
+	min-width: 0;
+}
+
+.ssx-results .ssx-res__title {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.ssx-results mark {
+	padding: 0 1px;
+	border-radius: 3px;
+	background: rgba(31, 168, 222, .2);
+	color: inherit;
+}
+
+.ssx-results .ssx-res__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 10px;
+	margin-top: 2px;
+	color: var(--r-muted);
+	font-size: 13px;
+}
+
+.ssx-results .ssx-res__price {
+	color: var(--r-blue-text);
+	font-weight: 700;
+}
+
+.ssx-results .ssx-res__go {
+	flex: none;
+	color: var(--r-blue-text);
+	opacity: 0;
+	transform: translateX(-4px);
+	transition: opacity .12s, transform .12s;
+}
+
+.ssx-results .ssx-res:hover .ssx-res__go,
+.ssx-results .ssx-res.is-active .ssx-res__go {
+	opacity: 1;
+	transform: none;
+}
+
+/* "See all results" footer */
+.ssx-results .ssx-results__all {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 13px 18px;
+	border-top: 1px solid var(--r-line);
+	background: var(--r-soft);
+	color: var(--r-blue-text);
+	font-weight: 600;
+	text-decoration: none;
+	transition: background-color .12s;
+}
+
+.ssx-results .ssx-results__all strong {
+	color: var(--r-ink);
+	font-weight: 700;
+}
+
+.ssx-results .ssx-results__all:hover,
+.ssx-results .ssx-results__all.is-active {
+	background: #dcf1fa;
+}
+
+/* Loading skeleton */
+.ssx-results .ssx-results__skel {
+	padding: 8px 6px 10px;
+}
+
+.ssx-results .ssx-sk {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 8px 10px;
+}
+
+.ssx-results .ssx-sk__img,
+.ssx-results .ssx-sk__l1,
+.ssx-results .ssx-sk__l2 {
+	display: block;
+	border-radius: 8px;
+	background: linear-gradient(90deg, #eef2f6 25%, #f8fafc 37%, #eef2f6 63%);
+	background-size: 400% 100%;
+	animation: ssx-r-shimmer 1.3s ease infinite;
+}
+
+.ssx-results .ssx-sk__img {
+	flex: none;
+	width: 52px;
+	height: 52px;
+	border-radius: 10px;
+}
+
+.ssx-results .ssx-sk__txt {
+	flex: 1;
+	display: grid;
+	gap: 8px;
+}
+
+.ssx-results .ssx-sk__l1 {
+	width: 70%;
+	height: 14px;
+}
+
+.ssx-results .ssx-sk__l2 {
+	width: 38%;
+	height: 11px;
+}
+
+/* Empty + error states */
+.ssx-results .ssx-results__empty {
+	padding: 26px 22px 22px;
+	text-align: center;
+}
+
+.ssx-results .ssx-results__empty-ico {
+	display: inline-grid;
+	place-items: center;
+	width: 48px;
+	height: 48px;
+	margin-bottom: 10px;
+	border-radius: 50%;
+	background: var(--r-soft);
+	color: var(--r-muted);
+}
+
+.ssx-results .ssx-results__empty-title {
+	margin: 0;
+	font-size: 16px;
+	font-weight: 700;
+	word-break: break-word;
+}
+
+.ssx-results .ssx-results__empty-sub {
+	margin: 4px 0 0;
+	color: var(--r-muted);
+	font-size: 14px;
+}
+
+.ssx-results .ssx-results__empty-label {
+	margin: 18px 0 8px;
+	color: var(--r-muted);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: .04em;
+	text-transform: uppercase;
+}
+
+.ssx-results .ssx-results__chips {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 8px;
+}
+
+.ssx-results .ssx-results__chip {
+	display: inline-flex;
+	align-items: center;
+	min-height: 34px;
+	padding: 0 13px;
+	border: 1px solid var(--r-line);
+	border-radius: 999px;
+	background: var(--r-soft);
+	color: var(--r-ink);
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: none;
+	transition: background-color .15s, border-color .15s, color .15s;
+}
+
+.ssx-results .ssx-results__chip:hover {
+	border-color: var(--r-blue);
+	background: var(--r-tint);
+	color: var(--r-blue-text);
+}
+
+.ssx-results .ssx-results__help {
+	display: inline-block;
+	margin-top: 16px;
+	color: var(--r-blue-text);
+	font-size: 14px;
+	font-weight: 700;
+	text-decoration: none;
+}
+
+.ssx-results .ssx-results__help:hover {
+	text-decoration: underline;
+}
+
+.ssx-results .ssx-results__retry {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 40px;
+	margin-top: 14px;
+	padding: 0 20px;
+	border: 0;
+	border-radius: 999px;
+	background: var(--r-blue);
+	color: #fff;
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+	transition: background-color .15s;
+}
+
+.ssx-results .ssx-results__retry:hover {
+	background: #1790c0;
+}
+
+@media (max-width: 575px) {
+	.ssx-results .ssx-res__thumb {
+		width: 46px;
+		height: 46px;
+	}
+
+	.ssx-results .ssx-res__go {
+		display: none;
+	}
+}
+
+@keyframes ssx-r-in {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+@keyframes ssx-r-bar {
+	0% {
+		transform: translateX(-100%);
+	}
+
+	100% {
+		transform: translateX(250%);
+	}
+}
+
+@keyframes ssx-r-shimmer {
+	0% {
+		background-position: 100% 50%;
+	}
+
+	100% {
+		background-position: 0 50%;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+	.ssx-results,
+	.ssx-results *,
+	.ssx-results::before {
+		animation-duration: 0s !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0s !important;
+	}
+}

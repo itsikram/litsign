@@ -11,13 +11,19 @@ class Cart
     {
 
         if (isset($_SESSION['cart_items'])) {
-            $cart_session = str_replace("\\", '', $_SESSION['cart_items']);
-            if (is_array(json_decode($cart_session))) {
-                $this->have_items = count(json_decode($cart_session)) == 0 ? false : true;
+            // Plain JSON. Stripping every backslash first, as before, broke any line whose job
+            // name or sign text held a double quote and emptied the whole cart. Sessions saved
+            // that way (no backslashes left) still decode on the fallback.
+            $cart_decoded = json_decode((string) $_SESSION['cart_items']);
+            if (!is_array($cart_decoded)) {
+                $cart_decoded = json_decode(str_replace("\\", '', (string) $_SESSION['cart_items']));
+            }
+            if (is_array($cart_decoded)) {
+                $this->have_items = count($cart_decoded) == 0 ? false : true;
             }
 
             if ($this->have_items) {
-                $this->cart_items = json_decode($cart_session) ? json_decode($cart_session) : [];
+                $this->cart_items = $cart_decoded;
 
                 foreach ($this->cart_items as $item) {
                     $this->sub_total = floatval($this->sub_total) + floatval($item->product_subtotal);
@@ -48,7 +54,10 @@ class Cart
                 }
 
                 foreach ($single_option as $title => $value) {
-                    if (trim((string) $value) == trim((string) $match)) {
+                    // The posted value went through sanitize_text_field(), which collapses
+                    // double spaces (round table cover: '31.5"  (Overhang 27")'), the same
+                    // fallback the price check accepts (inc/pricing.php).
+                    if (trim((string) $value) == trim((string) $match) || sanitize_text_field((string) $value) === trim((string) $match)) {
                         return $title;
                     }
                 }
@@ -176,6 +185,13 @@ class Cart
         $artwork_id = null;
         $attachment_src = null;
 
+        // Artwork must have the shape of the size ordered (inc/artwork-size-check.php). Checked
+        // before the held upload is claimed, so the customer can fix the size and add it again.
+        $artwork_problem = wholesale_artwork_request_problem($product_id, $request);
+        if ('' !== $artwork_problem) {
+            $this->redirect_with_error($product_id, $artwork_problem);
+        }
+
         // Uploaded in the background (inc/async-uploads.php), or posted with the form.
         $file = wholesale_async_upload_take($_POST['custom-artwork-token'] ?? '', 'artwork');
         if (!$file && isset($_FILES['custom-artwork']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['custom-artwork']['error']) {
@@ -186,19 +202,13 @@ class Cart
                 $this->redirect_with_error($product_id, 'Your artwork could not be uploaded. Please try again.');
             }
 
-            $allowed_artwork_types = array(
-                'jpg|jpeg|jpe' => 'image/jpeg',
-                'png' => 'image/png',
-                'gif' => 'image/gif',
-                'webp' => 'image/webp',
-                'pdf' => 'application/pdf',
-            );
+            $allowed_artwork_types = wholesale_artwork_mimes();
             $checked_type = wp_check_filetype_and_ext($file['tmp_name'], $file['name'], $allowed_artwork_types);
             if (empty($checked_type['ext']) || empty($checked_type['type'])) {
-                $this->redirect_with_error($product_id, 'Artwork must be a JPG, PNG, GIF, WebP or PDF file.');
+                $this->redirect_with_error($product_id, 'Artwork must be a ' . wholesale_artwork_types_text() . ' file.');
             }
-            if (filesize($file['tmp_name']) > 25 * 1024 * 1024) {
-                $this->redirect_with_error($product_id, 'Artwork files must be under 25MB.');
+            if (filesize($file['tmp_name']) > wholesale_artwork_max_bytes()) {
+                $this->redirect_with_error($product_id, 'Artwork files must be under ' . wholesale_artwork_max_text() . '. ' . wholesale_large_file_help());
             }
 
             $file_ext = $checked_type['ext'];
@@ -283,7 +293,7 @@ class Cart
 
 
         $product_cl_data_array = !empty($_SESSION['design_data_' . $product_id])
-            ? json_decode(stripslashes($_SESSION['design_data_' . $product_id]), true)
+            ? wholesale_decode_session_json($_SESSION['design_data_' . $product_id])
             : null;
 
         if (is_array($product_cl_data_array)) {
@@ -313,6 +323,28 @@ class Cart
             }
         }
 
+        // Product page order form with the builder's options (wholesale_cl_page_design()).
+        $trimcap_size = '';
+        if (!is_array($product_cl_data_array) && wholesale_product_is_channel_letter($product_id) && wholesale_cl_is_page_request($request)) {
+            $page_design = wholesale_cl_page_design($product_id, $request);
+            if (!is_wp_error($page_design)) {
+                $element = $page_design['elements'][0];
+                $extras = $page_design['extras'];
+                $height = $element['height'] . ' Inches';
+                $width = 'About ' . $element['width'] . ' Inches';
+                $font = $element['font']['title'];
+                $face_color = $element['faceColor']['title'];
+                $return_color = $element['returnColor']['title'] ?? '';
+                $return_size = $element['returnSize']['title'] ?? '';
+                $trimcap_color = $element['trimcapColor']['title'] ?? '';
+                $trimcap_size = $element['trimcapSize']['title'] ?? '';
+                $raceway = isset($page_design['elements'][1]) ? 'Yes, ' . $page_design['elements'][1]['width'] . ' Inches long' : 'No';
+                $power_suply = $extras['powerSupply']['value'] ?? null;
+                $lit = isset($extras['lit']) ? ('Back Lit' === $extras['lit']['value'] ? 'Front and Back Lit' : 'Front Lit') : null;
+                $cable = isset($extras['cable']) ? ('No Cable' === $extras['cable']['value'] ? 'No LED (no UL label)' : $extras['cable']['value']) : null;
+            }
+        }
+
 		if($shipping_type == 'store_pickup') {
 			$shipping_type = 'Store Pickup';
 		}elseif($shipping_type == 'blind_drop') {
@@ -320,7 +352,10 @@ class Cart
 		}
 
 
-		if($turnaround_option == 'same_day') {
+		if (!empty($quote['turnaround_label'])) {
+			// The product's own production time (mirrored from B2Sign), e.g. "3 Business Days".
+			$turnaround_option = $quote['turnaround_label'];
+		} elseif($turnaround_option == 'same_day') {
 			$turnaround_option = 'Same Day';
 		}elseif($turnaround_option == 'next_day') {
 			$turnaround_option = 'Next Day';
@@ -363,6 +398,7 @@ class Cart
                 'Font' => $this->getTitleByValue($product_id,$font),
                 'Raceway' => $this->getTitleByValue($product_id,$raceway),
                 'Return size' => $this->getTitleByValue($product_id,$return_size),
+                'Trimcap size' => $trimcap_size,
                 'Letters' => $letters,
                 'Material' => $this->getTitleByValue($product_id,$material),
                 'Print' => $this->getTitleByValue($product_id,$print),
@@ -419,6 +455,13 @@ class Cart
         // recorded too, so every choice that sets the price reaches the order. A fixed
         // single-choice option isn't posted by the form, so its only label is used.
         $cart_item = json_decode($cart_items_json, true);
+        // Trade site: the options the price was quoted from and the production days chosen, so a
+        // quantity change in the cart is quoted again (update_quantity()) and the ship date counts
+        // the production time (wholesale_cart_production_days()). Channel letters are priced per design.
+        if (function_exists('wholesale_is_trade_site') && wholesale_is_trade_site() && !wholesale_product_is_channel_letter($product_id)) {
+            $cart_item['quote_request'] = self::quote_inputs($product_id, $request);
+            $cart_item['turnaround_days'] = $quote['turnaround_days'] ?? null;
+        }
         foreach (wholesale_product_price_attrs($product_id) as $attr) {
             $label = ucwords(str_replace('-', ' ', (string) ($attr['name'] ?? '')));
             if ('' === $label || array_key_exists($label, $cart_item['product_details'])) {
@@ -458,7 +501,8 @@ class Cart
             // The header cart drawer (inc/mini-cart.php) sends its own response.
             return;
         }
-        wp_safe_redirect(get_permalink());
+        // Buy Now without JavaScript (single-product.php): straight to checkout.
+        wp_safe_redirect(!empty($request['buy_now']) ? home_url('/checkout/') : get_permalink());
         exit;
     }
 
@@ -467,9 +511,22 @@ class Cart
         $quantity = max(1, absint($quantity));
         $cart_items = $this->get_items();
         $updated_cart_items = array();
+        $is_trade = function_exists('wholesale_is_trade_site') && wholesale_is_trade_site();
         foreach ($cart_items as $key => $item) {
             if ($item->cart_id == $cart_id) {
                 $current_quanitity = max(1, absint($item->product_quantity));
+                // Trade site: quoted again for the new quantity (null = scaled as before).
+                $requoted = $is_trade && $quantity !== $current_quanitity ? $this->requote_line($item, $quantity) : null;
+                if (is_string($requoted)) {
+                    // The line keeps its quantity and price; the cart shows why.
+                    $_SESSION['wholesale_cart_notice'] = $requoted;
+                    $updated_cart_items[] = $item;
+                    continue;
+                }
+                if (true === $requoted) {
+                    $updated_cart_items[] = $item;
+                    continue;
+                }
                 $prodcut_subtotal = floatval($item->product_subtotal);
                 $single_product_cost = $prodcut_subtotal / $current_quanitity;
                 $update_product_cost = $single_product_cost * $quantity;
@@ -484,6 +541,77 @@ class Cart
         }
 
         $_SESSION['cart_items'] = json_encode($updated_cart_items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * The request fields wholesale_price_quote() reads for a product that is not a channel letter
+     * (size, production time and every price option), kept on the cart line.
+     */
+    private static function quote_inputs($product_id, $request)
+    {
+        $names = array();
+        foreach (wholesale_product_price_attrs($product_id) as $attr) {
+            $names[] = (string) ($attr['name'] ?? '');
+        }
+        $qty_pricing = wholesale_product_qty_pricing($product_id);
+        foreach ($qty_pricing ? $qty_pricing['opt'] : array() as $o) {
+            $names[] = (string) $o[0];
+        }
+        $inputs = array();
+        foreach (array('height-ft', 'height-in', 'width-ft', 'width-in', 'turnaround_option') as $key) {
+            if (isset($request[$key]) && is_scalar($request[$key])) {
+                $inputs[$key] = (string) $request[$key];
+            }
+        }
+        foreach (array_unique(array_filter($names, 'strlen')) as $name) {
+            // The same spellings wholesale_request_attr_value() accepts.
+            foreach (array($name, strtolower($name), str_replace(' ', '-', $name), strtolower(str_replace(' ', '-', $name)), str_replace(' ', '', $name)) as $key) {
+                if (isset($request[$key]) && is_scalar($request[$key])) {
+                    $inputs[$key] = (string) $request[$key];
+                    break;
+                }
+            }
+        }
+        return $inputs;
+    }
+
+    /**
+     * Trade site: prices a cart line again for a new quantity from the options it was added with,
+     * so quantity tiers, minimums and the production times the quantity allows apply.
+     *
+     * @return true|string|null True when the line was updated, a message when the quantity
+     *                          can't be used (the line is left as it was), null to scale the price.
+     */
+    private function requote_line($item, $quantity)
+    {
+        $product_id = absint($item->product_id ?? 0);
+        if (wholesale_product_is_channel_letter($product_id)) {
+            // Priced per design: every copy costs the same.
+            return null;
+        }
+        // get_the_title() is HTML-encoded; the notice is shown as plain text.
+        $title = html_entity_decode((string) ($item->product_title ?? 'This item'), ENT_QUOTES, 'UTF-8');
+        if (!isset($item->quote_request)) {
+            // Added before the options were kept on the line.
+            $depends_on_quantity = wholesale_product_qty_pricing($product_id) || wholesale_product_turnaround_spec($product_id) || get_post_meta($product_id, '_margin_floor', true);
+            return $depends_on_quantity
+                ? sprintf('To change the quantity of %s, please remove it and add it again from its product page, so the price and production time match the new quantity.', $title)
+                : null;
+        }
+        $quote = wholesale_price_quote($product_id, array_merge((array) $item->quote_request, array('product_quantity' => $quantity)));
+        if (empty($quote['ok'])) {
+            return sprintf('%s: %s The quantity was not changed. To change it, remove the item and add it again from its product page.', $title, '' !== (string) ($quote['error'] ?? '') ? $quote['error'] : 'This quantity could not be priced.');
+        }
+        $item->product_subtotal = $quote['total'];
+        $item->unit_price = $quote['unit_price'];
+        $item->discount = $quote['discount'];
+        $item->turnaround_cost = $quote['turnaround'];
+        $item->product_quantity = $quote['quantity'];
+        $item->turnaround_days = $quote['turnaround_days'] ?? null;
+        if ('' !== (string) ($quote['turnaround_label'] ?? '') && isset($item->product_details) && is_object($item->product_details)) {
+            $item->product_details->{'Turnaround Option'} = $quote['turnaround_label'];
+        }
+        return true;
     }
 
 

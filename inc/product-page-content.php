@@ -224,9 +224,31 @@ function wholesale_product_turnaround($product_id)
 	$sections = wholesale_product_supplier_sections($product_id);
 	$same = wp_strip_all_tags(isset($sections['same_day']) ? $sections['same_day'] : '');
 	$next = wp_strip_all_tags(isset($sections['next_day']) ? $sections['next_day'] : '');
+	$same_day = (bool) preg_match('/ships (?:same day|today)/i', $same);
+	// Products with their own production times (B2Sign Sync, the choices the page and cart
+	// offer) promise the 12 pm Same Day only when it is one of those choices. The 10ft SEG
+	// display offers Next Day and later, yet its notes said "ships same day" (2026-11-09).
+	$spec = function_exists('wholesale_product_turnaround_spec') ? wholesale_product_turnaround_spec($product_id) : array();
+	// Since the production times copy B2Sign (2026-11-11), the 12 pm Same Day choice
+	// usually costs extra (+100%), and an order approved by an early cut-off (6 am)
+	// gets Same Day free. The sentence below must not promise a paid upgrade as standard.
+	$same_day_extra = 0.0;
+	$free_same_day = '';
+	if ($spec) {
+		$same_day = in_array('same_day', array_column($spec, 'value'), true);
+		foreach ($spec as $choice) {
+			if ('same_day' === $choice['value']) {
+				$same_day_extra = (float) $choice['percent'];
+			} elseif (0 === (int) $choice['days'] && $choice['percent'] <= 0 && $choice['choice'] && $choice['cutoff']) {
+				$free_same_day = $choice['cutoff'];
+			}
+		}
+	}
 
 	return array(
-		'same_day' => (bool) preg_match('/ships (?:same day|today)/i', $same),
+		'same_day' => $same_day,
+		'same_day_extra' => $same_day_extra,
+		'free_same_day' => $free_same_day,
 		// Stock items list only "Order before 12pm PST ships today".
 		'stock' => '' === trim($next) && (bool) preg_match('/ships today/i', $same),
 		'next_days' => preg_match('/ships in (\d+) business days/i', $next, $m) ? (int) $m[1] : 1,
@@ -254,13 +276,29 @@ function wholesale_product_is_printed($product_id)
 function wholesale_product_ship_sentence($product_id)
 {
 	$t = wholesale_product_turnaround($product_id);
-	if ($t['stock']) {
+	// Stock items keep the 12 pm same-day sentence only while Same Day is one of their
+	// choices (the round table cover offers Next Day, 3 and 5 days; 2026-11-09).
+	if ($t['stock'] && $t['same_day']) {
 		return 'Order by 12 pm Pacific time and it ships the same business day; later orders ship the next business day.';
 	}
 
 	$next = 1 === $t['next_days'] ? 'the next business day' : sprintf('in %d business days', $t['next_days']);
+	// Same Day is a paid choice here (Visitor Insights Nov 2026: the page said "by 12 pm it
+	// ships the same business day" while that choice added $77.86).
+	if ($t['same_day'] && $t['same_day_extra'] > 0) {
+		$sentence = sprintf('Order and approve your artwork by 4 pm Pacific time and it ships %s; after 4 pm, allow one more business day. Need it sooner? Choose Same Day under Production Time: order by 12 pm Pacific and it ships the same business day, for an added charge', $next);
+		if ($t['free_same_day']) {
+			$sentence .= sprintf(' (orders approved by %s Pacific ship the same day at no extra charge)', strtolower(wp_date('g a', strtotime('2000-01-01 ' . $t['free_same_day'] . ' UTC'), new DateTimeZone('UTC'))));
+		}
+
+		return $sentence . '.';
+	}
 	if ($t['same_day']) {
 		return sprintf('Order and approve your artwork by 12 pm Pacific time and it ships the same business day. By 4 pm, it ships %s; after 4 pm, allow one more business day.', $next);
+	}
+	// Stock hardware (carrying bags, frames) has no artwork to approve.
+	if ($t['stock'] && !wholesale_product_is_printed($product_id)) {
+		return sprintf('Order by 4 pm Pacific time and it ships %s; after 4 pm, allow one more business day.', $next);
 	}
 
 	return sprintf('Order and approve your artwork by 4 pm Pacific time and it ships %s; after 4 pm, allow one more business day.', $next);
@@ -432,7 +470,7 @@ function wholesale_render_channel_letter_details($product_id)
 					}
 					?>
 				</li>
-				<li>Inspect the boxes before you sign for them. If the packaging is damaged, check the letters, file a claim with the carrier and email <a href="mailto:TR@StorefrontSignOnline.com">TR@StorefrontSignOnline.com</a> or call <a href="tel:+18664362101">866-436-2101</a>.</li>
+				<li>Inspect the boxes before you sign for them. If the packaging is damaged, check the letters, file a claim with the carrier and email <a href="mailto:Info@StorefrontSignWholesale.com">Info@StorefrontSignWholesale.com</a> or call <a href="tel:+18664362101">866-436-2101</a>.</li>
 				<li>Pickup isn&rsquo;t available; every order ships to you.</li>
 			</ul>
 		</div>
@@ -503,6 +541,13 @@ function wholesale_product_spec_html($product_id)
 		}, $html);
 	}
 
+	// HTML specs with no <p> or <br> (the 14 flag products) break lines with bare newlines,
+	// which browsers run together ("Print Method: Dye Sublimated Graphic Material: ...").
+	// WordPress's paragraph filter turns them into paragraphs and line breaks (2026-11-09).
+	if (false === stripos($html, '<p') && false === stripos($html, '<br')) {
+		$html = wpautop($html);
+	}
+
 	$html = wholesale_seo_clean_product_content($html);
 	// The supplier's section dividers double up with this page's own borders.
 	$html = preg_replace('#<hr\s*/?>#i', '', $html);
@@ -557,6 +602,16 @@ function wholesale_product_templates_html($product_id)
 }
 
 /**
+ * Wrap each table in a box that scrolls sideways on its own (css/ui-polish.css
+ * .product-info-table). Supplier tables can be wider than a phone (flag specs
+ * have 6 columns, 484px) and otherwise widen the whole page.
+ */
+function wholesale_product_info_wrap_tables($html)
+{
+	return preg_replace('#<table\b.*?</table>#is', '<div class="product-info-table">$0</div>', (string) $html);
+}
+
+/**
  * Print the specifications, production and shipping, artwork, care and FAQ
  * sections that replace the supplier description. Returns false (printing
  * nothing) for a product without an entry, so the template can fall back.
@@ -598,7 +653,7 @@ function wholesale_render_product_details($product_id)
 		<?php if ($spec) : ?>
 			<div class="product-info-block product-specs">
 				<h2><?php echo esc_html(sprintf('%s specifications', $name)); ?></h2>
-				<?php echo wp_kses_post($spec); ?>
+				<?php echo wholesale_product_info_wrap_tables(wp_kses_post($spec)); ?>
 			</div>
 		<?php endif; ?>
 
@@ -631,7 +686,7 @@ function wholesale_render_product_details($product_id)
 							<li><?php echo wp_kses_post($rule); ?></li>
 						<?php endforeach; ?>
 					<?php else : ?>
-					<li>Upload a JPEG or a single-page PDF, up to 300 MB, built at the exact size you order. Artwork at a different size is scaled to fit.</li>
+					<li>Upload a JPEG or a single-page PDF, up to <?php echo esc_html(wholesale_artwork_max_text()); ?> (larger files: email us a download link), built at the exact size you order (or the same shape at a larger or smaller scale). Artwork with a different shape is turned away at upload, so nothing prints stretched or cut off.</li>
 					<li>Use CMYK color, convert Pantone and spot colors to CMYK, and outline your fonts. Raster images need 150 dpi at full size.</li>
 					<li>Leave off crop marks and bleed. Double sided items take one file per side unless the template says otherwise.</li>
 					<?php endif; ?>
@@ -643,7 +698,7 @@ function wholesale_render_product_details($product_id)
 					<?php endif; ?>
 				</ul>
 				<?php if ($templates) : ?>
-					<div class="product-templates"><?php echo wp_kses_post($templates); ?></div>
+					<div class="product-templates"><?php echo wholesale_product_info_wrap_tables(wp_kses_post($templates)); ?></div>
 				<?php endif; ?>
 				<?php if ($templates_page && 'publish' === $templates_page->post_status) : ?>
 					<p>Need help? Our <a href="<?php echo esc_url(get_permalink($templates_page)); ?>">design templates and artwork guide</a> covers every product, or a sign specialist can check your file before it prints.</p>

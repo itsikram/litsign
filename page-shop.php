@@ -52,7 +52,8 @@ foreach ($category_tree as $node) {
 	foreach ($tiles as $tile) {
 		$tile_image = 0;
 		foreach ($all_products as $product) {
-			if ($product['thumb'] && in_array($tile['term']->slug, $product['cats'], true)) {
+			// A product whose only photos carry sample sale artwork doesn't picture a category (inc/product-photo-overrides.php).
+			if ($product['thumb'] && in_array($tile['term']->slug, $product['cats'], true) && !(function_exists('wholesale_product_card_hidden') && wholesale_product_card_hidden($product['id']))) {
 				$tile_image = $product['thumb'];
 				break;
 			}
@@ -69,7 +70,7 @@ if (!empty($all_products[0]['thumb'])) {
 wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'How is the price of a custom sign worked out?',
-		'a' => 'Each product shows where it starts. Printed products such as banners, vinyl and window graphics are priced per square foot of your size; flags, stands, frames and tents are priced per item; channel letters are priced per letter by letter height. Open any product, choose your size and options, and you see your full price before checkout.',
+		'a' => 'Each product shows where it starts. Printed products such as banners, vinyl and window graphics are priced per square foot of your size; flags, stands, frames and tents are priced per item; channel letter starting rates are shown per inch of letter height. Open any product, choose your size and options, and you see your full price before checkout.',
 	),
 	array(
 		'q' => 'Can I upload my own artwork?',
@@ -81,7 +82,7 @@ wholesale_seo_set_page_faq(array(
 	),
 	array(
 		'q' => 'I can&rsquo;t find the sign I need. Can you make it?',
-		'a' => 'Very likely. Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PT) or <a href="' . esc_url($contact_url) . '">request a free quote</a> with your size and a photo or logo, and a sign specialist will price it for you.',
+		'a' => 'Very likely. Call <a href="tel:+18664362101">866-436-2101</a> (Mon&ndash;Fri, 8am&ndash;5pm PST) or <a href="' . esc_url($contact_url) . '">request a free quote</a> with your size and a photo or logo, and a sign specialist will price it for you.',
 	),
 ));
 

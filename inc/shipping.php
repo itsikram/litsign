@@ -196,7 +196,7 @@ function wholesale_pickup_location()
 	return array(
 		'address' => $address,
 		'city' => $city,
-		'hours' => trim((string) wholesale_get_setting('pickup_hours')),
+		'hours' => preg_replace('/\bPT\b/', 'PST', trim((string) wholesale_get_setting('pickup_hours'))),
 		'map' => 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($address),
 	);
 }

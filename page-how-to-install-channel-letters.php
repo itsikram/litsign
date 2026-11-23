@@ -32,7 +32,7 @@ wholesale_seo_set_page_faq(array(
 	),
 	array(
 		'q' => "What if a letter doesn't light after installation?",
-		'a' => 'Ask your electrician to check the connections against the wiring diagram first. If a letter or power supply still doesn&rsquo;t work, contact us before any repair work: call <a href="tel:+18664362101">866-436-2101</a> or email TR@StorefrontSignOnline.com, and we&rsquo;ll walk through it under the warranty.',
+		'a' => 'Ask your electrician to check the connections against the wiring diagram first. If a letter or power supply still doesn&rsquo;t work, contact us before any repair work: call <a href="tel:+18664362101">866-436-2101</a> or email Info@StorefrontSignWholesale.com, and we&rsquo;ll walk through it under the warranty.',
 	),
 	array(
 		'q' => 'Do you install signs or send an installer?',

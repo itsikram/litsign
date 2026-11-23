@@ -84,8 +84,10 @@ if (isset($_POST['change_password'])) {
     if ($new_password !== $confirm_password) {
         $account_redirect('danger', 'Your New Password and Confirm Password is not same');
     }
-    if (strlen($new_password) < 8) {
-        $account_redirect('danger', 'Your new password must be at least 8 characters.');
+    // Trade applications require 10 characters (inc/trade/registration.php); retail keeps 8.
+    $password_min = (function_exists('wholesale_is_trade_site') && wholesale_is_trade_site()) ? 10 : 8;
+    if (strlen($new_password) < $password_min) {
+        $account_redirect('danger', 'Your new password must be at least ' . $password_min . ' characters.');
     }
 
     wp_set_password($new_password, $user_id);
@@ -117,6 +119,24 @@ get_header();
 
 $account_notice_type = isset($_GET['type']) ? sanitize_key($_GET['type']) : '';
 $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['message']) : '';
+// Same rule as the header notice: fixed account notices always show; any other text
+// (wp_update_user errors) only on a redirect from this site, never from an outside link.
+if ('' !== $account_notice_message && !in_array($account_notice_message, array(
+    'Please enter a valid email address.',
+    'That email address is already used by another account.',
+    'Account Details Updated Successfully',
+    'Address Updated Successfully',
+    'Your password is incorrect',
+    'Your New Password and Confirm Password is not same',
+    'Your new password must be at least 8 characters.',
+    'Your new password must be at least 10 characters.',
+    'Passwords updated successfully',
+), true)) {
+    $account_referer_host = isset($_SERVER['HTTP_REFERER']) ? (string) wp_parse_url(wp_unslash($_SERVER['HTTP_REFERER']), PHP_URL_HOST) : '';
+    if ('' === $account_referer_host || preg_replace('/^www\./', '', strtolower($account_referer_host)) !== preg_replace('/^www\./', '', strtolower((string) wp_parse_url(home_url('/'), PHP_URL_HOST)))) {
+        $account_notice_message = '';
+    }
+}
 
 ?>
 
@@ -152,7 +172,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                             </div>
                         </div>
                         <div class="col-md-9">
-                            <div class="tab-content account-tab-content" id="v-pills-tab">
+                            <div class="tab-content account-tab-content" id="v-pills-tabContent">
                                 <!-- Account Details  -->
                                 <div class="tab-pane fade show active" id="v-pills-account" role="tabpanel" aria-labelledby="v-pills-home-tab">
                                     <div class="card card-body">
@@ -164,30 +184,30 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                             <div class="row mb-2">
                                                 <div class="col-md-6">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">First
+                                                        <label for="account-fname" class="form-label mb-0">First
                                                             name</label>
-                                                        <input type="text" value="<?php echo esc_attr($user_first_name); ?>" placeholder="First name" name="fName" class="form-control">
+                                                        <input type="text" id="account-fname" autocomplete="given-name" value="<?php echo esc_attr($user_first_name); ?>" placeholder="First name" name="fName" class="form-control">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">Last
+                                                        <label for="account-lname" class="form-label mb-0">Last
                                                             name</label>
-                                                        <input type="text" value="<?php echo esc_attr($user_last_name); ?>" placeholder="Last name" name="lName" class="form-control">
+                                                        <input type="text" id="account-lname" autocomplete="family-name" value="<?php echo esc_attr($user_last_name); ?>" placeholder="Last name" name="lName" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
                                             <div class="row mb-2">
                                                 <div class="col">
                                                     <div class="form-group">
-                                                        <label for="" class="form-label mb-0">Username</label>
+                                                        <label for="account-username" class="form-label mb-0">Username</label>
                                                         <div class="input-group">
                                                             <div class="input-group-prepend">
                                                                 <div class="input-group-text">
                                                                     @
                                                                 </div>
                                                             </div>
-                                                            <input disabled type="text" value="<?php echo esc_attr($user_data->data->user_login); ?>" class="form-control">
+                                                            <input disabled type="text" id="account-username" autocomplete="username" value="<?php echo esc_attr($user_data->data->user_login); ?>" class="form-control">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -196,8 +216,8 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                             <div class="row mb-2">
                                                 <div class="col">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">Email</label>
-                                                        <input type="text" value="<?php echo esc_attr($user_data->data->user_email); ?>" placeholder="Email" name="email" class="form-control">
+                                                        <label for="account-email" class="form-label mb-0">Email</label>
+                                                        <input type="text" id="account-email" autocomplete="email" value="<?php echo esc_attr($user_data->data->user_email); ?>" placeholder="Email" name="email" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -205,14 +225,14 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                             <div class="row mb-2">
                                                 <div class="col">
                                                     <div class="form-group">
-                                                        <label for="" class="form-label mb-0">Phone Number</label>
+                                                        <label for="account-telephone" class="form-label mb-0">Phone Number</label>
                                                         <div class="input-group">
                                                             <div class="input-group-prepend">
                                                                 <div class="input-group-text">
                                                                     +1
                                                                 </div>
                                                             </div>
-                                                            <input type="tel" name="telephone" value="<?php echo esc_attr($suer_telephone); ?>" class="telephone form-control">
+                                                            <input type="tel" id="account-telephone" autocomplete="tel-national" name="telephone" value="<?php echo esc_attr($suer_telephone); ?>" class="telephone form-control">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -221,8 +241,8 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                             <div class="row mb-2">
                                                 <div class="col">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">Website</label>
-                                                        <input type="text" value="<?php echo esc_attr($user_website); ?>" placeholder="https://your-website.com" name="website" class="form-control">
+                                                        <label for="account-website" class="form-label mb-0">Website</label>
+                                                        <input type="text" id="account-website" autocomplete="url" value="<?php echo esc_attr($user_website); ?>" placeholder="https://your-website.com" name="website" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -242,24 +262,24 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                         <h3>Address</h3>
                                         <form method="POST">
                                             <input type="hidden" name="user_address" value="1">
-                                            <?php wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce'); ?>
+                                            <?php echo str_replace('id="wholesale_account_nonce"', 'id="wholesale_account_nonce_address"', wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce', true, false)); // Unique id per form. ?>
                                             <div class="row mb-2">
                                                 <div class="col-md-4">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">City</label>
-                                                        <input type="text" value="<?php echo esc_attr($user_city); ?>" placeholder="New York" name="city" class="form-control">
+                                                        <label for="account-city" class="form-label mb-0">City</label>
+                                                        <input type="text" id="account-city" autocomplete="address-level2" value="<?php echo esc_attr($user_city); ?>" placeholder="New York" name="city" class="form-control">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-4">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">State</label>
-                                                        <input type="text" value="<?php echo esc_attr($user_state); ?>" placeholder="" name="state" class="form-control">
+                                                        <label for="account-state" class="form-label mb-0">State</label>
+                                                        <input type="text" id="account-state" autocomplete="address-level1" value="<?php echo esc_attr($user_state); ?>" placeholder="" name="state" class="form-control">
                                                     </div>
                                                 </div>
                                                 <div class="col-md-4">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">Zip Code</label>
-                                                        <input type="text" value="<?php echo esc_attr($user_zip); ?>" placeholder="" name="zip" class="form-control">
+                                                        <label for="account-zip" class="form-label mb-0">Zip Code</label>
+                                                        <input type="text" id="account-zip" autocomplete="postal-code" value="<?php echo esc_attr($user_zip); ?>" placeholder="" name="zip" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -268,8 +288,8 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                             <div class="row mb-2">
                                                 <div class="col">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">Street 1</label>
-                                                        <input type="text" value="<?php echo esc_attr($user_street_one); ?>" name="street_one" class="form-control">
+                                                        <label for="account-street-one" class="form-label mb-0">Street 1</label>
+                                                        <input type="text" id="account-street-one" autocomplete="address-line1" value="<?php echo esc_attr($user_street_one); ?>" name="street_one" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -277,8 +297,8 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                             <div class="row mb-2">
                                                 <div class="col">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">Street 2</label>
-                                                        <input type="text" value="<?php echo esc_attr($user_street_two); ?>" name="street_two" class="form-control">
+                                                        <label for="account-street-two" class="form-label mb-0">Street 2</label>
+                                                        <input type="text" id="account-street-two" autocomplete="address-line2" value="<?php echo esc_attr($user_street_two); ?>" name="street_two" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -286,8 +306,8 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                             <div class="row mb-2">
                                                 <div class="col">
                                                     <div class="form-group">
-                                                        <label for="input-fName" class="form-label mb-0">country</label>
-                                                        <input type="text" disabled value="<?php echo esc_attr($user_country); ?>" name="country" class="form-control">
+                                                        <label for="account-country" class="form-label mb-0">country</label>
+                                                        <input type="text" id="account-country" disabled value="<?php echo esc_attr($user_country); ?>" name="country" class="form-control">
                                                     </div>
                                                 </div>
                                             </div>
@@ -304,23 +324,23 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                         <h3>Change Password</h3>
                                         <form method="POST">
                                             <input type="hidden" name="change_password" value="1">
-                                            <?php wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce'); ?>
+                                            <?php echo str_replace('id="wholesale_account_nonce"', 'id="wholesale_account_nonce_password"', wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce', true, false)); // Unique id per form. ?>
                                             <div class="row mb-2">
                                                 <div class="form-group">
-                                                    <label for="input-fName" class="form-label mb-0">Current Password</label>
-                                                    <input type="password" name="current_password" class="form-control">
+                                                    <label for="account-current-password" class="form-label mb-0">Current Password</label>
+                                                    <input type="password" id="account-current-password" autocomplete="current-password" name="current_password" class="form-control">
                                                 </div>
                                             </div>
                                             <div class="row">
                                                 <div class="form-group">
-                                                    <label for="input-fName" class="form-label mb-0">New Password</label>
-                                                    <input type="password" placeholder="" name="new_password" class="form-control">
+                                                    <label for="account-new-password" class="form-label mb-0">New Password</label>
+                                                    <input type="password" id="account-new-password" autocomplete="new-password" placeholder="" name="new_password" class="form-control">
                                                 </div>
                                             </div>
                                             <div class="row">
                                                 <div class="form-group">
-                                                    <label for="input-fName" class="form-label mb-0">Confirm Password</label>
-                                                    <input type="password" placeholder="" name="confirm_password" class="form-control">
+                                                    <label for="account-confirm-password" class="form-label mb-0">Confirm Password</label>
+                                                    <input type="password" id="account-confirm-password" autocomplete="new-password" placeholder="" name="confirm_password" class="form-control">
                                                 </div>
                                             </div>
 

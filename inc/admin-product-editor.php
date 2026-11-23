@@ -46,6 +46,9 @@ function wholesale_pe_field_copy()
 			'_discount_percent' => array('Everyday price adjustment (%)', 'Taken off every price this product shows and the whole cart line, after quantity. Shoppers only see the result, never a sale. 0 to 100. Example: 10. Run sales from Settings &gt; Storefront Sign &gt; Sale promotion.', '0', 'decimal'),
 			'_min_order_price' => array('Minimum order price ($)', 'Size calculator products only. The lowest price one item can cost, after the everyday price adjustment. Smaller sizes (down to the minimum width and height) can still be ordered and pay this price. Leave empty for the standard $16.50. Enter 0 for no minimum. Example: 25', '16.50', 'decimal'),
 			'_min_order_per_side' => array('Minimum order price per side', 'Ticked: the minimum order price is charged once per printed side, so 2 Sides has double the minimum (like B2Sign: $8 one side, $16 two sides).'),
+			'_min_order_extra_side' => array('Minimum order price, extra per side ($)', 'Size calculator products only. Added to the minimum order price for each extra printed side, so 2 Sides has a higher minimum (like B2Sign coroplast: $6.99 one side, $7.99 two). Leave empty for none. Example: 1.65', '1.65', 'decimal'),
+			'_max_print_price' => array('Full sheet price ($)', 'Size calculator products only. The most the printed size can cost (size x price per sq ft, plus per sq ft options such as 2 Sides), like B2Sign\'s full 4 x 8 ft sheet price. Flat options such as grommets and H-stakes are still added on top. Leave empty for no limit. Example: 49.48', '49.48', 'decimal'),
+			'_max_print_extra_side' => array('Full sheet price, extra per side ($)', 'Added to the full sheet price for each extra printed side (B2Sign coroplast: $29.99 one side, $33.99 two). Example: 6.60', '6.60', 'decimal'),
 			'_max_size' => array('Maximum size (inches)', 'Size calculator products only. Largest size, short side x long side, accepted either way round. Example: 48x1200. Leave empty for no limit.', '48x1200', 'text'),
 			'_promo_percent' => array('Product sale (%)', 'This product\'s own dated sale, taken off the everyday price between the start and end dates below (shown crossed out with "Sale"). Replaces the site-wide sale for this product while it runs. Leave empty for none. Example: 10', '0', 'decimal'),
 			'_promo_start' => array('Product sale start date', 'First day of this product\'s sale, Pacific time, YYYY-MM-DD. Example: 2026-10-21', '2026-10-21', 'text'),
@@ -58,9 +61,13 @@ function wholesale_pe_field_copy()
 			'_product_gallery' => array('Product gallery images', 'Extra photos shown in the product page gallery. Drag to reorder.'),
 			'_product_group_data' => array('Product group links (raw)', 'Buttons that switch between related versions of this product. Edited with the list above; this raw box is kept for reference.'),
 			'_hide_calculator' => array('Hide the size calculator', 'Ticked: customers pick from the options only (fixed-size product). Not ticked: customers type a width and height and pay per square foot.'),
-			'_size_presets' => array('Show preset size dropdown', 'Products with the size calculator: ticked shows a size dropdown (from its size options, plus Custom size) that fills in the width and height. Price is still per square foot.'),
+			'_size_presets' => array('Show preset size dropdown', 'Products with the size calculator: ticked shows a B2Sign-style Size dropdown with the preset sizes below, then "Custom Sizes", which shows the width and height boxes. Price is still per square foot.'),
+			'_size_preset_list' => array('Preset sizes', 'Used when "Show preset size dropdown" is ticked. One size per line, width x height in inches, then | and an optional grey note. Start a line with * to open the page on that size (otherwise the smallest size). Example: *24 x 18 | Vertical Flutes. Left empty, the sizes in the "size" option are used. Sizes under the minimum or over the maximum size are left out.', '24 x 18 | Vertical Flutes', 'text'),
+			'_custom_size_note' => array('Custom size note', 'Optional grey note on the "Custom Sizes" line of the Size dropdown. Example: Width over 48" horizontal flutes', 'Width over 48" horizontal flutes', 'text'),
+			'_size_unit' => array('Size box units', 'Products with the size calculator. Empty: width and height in inches (B2Sign rigid boards). ftin: feet and inches boxes, as on B2Sign\'s banner, flag and vinyl pages. SFS B2Sign Sync sets this from B2Sign.', 'ftin', 'text'),
 			'_show_in_list' => array('Show in product lists', 'Ticked: the product appears in shop and category lists.'),
-			'_has_upload_artwork' => array('Allow artwork upload', 'Ticked: customers can upload their artwork file on the product page.'),
+			'_has_upload_artwork' => array('Allow artwork upload', 'Ticked: customers can upload their artwork file on the product page, and (see "Artwork after ordering") from their order page if they ordered without one.'),
+			'_artwork_size' => array('Artwork size', 'The print size an uploaded file must match (same shape; a larger or smaller scale is fine). Width x height in inches; use \' for feet. One size for every order: 24 x 36. A size per option, one line each, option = size: 8ft = 94 x 33. Several accepted sizes: 29.5 x 139.5 or 59 x 139.5 (e.g. one side, or both sides in one file as in the double-sided template). Enter off to skip the check. Leave empty to use the size the customer orders (the width and height boxes, or a size option such as 24" x 36"); products with neither are not checked.', '24 x 36', 'text'),
 			'_product_turnaround' => array('Production time (business days)', 'Shown as the turnaround on the product page. Example: 2'),
 			'_stock_status' => array('Stock status', 'In stock: normal. Out of stock: the product page shows "Out of stock", Add To Cart is turned off and Google is told it is unavailable. Backorder: customers can still order; the page shows the expected ship date below.'),
 			'_backorder_date' => array('Backorder ship date', 'Backorder only. Date the product is expected to ship again, Pacific time, YYYY-MM-DD. Example: 2026-11-15. Empty or past: 14 days from today is used (Google requires a date).', '2026-11-15', 'text'),
@@ -367,6 +374,8 @@ add_action('admin_enqueue_scripts', function ($hook) {
 			return array('slug' => $product->post_name, 'title' => html_entity_decode(get_the_title($product), ENT_QUOTES, 'UTF-8'), 'status' => $product->post_status);
 		}, $products),
 		'sqftMinPrice' => defined('WHOLESALE_SQFT_MIN_PRICE') ? WHOLESALE_SQFT_MIN_PRICE : 16.5,
+		// wholesale_product_flat_options_on_top(), for the price preview.
+		'flatOnTop' => $post && function_exists('wholesale_product_flat_options_on_top') ? wholesale_product_flat_options_on_top($post->ID) : false,
 		'racewayPerFoot' => defined('WHOLESALE_RACEWAY_COST_PER_FOOT') ? WHOLESALE_RACEWAY_COST_PER_FOOT : 55,
 	));
 });

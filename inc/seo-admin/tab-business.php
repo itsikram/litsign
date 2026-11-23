@@ -39,7 +39,7 @@ function wholesale_seo_business_fields()
 			'placeholder' => '206-618-6543',
 			'description' => 'Kept here for reference. Schema.org has no property for a text-only number, so it is not printed in the JSON-LD.',
 		),
-		'email' => array('type' => 'email', 'label' => 'Email', 'placeholder' => 'TR@StorefrontSignOnline.com'),
+		'email' => array('type' => 'email', 'label' => 'Email', 'placeholder' => 'Info@StorefrontSignWholesale.com'),
 		'street' => array('type' => 'text', 'label' => 'Street address', 'placeholder' => '707 S. Grady Way Suite 600'),
 		'locality' => array('type' => 'text', 'label' => 'City', 'placeholder' => 'Renton'),
 		'region' => array('type' => 'text', 'label' => 'State', 'placeholder' => 'WA'),

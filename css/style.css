@@ -7665,3 +7665,47 @@ a.review-author-name:hover {
     }
   }
 }
+
+/* Channel letter product page: the builder's options (template-parts/cl-product-options.php). */
+.cl-product-options .cl-opt-row label,
+.cl-product-options .cl-opt-label {
+  font-weight: 600;
+}
+.cl-product-options .cl-opt-color {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cl-product-options .cl-opt-swatch {
+  flex: 0 0 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+.cl-product-options .cl-opt-fixed {
+  display: inline-block;
+  padding: 6px 0;
+  font-weight: 600;
+}
+.cl-product-options .cl-opt-raceway-length {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 400;
+}
+.cl-product-options .cl-opt-raceway-length[hidden] {
+  display: none;
+}
+.cl-product-options .cl-opt-unit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 160px;
+}
+.cl-product-options .cl-opt-unit em {
+  font-style: normal;
+  color: #6c757d;
+}
+#letter-output {
+  overflow-wrap: anywhere;
+}

@@ -64,6 +64,13 @@
   // ------------------------------------------------------------------
 
   const pageKey = randomKey(8);
+  const screenSize = window.screen ? window.screen.width + 'x' + window.screen.height : '';
+  let timeZone = '';
+  try {
+    timeZone = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 60);
+  } catch (error) {
+    // Very old browsers: no time zone.
+  }
   const queue = [];
   const originalFetch = window.fetch ? window.fetch.bind(window) : null;
   let lastSent = '';
@@ -195,7 +202,10 @@
     // DOM the document only sees the host element, so name the inner one.
     const inner = (event.composedPath && event.composedPath()[0]) || event.target;
     const typingBox = inner.matches && inner.matches('input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]), textarea, select');
-    if (event.isTrusted && !typingBox) {
+    // Quantity + / - buttons are meant to be tapped several times in a row (3 taps = 4
+    // pieces): they showed up as rage clicks on "Increase quantity" (Nov 2026).
+    const stepper = inner.closest && inner.closest('[data-qty-step], [data-mc-step]');
+    if (event.isTrusted && !typingBox && !stepper) {
       recentClicks = recentClicks.filter((click) => now - click.at < 800 && Math.abs(click.x - event.clientX) < 40 && Math.abs(click.y - event.clientY) < 40);
       recentClicks.push({ at: now, x: event.clientX, y: event.clientY });
       if (recentClicks.length === 3) {
@@ -241,7 +251,9 @@
   // Facebook and Instagram apps on iPhone call window.webkit.messageHandlers),
   // not from the site itself. "ResizeObserver loop ..." is the browser noting a
   // layout pass it postponed; nothing breaks and the visitor sees nothing.
-  const injectedError = /webkit\.messageHandlers|__gCrWeb|instantSearchSDKJSBridgeClearHighlight|^ResizeObserver loop/;
+  // _AutofillCallbackHandler: iPhone in-app browsers' own autofill script, which
+  // calls a handler that doesn't exist on the page (nothing on the site uses it).
+  const injectedError = /webkit\.messageHandlers|__gCrWeb|instantSearchSDKJSBridgeClearHighlight|_AutofillCallbackHandler|^ResizeObserver loop/;
 
   let errorCount = 0;
   const logError = (message, where) => {
@@ -286,7 +298,12 @@
         if (!configured || seenOnce.has('price')) return;
         seenOnce.add('price');
       }
-      push(type, { value: json && json.total ? String(json.total) : '' });
+      // The cart answers with its new subtotal ("$45.00"): the cart's value
+      // for following up people who leave without ordering.
+      const data = json && json.data;
+      const value = json && json.total ? String(json.total)
+        : (type === 'add_to_cart' && data && data.subtotal ? String(data.subtotal).replace(/[^0-9.]/g, '') : '');
+      push(type, { value });
       return send();
     }
 
@@ -366,6 +383,10 @@
       p: pageKey,
       url: location.href,
       tp: navigator.maxTouchPoints || 0,
+      // Sent every time so the server can tell a robot's browser from a person's
+      // even when the first page view did not arrive.
+      sc: screenSize,
+      tz: timeZone,
       ping: { secs: activeSeconds, scroll: maxScroll, forms: openForms },
       events: queue.splice(0, 40).map((event) => {
         event.ago = now - event.at;
@@ -395,11 +416,72 @@
         keepalive: body.length < 60000,
         credentials: 'same-origin',
         headers: { 'Content-Type': 'text/plain' },
-      })).catch(() => {});
+      }))
+        // 200 + {chat: 1}: an agent started a chat with this visitor; open it.
+        // 200 + {snap: id}: an admin asked for a screenshot of this page.
+        .then((response) => (response && response.status === 200 ? response.json() : null))
+        .then((json) => {
+          if (json && json.snap) sendSnap(String(json.snap));
+          const chat = window.SFSChatLoader;
+          if (!json || !json.chat || !chat || typeof chat.load !== 'function' || chat.widget) return;
+          // Desktop: open the chat. Phones: load it and show the agent's message as a bubble
+          // (an open chat would cover the whole screen).
+          const phone = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
+          if (!phone) {
+            chat.load(true);
+          } else {
+            chat.invited = true;
+            chat.load(false);
+          }
+        })
+        .catch(() => {});
     } catch (error) {
       // Offline or blocked: drop it.
     }
   };
+
+  // ------------------------------------------------------------------
+  // Screenshots (inc/visitor-snaps.php)
+  // ------------------------------------------------------------------
+
+  // Live Chat's snap.js only copies the page (HTML, typed values, canvas drawings, scroll
+  // spots; password and card fields masked, the chat window left out) in short slices; the
+  // admin's browser draws the picture. So the page never pauses, flashes or scrolls.
+  const snapsAnswered = new Set();
+  let snapScript = null;
+  const loadSnap = () => snapScript || (snapScript = new Promise((resolve, reject) => {
+    if (window.SFSChatSnap) return resolve(window.SFSChatSnap);
+    const script = document.createElement('script');
+    script.src = config.snap;
+    script.async = true;
+    script.onload = () => (window.SFSChatSnap ? resolve(window.SFSChatSnap) : reject(new Error('copier missing')));
+    script.onerror = () => {
+      snapScript = null;
+      reject(new Error('copier blocked'));
+    };
+    document.head.appendChild(script);
+  }));
+  function sendSnap(req) {
+    // A hidden tab is not what's on their screen; the server asks another page later.
+    if (!config.snap || !config.snapEndpoint || !originalFetch || snapsAnswered.has(req) || document.hidden) return;
+    snapsAnswered.add(req);
+    const post = (data) => {
+      try {
+        Promise.resolve(originalFetch(config.snapEndpoint, {
+          method: 'POST',
+          body: JSON.stringify(Object.assign({ s: session, v: visitor, req }, data)),
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'text/plain' },
+        })).catch(() => {});
+      } catch (error) {
+        // Offline or blocked: the admin sees it time out.
+      }
+    };
+    loadSnap()
+      .then((copier) => copier.capture())
+      .then((copy) => post(Object.assign(copy, { page: location.href, title: document.title })))
+      .catch((error) => post({ error: text((error && error.message) || error || 'copy failed', 160) }));
+  }
 
   push('pageview', {
     title: document.title,
@@ -407,13 +489,16 @@
     cart: config.cart || 0,
     ref: document.referrer.slice(0, 500),
     campaign,
-    screen: window.screen ? window.screen.width + 'x' + window.screen.height : '',
-    tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 60),
+    screen: screenSize,
+    tz: timeZone,
     lang: (navigator.language || '').slice(0, 20),
   });
   send();
 
-  setInterval(() => { if (!document.hidden) send(); }, 15000);
+  // Each ping is a full, uncacheable WordPress request that writes to the database. "Online now"
+  // counts anyone seen in the last 5 minutes and time on page is flushed when the tab is hidden
+  // or closed, so a 60 s heartbeat loses nothing that 15 s gave.
+  setInterval(() => { if (!document.hidden) send(); }, 60000);
   document.addEventListener('visibilitychange', () => { if (document.hidden) send(true); });
   window.addEventListener('pagehide', () => { leavingAt = Date.now(); send(true); });
 })();

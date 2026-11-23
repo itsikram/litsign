@@ -407,6 +407,8 @@ get_header();
                             </p>
                         </div>
                         <p class="checkout-cards">We accept Visa, Mastercard, American Express and Discover. Processed by Elavon Converge; we never store your card number.</p>
+                        <?php $wallet_names = function_exists('wholesale_public_wallet_names') ? wholesale_public_wallet_names() : array(); ?>
+                        <?php if ($wallet_names) : ?><p class="checkout-cards checkout-cards--wallets">Also accepted: <?php echo esc_html(implode(', ', $wallet_names)); ?>.</p><?php endif; ?>
                     <?php elseif ($card_enabled) : ?>
                         <div class="checkout-secure">
                             <?php echo $lock_icon; // Static SVG. ?>
@@ -414,6 +416,8 @@ get_header();
                                 <strong>Pay securely by card</strong>
                                 <p>When you click <em>Pay</em>, a secure window from our card processor, Elavon Converge, opens for your card details. Your card number never passes through our website.</p>
                                 <p class="checkout-cards">Visa &middot; Mastercard &middot; American Express &middot; Discover</p>
+                                <?php $wallet_names = function_exists('wholesale_public_wallet_names') ? wholesale_public_wallet_names() : array(); ?>
+                                <?php if ($wallet_names) : ?><p class="checkout-cards checkout-cards--wallets">Also accepted: <?php echo esc_html(implode(', ', $wallet_names)); ?>.</p><?php endif; ?>
                             </div>
                         </div>
                     <?php else : ?>
@@ -489,7 +493,7 @@ get_header();
                     <ul class="checkout-assurance">
                         <?php if ($card_enabled) : ?><li>Secure card processing by Elavon Converge</li><?php endif; ?>
                         <li><?php echo 'sign' === $noun ? 'UL listed signs, tested before shipping' : 'Made to order and checked before shipping'; ?></li>
-                        <li>Questions? <a href="tel:+18664362101">866-436-2101</a> &middot; Mon&ndash;Fri 8am&ndash;5pm PT</li>
+                        <li>Questions? <a href="tel:+18664362101">866-436-2101</a> &middot; Mon&ndash;Fri 8am&ndash;5pm PST</li>
                     </ul>
                     <p class="checkout-terms">By placing your order you agree to our <a href="<?php echo esc_url(home_url('/terms-conditions/')); ?>">Terms &amp; Conditions</a>.</p>
                 </div>

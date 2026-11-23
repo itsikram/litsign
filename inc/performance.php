@@ -65,6 +65,28 @@ function wholesale_delay_tidio_widget()
 add_action('wp', 'wholesale_delay_tidio_widget');
 
 /**
+ * Hero photos for /banners-displays/ and /window-graphics/: desktop and phone URLs.
+ *
+ * Uses img/landing-<name>-desktop.webp and -mobile.webp when both files exist.
+ * Otherwise it uses the page's featured image, then the default hero. A missing
+ * file must never be preloaded: on this site a 404 renders a whole WordPress page.
+ */
+function wholesale_landing_page_hero_images($name)
+{
+	$desktop = '/img/landing-' . $name . '-desktop.webp';
+	$mobile = '/img/landing-' . $name . '-mobile.webp';
+	$dir = get_template_directory();
+	if (file_exists($dir . $desktop) && file_exists($dir . $mobile)) {
+		$uri = get_template_directory_uri();
+		return array($uri . $desktop, $uri . $mobile);
+	}
+
+	$url = get_the_post_thumbnail_url(get_the_ID(), 'large');
+	$url = $url ? wholesale_webp_url(esc_url_raw($url)) : wholesale_default_hero_url();
+	return array($url, $url);
+}
+
+/**
  * Let the browser fetch the /landing-page/ hero image while CSS is still
  * loading; it is that page's largest paint.
  */
@@ -301,8 +323,10 @@ add_filter('wp_calculate_image_srcset', 'wholesale_logo_srcset', 10, 5);
 /**
  * Pages that use css/bootstrap-critical.css instead of the full Bootstrap
  * stylesheet for the first paint: public content and landing pages for
- * logged-out visitors. Product, cart, checkout, account and builder pages,
- * whose forms use much more of Bootstrap, keep the full file.
+ * logged-out visitors (trade product pages too, whose logged-out view is
+ * the price-free trade template). Retail product, cart, checkout, account
+ * and builder pages, whose forms use much more of Bootstrap, keep the full
+ * file.
  */
 function wholesale_use_critical_bootstrap()
 {
@@ -313,15 +337,40 @@ function wholesale_use_critical_bootstrap()
 
 	$dir = get_template_directory() . '/css/';
 	$use = !is_admin() && !is_customize_preview() && !is_user_logged_in()
-		&& file_exists($dir . 'bootstrap-critical.css')
 		// A newer bootstrap.min.css means the subset is stale.
-		&& filemtime($dir . 'bootstrap-critical.css') >= filemtime($dir . 'bootstrap.min.css')
-		&& !is_singular(array('product', 'order'))
+		&& wholesale_critical_subset_is_fresh($dir . 'bootstrap-critical.css', $dir . 'bootstrap.min.css')
+		&& !is_singular('order')
+		// Logged out on the trade site every product view is the price-free
+		// template-parts/trade/product.php, which has no Bootstrap forms.
+		&& (!is_singular('product') || (function_exists('wholesale_is_trade_site') && wholesale_is_trade_site()))
 		&& !get_query_var('wholesale_thank_you')
 		&& !is_page(array('cart', 'checkout', 'account', 'my-orders', 'track-order', 'login', 'signup', 'payment', 'pay', 'channel-letter-builder'))
 		&& !is_page_template(array('cart.php', 'checkout.php', 'account.php', 'my_orders.php', 'login.php', 'signup.php', 'payment.php', 'page-pay.php', 'page-track-order.php', 'cl_builderr.php', 'b2calc.php', 'landing-page.php', 'page-channel-letters-ads.php'));
 
 	return $use;
+}
+
+/**
+ * Whether a critical-CSS subset still matches the stylesheet it was built
+ * from: not older than its source, or, when a deploy wrote the two files in
+ * the other order, still built from the same content (the "source-md5: ..."
+ * the subset's first comment records, if any).
+ *
+ * @param string $subset Path of the subset.
+ * @param string $source Path of the full stylesheet.
+ * @return bool
+ */
+function wholesale_critical_subset_is_fresh($subset, $source)
+{
+	if (!file_exists($subset) || !file_exists($source)) {
+		return false;
+	}
+	if (filemtime($subset) >= filemtime($source)) {
+		return true;
+	}
+
+	$head = (string) file_get_contents($subset, false, null, 0, 512);
+	return preg_match('/source-md5: ([0-9a-f]{32})/', $head, $match) && md5_file($source) === $match[1];
 }
 
 /**
@@ -356,7 +405,7 @@ function wholesale_critical_bootstrap_tag($tag, $handle, $href)
 		var full = document.createElement('link');
 		full.rel = 'stylesheet';
 		full.id = 'bootsrap-css';
-		full.href = <?php echo wp_json_encode($href); ?>;
+		full.href = <?php echo wp_json_encode(html_entity_decode($href, ENT_QUOTES, 'UTF-8')); ?>;
 		// media="print" until it has loaded: a stylesheet added before the first
 		// paint otherwise holds the paint back (the page stayed blank until it
 		// arrived, PageSpeed Speed Index 5.7s).
@@ -389,7 +438,7 @@ function wholesale_critical_home_style_tag($tag, $handle, $href)
 	}
 
 	$dir = get_template_directory() . '/css/';
-	if (!file_exists($dir . 'style-home-critical.css') || filemtime($dir . 'style-home-critical.css') < filemtime($dir . 'style.css')) {
+	if (!wholesale_critical_subset_is_fresh($dir . 'style-home-critical.css', $dir . 'style.css')) {
 		return $tag;
 	}
 
@@ -407,7 +456,7 @@ function wholesale_critical_home_style_tag($tag, $handle, $href)
 		var full = document.createElement('link');
 		full.rel = 'stylesheet';
 		full.id = 'custom-style-css';
-		full.href = <?php echo wp_json_encode($href); ?>;
+		full.href = <?php echo wp_json_encode(html_entity_decode($href, ENT_QUOTES, 'UTF-8')); ?>;
 		// media="print" until it has loaded, so it never holds a paint back.
 		full.media = 'print';
 		full.onload = function () { this.media = 'all'; };

@@ -19,6 +19,12 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
+/*
+ * The Converge card gateway stays in this theme on the trade site. The retail site moved the
+ * same code to the SFS Wallet Payments plugin on 2026-11-12; that plugin only loads its copy
+ * when the theme doesn't define these functions, so installing it here later changes nothing.
+ */
+
 /**
  * 'lightbox' (Converge secure window) or 'direct' (card fields on our page).
  */
@@ -69,7 +75,9 @@ function wholesale_direct_card_from_request($post)
  */
 function wholesale_converge_direct_sale($amount, $card, $billing, $invoice)
 {
-	$result = array('ok' => false, 'message' => 'Payment failed. No charge was made.', 'txn_id' => '', 'approval_code' => '', 'card_last4' => substr($card['number'], -4));
+	// 'declined': the processor answered no (counts toward the card-testing limit).
+	// 'unknown': no answer came back, so the card may or may not have been charged.
+	$result = array('ok' => false, 'message' => 'Payment failed. No charge was made.', 'txn_id' => '', 'approval_code' => '', 'card_last4' => substr($card['number'], -4), 'declined' => false, 'unknown' => false);
 	$credentials = wholesale_converge_credentials();
 	if (!$credentials) {
 		$result['message'] = 'Online card payment is not available right now. Please call us at 866-436-2101 to place your order.';
@@ -101,6 +109,7 @@ function wholesale_converge_direct_sale($amount, $card, $billing, $invoice)
 		// A timeout can happen after Converge approved the charge, so staff must check.
 		error_log('Wholesale: direct Converge sale request failed for invoice ' . $invoice . ': ' . $response->get_error_message());
 		$result['message'] = 'We could not reach our payment processor. Please call us at 866-436-2101 before trying again, so you are not charged twice.';
+		$result['unknown'] = true;
 		return $result;
 	}
 
@@ -122,9 +131,17 @@ function wholesale_converge_direct_sale($amount, $card, $billing, $invoice)
 
 	if (!empty($fields['errorCode'])) {
 		error_log('Wholesale: direct Converge sale error ' . $fields['errorCode'] . ' (' . ($fields['errorName'] ?? '') . ') for invoice ' . $invoice);
-		$result['message'] = 'Payment could not be processed: ' . sanitize_text_field($fields['errorMessage'] ?? $fields['errorName'] ?? 'unknown error') . '. No charge was made.';
-	} elseif (!empty($fields['ssl_result_message'])) {
-		$result['message'] = 'Your card was declined (' . sanitize_text_field($fields['ssl_result_message']) . '). No charge was made. Please try another card.';
+		$result['message'] = 'Payment could not be processed: ' . sanitize_text_field($fields['errorMessage'] ?? $fields['errorName'] ?? 'unknown error') . '. No charge was made. Please check your card details or call us at 866-436-2101.';
+		$result['declined'] = true;
+	} elseif (isset($fields['ssl_result']) || !empty($fields['ssl_result_message'])) {
+		$reason = sanitize_text_field($fields['ssl_result_message'] ?? '');
+		$result['message'] = 'Your card was declined' . ('' !== $reason ? ' (' . $reason . ')' : '') . '. No charge was made. Please try another card or call us at 866-436-2101.';
+		$result['declined'] = true;
+	} else {
+		// An empty or unreadable answer says nothing about the charge either.
+		error_log('Wholesale: direct Converge sale for invoice ' . $invoice . ' returned no result (HTTP ' . (int) wp_remote_retrieve_response_code($response) . ').');
+		$result['message'] = 'We could not confirm your payment with our processor. Please call us at 866-436-2101 before trying again, so you are not charged twice.';
+		$result['unknown'] = true;
 	}
 	return $result;
 }
@@ -240,7 +257,9 @@ function wholesale_converge_xml_request($fields, $timeout = 30)
 	$previous = libxml_use_internal_errors(true);
 	$doc = simplexml_load_string(wp_remote_retrieve_body($response));
 	libxml_use_internal_errors($previous);
-	if (!$doc) {
+	// SimpleXML treats an element without children as false. For a lookup that is still an
+	// answer: an empty <txnlist/> means Converge has no such transaction (not_found below).
+	if (false === $doc || (!$doc && 'txnquery' !== ($fields['ssl_transaction_type'] ?? ''))) {
 		return new WP_Error('bad_response', 'Converge returned an unreadable response.');
 	}
 	if (isset($doc->errorCode)) {
@@ -290,9 +309,12 @@ function wholesale_converge_verify($txn_id, $amount, $invoice)
 {
 	$txn = wholesale_converge_query_transaction($txn_id);
 	if (is_wp_error($txn)) {
-		return in_array($txn->get_error_code(), array('not_found'), true)
-			? $txn
-			: new WP_Error('unverified', $txn->get_error_message());
+		// Only "no usable answer" (no reply, an unreadable reply, no gateway settings) leaves the
+		// payment unknown. A definite answer from Converge, such as an error code for an unknown
+		// transaction ID ('converge_error') or no record of it ('not_found'), is a rejection.
+		return in_array($txn->get_error_code(), array('unreachable', 'bad_response', 'not_configured'), true)
+			? new WP_Error('unverified', $txn->get_error_message())
+			: $txn;
 	}
 
 	if (abs((float) ($txn['ssl_amount'] ?? 0) - (float) $amount) > 0.005) {
@@ -412,7 +434,7 @@ function wholesale_checkout_build($post, $cart)
 			foreach (wholesale_blind_ship_fields() as $key => $info) {
 				$value = $field('blind_from_' . $key);
 				if ($info['required'] && '' === $value) {
-					return new WP_Error('blind_ship', sprintf('Please enter the %s for your blind ship return address.', strtolower($info['label'])), array('field' => 'blind_from_' . $key));
+					return new WP_Error('blind_ship', sprintf('Please enter the %s for your blind ship return address.', str_replace('zip', 'ZIP', strtolower($info['label']))), array('field' => 'blind_from_' . $key));
 				}
 				$shipping['blind_from_' . $key] = $value;
 			}
@@ -539,8 +561,12 @@ function wholesale_add_business_days(DateTime $date, $days)
 function wholesale_cart_production_days($cart)
 {
 	$turnaround = 1;
+	// Trade site: a line keeps the days of the production time chosen for its quantity
+	// (Cart::add_item(), from the product's _turnaround_spec), e.g. 5 for "5 Business Days".
+	$is_trade = function_exists('wholesale_is_trade_site') && wholesale_is_trade_site();
 	foreach ($cart->get_items() as $item) {
-		$turnaround = max($turnaround, (int) get_post_meta(absint($item->product_id), '_product_turnaround', true));
+		$days = $is_trade && isset($item->turnaround_days) ? (int) $item->turnaround_days : (int) get_post_meta(absint($item->product_id), '_product_turnaround', true);
+		$turnaround = max($turnaround, $days);
 	}
 	return wholesale_cart_has_channel_letters($cart) ? max($turnaround, 4) : $turnaround;
 }
@@ -554,7 +580,8 @@ function wholesale_cart_production_days($cart)
  */
 function wholesale_estimated_ship_datetime($cart, ?DateTime $now = null)
 {
-	$now = $now ? clone $now : new DateTime('now', new DateTimeZone('America/Los_Angeles'));
+	$now = $now ? clone $now : new DateTime('now');
+	$now->setTimezone(new DateTimeZone('America/Los_Angeles'));
 	$order_day = clone $now;
 	$order_day->setTime(0, 0);
 	if ($now->format('N') >= 6 || (int) $now->format('G') >= 16) {
@@ -618,6 +645,23 @@ function wholesale_checkout_create_order($checkout, $cart, $extra_meta = array()
 
 	if ($order) {
 		$cart->empty();
+		// The ordered builder designs are production artwork now: mark them, and take them out of
+		// this visitor's session so designing again can't delete or overwrite them
+		// (wholesale_store_session_cl_design()).
+		foreach ($checkout['items'] as $item) {
+			$design_id = absint($item->design_id ?? 0);
+			if (!$design_id) {
+				continue;
+			}
+			update_post_meta($design_id, '_wholesale_order', $order);
+			if (isset($_SESSION['wholesale_design_uploads']) && is_array($_SESSION['wholesale_design_uploads'])) {
+				$_SESSION['wholesale_design_uploads'] = array_values(array_diff(array_map('absint', $_SESSION['wholesale_design_uploads']), array($design_id)));
+			}
+			$session_design = wholesale_session_cl_design(absint($item->product_id ?? 0));
+			if ($session_design && absint($session_design['design_id'] ?? 0) === $design_id) {
+				unset($_SESSION['design_data_' . absint($item->product_id)]);
+			}
+		}
 		// Next checkout starts with the same blind ship return address.
 		if (!empty($checkout['blind_ship']) && is_user_logged_in()) {
 			$from = array();
@@ -763,11 +807,31 @@ function wholesale_ajax_payment_start()
 		}
 		$amount = $ticket['amount'];
 		$payload = array('ticket_id' => $ticket_id, 'billing' => $billing);
+	} elseif ('order' === $kind) {
+		// Payment link for an existing unpaid order (inc/order-pay-link.php). Takes cards even
+		// when "Disable card payment" is on: that setting only controls checkout.
+		$order_id = wholesale_find_order_by_pay_token(wholesale_order_pay_clean_token($_POST['order_token'] ?? ''));
+		if (!$order_id || !wholesale_order_pay_is_open($order_id)) {
+			wholesale_payment_json_error('This order is already paid or no longer open. Please contact us if you need help.');
+		}
+		if (current_user_can('edit_post', $order_id)) {
+			wholesale_payment_json_error('You are logged in as staff. Open the link in a private window to pay as the customer.');
+		}
+		$billing = wholesale_ticket_billing_from_request($_POST);
+		if (is_wp_error($billing)) {
+			wholesale_payment_json_error($billing->get_error_message());
+		}
+		$amount = wholesale_order_total($order_id);
+		$payload = array('order_post_id' => $order_id, 'billing' => $billing);
 	} else {
 		wholesale_payment_json_error('Unknown payment type.');
 	}
 
-	$ref = 'SSO' . strtoupper(wp_generate_password(12, false, false));
+	// The ref is the Converge invoice number. A payment link puts the order number in it
+	// (e.g. ORDVPRSMLLZNM7K2Q), so the transaction can be matched to the order in Converge.
+	$ref = 'order' === $kind
+		? 'ORD' . substr(preg_replace('/[^A-Z0-9]/', '', wholesale_order_number($payload['order_post_id'])), 0, 16) . strtoupper(wp_generate_password(4, false, false))
+		: 'SSO' . strtoupper(wp_generate_password(12, false, false));
 
 	if ('direct' === wholesale_payment_method()) {
 		wholesale_direct_payment($kind, $payload, $amount, $billing, $ref, $password);
@@ -795,6 +859,141 @@ function wholesale_ajax_payment_start()
 }
 add_action('wp_ajax_wholesale_payment_start', 'wholesale_ajax_payment_start');
 
+// ------------------------------------------------------------------
+// Failed card payments: tell staff, slow down card testing
+// ------------------------------------------------------------------
+
+/**
+ * Transient key counting declined cards from this visitor's IP address, or ''
+ * when the address is unknown (then nothing is counted or blocked, so visitors
+ * with no readable address can never share one counter).
+ */
+function wholesale_payment_decline_key()
+{
+	$ip = function_exists('wholesale_vi_client_ip')
+		? wholesale_vi_client_ip(false)
+		: (isset($_SERVER['REMOTE_ADDR']) ? (string) filter_var(wp_unslash($_SERVER['REMOTE_ADDR']), FILTER_VALIDATE_IP) : '');
+
+	return '' !== (string) $ip ? 'wholesale_pay_declines_' . md5((string) $ip) : '';
+}
+
+/**
+ * Declined or rejected cards allowed from one IP address within an hour of the
+ * last one. A real customer rarely needs more than two or three tries; bots
+ * testing stolen card numbers need hundreds, and each try costs a gateway fee.
+ */
+function wholesale_payment_decline_limit()
+{
+	return 5;
+}
+
+function wholesale_payment_declines_blocked()
+{
+	$key = wholesale_payment_decline_key();
+
+	return '' !== $key && (int) get_transient($key) >= wholesale_payment_decline_limit();
+}
+
+/**
+ * @return int Declines from this IP address in the last hour, this one included.
+ */
+function wholesale_payment_count_decline()
+{
+	$key = wholesale_payment_decline_key();
+	if ('' === $key) {
+		return 0;
+	}
+	$count = (int) get_transient($key) + 1;
+	set_transient($key, $count, HOUR_IN_SECONDS);
+
+	return $count;
+}
+
+/**
+ * Emails the team when a card payment fails. A declined checkout creates no
+ * order, so without this the customer's name, phone and cart are lost the
+ * moment they close the page. When the processor never answered, the card may
+ * have been charged, so the email says to check Converge first.
+ *
+ * One email per visitor per 30 minutes for declines, and at most 20 an hour in
+ * all, so a card-testing bot can't flood the inbox.
+ */
+function wholesale_payment_failed_alert($kind, $payload, $amount, $billing, $ref, $sale, $attempts)
+{
+	$unknown = !empty($sale['unknown']);
+	$visitor_key = 'wholesale_pay_alert_' . md5(session_id() . '|' . $kind . '|' . ($billing['billing_email'] ?? ''));
+	if (!$unknown && get_transient($visitor_key)) {
+		return;
+	}
+	$hour_key = 'wholesale_pay_alerts_' . gmdate('YmdH');
+	$sent_this_hour = (int) get_transient($hour_key);
+	if ($sent_this_hour >= 20) {
+		return;
+	}
+	set_transient($hour_key, $sent_this_hour + 1, HOUR_IN_SECONDS);
+	set_transient($visitor_key, 1, 30 * MINUTE_IN_SECONDS);
+
+	$name = trim(($billing['billing_fname'] ?? '') . ' ' . ($billing['billing_lname'] ?? ''));
+	$money = static function ($value) {
+		return '$' . number_format((float) $value, 2);
+	};
+
+	$lines = array();
+	if ($unknown) {
+		$lines[] = 'Converge gave no clear answer after the card was sent, so the card MAY HAVE BEEN CHARGED. No order was saved.';
+		$lines[] = 'Look up invoice ' . $ref . ' in Converge before contacting the customer, so they are not charged twice.';
+	} elseif ('cart' === $kind) {
+		$lines[] = 'A customer tried to pay at checkout, but the card did not go through, so no order was created.';
+		$lines[] = 'They were ready to buy: call or email them today. They can try another card, or you can take the payment by phone.';
+	}
+	$lines[] = '';
+	$lines[] = 'What the customer was told: ' . wp_strip_all_tags((string) $sale['message']);
+	if ($attempts > 1) {
+		$lines[] = sprintf('Declined attempts from this device in the last hour: %d (online payment pauses at %d).', $attempts, wholesale_payment_decline_limit());
+	}
+	$lines[] = '';
+	$lines[] = 'Name: ' . ('' !== $name ? $name : '(not given)');
+	if (!empty($billing['billing_company'])) {
+		$lines[] = 'Business: ' . $billing['billing_company'];
+	}
+	$lines[] = 'Email: ' . ($billing['billing_email'] ?? '');
+	$lines[] = 'Phone: ' . (!empty($billing['billing_tel']) ? $billing['billing_tel'] : '(not given)');
+	$lines[] = 'Billing address: ' . trim(implode(', ', array_filter(array($billing['billing_address'] ?? '', $billing['billing_city'] ?? '', trim(($billing['billing_state'] ?? '') . ' ' . ($billing['billing_zip'] ?? ''))))));
+	$lines[] = 'Amount: ' . $money($amount);
+
+	if ('cart' === $kind && !empty($payload['checkout'])) {
+		$checkout = $payload['checkout'];
+		$lines[] = sprintf('  Subtotal %s + %s %s + tax %s', $money($checkout['sub_total']), $checkout['shipping_label'], $money($checkout['shipping_cost']), $money($checkout['tax']));
+		$lines[] = '';
+		$lines[] = 'Cart:';
+		foreach ((array) $checkout['items'] as $item) {
+			$item = (object) $item;
+			$lines[] = sprintf('- %d x %s: %s', max(1, (int) ($item->product_quantity ?? 1)), html_entity_decode(wp_strip_all_tags((string) ($item->product_title ?? 'Item')), ENT_QUOTES, 'UTF-8'), $money($item->product_subtotal ?? 0));
+		}
+		if (!empty($checkout['comment'])) {
+			$lines[] = '';
+			$lines[] = 'Order note: ' . $checkout['comment'];
+		}
+	} elseif ('order' === $kind && !empty($payload['order_post_id'])) {
+		$lines[] = 'Order: #' . wholesale_order_number($payload['order_post_id']) . ' ' . admin_url('post.php?post=' . (int) $payload['order_post_id'] . '&action=edit');
+	} elseif ('ticket' === $kind && !empty($payload['ticket_id'])) {
+		$lines[] = 'Payment request (ticket) ID: ' . (int) $payload['ticket_id'];
+	}
+	$lines[] = '';
+	$lines[] = 'Converge invoice: ' . $ref;
+	$lines[] = 'Time: ' . wp_date('M j, Y g:i a T');
+
+	$subject = $unknown
+		? sprintf('CHECK CONVERGE: payment result unknown for %s (%s)', '' !== $name ? $name : ($billing['billing_email'] ?? ''), $money($amount))
+		: sprintf('Checkout payment failed: %s (%s), no order placed', '' !== $name ? $name : ($billing['billing_email'] ?? ''), $money($amount));
+	$headers = array();
+	if (!empty($billing['billing_email']) && is_email($billing['billing_email'])) {
+		$headers[] = 'Reply-To: ' . ('' !== $name ? str_replace(array('"', "\r", "\n"), '', $name) . ' ' : '') . '<' . $billing['billing_email'] . '>';
+	}
+
+	wholesale_mail_team($subject, implode("\n", $lines), $headers);
+}
+
 /**
  * Direct method: charge the card fields from the form, then create the order. Always exits.
  */
@@ -804,14 +1003,24 @@ function wholesale_direct_payment($kind, $payload, $amount, $billing, $ref, $pas
 	if (is_wp_error($card)) {
 		wholesale_payment_json_error($card->get_error_message(), 400, $card->get_error_data()['field'] ?? '');
 	}
+	if (wholesale_payment_declines_blocked()) {
+		wholesale_payment_json_error('For your security, online payment is paused after several declined cards. Please call us at 866-436-2101 and we will finish your order by phone.', 429);
+	}
 
 	// One charge at a time per visitor: a double click can never charge twice.
-	$lock = 'wholesale_direct_lock_' . md5(session_id() . ('ticket' === $kind ? $payload['ticket_id'] : ''));
+	// An order payment link locks the order itself, so two browsers can't both pay it.
+	$lock = 'order' === $kind
+		? 'wholesale_order_pay_lock_' . (int) $payload['order_post_id']
+		: 'wholesale_direct_lock_' . md5(session_id() . ('ticket' === $kind ? $payload['ticket_id'] : ''));
 	if ((int) get_option($lock) < time() - 120) {
 		delete_option($lock);
 	}
 	if (!add_option($lock, time(), '', 'no')) {
 		wholesale_payment_json_error('Your payment is already being processed. Please wait a moment.');
+	}
+	if ('order' === $kind && !wholesale_order_pay_is_open($payload['order_post_id'])) {
+		delete_option($lock);
+		wholesale_payment_json_error('This order has already been paid. No charge was made.');
 	}
 
 	$sale = wholesale_converge_direct_sale($amount, $card, $billing, $ref);
@@ -820,6 +1029,15 @@ function wholesale_direct_payment($kind, $payload, $amount, $billing, $ref, $pas
 		delete_option($lock);
 		if ('ticket' === $kind) {
 			wholesale_ticket_log($payload['ticket_id'], 'payment_failed', $sale['message']);
+		} elseif ('order' === $kind) {
+			wholesale_order_pay_log($payload['order_post_id'], 'failed', $sale['message']);
+		}
+		$attempts = !empty($sale['declined']) ? wholesale_payment_count_decline() : 0;
+		// A failed checkout leaves no order behind, so staff hear about it here. Ticket and
+		// order-link payments already have their own record; they only alert when the
+		// charge may have gone through.
+		if ('cart' === $kind || !empty($sale['unknown'])) {
+			wholesale_payment_failed_alert($kind, $payload, $amount, $billing, $ref, $sale, $attempts);
 		}
 		wholesale_payment_json_error($sale['message'], 402);
 	}
@@ -855,6 +1073,9 @@ function wholesale_payment_finalize($pending, $ref, $payment_meta, $password = '
 			wholesale_checkout_attach_account($order, $pending['checkout'], $password);
 		}
 		$customer = $pending['checkout']['billing'];
+	} elseif ('order' === $pending['kind']) {
+		$order = wholesale_order_pay_complete($pending['order_post_id'], $pending['billing'], $payment_meta);
+		$customer = $pending['billing'];
 	} else {
 		$order = wholesale_ticket_finalize($pending['ticket_id'], $pending['billing'], true, $payment_meta);
 		$customer = $pending['billing'];
@@ -949,7 +1170,8 @@ function wholesale_enqueue_payment_script()
 	wp_localize_script('wholesale-checkout', 'wholesalePayment', array(
 		'ajaxUrl' => admin_url('admin-ajax.php'),
 		'nonce' => wp_create_nonce('wholesale_payment'),
-		'cardEnabled' => !wholesale_setting_enabled('payment_disabled'),
+		// Order payment links (/pay/?o=) always take cards; the setting only covers checkout.
+		'cardEnabled' => !wholesale_setting_enabled('payment_disabled') || (is_page('pay') && isset($_GET['o'])),
 		'method' => wholesale_payment_method(),
 	));
 }

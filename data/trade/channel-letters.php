@@ -16,19 +16,22 @@
  * @package litsign
  */
 
+// UL file number from Settings > Storefront Sign; shown only once the owner enters it.
+$ul_file = function_exists('wholesale_guide_ul_file_number') ? wholesale_guide_ul_file_number() : '';
+$listing = 'UL listed, sign section label for outdoor use' . ('' !== $ul_file ? ' (UL file ' . $ul_file . ')' : '');
 $aluminum_specs = array(
 	'Returns' => '.040" high-reflective aluminum, 3" or 5" deep',
 	'Trim cap' => 'Jewelite, 3/4" or 1"',
 	'Face' => '3/16" acrylic; translucent, day/night or printed 3M vinyl for brand colors',
 	'LEDs' => '0.7W / 1.2W IP67 modules, 160° beam, 9,000–10,500K',
-	'Listing' => 'UL listed, sign section label for outdoor use',
+	'Listing' => $listing,
 	'Ships with' => '3 ft power lead, wiring diagram, full-size mounting pattern',
 );
 $stainless_specs = array(
 	'Returns' => 'Welded stainless steel, 0.8 or 1 mm, 2" or 3" deep; sanded and painted',
 	'LEDs' => '0.7W / 1.2W IP67 modules, 160° beam, 10,000–12,000K',
 	'Colors' => '35+ standard finishes; custom Pantone C on request',
-	'Listing' => 'UL listed, sign section label for outdoor use',
+	'Listing' => $listing,
 	'Ships with' => '3 ft power lead, wiring diagram, full-size mounting pattern',
 );
 
@@ -55,15 +58,15 @@ return array(
 	'standard-channel-letter-back-lit' => array(
 		'faq' => array(
 			array('q' => 'What wall finish works best with back lit letters?', 'a' => 'Smooth, light-colored walls show the glow best. Very dark or rough surfaces absorb the light, so on those facades we suggest Type 5 reverse lit letters instead.'),
-			array('q' => 'Do back lit letters read in daylight?', 'a' => 'By day they read as solid dimensional aluminum letters in your chosen return color. The lit effect only shows after dusk, so pick a return color that carries the brand in daylight.'),
+			array('q' => 'Do back lit letters read in daylight?', 'a' => 'By day they read as dimensional letters in your chosen face and return colors. The lit effect only shows after dusk, so pick face and return colors that carry the brand in daylight.'),
 		),
 		'type' => 2,
 		'name' => 'Back Lit',
 		'short' => 'Aluminum letters that wash the wall behind them with light.',
 		'title' => 'Wholesale Back Lit Channel Letters | Storefront Sign Wholesale',
-		'description' => 'Back lit channel letters for sign companies: aluminum returns, LEDs aimed at the wall for a soft glow, UL listed, mounting pattern and wiring diagram included.',
+		'description' => 'Back lit channel letters for sign companies: aluminum returns, LEDs aimed at the wall for a soft glow, UL listed, with mounting pattern and wiring diagram.',
 		'h1' => 'Wholesale Back Lit Channel Letters',
-		'lead' => 'Opaque letters with the LEDs aimed backward, so the light spreads across the wall around each character. A good fit when the client wants a softer night look than a face lit sign but keeps an aluminum budget.',
+		'lead' => 'Acrylic-faced aluminum letters with the LEDs aimed backward, so the light spreads across the wall around each character. A good fit when the client wants a softer night look than a face lit sign but keeps an aluminum budget.',
 		'best_for' => array('Light-colored or smooth wall finishes that show the glow', 'Restaurants, salons and offices that want an evening look', 'Clients upgrading from non-lit dimensional letters'),
 		'sell' => 'Tell your client: the wall becomes part of the sign at night, and by day it reads as clean dimensional letters.',
 		'install' => 'Mount on standoffs so the light has room to spread; the pattern shows standoff and wire locations for each letter.',
@@ -80,7 +83,7 @@ return array(
 		'name' => 'Front & Back Lit',
 		'short' => 'Dual lit: a bright face plus a glow on the wall through a clear back.',
 		'title' => 'Wholesale Dual Lit Channel Letters | Storefront Sign Wholesale',
-		'description' => 'Front and back lit (dual lit) channel letters: acrylic face, clear 1/8" Lexan back, aluminum returns. Fabricated and UL listed for sign shops. Apply for trade pricing.',
+		'description' => 'Front and back lit (dual lit) channel letters: acrylic face, clear 1/8" Lexan back, aluminum returns. UL listed for sign shops. Apply for trade pricing.',
 		'h1' => 'Wholesale Front & Back Lit (Dual Lit) Channel Letters',
 		'lead' => 'One letter, two light paths. The acrylic face lights like a standard front lit letter, while a clear Lexan back lets light out onto the wall. It is the upsell that wins the bid when two shops quote the same front lit set.',
 		'best_for' => array('Flagship storefronts and corner locations', 'Brands that want a halo without moving to stainless', 'Bids where a visible step up helps you win the job'),
@@ -99,7 +102,7 @@ return array(
 		'name' => 'Halo Lit (Stainless)',
 		'short' => 'Solid stainless face and returns; light shows only as a halo.',
 		'title' => 'Wholesale Halo Lit Channel Letters | Storefront Sign Wholesale',
-		'description' => 'Halo lit stainless steel channel letters for sign companies: welded face and returns, hidden clear Lexan back, 35+ finishes, UL listed. Trade accounts only.',
+		'description' => 'Halo lit stainless steel channel letters for sign companies: welded face and returns, hidden clear Lexan back, 35+ finishes, UL listed. Trade only.',
 		'h1' => 'Wholesale Halo Lit Stainless Steel Channel Letters',
 		'lead' => 'Welded stainless steel faces and returns with the light hidden behind them. By day it reads as a premium metal letter; at night the halo outlines every character. The letter architects specify for lobbies, clinics and hospitality.',
 		'best_for' => array('Corporate lobbies, medical and professional offices', 'Hotels, restaurants and upscale retail', 'Architect-specified projects with a finish schedule'),
@@ -118,7 +121,7 @@ return array(
 		'name' => 'Reverse Lit (Acrylic Back)',
 		'short' => 'Stainless letters on a glowing translucent acrylic back.',
 		'title' => 'Wholesale Reverse Lit Channel Letters | Storefront Sign Wholesale',
-		'description' => 'Reverse lit channel letters: stainless steel face and returns on an exposed translucent acrylic back that glows and throws a halo. Built for sign shops, UL listed.',
+		'description' => 'Reverse lit channel letters: stainless steel face and returns on an exposed translucent acrylic back that glows and casts a halo. UL listed for sign shops.',
 		'h1' => 'Wholesale Reverse Lit Channel Letters',
 		'lead' => 'A stainless face and return on an exposed translucent acrylic back. The back edge glows and casts the halo, which gives a crisper outline than a hidden back. A strong pick for darker walls and logos with fine detail.',
 		'best_for' => array('Darker wall finishes where a hidden halo fades', 'Logos and marks that need a defined edge at night', 'Interior feature walls and reception signs'),
@@ -137,7 +140,7 @@ return array(
 		'name' => 'Trimless with Border',
 		'short' => 'Face lit acrylic set inside a thin stainless border; no trim cap.',
 		'title' => 'Wholesale Trimless Channel Letters | Storefront Sign Wholesale',
-		'description' => 'Trimless face lit channel letters: 9mm acrylic face inset in a thin stainless steel border, no plastic trim cap, welded returns. Wholesale for sign companies.',
+		'description' => 'Trimless face lit channel letters: 9mm acrylic face inset in a thin stainless steel border, no plastic trim cap, welded returns. Wholesale for sign shops.',
 		'h1' => 'Wholesale Trimless Channel Letters with Border',
 		'lead' => 'The face lit look without a plastic trim cap. A 9mm acrylic face sits inside a thin stainless steel border, so the edge of each letter stays clean and metal. It answers the "can we lose the trim cap?" question from design-led clients.',
 		'best_for' => array('Design-led brands that dislike visible trim cap', 'Boutique retail, cafés and fitness studios', 'Close viewing distances where edge detail shows'),
@@ -156,7 +159,7 @@ return array(
 		'name' => 'Borderless Face Lit',
 		'short' => 'A thick exposed acrylic face with no trim cap and no border.',
 		'title' => 'Wholesale Borderless Channel Letters | Storefront Sign Wholesale',
-		'description' => 'Borderless face lit channel letters: 15mm exposed acrylic face with no trim cap or border, on stainless returns. For sign companies; apply for a trade account.',
+		'description' => 'Borderless face lit channel letters: 15mm exposed acrylic face with no trim cap or border, on stainless returns. For sign shops; apply for a trade account.',
 		'h1' => 'Wholesale Borderless Face Lit Channel Letters',
 		'lead' => 'A 15mm acrylic face with no trim cap and no border, so the whole face edge glows. The most modern face lit option in the range, popular for tech, beauty and lifestyle brands.',
 		'best_for' => array('Modern brands with rounded or script logos', 'Interior and exterior feature signs', 'Clients comparing against trimless imports'),

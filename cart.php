@@ -68,7 +68,7 @@ get_header();
                     <a class="checkout-pay" href="<?php echo esc_url(home_url('/#banners-displays')); ?>">Shop Banners &amp; Displays</a>
                     <a class="cart-secondary" href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>">Shop Channel Letters</a>
                 </div>
-                <p class="cart-help">Need help? Call <a href="tel:+18664362101">866-436-2101</a>, Mon&ndash;Fri 8am&ndash;5pm PT.</p>
+                <p class="cart-help">Need help? Call <a href="tel:+18664362101">866-436-2101</a>, Mon&ndash;Fri 8am&ndash;5pm PST.</p>
             </section>
         <?php else : ?>
             <div class="checkout-layout">
@@ -149,12 +149,12 @@ get_header();
                         </dl>
                         <?php if ($free_shipping_min > 0) : ?>
                             <p class="cart-free-shipping"><?php echo $sub_total >= $free_shipping_min
-                                ? 'Your order qualifies for free shipping (3–6 business days).'
-                                : esc_html(sprintf('Add %s more to get free shipping.', $money($free_shipping_min - $sub_total))); ?></p>
+                                ? esc_html(sprintf('Your order qualifies for free %s Ground shipping.', implode(' or ', wholesale_enabled_shipping_carriers())))
+                                : esc_html(sprintf('Add %s more to get free Ground shipping.', $money($free_shipping_min - $sub_total))); ?></p>
                         <?php endif; ?>
                         <a class="checkout-pay" href="<?php echo esc_url(home_url('/checkout/')); ?>">Proceed to Checkout</a>
                         <ul class="checkout-assurance">
-                            <li>Choose your shipping speed at checkout</li>
+                            <li><?php echo esc_html(implode(' or ', wholesale_enabled_shipping_carriers())); ?>, blind drop ship<?php echo wholesale_pickup_enabled() ? ' or free pickup' : ''; ?> at checkout</li>
                             <li><?php echo 'sign' === wholesale_items_noun($items) ? 'UL listed signs, tested before shipping' : 'Made to order and checked before shipping'; ?></li>
                             <li>Questions? <a href="tel:+18664362101">866-436-2101</a></li>
                         </ul>

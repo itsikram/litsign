@@ -55,7 +55,7 @@
   // visitor can still add the item and send the file by email.
   function rejectedText(input, message) {
     if (input.getAttribute("data-async-upload") !== "artwork") return message;
-    return message + " Choose another file (a PDF or JPG export works best), or add to cart without it and email your artwork to TR@StorefrontSignOnline.com with your order number.";
+    return message + " Choose another file (a PDF or JPG export works best), or add to cart without it and email a download link (Google Drive, Dropbox or WeTransfer) to Info@StorefrontSignWholesale.com with your order number.";
   }
 
   // Hold a form's submit until its uploads finish, then submit it again.
@@ -92,7 +92,8 @@
     var context = input.getAttribute("data-async-upload");
     var field = input.getAttribute("data-async-field");
     var form = input.form;
-    if (!context || !field || !form) return;
+    if (!context || !field || !form || input.hasAttribute("data-async-bound")) return;
+    input.setAttribute("data-async-bound", "");
 
     var name = input.name;
     var status = document.createElement("small");
@@ -110,10 +111,13 @@
         pending.delete(job);
         job = null;
       }
+      var hadToken = Boolean(hidden.parentNode);
       if (hidden.parentNode) hidden.parentNode.removeChild(hidden);
       input.name = name;
       status.textContent = "";
       status.className = "async-upload-status";
+      // js/artwork-size-check.js clears its size message.
+      if (hadToken) input.dispatchEvent(new CustomEvent("async-upload:cleared", { bubbles: true }));
     }
 
     input.addEventListener("change", function () {
@@ -148,6 +152,8 @@
         input.removeAttribute("name");
         status.textContent = "Uploaded ✓";
         status.className = "async-upload-status is-done";
+        // js/artwork-size-check.js compares the file with the ordered size.
+        input.dispatchEvent(new CustomEvent("async-upload:done", { bubbles: true, detail: { token: token, context: context } }));
       }, function (err) {
         if (job !== current || err.message === "aborted") return;
         if (err.status === 400 && err.message !== "upload_failed") {
@@ -170,6 +176,10 @@
   }
 
   document.querySelectorAll("input[type=file][data-async-upload]").forEach(bindInput);
+  // A product group swap (js/product-group-swap.js) brings in a new artwork box.
+  document.addEventListener("wholesale:product-swapped", function () {
+    document.querySelectorAll("input[type=file][data-async-upload]").forEach(bindInput);
+  });
 
   window.wholesaleAsyncUpload = Object.assign(config, {
     upload: upload,

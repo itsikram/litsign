@@ -21,13 +21,17 @@ function wholesale_seo_category_meta()
 		return '<a href="' . esc_url(wholesale_category_url($slug)) . '">' . esc_html($text) . '</a>';
 	};
 	$storefront = '<a href="' . esc_url(home_url('/storefront-signs/')) . '">storefront signs</a>';
+	// Trade site: prices are shown only to approved trade accounts.
+	$wholesale_price_line = (function_exists('wholesale_is_trade_site') && wholesale_is_trade_site())
+		? 'Pick a material and enter your size; approved trade accounts see live pricing before they order.'
+		: 'Pick a material, enter your size and see your price before you order.';
 
 	return array(
 		'banners' => array(
 			'title' => 'Custom Vinyl & Fabric Banners | Storefront Sign Online',
 			'description' => 'Custom vinyl, mesh, blockout and fabric banners printed to your exact size and priced per square foot. Enter your size to see your price. Ships nationwide.',
 			'h1' => 'Custom Printed Banners',
-			'intro' => 'Full color banners for storefronts, grand openings, events and trade shows. Choose 13oz vinyl for everyday outdoor use, 18oz blockout when both sides are seen, mesh for fences and windy locations, backlit banner for lightboxes, or wrinkle-free fabric for indoor displays. Pick a material, enter your size and see your price before you order. Need a stand? See our ' . $link('banner-stands', 'banner stands') . '.',
+			'intro' => 'Full color banners for storefronts, grand openings, events and trade shows. Choose 13oz vinyl for everyday outdoor use, 18oz blockout when both sides are seen, mesh for fences and windy locations, backlit banner for lightboxes, or wrinkle-free fabric for indoor displays. ' . $wholesale_price_line . ' Need a stand? See our ' . $link('banner-stands', 'banner stands') . '.',
 		),
 		'advertising-flags' => array(
 			'title' => 'Custom Feather & Teardrop Flags | Storefront Sign Online',
@@ -69,7 +73,7 @@ function wholesale_seo_category_meta()
 			'title' => 'Trade Show Displays & Backwalls | Storefront Sign Online',
 			'description' => 'Straight and curved tension fabric and Velcro pop up trade show displays, printed in full color with or without the frame. Order online; ships nationwide.',
 			'h1' => 'Trade Show Displays',
-			'intro' => 'Fabric backwalls for trade show booths, events and photo backdrops. Tension fabric displays use a pillowcase-style graphic that zips over a tube frame, and Velcro pop up displays attach fabric panels to a collapsible frame. Both come straight or curved and can be ordered with or without the frame. Finish the booth with ' . $link('table-throws', 'custom table throws') . ' and ' . $link('banner-stands', 'banner stands') . '.',
+			'intro' => 'Fabric backwalls for trade show booths, events and photo backdrops. Tension fabric displays use a pillowcase-style graphic that zips over an aluminum tube frame, and Velcro pop up displays attach fabric panels to a collapsible aluminum frame. Both come straight or curved and can be ordered with or without the frame. Finish the booth with ' . $link('table-throws', 'custom table throws') . ' and ' . $link('banner-stands', 'banner stands') . '.',
 		),
 		'custom-event-tents' => array(
 			'title' => 'Custom 10x10 Event Tents | Storefront Sign Online',
@@ -85,25 +89,25 @@ function wholesale_seo_category_meta()
 		),
 		'hardware-only' => array(
 			'title' => 'Banner Stand & Display Hardware | Storefront Sign Online',
-			'description' => 'Replacement retractable, X-stand, tension fabric and step and repeat frames, no graphic. Order in-stock hardware by 12 pm PT to ship same day, nationwide.',
+			'description' => 'Replacement retractable, X-stand, tension fabric and step and repeat frames, no graphic. Order in-stock hardware by 12 pm PST to ship same day, nationwide.',
 			'h1' => 'Display Hardware Only',
 			'intro' => 'Stands and frames without a printed graphic, for replacing worn hardware or adding stands to use with graphics you already have. Printed graphics are sold separately under ' . $link('banner-stands', 'banner stands') . '.',
 		),
 		'banner-stand-hardware' => array(
 			'title' => 'Replacement Banner Stand Hardware | Storefront Sign Online',
-			'description' => 'Replacement Standard retractable and tension fabric stand hardware, graphic not included. Order by 12 pm PT for same day shipping. Ships nationwide.',
+			'description' => 'Replacement Standard retractable and tension fabric stand hardware, graphic not included. Order by 12 pm PST for same day shipping. Ships nationwide.',
 			'h1' => 'Banner Stand Hardware',
 			'intro' => 'Replacement retractable and tension fabric stand hardware. Graphics are not included; order printed graphics under ' . $link('banner-stands', 'banner stands') . '.',
 		),
 		'flag-hardware' => array(
 			'title' => 'Flag Poles, Bases & Stakes | Storefront Sign Online',
-			'description' => 'Feather and rectangle flag pole sets, cross and square bases, ground stakes, water bags and carry bags. Order by 12 pm PT to ship same day, nationwide.',
+			'description' => 'Feather and rectangle flag pole sets, cross and square bases, ground stakes, water bags and carry bags. Order by 12 pm PST to ship same day, nationwide.',
 			'h1' => 'Flag Poles, Bases & Hardware',
 			'intro' => 'Poles and bases for feather, rectangle and economy flags: cross bases and water bags for hard surfaces, ground stakes and spikes for grass. Graphics are not included; order printed flags under ' . $link('advertising-flags', 'advertising flags') . '.',
 		),
 		'event-tent-hardware-only' => array(
 			'title' => 'Event Tent Frames & Accessories | Storefront Sign Online',
-			'description' => '10x10 event tent frames, sandbag sets, half wall hardware, flag holders and wheeled bags, graphics not included. Order by 12 pm PT; ships nationwide.',
+			'description' => '10x10 event tent frames, sandbag sets, half wall hardware, flag holders and wheeled bags, graphics not included. Order by 12 pm PST; ships nationwide.',
 			'h1' => 'Event Tent Hardware',
 			'intro' => 'Frames and accessories for 10x10 event tents: frame only, half wall hardware, flag holders, sandbag sets and wheeled carrying bags. Printed canopies and walls are under ' . $link('custom-event-tents', 'custom event tents') . '.',
 		),
@@ -170,11 +174,13 @@ function wholesale_seo_category_faq($slug)
 	);
 	$help = array(
 		'q' => 'Can someone help me choose?',
-		'a' => 'Yes. Call a sign specialist at <a href="tel:+18664362101">866-436-2101</a>, Monday to Friday, 8am&ndash;5pm PT, or <a href="' . esc_url(home_url('/contact/')) . '">send us your question</a>.',
+		'a' => 'Yes. Call a sign specialist at <a href="tel:+18664362101">866-436-2101</a>, Monday to Friday, 8am&ndash;5pm PST, or <a href="' . esc_url(home_url('/contact/')) . '">send us your question</a>.',
 	);
 	$per_sqft = array(
 		'q' => 'How is the price calculated?',
-		'a' => 'These products are priced per square foot. Enter your width and height on the product page and your price updates before you add it to the cart, so you know the cost before you order.',
+		'a' => (function_exists('wholesale_is_trade_site') && wholesale_is_trade_site())
+			? 'These products are priced per square foot. Approved trade accounts enter a width and height on the product page and see the price update before adding it to the cart.'
+			: 'These products are priced per square foot. Enter your width and height on the product page and your price updates before you add it to the cart, so you know the cost before you order.',
 	);
 
 	$faqs = array(
@@ -283,7 +289,7 @@ function wholesale_seo_category_faq($slug)
 		'trade-show-products' => array(
 			array(
 				'q' => 'Tension fabric or Velcro pop up display?',
-				'a' => 'A tension fabric display uses a pillowcase-style graphic that zips over a tube frame. A Velcro pop up display attaches fabric panels to a collapsible frame. Both come straight or curved.',
+				'a' => 'A tension fabric display uses a pillowcase-style graphic that zips over an aluminum tube frame. A Velcro pop up display attaches fabric panels to a collapsible aluminum frame. Both come straight or curved.',
 			),
 			array(
 				'q' => 'Can I order a new graphic for my frame?',
@@ -429,6 +435,26 @@ function wholesale_seo_category_faq($slug)
 			),
 			$shipping,
 		),
+		'indoor-outdoor-displays' => array(
+			array(
+				'q' => 'Which display should I choose?',
+				'a' => 'Pick by where it goes. Use ' . $link('advertising-flags', 'feather and teardrop flags') . ' and ' . $link('signicade-a-frames', 'sidewalk A-frames') . ' at the roadside or storefront, ' . $link('trade-show-products', 'fabric backwalls') . ' and ' . $link('table-throws', 'table covers') . ' for a trade show booth, ' . $link('banner-stands', 'banner stands') . ' for a lobby or retail floor, and ' . $link('custom-event-tents', 'event tents') . ' for outdoor events and markets.',
+			),
+			array(
+				'q' => 'Do displays come with the hardware?',
+				'a' => 'Most displays are sold as a complete kit or as the graphic only, so you can order a new print for a frame, stand or pole you already own.',
+			),
+			array(
+				'q' => 'Can I buy replacement hardware?',
+				'a' => 'Yes. Replacement poles, bases, frames and stands are in ' . $link('flag-hardware', 'flag hardware') . ', ' . $link('hardware-only', 'display hardware') . ' and ' . $link('event-tent-hardware-only', 'event tent hardware') . '.',
+			),
+			array(
+				'q' => 'How do I make a booth look like one brand?',
+				'a' => 'Use the same artwork across a backwall, table cover and banner stand so the booth reads as one brand from the aisle, and add a flag outside the venue or at your tent.',
+			),
+			$shipping,
+			$help,
+		),
 	);
 
 	return isset($faqs[$slug]) ? $faqs[$slug] : array();
@@ -482,7 +508,7 @@ function wholesale_seo_product_variant_label($product_id)
 }
 
 /**
- * The product that an exact duplicate (same name, "-2"/"-3" slug) should
+ * The product that an exact duplicate (same name, "-2"/"-3"/"-old" slug) should
  * point search engines at, or 0.
  */
 function wholesale_seo_product_duplicate_of($product_id)
@@ -499,7 +525,8 @@ function wholesale_seo_product_duplicate_of($product_id)
 
 	if (isset($copies[$slug])) {
 		$original_slug = $copies[$slug];
-	} elseif (preg_match('/^(.+)-\d+$/', $slug, $match)) {
+	} elseif (preg_match('/^(.+?)(?:-old)?(?:-\d+)?$/', $slug, $match) && $match[1] !== $slug) {
+		// "x-2", "x-old" and "x-old-2" are copies of "x".
 		$original_slug = $match[1];
 	} else {
 		return 0;
@@ -510,7 +537,11 @@ function wholesale_seo_product_duplicate_of($product_id)
 		return 0;
 	}
 
-	return get_the_title($original) === get_the_title($product_id) ? (int) $original->ID : 0;
+	// Same name, ignoring case and punctuation ("Stand (Hardware Only)" = "Stand Hardware Only").
+	$name = static function ($id) {
+		return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', html_entity_decode(get_the_title($id), ENT_QUOTES, 'UTF-8')));
+	};
+	return $name($original->ID) === $name($product_id) ? (int) $original->ID : 0;
 }
 
 /**
@@ -645,6 +676,85 @@ function wholesale_seo_sitemap_exclude_duplicate_products($args, $post_type)
 	return $args;
 }
 add_filter('wp_sitemaps_posts_query_args', 'wholesale_seo_sitemap_exclude_duplicate_products', 20, 2);
+
+/**
+ * The listed product that a hidden "-2"/"-3" copy should send shoppers to, or 0.
+ *
+ * Only exact copies count: same name as a published original, the copy hidden
+ * from product lists ("Show in product lists" unticked) and the original shown.
+ * Shoppers reached such a copy from search and old links and went back and
+ * forth between two identical pages (standard-retractable-hardware-only-2,
+ * Nov 2026). A copy that is still listed, or that differs in name, stays open:
+ * it may be a new product that happens to share a name.
+ */
+function wholesale_seo_product_copy_redirect_target($product_id)
+{
+	$product_id = (int) $product_id;
+	if (!preg_match('/-\d+$/', (string) get_post_field('post_name', $product_id))
+		|| 'on' === get_post_meta($product_id, '_show_in_list', true)) {
+		return 0;
+	}
+
+	$original = wholesale_seo_product_duplicate_of($product_id);
+
+	return $original && 'on' === get_post_meta($original, '_show_in_list', true) ? (int) $original : 0;
+}
+
+/**
+ * Send shoppers on a hidden copy to the listed original (301, query string kept
+ * so ad and tracking parameters survive). Previews are left alone.
+ */
+function wholesale_seo_redirect_product_copies()
+{
+	if (is_admin() || is_preview() || !is_singular('product')) {
+		return;
+	}
+
+	$original = wholesale_seo_product_copy_redirect_target(get_queried_object_id());
+	if (!$original) {
+		return;
+	}
+
+	$target = get_permalink($original);
+	$query = isset($_SERVER['QUERY_STRING']) ? (string) wp_unslash($_SERVER['QUERY_STRING']) : '';
+	wp_safe_redirect('' !== $query ? $target . '?' . $query : $target, 301);
+	exit;
+}
+add_action('template_redirect', 'wholesale_seo_redirect_product_copies', 2);
+
+/**
+ * Hidden copies that redirect stay out of search results (the results page and
+ * the live search box), so a search shows one card per product.
+ */
+function wholesale_seo_search_exclude_product_copies($query)
+{
+	if (is_admin() || !$query->is_search() || $query->get('wholesale_copy_check')) {
+		return;
+	}
+
+	static $copies = null;
+	if (null === $copies) {
+		$copies = array();
+		$ids = get_posts(array(
+			'post_type' => 'product',
+			'post_status' => 'publish',
+			'posts_per_page' => -1,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+			'wholesale_copy_check' => true,
+		));
+		foreach ($ids as $id) {
+			if (preg_match('/-\d+$/', (string) get_post_field('post_name', $id)) && wholesale_seo_product_copy_redirect_target($id)) {
+				$copies[] = (int) $id;
+			}
+		}
+	}
+
+	if ($copies) {
+		$query->set('post__not_in', array_merge((array) $query->get('post__not_in'), $copies));
+	}
+}
+add_action('pre_get_posts', 'wholesale_seo_search_exclude_product_copies');
 
 /**
  * Plain-text description from product meta: list items become sentences and
@@ -928,6 +1038,195 @@ function wholesale_seo_product_starting_text($slug)
 }
 
 /**
+ * The cheapest "Starting at" in one or more product categories, for category cards:
+ * the lowest Starting at among the published products the category pages list
+ * (sub-categories included, as on the category page; channel letters and out of
+ * stock products left out), so a category card never reads higher than a product in
+ * it and shows the same price on every page. Amounts compare as shown: a category
+ * with size-calculator products usually starts at its lowest per ft² rate.
+ *
+ * @param string|string[] $slugs product_category slug(s).
+ * @return array array('text' => that product's Starting at text without a leading
+ *               "From" (a dated sale keeps its <del> everyday price), 'price' => float,
+ *               'unit' => 'sqft'|'item', 'product_id' => int), or an empty array.
+ */
+function wholesale_seo_category_from($slugs)
+{
+	static $cache = array();
+	$slugs = array_values(array_unique(array_filter(array_map('sanitize_title', (array) $slugs))));
+	sort($slugs);
+	$key = implode(',', $slugs);
+	if (isset($cache[$key])) {
+		return $cache[$key];
+	}
+	$cache[$key] = array();
+
+	$term_ids = array();
+	foreach ($slugs as $slug) {
+		$term = get_term_by('slug', $slug, 'product_category');
+		if ($term && !is_wp_error($term)) {
+			$term_ids[] = (int) $term->term_id;
+		}
+	}
+	if (!$term_ids) {
+		return $cache[$key];
+	}
+	// Whole posts, not IDs: the query then loads their meta and categories in bulk.
+	$ids = wp_list_pluck(get_posts(array(
+		'post_type' => 'product',
+		'post_status' => 'publish',
+		'posts_per_page' => -1,
+		'no_found_rows' => true,
+		'orderby' => 'ID',
+		'order' => 'ASC',
+		'tax_query' => array(
+			array('taxonomy' => 'product_category', 'field' => 'term_id', 'terms' => $term_ids),
+		),
+		'meta_query' => array(
+			array('key' => '_show_in_list', 'value' => 'on'),
+		),
+	)), 'ID');
+
+	foreach ($ids as $id) {
+		if (wholesale_product_is_channel_letter($id) || (function_exists('wholesale_product_stock_status') && 'outofstock' === wholesale_product_stock_status($id))) {
+			continue;
+		}
+		// Add-ons, unprinted hardware and per-ft² fabric-only items don't set a category
+		// card's price: "Event Tents From $98.16" was a tent flag and "Feather & Teardrop
+		// Flags From $5.77 per ft²" a custom pole flag (2026-11-09).
+		if (in_array(get_post_field('post_name', $id), wholesale_seo_category_from_skipped(), true)) {
+			continue;
+		}
+		$text = trim(preg_replace('/^\s*from\s+/i', '', (string) get_post_meta($id, '_starting_at_text', true)));
+		$plain = wp_strip_all_tags(preg_replace('#<del\b.*?</del>#is', '', $text));
+		if (!preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', $plain, $prices)) {
+			continue;
+		}
+		$price = (float) str_replace(',', '', end($prices[1]));
+		if ($price > 0 && (!$cache[$key] || $price < $cache[$key]['price'])) {
+			$cache[$key] = array(
+				'text' => $text,
+				'price' => $price,
+				'unit' => preg_match('/per\s*(ft|sq)/i', $plain) ? 'sqft' : 'item',
+				'product_id' => (int) $id,
+			);
+		}
+	}
+
+	return $cache[$key];
+}
+
+/**
+ * Products that stay on their category pages but don't set the category card's
+ * "From" price, because the card names something else: add-ons and accessories
+ * (tent flag, tent walls), unprinted items (wood frame hanger, solid color throws)
+ * and per-ft² print-only or custom items in categories of complete kits (SEG fabric
+ * without a frame, the custom pole flag on the "Feather & Teardrop Flags" card).
+ *
+ * @return string[] Product slugs.
+ */
+function wholesale_seo_category_from_skipped()
+{
+	// Owner 2026-11-11: a category card's "From" must be the lowest price shown on that
+	// category page, add-ons included, so nothing is skipped any more. The 11-09 list was
+	// custom-pole-flag-pole, custom-pole-flag-only, tent-flag, tent-walls-full-color-full-wall,
+	// tent-walls-full-color-half-wall, custom-seg-fabric, magnetic-wood-frame-hanger,
+	// solid-color-table-throws.
+	return array();
+}
+
+/**
+ * A category's "From" price for a sign-type card, as the category page shows its
+ * cheapest product: the exact amount without ".00" (wholesale_whole_dollars(), no
+ * rounding since 2026-11-12) plus the unit, e.g. array('$1.58', '/sq ft'), array('$42', '').
+ * Channel letters: the cheapest per-letter price of any style in the category.
+ *
+ * @return array array(amount, unit), or an empty array.
+ */
+function wholesale_category_card_from($category)
+{
+	static $cache = array();
+	if (isset($cache[$category])) {
+		return $cache[$category];
+	}
+	$cache[$category] = array();
+
+	if ('channel-letters' === $category) {
+		$low = 0.0;
+		foreach (get_posts(array(
+			'post_type' => 'product',
+			'post_status' => 'publish',
+			'posts_per_page' => -1,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+			'tax_query' => array(array('taxonomy' => 'product_category', 'field' => 'slug', 'terms' => $category)),
+		)) as $id) {
+			if (!wholesale_product_is_channel_letter($id) || (function_exists('wholesale_product_stock_status') && 'outofstock' === wholesale_product_stock_status($id))) {
+				continue;
+			}
+			$from = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($id) : null;
+			if ($from && $from['price'] > 0 && (!$low || $from['price'] < $low)) {
+				$low = (float) $from['price'];
+			}
+		}
+		if ($low > 0) {
+			$cache[$category] = array('$' . number_format($low, 2), '/inch');
+		}
+
+		return $cache[$category];
+	}
+
+	$from = wholesale_seo_category_from($category);
+	if ($from) {
+		$cache[$category] = array(wholesale_whole_dollars($from['price']), 'sqft' === $from['unit'] ? '/sq ft' : '');
+	}
+
+	return $cache[$category];
+}
+
+/**
+ * A category card's "Starting at" text (see wholesale_seo_category_from()), or ''.
+ *
+ * @param string|string[] $slugs product_category slug(s).
+ */
+function wholesale_seo_category_starting_text($slugs)
+{
+	$from = wholesale_seo_category_from($slugs);
+
+	return $from ? $from['text'] : '';
+}
+
+/**
+ * The channel letter style with the lowest Starting at (wholesale_seo_channel_letter_products()), for every
+ * "channel letters from $X per letter" line that speaks for all the styles; front lit when none has a price.
+ * A dated sale's struck-through everyday price is ignored.
+ *
+ * @return string product slug.
+ */
+function wholesale_seo_cheapest_letter_slug()
+{
+	static $slug = null;
+	if (null !== $slug) {
+		return $slug;
+	}
+	$slug = 'standard-channel-letter-front-lit';
+	$best = null;
+	foreach (array_keys(wholesale_seo_channel_letter_products()) as $each) {
+		$text = wp_strip_all_tags(preg_replace('#<del.*?</del>#is', '', (string) wholesale_seo_product_starting_text($each)));
+		if (!preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', $text, $prices)) {
+			continue;
+		}
+		$amount = (float) str_replace(',', '', end($prices[1]));
+		if ($amount > 0 && (null === $best || $amount < $best)) {
+			$best = $amount;
+			$slug = $each;
+		}
+	}
+
+	return $slug;
+}
+
+/**
  * Smallest and largest letter height offered for a channel letter style.
  *
  * @return int[] array(min, max) in inches, or an empty array.
@@ -960,19 +1259,31 @@ function wholesale_seo_letter_height_range($slug)
  * at the smallest height without a power supply. Product structured data uses
  * it so Google sees the same price the page and cart charge.
  *
+ * @param bool $fresh Work it out again instead of using this request's earlier answer
+ *                    (SFS B2Sign Sync prices proposed values before saving them).
  * @return float 0 when the product has no online price.
  */
-function wholesale_seo_product_lowest_price($product_id)
+function wholesale_seo_product_lowest_price($product_id, $fresh = false)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
-	if (isset($cache[$product_id])) {
+	if (!$fresh && isset($cache[$product_id])) {
 		return $cache[$product_id];
 	}
+	unset($GLOBALS['wholesale_seo_lowest_quote'][$product_id]);
 
 	$cache[$product_id] = 0.0;
 	if (!function_exists('wholesale_price_quote')) {
 		return 0.0;
+	}
+	// Channel letters: the cheapest letter height, the same "Starting at" price the page shows. With
+	// B2Sign's per-letter minimums the smallest height is not always the cheapest (8" costs more than 14").
+	if (function_exists('wholesale_product_is_channel_letter') && wholesale_product_is_channel_letter($product_id) && function_exists('wholesale_cl_from_price')) {
+		$from = wholesale_cl_from_price($product_id);
+		if ($from && $from['price'] > 0) {
+			$cache[$product_id] = (float) $from['price'];
+			return $cache[$product_id];
+		}
 	}
 
 	$request = array('letters' => 'A', 'product_quantity' => 1);
@@ -1232,7 +1543,10 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 			if ($from_price > 0 && $heights) :
 				?>
 				<?php
-				echo '<strong>' . esc_html(sprintf('Prices start at $%s for one %d inch letter', number_format($from_price, 2), $heights[0])) . '</strong>'
+				$from_cl = function_exists('wholesale_cl_from_inch_rate') ? wholesale_cl_from_inch_rate($product_id) : null;
+				$from_height = $from_cl && !empty($from_cl['height']) ? (int) $from_cl['height'] : $heights[0];
+				$from_rate = $from_cl ? (float) $from_cl['price'] : 0.0;
+				echo '<strong>' . esc_html(sprintf('Starting rate: $%s per inch of letter height at %d inches tall', number_format($from_rate, 2), $from_height)) . '</strong>'
 					. esc_html($promotion ? sprintf(', including the %s%% sale that ends %s,', rtrim(rtrim(number_format($promotion['percent'], 2), '0'), '.'), wholesale_promotion_end_text($promotion)) : ',')
 					. ' before options such as a power supply or raceway.';
 				$cost_page = get_page_by_path('channel-letter-cost');
@@ -1241,7 +1555,7 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 				}
 				?>
 			<?php endif; ?>
-			Price is per letter by height: choose your height, enter your wording and colors above, and your total updates before you add it to the cart. Every sign is tested before it ships, with an installation pattern and wiring diagram for your installer.
+			Rates vary by height and style. Choose your height, enter your wording and colors above, and your full sign price updates before you add it to the cart. Every sign is tested before it ships, with an installation pattern and wiring diagram for your installer.
 		</p>
 
 		<h3>Compare other channel letter styles</h3>
@@ -1260,7 +1574,7 @@ function wholesale_seo_render_channel_letter_guide($product_id)
 			<?php endforeach; ?>
 		</ul>
 		<p>
-			See all styles side by side on the <a href="<?php echo esc_url((wholesale_channel_letters_landing_id() ? get_permalink(wholesale_channel_letters_landing_id()) : home_url('/custom-channel-letters/')) . '#cl-compare-title'); ?>">custom channel letters page</a><?php if ($storefront_url) : ?>, or compare every sign type in our <a href="<?php echo esc_url($storefront_url); ?>">storefront signs guide</a><?php endif; ?>.
+			See all styles side by side on the <a href="<?php echo esc_url((function_exists('wholesale_is_trade_site') && wholesale_is_trade_site()) ? home_url('/channel-letters/') : ((wholesale_channel_letters_landing_id() ? get_permalink(wholesale_channel_letters_landing_id()) : home_url('/custom-channel-letters/')) . '#cl-compare-title')); ?>">custom channel letters page</a><?php if ($storefront_url) : ?>, or compare every sign type in our <a href="<?php echo esc_url($storefront_url); ?>">storefront signs guide</a><?php endif; ?>.
 		</p>
 	</section>
 	<?php
@@ -1487,7 +1801,8 @@ function wholesale_seo_render_related_products($product_id)
 		'post_type' => 'product',
 		'post_status' => 'publish',
 		'posts_per_page' => 8,
-		'post__not_in' => array_merge(array((int) $product_id), wholesale_seo_duplicate_product_ids()),
+		// Products whose only photos carry sample sale artwork stay out (inc/product-photo-overrides.php).
+		'post__not_in' => array_merge(array((int) $product_id), wholesale_seo_duplicate_product_ids(), function_exists('wholesale_card_hidden_product_ids') ? wholesale_card_hidden_product_ids() : array()),
 		'no_found_rows' => true,
 		'orderby' => array('menu_order' => 'ASC', 'title' => 'ASC'),
 		'tax_query' => array(
@@ -1510,7 +1825,11 @@ function wholesale_seo_render_related_products($product_id)
 			<?php foreach ($related as $item) : ?>
 				<?php
 				$name = wholesale_seo_product_name($item->ID);
-				$price = wholesale_seo_product_lowest_price($item->ID);
+				// The product's own Starting at, as its other cards show it: whole dollars rounded
+				// up, per ft² for size-calculator products, a dated sale struck through. Not
+				// wholesale_seo_product_lowest_price(), the default-choice price Google gets.
+				$price = trim(preg_replace('/^\s*from\s+/i', '', (string) get_post_meta($item->ID, '_starting_at_text', true)));
+				$price = preg_match('/\$\s?\d/', wp_strip_all_tags($price)) ? wholesale_price_no_cents($price) : '';
 				?>
 				<li class="related-product">
 					<?php echo wholesale_admin_edit_product_link($item->ID); // Escaped in helper. ?>
@@ -1528,8 +1847,8 @@ function wholesale_seo_render_related_products($product_id)
 							?>
 						</span>
 						<span class="related-product-name"><?php echo esc_html($name); ?></span>
-						<?php if ($price > 0) : ?>
-							<span class="related-product-price"><?php echo esc_html('From ' . wholesale_whole_dollars($price)); ?></span>
+						<?php if ($price) : ?>
+							<span class="related-product-price"><?php echo wp_kses('From ' . $price, array('sup' => array(), 'del' => array())); ?></span>
 						<?php endif; ?>
 					</a>
 				</li>

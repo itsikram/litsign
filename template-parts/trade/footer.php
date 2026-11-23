@@ -25,8 +25,8 @@ $show_sticky = !$approved && !is_page(array('cart', 'checkout', 'login')) && 'tr
 				<?php endforeach; ?>
 			</ul>
 		</nav>
-		<nav aria-label="Trade">
-			<h2>Trade</h2>
+		<nav aria-label="Contact">
+			<h2>Contact</h2>
 			<ul>
 				<li><a href="<?php echo esc_url(home_url('/channel-letters/')); ?>">Compare all 7 types</a></li>
 				<li><a href="<?php echo esc_url(home_url('/for-sign-companies/')); ?>">Outsource fabrication</a></li>
@@ -51,7 +51,19 @@ $show_sticky = !$approved && !is_page(array('cart', 'checkout', 'login')) && 'tr
 	</div>
 	<div class="tw-wrap tw-footer__bottom">
 		<span>&copy; <?php echo esc_html(wp_date('Y')); ?> <?php echo esc_html($brand['legal_name']); ?>. Trade accounts only.</span>
-		<span><a href="<?php echo esc_url(home_url('/terms-conditions/')); ?>">Trade terms</a></span>
+		<?php
+		// Help and guide pages: one link from every page so they are crawled and found
+		// (only pages that are published and public, inc/trade/seo.php).
+		$footer_pages = array('terms-conditions' => 'Trade terms', 'warranty' => 'Warranty', 'shipping-returns' => 'Shipping & returns', 'reviews' => 'Reviews', 'design-templates' => 'Design templates', 'how-to-install-channel-letters' => 'Install guide', 'sign-permits' => 'Sign permits', 'banners-displays' => 'Banners & displays', 'window-graphics' => 'Window graphics');
+		$footer_links = array();
+		foreach ($footer_pages as $slug => $label) {
+			$page = get_page_by_path($slug);
+			if ($page && ('terms-conditions' === $slug || (function_exists('wholesale_trade_sitemap_page_ok') && wholesale_trade_sitemap_page_ok($page)))) {
+				$footer_links[] = '<a href="' . esc_url(get_permalink($page)) . '">' . esc_html($label) . '</a>';
+			}
+		}
+		?>
+		<nav aria-label="Help and guides"><?php echo implode(' · ', $footer_links); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped above. ?></nav>
 	</div>
 	<?php if ($show_sticky) : ?>
 		<div class="tw-sticky" role="region" aria-label="Quick actions">

@@ -66,7 +66,14 @@ get_header();
 	<div class="tw-wrap">
 		<div class="tw-apply">
 			<div>
-				<?php if ('verified' === $verify || 'already' === $verify) : ?>
+				<?php if ('approved' === $verify) : ?>
+					<div class="tw-status">
+						<span class="tw-status__badge tw-status__badge--approved">Approved</span>
+						<h2 class="tw-h2">Thanks, your trade account is open</h2>
+						<p>Your email is confirmed and your account is approved. Log in to see trade pricing on every channel letter type and order online.</p>
+						<p><a class="tw-btn tw-btn--primary" href="<?php echo esc_url($user->ID ? home_url('/channel-letters/') : wholesale_trade_login_url(home_url('/channel-letters/'))); ?>"><?php echo $user->ID ? 'See trade pricing' : 'Log in and see trade pricing'; ?></a></p>
+					</div>
+				<?php elseif ('verified' === $verify || 'already' === $verify) : ?>
 					<div class="tw-status">
 						<span class="tw-status__badge">Pending review</span>
 						<h2 class="tw-h2">Thanks, your email is confirmed</h2>
@@ -77,7 +84,7 @@ get_header();
 					<div class="tw-status">
 						<span class="tw-status__badge tw-status__badge--rejected">Link expired</span>
 						<h2 class="tw-h2">That confirmation link no longer works</h2>
-						<p>Links last 3 days and work once. Log in and we will show your application status, or call trade sales at <a href="<?php echo esc_url($brand['phone_href']); ?>"><?php echo esc_html($brand['phone']); ?></a>.</p>
+						<p>Links last 3 days and work once. Log in and we will show your application status (you can send yourself a new link there), or call trade sales at <a href="<?php echo esc_url($brand['phone_href']); ?>"><?php echo esc_html($brand['phone']); ?></a>.</p>
 					</div>
 				<?php elseif ($submitted) : ?>
 					<div class="tw-status">
@@ -94,10 +101,24 @@ get_header();
 						<span class="tw-status__badge<?php echo $badge ? ' tw-status__badge--' . esc_attr($badge) : ''; ?>"><?php echo esc_html(wholesale_trade_status_label($status)); ?></span>
 						<h2 class="tw-h2"><?php echo esc_html(!empty($profile['legal_name']) ? $profile['legal_name'] : $user->display_name); ?></h2>
 						<?php if (wholesale_trade_can_order()) : ?>
+							<?php if (isset($_GET['welcome'])) : ?>
+								<div class="tw-alert tw-alert--ok" role="status">Welcome! Your trade account is open and you are logged in. We also emailed you a copy of your login details.</div>
+							<?php endif; ?>
 							<p>Your trade account is active. Trade pricing shows on every channel letter page and in the builder.</p>
-							<p><a class="tw-btn tw-btn--primary" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Open the builder</a> <a class="tw-btn tw-btn--ghost" href="<?php echo esc_url(home_url('/my-orders/')); ?>">My orders</a></p>
+							<p><a class="tw-btn tw-btn--primary" href="<?php echo esc_url(home_url('/channel-letters/')); ?>">See trade pricing</a> <a class="tw-btn tw-btn--ghost" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Open the builder</a> <a class="tw-btn tw-btn--ghost" href="<?php echo esc_url(home_url('/my-orders/')); ?>">My orders</a></p>
 						<?php elseif ('email_unverified' === $status) : ?>
 							<p>Please click the confirmation link we emailed to <strong><?php echo esc_html($user->user_email); ?></strong>. Your application goes to review as soon as you do.</p>
+							<?php if (isset($_GET['resent']) && '1' === $_GET['resent']) : ?>
+								<div class="tw-alert tw-alert--ok" role="status">We sent a new confirmation link. It works for 3 days. Nothing there? Check spam.</div>
+							<?php elseif (isset($_GET['resent'])) : ?>
+								<div class="tw-alert" role="status">We just sent a link. Please wait 10 minutes before asking for another one.</div>
+							<?php endif; ?>
+							<form method="post" action="<?php echo esc_url(wholesale_trade_apply_url()); ?>">
+								<input type="hidden" name="wholesale_trade_resend" value="1">
+								<?php wp_nonce_field('wholesale_trade_resend'); ?>
+								<p><button type="submit" class="tw-btn tw-btn--ghost">Send a new confirmation link</button></p>
+							</form>
+							<p style="color:var(--tw-muted)">Link expired or no email? Send a new one, or call <a href="<?php echo esc_url($brand['phone_href']); ?>"><?php echo esc_html($brand['phone']); ?></a>.</p>
 						<?php elseif ('pending_review' === $status) : ?>
 							<p>Your application is with our team. We email you as soon as it is decided. Trade pricing opens on this login once you are approved.</p>
 						<?php elseif ('info_requested' === $status) : ?>
@@ -111,16 +132,17 @@ get_header();
 						<?php endif; ?>
 					</div>
 				<?php else : ?>
-					<form class="tw-form" method="post" enctype="multipart/form-data" action="<?php echo esc_url(wholesale_trade_apply_url()); ?>" novalidate>
+					<form class="tw-form" method="post" enctype="multipart/form-data" action="<?php echo esc_url(wholesale_trade_apply_url()); ?>">
 						<?php if (!empty($errors['_form'])) : ?>
 							<div class="tw-alert tw-alert--error" role="alert"><?php echo esc_html($errors['_form']); ?></div>
 						<?php endif; ?>
 						<input type="hidden" name="wholesale_trade_apply" value="1">
-						<input type="hidden" name="trade_token" value="<?php echo esc_attr(wholesale_trade_form_token()); ?>">
+						<input type="hidden" name="trade_token" value="<?php echo esc_attr(!empty($form['token']) ? $form['token'] : wholesale_trade_form_token()); ?>">
 						<?php wp_nonce_field('wholesale_trade_apply'); ?>
+						<?php // Spam trap, hidden by trade.css (display:none). No autofill-like name or label, so browsers never fill it. ?>
 						<div class="tw-hp" aria-hidden="true">
-							<label for="tw-company-fax">Company fax (leave empty)</label>
-							<input type="text" id="tw-company-fax" name="company_fax" value="" tabindex="-1" autocomplete="off">
+							<label for="tw-hp-check">Leave this empty</label>
+							<input type="text" id="tw-hp-check" name="tw_hp_check" value="" tabindex="-1" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other">
 						</div>
 
 						<fieldset>
@@ -155,33 +177,20 @@ get_header();
 									</select>
 									<?php $error('business_type'); ?>
 								</div>
-								<?php $text('website', 'url', ' placeholder="yoursignco.com" inputmode="url"'); ?>
+								<?php $text('website', 'text', ' placeholder="yoursignco.com" inputmode="url" autocomplete="url"'); ?>
 								<?php $text('business_phone', 'tel', ' inputmode="tel"'); ?>
-								<?php $text('years_in_business', 'text', ' inputmode="numeric" maxlength="3"'); ?>
+								<?php $text('years_in_business', 'text', ' inputmode="numeric" maxlength="3" pattern="\d{1,3}" title="A number of years, for example 12"'); ?>
 								<div class="tw-field--full"><?php $text('address_1', 'text', ' autocomplete="address-line1"'); ?></div>
 								<?php $text('address_2', 'text', ' autocomplete="address-line2"'); ?>
 								<?php $text('city', 'text', ' autocomplete="address-level2"'); ?>
 								<?php $state_select('state'); ?>
-								<?php $text('zip', 'text', ' autocomplete="postal-code" inputmode="numeric" maxlength="10"'); ?>
-								<?php $state_select('incorporation_state'); ?>
-								<div class="<?php echo esc_attr($field_class('monthly_volume')); ?>">
-									<label for="tw-monthly_volume">Estimated channel letter sets per month</label>
-									<select id="tw-monthly_volume" name="monthly_volume" required<?php echo $described('monthly_volume'); // Escaped in helper. ?>>
-										<option value="">Choose…</option>
-										<?php foreach (wholesale_trade_volume_options() as $key => $label) : ?>
-											<option value="<?php echo esc_attr($key); ?>" <?php selected($value('monthly_volume'), $key); ?>><?php echo esc_html($label); ?></option>
-										<?php endforeach; ?>
-									</select>
-									<?php $error('monthly_volume'); ?>
-								</div>
+								<?php $text('zip', 'text', ' autocomplete="postal-code" inputmode="numeric" maxlength="10" pattern="\d{5}(-\d{4})?" title="A 5-digit ZIP code, for example 90210"'); ?>
 							</div>
 						</fieldset>
 
 						<fieldset>
 							<legend>Licenses &amp; documents</legend>
 							<div class="tw-grid">
-								<?php $text('contractor_license'); ?>
-								<?php $state_select('contractor_license_state'); ?>
 								<?php foreach (wholesale_trade_doc_fields() as $key => $label) :
 									$required_doc = 'resale_certificate' === $key && get_option('wholesale_trade_require_resale');
 									?>
@@ -210,7 +219,7 @@ get_header();
 							</div>
 						</fieldset>
 
-						<button type="submit" class="tw-btn tw-btn--primary" style="width:100%">Send my application</button>
+						<button type="submit" class="tw-btn tw-btn--primary" style="width:100%"><?php echo wholesale_trade_auto_approve() ? 'Open my trade account' : 'Send my application'; ?></button>
 						<p class="tw-field__hint" style="text-align:center">Already have an account? <a href="<?php echo esc_url(wholesale_trade_login_url(home_url('/trade-account/'))); ?>">Log in</a></p>
 					</form>
 				<?php endif; ?>
@@ -218,7 +227,7 @@ get_header();
 
 			<aside class="tw-apply__aside">
 				<div class="tw-aside-card">
-					<h2>What you get when approved</h2>
+					<h2><?php echo wholesale_trade_auto_approve() ? 'What you get right away' : 'What you get when approved'; ?></h2>
 					<ul class="tw-checks">
 						<li>Trade pricing on all 7 channel letter types</li>
 						<li>The online builder: price complete sets in minutes</li>
@@ -228,8 +237,13 @@ get_header();
 					</ul>
 				</div>
 				<div class="tw-value" style="margin-top:16px">
-					<h2 class="tw-h3">How review works</h2>
-					<p>1. Confirm your email. 2. Our team checks your business details and website. 3. You get an email with the decision. We may ask for a resale certificate or license.</p>
+					<?php if (wholesale_trade_auto_approve()) : ?>
+						<h2 class="tw-h3">How it works</h2>
+						<p>1. Send this form. 2. Your account opens at once and you are logged in, with trade pricing on every page. 3. Our team looks over every new account and may ask for a resale certificate or license.</p>
+					<?php else : ?>
+						<h2 class="tw-h3">How review works</h2>
+						<p>1. Confirm your email. 2. Our team checks your business details and website. 3. You get an email with the decision. We may ask for a resale certificate or license.</p>
+					<?php endif; ?>
 				</div>
 				<div class="tw-value" style="margin-top:16px">
 					<h2 class="tw-h3">Questions?</h2>

@@ -387,7 +387,7 @@ function wholesale_product_image_alt_find_product_id_by_attachment($attachment_i
 		return 0;
 	}
 
-	$map = wholesale_product_image_alt_attachment_product_map();
+	$map = wholesale_product_image_alt_attachment_product_map($attachment_id);
 
 	return isset($map[$attachment_id]) ? $map[$attachment_id] : 0;
 }
@@ -397,27 +397,51 @@ function wholesale_product_image_alt_find_product_id_by_attachment($attachment_i
  * images, built once per request. The first product in query order that
  * uses an image wins, as a product-by-product scan would find it.
  *
+ * Built lazily in query order: with $attachment_id it stops after the first
+ * batch of products that uses that image (the newest products hold most of
+ * the photos the pages print), so the rest of the products and their meta
+ * are only loaded when an image is not found there. Entries already in the
+ * map are final, because later products never replace an earlier one.
+ *
+ * @param int $attachment_id Attachment to find; 0 builds the whole map.
  * @return array
  */
-function wholesale_product_image_alt_attachment_product_map()
+function wholesale_product_image_alt_attachment_product_map($attachment_id = 0)
 {
 	static $map = null;
-	if (null !== $map) {
-		return $map;
-	}
-	$map = array();
+	static $products = array();
+	static $next = 0;
+	$attachment_id = (int) $attachment_id;
 
-	$products = get_posts(array(
-		'post_type' => 'product',
-		'post_status' => 'publish',
-		'posts_per_page' => -1,
-		'fields' => 'ids',
-		'no_found_rows' => true,
-	));
-	if (!$products) {
-		return $map;
+	if (null === $map) {
+		$map = array();
+		$products = get_posts(array(
+			'post_type' => 'product',
+			'post_status' => 'publish',
+			'posts_per_page' => -1,
+			'fields' => 'ids',
+			'no_found_rows' => true,
+		));
 	}
 
+	while ($next < count($products) && !($attachment_id && isset($map[$attachment_id]))) {
+		// The newest 24 products first, then all the rest in one go.
+		$batch = array_slice($products, $next, 0 === $next ? 24 : null);
+		$next += count($batch);
+		wholesale_product_image_alt_add_to_product_map($map, $batch);
+	}
+
+	return $map;
+}
+
+/**
+ * Add a batch of products (in query order) to the attachment => product map.
+ *
+ * @param array $map      Map to extend.
+ * @param int[] $products Product IDs.
+ */
+function wholesale_product_image_alt_add_to_product_map(&$map, $products)
+{
 	// Load every product row and its meta in one go instead of per product.
 	_prime_post_caches($products, false, true);
 
@@ -450,8 +474,6 @@ function wholesale_product_image_alt_attachment_product_map()
 			}
 		}
 	}
-
-	return $map;
 }
 
 /**
@@ -463,6 +485,8 @@ function wholesale_product_image_alt_attachment_product_map()
 function wholesale_product_image_alt_attachment_ids_by_url($urls)
 {
 	global $wpdb;
+	// Each URL is looked up once per request: the category grid asks per card.
+	static $memo = array();
 
 	$ids = array();
 	if (!$urls) {
@@ -482,6 +506,9 @@ function wholesale_product_image_alt_attachment_ids_by_url($urls)
 	$site_url = parse_url($dir['url']);
 	$paths = array();
 	foreach ($urls as $url) {
+		if (isset($memo[$url])) {
+			continue;
+		}
 		$path = $url;
 		$image_path = parse_url($path);
 		if (isset($image_path['scheme']) && $image_path['scheme'] !== $site_url['scheme']) {
@@ -519,7 +546,11 @@ function wholesale_product_image_alt_attachment_ids_by_url($urls)
 				}
 			}
 		}
-		$ids[$url] = $post_id;
+		$memo[$url] = $post_id;
+	}
+
+	foreach ($urls as $url) {
+		$ids[$url] = $memo[$url];
 	}
 
 	return $ids;

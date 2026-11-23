@@ -77,7 +77,7 @@ get_header();
 			<h3>Built to order and tested</h3>
 			<p>Every sign is made to order. Channel letters are tested before they ship and arrive ready to install, with a wiring diagram and installation pattern for your installer. All 7 channel letter styles carry a five-year warranty, and the LED modules and power supplies each carry their own five-year warranty.</p>
 			<h3>Where your order is made</h3>
-			<p>Channel letters are built in Washington and California and ship from both. Banners, window graphics and our other printed products are made in Renton, Washington. Everything ships to all 50 states, with standard (3&ndash;6 business days), 3-day, 2-day or overnight delivery<?php if ($free_shipping) : ?>, and standard shipping is free on orders of <?php echo esc_html($free_shipping); ?> or more<?php if ($free_shipping_cl) : ?> (<?php echo esc_html($free_shipping_cl); ?> or more with channel letters)<?php endif; ?><?php endif; ?>.</p>
+			<p>Channel letters are built in Washington and California and ship from both. Banners, window graphics and our other printed products are made in Renton, Washington. Everything ships to all 50 states, with standard (3&ndash;6 business days), 3-day, 2-day or overnight delivery<?php if ($free_shipping) : ?>, and standard shipping is free on orders of <?php echo esc_html($free_shipping); ?> or more<?php if ($free_shipping_cl && $free_shipping_cl !== $free_shipping) : ?> (<?php echo esc_html($free_shipping_cl); ?> or more with channel letters)<?php endif; ?><?php endif; ?>.</p>
 			<h3>We ship; your installer installs</h3>
 			<?php $install_url = $page_link('how-to-install-channel-letters'); $permits_url = $page_link('sign-permits'); ?>
 			<p>We don&rsquo;t install signs. Every lit sign is tested before it ships and arrives with a wiring diagram and installation pattern, so your licensed electrician or sign installer can mount it.<?php if ($install_url) : ?> Our <a href="<?php echo esc_url($install_url); ?>">installation guide</a> explains what they will do<?php echo $permits_url ? ', and the <a href="' . esc_url($permits_url) . '">sign permit guide</a> covers what your city may require' : ''; ?>.<?php endif; ?></p>
@@ -145,7 +145,7 @@ get_header();
 			<div class="cl-help-actions">
 				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
 				<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+				<a class="cl-help-action" href="mailto:Info@StorefrontSignWholesale.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>Info@StorefrontSignWholesale.com</span></a>
 				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
 			</div>
 		</div>

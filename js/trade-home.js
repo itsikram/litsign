@@ -121,7 +121,10 @@
 	});
 
 	radioGroup(swatches, function (btn) {
-		stage.style.setProperty('--face', btn.getAttribute('data-color'));
+		var color = btn.getAttribute('data-color');
+		stage.style.setProperty('--face', color);
+		// A black face gives no glow of its own: the CSS shows a lit edge instead.
+		stage.setAttribute('data-face', color === '#111111' ? 'dark' : 'light');
 	});
 
 	if (dayBtn) {

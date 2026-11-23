@@ -27,12 +27,12 @@ function wholesale_trade_brand()
 		$brand = array(
 			'name' => 'Storefront Sign Wholesale',
 			'legal_name' => 'Lit Sign Manufacturing LLC',
-			'email' => $email ? $email : 'TR@StorefrontSignOnline.com',
+			'email' => $email ? $email : 'Info@StorefrontSignWholesale.com',
 			'phone' => '866-436-2101',
 			'phone_href' => 'tel:+18664362101',
 			'text' => '206-618-6543',
 			'text_href' => 'sms:+12066186543',
-			'hours' => 'Mon–Fri 8am–5pm PT',
+			'hours' => 'Mon–Fri 8am–5pm PST',
 			'since' => 2002,
 			'retail_url' => 'https://storefrontsignonline.com/',
 			'retail_name' => 'Storefront Sign Online',
@@ -41,11 +41,21 @@ function wholesale_trade_brand()
 	return $brand;
 }
 
-/** Where staff notifications for new applications go. */
+/**
+ * Where staff notifications for new applications go: the address set in Trade
+ * Accounts > Settings, otherwise the same inboxes as new orders and reviews
+ * (Emails > SMTP Settings > Store notifications).
+ *
+ * @return string[]
+ */
 function wholesale_trade_notify_email()
 {
 	$email = sanitize_email((string) get_option('wholesale_trade_notify_email', ''));
-	return $email ? $email : get_option('admin_email');
+	if ($email) {
+		return array($email);
+	}
+	$store = function_exists('wholesale_contact_admin_recipients') ? wholesale_contact_admin_recipients() : array();
+	return $store ? $store : array(get_option('admin_email'));
 }
 
 /** Site name and tagline, whatever the options table says after a pull. */
@@ -69,6 +79,8 @@ function wholesale_trade_remove_retail_hooks()
 	remove_action('admin_init', 'wholesale_guide_sync_pages', 20);
 	remove_action('admin_init', 'wholesale_developer_create_page', 20);
 	remove_action('init', 'wholesale_shop_ensure_page', 30);
+	// The retail /sign-packages/ page (inc/buying-journey.php) is consumer bundles, not trade.
+	remove_action('admin_init', 'wholesale_packages_sync_page', 21);
 
 	// The retail theme 301s its other domains to the retail site and forces
 	// https only for the retail host. Neither applies here; https is replaced below.
@@ -82,13 +94,55 @@ function wholesale_trade_remove_retail_hooks()
 	remove_action('wp_footer', 'wholesale_ads_click_tracking_script', 21);
 	remove_action('wp_footer', 'wholesale_page_conversion_script', 21);
 	remove_action('wp_footer', 'wholesale_purchase_conversion', 21);
+	// Google Customer Reviews opt-in (inc/google-customer-reviews.php) belongs to the retail
+	// Merchant Center account (5877365740) and the retail domain.
+	remove_action('wp_footer', 'wholesale_gcr_optin_script', 50);
 
-	// Merchant Center feed and location pages are retail-only SEO.
+	// Merchant Center and OpenAI product feeds and location pages are retail-only SEO
+	// (the feeds carry prices, which are login-only here).
 	remove_action('template_redirect', 'wholesale_render_merchant_feed', 0);
+	remove_action('template_redirect', 'wholesale_render_openai_feed', 0);
 	remove_action('template_redirect', 'wholesale_render_location_sitemap', 0);
 }
 // functions.php keeps registering hooks after wholesale_trade_boot(), so remove them once it's done.
 add_action('after_setup_theme', 'wholesale_trade_remove_retail_hooks', 99);
+
+/**
+ * GA4 only (Settings > Storefront Sign > Marketing), never the retail Ads ID.
+ * Nothing is printed while the ID is empty. Deferred like the retail loader
+ * (functions.php wholesale_deferred_conversion_tracking): first scroll, tap,
+ * key or mouse move, or 40s after load.
+ */
+add_action('wp_footer', static function () {
+	$id = function_exists('wholesale_ga4_measurement_id') ? wholesale_ga4_measurement_id() : '';
+	if (!$id) {
+		return;
+	}
+	?>
+	<script>
+		(function () {
+			var id = <?php echo wp_json_encode($id); ?>, started = false, events = ['scroll', 'pointerdown', 'keydown', 'touchstart', 'mousemove'];
+			var start = function () {
+				if (started) return;
+				started = true;
+				events.forEach(function (name) { window.removeEventListener(name, start, { passive: true }); });
+				var script = document.createElement('script');
+				script.async = true;
+				script.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(id);
+				document.head.appendChild(script);
+				window.dataLayer = window.dataLayer || [];
+				window.gtag = window.gtag || function () {
+					window.dataLayer.push(arguments);
+				};
+				window.gtag('js', new Date());
+				window.gtag('config', id);
+			};
+			events.forEach(function (name) { window.addEventListener(name, start, { passive: true }); });
+			window.addEventListener('load', function () { setTimeout(start, 40000); });
+		})();
+	</script>
+	<?php
+}, 20);
 
 /**
  * Plain-http requests for the live trade domain go to https (the retail
@@ -116,16 +170,45 @@ add_action('init', static function () {
 
 /** Retail-only URLs on the trade site: the feed and location pages are gone (410). */
 add_action('template_redirect', static function () {
-	$gone = get_query_var('wholesale_merchant_feed') || get_query_var('wholesale_location_sitemap');
+	$gone = get_query_var('wholesale_merchant_feed') || get_query_var('wholesale_openai_feed') || get_query_var('wholesale_location_sitemap');
 	if (!$gone && is_page()) {
+		$retired = array('page-location.php', 'page-locations.php', 'page-industry.php', 'page-industries.php', 'page-sign-packages.php');
 		$template = get_page_template_slug(get_queried_object_id());
-		$gone = in_array($template, array('page-location.php', 'page-locations.php', 'page-industry.php', 'page-industries.php'), true);
+		$gone = in_array($template, $retired, true);
+		// Location and industry pages have no template meta: inc/guide-pages.php picks
+		// their template from its registry (template_include), so check that too.
+		if (!$gone && function_exists('wholesale_guide_current')) {
+			$entry = wholesale_guide_current();
+			$gone = !empty($entry['template']) && in_array($entry['template'], $retired, true);
+		}
+		// The /locations/ hub is still linked from shared guide pages (sign permits,
+		// install guide): send those visitors to the trade hub instead of a 410.
+		if ($gone && function_exists('wholesale_guide_current_path') && 'locations' === wholesale_guide_current_path()) {
+			wp_safe_redirect(home_url('/channel-letters/'), 301);
+			exit;
+		}
 	}
 	if ($gone) {
 		status_header(410);
 		nocache_headers();
 		header('Content-Type: text/plain; charset=utf-8');
 		echo 'Gone';
+		exit;
+	}
+}, -1);
+
+/**
+ * Retail landing pages (consumer copy, retail price tables, the unconfirmed
+ * "Made in USA" claim) go to the trade channel letters hub. 301, not 410:
+ * trade pages and menus still link to some of them.
+ */
+add_action('template_redirect', static function () {
+	if (!is_page()) {
+		return;
+	}
+	if (is_page(array('custom-channel-letters', 'chennel-letter-ads', 'landing-page', 'channel-letter-cost', 'storefront-signs'))
+		|| is_page_template(array('page-channel-letters.php', 'page-channel-letters-ads.php', 'landing-page.php', 'page-channel-letter-cost.php', 'page-storefront-signs.php'))) {
+		wp_safe_redirect(home_url('/channel-letters/'), 301);
 		exit;
 	}
 }, -1);
@@ -153,4 +236,7 @@ add_action('admin_init', static function () {
 	register_setting('wholesale_trade_settings', 'wholesale_trade_require_resale', array('type' => 'boolean', 'sanitize_callback' => static function ($v) {
 		return $v ? 1 : 0;
 	}, 'default' => 0));
+	register_setting('wholesale_trade_settings', 'wholesale_trade_auto_approve', array('type' => 'boolean', 'sanitize_callback' => static function ($v) {
+		return $v ? 1 : 0;
+	}, 'default' => 1));
 });

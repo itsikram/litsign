@@ -126,6 +126,45 @@
   line-height: 1.6;
 }
 
+/* "How Ordering Channel Letters Works" (the 11-05 journey and the old "How It
+   Works" steps, merged 2026-11-09): a white band between the tinted example
+   prices and "Why" sections. Two classes so it beats .cl-steps (style.css) and
+   .cl-journey (buying-journey.css). */
+.cl-steps.cl-journey {
+  margin-top: 0;
+  padding: 64px 0;
+  background: #ffffff;
+}
+
+.cl-journey .cll-install,
+.cl-journey .cl-included {
+  text-align: left;
+}
+
+.cl-journey .cll-install {
+  margin-top: 28px;
+}
+
+.cl-journey .cl-included {
+  margin-top: 20px;
+}
+
+.cl-journey .cl-journey-actions {
+  justify-content: center;
+  margin-top: 28px;
+}
+
+/* FAQ on the tint, so it stands apart from the white specs table above it. */
+.cll-faq {
+  background: #f7f8fc;
+}
+
+@media (max-width: 767px) {
+  .cl-steps.cl-journey {
+    padding: 48px 0;
+  }
+}
+
 @media (max-width: 991px) {
   .cll-trust-list,
   .cll-why-grid {
@@ -145,5 +184,167 @@
   .cll-specs-table th {
     width: auto;
     white-space: normal;
+  }
+}
+
+/* ------------------------------------------------------------------
+   Phones (2026-11-12): /custom-channel-letters/ hero and trust strip.
+   A shorter, cleaner hero: title, proof chips, one lead, the install
+   note, two buttons and the worked price. The logo + phone lines hide
+   here because the sticky bar (Free Quote), the header phone button and
+   the "Have a logo?" card under the styles already carry them.
+   Desktop and tablet are unchanged.
+   ------------------------------------------------------------------ */
+@media (max-width: 767px) {
+  .home-hero.home-hero--cl-page .home-hero-content {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /* Extra shade over the photo so no word sits on the lit sign. */
+  .home-hero.home-hero--cl-page .home-hero-content::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(120% 60% at 100% 0%, rgba(31, 168, 222, 0.18) 0%, rgba(31, 168, 222, 0) 60%),
+      linear-gradient(180deg, rgba(3, 24, 53, 0.55) 0%, rgba(3, 24, 53, 0.72) 45%, rgba(3, 24, 53, 0.72) 75%, rgba(3, 24, 53, 0.5) 100%);
+    pointer-events: none;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-copy {
+    padding: 26px 0 28px;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-eyebrow {
+    display: inline-flex;
+    margin-bottom: 14px;
+    padding: 5px 10px;
+    border-color: rgba(127, 211, 245, 0.35);
+    background: rgba(31, 168, 222, 0.12);
+    color: #bfe9fb;
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-copy .home-hero-title {
+    font-size: clamp(1.75rem, 8.2vw, 2.15rem);
+    line-height: 1.12;
+    letter-spacing: -0.025em;
+  }
+
+
+  /* Rating as a chip, "Made in" as a quiet line under it. */
+  .home-hero.home-hero--cl-page .home-hero-proof {
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 0.8rem;
+    line-height: 1.3;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-rating {
+    padding: 6px 11px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-proof > span {
+    align-items: flex-start;
+    color: rgba(255, 255, 255, 0.78);
+    font-weight: 500;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-proof .cl-icon {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    margin-top: 1px;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-rating .review-star {
+    font-size: 0.85rem;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-lead {
+    margin-top: 16px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-install {
+    margin-top: 10px;
+    padding-left: 10px;
+    border-left: 2px solid #1fa8de;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-actions--cl {
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-shop-button {
+    min-height: 56px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    box-shadow: 0 10px 24px rgba(11, 116, 163, 0.35);
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-secondary-button {
+    min-height: 48px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #ffffff;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-example {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  .home-hero.home-hero--cl-page .home-hero-logo,
+  .home-hero.home-hero--cl-page .home-hero-help {
+    display: none;
+  }
+
+  /* Trust strip: compact 2 x 2 tiles, headline only. */
+  .cll-trust-list {
+    gap: 8px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  .cll-trust-list li {
+    gap: 8px;
+    min-width: 0;
+    padding: 9px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .cll-trust-list svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cll-trust-list strong {
+    font-size: 0.8rem;
+  }
+
+  .cll-trust-list small {
+    display: none;
   }
 }

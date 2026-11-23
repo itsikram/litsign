@@ -86,8 +86,8 @@ if ($product_id > 0) {
         }
         if (isset($_SESSION['design_data_' . $product_id])) {
             $product_data = $_SESSION['design_data_' . $product_id];
-            $edit_product_data = stripslashes($_SESSION['design_data_' . $product_id]);
-            $product_data_array = json_decode($edit_product_data, true);
+            $product_data_array = wholesale_decode_session_json($_SESSION['design_data_' . $product_id]);
+            $edit_product_data = is_array($product_data_array) ? wp_json_encode($product_data_array, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null;
         }
     }
 } else {
@@ -103,6 +103,7 @@ get_header();
 <input type="hidden" id="faceColorPicker" value="#ffffff">
 <input type="hidden" id="productPermalink" value="<?php echo esc_url($ticket_builder ? $ticket_builder['save_url'] : get_permalink($product_id)); ?>">
 <input type="hidden" id="isTicketBuilder" value="<?php echo $ticket_builder ? '1' : '0'; ?>">
+<input type="hidden" id="clThemeUrl" value="<?php echo esc_url(get_template_directory_uri()); ?>">
 <input type="hidden" id="clProductId" value="<?php echo esc_attr($product_id); ?>">
 
 <?php if ($ticket_builder) : ?>
@@ -137,6 +138,11 @@ get_header();
 <input type="hidden" id="backLitCost" value="<?php echo $backlit_cost ? $backlit_cost : 100; ?>">
 <input type="hidden" id="eightFtcableCost" value="<?php echo $eight_ft_cable_cost ? $eight_ft_cable_cost : 77; ?>">
 <input type="hidden" id="racewayPerFoot" value="<?php echo esc_attr(WHOLESALE_RACEWAY_COST_PER_FOOT); ?>">
+<?php $cl_option_prices = wholesale_cl_option_prices($product_id); ?>
+<input type="hidden" id="clLexanPercent" value="<?php echo esc_attr($cl_option_prices['lexan_percent']); ?>">
+<input type="hidden" id="clTrimcap1in" value="<?php echo esc_attr(wp_json_encode($cl_option_prices['trimcap_1in'])); ?>">
+<?php // B2Sign's piece rules (large letters by sq ft, longer than the rate table, lit letters under 6"), the same numbers the cart uses. ?>
+<input type="hidden" id="clPiecePricing" value="<?php echo esc_attr(wp_json_encode(array_intersect_key($cl_option_prices, array_flip(array('large_sqft', 'per_sqft', 'width_share', 'lexan_large', 'per_inch', 'under_in', 'under_price'))))); ?>">
 <input type="hidden" id="clDiscountPercent" value="<?php echo esc_attr($discount_percent); ?>">
 <input type="hidden" id="clPromoPercent" value="<?php echo esc_attr($promo_percent ?? 0); ?>" data-ends="<?php echo esc_attr($promo_ends ?? ''); ?>">
 
@@ -402,7 +408,10 @@ get_header();
                                         <span class="info-btn" role="button" tabindex="0" aria-label="About the standard power supply">i</span>
                                         <div class="info-btn-content top">
                                             <small class="text-muted">
-                                                Fang Hua HMA-60NU-RX 12V / 5A 60W, Class 2, constant voltage and current, IP67, 5-year warranty. Non-brand transformer boxes, for dry locations only. <?php $ps_price = (float) ($standard_ps_cost ? $standard_ps_cost : 99); echo esc_html('$' . number_format($ps_price, floor($ps_price) == $ps_price ? 0 : 2)); ?> each.
+                                                Fang Hua HMA-60NU-RX 12V / 5A 60W, Class 2, constant voltage and current, IP67, 5-year warranty. Non-brand transformer boxes, for dry locations only. <?php
+                                                // What the cart charges: once per design, after the product's own discount (wholesale_cl_design_quote()).
+                                                $ps_price = round((float) ($standard_ps_cost ? $standard_ps_cost : 99) * (1 - $discount_percent / 100), 2);
+                                                echo esc_html('$' . number_format($ps_price, floor($ps_price) == $ps_price ? 0 : 2)); ?> per design.
                                             </small>
                                             <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/standard-ps-info.png'); ?>" alt="Standard power supply for channel letters">
                                         </div>

@@ -84,14 +84,14 @@ function wholesale_page_loader_head()
 			width: 100%;
 		}
 
-		/* Stage: the logo box keeps the logo's 2172:408 shape; perspective gives
+		/* Stage: the logo box keeps the logo's 2313:365 shape; perspective gives
 		   the pieces real depth. --dz is the gap between the stacked layers. */
 		.wholesale-page-loader__logo-wrap {
 			--dz: clamp(1.4px, .7vw, 2.4px);
 			position: relative;
 			width: clamp(180px, 60vw, 340px);
 			max-width: 100%;
-			aspect-ratio: 2172 / 408;
+			aspect-ratio: 2313 / 365;
 			perspective: 760px;
 			perspective-origin: 50% 40%;
 			transition: opacity 340ms ease, transform 440ms cubic-bezier(.4, 0, 1, 1);
@@ -106,7 +106,7 @@ function wholesale_page_loader_head()
 			position: absolute;
 			inset: -75% -14%;
 			pointer-events: none;
-			background: radial-gradient(closest-side, rgba(246, 78, 9, .30), rgba(246, 78, 9, .11) 52%, rgba(246, 78, 9, 0) 100%);
+			background: radial-gradient(closest-side, rgba(246, 145, 30, .30), rgba(246, 145, 30, .11) 52%, rgba(246, 145, 30, 0) 100%);
 			opacity: .85;
 			transition: opacity 320ms ease;
 		}
@@ -146,7 +146,7 @@ function wholesale_page_loader_head()
 		}
 		.spl3-letter { transform-origin: 50% 100%; }
 		.spl3-mark { transform-origin: 50% 50%; }
-		.spl3-badge { transform-origin: 35% 100%; transform: translateZ(2px); }
+		.spl3-badge { transform-origin: 50% 100%; transform: translateZ(2px); }
 		.spl3-tag { transform-origin: 50% 0; }
 
 		/* Indeterminate progress line. */
@@ -167,7 +167,7 @@ function wholesale_page_loader_head()
 			width: 40%;
 			height: 100%;
 			border-radius: inherit;
-			background: linear-gradient(90deg, rgba(246, 78, 9, 0), #f64e09 45%, #ff9a5c);
+			background: linear-gradient(90deg, rgba(243, 108, 33, 0), #f36c21 45%, #f6911e);
 			transform: translateX(-100%);
 			animation: wholesale-loader-progress 1.4s cubic-bezier(.65, 0, .35, 1) infinite;
 		}
@@ -417,48 +417,49 @@ add_action('wp_body_open', 'wholesale_page_loader_markup', 1);
 
 /**
  * Print the logo as 3D pieces: the mark, each wordmark letter, the tagline
- * and the "online .com" badge. Each piece is a front face plus a few darker
+ * and the "WHOLESALE .COM" sign. Each piece is a front face plus a few darker
  * layers stacked behind it (translateZ), like the returns of a channel
  * letter, so it shows real thickness when it turns. All layers draw the
  * shapes from the hidden source SVG with <use>, so no path data is repeated.
  *
- * Boxes are each piece's bounds in the logo's 2172 x 408 viewBox, measured
- * from img/loader-logo.svg (utils/loader-logo). Re-measure if the logo changes.
+ * Boxes are each piece's bounds in the logo's 2313 x 365 viewBox. They and
+ * img/loader-logo.svg come from the vector logo PDF via
+ * utils/loader-logo/from_pdf.py, which prints them. Re-run it if the logo changes.
  */
 function wholesale_page_loader_3d_logo()
 {
-	$width = 2172;
-	$height = 408;
+	$width = 2313;
+	$height = 365;
 	$letters = array(
-		array(288, 125.6, 135.7, 199.7),
-		array(425, 153, 97.5, 171),
-		array(524.5, 178.8, 139.7, 147.2),
-		array(667, 179.2, 105.6, 144.5),
-		array(769.6, 179.2, 137.9, 146.9),
-		array(916, 125, 117.2, 199),
-		array(1022.9, 178.5, 106, 145.5),
-		array(1126, 178.5, 139, 147.9),
-		array(1267.5, 179, 143.5, 145.8),
-		array(1415.7, 152.8, 98.4, 171.3),
-		array(1513.9, 125.8, 136.3, 200),
-		array(1661.8, 125, 57.6, 198.8),
-		array(1728, 179.1, 138, 199.9),
-		array(1872.8, 177.9, 150.2, 148.1),
+		array(299.2, 93.6, 134.3, 206.8),
+		array(447.4, 122.1, 99.8, 177.4),
+		array(554.1, 150.7, 133.5, 149.7),
+		array(701.1, 150.1, 106.4, 148.9),
+		array(815.6, 150.6, 127, 149.8),
+		array(953.9, 93.5, 109.4, 204.3),
+		array(1061.7, 150.1, 106.4, 148.9),
+		array(1176, 150.7, 133.5, 149.7),
+		array(1323, 150.4, 141.8, 148.9),
+		array(1480.5, 122.1, 99.5, 177.4),
+		array(1589.6, 93.7, 134.3, 206.8),
+		array(1744.4, 93.3, 53.7, 205.1),
+		array(1818.5, 150.7, 128.6, 203.2),
+		array(1965.1, 150.4, 141.5, 148.8),
 	);
 
 	// kind, source ids, box, depth layers, front fill, side fill.
-	$pieces = array(array('mark', array('spl-tile', 'spl-s'), array(-0.2, 123.1, 265.5, 264.6), 4, '', ''));
+	$pieces = array(array('mark', array('spl-tile', 'spl-s'), array(0, 90.9, 273.6, 273.6), 4, '', ''));
 	foreach ($letters as $index => $box) {
-		$pieces[] = array('letter', array('spl-l' . ($index + 1)), $box, 3, '#f64e09', '#9a3006');
+		$pieces[] = array('letter', array('spl-l' . ($index + 1)), $box, 3, '#f6911e', '#9a5b13');
 	}
-	$pieces[] = array('tag', array('spl-tag'), array(287.5, 343.5, 1424, 40.4), 0, '', ''); // Thin text: no side layers.
-	$pieces[] = array('badge', array('spl-badge'), array(1890.3, 12.5, 282.2, 270), 3, '', '');
+	$pieces[] = array('tag', array('spl-tag'), array(309.2, 325.4, 1500.1, 38.7), 0, '', ''); // Thin text: no side layers.
+	$pieces[] = array('badge', array('spl-badge'), array(1945.8, 0, 367, 242.6), 3, '', '');
 
 	$percent = static function ($value, $total) {
 		return round($value / $total * 100, 3) . '%';
 	};
 
-	echo '<div class="spl3" role="img" aria-label="' . esc_attr__('Storefront Sign Online', 'litsign') . '">';
+	echo '<div class="spl3" role="img" aria-label="' . esc_attr__('Storefront Sign Wholesale', 'litsign') . '">';
 	$letter_index = 0;
 	foreach ($pieces as $piece) {
 		list($kind, $ids, $box, $depth, $front_fill, $side_fill) = $piece;

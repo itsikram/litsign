@@ -34,7 +34,8 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['email'])) {
     );
 
     if (!is_wp_error($signed_in_user)) {
-        wp_safe_redirect($redirect_url);
+        // Same filter wp-login.php applies (trade sends pending accounts to their status page).
+        wp_safe_redirect(apply_filters('login_redirect', $redirect_url, $redirect_url, $signed_in_user));
         exit;
     }
 
@@ -47,6 +48,7 @@ if ('POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['email'])) {
 }
 get_header();
 
+$login_is_trade = function_exists('wholesale_is_trade_site') && wholesale_is_trade_site();
 ?>
 
 
@@ -55,26 +57,33 @@ get_header();
         <div class="col-md-6 offset-md-3 col-sm-12">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="fs-3">Login</h2>
+                    <h1 class="fs-3">Login</h1>
                 </div>
                 <div class="card-body">
                     <form method="POST">
                         <?php wp_nonce_field('wholesale_login', 'wholesale_login_nonce'); ?>
                         <input type="hidden" name="redirect_ulr" value="<?php echo esc_attr($redirect_url); ?>">
                         <div class="form-group mb-2">
-                            <label for="" class="form-label">Email</label>
-                            <input type="text" required name="email" placeholder="Enter your email or username"
+                            <label for="login-email" class="form-label">Email</label>
+                            <input type="text" required name="email" id="login-email" autocomplete="username" placeholder="Enter your email or username"
                                 class="form-control">
                         </div>
                         <div class="form-group mb-2">
-                            <label for="" class="form-label">Password</label>
-                            <input type="password" name="password" placeholder="Enter your Password" required
+                            <label for="login-password" class="form-label">Password</label>
+                            <input type="password" name="password" id="login-password" autocomplete="current-password" placeholder="Enter your Password" required
                                 class="form-control">
                         </div>
 
                         <button type="submit" class="btn btn-primary">Login</button>
+                        <?php if ($login_is_trade) : ?>
+                            <a href="<?php echo esc_url(wp_lostpassword_url($redirect_url)); ?>" class="btn btn-link">Forgot your password?</a>
+                        <?php endif; ?>
                         <div class="text-center">
-                            <a href="<?php echo site_url().'/signup'; ?>" class="btn btn-link">Create an Account</a>
+                            <?php if ($login_is_trade && function_exists('wholesale_trade_apply_url')) : ?>
+                                <a href="<?php echo esc_url(wholesale_trade_apply_url()); ?>" class="btn btn-link">Apply for a trade account</a>
+                            <?php else : ?>
+                                <a href="<?php echo site_url().'/signup'; ?>" class="btn btn-link">Create an Account</a>
+                            <?php endif; ?>
                         </div>
                     </form>
                 </div>

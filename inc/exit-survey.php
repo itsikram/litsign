@@ -209,6 +209,11 @@ function wholesale_es_enqueue()
 	$preview = wholesale_es_preview_requested();
 	$thank_you = (bool) get_query_var('wholesale_thank_you');
 
+	// The survey's questions and replies are retail copy ("prices show instantly"); off on the trade site.
+	if (!$preview && function_exists('wholesale_is_trade_site') && wholesale_is_trade_site()) {
+		return;
+	}
+
 	// The thank-you page only loads the script to remember the order, so the
 	// survey never asks a customer why they did not buy.
 	if (!$preview && !$thank_you) {
@@ -402,8 +407,7 @@ function wholesale_es_notify($id)
 	global $wpdb;
 
 	$row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . wholesale_es_table() . ' WHERE id = %d', $id));
-	$recipients = function_exists('wholesale_contact_admin_recipients') ? wholesale_contact_admin_recipients() : array(get_option('admin_email'));
-	if (!$row || !$recipients) {
+	if (!$row) {
 		return;
 	}
 
@@ -432,7 +436,7 @@ function wholesale_es_notify($id)
 		$headers[] = 'Reply-To: ' . $row->contact;
 	}
 
-	wp_mail($recipients, 'Exit survey: a visitor wants a reply', implode("\n", $lines), $headers);
+	wholesale_mail_team('Exit survey: a visitor wants a reply', implode("\n", $lines), $headers);
 }
 
 /* ---------------------------------------------------------------------------

@@ -17,7 +17,7 @@ get_header();
 <main id="primary" class="tw-page tw-fsc">
 	<section class="tw-hero">
 		<div class="tw-wrap"><?php wholesale_trade_render_crumbs(); ?></div>
-		<div class="tw-wrap tw-hero__in" style="padding-top:28px">
+		<div class="tw-wrap tw-hero__in tw-hero__in--crumbs">
 			<div>
 				<p class="tw-eyebrow">For sign companies</p>
 				<h1 class="tw-hero__title">Outsource channel letter fabrication <em>without losing the client</em></h1>
@@ -28,7 +28,7 @@ get_header();
 				</div>
 			</div>
 			<div class="tw-hero__media">
-				<img src="<?php echo esc_url(content_url('uploads/storefront-files/channel-letter-raceway-assembly.jpg')); ?>" alt="Wired channel letters assembled on a raceway in the shop" loading="eager" fetchpriority="high" decoding="async">
+				<img src="<?php echo esc_url(content_url('uploads/storefront-files/channel-letter-raceway-assembly.jpg')); ?>" alt="Cutaway drawing of an aluminum channel letter raceway with mounting tabs" loading="eager" fetchpriority="high" decoding="async">
 			</div>
 		</div>
 	</section>

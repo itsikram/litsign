@@ -19,6 +19,8 @@ const WHOLESALE_VI_OFF_COOKIE = 'sso_vi_off';
 const WHOLESALE_VI_SESSION_COOKIE = 'sso_sid';
 const WHOLESALE_VI_VISITOR_COOKIE = 'sso_vid';
 const WHOLESALE_VI_MAX_EVENTS_PER_SESSION = 1500;
+// Bump to re-run wholesale_vi_fix_data() once on each site.
+const WHOLESALE_VI_DATA_REV = '2026-11-09';
 
 /* ---------------------------------------------------------------------------
  * Settings and storage
@@ -34,19 +36,45 @@ function wholesale_vi_settings()
 		'mask_ip' => 0,
 		'retention_days' => 120,
 		'excluded_ips' => '',
-		// Ad links send the campaign ID ({campaignid}); these names replace it in the reports.
-		'campaign_names' => "24253204713 = Channel Letters - USA\n24352872665 = Channel Letters - WA\n24321177008 = Banners & Displays\n24347758452 = Window Graphics & Vinyl\n24334436525 = Brand",
+		// Ad links send the campaign ID ({campaignid}); these names replace it in the
+		// reports. They add to (and override) wholesale_vi_known_campaigns().
+		'campaign_names' => '',
 	));
 }
 
 /**
- * A campaign's name from the Settings list, else the campaign as sent.
+ * Campaigns in the Google Ads account (Nov 9, 2026), so every ad click shows a
+ * name even before anyone fills in Settings. Lines in Settings add to these or
+ * override them; a campaign made later only needs its line there.
  */
-function wholesale_vi_campaign_name($campaign)
+function wholesale_vi_known_campaigns()
+{
+	return array(
+		'24253204713' => 'SSO - Channel Letters - USA',
+		'24352872665' => 'SSO - Channel Letters - WA',
+		// Was the Banners & Displays Search campaign until Nov 2, 2026.
+		'24321177008' => 'SSO - Business Intent - USA (was Banners & Displays Search)',
+		'24347758452' => 'SSO - Window Graphics & Vinyl - USA',
+		'24334436525' => 'SSO - Brand - USA',
+		'24399941678' => 'SSO - Shopping - Banners & Displays - USA',
+		'24449162107' => 'SSO - PMax - Banners & Displays - USA',
+		'24438569001' => 'SSO - PMax - Channel Letters - USA',
+		'24449655346' => 'SSO - YouTube - Channel Letters Video - USA',
+		'24429570132' => 'Sales-Performance Max-1',
+		// Early ads sent a name instead of the ID.
+		'sso-window-graphics-vinyl-usa' => 'SSO - Window Graphics & Vinyl - USA',
+		'sso-channel-letters-wa' => 'SSO - Channel Letters - WA',
+	);
+}
+
+/**
+ * Campaign ID => name: the built-in list plus the Settings list.
+ */
+function wholesale_vi_campaign_names()
 {
 	static $names = null;
 	if (null === $names) {
-		$names = array();
+		$names = wholesale_vi_known_campaigns();
 		foreach (preg_split('/\r\n|\r|\n/', (string) wholesale_vi_setting('campaign_names')) as $line) {
 			$parts = array_map('trim', explode('=', $line, 2));
 			if (2 === count($parts) && '' !== $parts[0] && '' !== $parts[1]) {
@@ -55,7 +83,94 @@ function wholesale_vi_campaign_name($campaign)
 		}
 	}
 
-	return $names[(string) $campaign] ?? (string) $campaign;
+	return $names;
+}
+
+/**
+ * A campaign's name. An ID with no name reads "Campaign 24449…" (name it under
+ * Settings); a name sent as a slug is made readable.
+ */
+function wholesale_vi_campaign_name($campaign)
+{
+	$campaign = trim((string) $campaign);
+	$names = wholesale_vi_campaign_names();
+	if (isset($names[$campaign])) {
+		return $names[$campaign];
+	}
+	if (isset($names[strtolower($campaign)])) {
+		return $names[strtolower($campaign)];
+	}
+	if (preg_match('/^\d{6,}$/', $campaign)) {
+		return 'Campaign ' . $campaign;
+	}
+	if ('' !== $campaign && false === strpos($campaign, ' ') && preg_match('/[-_+]/', $campaign)) {
+		$words = explode(' ', ucwords(strtolower(str_replace(array('-', '_', '+'), ' ', $campaign))));
+		$upper = array('Sso', 'Usa', 'Us', 'Wa', 'Ca', 'Cl', 'Led', 'Pmax', 'Seo', 'Ai');
+		foreach ($words as &$word) {
+			if (in_array($word, $upper, true)) {
+				$word = 'Pmax' === $word ? 'PMax' : strtoupper($word);
+			}
+		}
+		return implode(' ', $words);
+	}
+
+	return $campaign;
+}
+
+/**
+ * Whether a campaign has a name (built in or from Settings).
+ */
+function wholesale_vi_campaign_is_named($campaign)
+{
+	$names = wholesale_vi_campaign_names();
+
+	return isset($names[(string) $campaign]) || isset($names[strtolower((string) $campaign)]) || !preg_match('/^\d{6,}$/', (string) $campaign);
+}
+
+/**
+ * The kind of campaign, read from its name: PMax, Shopping, Video, Search.
+ */
+function wholesale_vi_campaign_type($campaign)
+{
+	$name = wholesale_vi_campaign_name($campaign);
+	if (preg_match('/pmax|performance max/i', $name)) {
+		return 'PMax';
+	}
+	if (preg_match('/shopping/i', $name)) {
+		return 'Shopping';
+	}
+	if (preg_match('/youtube|demand gen|video/i', $name)) {
+		return 'Video';
+	}
+	if (wholesale_vi_campaign_is_named($campaign) && '' !== trim((string) $campaign)) {
+		return 'Search';
+	}
+
+	return '';
+}
+
+/**
+ * Campaign name with its type and, when it differs, the ID as sent.
+ */
+function wholesale_vi_campaign_html($campaign, $with_id = true)
+{
+	$campaign = (string) $campaign;
+	if ('' === $campaign || '(not set)' === $campaign) {
+		return '<span class="wvi-muted">(not set)</span>';
+	}
+	$name = wholesale_vi_campaign_name($campaign);
+	$type = wholesale_vi_campaign_type($campaign);
+	$html = esc_html($name);
+	if ($type) {
+		$html .= ' <span class="wvi-ctype is-' . esc_attr(strtolower($type)) . '">' . esc_html($type) . '</span>';
+	}
+	if (!wholesale_vi_campaign_is_named($campaign)) {
+		$html .= ' <a class="wvi-muted" href="' . esc_url(wholesale_vi_url('wholesale-insights-settings')) . '#wvi-campaigns" title="Add this campaign\'s name under Settings">name it</a>';
+	} elseif ($with_id && $name !== $campaign) {
+		$html .= ' <span class="wvi-muted">' . esc_html($campaign) . '</span>';
+	}
+
+	return $html;
 }
 
 function wholesale_vi_setting($key)
@@ -75,6 +190,9 @@ function wholesale_vi_table($name)
 function wholesale_vi_install()
 {
 	if (WHOLESALE_VI_DB_VERSION === get_option('wholesale_vi_db_version')) {
+		if (WHOLESALE_VI_DATA_REV !== get_option('wholesale_vi_data_rev')) {
+			wholesale_vi_fix_data();
+		}
 		return;
 	}
 
@@ -148,8 +266,38 @@ function wholesale_vi_install()
 	) {$charset_collate};");
 
 	update_option('wholesale_vi_db_version', WHOLESALE_VI_DB_VERSION);
+	wholesale_vi_fix_data();
 }
 add_action('init', 'wholesale_vi_install');
+
+/**
+ * Corrections to visits recorded before the tracker knew better: ChatGPT and
+ * other AI assistants were counted as plain referrals. Safe to run again; it
+ * also runs with the daily clean-up, because copying wp_options between the
+ * live and local sites can carry the "done" flag without the visits.
+ */
+function wholesale_vi_fix_data()
+{
+	global $wpdb;
+	$sessions = wholesale_vi_table('sessions');
+	if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $sessions)) !== $sessions) {
+		return;
+	}
+
+	$ai = wholesale_vi_ai_regex();
+	$wpdb->query("UPDATE {$sessions} SET channel = 'ai', medium = IF(medium IN ('', 'referral'), 'ai', medium) WHERE channel = 'referral' AND (source REGEXP '{$ai}' OR referrer REGEXP '{$ai}')"); // phpcs:ignore WordPress.DB.PreparedSQL -- constant pattern.
+
+	update_option('wholesale_vi_data_rev', WHOLESALE_VI_DATA_REV);
+}
+
+/**
+ * Hosts of AI assistants (ChatGPT, Copilot, Perplexity...), as a pattern that
+ * works in both PHP (with # delimiters) and MySQL REGEXP.
+ */
+function wholesale_vi_ai_regex()
+{
+	return '(^|[/.])(chatgpt[.]com|chat[.]openai[.]com|perplexity[.]ai|copilot[.]microsoft[.]com|copilot[.]com|gemini[.]google[.]com|bard[.]google[.]com|claude[.]ai|meta[.]ai|you[.]com|phind[.]com|poe[.]com|deepseek[.]com|grok[.]com|mistral[.]ai)([/:?]|$)';
+}
 
 /**
  * Delete visits older than the retention period, once a day.
@@ -172,6 +320,7 @@ function wholesale_vi_purge_old()
 
 	$wpdb->query($wpdb->prepare("DELETE FROM {$events} WHERE created_at < %s", $cutoff));
 	$wpdb->query($wpdb->prepare("DELETE FROM {$sessions} WHERE last_seen < %s", $cutoff));
+	wholesale_vi_fix_data();
 }
 add_action('wholesale_vi_purge', 'wholesale_vi_purge_old');
 
@@ -283,11 +432,17 @@ function wholesale_vi_enqueue_tracker()
 		$cart_items = count((array) wholesale_get_cart()->get_items());
 	}
 
-	wp_localize_script('wholesale-vi', 'wholesaleVI', array(
+	$snap_scripts = function_exists('wholesale_vi_snap_scripts') ? wholesale_vi_snap_scripts() : null;
+	wp_localize_script('wholesale-vi', 'wholesaleVI', array_filter(array(
 		'endpoint' => rest_url('wholesale/v1/vi'),
 		'ptype' => $ptype,
 		'cart' => $cart_items,
-	));
+		// Admin "Take screenshot" (inc/visitor-snaps.php): loaded only when asked.
+		'snap' => $snap_scripts ? $snap_scripts['capture'] : '',
+		'snapEndpoint' => $snap_scripts ? rest_url('wholesale/v1/vi-snap') : '',
+	), static function ($value) {
+		return '' !== $value;
+	}));
 }
 add_action('wp_enqueue_scripts', 'wholesale_vi_enqueue_tracker', 20);
 
@@ -351,7 +506,7 @@ function wholesale_vi_is_google_ip($ip)
 	}
 
 	$long = ip2long($ip);
-	foreach (array('64.233.160.0/19', '66.102.0.0/20', '66.249.64.0/19', '72.14.192.0/18', '74.125.0.0/16', '209.85.128.0/17', '216.239.32.0/19') as $range) {
+	foreach (wholesale_vi_google_ranges() as $range) {
 		list($subnet, $bits) = explode('/', $range);
 		$mask = -1 << (32 - (int) $bits);
 		if ((ip2long($subnet) & $mask) === ($long & $mask)) {
@@ -360,6 +515,74 @@ function wholesale_vi_is_google_ip($ip)
 	}
 
 	return false;
+}
+
+function wholesale_vi_google_ranges()
+{
+	return array('64.233.160.0/19', '66.102.0.0/20', '66.249.64.0/19', '72.14.192.0/18', '74.125.0.0/16', '209.85.128.0/17', '216.239.32.0/19');
+}
+
+/**
+ * Screen sizes that only automated browsers report on a Linux desktop: the
+ * square 1024x1024 window of Google's page renderer and of crawlers that copy
+ * it, and headless Chrome's 800x600. 250+ such "direct" visits (Oct 6 – Nov 1)
+ * had 0 seconds engaged, made a third of all direct traffic and inflated the
+ * bounce rate.
+ */
+function wholesale_vi_robot_screens()
+{
+	return array('1024x1024', '1366x1024', '1280x1280', '1200x2000', '800x600');
+}
+
+/**
+ * Whether a new visit is from an automated browser that passes as a person
+ * (a normal Chrome user agent, but a robot's screen).
+ *
+ * @param array  $agent  wholesale_vi_parse_ua() result.
+ * @param string $screen "WIDTHxHEIGHT" of the screen.
+ */
+function wholesale_vi_looks_automated($agent, $screen)
+{
+	if (!preg_match('/^(\d+)x(\d+)$/', (string) $screen, $size)) {
+		return false;
+	}
+	$linux_desktop = 'desktop' === $agent['device'] && in_array($agent['os'], array('Linux', 'Other'), true);
+
+	return ($linux_desktop && in_array($screen, wholesale_vi_robot_screens(), true))
+		// Phones are never square.
+		|| ('Android' === $agent['os'] && '1024x1024' === $screen)
+		|| ('desktop' === $agent['device'] && 'Other' === $agent['os'] && 'Other' === $agent['browser'])
+		// Full-page screenshot services report the whole page as the screen.
+		|| (int) $size[2] > 6000 || (int) $size[1] > 8000;
+}
+
+/**
+ * SQL that is true for a recorded visit that was a robot (see
+ * wholesale_vi_looks_automated()), a Google checker, or a server: hidden from
+ * every report. Visits with an order or a lead are always kept.
+ */
+function wholesale_vi_automated_sql($alias = 's')
+{
+	$a = $alias;
+	$screens = "'" . implode("', '", wholesale_vi_robot_screens()) . "'";
+	$google = array();
+	foreach (wholesale_vi_google_ranges() as $range) {
+		list($subnet, $bits) = explode('/', $range);
+		$start = ip2long($subnet);
+		// INET_ATON() is NULL for IPv6, and a NULL here used to drop the visit
+		// from every report (neither human nor robot). The last part after ':'
+		// keeps IPv4-mapped addresses (::ffff:1.2.3.4) checkable.
+		$google[] = sprintf("COALESCE(INET_ATON(SUBSTRING_INDEX(%s.ip, ':', -1)), 0) BETWEEN %d AND %d", $a, $start, $start + (1 << (32 - (int) $bits)) - 1);
+	}
+
+	// COALESCE: an unknown (NULL) check means "not a robot", so the visit is counted.
+	return "COALESCE(({$a}.order_id = 0 AND {$a}.is_lead = 0 AND (
+		({$a}.device = 'desktop' AND {$a}.os IN ('Linux', 'Other') AND {$a}.screen IN ({$screens}))
+		OR ({$a}.os = 'Android' AND {$a}.screen = '1024x1024')
+		OR ({$a}.device = 'desktop' AND {$a}.os = 'Other' AND {$a}.browser = 'Other')
+		OR CAST(SUBSTRING_INDEX({$a}.screen, 'x', -1) AS UNSIGNED) > 6000
+		OR ({$a}.device = 'desktop' AND {$a}.os = 'Linux' AND {$a}.timezone IN ('UTC', 'Etc/UTC') AND {$a}.engaged_seconds < 5)
+		OR " . implode(' OR ', $google) . ')), 0)';
 }
 
 /**
@@ -382,11 +605,23 @@ function wholesale_vi_parse_ua($ua, $touch_points = 0)
 		}
 	}
 
+	// In-app browsers first: ads on YouTube, Gmail and Discover open inside those
+	// apps, which is why so many phone visits used to read "Other".
 	$browser = 'Other';
 	foreach (array(
 		'/FBAN|FBAV/' => 'Facebook app',
 		'/Instagram/' => 'Instagram app',
+		'/com\.google\.ios\.youtube|YouTube\//i' => 'YouTube app',
+		'/GmailApp|com\.google\.Gmail/i' => 'Gmail app',
 		'/GSA\//' => 'Google app',
+		'/LinkedInApp/i' => 'LinkedIn app',
+		'/Pinterest/i' => 'Pinterest app',
+		'/Snapchat/i' => 'Snapchat app',
+		'/musical_ly|BytedanceWebview|TikTok/i' => 'TikTok app',
+		'/Twitter|TwitterAndroid/i' => 'X (Twitter) app',
+		'/WhatsApp/i' => 'WhatsApp',
+		'/DuckDuckGo/i' => 'DuckDuckGo',
+		'/; wv\)/' => 'In-app browser',
 		'/Edg(e|A|iOS)?\//' => 'Edge',
 		'/OPR\/|Opera/' => 'Opera',
 		'/SamsungBrowser/' => 'Samsung Internet',
@@ -398,6 +633,10 @@ function wholesale_vi_parse_ua($ua, $touch_points = 0)
 			$browser = $name;
 			break;
 		}
+	}
+	// iPhone apps show pages in a web view whose user agent lacks "Safari/".
+	if ('Other' === $browser && 'iOS' === $os && preg_match('/AppleWebKit/', $ua)) {
+		$browser = 'In-app browser';
 	}
 
 	$device = 'desktop';
@@ -459,6 +698,12 @@ function wholesale_vi_attribution($campaign, $referrer)
 	$ref_host = strtolower((string) wp_parse_url($referrer, PHP_URL_HOST));
 	$own_host = strtolower((string) wp_parse_url(home_url(), PHP_URL_HOST));
 	$ref_host = preg_replace('/^(www|m|l|lm)\./', '', $ref_host);
+	// Coming back from a payment or sign-in page is the same visitor carrying
+	// on, not a referral from that site.
+	if (preg_match('/(^|\.)(stripe\.com|paypal\.com|squareup\.com|square\.link|authorize\.net|klarna\.com|affirm\.com|afterpay\.com|accounts\.google\.com|appleid\.apple\.com)$/', $ref_host)) {
+		$ref_host = '';
+	}
+	$is_ai = (bool) preg_match('#' . wholesale_vi_ai_regex() . '#i', $source) || (bool) preg_match('#' . wholesale_vi_ai_regex() . '#i', $ref_host);
 	$is_search = (bool) preg_match('/(^|\.)(google|bing|yahoo|duckduckgo|ecosia|baidu|yandex|aol|ask|brave)\./', $ref_host . '.');
 	$is_social = (bool) preg_match('/(^|\.)(facebook|instagram|t\.co|twitter|x\.com|linkedin|lnkd\.in|pinterest|youtube|tiktok|reddit|nextdoor|yelp)/', $ref_host);
 	$is_internal = '' !== $ref_host && ($ref_host === preg_replace('/^www\./', '', $own_host));
@@ -476,6 +721,11 @@ function wholesale_vi_attribution($campaign, $referrer)
 	} elseif ('fbclid' === $click_type || preg_match('/social/', $medium) || ($is_social && !$source)) {
 		$channel = 'social';
 		$source = $source ?: ($ref_host ?: 'facebook');
+	} elseif ($is_ai) {
+		// ChatGPT adds utm_source=chatgpt.com to the links it gives.
+		$channel = 'ai';
+		$source = $source ?: $ref_host;
+		$medium = $medium ?: 'ai';
 	} elseif ($source) {
 		$channel = 'referral';
 	} elseif ($is_search) {
@@ -548,6 +798,15 @@ function wholesale_vi_open_session($session_key, $visitor_key, $data, $events, $
 	$referrer = isset($first['ref']) ? esc_url_raw(substr((string) $first['ref'], 0, 500)) : '';
 	$attribution = wholesale_vi_attribution($first['campaign'] ?? array(), $referrer);
 	$agent = wholesale_vi_parse_ua($ua, (int) ($data['tp'] ?? 0));
+	// Every request carries the screen size, so a robot is turned away even when
+	// its first page view never arrived.
+	$screen = substr(preg_replace('/[^0-9x]/', '', (string) ($first['screen'] ?? ($data['sc'] ?? ''))), 0, 20);
+	if (wholesale_vi_looks_automated($agent, $screen)) {
+		return null;
+	}
+	if (!$first && !empty($data['tz'])) {
+		$first['tz'] = $data['tz'];
+	}
 	$country = isset($_SERVER['HTTP_CF_IPCOUNTRY']) ? strtoupper(substr(sanitize_key(wp_unslash($_SERVER['HTTP_CF_IPCOUNTRY'])), 0, 2)) : '';
 	$ago = min(max(0, (int) ($first['ago'] ?? 0)), HOUR_IN_SECONDS * 1000);
 	$now = gmdate('Y-m-d H:i:s', time() - (int) round($ago / 1000));
@@ -578,7 +837,7 @@ function wholesale_vi_open_session($session_key, $visitor_key, $data, $events, $
 		$agent['device'],
 		$agent['browser'],
 		$agent['os'],
-		substr(preg_replace('/[^0-9x]/', '', (string) ($first['screen'] ?? '')), 0, 20),
+		$screen,
 		preg_match('/^[A-Z]{2}$/', $country) && 'XX' !== $country ? $country : '',
 		substr(preg_replace('#[^A-Za-z0-9_/+-]#', '', (string) ($first['tz'] ?? '')), 0, 60),
 		substr(preg_replace('/[^A-Za-z-]/', '', (string) ($first['lang'] ?? '')), 0, 20),
@@ -653,6 +912,24 @@ function wholesale_vi_rest_collect(WP_REST_Request $request)
 	$user_id = wholesale_vi_request_user_id();
 	if ($user_id && wholesale_vi_setting('exclude_admins') && user_can($user_id, 'edit_posts')) {
 		return $done;
+	}
+
+	// An agent started a chat with this visitor from Live Chat's Live visitors
+	// tab: tell the page to open the chat (visitor-tracker.js). Reads an
+	// autoloaded option, so no extra query on ordinary pings.
+	$reply = array();
+	if (apply_filters('sfs_chat_invite_pending', false, $data['v'])) {
+		$reply['chat'] = 1;
+	}
+	// An admin pressed "Take screenshot" on this visit: the page sends a copy of
+	// itself (inc/visitor-snaps.php). Also reads an autoloaded option only.
+	$snap = function_exists('wholesale_vi_snap_pending') ? wholesale_vi_snap_pending($data['s']) : '';
+	if ('' !== $snap) {
+		$reply['snap'] = $snap;
+	}
+	if ($reply) {
+		$done->set_status(200);
+		$done->set_data($reply);
 	}
 
 	// Safari keeps a cookie written by a page script for 1 to 7 days, so a
@@ -883,6 +1160,12 @@ function wholesale_vi_record_quote($post_id, $post, $update)
 
 	update_post_meta($post_id, '_vi_session_id', (int) $session->id);
 	wholesale_vi_log_server_event($session, 'quote_submit', wp_strip_all_tags($post->post_title), (string) $post_id, array('is_lead = %d' => 1));
+
+	// Saved on the request now, like an order's source: the visits behind it
+	// are deleted after the retention period.
+	if (function_exists('wholesale_vi_lead_source')) {
+		wholesale_vi_lead_source($post_id);
+	}
 }
 add_action('save_post_contact_submission', 'wholesale_vi_record_quote', 10, 3);
 
@@ -933,14 +1216,58 @@ function wholesale_vi_order_source($order_id)
 	$order_id = (int) $order_id;
 	$saved = get_post_meta($order_id, '_vi_source', true);
 	if (is_array($saved) && !empty($saved['channel'])) {
-		return $saved;
+		return wholesale_vi_normalize_source($saved);
 	}
 
 	$buy = wholesale_vi_order_session($order_id);
-	if (!$buy) {
+	$source = $buy ? wholesale_vi_credit_source($buy) : null;
+
+	// A customer who asked for a quote first often pays later from another
+	// device or through a payment link, so the order's own visit says "direct"
+	// or nothing. Their quote request knows where they came from.
+	if ((!$source || 'direct' === $source['channel']) && function_exists('wholesale_vi_order_lead')) {
+		$lead = wholesale_vi_order_lead($order_id);
+		$lead_source = $lead ? wholesale_vi_lead_source($lead) : null;
+		if ($lead_source && 'direct' !== $lead_source['channel']) {
+			$source = array_merge($lead_source, array(
+				'via_lead' => (int) $lead,
+				'lead_at' => get_post_field('post_date_gmt', $lead),
+				'ordered_at' => $buy ? $buy->ordered_at : get_post_field('post_date_gmt', $order_id),
+				'order_visit_id' => $buy ? (int) $buy->id : (int) $lead_source['order_visit_id'],
+				'order_channel' => $buy ? $buy->channel : 'direct',
+				'device' => $buy ? $buy->device : ($lead_source['device'] ?? ''),
+			));
+		}
+	}
+	if (!$source) {
 		return null;
 	}
 
+	update_post_meta($order_id, '_vi_source', $source);
+
+	return $source;
+}
+
+/**
+ * Sources saved before AI assistants had their own channel.
+ */
+function wholesale_vi_normalize_source($source)
+{
+	if ('referral' === ($source['channel'] ?? '') && preg_match('#' . wholesale_vi_ai_regex() . '#i', (string) ($source['source'] ?? ''))) {
+		$source['channel'] = 'ai';
+	}
+
+	return $source + array('network' => '', 'placement' => '', 'via_lead' => 0, 'location' => '', 'from_form' => false);
+}
+
+/**
+ * Who gets the credit for a sale or lead made in the visit $buy (which has
+ * ->ordered_at, the time of the purchase or request): the last ad click in the
+ * 90 days before, else the last visit that was not direct, else $buy itself.
+ * Earlier visits count when they are from the same browser or account.
+ */
+function wholesale_vi_credit_source($buy)
+{
 	global $wpdb;
 	$who = 'visitor_key = %s';
 	$params = array($buy->visitor_key);
@@ -969,25 +1296,27 @@ function wholesale_vi_order_source($order_id)
 	}
 	$credit = $paid ?: ($not_direct ?: $buy);
 
-	$source = array(
+	return array(
 		'channel' => $credit->channel,
 		'source' => $credit->source,
 		'keyword' => $credit->term,
 		'campaign' => $credit->campaign,
 		'ad_group' => $credit->content,
 		'landing' => $credit->landing_url,
+		'network' => wholesale_vi_ad_network($credit),
+		'placement' => wholesale_vi_ad_placement($credit),
 		'visit_id' => (int) $credit->id,
 		'visit_at' => $credit->started_at,
 		'order_visit_id' => (int) $buy->id,
 		'order_channel' => $buy->channel,
 		'ordered_at' => $buy->ordered_at,
 		'device' => $buy->device,
+		'location' => wholesale_vi_location($buy),
 		'visits' => count($visits),
-		'first_at' => end($visits)->started_at,
+		'first_at' => $visits ? end($visits)->started_at : $buy->started_at,
+		'via_lead' => 0,
+		'from_form' => false,
 	);
-	update_post_meta($order_id, '_vi_source', $source);
-
-	return $source;
 }
 
 /**
@@ -1017,7 +1346,12 @@ function wholesale_vi_order_source_html($order_id)
 	if ('' !== $source['campaign']) {
 		$details[] = wholesale_vi_campaign_name($source['campaign']);
 	}
-	if ($source['visit_id'] !== $source['order_visit_id']) {
+	if ($paid && '' !== $source['network']) {
+		$details[] = wholesale_vi_ad_networks()[$source['network']] ?? $source['network'];
+	}
+	if ($source['via_lead']) {
+		$details[] = 'Asked for a quote ' . wholesale_vi_date($source['lead_at'] ?? '', 'M j') . ' first';
+	} elseif ($source['visit_id'] !== $source['order_visit_id']) {
 		$details[] = wholesale_vi_time_between($source['visit_at'], $source['ordered_at']) . ' before ordering';
 	}
 	if (!$paid && wholesale_vi_order_has_unlinked_ad_click($order_id, $source)) {
@@ -1065,17 +1399,25 @@ function wholesale_vi_order_source_box($post)
 		$facts['Keyword'] = '<span class="wvi-muted">Search engines do not share search words.</span>';
 	}
 	if ('' !== $source['campaign']) {
-		$name = wholesale_vi_campaign_name($source['campaign']);
-		$facts['Campaign'] = esc_html($name) . ($name !== $source['campaign'] ? ' <span class="wvi-muted">' . esc_html($source['campaign']) . '</span>' : '');
+		$facts['Campaign'] = wholesale_vi_campaign_html($source['campaign']);
+	}
+	if ($paid && '' !== $source['network']) {
+		$facts['Ad shown on'] = esc_html(wholesale_vi_ad_networks()[$source['network']] ?? $source['network']) . ('' !== $source['placement'] ? ' <span class="wvi-muted">' . esc_html($source['placement']) . '</span>' : '');
 	}
 	if ($paid && '' !== $source['ad_group']) {
 		$facts['Ad group'] = '<span class="wvi-muted">' . esc_html($source['ad_group']) . '</span>';
+	}
+	if ($source['via_lead']) {
+		$facts['Quote first'] = '<a href="' . esc_url(get_edit_post_link($source['via_lead'])) . '">Quote request</a> on ' . esc_html(wholesale_vi_date($source['lead_at'] ?? '', 'M j')) . '<br><span class="wvi-muted">Matched by the customer\'s email. Credited to where that request came from.</span>';
 	}
 	if (wholesale_vi_order_has_unlinked_ad_click($post->ID, $source)) {
 		$facts['Google Ads'] = '<span class="wvi-muted">This browser came from a Google ad in the 90 days before the order (see the Google Ads box), but that visit was not linked, so its keyword is unknown.</span>';
 	}
 	$facts['Landed on'] = '<a href="' . esc_url(wholesale_vi_site_link($source['landing'])) . '" target="_blank" rel="noopener" class="wvi-break">' . esc_html(wholesale_vi_short_path(strtok($source['landing'], '?'), 60)) . '</a>';
 	$facts[$paid ? 'Ad click' : 'Visit'] = esc_html(wholesale_vi_date($source['visit_at'])) . '<br><span class="wvi-muted">' . esc_html($source['visit_id'] === $source['order_visit_id'] ? 'Ordered in the same visit' : wholesale_vi_time_between($source['visit_at'], $source['ordered_at']) . ' before ordering, on a later ' . strtolower(wholesale_vi_channels()[$source['order_channel']] ?? $source['order_channel']) . ' visit') . '</span>';
+	if ('' !== $source['location']) {
+		$facts['Location'] = esc_html($source['location']) . ' <span class="wvi-muted">(from the browser\'s time zone)</span>';
+	}
 	$facts['Visits'] = esc_html(sprintf(_n('%d visit', '%d visits', $source['visits']), $source['visits'])) . ($source['visits'] > 1 ? '<br><span class="wvi-muted">First on ' . esc_html(wholesale_vi_date($source['first_at'], 'M j')) . '</span>' : '');
 	?>
 	<div class="wvi wvi-order-source">
@@ -1145,12 +1487,163 @@ function wholesale_vi_channels()
 	return array(
 		'google_ads' => 'Google Ads',
 		'organic' => 'Organic search',
+		'ai' => 'AI assistants',
 		'direct' => 'Direct',
 		'referral' => 'Referral',
 		'social' => 'Social',
 		'email' => 'Email',
 		'paid_other' => 'Other paid',
 	);
+}
+
+/**
+ * Where a Google ad was shown when it was clicked.
+ */
+function wholesale_vi_ad_networks()
+{
+	return array(
+		'search' => 'Google Search & Shopping',
+		'youtube' => 'YouTube',
+		'display' => 'Display network',
+		'partners' => 'Search partners',
+		'gmail' => 'Gmail',
+		'sites' => 'Partner websites',
+		'app' => 'Apps (no referrer)',
+	);
+}
+
+/**
+ * Rules for wholesale_vi_ad_networks(), first match wins: the {network} value
+ * when the ad's tracking suffix sends one (utm_network={network}), else the
+ * page the click came from. Patterns work in both PHP and MySQL REGEXP.
+ */
+function wholesale_vi_network_rules()
+{
+	return array(
+		array('youtube', 'landing_url', '[?&](utm_)?network=ytv'),
+		array('partners', 'landing_url', '[?&](utm_)?network=s(&|$)'),
+		array('display', 'landing_url', '[?&](utm_)?network=(d|vp)(&|$)'),
+		array('youtube', 'referrer', '(^|[/.])(youtube[.]com|youtu[.]be)(/|$)|com[.]google[.]android[.]youtube'),
+		array('display', 'referrer', '(^|[/.])(doubleclick[.]net|googlesyndication[.]com|googleadservices[.]com)(/|$)'),
+		array('partners', 'referrer', '(^|[/.])syndicatedsearch[.]goog(/|$)'),
+		array('gmail', 'referrer', 'mail[.]google[.]com|com[.]google[.]android[.]gm'),
+		array('search', 'referrer', '(^|[/.])google[.][a-z.]+(/|$)|googlequicksearchbox'),
+		array('search', 'landing_url', '[?&](utm_)?network=g(&|$)'),
+	);
+}
+
+/**
+ * The ad network of a visit (empty for visits that are not ad clicks).
+ */
+function wholesale_vi_ad_network($session)
+{
+	$session = (object) $session;
+	if (!in_array($session->channel ?? '', array('google_ads', 'paid_other'), true)) {
+		return '';
+	}
+	foreach (wholesale_vi_network_rules() as $rule) {
+		if (preg_match('#' . $rule[2] . '#i', (string) ($session->{$rule[1]} ?? ''))) {
+			return $rule[0];
+		}
+	}
+
+	return '' === (string) ($session->referrer ?? '') ? 'app' : 'sites';
+}
+
+/**
+ * SQL version of wholesale_vi_ad_network().
+ */
+function wholesale_vi_network_sql($alias = 's')
+{
+	$sql = "CASE WHEN {$alias}.channel NOT IN ('google_ads', 'paid_other') THEN ''";
+	foreach (wholesale_vi_network_rules() as $rule) {
+		$sql .= " WHEN {$alias}.{$rule[1]} REGEXP '{$rule[2]}' THEN '{$rule[0]}'";
+	}
+
+	return $sql . " WHEN {$alias}.referrer = '' THEN 'app' ELSE 'sites' END";
+}
+
+/**
+ * SQL true for ad clicks that came from a partner website, one that could be
+ * excluded in Google Ads. Google's own ad-serving hosts (doubleclick,
+ * googlesyndication, syndicatedsearch) hide the real site, so they are left out.
+ */
+function wholesale_vi_placement_sql($alias = 's')
+{
+	// The site itself is never a placement: an ad URL reopened from one of its own pages
+	// (reload, back, an in-app browser) showed the site's own domain as a "partner
+	// website" to exclude in Google Ads (Nov 2026).
+	$own = array('storefrontsignwholesale[.]com');
+	$host = strtolower((string) wp_parse_url(home_url('/'), PHP_URL_HOST));
+	if ($host && preg_match('/^[a-z0-9.-]+$/', $host)) {
+		$own[] = str_replace('.', '[.]', preg_replace('/^www\./', '', $host));
+	}
+
+	return '(' . wholesale_vi_network_sql($alias) . ") IN ('display', 'partners', 'sites') AND {$alias}.referrer <> '' AND {$alias}.referrer NOT REGEXP '(^|[/.])(doubleclick[.]net|googlesyndication[.]com|googleadservices[.]com|syndicatedsearch[.]goog|google[.][a-z.]+|localhost|" . implode('|', array_unique($own)) . ")(/|:|$)'";
+}
+
+/**
+ * The site an ad was clicked on, for Display and partner clicks.
+ */
+function wholesale_vi_ad_placement($session)
+{
+	$session = (object) $session;
+	$network = wholesale_vi_ad_network($session);
+	if (!in_array($network, array('display', 'partners', 'sites', 'youtube'), true)) {
+		return '';
+	}
+
+	return preg_replace('/^www\./', '', strtolower((string) wp_parse_url((string) $session->referrer, PHP_URL_HOST)));
+}
+
+/**
+ * A US region (or the country) from a browser time zone. Visits carry no
+ * country unless the site is behind Cloudflare, so this is the best location.
+ */
+function wholesale_vi_region($tz)
+{
+	$tz = (string) $tz;
+	if ('' === $tz) {
+		return '';
+	}
+	$us = array(
+		'America/Los_Angeles' => 'US Pacific (CA, WA, OR, NV)',
+		'America/Denver' => 'US Mountain (CO, UT, NM, MT, WY)',
+		'America/Boise' => 'US Mountain (Idaho)',
+		'America/Phoenix' => 'US Arizona',
+		'America/Chicago' => 'US Central (TX, IL, MN, MO…)',
+		'America/New_York' => 'US Eastern (NY, FL, GA, PA…)',
+		'America/Detroit' => 'US Eastern (Michigan)',
+		'America/Anchorage' => 'US Alaska',
+		'America/Juneau' => 'US Alaska',
+		'Pacific/Honolulu' => 'US Hawaii',
+		'America/Puerto_Rico' => 'Puerto Rico',
+	);
+	if (isset($us[$tz])) {
+		return $us[$tz];
+	}
+	if (preg_match('#^America/Indiana/#', $tz)) {
+		return 'US Indiana';
+	}
+	if (preg_match('#^America/Kentucky/#', $tz)) {
+		return 'US Kentucky';
+	}
+	if (preg_match('#^America/North_Dakota/#', $tz)) {
+		return 'US North Dakota';
+	}
+	$countries = array(
+		'America/Toronto' => 'Canada', 'America/Vancouver' => 'Canada', 'America/Edmonton' => 'Canada', 'America/Winnipeg' => 'Canada', 'America/Halifax' => 'Canada',
+		'America/Mexico_City' => 'Mexico', 'America/Tijuana' => 'Mexico', 'Asia/Dhaka' => 'Bangladesh', 'Asia/Kolkata' => 'India', 'Asia/Calcutta' => 'India',
+		'Asia/Karachi' => 'Pakistan', 'Asia/Manila' => 'Philippines', 'Asia/Shanghai' => 'China', 'Asia/Hong_Kong' => 'Hong Kong', 'Asia/Singapore' => 'Singapore',
+		'Asia/Dubai' => 'UAE', 'Asia/Jakarta' => 'Indonesia', 'Asia/Ho_Chi_Minh' => 'Vietnam', 'Asia/Saigon' => 'Vietnam', 'Asia/Tokyo' => 'Japan',
+		'Europe/London' => 'UK', 'Europe/Berlin' => 'Germany', 'Europe/Paris' => 'France', 'Europe/Amsterdam' => 'Netherlands', 'Africa/Lagos' => 'Nigeria',
+		'Australia/Sydney' => 'Australia', 'Australia/Melbourne' => 'Australia', 'UTC' => 'Unknown (UTC)', 'Etc/UTC' => 'Unknown (UTC)',
+	);
+	if (isset($countries[$tz])) {
+		return $countries[$tz];
+	}
+
+	return str_replace('_', ' ', substr(strrchr($tz, '/') ?: '/' . $tz, 1));
 }
 
 function wholesale_vi_stages()
@@ -1274,6 +1767,13 @@ function wholesale_vi_where($start_gmt, $end_gmt, $filters = array(), $alias = '
 	$where = array("{$alias}.started_at >= %s", "{$alias}.started_at < %s");
 	$params = array($start_gmt, $end_gmt);
 
+	// Robots are left out of every number unless asked for.
+	if (empty($filters['robots'])) {
+		$where[] = 'NOT ' . wholesale_vi_automated_sql($alias);
+	} elseif ('only' === $filters['robots']) {
+		$where[] = wholesale_vi_automated_sql($alias);
+	}
+
 	if (!empty($filters['channel']) && isset(wholesale_vi_channels()[$filters['channel']])) {
 		$where[] = "{$alias}.channel = %s";
 		$params[] = $filters['channel'];
@@ -1281,6 +1781,14 @@ function wholesale_vi_where($start_gmt, $end_gmt, $filters = array(), $alias = '
 	if (!empty($filters['device']) && in_array($filters['device'], array('mobile', 'tablet', 'desktop'), true)) {
 		$where[] = "{$alias}.device = %s";
 		$params[] = $filters['device'];
+	}
+	if (!empty($filters['network']) && isset(wholesale_vi_ad_networks()[$filters['network']])) {
+		$where[] = '(' . wholesale_vi_network_sql($alias) . ') = %s';
+		$params[] = $filters['network'];
+	}
+	if (!empty($filters['campaign'])) {
+		$where[] = "{$alias}.campaign IN (" . implode(', ', array_fill(0, count((array) $filters['campaign']), '%s')) . ')';
+		$params = array_merge($params, (array) $filters['campaign']);
 	}
 
 	return array(implode(' AND ', $where), $params);
@@ -1359,10 +1867,17 @@ function wholesale_vi_form_report($start_gmt, $end_gmt, $filters = array())
 	$events = wholesale_vi_table('events');
 	$base = array_merge(array($start_gmt, $end_gmt), $params);
 
+	// The checkout form counts as finished only when an order was placed. Every
+	// checkout visit has added to the cart first, so the add_to_cart rule below
+	// marked every checkout "finished" and hid checkout abandonment (0% gave up).
+	$checkout = "('checkoutForm', 'Checkout')";
+	$finished = "CASE WHEN f.label IN {$checkout} THEN %1\$s.type = 'purchase'
+		ELSE %1\$s.type IN ('form_submit', 'quote_submit', 'purchase', 'add_to_cart') AND (%1\$s.label = f.label OR %1\$s.type <> 'form_submit') END";
+
 	$rows = $wpdb->get_results($wpdb->prepare(
 		"SELECT f.label, COUNT(DISTINCT f.session_id) AS started, COUNT(DISTINCT sub.session_id) AS submitted
 		FROM {$events} f JOIN " . wholesale_vi_table('sessions') . " s ON s.id = f.session_id
-		LEFT JOIN {$events} sub ON sub.session_id = f.session_id AND sub.type IN ('form_submit', 'quote_submit', 'purchase') AND (sub.label = f.label OR sub.type <> 'form_submit')
+		LEFT JOIN {$events} sub ON sub.session_id = f.session_id AND " . sprintf($finished, 'sub') . "
 		WHERE f.type = 'form_start' AND f.created_at >= %s AND f.created_at < %s AND {$where}
 		GROUP BY f.label ORDER BY started DESC LIMIT 8",
 		$base
@@ -1372,7 +1887,7 @@ function wholesale_vi_form_report($start_gmt, $end_gmt, $filters = array())
 		"SELECT f.label, f.value, COUNT(*) AS n
 		FROM {$events} f JOIN " . wholesale_vi_table('sessions') . " s ON s.id = f.session_id
 		WHERE f.type = 'form_start' AND f.value <> '' AND f.created_at >= %s AND f.created_at < %s AND {$where}
-			AND NOT EXISTS (SELECT 1 FROM {$events} x WHERE x.session_id = f.session_id AND x.type IN ('form_submit', 'quote_submit', 'purchase'))
+			AND NOT EXISTS (SELECT 1 FROM {$events} x WHERE x.session_id = f.session_id AND " . sprintf($finished, 'x') . ")
 		GROUP BY f.label, f.value ORDER BY n DESC",
 		$base
 	), ARRAY_A);
@@ -1437,7 +1952,7 @@ function wholesale_vi_repeat_ad_clickers($start_gmt, $end_gmt, $min = 3)
 	$rows = $wpdb->get_results($wpdb->prepare(
 		'SELECT ip, COUNT(*) AS clicks, COUNT(DISTINCT visitor_key) AS devices, SUM(order_id > 0) AS orders, SUM(is_lead) AS leads,
 			COALESCE(AVG(engaged_seconds), 0) AS avg_engaged, MAX(last_seen) AS last_seen, MAX(device) AS device, MAX(timezone) AS timezone
-		FROM ' . wholesale_vi_table('sessions') . " WHERE channel = 'google_ads' AND ip <> '' AND started_at >= %s AND started_at < %s
+		FROM ' . wholesale_vi_table('sessions') . " s WHERE channel = 'google_ads' AND ip <> '' AND started_at >= %s AND started_at < %s AND NOT " . wholesale_vi_automated_sql('s') . "
 		GROUP BY ip HAVING clicks >= %d ORDER BY clicks DESC LIMIT 15",
 		$start_gmt,
 		$end_gmt,
@@ -1446,9 +1961,38 @@ function wholesale_vi_repeat_ad_clickers($start_gmt, $end_gmt, $min = 3)
 
 	// Google's own landing page checks (recorded before they were filtered out) are not
 	// clicks to exclude in Google Ads.
-	return array_values(array_filter((array) $rows, static function ($row) {
+	$rows = array_values(array_filter((array) $rows, static function ($row) {
 		return !wholesale_vi_is_google_ip($row['ip']);
 	}));
+	foreach ($rows as &$row) {
+		$row['carrier'] = wholesale_vi_is_carrier_ip($row['ip']);
+	}
+	unset($row);
+
+	return $rows;
+}
+
+/**
+ * True for a mobile carrier address that many phones share at once (T-Mobile
+ * 172.32.0.0/11, Verizon Wireless 174.192.0.0/10, AT&T Mobility 107.64.0.0/10 and
+ * 166.128.0.0/9, carrier-grade NAT 100.64.0.0/10). Most repeat ad clickers in Nov
+ * 2026 were these: excluding one in Google Ads would hide the ads from real buyers.
+ */
+function wholesale_vi_is_carrier_ip($ip)
+{
+	$long = ip2long((string) $ip);
+	if (false === $long) {
+		return false;
+	}
+	foreach (array('172.32.0.0/11', '174.192.0.0/10', '107.64.0.0/10', '166.128.0.0/9', '100.64.0.0/10') as $cidr) {
+		list($net, $bits) = explode('/', $cidr);
+		$mask = -1 << (32 - (int) $bits);
+		if ((ip2long($net) & $mask) === ($long & $mask)) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 /**
@@ -1512,9 +2056,13 @@ function wholesale_vi_findings($m, $context)
 		}
 	}
 
-	if (!empty($context['repeat_clickers'])) {
-		$findings[] = array('critical', sprintf('%d IP address(es) clicked your ads 3 or more times', count($context['repeat_clickers'])),
-			'Repeated clicks from the same address with no purchase are often competitors or click fraud. Check them in "Repeat ad clickers" and add them under Google Ads → Settings → IP exclusions.');
+	// Shared phone-carrier addresses are many people, not one clicker (wholesale_vi_is_carrier_ip()).
+	$own_ips = array_filter((array) ($context['repeat_clickers'] ?? array()), static function ($row) {
+		return empty($row['carrier']);
+	});
+	if ($own_ips) {
+		$findings[] = array('critical', sprintf('%d IP address(es) clicked your ads 3 or more times', count($own_ips)),
+			'Repeated clicks from the same address with no purchase are often competitors or click fraud. Check them in "Repeat ad clickers" and add them under Google Ads → Settings → IP exclusions. Leave out the ones marked "Phone carrier": many phones share those addresses.');
 	}
 
 	if (!empty($context['foreign']) && $pct($context['foreign'], $sessions) >= 10) {
@@ -1556,6 +2104,8 @@ function wholesale_vi_admin_menu()
 {
 	add_menu_page('Visitor Insights', 'Visitor Insights', 'manage_options', 'wholesale-insights', 'wholesale_vi_admin_page', 'dashicons-chart-area', 3);
 	add_submenu_page('wholesale-insights', 'Overview', 'Overview', 'manage_options', 'wholesale-insights', 'wholesale_vi_admin_page');
+	add_submenu_page('wholesale-insights', 'Get More Orders', 'Get more orders', 'manage_options', 'wholesale-insights-grow', 'wholesale_vi_admin_page');
+	add_submenu_page('wholesale-insights', 'Leads', 'Leads', 'manage_options', 'wholesale-insights-leads', 'wholesale_vi_admin_page');
 	add_submenu_page('wholesale-insights', 'Google Ads Insights', 'Google Ads', 'manage_options', 'wholesale-insights-ads', 'wholesale_vi_admin_page');
 	add_submenu_page('wholesale-insights', 'Visitors', 'Visitors', 'manage_options', 'wholesale-insights-visitors', 'wholesale_vi_admin_page');
 	add_submenu_page('wholesale-insights', 'Live Visitors', 'Live', 'manage_options', 'wholesale-insights-live', 'wholesale_vi_admin_page');
@@ -1577,6 +2127,8 @@ function wholesale_vi_admin_bar_menu($admin_bar)
 
 	$views = array(
 		'wholesale-insights' => __('Overview', 'litsign'),
+		'wholesale-insights-grow' => __('Get more orders', 'litsign'),
+		'wholesale-insights-leads' => __('Leads', 'litsign'),
 		'wholesale-insights-live' => __('Live Visitors', 'litsign'),
 		'wholesale-insights-visitors' => __('Visitors', 'litsign'),
 		'wholesale-insights-ads' => __('Google Ads', 'litsign'),
@@ -1620,6 +2172,8 @@ function wholesale_vi_tabs()
 {
 	return array(
 		'wholesale-insights' => array('Overview', 'dashboard'),
+		'wholesale-insights-grow' => array('Get more orders', 'lightbulb'),
+		'wholesale-insights-leads' => array('Leads', 'id'),
 		'wholesale-insights-ads' => array('Google Ads', 'megaphone'),
 		'wholesale-insights-visitors' => array('Visitors', 'groups'),
 		'wholesale-insights-live' => array('Live', 'visibility'),
@@ -1717,7 +2271,9 @@ function wholesale_vi_outcome($session)
 		return '<span class="wvi-badge is-green">Purchased ' . esc_html(wholesale_vi_money($session->revenue)) . '</span>';
 	}
 	if ((int) $session->is_lead) {
-		return '<span class="wvi-badge is-blue">Lead</span>';
+		$types = wholesale_vi_lead_types_cache()[(int) ($session->id ?? 0)] ?? array();
+		$label = in_array('quote_submit', $types, true) ? 'Quote request' : (in_array('call_click', $types, true) ? 'Lead · call tap' : (in_array('email_click', $types, true) ? 'Lead · email' : 'Lead'));
+		return '<span class="wvi-badge is-blue">' . esc_html($label) . '</span>';
 	}
 	if ((int) $session->stage >= 4) {
 		return '<span class="wvi-badge is-amber">Abandoned ' . ((int) $session->stage >= 5 ? 'checkout' : 'cart') . '</span>';
@@ -1733,11 +2289,14 @@ function wholesale_vi_location($session)
 {
 	$session = (object) $session;
 	$parts = array();
-	if ($session->country) {
+	if (!empty($session->country)) {
 		$parts[] = $session->country;
 	}
-	if ($session->timezone) {
-		$parts[] = str_replace('_', ' ', $session->timezone);
+	if (!empty($session->timezone)) {
+		$parts[] = wholesale_vi_region($session->timezone);
+	}
+	if (!empty($session->language) && preg_match('/^es/i', $session->language)) {
+		$parts[] = 'Spanish speaker';
 	}
 
 	return implode(' · ', $parts);
@@ -1834,6 +2393,12 @@ function wholesale_vi_render_body($page)
 		case 'wholesale-insights-live':
 			wholesale_vi_render_live();
 			break;
+		case 'wholesale-insights-leads':
+			wholesale_vi_render_leads();
+			break;
+		case 'wholesale-insights-grow':
+			wholesale_vi_render_growth();
+			break;
 		default:
 			wholesale_vi_render_report(false);
 	}
@@ -1849,8 +2414,12 @@ function wholesale_vi_data_version($page)
 	$sessions = wholesale_vi_table('sessions');
 
 	if ('wholesale-insights-visitors' === $page && !empty($_GET['session'])) {
-		$row = $wpdb->get_row($wpdb->prepare("SELECT last_seen, events FROM {$sessions} WHERE id = %d", absint($_GET['session'])));
+		$row = $wpdb->get_row($wpdb->prepare("SELECT last_seen, events, session_key FROM {$sessions} WHERE id = %d", absint($_GET['session'])));
 		$version = $row ? $row->last_seen . ':' . $row->events : 'gone';
+		// A screenshot taken or drawn (inc/visitor-snaps.php).
+		if ($row && function_exists('wholesale_vi_snap_signature')) {
+			$version .= ':' . wholesale_vi_snap_signature($row->session_key);
+		}
 	} else {
 		// A range that ended before now never changes.
 		$period = wholesale_vi_period();
@@ -1933,6 +2502,10 @@ function wholesale_vi_render_toolbar($period, $page, $filters = array(), $show =
 					<?php endforeach; ?>
 				</select>
 			<?php endif; ?>
+			<?php if (!empty($filters['network']) && isset(wholesale_vi_ad_networks()[$filters['network']])) : ?>
+				<input type="hidden" name="network" value="<?php echo esc_attr($filters['network']); ?>">
+				<a class="wvi-chip" href="<?php echo esc_url(wholesale_vi_url($page, array_filter(array_merge($filters, array('network' => '', 'period' => $period['key']))))); ?>" title="Show all ad networks">Ad network: <?php echo esc_html(wholesale_vi_ad_networks()[$filters['network']]); ?> ✕</a>
+			<?php endif; ?>
 			<?php do_action('wholesale_vi_toolbar_fields', $page, $filters); ?>
 			<button class="button button-primary">Apply</button>
 		</div>
@@ -1945,6 +2518,7 @@ function wholesale_vi_request_filters()
 	return array(
 		'channel' => isset($_GET['channel']) ? sanitize_key(wp_unslash($_GET['channel'])) : '',
 		'device' => isset($_GET['device']) ? sanitize_key(wp_unslash($_GET['device'])) : '',
+		'network' => isset($_GET['network']) ? sanitize_key(wp_unslash($_GET['network'])) : '',
 	);
 }
 
@@ -2126,7 +2700,9 @@ function wholesale_vi_report_data($period, $filters, $ads)
 
 	$repeat = $ads ? wholesale_vi_repeat_ad_clickers($start, $end) : array();
 	$keywords = $ads ? wholesale_vi_breakdown("IF(s.term = '', '(not set)', s.term)", $start, $end, $filters, 15) : array();
-	$campaigns = $ads ? wholesale_vi_breakdown("IF(s.campaign = '', '(not set)', s.campaign)", $start, $end, $filters, 10) : array();
+	$campaigns = $ads ? wholesale_vi_merge_campaigns(wholesale_vi_breakdown("IF(s.campaign = '', '(not set)', s.campaign)", $start, $end, $filters, 40)) : array();
+	$networks = $ads ? wholesale_vi_breakdown(wholesale_vi_network_sql('s'), $start, $end, $filters, 10) : array();
+	$placements = $ads ? wholesale_vi_breakdown("SUBSTRING_INDEX(SUBSTRING_INDEX(s.referrer, '/', 3), '/', -1)", $start, $end, $filters, 15, wholesale_vi_placement_sql()) : array();
 	$has_keywords = false;
 	foreach (array_merge($keywords, $campaigns) as $row) {
 		if ('(not set)' !== $row['label']) {
@@ -2153,6 +2729,27 @@ function wholesale_vi_report_data($period, $filters, $ads)
 		$hours[(int) $row['label']] = array('sessions' => (int) $row['sessions'], 'conversions' => (int) ($row['orders'] + $row['leads']));
 	}
 
+	$orders = wholesale_vi_orders_report($period, $filters);
+	// Orders each campaign earned, including those placed on a later visit
+	// (the per-visit "Orders" column only counts orders made during the click).
+	$credited = array();
+	foreach ($orders as $order) {
+		if ($order['source'] && in_array($order['source']['channel'], array('google_ads', 'paid_other'), true)) {
+			$name = '' === (string) $order['source']['campaign'] ? '(not set)' : wholesale_vi_campaign_name($order['source']['campaign']);
+			$credited[$name]['orders'] = ($credited[$name]['orders'] ?? 0) + 1;
+			$credited[$name]['revenue'] = ($credited[$name]['revenue'] ?? 0) + $order['total'];
+		}
+	}
+	foreach ($campaigns as &$campaign_row) {
+		$name = '(not set)' === $campaign_row['label'] ? '(not set)' : wholesale_vi_campaign_name($campaign_row['label']);
+		$campaign_row['credited_orders'] = $credited[$name]['orders'] ?? 0;
+		$campaign_row['credited_revenue'] = $credited[$name]['revenue'] ?? 0;
+	}
+	unset($campaign_row);
+
+	$robot_filters = array_merge($filters, array('robots' => 'only'));
+	$robots = (int) ($ads ? 0 : wholesale_vi_summary($start, $end, $robot_filters)['sessions'] ?? 0);
+
 	return array(
 		'summary' => $m,
 		'previous' => $prev,
@@ -2173,8 +2770,45 @@ function wholesale_vi_report_data($period, $filters, $ads)
 		'channels' => wholesale_vi_breakdown('s.channel', $start, $end, $filters, 10),
 		'browsers' => wholesale_vi_breakdown('s.browser', $start, $end, $filters, 8),
 		'sources' => wholesale_vi_breakdown("IF(s.source = '', '(direct)', s.source)", $start, $end, $filters, 10),
-		'orders' => wholesale_vi_orders_report($period, $filters),
+		'orders' => $orders,
+		'networks' => $networks,
+		'placements' => $placements,
+		'robots' => $robots,
 	);
+}
+
+/**
+ * Campaign rows merged by name: early ads sent a name, later ones the ID, and
+ * both are the same campaign.
+ */
+function wholesale_vi_merge_campaigns($rows)
+{
+	$merged = array();
+	$sum = array('sessions', 'visitors', 'ads', 'bounced', 'quick_exits', 's2', 's3', 's4', 's5', 's6', 'orders', 'leads', 'revenue', 'returning_visits');
+	foreach ($rows as $row) {
+		$key = '(not set)' === $row['label'] ? '(not set)' : wholesale_vi_campaign_name($row['label']);
+		if (!isset($merged[$key])) {
+			$merged[$key] = $row;
+			// Prefer the ID as the label: it shows next to the name.
+			continue;
+		}
+		$total = $merged[$key]['sessions'] + $row['sessions'];
+		foreach (array('avg_engaged', 'avg_pages') as $avg) {
+			$merged[$key][$avg] = $total > 0 ? ($merged[$key][$avg] * $merged[$key]['sessions'] + $row[$avg] * $row['sessions']) / $total : 0;
+		}
+		foreach ($sum as $col) {
+			$merged[$key][$col] = ($merged[$key][$col] ?? 0) + ($row[$col] ?? 0);
+		}
+		if (preg_match('/^\d+$/', $row['label'])) {
+			$merged[$key]['label'] = $row['label'];
+		}
+	}
+	$merged = array_values($merged);
+	usort($merged, static function ($a, $b) {
+		return $b['sessions'] <=> $a['sessions'];
+	});
+
+	return array_slice($merged, 0, 15);
 }
 
 /**
@@ -2260,6 +2894,53 @@ function wholesale_vi_render_orders($orders, $ads)
 }
 
 /**
+ * Google Ads tab: each campaign by name and type, with what its clicks did and
+ * the orders it earned (also those placed on a later visit).
+ */
+function wholesale_vi_render_campaigns($campaigns, $period, $filters)
+{
+	?>
+	<section class="wvi-card wvi-section">
+		<div class="wvi-section-head">
+			<h2>Campaigns</h2>
+			<span class="wvi-muted">Names come from the built-in list and Settings. "Orders earned" also counts orders placed days after the click.</span>
+		</div>
+		<?php if (!$campaigns) : ?>
+			<p class="wvi-empty">No ad clicks in this range.</p>
+		<?php else : ?>
+			<div class="wvi-table-wrap">
+				<table class="wvi-table">
+					<thead><tr><th>Campaign</th><th class="num">Ad clicks</th><th class="num" title="One page, under 10 seconds, no action">Bounce</th><th class="num">Avg. time</th><th class="num">Got a price</th><th class="num">Cart</th><th class="num">Leads</th><th class="num" title="Orders credited to this campaign, including later visits">Orders earned</th><th class="num">Revenue</th><th class="num" title="Leads + orders earned per click">Conv.</th><th></th></tr></thead>
+					<tbody>
+						<?php foreach ($campaigns as $row) : ?>
+							<?php
+							$bounce = $row['sessions'] > 0 ? $row['bounced'] / $row['sessions'] : 0;
+							$won = max((int) $row['orders'], (int) $row['credited_orders']);
+							$dead = $row['sessions'] >= 30 && !$row['s4'] && !$row['leads'] && !$won;
+							?>
+							<tr>
+								<td class="wvi-cell-label wvi-wrap"><?php echo wholesale_vi_campaign_html($row['label']); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in the helper. ?><?php echo $dead ? ' <span class="wvi-badge is-red" title="30+ clicks, no cart, lead or order">No results</span>' : ''; ?></td>
+								<td class="num"><?php echo esc_html(number_format_i18n($row['sessions'])); ?></td>
+								<td class="num <?php echo $bounce >= 0.6 && $row['sessions'] >= 5 ? 'is-bad' : ''; ?>"><?php echo esc_html(wholesale_vi_pct($row['bounced'], $row['sessions'])); ?></td>
+								<td class="num"><?php echo esc_html(wholesale_vi_duration($row['avg_engaged'])); ?></td>
+								<td class="num"><?php echo esc_html(number_format_i18n($row['s3'])); ?></td>
+								<td class="num"><?php echo esc_html(number_format_i18n($row['s4'])); ?></td>
+								<td class="num"><?php echo esc_html(number_format_i18n($row['leads'])); ?></td>
+								<td class="num"><strong><?php echo esc_html(number_format_i18n($won)); ?></strong></td>
+								<td class="num"><?php echo esc_html($row['credited_revenue'] > 0 ? wholesale_vi_money($row['credited_revenue']) : ($row['revenue'] > 0 ? wholesale_vi_money($row['revenue']) : '—')); ?></td>
+								<td class="num"><strong><?php echo esc_html(wholesale_vi_pct($won + $row['leads'], $row['sessions'], 1)); ?></strong></td>
+								<td class="wvi-nowrap"><?php if ('(not set)' !== $row['label']) : ?><a href="<?php echo esc_url(wholesale_vi_url('wholesale-insights-visitors', array_filter(array('period' => $period['key'], 'from' => $period['start']->format('Y-m-d'), 'to' => $period['end']->modify('-1 second')->format('Y-m-d'), 'channel' => 'google_ads', 'device' => $filters['device'], 's' => $row['label'])))); ?>">Visits →</a><?php endif; ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+		<?php endif; ?>
+	</section>
+	<?php
+}
+
+/**
  * Overview and Google Ads reports share one layout; the Ads one is filtered
  * to ad clicks and adds keyword, campaign and click-fraud sections.
  */
@@ -2288,8 +2969,12 @@ function wholesale_vi_render_report($ads)
 	$campaigns = $report['campaigns'];
 	$findings = $report['findings'];
 
-	wholesale_vi_render_toolbar($period, $page, $ads ? array('device' => $filters['device']) : $filters, $ads ? array('device') : array('channel', 'device'));
-	wholesale_vi_render_export_bar($period, $ads ? array('device' => $filters['device']) : $filters);
+	$shown_filters = $ads ? array('device' => $filters['device'], 'network' => $filters['network']) : $filters;
+	wholesale_vi_render_toolbar($period, $page, $shown_filters, $ads ? array('device') : array('channel', 'device'));
+	wholesale_vi_render_export_bar($period, $shown_filters);
+	if (function_exists('wholesale_vi_render_growth_teaser')) {
+		wholesale_vi_render_growth_teaser($period);
+	}
 
 	$conversions = $m['orders'] + $m['leads'];
 	$prev_conversions = ($prev['orders'] ?? 0) + ($prev['leads'] ?? 0);
@@ -2310,7 +2995,7 @@ function wholesale_vi_render_report($ads)
 	<section class="wvi-card wvi-section">
 		<div class="wvi-section-head">
 			<h2><?php echo $ads ? 'Why Google Ads visitors are not buying' : 'What is stopping visitors from buying'; ?></h2>
-			<span class="wvi-muted">Worked out from this range's visits.</span>
+			<span class="wvi-muted">Worked out from this range's visits.<?php if (!empty($report['robots'])) : ?> <a href="<?php echo esc_url(wholesale_vi_url('wholesale-insights-visitors', array('period' => $period['key'], 'from' => $period['start']->format('Y-m-d'), 'to' => $period['end']->modify('-1 second')->format('Y-m-d'), 'outcome' => 'robots'))); ?>" title="Crawlers, screenshot services and Google's page checker that run like a browser"><?php echo esc_html(sprintf(_n('%s robot visit left out', '%s robot visits left out', $report['robots']), number_format_i18n($report['robots']))); ?></a>.<?php endif; ?></span>
 		</div>
 		<ul class="wvi-findings">
 			<?php foreach ($findings as $finding) : ?>
@@ -2336,17 +3021,26 @@ function wholesale_vi_render_report($ads)
 	<?php wholesale_vi_render_orders($report['orders'], $ads); ?>
 
 	<?php if ($ads) : ?>
+		<?php wholesale_vi_render_campaigns($campaigns, $period, $filters); ?>
 		<div class="wvi-grid">
 			<?php
-			wholesale_vi_render_breakdown('Keywords', $keywords, static function ($row) {
-				return esc_html($row['label']);
-			}, 'From utm_term. Orders here were placed during the ad visit; the orders table above also credits orders placed on a later visit.');
-			wholesale_vi_render_breakdown('Campaigns', $campaigns, static function ($row) {
-				$name = wholesale_vi_campaign_name($row['label']);
-				return esc_html($name) . ($name !== $row['label'] ? ' <span class="wvi-muted">' . esc_html($row['label']) . '</span>' : '');
-			}, 'From utm_campaign. Names are set under Settings.');
+			$network_names = wholesale_vi_ad_networks();
+			wholesale_vi_render_breakdown('Where the ads were clicked', $report['networks'], static function ($row) use ($network_names, $page, $period, $filters) {
+				$label = $network_names[$row['label']] ?? ($row['label'] ?: 'Unknown');
+				$url = wholesale_vi_url($page, array_filter(array('period' => $period['key'], 'from' => 'custom' === $period['key'] ? $period['start']->format('Y-m-d') : '', 'to' => 'custom' === $period['key'] ? $period['end']->modify('-1 second')->format('Y-m-d') : '', 'device' => $filters['device'], 'network' => $row['label'])));
+				return '<a href="' . esc_url($url) . '" title="Show only these clicks">' . esc_html($label) . '</a>';
+			}, 'Worked out from the page each click came from, or from {network} when the tracking suffix sends it.', array('sessions', 'bounce', 'time', 'cart', 'conv'));
+			wholesale_vi_render_breakdown('Partner websites that sent ad clicks', $report['placements'], static function ($row) {
+				$host = preg_replace('/^www\./', '', (string) $row['label']);
+				return esc_html($host ?: '(unknown)') . ($host ? ' <button type="button" class="wvi-copy button-link" data-copy="' . esc_attr($host) . '">Copy</button>' : '');
+			}, 'Sites with no carts or leads are candidates for Google Ads → Content → Exclusions (placements).', array('sessions', 'bounce', 'cart', 'conv'));
 			?>
 		</div>
+		<?php
+		wholesale_vi_render_breakdown('Keywords', $keywords, static function ($row) {
+			return esc_html($row['label']);
+		}, 'From utm_term. Performance Max, Shopping and YouTube clicks carry no keyword, so they show as (not set).');
+		?>
 		<section class="wvi-card wvi-section">
 			<div class="wvi-section-head">
 				<h2>Repeat ad clickers</h2>
@@ -2366,7 +3060,7 @@ function wholesale_vi_render_report($ads)
 									<td class="num"><?php echo esc_html($row['devices']); ?></td>
 									<td class="num"><?php echo esc_html(wholesale_vi_duration($row['avg_engaged'])); ?></td>
 									<td><?php echo wholesale_vi_device_icon($row['device']); // phpcs:ignore ?> <?php echo esc_html(str_replace('_', ' ', $row['timezone'])); ?></td>
-									<td><?php echo $row['orders'] > 0 ? '<span class="wvi-badge is-green">Bought</span>' : ($row['leads'] > 0 ? '<span class="wvi-badge is-blue">Lead</span>' : '<span class="wvi-badge is-red">Nothing</span>'); ?></td>
+									<td><?php echo $row['orders'] > 0 ? '<span class="wvi-badge is-green">Bought</span>' : ($row['leads'] > 0 ? '<span class="wvi-badge is-blue">Lead</span>' : '<span class="wvi-badge is-red">Nothing</span>'); ?><?php if (!empty($row['carrier'])) : ?> <span class="wvi-badge" title="A mobile carrier address many phones share. Excluding it would hide your ads from real buyers.">Phone carrier, don't exclude</span><?php endif; ?></td>
 									<td><?php echo esc_html(wholesale_vi_ago($row['last_seen'])); ?></td>
 									<td><a href="<?php echo esc_url(wholesale_vi_url('wholesale-insights-visitors', array('period' => $period['key'], 'from' => $period['start']->format('Y-m-d'), 'to' => $period['end']->modify('-1 second')->format('Y-m-d'), 'channel' => 'google_ads', 's' => $row['ip']))); ?>">View visits →</a></td>
 								</tr>
@@ -2444,7 +3138,7 @@ function wholesale_vi_render_report($ads)
 		<section class="wvi-card wvi-section">
 			<div class="wvi-section-head">
 				<h2>Form abandonment</h2>
-				<span class="wvi-muted">Forms visitors started typing in, and the field where most of them gave up.</span>
+				<span class="wvi-muted">Forms visitors started typing in, and the field where most of them gave up. Finished = sent, added to the cart or ordered.</span>
 			</div>
 			<?php if (!$forms) : ?>
 				<p class="wvi-empty">No form activity in this range.</p>
@@ -2513,8 +3207,8 @@ function wholesale_vi_render_report($ads)
 			}, '', array('sessions', 'bounce', 'conv'));
 		}
 		wholesale_vi_render_breakdown('Locations (time zone)', array_slice($timezones, 0, 10), static function ($row) {
-			$label = $row['label'] ? str_replace('_', ' ', $row['label']) : 'Unknown';
-			return esc_html($label) . (wholesale_vi_is_foreign_tz($row['label']) ? ' <span class="wvi-badge is-amber">Outside US</span>' : '');
+			$label = $row['label'] ? wholesale_vi_region($row['label']) : 'Unknown';
+			return '<span title="' . esc_attr($row['label']) . '">' . esc_html($label) . '</span>' . (wholesale_vi_is_foreign_tz($row['label']) ? ' <span class="wvi-badge is-amber">Outside US</span>' : '');
 		}, '', array('sessions', 'bounce', 'conv'));
 		?>
 	</div>
@@ -2561,6 +3255,29 @@ function wholesale_vi_load_people($rows)
 		}
 	}
 
+	// The name, email and phone given in a quote request on any visit from the
+	// same browser: most buyers never make an account.
+	$requests = array();
+	if ($visitor_keys) {
+		foreach ($wpdb->get_results($wpdb->prepare('SELECT s.visitor_key, e.label, e.value FROM ' . wholesale_vi_table('events') . ' e JOIN ' . wholesale_vi_table('sessions') . " s ON s.id = e.session_id WHERE e.type = 'quote_submit' AND s.visitor_key IN ({$in}) ORDER BY e.id ASC", $visitor_keys)) as $match) {
+			$requests[$match->visitor_key] = $match;
+		}
+	}
+
+	// What kind of lead each visit was, for the Outcome badge.
+	$lead_rows = array_filter($rows, static function ($row) {
+		return (int) $row->is_lead;
+	});
+	if ($lead_rows) {
+		$types = &wholesale_vi_lead_types_cache();
+		$ids = implode(',', array_map(static function ($row) {
+			return (int) $row->id;
+		}, $lead_rows));
+		foreach ($wpdb->get_results('SELECT session_id, GROUP_CONCAT(DISTINCT type) AS types FROM ' . wholesale_vi_table('events') . " WHERE session_id IN ({$ids}) AND type IN ('quote_submit', 'call_click', 'email_click') GROUP BY session_id") as $match) { // phpcs:ignore WordPress.DB.PreparedSQL -- integers.
+			$types[(int) $match->session_id] = explode(',', $match->types);
+		}
+	}
+
 	$user_ids = array_unique(array_filter(array_merge(array_map(static function ($row) {
 		return (int) $row->user_id;
 	}, $rows), array_map(static function ($match) {
@@ -2597,6 +3314,14 @@ function wholesale_vi_load_people($rows)
 				$person = array('user_id' => 0, 'name' => $name, 'email' => (string) ($billing['billing_email'] ?? ''), 'type' => 'buyer', 'note' => 'Guest checkout; name from the order');
 			}
 		}
+		if (!$person && isset($requests[$row->visitor_key]) && function_exists('wholesale_vi_lead_by_title')) {
+			$lead = wholesale_vi_lead_by_title($requests[$row->visitor_key]->label, (int) $requests[$row->visitor_key]->value);
+			$name = $lead ? trim((string) get_post_meta($lead, '_contact_name', true)) : '';
+			if ('' !== $name) {
+				$phone = (string) get_post_meta($lead, '_contact_phone', true);
+				$person = array('user_id' => 0, 'name' => $name, 'email' => (string) get_post_meta($lead, '_contact_email', true), 'type' => 'lead', 'lead_id' => $lead, 'note' => 'Name from their quote request' . ($phone ? ' · ' . $phone : ''));
+			}
+		}
 		$people[(int) $row->id] = $person;
 	}
 }
@@ -2606,6 +3331,13 @@ function &wholesale_vi_people_cache()
 	static $people = array();
 
 	return $people;
+}
+
+function &wholesale_vi_lead_types_cache()
+{
+	static $types = array();
+
+	return $types;
 }
 
 function wholesale_vi_person($row)
@@ -2623,7 +3355,7 @@ function wholesale_vi_person_html($person)
 	if (!$person) {
 		return '';
 	}
-	$icons = array('member' => 'admin-users', 'linked' => 'admin-users', 'buyer' => 'cart');
+	$icons = array('member' => 'admin-users', 'linked' => 'admin-users', 'buyer' => 'cart', 'lead' => 'clipboard');
 
 	return sprintf(
 		'<span class="wvi-person is-%s" title="%s"><span class="dashicons dashicons-%s"></span>%s</span>',
@@ -2647,7 +3379,7 @@ function wholesale_vi_render_visitors()
 	$per_page = 30;
 	$paged = max(1, isset($_GET['paged']) ? absint($_GET['paged']) : 1);
 
-	list($where, $params) = wholesale_vi_where($period['start_gmt'], $period['end_gmt'], $filters);
+	list($where, $params) = wholesale_vi_where($period['start_gmt'], $period['end_gmt'], array_merge($filters, array('robots' => 'robots' === $outcome ? 'only' : '')));
 	$table = wholesale_vi_table('sessions');
 	$outcomes = array(
 		'' => 'All visits',
@@ -2657,6 +3389,7 @@ function wholesale_vi_render_visitors()
 		'abandoned' => 'Abandoned cart / checkout',
 		'engaged' => 'Engaged, no purchase',
 		'bounced' => 'Bounced',
+		'robots' => 'Robots (left out of reports)',
 	);
 	switch ($outcome) {
 		case 'members':
@@ -2775,7 +3508,13 @@ function wholesale_vi_visit_row($row, $live = false)
 {
 	$url = wholesale_vi_url('wholesale-insights-visitors', array('session' => $row->id));
 	$online = strtotime($row->last_seen . ' UTC') > time() - 5 * MINUTE_IN_SECONDS;
-	$source_detail = array_filter(array(wholesale_vi_campaign_name($row->campaign), $row->term ? '“' . $row->term . '”' : '', 'google_ads' !== $row->channel ? $row->source : ''));
+	$network = wholesale_vi_ad_network($row);
+	$source_detail = array_filter(array(
+		wholesale_vi_campaign_name($row->campaign),
+		$row->term ? '“' . $row->term . '”' : '',
+		$network ? (wholesale_vi_ad_networks()[$network] ?? '') : '',
+		'google_ads' !== $row->channel ? $row->source : '',
+	));
 	?>
 	<tr class="wvi-row-link" data-id="<?php echo esc_attr($row->id); ?>" data-href="<?php echo esc_url($url); ?>">
 		<td class="wvi-nowrap">
@@ -2783,6 +3522,7 @@ function wholesale_vi_visit_row($row, $live = false)
 			<a href="<?php echo esc_url($url); ?>"><?php echo esc_html($live ? wholesale_vi_ago($row->started_at) : wholesale_vi_date($row->started_at)); ?></a>
 			<?php if (!(int) $row->is_new) : ?><span class="wvi-badge is-soft" title="Has visited before">Returning</span><?php endif; ?>
 			<?php echo wholesale_vi_person_html(wholesale_vi_person($row)); // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in the helper. ?>
+			<?php echo function_exists('wholesale_vi_snap_badge') ? wholesale_vi_snap_badge($row->session_key) : ''; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in the helper. ?>
 		</td>
 		<td><?php echo wholesale_vi_channel_badge($row->channel); // phpcs:ignore ?><?php if ($source_detail) : ?><span class="wvi-sub"><?php echo esc_html(implode(' · ', $source_detail)); ?></span><?php endif; ?></td>
 		<td class="wvi-path" title="<?php echo esc_attr($live ? $row->exit_url : $row->landing_url); ?>">
@@ -2793,11 +3533,39 @@ function wholesale_vi_visit_row($row, $live = false)
 		<td class="num"><?php echo esc_html(wholesale_vi_duration($row->engaged_seconds)); ?></td>
 		<td><?php echo wholesale_vi_stage_pips((int) $row->stage); // phpcs:ignore ?></td>
 		<td><?php echo wholesale_vi_outcome($row); // phpcs:ignore ?><?php if ((int) $row->errors) : ?> <span class="wvi-badge is-red" title="Errors shown to this visitor"><?php echo esc_html($row->errors); ?> err</span><?php endif; ?></td>
+		<?php if ($live) : ?>
+			<td class="wvi-nowrap">
+				<?php if ($online && !empty($GLOBALS['wholesale_vi_chat_map'][$row->visitor_key])) : ?>
+					<button type="button" class="button button-small" data-chat-visitor="<?php echo esc_attr($GLOBALS['wholesale_vi_chat_map'][$row->visitor_key]); ?>"><span class="dashicons dashicons-format-chat" style="font-size:16px;width:16px;height:16px;margin:3px 2px 0 0"></span> Message</button>
+				<?php endif; ?>
+				<?php echo $online && function_exists('wholesale_vi_snap_button') ? wholesale_vi_snap_button($row->id) : ''; // phpcs:ignore WordPress.Security.EscapeOutput -- built with escaping. ?>
+			</td>
+		<?php endif; ?>
 	</tr>
 	<?php
 }
 
 /* Single visit ---------------------------------------------------------- */
+
+/**
+ * The number a call tap dialed, in words. For visitors from an ad, Google's
+ * call tracking (wholesale_deferred_conversion_tracking) swaps the main line
+ * for a forwarding number that rings through to 866-436-2101, so a tap on any
+ * other number is shown as the main line, with Google's number alongside.
+ */
+function wholesale_vi_call_label($label)
+{
+	$digits = preg_replace('/\D/', '', (string) $label);
+	$local = preg_replace('/^1(?=\d{10}$)/', '', $digits);
+	if ('8664362101' === $local) {
+		return '866-436-2101';
+	}
+	if (10 !== strlen($local)) {
+		return (string) $label;
+	}
+
+	return '866-436-2101 (via Google ad number ' . substr($local, 0, 3) . '-' . substr($local, 3, 3) . '-' . substr($local, 6) . ')';
+}
 
 function wholesale_vi_event_text($event)
 {
@@ -2808,7 +3576,7 @@ function wholesale_vi_event_text($event)
 		case 'click':
 			return array('admin-links', 'Clicked “' . ($label ?: 'element') . '”', '');
 		case 'call_click':
-			return array('phone', 'Tapped to call ' . $label, 'good');
+			return array('phone', 'Tapped to call ' . wholesale_vi_call_label($label), 'good');
 		case 'email_click':
 			return array('email', 'Clicked to email ' . $label, 'good');
 		case 'rage_click':
@@ -2862,7 +3630,9 @@ function wholesale_vi_render_session($id)
 	}
 
 	$events = $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . wholesale_vi_table('events') . ' WHERE session_id = %d ORDER BY created_at, id LIMIT 2000', $id));
-	$others = $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . wholesale_vi_table('sessions') . ' WHERE visitor_key = %s AND id <> %d ORDER BY started_at DESC LIMIT 20', $session->visitor_key, $id));
+	// Screenshots an admin took (inc/visitor-snaps.php), shown as steps of the journey.
+	$snaps = function_exists('wholesale_vi_snap_timeline_list') ? wholesale_vi_snap_timeline_list($session->session_key) : array();
+	$others =$wpdb->get_results($wpdb->prepare('SELECT * FROM ' . wholesale_vi_table('sessions') . ' WHERE visitor_key = %s AND id <> %d ORDER BY started_at DESC LIMIT 20', $session->visitor_key, $id));
 	$start = strtotime($session->started_at . ' UTC');
 	$duration = max(0, strtotime($session->last_seen . ' UTC') - $start);
 	$back = wp_get_referer() && false !== strpos(wp_get_referer(), 'wholesale-insights') ? wp_get_referer() : wholesale_vi_url('wholesale-insights-visitors');
@@ -2879,15 +3649,25 @@ function wholesale_vi_render_session($id)
 		}
 		$facts['Customer'] = $who . '<br><span class="wvi-muted">' . esc_html($person['note']) . '</span>';
 	}
+	$network = wholesale_vi_ad_network($session);
+	$placement = wholesale_vi_ad_placement($session);
 	$facts += array(
 		'Source' => wholesale_vi_channel_badge($session->channel) . ($session->source ? ' ' . esc_html($session->source . ($session->medium ? ' / ' . $session->medium : '')) : ''),
-		'Campaign' => $session->campaign ? esc_html(wholesale_vi_campaign_name($session->campaign)) . (wholesale_vi_campaign_name($session->campaign) !== $session->campaign ? ' <span class="wvi-muted">' . esc_html($session->campaign) . '</span>' : '') : '—',
+		'Campaign' => $session->campaign ? wholesale_vi_campaign_html($session->campaign) : '—',
 		'Keyword' => esc_html($session->term ?: '—'),
+	);
+	if ($network) {
+		$facts['Ad shown on'] = esc_html(wholesale_vi_ad_networks()[$network] ?? $network) . ($placement ? ' <span class="wvi-muted">' . esc_html($placement) . '</span>' : '');
+	}
+	if (wholesale_vi_looks_automated(array('device' => $session->device, 'os' => $session->os, 'browser' => $session->browser), $session->screen)) {
+		$facts['Robot?'] = '<span class="wvi-badge is-amber">Likely automated</span> <span class="wvi-muted">Its screen size is one only crawlers report; left out of the reports.</span>';
+	}
+	$facts += array(
 		'Ad click ID' => esc_html($session->click_type ?: '—'),
 		'Referrer' => $session->referrer ? '<span class="wvi-break">' . esc_html($session->referrer) . '</span>' : '—',
 		'Landing page' => '<a href="' . esc_url(wholesale_vi_site_link($session->landing_url)) . '" target="_blank" rel="noopener" class="wvi-break">' . esc_html(wholesale_vi_short_path($session->landing_url, 80)) . '</a>',
 		'Device' => wholesale_vi_device_icon($session->device) . ' ' . esc_html(ucfirst($session->device) . ' · ' . $session->os . ' · ' . $session->browser . ($session->screen ? ' · ' . $session->screen : '')),
-		'Location' => esc_html(wholesale_vi_location($session) ?: '—') . ($session->language ? ' <span class="wvi-muted">(' . esc_html($session->language) . ')</span>' : ''),
+		'Location' => esc_html(wholesale_vi_location($session) ?: '—') . ($session->timezone || $session->language ? ' <span class="wvi-muted">(' . esc_html(trim($session->timezone . ' ' . $session->language)) . ')</span>' : ''),
 		'IP address' => $session->ip ? '<code>' . esc_html($session->ip) . '</code> <a href="' . esc_url(wholesale_vi_url('wholesale-insights-visitors', array('period' => 'custom', 'from' => wp_date('Y-m-d', time() - max(7, (int) wholesale_vi_setting('retention_days')) * DAY_IN_SECONDS), 'to' => wp_date('Y-m-d'), 's' => $session->ip))) . '">all visits from this IP</a>' : '—',
 		'Visitor' => ((int) $session->is_new ? 'First visit' : 'Returning visitor') . ' · ' . (count($others) + 1) . ' visit(s) on record',
 	);
@@ -2907,6 +3687,20 @@ function wholesale_vi_render_session($id)
 	}
 	if ($orders) {
 		$facts['Order'] = implode('<br>', $orders);
+	}
+	// Quote requests are found by their title for the same reason.
+	$requests = array();
+	foreach ($events as $event) {
+		if ('quote_submit' === $event->type && function_exists('wholesale_vi_lead_by_title')) {
+			$lead = wholesale_vi_lead_by_title($event->label, (int) $event->value);
+			$requests[] = $lead
+				? '<a href="' . esc_url(get_edit_post_link($lead)) . '">' . esc_html(get_post_meta($lead, '_contact_name', true) ?: get_the_title($lead)) . '</a> · ' . esc_html(wholesale_vi_lead_wants($lead))
+					. '<br><span class="wvi-muted">' . esc_html(implode(' · ', array_filter(array(get_post_meta($lead, '_contact_phone', true), get_post_meta($lead, '_contact_email', true))))) . '</span>'
+				: esc_html($event->label) . ' <span class="wvi-muted">(deleted)</span>';
+		}
+	}
+	if ($requests) {
+		$facts['Quote request'] = implode('<br>', $requests);
 	}
 	?>
 	<p><a href="<?php echo esc_url($back); ?>" class="wvi-back">← Back to visits</a></p>
@@ -2935,6 +3729,9 @@ function wholesale_vi_render_session($id)
 						<?php
 						list($icon, $text, $tone) = wholesale_vi_event_text($event);
 						$offset = max(0, strtotime($event->created_at . ' UTC') - $start);
+						if ($snaps) {
+							wholesale_vi_snap_timeline_items($snaps, strtotime($event->created_at . ' UTC') - 1, $start, $session->id);
+						}
 						?>
 						<li class="is-<?php echo esc_attr($event->type); ?> <?php echo $tone ? 'tone-' . esc_attr($tone) : ''; ?>">
 							<span class="wvi-tl-time" title="<?php echo esc_attr(wholesale_vi_date($event->created_at, 'g:i:s a')); ?>">+<?php echo esc_html(sprintf('%d:%02d', floor($offset / 60), $offset % 60)); ?></span>
@@ -2953,6 +3750,9 @@ function wholesale_vi_render_session($id)
 							</div>
 						</li>
 					<?php endforeach; ?>
+					<?php if ($snaps) {
+						wholesale_vi_snap_timeline_items($snaps, PHP_INT_MAX, $start, $session->id);
+					} ?>
 					<?php if (strtotime($session->last_seen . ' UTC') < time() - 5 * MINUTE_IN_SECONDS && !(int) $session->order_id) : ?>
 						<li class="tone-end">
 							<span class="wvi-tl-time">+<?php echo esc_html(sprintf('%d:%02d', floor($duration / 60), $duration % 60)); ?></span>
@@ -2965,6 +3765,9 @@ function wholesale_vi_render_session($id)
 		</section>
 
 		<div>
+			<?php if (function_exists('wholesale_vi_snap_render_section')) {
+				wholesale_vi_snap_render_section($session);
+			} ?>
 			<section class="wvi-card wvi-section">
 				<div class="wvi-section-head"><h2>Visit details</h2></div>
 				<dl class="wvi-facts">
@@ -3001,25 +3804,301 @@ function wholesale_vi_live_count()
 {
 	global $wpdb;
 
-	return (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . wholesale_vi_table('sessions') . ' WHERE last_seen >= %s', gmdate('Y-m-d H:i:s', time() - 5 * MINUTE_IN_SECONDS)));
+	return (int) $wpdb->get_var($wpdb->prepare('SELECT COUNT(*) FROM ' . wholesale_vi_table('sessions') . ' s WHERE last_seen >= %s AND NOT ' . wholesale_vi_automated_sql('s'), gmdate('Y-m-d H:i:s', time() - 5 * MINUTE_IN_SECONDS)));
 }
 
 function wholesale_vi_live_rows_html()
 {
 	global $wpdb;
-	$rows = $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . wholesale_vi_table('sessions') . ' WHERE last_seen >= %s ORDER BY last_seen DESC LIMIT 100', gmdate('Y-m-d H:i:s', time() - 5 * MINUTE_IN_SECONDS)));
+	$rows = $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . wholesale_vi_table('sessions') . ' s WHERE last_seen >= %s AND NOT ' . wholesale_vi_automated_sql('s') . ' ORDER BY last_seen DESC LIMIT 100', gmdate('Y-m-d H:i:s', time() - 5 * MINUTE_IN_SECONDS)));
 
 	ob_start();
 	if (!$rows) {
-		echo '<tr><td colspan="8" class="wvi-empty">Nobody is on the site right now.</td></tr>';
+		echo '<tr><td colspan="9" class="wvi-empty">Nobody is on the site right now.</td></tr>';
 	}
 	wholesale_vi_load_people($rows);
+	$GLOBALS['wholesale_vi_chat_map'] = wholesale_vi_chat_visitor_map($rows);
 	foreach ($rows as $row) {
 		wholesale_vi_visit_row($row, true);
 	}
+	unset($GLOBALS['wholesale_vi_chat_map']);
 
 	return array('count' => count($rows), 'html' => ob_get_clean());
 }
+
+/**
+ * Live Chat visitor ids for these visits (the chat plugin stores the visitor's
+ * sso_vid cookie), so the Live tab can message someone through the chat.
+ */
+function wholesale_vi_chat_visitor_map($rows)
+{
+	global $wpdb;
+	if (!$rows || !class_exists('\SFS\LiveChat\Repo\Visitors')) {
+		return array();
+	}
+	$keys = array_values(array_unique(array_map(static function ($row) {
+		return (string) $row->visitor_key;
+	}, $rows)));
+	$table = \SFS\LiveChat\Repo\Visitors::table();
+	if (!$wpdb->get_var($wpdb->prepare('SHOW COLUMNS FROM ' . $table . ' LIKE %s', 'vi_key'))) {
+		return array();
+	}
+	$in = implode(', ', array_fill(0, count($keys), '%s'));
+	$map = array();
+	foreach ($wpdb->get_results($wpdb->prepare("SELECT id, vi_key FROM {$table} WHERE blocked = 0 AND vi_key IN ({$in}) ORDER BY last_seen ASC", $keys)) as $match) {
+		$map[$match->vi_key] = (int) $match->id;
+	}
+
+	return $map;
+}
+
+/**
+ * Live tab "Message" button: a first message to someone on the site, sent
+ * through Live Chat (it pops up in their chat widget and opens a conversation).
+ */
+function wholesale_vi_ajax_chat_message()
+{
+	if (!current_user_can('manage_options') || !check_ajax_referer('wholesale_vi_live', 'nonce', false)) {
+		wp_send_json_error('Not allowed.', 403);
+	}
+	if (!class_exists('\SFS\LiveChat\Rest\AdminController')) {
+		wp_send_json_error('Live Chat is not active.', 400);
+	}
+	$request = new WP_REST_Request('POST', '/');
+	$request->set_param('id', isset($_POST['visitor']) ? absint($_POST['visitor']) : 0);
+	$request->set_param('body', isset($_POST['body']) ? wp_unslash($_POST['body']) : '');
+	$result = (new \SFS\LiveChat\Rest\AdminController())->proactive($request);
+	if (is_wp_error($result)) {
+		wp_send_json_error($result->get_error_message(), 400);
+	}
+	wp_send_json_success();
+}
+add_action('wp_ajax_wholesale_vi_chat_message', 'wholesale_vi_ajax_chat_message');
+
+/**
+ * Live Chat's "Live visitors" tab lists only people whose chat is connected
+ * (the chat bundle loads when they open it, visitor tracking is off for
+ * speed). Hand it the rest of our "online now" visits so both screens count
+ * the same people. Visits already listed there (matched by chat visitor id)
+ * are skipped. No IPs, names or emails leave here.
+ */
+function wholesale_vi_chat_live_browsing($browsing, $shown)
+{
+	global $wpdb;
+	$rows = $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . wholesale_vi_table('sessions') . ' s WHERE last_seen >= %s AND NOT ' . wholesale_vi_automated_sql('s') . ' ORDER BY last_seen DESC LIMIT 100', gmdate('Y-m-d H:i:s', time() - 5 * MINUTE_IN_SECONDS)));
+	if (!$rows) {
+		return $browsing;
+	}
+	$chat_map = wholesale_vi_chat_visitor_map($rows);
+	$shown = array_flip(array_map('intval', (array) $shown));
+	$channels = wholesale_vi_channels();
+	$details = current_user_can('manage_options');
+	$seen = array();
+	foreach ($rows as $row) {
+		$chat_id = (int) ($chat_map[$row->visitor_key] ?? 0);
+		// One row per person (newest visit), and not the people chat already lists.
+		if (isset($seen[$row->visitor_key]) || ($chat_id && isset($shown[$chat_id]))) {
+			continue;
+		}
+		$seen[$row->visitor_key] = true;
+		$path = (string) ($row->exit_url ?: $row->landing_url);
+		$page = $path;
+		if ('' !== $path && '/' === $path[0]) {
+			// Stored paths already include any subfolder, so add only scheme + host.
+			$page = wp_parse_url(home_url('/'), PHP_URL_SCHEME) . '://' . wp_parse_url(home_url('/'), PHP_URL_HOST) . $path;
+		}
+		$browsing[] = array(
+			'key' => substr(md5((string) $row->visitor_key), 0, 12),
+			'page' => $page,
+			'title' => wholesale_vi_short_path($path, 60),
+			'since' => strtotime($row->started_at . ' UTC') * 1000,
+			'last_seen' => strtotime($row->last_seen . ' UTC') * 1000,
+			'device' => (string) $row->device,
+			'browser' => (string) $row->browser,
+			'location' => wholesale_vi_location($row),
+			'source' => (string) ($channels[$row->channel] ?? ucfirst((string) $row->channel)),
+			'pages' => (int) $row->pageviews,
+			'chat_visitor_id' => $chat_id ?: null,
+			'session_id' => (int) $row->id,
+			'details_url' => $details ? wholesale_vi_url('wholesale-insights-visitors', array('session' => $row->id)) : '',
+		);
+	}
+
+	return $browsing;
+}
+add_filter('sfs_chat_live_browsing', 'wholesale_vi_chat_live_browsing', 10, 2);
+
+/**
+ * Live Chat "Start chat" on someone browsing without the chat open: the
+ * visitor key and current page for a visit seen in the last 30 minutes.
+ */
+function wholesale_vi_chat_browsing_target($target, $session_id)
+{
+	global $wpdb;
+	$row = $wpdb->get_row($wpdb->prepare('SELECT visitor_key, exit_url, landing_url FROM ' . wholesale_vi_table('sessions') . ' WHERE id = %d AND last_seen >= %s', absint($session_id), gmdate('Y-m-d H:i:s', time() - 30 * MINUTE_IN_SECONDS)));
+	if (!$row || !preg_match('/^[a-f0-9]{32}$/', (string) $row->visitor_key)) {
+		return $target;
+	}
+	$path = (string) ($row->exit_url ?: $row->landing_url);
+
+	return array(
+		'key' => (string) $row->visitor_key,
+		'page' => ('' !== $path && '/' === $path[0]) ? wp_parse_url(home_url('/'), PHP_URL_SCHEME) . '://' . wp_parse_url(home_url('/'), PHP_URL_HOST) . $path : $path,
+	);
+}
+add_filter('sfs_chat_browsing_target', 'wholesale_vi_chat_browsing_target', 10, 2);
+
+/**
+ * Live Chat inbox: what a chat visitor is doing right now and did before, for
+ * the visitor details pane (polled every few seconds while it is open).
+ * Matched by the chat visitor's sso_vid cookie (vi_key), else their account.
+ * Returns plain data; the inbox prints every value as text.
+ */
+function wholesale_vi_chat_visitor_insights($insights, $vi_key, $chat_visitor)
+{
+	global $wpdb;
+	$sessions = wholesale_vi_table('sessions');
+	$vi_key = strtolower((string) $vi_key);
+	$user_id = (int) ($chat_visitor->user_id ?? 0);
+	if (preg_match('/^[a-f0-9]{32}$/', $vi_key)) {
+		$match = $wpdb->prepare('visitor_key = %s', $vi_key);
+	} elseif ($user_id > 0) {
+		$match = $wpdb->prepare('user_id = %d', $user_id);
+	} else {
+		return $insights;
+	}
+	$visits = $wpdb->get_results("SELECT * FROM {$sessions} WHERE {$match} ORDER BY last_seen DESC LIMIT 6"); // phpcs:ignore WordPress.DB.PreparedSQL -- prepared above.
+	if (!$visits) {
+		return $insights;
+	}
+	$totals = $wpdb->get_row("SELECT COUNT(*) AS visits, MIN(started_at) AS first_seen, SUM(pageviews) AS pages, SUM(engaged_seconds) AS engaged, SUM(order_id > 0) AS orders, SUM(revenue) AS revenue, SUM(is_lead) AS leads, MAX(stage) AS best_stage FROM {$sessions} WHERE {$match}"); // phpcs:ignore WordPress.DB.PreparedSQL -- prepared above.
+
+	$now = time();
+	$ms = static function ($gmt) {
+		return $gmt ? strtotime($gmt . ' UTC') * 1000 : null;
+	};
+	$link = static function ($path) {
+		$path = (string) $path;
+		return ('' !== $path && '/' === $path[0]) ? wholesale_vi_site_link($path) : $path;
+	};
+	$channels = wholesale_vi_channels();
+	$stages = wholesale_vi_stages();
+	$details = current_user_can('manage_options');
+	wholesale_vi_load_people($visits);
+	$lead_types = wholesale_vi_lead_types_cache();
+
+	// The same badge the Visitors report shows, worded for someone who may still be on the site.
+	$outcome = static function ($visit, $online) use ($lead_types) {
+		if ((int) $visit->order_id > 0) {
+			return array('Purchased ' . wholesale_vi_money($visit->revenue), 'won');
+		}
+		if ((int) $visit->is_lead) {
+			$types = $lead_types[(int) $visit->id] ?? array();
+			return array(in_array('quote_submit', $types, true) ? 'Quote request' : (in_array('call_click', $types, true) ? 'Lead · call tap' : (in_array('email_click', $types, true) ? 'Lead · email' : 'Lead')), 'good');
+		}
+		if ((int) $visit->stage >= 4) {
+			$checkout = (int) $visit->stage >= 5;
+			return $online ? array($checkout ? 'At checkout' : 'Has items in cart', 'warn') : array('Abandoned ' . ($checkout ? 'checkout' : 'cart'), 'bad');
+		}
+		if ((int) $visit->pageviews <= 1 && (int) $visit->engaged_seconds < 10) {
+			return $online ? array('Just arrived', '') : array('Bounced', 'bad');
+		}
+
+		return array($online ? 'Browsing' : 'Browsed', '');
+	};
+	$source = static function ($visit) use ($channels) {
+		$network = wholesale_vi_ad_network($visit);
+		return array(
+			'channel' => (string) $visit->channel,
+			'label' => (string) ($channels[$visit->channel] ?? ucfirst((string) $visit->channel)),
+			'detail' => implode(' / ', array_filter(array((string) $visit->source, (string) $visit->medium))),
+			'campaign' => $visit->campaign ? (string) wholesale_vi_campaign_name($visit->campaign) : '',
+			'keyword' => (string) $visit->term,
+			'network' => $network ? (string) (wholesale_vi_ad_networks()[$network] ?? $network) : '',
+			'referrer' => (string) $visit->referrer,
+		);
+	};
+
+	$visit = $visits[0];
+	$online = strtotime($visit->last_seen . ' UTC') >= $now - 5 * MINUTE_IN_SECONDS;
+	$events = array_reverse($wpdb->get_results($wpdb->prepare('SELECT * FROM ' . wholesale_vi_table('events') . ' WHERE session_id = %d ORDER BY id DESC LIMIT 40', $visit->id)));
+	$timeline = array();
+	$page_since = null;
+	foreach ($events as $event) {
+		list(, $text, $tone) = wholesale_vi_event_text($event);
+		$item = array(
+			'type' => (string) $event->type,
+			'at' => $ms($event->created_at),
+			'text' => (string) $text,
+			'tone' => (string) $tone,
+		);
+		if ('pageview' === $event->type) {
+			$item['url'] = $link($event->url);
+			$item['path'] = wholesale_vi_short_path($event->url, 60);
+			$item['seconds'] = (int) $event->seconds;
+			$item['scroll'] = (int) $event->scroll;
+			$page_since = $item['at'];
+		}
+		$timeline[] = $item;
+	}
+	$person = wholesale_vi_person($visit);
+	list($outcome_label, $outcome_tone) = $outcome($visit, $online);
+
+	$history = array();
+	foreach (array_slice($visits, 1, 5) as $other) {
+		list($label, $tone) = $outcome($other, false);
+		$history[] = array(
+			'started' => $ms($other->started_at),
+			'channel' => (string) ($channels[$other->channel] ?? ucfirst((string) $other->channel)),
+			'pages' => (int) $other->pageviews,
+			'engaged' => (int) $other->engaged_seconds,
+			'outcome' => $label,
+			'tone' => $tone,
+			'details_url' => $details ? wholesale_vi_url('wholesale-insights-visitors', array('session' => $other->id)) : '',
+		);
+	}
+
+	return array(
+		'online' => $online,
+		'visit' => array(
+			'started' => $ms($visit->started_at),
+			'last_seen' => $ms($visit->last_seen),
+			'page' => $link($visit->exit_url ?: $visit->landing_url),
+			'page_path' => wholesale_vi_short_path($visit->exit_url ?: $visit->landing_url, 60),
+			'page_since' => $page_since,
+			'landing' => $link($visit->landing_url),
+			'landing_path' => wholesale_vi_short_path($visit->landing_url, 60),
+			'pages' => (int) $visit->pageviews,
+			'engaged' => (int) $visit->engaged_seconds,
+			'scroll' => (int) $visit->max_scroll,
+			'stage' => (int) $visit->stage,
+			'stage_label' => (string) ($stages[(int) $visit->stage] ?? ''),
+			'stages' => count($stages),
+			'outcome' => $outcome_label,
+			'tone' => $outcome_tone,
+			'returning' => !(int) $visit->is_new,
+			'errors' => (int) $visit->errors,
+			'rage_clicks' => (int) $visit->rage_clicks,
+			'source' => $source($visit),
+			'device' => implode(' · ', array_filter(array(ucfirst((string) $visit->device), (string) $visit->os, (string) $visit->browser, (string) $visit->screen))),
+			'location' => (string) wholesale_vi_location($visit),
+			'details_url' => $details ? wholesale_vi_url('wholesale-insights-visitors', array('session' => $visit->id)) : '',
+		),
+		'person' => $person ? array('name' => (string) $person['name'], 'email' => (string) $person['email'], 'note' => (string) $person['note']) : null,
+		'timeline' => array_reverse($timeline),
+		'totals' => array(
+			'visits' => (int) ($totals->visits ?? 1),
+			'first_seen' => $ms($totals->first_seen ?? ''),
+			'pages' => (int) ($totals->pages ?? 0),
+			'engaged' => (int) ($totals->engaged ?? 0),
+			'orders' => (int) ($totals->orders ?? 0),
+			'revenue' => round((float) ($totals->revenue ?? 0), 2),
+			'leads' => (int) ($totals->leads ?? 0),
+		),
+		'history' => $history,
+	);
+}
+add_filter('sfs_chat_visitor_insights', 'wholesale_vi_chat_visitor_insights', 10, 3);
 
 function wholesale_vi_render_live()
 {
@@ -3032,7 +4111,7 @@ function wholesale_vi_render_live()
 		</div>
 		<div class="wvi-table-wrap">
 			<table class="wvi-table wvi-visits">
-				<thead><tr><th>Arrived</th><th>Source</th><th>Current page</th><th>Device · location</th><th class="num">Pages</th><th class="num">Time</th><th>Got to</th><th>Outcome</th></tr></thead>
+				<thead><tr><th>Arrived</th><th>Source</th><th>Current page</th><th>Device · location</th><th class="num">Pages</th><th class="num">Time</th><th>Got to</th><th>Outcome</th><th>Chat · screenshot</th></tr></thead>
 				<tbody data-live-rows><?php echo $live['html']; // phpcs:ignore WordPress.Security.EscapeOutput -- built with escaping. ?></tbody>
 			</table>
 		</div>
@@ -3074,11 +4153,12 @@ function wholesale_vi_render_settings()
 					<textarea id="wvi-ips" name="excluded_ips" rows="3" class="large-text code" placeholder="One per line, e.g. your office IP"><?php echo esc_textarea($settings['excluded_ips']); ?></textarea>
 					<span class="wvi-muted">Your current IP: <code><?php echo esc_html(wholesale_vi_client_ip(false)); ?></code></span>
 				</p>
-				<p>
-					<label for="wvi-campaigns"><strong>Google Ads campaign names</strong></label><br>
-					<textarea id="wvi-campaigns" name="campaign_names" rows="5" class="large-text code" placeholder="24253204713 = Channel Letters - USA"><?php echo esc_textarea($settings['campaign_names']); ?></textarea>
-					<span class="wvi-muted">One per line: campaign ID = name. Ad clicks carry only the campaign ID; the reports and orders show these names instead. The ID is in Google Ads under Campaigns (add the "Campaign ID" column).</span>
+				<p id="wvi-campaigns">
+					<label for="wvi-campaigns-names"><strong>Google Ads campaign names</strong></label><br>
+					<textarea id="wvi-campaigns-names" name="campaign_names" rows="5" class="large-text code" placeholder="24449162107 = SSO - PMax - Banners & Displays - USA"><?php echo esc_textarea($settings['campaign_names']); ?></textarea>
+					<span class="wvi-muted">One per line: campaign ID = name. Only needed for campaigns made after Nov 9, 2026 or to rename one; the campaigns below are already named. The ID is in Google Ads under Campaigns (add the "Campaign ID" column).</span>
 				</p>
+				<?php wholesale_vi_render_campaign_list(); ?>
 				<p><button class="button button-primary">Save settings</button></p>
 			</form>
 		</section>
@@ -3092,6 +4172,11 @@ function wholesale_vi_render_settings()
 					<button type="button" class="button wvi-copy" data-copy="<?php echo esc_attr($suffix); ?>">Copy</button>
 				</div>
 				<p class="wvi-muted">Every ad click then tells this page which campaign, ad group and keyword it came from, so the Google Ads tab can show which keywords bring visitors who buy and which only cost money. Keep auto-tagging (gclid) on as well; it is what marks a visit as a Google Ads click.</p>
+				<p><strong>Optional, more exact:</strong> this version also sends where the ad was shown (<code>{network}</code>: Search, Search partners, Display, YouTube) and the match type. Without it the site works this out from the page the click came from, which is right for most clicks but not for app clicks.</p>
+				<div class="wvi-code">
+					<code><?php echo esc_html($suffix . '&utm_network={network}&utm_matchtype={matchtype}'); ?></code>
+					<button type="button" class="button wvi-copy" data-copy="<?php echo esc_attr($suffix . '&utm_network={network}&utm_matchtype={matchtype}'); ?>">Copy</button>
+				</div>
 			</section>
 			<section class="wvi-card wvi-section">
 				<div class="wvi-section-head"><h2>Stored data</h2></div>
@@ -3104,6 +4189,44 @@ function wholesale_vi_render_settings()
 				</form>
 			</section>
 		</div>
+	</div>
+	<?php
+}
+
+/**
+ * Settings: every campaign seen in ad clicks over the last 90 days, with the
+ * name the reports use, so a new campaign without a name stands out.
+ */
+function wholesale_vi_render_campaign_list()
+{
+	global $wpdb;
+	$rows = $wpdb->get_results($wpdb->prepare(
+		'SELECT campaign, COUNT(*) AS clicks, MAX(started_at) AS last_click FROM ' . wholesale_vi_table('sessions') . " WHERE channel IN ('google_ads', 'paid_other') AND campaign <> '' AND started_at >= %s GROUP BY campaign ORDER BY last_click DESC LIMIT 40",
+		gmdate('Y-m-d H:i:s', time() - 90 * DAY_IN_SECONDS)
+	));
+	$seen = array();
+	foreach ((array) $rows as $row) {
+		$seen[$row->campaign] = $row;
+	}
+	$all = array_unique(array_merge(array_keys($seen), array_filter(array_keys(wholesale_vi_campaign_names()), static function ($id) {
+		return (bool) preg_match('/^\d+$/', (string) $id);
+	})));
+	?>
+	<div class="wvi-table-wrap">
+		<table class="wvi-table">
+			<thead><tr><th>Campaign ID</th><th>Shown as</th><th class="num">Ad clicks (90 days)</th><th>Last click</th></tr></thead>
+			<tbody>
+				<?php foreach ($all as $id) : ?>
+					<?php $row = $seen[$id] ?? null; ?>
+					<tr>
+						<td><code><?php echo esc_html($id); ?></code></td>
+						<td><?php echo wholesale_vi_campaign_is_named($id) ? wholesale_vi_campaign_html($id, false) : '<span class="wvi-badge is-amber">No name yet</span> <span class="wvi-muted">add a line above</span>'; // phpcs:ignore WordPress.Security.EscapeOutput -- escaped in the helper. ?></td>
+						<td class="num"><?php echo esc_html($row ? number_format_i18n($row->clicks) : '0'); ?></td>
+						<td><?php echo esc_html($row ? wholesale_vi_ago($row->last_click) : '—'); ?></td>
+					</tr>
+				<?php endforeach; ?>
+			</tbody>
+		</table>
 	</div>
 	<?php
 }
@@ -3160,15 +4283,18 @@ add_action('admin_post_wholesale_vi_purge_all', 'wholesale_vi_purge_all');
 function wholesale_vi_page_type_files()
 {
 	$map = array(
-		'home' => array('home.php', 'header.php', 'footer.php', 'css/style.scss'),
-		'landing' => array('landing-page.php', 'page-channel-letters.php', 'css/landing-page.css', 'css/cl-quote.css'),
-		'product' => array('single-product.php', 'js/main.js', 'inc/pricing.php', 'css/shop.css'),
+		'every page' => array('header.php', 'footer.php', 'css/ui-polish.css', 'js/ui-polish.js', 'inc/page-loader.php', 'inc/buying-journey.php'),
+		'home' => array('home.php', 'template-parts/home-catalog.php', 'inc/home-catalog-directory.php', 'css/style.scss'),
+		'landing' => array('landing-page.php', 'page-channel-letters.php', 'page-window-graphics.php', 'page-banners-displays.php', 'page-storefront-signs.php', 'inc/hero-images.php', 'inc/quote-form.php', 'css/landing-page.css', 'css/cl-quote.css'),
+		'product' => array('single-product.php', 'inc/product-hero.php', 'inc/product-buy-box.php', 'inc/size-chips.php', 'inc/product-page-content.php', 'inc/product-group-swap.php', 'inc/product-kit.php', 'js/main.js', 'js/product-group-swap.js', 'inc/pricing.php', 'css/shop.css'),
 		'builder' => array('cl_builderr.php', 'b2calc.php', 'js/cl.js', 'css/cl.css'),
-		'category' => array('home.php'),
+		'category' => array('home.php', 'inc/category-page-content.php'),
+		'shop' => array('page-shop.php', 'inc/shop-catalog.php'),
 		'cart' => array('cart.php', 'utils/Cart.php', 'inc/mini-cart.php', 'js/mini-cart.js'),
 		'checkout' => array('checkout.php', 'js/checkout.js', 'inc/payments.php'),
 		'thankyou' => array('thank-you.php', 'inc/ads-tracking.php'),
-		'contact' => array('page-contact.php'),
+		'contact' => array('page-contact.php', 'inc/quote-form.php'),
+		'exit survey' => array('inc/exit-survey.php', 'js/exit-survey.js', 'css/exit-survey.css'),
 		'404' => array('404.php'),
 		'tracking' => array('inc/visitor-insights.php', 'js/visitor-tracker.js', 'inc/ads-tracking.php'),
 	);
@@ -3288,21 +4414,23 @@ function wholesale_vi_md_breakdown($rows, $first_header, $label_cb = null)
 }
 
 /**
- * Recent visits that showed interest but did not buy, as short step lists.
- * No names, emails or IP addresses.
+ * Recent visits as short step lists: by default visits that showed interest
+ * but did not buy; with $bought, visits that ended in an order (to compare
+ * what worked). No names, emails or IP addresses.
  */
-function wholesale_vi_md_journeys($period, $filters, $limit = 15)
+function wholesale_vi_md_journeys($period, $filters, $limit = 15, $bought = false)
 {
 	global $wpdb;
 	list($where, $params) = wholesale_vi_where($period['start_gmt'], $period['end_gmt'], $filters);
 	$params[] = (int) $limit;
 	$sessions = $wpdb->get_results($wpdb->prepare(
-		'SELECT * FROM ' . wholesale_vi_table('sessions') . " s WHERE {$where} AND s.order_id = 0 AND (s.stage >= 2 OR s.pageviews >= 2 OR s.errors > 0)
-		ORDER BY s.stage DESC, s.errors DESC, s.started_at DESC LIMIT %d",
+		'SELECT * FROM ' . wholesale_vi_table('sessions') . " s WHERE {$where} AND " . ($bought
+			? 's.order_id > 0 ORDER BY s.started_at DESC'
+			: 's.order_id = 0 AND (s.stage >= 2 OR s.pageviews >= 2 OR s.errors > 0) ORDER BY s.stage DESC, s.errors DESC, s.started_at DESC') . ' LIMIT %d',
 		$params
 	));
 	if (!$sessions) {
-		return "\n_No visits that showed interest without buying in this range._\n";
+		return $bought ? "\n_No tracked orders in this range._\n" : "\n_No visits that showed interest without buying in this range._\n";
 	}
 
 	$stages = wholesale_vi_stages();
@@ -3312,8 +4440,10 @@ function wholesale_vi_md_journeys($period, $filters, $limit = 15)
 		$events = $wpdb->get_results($wpdb->prepare('SELECT * FROM ' . wholesale_vi_table('events') . ' WHERE session_id = %d ORDER BY created_at, id LIMIT 80', $session->id));
 		$start = strtotime($session->started_at . ' UTC');
 		$out .= sprintf(
-			"\n**Visit %d** — %s, %s %s, %s · %d pages · %s engaged · got to: %s%s\n\n",
+			"\n**%s %d** — %s · %s, %s %s, %s · %d pages · %s engaged · got to: %s%s%s\n\n",
+			$bought ? 'Order visit' : 'Visit',
 			$i + 1,
+			wp_date('D M j, g:i a', $start),
 			$channels[$session->channel] ?? $session->channel,
 			ucfirst($session->device),
 			$session->browser,
@@ -3321,6 +4451,7 @@ function wholesale_vi_md_journeys($period, $filters, $limit = 15)
 			$session->pageviews,
 			wholesale_vi_duration($session->engaged_seconds),
 			$stages[(int) $session->stage] ?? '',
+			($session->is_new ? '' : ' · returning visitor') . ('' !== (string) $session->campaign ? ' · campaign: ' . wholesale_vi_campaign_name($session->campaign) : ''),
 			$session->term ? ' · keyword: "' . $session->term . '"' : ''
 		);
 		$last = '';
@@ -3342,6 +4473,635 @@ function wholesale_vi_md_journeys($period, $filters, $limit = 15)
 	}
 
 	return $out;
+}
+
+/**
+ * Visitor-typed text (survey answers, chat messages) for the export: emails
+ * and phone numbers removed, one line, shortened.
+ */
+function wholesale_vi_md_scrub($text, $max = 220)
+{
+	$text = wp_strip_all_tags(html_entity_decode((string) $text, ENT_QUOTES, 'UTF-8'));
+	$text = preg_replace('/[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}/i', '[email]', $text);
+	$text = preg_replace_callback('/\+?\(?\d[\d\s().\-]{6,}\d/', static function ($match) {
+		return strlen(preg_replace('/\D/', '', $match[0])) >= 9 ? '[phone]' : $match[0];
+	}, $text);
+	$text = trim(preg_replace('/\s+/u', ' ', $text));
+	if (mb_strlen($text) > $max) {
+		$text = rtrim(mb_substr($text, 0, $max - 1)) . '…';
+	}
+
+	return wholesale_vi_md_cell($text);
+}
+
+function wholesale_vi_md_dollars($amount)
+{
+	return '$' . number_format_i18n(round((float) $amount));
+}
+
+/**
+ * Page title without the " | Storefront Sign Online" suffix.
+ */
+function wholesale_vi_md_title($title, $length = 48)
+{
+	$title = trim(preg_replace('/\s*[|–-]\s*Storefront Sign Online.*$/iu', '', html_entity_decode((string) $title, ENT_QUOTES, 'UTF-8')));
+
+	return mb_strlen($title) > $length ? rtrim(mb_substr($title, 0, $length - 1)) . '…' : $title;
+}
+
+/**
+ * The products in an order, e.g. "13oz Vinyl Banner ×2, Magnets".
+ *
+ * @return array[] Each: product_id, title, qty, subtotal.
+ */
+function wholesale_vi_order_items($order_id)
+{
+	$raw = get_post_meta($order_id, 'product_json', true);
+	$items = is_array($raw) ? $raw : json_decode((string) $raw, true);
+	if (!is_array($items) && function_exists('wholesale_decode_order_meta_array')) {
+		$items = wholesale_decode_order_meta_array($raw);
+	}
+
+	$out = array();
+	foreach (is_array($items) ? $items : array() as $item) {
+		if (!is_array($item) || empty($item['product_title'])) {
+			continue;
+		}
+		$qty = max(1, (int) ($item['product_quantity'] ?? 1));
+		$id = (int) ($item['product_id'] ?? 0);
+		$title = trim(html_entity_decode(wp_strip_all_tags((string) $item['product_title']), ENT_QUOTES, 'UTF-8'));
+		$subtotal = isset($item['product_subtotal']) ? (float) $item['product_subtotal'] : (float) ($item['unit_price'] ?? 0) * $qty;
+		// The same product in several sizes is one line here.
+		$key = $id . '|' . $title;
+		if (isset($out[$key])) {
+			$out[$key]['qty'] += $qty;
+			$out[$key]['subtotal'] += $subtotal;
+			continue;
+		}
+		$out[$key] = array('product_id' => $id, 'title' => $title, 'qty' => $qty, 'subtotal' => $subtotal);
+	}
+
+	return array_values($out);
+}
+
+function wholesale_vi_order_items_text($order_id, $max = 3)
+{
+	$names = array();
+	foreach (wholesale_vi_order_items($order_id) as $item) {
+		$names[] = $item['title'] . ($item['qty'] > 1 ? ' ×' . $item['qty'] : '');
+	}
+
+	return $names ? implode(', ', array_slice($names, 0, $max)) . (count($names) > $max ? ' +' . (count($names) - $max) . ' more' : '') : '—';
+}
+
+/**
+ * Each product page (and the sign builder): how many visits viewed it, got a
+ * price, saw a pricing error, added it to the cart and bought, the prices
+ * they were shown, and the orders that included it.
+ */
+function wholesale_vi_product_funnel($period, $filters, $orders)
+{
+	global $wpdb;
+	list($where, $params) = wholesale_vi_where($period['start_gmt'], $period['end_gmt'], $filters);
+	$num = "e.value REGEXP '^[0-9]+([.][0-9]+)?$'";
+	// "priced" counts add_to_cart too: a visit that put the product in the cart saw its
+	// price even with no option changed (fixed-price graphic-only stands read 0 priced,
+	// 1 in cart, Nov 2026).
+	$rows = $wpdb->get_results($wpdb->prepare(
+		"SELECT SUBSTRING_INDEX(e.url, '?', 1) AS path,
+			MAX(CASE WHEN e.type = 'pageview' THEN e.label END) AS title,
+			COUNT(DISTINCT CASE WHEN e.type = 'pageview' THEN e.session_id END) AS views,
+			COUNT(DISTINCT CASE WHEN e.type = 'pageview' AND s.channel = 'google_ads' THEN e.session_id END) AS ads,
+			COUNT(DISTINCT CASE WHEN e.type = 'pageview' AND s.device = 'mobile' THEN e.session_id END) AS mobile,
+			SUM(CASE WHEN e.type = 'pageview' THEN e.seconds ELSE 0 END) AS seconds,
+			SUM(CASE WHEN e.type = 'pageview' THEN e.scroll ELSE 0 END) AS scroll,
+			SUM(e.type = 'pageview') AS pageviews,
+			COUNT(DISTINCT CASE WHEN e.type IN ('configure', 'price_quote', 'add_to_cart') THEN e.session_id END) AS priced,
+			COUNT(DISTINCT CASE WHEN e.type = 'price_error' THEN e.session_id END) AS price_errors,
+			COUNT(DISTINCT CASE WHEN e.type = 'add_to_cart' THEN e.session_id END) AS carted,
+			COUNT(DISTINCT CASE WHEN e.type = 'add_to_cart' AND s.order_id > 0 THEN e.session_id END) AS bought,
+			SUM(CASE WHEN e.type = 'price_quote' AND {$num} THEN e.value + 0 ELSE 0 END) AS price_sum,
+			SUM(e.type = 'price_quote' AND {$num}) AS price_n,
+			MIN(CASE WHEN e.type = 'price_quote' AND {$num} AND e.value + 0 > 0 THEN e.value + 0 END) AS price_min,
+			MAX(CASE WHEN e.type = 'price_quote' AND {$num} THEN e.value + 0 END) AS price_max,
+			SUM(CASE WHEN e.type = 'add_to_cart' AND {$num} THEN e.value + 0 ELSE 0 END) AS cart_sum,
+			SUM(e.type = 'add_to_cart' AND {$num}) AS cart_n
+		FROM " . wholesale_vi_table('events') . ' e JOIN ' . wholesale_vi_table('sessions') . " s ON s.id = e.session_id
+		WHERE e.type IN ('pageview', 'configure', 'price_quote', 'price_error', 'add_to_cart') AND NOT (e.type = 'pageview' AND e.value = '404')
+			AND e.created_at >= %s AND e.created_at < %s AND (e.url LIKE %s OR e.url LIKE %s) AND {$where}
+		GROUP BY path",
+		array_merge(array($period['start_gmt'], $period['end_gmt'], '%/product/%', '%-builder%'), $params)
+	), ARRAY_A);
+
+	// The same page can be stored with and without the site's sub-folder.
+	$sum = array('views', 'ads', 'mobile', 'seconds', 'scroll', 'pageviews', 'priced', 'price_errors', 'carted', 'bought', 'price_sum', 'price_n', 'cart_sum', 'cart_n');
+	$products = array();
+	foreach ((array) $rows as $row) {
+		$key = wholesale_vi_short_path($row['path'], 300);
+		if (!isset($products[$key])) {
+			$products[$key] = array_merge(array_fill_keys($sum, 0), array('path' => $key, 'title' => '', 'price_min' => null, 'price_max' => null, 'orders' => 0, 'units' => 0, 'sales' => 0.0));
+		}
+		$product = &$products[$key];
+		foreach ($sum as $col) {
+			$product[$col] += (float) $row[$col];
+		}
+		$product['title'] = $product['title'] ?: (string) $row['title'];
+		if (null !== $row['price_min']) {
+			$product['price_min'] = null === $product['price_min'] ? (float) $row['price_min'] : min($product['price_min'], (float) $row['price_min']);
+		}
+		if (null !== $row['price_max']) {
+			$product['price_max'] = null === $product['price_max'] ? (float) $row['price_max'] : max($product['price_max'], (float) $row['price_max']);
+		}
+		unset($product);
+	}
+
+	// Orders placed in the range, by product, from the order itself.
+	foreach ($orders as $order) {
+		foreach (wholesale_vi_order_items($order['id']) as $item) {
+			$link = $item['product_id'] ? get_permalink($item['product_id']) : '';
+			$key = $link ? wholesale_vi_short_path((string) wp_parse_url($link, PHP_URL_PATH), 300) : 'item:' . $item['title'];
+			if (!isset($products[$key])) {
+				// Custom items without a product page keep an empty path.
+				$products[$key] = array_merge(array_fill_keys($sum, 0), array('path' => $link ? $key : '', 'title' => $item['title'], 'price_min' => null, 'price_max' => null, 'orders' => 0, 'units' => 0, 'sales' => 0.0));
+			}
+			if (empty($counted[$key][$order['id']])) {
+				$counted[$key][$order['id']] = true;
+				$products[$key]['orders']++;
+			}
+			$products[$key]['units'] += $item['qty'];
+			$products[$key]['sales'] += $item['subtotal'];
+		}
+	}
+
+	uasort($products, static function ($a, $b) {
+		return array($b['views'], $b['orders']) <=> array($a['views'], $a['orders']);
+	});
+
+	return $products;
+}
+
+function wholesale_vi_md_products($products, $limit = 25)
+{
+	$top = array_slice($products, 0, $limit, true);
+	// Products that sold but were not among the most viewed still belong here.
+	foreach ($products as $key => $product) {
+		if ($product['orders'] && !isset($top[$key])) {
+			$top[$key] = $product;
+		}
+	}
+
+	$rows = array();
+	foreach ($top as $product) {
+		$views = (int) $product['views'];
+		$rows[] = array(
+			'' === $product['path'] ? wholesale_vi_md_title($product['title'], 56) . ' (custom item, no product page)' : ($product['title'] ? wholesale_vi_md_title($product['title'], 56) . ' — ' : '') . '`' . wholesale_vi_short_path($product['path'], 70) . '`',
+			number_format_i18n($views),
+			$views ? wholesale_vi_pct($product['ads'], $views) : '—',
+			$views ? wholesale_vi_pct($product['mobile'], $views) : '—',
+			$product['pageviews'] ? wholesale_vi_duration($product['seconds'] / $product['pageviews']) : '—',
+			$product['pageviews'] ? round($product['scroll'] / $product['pageviews']) . '%' : '—',
+			number_format_i18n($product['priced']),
+			$product['price_errors'] ? number_format_i18n($product['price_errors']) : '0',
+			number_format_i18n($product['carted']),
+			number_format_i18n($product['bought']),
+			$product['orders'] ? $product['orders'] . ' (' . wholesale_vi_md_dollars($product['sales']) . ')' : '0',
+			$product['price_n'] ? wholesale_vi_md_dollars($product['price_sum'] / $product['price_n']) . ' avg (' . wholesale_vi_md_dollars($product['price_min']) . '–' . wholesale_vi_md_dollars($product['price_max']) . ')' : '—',
+			$product['cart_n'] ? wholesale_vi_md_dollars($product['cart_sum'] / $product['cart_n']) : '—',
+		);
+	}
+
+	return wholesale_vi_md_table(array('Product — page', 'Visits that viewed it', 'From ads', 'On phones', 'Avg. time on page', 'Avg. scroll', 'Got a price', 'Saw a pricing error', 'Added to cart', 'Bought in that visit', 'Orders in range (sales)', 'Prices shown', 'Avg. cart value'), $rows);
+}
+
+/**
+ * Landing pages from the first-screen point of view: how far the visitors
+ * who left at once scrolled (0% = they never looked past the first screen)
+ * and how long the others stayed.
+ */
+function wholesale_vi_md_landing_check($period, $filters, $limit = 10)
+{
+	global $wpdb;
+	list($where, $params) = wholesale_vi_where($period['start_gmt'], $period['end_gmt'], $filters);
+	$bounce = wholesale_vi_bounce_sql('s');
+	$params[] = (int) $limit;
+	$rows = $wpdb->get_results($wpdb->prepare(
+		"SELECT SUBSTRING_INDEX(s.landing_url, '?', 1) AS label, COUNT(*) AS sessions, SUM(s.device = 'mobile') AS mobile, SUM({$bounce}) AS bounced,
+			AVG(CASE WHEN {$bounce} THEN s.max_scroll END) AS bounce_scroll, AVG(CASE WHEN NOT {$bounce} THEN s.engaged_seconds END) AS stayed_seconds,
+			AVG(CASE WHEN NOT {$bounce} THEN s.pageviews END) AS stayed_pages, SUM(s.stage >= 3) AS priced, SUM(s.is_lead) AS leads, SUM(s.order_id > 0) AS orders
+		FROM " . wholesale_vi_table('sessions') . " s WHERE {$where} GROUP BY label ORDER BY sessions DESC LIMIT %d",
+		$params
+	), ARRAY_A);
+
+	$out = array();
+	foreach ((array) $rows as $row) {
+		$template = wholesale_vi_path_template($row['label']);
+		$out[] = array(
+			wholesale_vi_short_path($row['label'], 70) . ($template ? ' → `' . $template . '`' : ''),
+			number_format_i18n($row['sessions']),
+			wholesale_vi_pct($row['mobile'], $row['sessions']),
+			wholesale_vi_pct($row['bounced'], $row['sessions']),
+			null === $row['bounce_scroll'] ? '—' : round($row['bounce_scroll']) . '%',
+			null === $row['stayed_seconds'] ? '—' : wholesale_vi_duration($row['stayed_seconds']) . ', ' . number_format_i18n($row['stayed_pages'], 1) . ' pages',
+			number_format_i18n($row['priced']),
+			number_format_i18n($row['leads'] + $row['orders']),
+		);
+	}
+
+	return wholesale_vi_md_table(array('Landing page → template', 'Visits', 'On phones', 'Bounce', 'How far bouncers scrolled', 'Visitors who stayed: time, pages', 'Got a price', 'Leads + orders'), $out);
+}
+
+/**
+ * The pages a problem happened on, most visitors first: "/product/x/ (12)".
+ */
+function wholesale_vi_problem_pages($type, $label, $period, $filters)
+{
+	global $wpdb;
+	list($where, $params) = wholesale_vi_where($period['start_gmt'], $period['end_gmt'], $filters);
+	$rows = $wpdb->get_results($wpdb->prepare(
+		"SELECT SUBSTRING_INDEX(e.url, '?', 1) AS path, COUNT(DISTINCT e.session_id) AS n FROM " . wholesale_vi_table('events') . ' e JOIN ' . wholesale_vi_table('sessions') . " s ON s.id = e.session_id
+		WHERE e.type = %s AND e.label = %s AND e.created_at >= %s AND e.created_at < %s AND {$where} GROUP BY path ORDER BY n DESC LIMIT 6",
+		array_merge(array($type, (string) $label, $period['start_gmt'], $period['end_gmt']), $params)
+	), ARRAY_A);
+
+	$pages = array();
+	foreach ((array) $rows as $row) {
+		$key = wholesale_vi_short_path($row['path'], 60);
+		$pages[$key] = ($pages[$key] ?? 0) + (int) $row['n'];
+	}
+	arsort($pages);
+	$out = array();
+	foreach (array_slice($pages, 0, 3, true) as $path => $n) {
+		$out[] = $path . ' (' . $n . ')';
+	}
+
+	return $out ? implode(', ', $out) : '—';
+}
+
+/**
+ * What visitors said in the exit survey ("What stopped you from ordering?").
+ * The contact field is never included.
+ */
+function wholesale_vi_md_exit_survey($period, $filters)
+{
+	global $wpdb;
+	$table = $wpdb->prefix . 'wholesale_exit_survey';
+	$md = "### Exit survey: \"What stopped you from ordering?\"\n\n";
+	if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) !== $table) {
+		return $md . "_The exit survey is not installed._\n\n";
+	}
+
+	$where = 'created_at >= %s AND created_at < %s';
+	$params = array($period['start_gmt'], $period['end_gmt']);
+	if (!empty($filters['channel'])) {
+		$where .= ' AND channel = %s';
+		$params[] = $filters['channel'];
+	}
+	if (!empty($filters['device'])) {
+		$where .= ' AND device = %s';
+		$params[] = $filters['device'];
+	}
+
+	$totals = $wpdb->get_row($wpdb->prepare("SELECT COUNT(*) AS shown, SUM(status = 'answered') AS answered, SUM(status = 'dismissed') AS dismissed FROM {$table} WHERE {$where}", $params), ARRAY_A);
+	$settings = (array) get_option('wholesale_es_settings', array());
+	$enabled = !empty($settings['enabled']);
+	if (empty($totals['shown'])) {
+		return $md . '_Not shown in this range. The survey is ' . ($enabled ? 'on' : 'off') . ' (Settings → Storefront Sign → Store → "Exit survey")._' . "\n\n";
+	}
+
+	$md .= sprintf("Shown %s times · answered %s · closed without answering %s. The survey is %s now.\n\n", number_format_i18n($totals['shown']), number_format_i18n($totals['answered']), number_format_i18n($totals['dismissed']), $enabled ? 'on' : 'off');
+	if (empty($totals['answered'])) {
+		return $md;
+	}
+	$labels = function_exists('wholesale_es_reasons') ? wholesale_es_reasons() : array();
+	$label = static function ($reason) use ($labels) {
+		return $labels[$reason]['label'] ?? ($reason ?: '(no reason)');
+	};
+
+	$rows = array();
+	foreach ((array) $wpdb->get_results($wpdb->prepare(
+		"SELECT reason, COUNT(*) AS n, SUM(device = 'mobile') AS mobile, SUM(channel = 'google_ads') AS ads, SUM(cart_items > 0) AS with_cart,
+			GROUP_CONCAT(DISTINCT NULLIF(page_type, '') ORDER BY page_type SEPARATOR ', ') AS pages
+		FROM {$table} WHERE {$where} AND status = 'answered' GROUP BY reason ORDER BY n DESC",
+		$params
+	), ARRAY_A) as $row) {
+		$rows[] = array($label($row['reason']), $row['n'], wholesale_vi_pct($row['mobile'], $row['n']), wholesale_vi_pct($row['ads'], $row['n']), $row['with_cart'], $row['pages'] ?: '—');
+	}
+	$md .= wholesale_vi_md_table(array('Reason', 'Answers', 'On phones', 'From ads', 'Had items in cart', 'Page types'), $rows);
+
+	$comments = $wpdb->get_results($wpdb->prepare(
+		"SELECT reason, details, page_url, device, channel, cart_items FROM {$table} WHERE {$where} AND status = 'answered' AND details <> '' ORDER BY created_at DESC LIMIT 20",
+		$params
+	));
+	if ($comments) {
+		$md .= "\nWhat they wrote (newest first; emails and phone numbers removed):\n\n";
+		foreach ($comments as $comment) {
+			$md .= sprintf("- “%s” — %s · %s · %s, %s%s\n", wholesale_vi_md_scrub($comment->details, 300), $label($comment->reason), wholesale_vi_short_path(strtok((string) $comment->page_url, '?'), 60), wholesale_vi_channels()[$comment->channel] ?? ($comment->channel ?: 'unknown source'), $comment->device ?: 'unknown device', $comment->cart_items ? ' · had ' . (int) $comment->cart_items . ' item(s) in cart' : '');
+		}
+	}
+
+	return $md . "\n";
+}
+
+/**
+ * Live chats visitors started in the range, with what they asked first.
+ * Emails and phone numbers are removed from the text.
+ */
+function wholesale_vi_md_chats($period, $filters = array(), $limit = 25)
+{
+	global $wpdb;
+	$conversations = $wpdb->prefix . 'sfs_chat_conversations';
+	$messages = $wpdb->prefix . 'sfs_chat_messages';
+	$md = "### Live chat: what visitors asked\n\n" . (!empty($filters['channel']) || !empty($filters['device']) ? "_All chats in the range: the source and device filters do not apply here._\n\n" : '');
+	if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $conversations)) !== $conversations || $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $messages)) !== $messages) {
+		return $md . "_Live chat is not installed._\n\n";
+	}
+
+	// The shared inbox also holds chats from the other sites; 'sso' is this one.
+	$site = in_array('site', (array) $wpdb->get_col("SHOW COLUMNS FROM {$conversations}"), true) ? " AND c.site = 'sso'" : '';
+	$range = array($period['start_gmt'], $period['end_gmt']);
+	$totals = $wpdb->get_row($wpdb->prepare(
+		"SELECT COUNT(*) AS chats, SUM(c.last_admin_message_at IS NOT NULL) AS staff,
+			SUM(EXISTS (SELECT 1 FROM {$messages} m WHERE m.conversation_id = c.id AND m.sender_type = 'visitor')) AS asked
+		FROM {$conversations} c WHERE c.created_at >= %s AND c.created_at < %s{$site}",
+		$range
+	), ARRAY_A);
+	if (empty($totals['chats'])) {
+		return $md . "_No chats in this range._\n\n";
+	}
+	$md .= sprintf("%s chats opened · visitors wrote in %s · staff replied in %s.\n\n", number_format_i18n($totals['chats']), number_format_i18n($totals['asked']), number_format_i18n($totals['staff']));
+
+	$rows = $wpdb->get_results($wpdb->prepare(
+		"SELECT c.created_at, c.source_page, c.last_admin_message_at IS NOT NULL AS staff,
+			(SELECT COUNT(*) FROM {$messages} m WHERE m.conversation_id = c.id AND m.sender_type = 'bot' AND m.type = 'text') AS bot,
+			(SELECT COUNT(*) FROM {$messages} m WHERE m.conversation_id = c.id AND m.sender_type = 'visitor') AS visitor,
+			(SELECT GROUP_CONCAT(LEFT(m.body, 200) ORDER BY m.id SEPARATOR ' / ') FROM {$messages} m WHERE m.conversation_id = c.id AND m.sender_type = 'visitor' AND m.type = 'text') AS said
+		FROM {$conversations} c WHERE c.created_at >= %s AND c.created_at < %s{$site}
+		HAVING visitor > 0 ORDER BY c.created_at DESC LIMIT %d",
+		array_merge($range, array((int) $limit))
+	));
+	if ($rows) {
+		$md .= "Newest first. \"/\" separates the visitor's messages.\n\n";
+		foreach ($rows as $row) {
+			$md .= sprintf(
+				"- %s · from %s · %d visitor message(s) · answered by %s — “%s”\n",
+				wholesale_vi_date($row->created_at, 'M j, g:i a'),
+				wholesale_vi_short_path(strtok((string) wp_parse_url((string) $row->source_page, PHP_URL_PATH), '?') ?: '/', 60),
+				(int) $row->visitor,
+				$row->staff ? 'staff' : ($row->bot ? 'the AI assistant only' : 'nobody'),
+				'' !== (string) $row->said ? wholesale_vi_md_scrub($row->said, 320) : '(sent a photo or file)'
+			);
+		}
+	}
+
+	return $md . "\n";
+}
+
+/**
+ * The business and the owner's standing rules, so whoever reads the report
+ * can change the site without breaking ads, claims or pricing.
+ */
+function wholesale_vi_md_business()
+{
+	$name = wp_specialchars_decode(get_bloginfo('name'), ENT_QUOTES);
+	$host = wp_parse_url(home_url(), PHP_URL_HOST);
+	$categories = array();
+	$terms = get_terms(array('taxonomy' => 'product_category', 'hide_empty' => true, 'parent' => 0));
+	foreach (is_array($terms) ? $terms : array() as $term) {
+		if ((int) $term->count > 0) {
+			$categories[] = trim(preg_replace('/\s*\|.*$/', '', html_entity_decode($term->name, ENT_QUOTES, 'UTF-8')));
+		}
+	}
+	$products = (int) (wp_count_posts('product')->publish ?? 0);
+	$aov = function_exists('wholesale_vi_average_order') ? wholesale_vi_average_order() : 0;
+
+	$md = "### About the business\n\n";
+	$md .= "- **Store:** {$name} ({$host}), an online sign and print shop with {$products} products" . ($categories ? ' in: ' . implode(', ', $categories) : '') . ".\n";
+	$md .= "- **How people buy:** each product page shows the price instantly for the chosen size and options, then Add to cart or Buy now → checkout. Channel letters (lighted 3D letters) are designed in the online sign builder or quoted from a photo.\n";
+	$md .= "- **Production and delivery:** made in Renton, WA (channel letters in Washington and California) and shipped to all 50 states. The company does **not** install; the customer's own sign installer or electrician does.\n";
+	$md .= '- **Help for buyers:** phone (Mon–Fri 8 am–5 pm Pacific), text, email and live chat.' . ($aov > 0 ? ' Average order over the last 180 days: ' . wholesale_vi_md_dollars($aov) . '.' : '') . "\n";
+	$md .= "- **Traffic:** paid traffic is Google Ads (Performance Max, Shopping and Search). Leads (calls, quote requests, chats) matter as well as orders: staff turn many of them into orders.\n\n";
+
+	$md .= "### Rules for any change (set by the owner)\n\n";
+	$md .= "- Keep every page URL and slug as it is: Google Ads final URLs and Merchant Center links point at them.\n";
+	$md .= "- Never say or imply the company installs signs, or has shops or offices outside Renton, WA. No made-up reviews, ratings, customer counts, addresses or projects.\n";
+	$md .= "- Each product uses its own word (banner, display, decal, flag, print); \"sign\" is for channel letters and sign products. `wholesale_product_noun()` in `inc/pricing.php` picks it.\n";
+	$md .= "- Sizes are always written width × height.\n";
+	$md .= "- \"Starting at\" prices on product cards are exact, as on the product page, only without \".00\" (`wholesale_price_no_cents()`, no rounding since 2026-11-12).\n";
+	$md .= "- No permanent sale badges or crossed-out prices. Discounts come only from the dated promotion in Settings → Storefront Sign.\n";
+	$md .= "- Channel letter price rules live in both `js/cl.js` (what the builder shows) and `inc/pricing.php` (what the cart charges): change both together.\n";
+	$md .= "- The theme owns SEO (titles, meta, schema, sitemaps); Rank Math is not used.\n";
+	$md .= "- Late CSS and phone fixes go in `css/ui-polish.css` and `js/ui-polish.js`, which load last (not on the sign builder).\n";
+	$md .= "- Changes are made on a local copy and the owner uploads files by hand, so end with the list of changed files. Other work may be editing the same theme: re-read a file right before changing it and keep edits small.\n\n";
+
+	return $md;
+}
+
+/**
+ * A few computed headlines so the reader starts from the biggest levers.
+ */
+function wholesale_vi_md_glance($all, $ads, $products, $period)
+{
+	$m = $all['summary'];
+	$prev = $all['previous'];
+	$out = array();
+	$conv = static function ($s) {
+		return !empty($s['sessions']) ? (($s['orders'] ?? 0) + ($s['leads'] ?? 0)) / $s['sessions'] : 0;
+	};
+	$change = static function ($now, $before) {
+		if ($before <= 0) {
+			return $now > 0 ? 'new' : 'no change';
+		}
+		$pct = ($now - $before) / $before * 100;
+
+		return ($pct >= 0 ? '+' : '') . number_format_i18n($pct) . '%';
+	};
+
+	$out[] = sprintf(
+		'**Traffic:** %s visits (%s vs %s in the period before), %s of them Google Ads clicks.',
+		number_format_i18n($m['sessions']),
+		$change($m['sessions'], $prev['sessions'] ?? 0),
+		number_format_i18n($prev['sessions'] ?? 0),
+		wholesale_vi_pct($m['ads'] ?? 0, $m['sessions'])
+	);
+	$order_total = array_sum(array_column($all['orders'], 'total'));
+	$out[] = sprintf(
+		'**Results:** %s placed (%s, average %s) and %s leads; %s of visits ended in an order or lead (previous period %s).',
+		sprintf(_n('%s order', '%s orders', count($all['orders'])), number_format_i18n(count($all['orders']))),
+		wholesale_vi_md_dollars($order_total),
+		count($all['orders']) ? wholesale_vi_md_dollars($order_total / count($all['orders'])) : '—',
+		number_format_i18n($m['leads']),
+		number_format_i18n($conv($m) * 100, 1) . '%',
+		number_format_i18n($conv($prev) * 100, 1) . '%'
+	);
+
+	// Funnel steps that lose the most visitors.
+	$stages = wholesale_vi_stages();
+	$losses = array();
+	$before = $m['sessions'];
+	foreach ($stages as $i => $label) {
+		if ($i < 2) {
+			continue;
+		}
+		$now = $m[7 === $i ? 'orders' : 's' . $i] ?? 0;
+		$losses[] = array('lost' => $before - $now, 'text' => sprintf('%s → %s: %s visits lost (%s)', $stages[$i - 1], $label, number_format_i18n($before - $now), wholesale_vi_pct($before - $now, $before)));
+		$before = $now;
+	}
+	usort($losses, static function ($a, $b) {
+		return $b['lost'] <=> $a['lost'];
+	});
+	$out[] = '**Biggest drop-offs:** ' . implode('; ', array_column(array_slice($losses, 0, 3), 'text')) . '.';
+
+	$best = $worst = null;
+	foreach ($all['channels'] as $row) {
+		$rate = $row['sessions'] ? ($row['orders'] + $row['leads']) / $row['sessions'] : 0;
+		if ($row['sessions'] >= 30 && (!$best || $rate > $best[1])) {
+			$best = array($row, $rate);
+		}
+		if ($row['sessions'] >= 100 && (!$worst || $rate < $worst[1])) {
+			$worst = array($row, $rate);
+		}
+	}
+	if ($best && $worst && $best[0]['label'] !== $worst[0]['label']) {
+		$channels = wholesale_vi_channels();
+		$out[] = sprintf(
+			'**Sources:** best is %s at %s (%s visits); weakest large source is %s at %s (%s visits).',
+			$channels[$best[0]['label']] ?? $best[0]['label'],
+			number_format_i18n($best[1] * 100, 1) . '%',
+			number_format_i18n($best[0]['sessions']),
+			$channels[$worst[0]['label']] ?? $worst[0]['label'],
+			number_format_i18n($worst[1] * 100, 1) . '%',
+			number_format_i18n($worst[0]['sessions'])
+		);
+	}
+
+	$devices = array();
+	foreach ($all['devices'] as $row) {
+		$devices[$row['label']] = $row;
+	}
+	if (!empty($devices['mobile']['sessions']) && !empty($devices['desktop']['sessions'])) {
+		$out[] = sprintf(
+			'**Phones vs computers:** %s of visits are on phones; phones convert at %s, computers at %s.',
+			wholesale_vi_pct($devices['mobile']['sessions'], $m['sessions']),
+			wholesale_vi_pct($devices['mobile']['orders'] + $devices['mobile']['leads'], $devices['mobile']['sessions'], 1),
+			wholesale_vi_pct($devices['desktop']['orders'] + $devices['desktop']['leads'], $devices['desktop']['sessions'], 1)
+		);
+	}
+
+	if (!empty($all['problems'][0])) {
+		$problem = $all['problems'][0];
+		$out[] = sprintf('**Most common problem:** %s “%s” — %s visitors, %s times.', wholesale_vi_event_label($problem['type']), $problem['label'] ?: '—', number_format_i18n($problem['sessions']), number_format_i18n($problem['hits']));
+	}
+
+	$stuck = null;
+	foreach ($products as $product) {
+		$gap = $product['priced'] - $product['carted'];
+		if ($product['priced'] >= 5 && (!$stuck || $gap > $stuck['priced'] - $stuck['carted'])) {
+			$stuck = $product;
+		}
+	}
+	if ($stuck) {
+		$out[] = sprintf('**Priced most but not bought:** %s (`%s`) — %d visits got a price, %d added it to the cart.', wholesale_vi_md_title($stuck['title'] ?: $stuck['path'], 50), wholesale_vi_short_path($stuck['path'], 70), $stuck['priced'], $stuck['carted']);
+	}
+
+	$form = null;
+	foreach ($all['forms'] as $row) {
+		if (!$form || ($row['started'] - $row['submitted']) > ($form['started'] - $form['submitted'])) {
+			$form = $row;
+		}
+	}
+	if ($form && $form['started'] - $form['submitted'] > 0) {
+		$out[] = sprintf('**Most abandoned form:** “%s” — %d of %d gave up%s.', $form['label'], $form['started'] - $form['submitted'], $form['started'], $form['left_at'] ? ', most at “' . $form['left_at'] . '”' : '');
+	}
+
+	return '- ' . implode("\n- ", $out) . "\n\n";
+}
+
+/**
+ * Things in the data that are easy to misread.
+ */
+function wholesale_vi_md_data_notes($all, $ads)
+{
+	$m = $all['summary'];
+	$notes = array();
+
+	foreach ($ads['keywords'] as $row) {
+		if ('(not set)' === $row['label'] && !empty($ads['summary']['sessions'])) {
+			$notes[] = sprintf('%s of Google Ads clicks have no keyword: Performance Max and Shopping do not send one. Judge those clicks by campaign, network and landing page.', wholesale_vi_pct($row['sessions'], $ads['summary']['sessions']));
+		}
+	}
+
+	$untracked = array_filter($all['orders'], static function ($order) {
+		return !$order['source'] && 'google_ads' !== $order['channel'];
+	});
+	if ($untracked) {
+		$notes[] = sprintf('%d of %d orders (%s) have no recorded visit, so their source is unknown (for example orders entered by staff, or a browser that blocked tracking). Key numbers count revenue only from tracked visits; the Orders table lists every order.', count($untracked), count($all['orders']), wholesale_vi_md_dollars(array_sum(array_column($untracked, 'total'))));
+	}
+
+	$foreign = $foreign_bounced = 0;
+	foreach ($all['timezones'] as $row) {
+		if (wholesale_vi_is_foreign_tz($row['label'])) {
+			$foreign += $row['sessions'];
+			$foreign_bounced += $row['bounced'];
+		}
+	}
+	if ($foreign && $m['sessions']) {
+		$notes[] = sprintf('%s of visits (%s) come from time zones outside the US and %s of them bounce; most are crawlers or link checkers, not buyers. They push the all-traffic bounce rate up; the Google Ads columns are cleaner.', wholesale_vi_pct($foreign, $m['sessions']), number_format_i18n($foreign), wholesale_vi_pct($foreign_bounced, $foreign));
+	}
+
+	foreach ($all['browsers'] as $row) {
+		if ('Other' === $row['label'] && $m['sessions'] && $row['sessions'] / $m['sessions'] >= 0.05) {
+			$notes[] = sprintf('%s visits (%s) report an unrecognized browser and %s of them bounce; many are likely automated.', number_format_i18n($row['sessions']), wholesale_vi_pct($row['sessions'], $m['sessions']), wholesale_vi_pct($row['bounced'], $row['sessions']));
+		}
+	}
+
+	$prev = $all['previous']['sessions'] ?? 0;
+	if ($prev > 0 && $prev < $m['sessions'] / 2) {
+		$notes[] = sprintf('The previous period had far fewer visits (%s vs %s), so percentage changes against it are not like-for-like.', number_format_i18n($prev), number_format_i18n($m['sessions']));
+	}
+
+	if (!empty($all['robots'])) {
+		$notes[] = number_format_i18n($all['robots']) . ' robot visits were already left out of every number.';
+	}
+	$notes[] = 'Leads are per visit: one visitor who calls twice in one visit counts once. Calls are taps on a phone link, not answered calls.';
+
+	return '- ' . implode("\n- ", $notes) . "\n\n";
+}
+
+/**
+ * Visits and results per day (per hour for one-day ranges), to line up
+ * changes on the site or in Google Ads with what happened next.
+ */
+function wholesale_vi_md_trend($all, $period)
+{
+	$format = $period['hourly'] ? 'ga' : 'M j';
+	$placed = array();
+	foreach ($all['orders'] as $order) {
+		$key = wp_date($format, strtotime($order['ordered_gmt'] . ' UTC'));
+		$placed[$key]['n'] = ($placed[$key]['n'] ?? 0) + 1;
+		$placed[$key]['total'] = ($placed[$key]['total'] ?? 0) + $order['total'];
+	}
+
+	$rows = array();
+	foreach ($all['series'] as $point) {
+		$day = $point['label'];
+		if (!$period['hourly']) {
+			// Labels have no year; a range can run from December into January.
+			$when = strtotime($point['label'] . ' ' . $period['start']->format('Y') . ' 12:00 UTC');
+			if ($when && $when < $period['start']->getTimestamp() - DAY_IN_SECONDS) {
+				$when = strtotime($point['label'] . ' ' . $period['end']->format('Y') . ' 12:00 UTC');
+			}
+			$day .= $when ? ' ' . gmdate('D', $when) : '';
+		}
+		$rows[] = array(
+			$day,
+			$point['sessions'],
+			$point['ads'],
+			$point['conversions'],
+			isset($placed[$point['label']]) ? $placed[$point['label']]['n'] . ' (' . wholesale_vi_md_dollars($placed[$point['label']]['total']) . ')' : '0',
+		);
+	}
+
+	return wholesale_vi_md_table(array($period['hourly'] ? 'Hour' : 'Day', 'Visits', 'Ad clicks', 'Visits with a lead or order', 'Orders placed'), $rows);
 }
 
 /**
@@ -3367,27 +5127,42 @@ function wholesale_vi_export_markdown($period, $filters)
 		return wholesale_vi_short_path($row['label'], 90) . ($template ? ' → `' . $template . '`' : '');
 	};
 
+	$products = wholesale_vi_product_funnel($period, $filters, $all['orders']);
+
 	$md = "# Visitor Insights report — {$site}\n\n";
 	$md .= "- **Period:** {$range} ({$period['label']}, site time zone " . wp_timezone_string() . ")\n";
 	$md .= '- **Filters:** ' . ($filter_text ? implode(', ', $filter_text) : 'none (all traffic)') . "\n";
 	$md .= '- **Generated:** ' . wp_date('M j, Y g:i a') . "\n";
-	$md .= "- **Source:** Visitor Insights (first-party tracking in the `wholesale` theme). No names, emails or full IP addresses are included.\n\n";
+	$md .= "- **Source:** Visitor Insights (first-party tracking in the site's theme), orders, the exit survey and live chat. No names, emails or full IP addresses; text visitors typed has emails and phone numbers removed.\n\n";
+	$md .= "**Contents:** Instructions · At a glance · Data notes · Page map · Key numbers · Day by day · Automatic findings · Purchase funnel · Products · Orders · Landing pages · Exit pages · Problems · Form abandonment · Clicks · What visitors told us · Audience · Google Ads detail · Suggestions · Leads · Journeys of buyers · Journeys of visitors who did not buy · Definitions\n\n";
 
 	$md .= "## Instructions for Claude\n\n";
-	$md .= "This report shows how visitors use {$site}, a WordPress store for custom signs (channel letters, storefront signs). Most paid traffic comes from Google Ads, and many ad visitors leave without buying. Please:\n\n";
-	$md .= "1. Read the findings, funnel, problems, form abandonment and sample journeys below, and work out the most likely reasons visitors are not buying.\n";
-	$md .= "2. Check each likely cause against the site's code before changing anything. All site code lives in the custom theme at `wp-content/themes/wholesale/` (see the page map below). The theme, not plugins, also owns SEO (titles, meta, schema).\n";
-	$md .= "3. Fix what can be fixed in the theme: errors visitors hit, confusing or slow landing pages, missing prices or calls to action, mobile layout problems, form friction, broken links. Make the smallest changes that address the cause, and explain each one.\n";
-	$md .= "4. List separately what has to be changed outside the website (Google Ads keywords, negative keywords, locations, bids, ad schedule, IP exclusions), since those cannot be changed in code.\n";
-	$md .= "5. Say how to confirm each change worked in the next report (which number should move).\n\n";
-	$md .= "_Small numbers (fewer than about 30 visits) are not reliable on their own; treat them as hints and look for patterns in the journeys._\n\n";
+	$md .= "You are helping the owner of {$site} get more orders. This report shows what visitors did on the site in the period above. Use it to find what stops visitors from buying, fix what can be fixed in the website code, and say what to change in Google Ads and in how the team follows up.\n\n";
+	$md .= wholesale_vi_md_business();
+	$md .= "### What to do\n\n";
+	$md .= "1. Start from \"At a glance\" and \"Data notes\", then read the funnel, products, landing pages, problems, form abandonment, what visitors told us, and the journeys. Compare the buyers' journeys with the non-buyers': what did buyers see or do that the others did not?\n";
+	$md .= "2. Work out the most likely reasons visitors do not buy, biggest first. Back each with numbers from this report, and say when a number is too small to trust (under about 30 visits is a hint, not proof).\n";
+	$md .= "3. Check each cause against the code before changing anything. All site code is in the custom theme at `wp-content/themes/tr-wholesale/` (see the page map). Open the page on a phone-sized screen (390 px wide) as well as a computer: most visitors are on phones.\n";
+	$md .= "4. Fix what can be fixed in the theme: errors visitors hit, pricing messages that show before anyone typed, landing pages whose first screen does not show the product, price and a clear button, mobile layout problems, form friction, missing trust details (shipping, turnaround, proof before printing), broken links. Make the smallest change that fixes the cause and explain each one.\n";
+	$md .= "5. List separately what has to change outside the website: Google Ads (campaigns, asset groups, keywords, negative keywords, placements, networks, locations, ad schedule, bids, IP exclusions), Merchant Center, and follow-up by the team (quote requests, calls, chats, abandoned carts).\n";
+	$md .= "6. Do not invent numbers that are not in this report. If something needed is missing, say what data would answer it.\n\n";
+	$md .= "### How to answer\n\n";
+	$md .= "1. **Diagnosis** — three to five sentences: the main reasons visitors are not buying, with the numbers behind them.\n";
+	$md .= "2. **Top actions** — a table ranked by how many extra orders or leads each is likely to bring: # · change · evidence (section and number) · where (file, or Google Ads screen) · effort (small / medium / large) · number to watch in the next report.\n";
+	$md .= "3. **Website changes** — make them one at a time, explain each, and finish with the list of changed files for upload.\n";
+	$md .= "4. **Google Ads and Merchant Center** — exact steps (screen → setting → value); these cannot be changed in code.\n";
+	$md .= "5. **Team follow-up** — who to contact and what to send (from the leads, chats and suggestions sections).\n";
+	$md .= "6. **Next report** — what to compare after the changes have been live for 7–14 days.\n\n";
+
+	$md .= "## At a glance\n\n" . wholesale_vi_md_glance($all, $ads, $products, $period);
+	$md .= "## Data notes (read before drawing conclusions)\n\n" . wholesale_vi_md_data_notes($all, $ads);
 
 	$md .= "## Page map: page types → theme files\n\n";
 	$rows = array();
 	foreach (wholesale_vi_page_type_files() as $type => $files) {
 		$rows[] = array($type, '`' . implode('`, `', $files) . '`');
 	}
-	$md .= wholesale_vi_md_table(array('Page type', 'Files (in wp-content/themes/wholesale/)'), $rows) . "\n";
+	$md .= wholesale_vi_md_table(array('Page type', 'Files (in wp-content/themes/tr-wholesale/)'), $rows) . "\n";
 
 	$conv = static function ($s) {
 		return wholesale_vi_pct(($s['orders'] ?? 0) + ($s['leads'] ?? 0), $s['sessions'] ?? 0, 1);
@@ -3404,6 +5179,9 @@ function wholesale_vi_export_markdown($period, $filters)
 	$money = static function ($s) {
 		return wholesale_vi_money($s['revenue'] ?? 0);
 	};
+	$per_visit = static function ($s) {
+		return !empty($s['sessions']) ? wholesale_vi_money(($s['revenue'] ?? 0) / $s['sessions']) : '—';
+	};
 	$md .= "## Key numbers\n\n";
 	$md .= wholesale_vi_md_table(array('Metric', 'All traffic', 'Previous period', 'Google Ads', 'Ads previous period'), array(
 		array('Visits', $num($m, 'sessions'), $num($prev, 'sessions'), $num($a, 'sessions'), $num($ap, 'sessions')),
@@ -3417,7 +5195,13 @@ function wholesale_vi_export_markdown($period, $filters)
 		array('Orders', $num($m, 'orders'), $num($prev, 'orders'), $num($a, 'orders'), $num($ap, 'orders')),
 		array('Revenue', $money($m), $money($prev), $money($a), $money($ap)),
 		array('Conversion rate (orders + leads)', $conv($m), $conv($prev), $conv($a), $conv($ap)),
+		array('Returning visits (visitor came before)', $rate($m, 'returning_visits'), $rate($prev, 'returning_visits'), $rate($a, 'returning_visits'), $rate($ap, 'returning_visits')),
+		array('Got a price (configured a product)', $num($m, 's3'), $num($prev, 's3'), $num($a, 's3'), $num($ap, 's3')),
+		array('Reached checkout', $num($m, 's5'), $num($prev, 's5'), $num($a, 's5'), $num($ap, 's5')),
+		array('Revenue per visit', $per_visit($m), $per_visit($prev), $per_visit($a), $per_visit($ap)),
 	)) . "\n";
+
+	$md .= "## Day by day\n\nUse this to line up changes on the site or in Google Ads with what happened next.\n\n" . wholesale_vi_md_trend($all, $period) . "\n";
 
 	$md .= "## Automatic findings\n\n";
 	foreach (array('All traffic' => $all['findings'], 'Google Ads' => $ads['findings']) as $label => $findings) {
@@ -3446,6 +5230,10 @@ function wholesale_vi_export_markdown($period, $filters)
 	$md .= wholesale_vi_md_table(array('Step', 'All traffic', 'Lost from previous step', 'Google Ads', 'Lost from previous step'), $rows);
 	$md .= sprintf("\nLeads (calls, emails, quote requests) are counted outside the funnel: all traffic %d, Google Ads %d.\n\n", $m['leads'], $a['leads']);
 
+	$md .= "## Products: viewed → priced → cart → bought\n\n";
+	$md .= "Most-viewed product pages (all use `single-product.php`; the channel letter builder is `cl_builderr.php`), plus any product that sold. \"Got a price\" = changed an option or saw a price. \"Saw a pricing error\" = a size or text message such as \"Please enter the height\"; if it is close to the number of views, the message probably shows before the visitor typed anything. \"Prices shown\" are the totals visitors were quoted for the sizes they chose.\n\n";
+	$md .= wholesale_vi_md_products($products) . "\n";
+
 	$md .= "## Orders and where they came from\n\nEach order is credited to the last ad click in the 90 days before it (as Google Ads does), else the last search or referral visit.\n\n";
 	$rows = array();
 	foreach ($all['orders'] as $order) {
@@ -3457,6 +5245,8 @@ function wholesale_vi_export_markdown($period, $filters)
 		$rows[] = array(
 			wholesale_vi_date($order['ordered_gmt'], 'M j, Y'),
 			wholesale_vi_money($order['total']),
+			wholesale_vi_order_items_text($order['id']),
+			$source && !empty($source['device']) ? $source['device'] : '—',
 			$label,
 			$source && '' !== $source['keyword'] ? $source['keyword'] : '—',
 			$source && '' !== $source['campaign'] ? wholesale_vi_campaign_name($source['campaign']) : '—',
@@ -3465,22 +5255,23 @@ function wholesale_vi_export_markdown($period, $filters)
 			!$source ? '—' : ($source['visit_id'] === $source['order_visit_id'] ? 'same visit' : wholesale_vi_time_between($source['visit_at'], $source['ordered_at']) . ' later'),
 		);
 	}
-	$md .= wholesale_vi_md_table(array('Ordered', 'Total', 'Source', 'Keyword', 'Campaign', 'Landing page', 'Visits', 'Ordered after the credited visit'), $rows) . "\n";
+	$md .= wholesale_vi_md_table(array('Ordered', 'Total', 'Bought', 'Device', 'Source', 'Keyword', 'Campaign', 'Landing page', 'Visits', 'Ordered after the credited visit'), $rows) . "\n";
 
 	$md .= "## Landing pages (first page of each visit)\n\n### All traffic\n\n" . wholesale_vi_md_breakdown($all['landing'], 'Page → template', $template_label);
-	$md .= "\n### Google Ads\n\n" . wholesale_vi_md_breakdown($ads['landing'], 'Page → template', $template_label) . "\n";
+	$md .= "\n### Google Ads\n\n" . wholesale_vi_md_breakdown($ads['landing'], 'Page → template', $template_label);
+	$md .= "\n### First-screen check (all traffic)\n\nFor visitors who bounced: how far down the page they scrolled before leaving. Near 0% means they judged the page on the first screen alone, so the first screen (on phones especially) must show the product from the ad, a price and one clear button.\n\n" . wholesale_vi_md_landing_check($period, $filters) . "\n";
 
 	$md .= "## Exit pages of visitors who did not buy\n\n" . wholesale_vi_md_breakdown($all['exits'], 'Last page → template', $template_label) . "\n";
 
 	$md .= "## Problems visitors hit\n\n";
 	$rows = array();
 	foreach ($all['problems'] as $row) {
-		$rows[] = array(wholesale_vi_event_label($row['type']), $row['label'] ?: '—', $row['hits'], $row['sessions'], wholesale_vi_error_files($row['type']));
+		$rows[] = array(wholesale_vi_event_label($row['type']), $row['label'] ?: '—', $row['hits'], $row['sessions'], (int) ($row['buyers'] ?? 0), wholesale_vi_problem_pages($row['type'], $row['label'], $period, $filters), wholesale_vi_error_files($row['type']));
 	}
 	foreach ($all['not_found'] as $row) {
-		$rows[] = array('Page not found (404)', wholesale_vi_short_path($row['label'], 90), $row['hits'], $row['sessions'], 'Fix the link pointing here, or add a redirect');
+		$rows[] = array('Page not found (404)', wholesale_vi_short_path($row['label'], 90), $row['hits'], $row['sessions'], '—', '—', 'Fix the link pointing here, or add a redirect');
 	}
-	$md .= wholesale_vi_md_table(array('Problem', 'Exact message / element', 'Times', 'Visitors', 'Where to look'), $rows) . "\n";
+	$md .= wholesale_vi_md_table(array('Problem', 'Exact message / element', 'Times', 'Visitors', 'Of them bought anyway', 'Pages (visitors)', 'Where to look'), $rows) . "\n";
 
 	$md .= "## Form abandonment\n\n";
 	$rows = array();
@@ -3491,14 +5282,19 @@ function wholesale_vi_export_markdown($period, $filters)
 
 	$md .= "## What visitors click\n\n";
 	$rows = array();
-	foreach ($all['clicks'] as $row) {
+	foreach (wholesale_vi_event_breakdown(array('click', 'call_click', 'email_click'), $period['start_gmt'], $period['end_gmt'], $filters, 25) as $row) {
 		$rows[] = array(('click' !== $row['type'] ? wholesale_vi_event_label($row['type']) . ': ' : '') . ($row['label'] ?: '(no text)'), $row['hits'], $row['sessions'], $row['buyers']);
 	}
 	$md .= wholesale_vi_md_table(array('Button / link', 'Clicks', 'Visitors', 'Of them bought'), $rows) . "\n";
 
+	$md .= "## What visitors told us\n\nTheir own words are the best clue to what is missing on the site.\n\n";
+	$md .= wholesale_vi_md_exit_survey($period, $filters);
+	$md .= wholesale_vi_md_chats($period, $filters);
+
 	$md .= "## Audience\n\n### Traffic sources\n\n" . wholesale_vi_md_breakdown($all['channels'], 'Source', static function ($row) {
 		return wholesale_vi_channels()[$row['label']] ?? $row['label'];
 	});
+	$md .= "\n### New vs returning visitors\n\n" . wholesale_vi_md_breakdown(wholesale_vi_breakdown("IF(s.is_new = 1, 'New visitor', 'Returning visitor')", $period['start_gmt'], $period['end_gmt'], $filters, 2), 'Visitor');
 	$md .= "\n### Devices (all traffic)\n\n" . wholesale_vi_md_breakdown($all['devices'], 'Device');
 	$md .= "\n### Devices (Google Ads)\n\n" . wholesale_vi_md_breakdown($ads['devices'], 'Device');
 	$md .= "\n### Browsers\n\n" . wholesale_vi_md_breakdown($all['browsers'], 'Browser');
@@ -3507,9 +5303,20 @@ function wholesale_vi_export_markdown($period, $filters)
 	}) . "\n";
 
 	$md .= "## Google Ads detail\n\n### Keywords (utm_term)\n\n" . wholesale_vi_md_breakdown($ads['keywords'], 'Keyword');
-	$md .= "\n### Campaigns (utm_campaign)\n\n" . wholesale_vi_md_breakdown($ads['campaigns'], 'Campaign', static function ($row) {
-		return wholesale_vi_campaign_name($row['label']);
+	$rows = array();
+	foreach ($ads['campaigns'] as $row) {
+		$type = wholesale_vi_campaign_type($row['label']);
+		$rows[] = array_merge(
+			array(('(not set)' === $row['label'] ? '(not set)' : wholesale_vi_campaign_name($row['label'])) . ($type ? ' [' . $type . ']' : '')),
+			wholesale_vi_md_metrics($row),
+			array(max((int) $row['orders'], (int) $row['credited_orders']), $row['credited_revenue'] > 0 ? wholesale_vi_money($row['credited_revenue']) : '—')
+		);
+	}
+	$md .= "\n### Campaigns\n\n" . wholesale_vi_md_table(array('Campaign', 'Visits', 'Bounce', 'Avg. engaged', 'Viewed product', 'Cart', 'Leads', 'Orders in visit', 'Conv.', 'Orders earned', 'Revenue earned'), $rows);
+	$md .= "\n### Where the ads were clicked (from the referring page)\n\n" . wholesale_vi_md_breakdown($ads['networks'], 'Network', static function ($row) {
+		return wholesale_vi_ad_networks()[$row['label']] ?? ($row['label'] ?: 'Unknown');
 	});
+	$md .= "\n### Partner websites that sent ad clicks\n\n" . wholesale_vi_md_breakdown($ads['placements'], 'Site');
 	$rows = array();
 	foreach ($ads['hours'] as $hour => $row) {
 		if ($row['sessions']) {
@@ -3520,13 +5327,20 @@ function wholesale_vi_export_markdown($period, $filters)
 	$rows = array();
 	foreach ($ads['repeat_clickers'] as $row) {
 		$ip = false !== strpos($row['ip'], ':') ? implode(':', array_slice(explode(':', $row['ip']), 0, 2)) . ':…' : preg_replace('/\.\d+$/', '.x', $row['ip']);
-		$rows[] = array($ip, $row['clicks'], $row['devices'], wholesale_vi_duration($row['avg_engaged']), $row['orders'] > 0 ? 'bought' : ($row['leads'] > 0 ? 'lead' : 'nothing'));
+		$rows[] = array($ip, $row['clicks'], $row['devices'], wholesale_vi_duration($row['avg_engaged']), ($row['orders'] > 0 ? 'bought' : ($row['leads'] > 0 ? 'lead' : 'nothing')) . (!empty($row['carrier']) ? ' (phone carrier, shared IP: do not exclude)' : ''));
 	}
 	$md .= "\n### Repeat ad clickers (3+ ad clicks from one IP; partly masked)\n\n" . wholesale_vi_md_table(array('IP', 'Ad clicks', 'Devices', 'Avg. engaged', 'Result'), $rows);
 	$md .= "\nFull IP addresses for Google Ads IP exclusions are on the Google Ads tab of Visitor Insights.\n\n";
 
+	if (function_exists('wholesale_vi_md_growth')) {
+		$md .= wholesale_vi_md_growth($period) . "\n";
+	}
+
+	$md .= "## Journeys of visitors who bought\n\nThe most recent order visits, to compare with the visits below that did not buy. Times are minutes:seconds from the start of the visit.\n";
+	$md .= wholesale_vi_md_journeys($period, $filters, 6, true) . "\n";
+
 	$md .= "## Sample journeys of visitors who showed interest but did not buy\n\nFurthest-reaching visits first. Times are minutes:seconds from the start of the visit.\n";
-	$md .= wholesale_vi_md_journeys($period, $filters) . "\n";
+	$md .= wholesale_vi_md_journeys($period, $filters, 20) . "\n";
 
 	$md .= "## Definitions\n\n";
 	$md .= "- **Visit:** one browsing session; a new visit starts after 30 idle minutes or a new ad click.\n";
@@ -3534,6 +5348,10 @@ function wholesale_vi_export_markdown($period, $filters)
 	$md .= "- **Engaged time:** time the page was open, visible and in use (60 seconds without input stops the clock).\n";
 	$md .= "- **Funnel steps:** 2 = opened a product or the sign builder; 3 = changed an option or got a price; 4 = added to cart; 5 = opened checkout; 6 = clicked pay; 7 = order placed.\n";
 	$md .= "- **Lead:** clicked a phone or email link, or submitted a quote form.\n";
+	$md .= "- **Returning visit:** the browser had visited before (same device and browser; cleared cookies count as new).\n";
+	$md .= "- **Location:** the browser's time zone, not an IP lookup; VPNs and travel make it approximate.\n";
+	$md .= "- **Robots:** visits from automated browsers (a screen size only crawlers report, such as 1024x1024 on Linux; Google's own checkers) are left out of every number." . (!empty($all['robots']) ? ' ' . $all['robots'] . ' were left out of this range.' : '') . "\n";
+	$md .= "- **AI assistants:** visits from links in ChatGPT, Copilot, Perplexity, Gemini and similar (counted as referrals before Nov 9, 2026).\n";
 	$md .= "- **Rage click:** three fast clicks on the same spot, usually on something that looks clickable but does nothing.\n";
 
 	return $md;
@@ -3576,16 +5394,21 @@ function wholesale_vi_render_export_bar($period, $filters)
 		'to' => 'custom' === $period['key'] ? $period['end']->modify('-1 second')->format('Y-m-d') : '',
 		'channel' => $filters['channel'] ?? '',
 		'device' => $filters['device'] ?? '',
+		'network' => $filters['network'] ?? '',
 	));
 	?>
 	<div class="wvi-export wvi-card">
 		<span class="wvi-export-icon dashicons dashicons-media-text"></span>
 		<div class="wvi-export-text">
 			<strong>Export insights report</strong>
-			<span class="wvi-muted"><?php echo esc_html($period['label']); ?> · all traffic and Google Ads · a Markdown file to give to Claude, which can then find and fix what stops visitors from buying. No names, emails or full IPs.</span>
+			<span class="wvi-muted"><?php echo esc_html($period['label']); ?> · all traffic and Google Ads · a Markdown brief for Claude: business rules, funnel, every product's views → price → cart → orders, landing pages, errors, survey answers and chat questions, buyer and non-buyer journeys, and the answer format. Claude can then find and fix what stops visitors from buying. No names, emails or full IPs.</span>
 		</div>
 		<a class="button" href="<?php echo esc_url(wholesale_vi_export_url($args)); ?>"><span class="dashicons dashicons-download"></span> Download .md</a>
 		<button type="button" class="button button-primary wvi-copy-report" data-url="<?php echo esc_url(wholesale_vi_export_url(array_merge($args, array('inline' => 1)))); ?>"><span class="dashicons dashicons-clipboard"></span> <span>Copy for Claude</span></button>
 	</div>
 	<?php
 }
+
+require_once __DIR__ . '/visitor-insights-leads.php';
+require_once __DIR__ . '/visitor-insights-chat-ai.php';
+require_once __DIR__ . '/visitor-snaps.php';

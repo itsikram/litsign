@@ -7,10 +7,12 @@
  *   companies), never retail terms (custom/near me/cost/{place}, storefront
  *   signs, print products);
  * - title formula "{Primary keyword} | Storefront Sign Wholesale";
- * - no Product/Offer/price markup (prices are login-only), no Merchant feed,
+ * - public Product details, but no Offer/price markup (prices are login-only), no Merchant feed,
  *   no LocalBusiness, no location pages;
- * - only channel letter pages and trade pages are indexed; the rest of the
- *   catalog is noindex,follow and out of the sitemap.
+ * - every public page is indexed and in the sitemap: channel letter and trade
+ *   pages, the rest of the catalog (price-free product and category pages) and
+ *   the public content pages (owner, 2026-11-20). Private, order, redirected
+ *   and retired pages stay noindex and out of the sitemap.
  *
  * @package litsign
  */
@@ -31,6 +33,9 @@ add_action('after_setup_theme', static function () {
 	remove_action('template_redirect', 'wholesale_render_product_sitemap', 0);
 	remove_action('template_redirect', 'wholesale_render_category_sitemap', 0);
 	remove_action('wp_head', 'rel_canonical');
+	// /channel-letters/ is the trade hub (template-parts/trade/channel-letters.php). The retail
+	// 301 to /custom-channel-letters/ (a noindexed retail page) ran first and hid it.
+	remove_action('template_redirect', 'wholesale_seo_redirect_channel_letters', 1);
 }, 99);
 
 /** The 7 channel letter types, keyed by product slug (data/trade/channel-letters.php). */
@@ -77,6 +82,169 @@ function wholesale_trade_virtual_page()
 	return isset($GLOBALS['wholesale_trade_virtual_page']) ? (string) $GLOBALS['wholesale_trade_virtual_page'] : '';
 }
 
+/** A product or category name without the retail brand ("Clear Acrylic Prints | Storefront Sign Online"). */
+function wholesale_trade_clean_name($name)
+{
+	$name = html_entity_decode(wp_strip_all_tags((string) $name), ENT_QUOTES, 'UTF-8');
+	$name = (string) preg_replace('/\s*[|:\x{2013}\x{2014}-]?\s*Storefront\s+Signs?\s+Online\b/iu', '', $name);
+	return trim((string) preg_replace('/\s+/u', ' ', $name), " \t,|:-");
+}
+
+/**
+ * Title for a catalog product or category that fits the ~60 characters Google
+ * shows, leading with the trade search term: "Wholesale {name} | brand", then
+ * "Wholesale {name} for Sign Shops", then "Wholesale {name}".
+ */
+function wholesale_trade_catalog_title($name)
+{
+	$name = wholesale_trade_clean_name($name);
+	$core = preg_match('/\bwholesale\b/i', $name) ? $name : 'Wholesale ' . $name;
+	foreach (array($core . ' | Storefront Sign Wholesale', $core . ' for Sign Shops') as $title) {
+		if (mb_strlen($title) <= 60) {
+			return $title;
+		}
+	}
+	return $core;
+}
+
+/** A meta description cut at a word to the ~160 characters Google shows. */
+function wholesale_trade_fit_description($text, $max = 160)
+{
+	$text = trim((string) preg_replace('/\s+/u', ' ', (string) $text));
+	if (mb_strlen($text) <= $max) {
+		return $text;
+	}
+	$cut = mb_substr($text, 0, $max - 1);
+	$space = mb_strrpos($cut, ' ');
+	if (false !== $space && $space > 80) {
+		$cut = mb_substr($cut, 0, $space);
+	}
+	return rtrim($cut, " ,;:-\x{2013}\x{2014}.…") . '…';
+}
+
+/**
+ * The page a copy points search engines at: "reviews-2" with the same title as
+ * a published "reviews" page. 0 when the page is not a copy.
+ */
+function wholesale_trade_page_duplicate_of($page_id)
+{
+	$slug = (string) get_post_field('post_name', $page_id);
+	if (!preg_match('/^(.+)-\d+$/', $slug, $match)) {
+		return 0;
+	}
+	$original = get_page_by_path($match[1]);
+	if (!$original || 'publish' !== $original->post_status || (int) $original->ID === (int) $page_id) {
+		return 0;
+	}
+	$name = static function ($id) {
+		return strtolower((string) preg_replace('/[^a-z0-9]+/i', '', html_entity_decode(get_the_title($id), ENT_QUOTES, 'UTF-8')));
+	};
+	return $name($original->ID) === $name($page_id) ? (int) $original->ID : 0;
+}
+
+/** Plain text for a meta description: no tags, shortcodes or price amounts, one line. */
+function wholesale_trade_meta_text($text, $words)
+{
+	// List items, paragraphs and line breaks become sentences, not one run-on line.
+	$text = (string) preg_replace('#</(?:li|p|h[1-6]|div|td)>|<br\s*/?>|\r?\n#i', '. ', strip_shortcodes((string) $text));
+	$text = wp_strip_all_tags($text);
+	$text = (string) preg_replace('/([.!?;:,])(\s*\.)+/u', '$1', (string) preg_replace('/^[\s.]+|(\s*\.){2,}/u', '.', $text));
+	$text = ltrim($text, ' .');
+	if (function_exists('wholesale_trade_strip_price_text')) {
+		$text = wholesale_trade_strip_price_text($text);
+	}
+	$text = trim((string) preg_replace('/\s+/u', ' ', html_entity_decode($text, ENT_QUOTES, 'UTF-8')));
+	return '' === $text ? '' : wp_trim_words($text, $words, '…');
+}
+
+/** Description for a catalog product page: its name, then its own short copy. */
+function wholesale_trade_product_description($product_id)
+{
+	$text = '';
+	foreach (array((string) get_post_field('post_excerpt', $product_id), (string) get_post_meta($product_id, '_product_short_desc', true), (string) get_post_field('post_content', $product_id)) as $source) {
+		$text = wholesale_trade_meta_text($source, 16);
+		if ('' !== $text) {
+			break;
+		}
+	}
+	$lead = 'Wholesale ' . wholesale_trade_clean_name(get_the_title($product_id)) . ' for sign companies and resellers.';
+	return wholesale_trade_fit_description('' === $text ? $lead . ' Trade pricing and online ordering once your account is approved.' : $lead . ' ' . $text);
+}
+
+/** Description for a product category page. */
+function wholesale_trade_category_description($term)
+{
+	if (!$term || is_wp_error($term)) {
+		return 'Trade-only products for approved accounts of Storefront Sign Wholesale.';
+	}
+	$text = wholesale_trade_meta_text(term_description($term), 18);
+	$lead = 'Wholesale ' . wholesale_trade_clean_name($term->name) . ' for sign companies, installers and resellers, with trade pricing for approved accounts.';
+	return wholesale_trade_fit_description('' === $text ? $lead : $lead . ' ' . $text);
+}
+
+/** Description for a public content page (trade copy, not the retail guide text). */
+function wholesale_trade_page_description($page_id)
+{
+	$known = array(
+		'contact' => 'Contact Storefront Sign Wholesale trade sales for channel letter quotes, artwork questions and order help. For sign companies, installers and resellers.',
+		'reviews' => 'Customer reviews of Storefront Sign Wholesale channel letters and signs: build quality, packaging, shipping and support.',
+		'warranty' => 'Warranty and claims for Storefront Sign Wholesale products: how to report a defect or order issue, and the five-year channel letter warranty.',
+		'shipping-returns' => 'How Storefront Sign Wholesale ships trade orders: UPS and FedEx options, free blind drop ship and pickup, plus cancellations, reprints and damage claims.',
+		'design-templates' => 'Print templates and artwork guides for banners, flags, displays and signs, so trade orders print at the right size with the right bleed.',
+		'how-to-install-channel-letters' => 'Channel letter installation for sign crews, step by step: raceway or direct mount, the install pattern, power and inspection.',
+		'sign-permits' => 'How sign permits work for lit channel letters: what cities ask for, sign drawings, UL labels and the electrician checklist your crew needs.',
+		'banners-displays' => 'Wholesale banners and displays for sign companies: vinyl and fabric banners, banner stands, flags and trade show displays, with trade pricing.',
+		'window-graphics' => 'Wholesale window graphics and adhesive vinyl for sign shops: perforated window film, frosted and clear vinyl, window clings and wall graphics.',
+	);
+	$slug = (string) get_post_field('post_name', $page_id);
+	if (isset($known[$slug])) {
+		return $known[$slug];
+	}
+	$text = wholesale_trade_meta_text(get_post_field('post_excerpt', $page_id), 22);
+	return '' !== $text ? $text : wp_strip_all_tags(get_the_title($page_id)) . ' from Storefront Sign Wholesale, the trade-only channel letter and sign fabricator for sign companies, installers and resellers.';
+}
+
+/** Pages that must stay out of search: account, order, payment and placeholder pages. */
+function wholesale_trade_is_private_page()
+{
+	return in_array((int) get_queried_object_id(), array_map('intval', wholesale_seo_noindex_page_ids()), true)
+		|| is_page('shop') || is_page_template('page-shop.php') // Priced catalog: approved accounts only.
+		|| (function_exists('wholesale_trade_is_order_page') && wholesale_trade_is_order_page())
+		|| (bool) get_query_var('wholesale_thank_you')
+		|| post_password_required();
+}
+
+/**
+ * Whether a published page belongs in the sitemap: public, indexable and
+ * answering 200 on the trade site (not redirected by inc/trade/settings.php or
+ * gate.php, not a retired 410 location or industry page).
+ */
+function wholesale_trade_sitemap_page_ok($page)
+{
+	$page = get_post($page);
+	if (!$page || 'page' !== $page->post_type || 'publish' !== $page->post_status || '' !== $page->post_password) {
+		return false;
+	}
+	if ((int) get_option('page_on_front') === (int) $page->ID || in_array((int) $page->ID, array_map('intval', wholesale_seo_noindex_page_ids()), true)
+		|| wholesale_trade_page_duplicate_of($page->ID)) {
+		return false;
+	}
+	$redirected = array('custom-channel-letters', 'chennel-letter-ads', 'landing-page', 'channel-letter-cost', 'storefront-signs', 'shop', 'locations', 'cart', 'checkout', 'payment', 'pay', 'my-orders', 'orders');
+	$templates = array('page-channel-letters.php', 'page-channel-letters-ads.php', 'landing-page.php', 'page-channel-letter-cost.php', 'page-storefront-signs.php', 'page-shop.php',
+		'cart.php', 'checkout.php', 'payment.php', 'page-pay.php', 'my_orders.php',
+		'page-location.php', 'page-locations.php', 'page-industry.php', 'page-industries.php', 'page-sign-packages.php');
+	if (in_array($page->post_name, $redirected, true) || in_array(get_page_template_slug($page), $templates, true)) {
+		return false;
+	}
+	if (function_exists('wholesale_guide_entry')) {
+		$entry = wholesale_guide_entry(get_page_uri($page));
+		if ($entry && (in_array($entry['template'], $templates, true) || 'live' !== $entry['status'])) {
+			return false;
+		}
+	}
+	return true;
+}
+
 /**
  * Title, description and index rule for the current request.
  *
@@ -96,7 +264,7 @@ function wholesale_trade_seo()
 	if (is_front_page()) {
 		$seo = array(
 			'title' => 'Wholesale Channel Letter Manufacturer | Trade Only Since 2002',
-			'description' => 'Wholesale channel letters for sign companies: 7 UL listed types, built in Washington and California, shipped to all 50 states with wiring diagrams and patterns.',
+			'description' => 'Wholesale channel letters for sign shops: 7 UL listed types built in Washington and California, shipped to all 50 states with wiring diagrams and patterns.',
 			'index' => true,
 			'canonical' => home_url('/'),
 		);
@@ -106,37 +274,51 @@ function wholesale_trade_seo()
 	} elseif (wholesale_trade_is_cl_hub()) {
 		$seo = array(
 			'title' => 'Wholesale Channel Letters, All 7 Types' . $brand,
-			'description' => 'Compare 7 wholesale channel letter types for your sign jobs: aluminum face, back and dual lit, plus stainless halo, reverse, trimless and borderless. Trade only.',
+			'description' => 'Compare 7 wholesale channel letter types for sign jobs: aluminum face, back and dual lit, or stainless halo, reverse, trimless and borderless. Trade only.',
 			'index' => true,
 			'canonical' => home_url('/channel-letters/'),
 		);
 	} elseif ($type = wholesale_trade_current_cl_type()) {
 		$seo = array('title' => $type['title'], 'description' => $type['description'], 'index' => true, 'canonical' => get_permalink(get_queried_object_id()));
 	} elseif (is_singular('product')) {
-		// The rest of the catalog: orderable by approved accounts, never indexed
-		// (retail owns those searches and the copy is supplier text).
+		// The rest of the catalog: price-free trade pages, indexed. A product that
+		// duplicates another ("graphic only" next to "graphic + frame") points its
+		// canonical at that one and stays out of the sitemap.
+		$product_id = get_queried_object_id();
+		$canonical_of = function_exists('wholesale_seo_product_canonical_of') ? (int) wholesale_seo_product_canonical_of($product_id) : 0;
 		$seo = array(
-			'title' => wp_strip_all_tags(get_the_title()) . ' for Trade Accounts' . $brand,
-			'description' => 'Trade-only ordering for approved sign companies. ' . wp_trim_words(wp_strip_all_tags((string) get_post_field('post_excerpt', get_queried_object_id())), 18, '…'),
-			'index' => false,
-			'canonical' => get_permalink(get_queried_object_id()),
+			'title' => wholesale_trade_catalog_title(get_the_title()),
+			'description' => wholesale_trade_product_description($product_id),
+			'index' => true,
+			'canonical' => $canonical_of ? get_permalink($canonical_of) : get_permalink($product_id),
 		);
 	} elseif (is_page('about')) {
 		$seo = array(
-			'title' => 'About Our Channel Letter Fabrication Shop' . $brand,
-			'description' => 'Storefront Sign Wholesale builds UL listed channel letters for sign companies in Washington and California, since 2002. We fabricate; your installers install.',
+			'title' => 'Channel Letter Fabrication Shop' . $brand,
+			'description' => 'Storefront Sign Wholesale builds UL listed channel letters for sign companies in Washington and California, since 2002. We fabricate; your crews install.',
 			'index' => true,
 			'canonical' => get_permalink(),
 		);
 	} elseif (is_page('terms-conditions')) {
-		$seo = array('title' => 'Trade Terms and Conditions' . $brand, 'description' => 'Terms for trade accounts ordering channel letters from Storefront Sign Wholesale: ordering, artwork approval, shipping, damage claims and warranty.', 'index' => true, 'canonical' => get_permalink());
+		$seo = array('title' => 'Trade Terms and Conditions' . $brand, 'description' => 'Terms for all Storefront Sign Wholesale products, including orders, proofs, cancellations, defect claims and reprints.', 'index' => true, 'canonical' => get_permalink());
 	} elseif (is_page('channel-letter-builder')) {
-		$seo = array('title' => 'Channel Letter Builder for Trade Accounts' . $brand, 'description' => 'Design and price channel letter sets online with a trade account: pick the type, font, height and colors, then order with shop drawings and a mounting pattern.', 'index' => false, 'canonical' => get_permalink());
+		$seo = array('title' => 'Channel Letter Builder for Trade Accounts' . $brand, 'description' => 'Design and price channel letter sets online with a trade account: pick the type, font, height and colors, then order with shop drawings and a mounting pattern.', 'index' => true, 'canonical' => get_permalink());
 	} elseif (is_page()) {
-		$seo = array('title' => wp_strip_all_tags(get_the_title()) . $brand, 'description' => 'Storefront Sign Wholesale: trade-only channel letter fabrication for sign companies, installers and resellers.', 'index' => false, 'canonical' => get_permalink());
+		$page_id = get_queried_object_id();
+		$copy_of = wholesale_trade_page_duplicate_of($page_id);
+		$seo = array('title' => wp_strip_all_tags(get_the_title()) . $brand, 'description' => wholesale_trade_page_description($copy_of ? $copy_of : $page_id), 'index' => !wholesale_trade_is_private_page(), 'canonical' => get_permalink($copy_of ? $copy_of : $page_id));
 	} elseif (get_query_var('category_slug')) {
-		$term = get_term_by('slug', sanitize_title((string) get_query_var('category_slug')), 'product_category');
-		$seo = array('title' => ($term ? $term->name : 'Products') . ' for Trade Accounts' . $brand, 'description' => 'Trade-only products for approved accounts of Storefront Sign Wholesale.', 'index' => false, 'canonical' => wholesale_category_url(sanitize_title((string) get_query_var('category_slug'))));
+		$slug = sanitize_title((string) get_query_var('category_slug'));
+		$term = get_term_by('slug', $slug, 'product_category');
+		$name = $term ? $term->name : 'Products';
+		// Empty categories are thin; redirected ones (signs-letters) never render.
+		$excluded = function_exists('wholesale_seo_sitemap_excluded_categories') ? wholesale_seo_sitemap_excluded_categories() : array();
+		$seo = array(
+			'title' => wholesale_trade_catalog_title($name),
+			'description' => wholesale_trade_category_description($term),
+			'index' => $term && !in_array($slug, $excluded, true) && !(function_exists('wholesale_seo_is_empty_category_page') && wholesale_seo_is_empty_category_page()),
+			'canonical' => wholesale_category_url($slug),
+		);
 	} elseif (is_search()) {
 		$seo = array('title' => 'Search' . $brand, 'description' => '', 'index' => false, 'canonical' => '');
 	} elseif (is_404()) {
@@ -144,6 +326,8 @@ function wholesale_trade_seo()
 	} else {
 		$seo['title'] = 'Storefront Sign Wholesale';
 	}
+
+	$seo['description'] = wholesale_trade_fit_description($seo['description']);
 
 	// Filtered or parameterized views never index (?s=, ?orderby=, utm tags…).
 	if ($seo['index'] && !empty($_GET)) {
@@ -166,7 +350,11 @@ add_filter('wp_robots', static function ($robots) {
 	if (!$seo['index']) {
 		return array('noindex' => true, 'follow' => true);
 	}
-	unset($robots['noindex'], $robots['nofollow']);
+	// Keep restrictions added earlier: core (Discourage search engines, /embed/
+	// copies) and the SEO screen's per-page noindex/nofollow.
+	if (!empty($robots['noindex']) || !empty($robots['nofollow'])) {
+		return $robots;
+	}
 	return $robots + array('max-image-preview' => 'large');
 }, 99);
 
@@ -174,6 +362,9 @@ add_filter('wp_robots', static function ($robots) {
 function wholesale_trade_crumbs()
 {
 	$crumbs = array(array('name' => 'Home', 'url' => home_url('/')));
+	if (is_front_page()) {
+		return $crumbs; // One item: no "Home > Home" trail or BreadcrumbList.
+	}
 	$virtual = wholesale_trade_virtual_page();
 	$pages = wholesale_trade_virtual_pages();
 	if ($virtual && isset($pages[$virtual])) {
@@ -184,12 +375,43 @@ function wholesale_trade_crumbs()
 		$crumbs[] = array('name' => 'Channel Letters', 'url' => home_url('/channel-letters/'));
 		$crumbs[] = array('name' => 'Type ' . $type['type'] . ': ' . $type['name'], 'url' => get_permalink(get_queried_object_id()));
 	} elseif (is_singular('product')) {
-		$crumbs[] = array('name' => 'Other trade products', 'url' => home_url('/shop/'));
+		$term = wholesale_trade_product_category(get_queried_object_id());
+		if ($term) {
+			$crumbs[] = array('name' => $term->name, 'url' => wholesale_category_url($term->slug));
+		} else {
+			$crumbs[] = array('name' => 'Other trade products', 'url' => (function_exists('wholesale_trade_can_see_prices') && wholesale_trade_can_see_prices()) ? home_url('/shop/') : home_url('/channel-letters/'));
+		}
 		$crumbs[] = array('name' => wp_strip_all_tags(get_the_title()), 'url' => get_permalink());
+	} elseif (get_query_var('category_slug') && ($term = get_term_by('slug', sanitize_title((string) get_query_var('category_slug')), 'product_category'))) {
+		$crumbs[] = array('name' => $term->name, 'url' => wholesale_category_url($term->slug));
 	} elseif (is_page()) {
 		$crumbs[] = array('name' => wp_strip_all_tags(get_the_title()), 'url' => get_permalink());
 	}
 	return $crumbs;
+}
+
+/**
+ * The category a catalog product's breadcrumb links to: its first category
+ * with a public, indexable page (the most specific one when it has several).
+ */
+function wholesale_trade_product_category($product_id)
+{
+	$terms = get_the_terms($product_id, 'product_category');
+	if (!$terms || is_wp_error($terms)) {
+		return null;
+	}
+	$excluded = function_exists('wholesale_seo_sitemap_excluded_categories') ? wholesale_seo_sitemap_excluded_categories() : array('channel-letters');
+	$terms = array_values(array_filter($terms, static function ($term) use ($excluded) {
+		return !in_array($term->slug, $excluded, true);
+	}));
+	if (!$terms) {
+		return null;
+	}
+	// Children before parents: "Flag Hardware" over "Hardware Only".
+	usort($terms, static function ($a, $b) {
+		return ((int) (0 === (int) $a->parent)) - ((int) (0 === (int) $b->parent)) ?: strcmp($a->name, $b->name);
+	});
+	return $terms[0];
 }
 
 function wholesale_trade_render_crumbs()
@@ -231,14 +453,24 @@ add_action('wp_head', static function () {
 		echo '<meta name="description" content="' . esc_attr($seo['description']) . '">' . "\n";
 	}
 
-	$image = '';
-	if ($type = wholesale_trade_current_cl_type()) {
-		$image = get_the_post_thumbnail_url(get_queried_object_id(), 'large');
-	} elseif (is_front_page() || wholesale_trade_is_cl_hub()) {
-		$front = wholesale_trade_cl_product_id('standard-channel-letter-front-lit');
-		$image = $front ? get_the_post_thumbnail_url($front, 'large') : '';
+	// Share image by real size (full file, not a resized copy): a product's own
+	// photo when it is at least 600px wide, else the front page hero (the
+	// large storefront photo), else the logo. [url, width, height].
+	$image_src = array();
+	if (is_singular('product')) {
+		$thumb = wp_get_attachment_image_src((int) get_post_thumbnail_id(get_queried_object_id()), 'full');
+		$image_src = ($thumb && (int) $thumb[1] >= 600) ? $thumb : array();
 	}
-	$image = $image ? $image : wholesale_trade_logo_url();
+	if (!$image_src) {
+		$hero_id = (int) get_post_thumbnail_id((int) get_option('page_on_front'));
+		$hero = $hero_id ? wp_get_attachment_image_src($hero_id, 'full') : false;
+		$logo_id = (int) get_theme_mod('custom_logo');
+		$logo = $logo_id ? wp_get_attachment_image_src($logo_id, 'full') : false;
+		$image_src = $hero ? $hero : ($logo ? $logo : array());
+	}
+	$image = $image_src ? (string) $image_src[0] : '';
+	$image_w = $image_src ? (int) $image_src[1] : 0;
+	$image_h = $image_src ? (int) $image_src[2] : 0;
 
 	$og = array(
 		'og:type' => 'website',
@@ -247,11 +479,13 @@ add_action('wp_head', static function () {
 		'og:description' => $seo['description'],
 		'og:url' => $url,
 		'og:image' => $image,
+		'og:image:width' => $image && $image_w ? (string) $image_w : '',
+		'og:image:height' => $image && $image_h ? (string) $image_h : '',
 	);
 	foreach (array_filter($og) as $property => $content) {
 		echo '<meta property="' . esc_attr($property) . '" content="' . esc_attr($content) . '">' . "\n";
 	}
-	echo '<meta name="twitter:card" content="' . ($image ? 'summary_large_image' : 'summary') . '">' . "\n";
+	echo '<meta name="twitter:card" content="' . ($image && $image_w >= 300 ? 'summary_large_image' : 'summary') . '">' . "\n";
 
 	if (!$seo['index']) {
 		return;
@@ -298,8 +532,15 @@ add_action('wp_head', static function () {
 	);
 	if ($image) {
 		$page['primaryImageOfPage'] = array('@type' => 'ImageObject', 'url' => $image);
+		if ($image_w && $image_h) {
+			$page['primaryImageOfPage'] += array('width' => $image_w, 'height' => $image_h);
+		}
 	}
-	if (is_singular()) {
+	// Same date as the sitemap lastmod (content built from code counts).
+	$modified_key = is_front_page() ? 'home' : (wholesale_trade_is_cl_hub() ? 'hub' : (wholesale_trade_current_cl_type() ? 'type' : (is_page('about') ? 'about' : (is_page('terms-conditions') ? 'terms-conditions' : ''))));
+	if ($modified_key) {
+		$page['dateModified'] = wholesale_trade_content_modified(is_singular() ? get_queried_object_id() : 0, $modified_key);
+	} elseif (is_singular()) {
 		$page['dateModified'] = get_post_modified_time('c', true, get_queried_object_id());
 	}
 	if (count($crumbs) > 1) {
@@ -310,7 +551,7 @@ add_action('wp_head', static function () {
 		}
 		$graph[] = array('@type' => 'BreadcrumbList', '@id' => trailingslashit($url) . '#breadcrumb', 'itemListElement' => $list);
 	}
-	// Hubs list the 7 types (no Product markup: prices are login-only).
+	// Hubs list the 7 types; only their own pages describe them as Products.
 	if (is_front_page() || wholesale_trade_is_cl_hub()) {
 		$items = array();
 		foreach (wholesale_trade_cl_types() as $slug => $type) {
@@ -322,6 +563,37 @@ add_action('wp_head', static function () {
 		if ($items) {
 			$page['mainEntity'] = array('@type' => 'ItemList', 'name' => 'Wholesale channel letter types', 'numberOfItems' => count($items), 'itemListElement' => $items);
 		}
+	}
+	if ($type = wholesale_trade_current_cl_type()) {
+		$product_id = get_queried_object_id();
+		$product = array(
+			'@type' => 'Product',
+			'@id' => trailingslashit($url) . '#product',
+			'name' => $type['h1'],
+			'description' => $type['lead'],
+			'url' => $url,
+			'category' => 'Wholesale channel letters',
+			'material' => 'aluminum' === $type['family'] ? 'Aluminum' : 'Stainless steel',
+			'manufacturer' => array('@id' => $home . '#organization'),
+			'additionalProperty' => array(),
+		);
+		$photo = get_the_post_thumbnail_url($product_id, 'full');
+		if (!$photo && !empty($type['image'])) {
+			$filename = basename($type['image']);
+			if (is_file(WP_CONTENT_DIR . '/uploads/storefront-files/' . $filename)) {
+				$photo = content_url('uploads/storefront-files/' . $filename);
+			}
+		}
+		if ($photo) {
+			$product['image'] = array($photo);
+		}
+		foreach ($type['specs'] as $label => $value) {
+			$product['additionalProperty'][] = array('@type' => 'PropertyValue', 'name' => $label, 'value' => $value);
+		}
+		$product['additionalProperty'][] = array('@type' => 'PropertyValue', 'name' => 'Warranty', 'value' => '5 years');
+		$product['additionalProperty'][] = array('@type' => 'PropertyValue', 'name' => 'Built in', 'value' => 'Washington and California; ships to all 50 states');
+		$page['mainEntity'] = array('@id' => $product['@id']);
+		$graph[] = $product;
 	}
 	$graph[] = $page;
 
@@ -340,13 +612,45 @@ add_action('wp_footer', static function () {
 	echo '<script type="application/ld+json">' . wp_json_encode(array('@context' => 'https://schema.org', '@type' => 'FAQPage', 'mainEntity' => $entities), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
 }, 5);
 
-/** Every indexable trade URL (the sitemap lists exactly these). */
+/**
+ * Last change to a page's visible content: the later of the post's modified
+ * date and the newest template/data file that renders it (these pages are
+ * built from code, so post_modified alone is stale). Never the current time.
+ *
+ * @param int    $post_id Post behind the page, or 0.
+ * @param string $key     'home', 'hub', 'type', 'about' or 'terms-conditions'.
+ */
+function wholesale_trade_content_modified($post_id, $key)
+{
+	$data = 'data/trade/channel-letters.php';
+	$content = 'inc/trade/content.php';
+	$files = array(
+		'home' => array('template-parts/trade/home.php', $data, $content),
+		'hub' => array('template-parts/trade/channel-letters.php', $data, $content),
+		'type' => array('template-parts/trade/product.php', $data),
+		'about' => array('template-parts/trade/about.php', $content),
+		'terms-conditions' => array('template-parts/trade/terms.php'),
+	);
+	$time = $post_id ? (int) get_post_modified_time('U', true, $post_id) : 0;
+	foreach (isset($files[$key]) ? $files[$key] : array() as $file) {
+		$path = get_template_directory() . '/' . $file;
+		if (is_file($path)) {
+			$time = max($time, (int) filemtime($path));
+		}
+	}
+	return $time ? gmdate('c', $time) : '';
+}
+
+/** Every indexable trade URL (the sitemap lists exactly these): trade pages first, then content pages, categories and products. */
 function wholesale_trade_sitemap_urls()
 {
-	$urls = array(home_url('/') => current_time('c'), home_url('/channel-letters/') => current_time('c'));
+	$urls = array(
+		home_url('/') => wholesale_trade_content_modified((int) get_option('page_on_front'), 'home'),
+		home_url('/channel-letters/') => wholesale_trade_content_modified(0, 'hub'),
+	);
 	foreach (array_keys(wholesale_trade_cl_types()) as $slug) {
 		if ($id = wholesale_trade_cl_product_id($slug)) {
-			$urls[get_permalink($id)] = get_post_modified_time('c', true, $id);
+			$urls[get_permalink($id)] = wholesale_trade_content_modified($id, 'type');
 		}
 	}
 	foreach (wholesale_trade_virtual_pages() as $path => $page) {
@@ -355,7 +659,52 @@ function wholesale_trade_sitemap_urls()
 	foreach (array('about', 'terms-conditions') as $slug) {
 		$page = get_page_by_path($slug);
 		if ($page && 'publish' === $page->post_status) {
-			$urls[get_permalink($page)] = get_post_modified_time('c', true, $page);
+			$urls[get_permalink($page)] = wholesale_trade_content_modified((int) $page->ID, $slug);
+		}
+	}
+
+	// The public content pages (contact, warranty, guides...).
+	$pages = get_posts(array('post_type' => 'page', 'post_status' => 'publish', 'posts_per_page' => -1, 'orderby' => 'menu_order title', 'order' => 'ASC', 'no_found_rows' => true));
+	foreach ($pages as $page) {
+		$url = get_permalink($page);
+		if ($url && !isset($urls[$url]) && wholesale_trade_sitemap_page_ok($page)) {
+			$urls[$url] = get_post_modified_time('c', true, $page);
+		}
+	}
+
+	// Category pages with products, dated by their newest product.
+	$excluded_terms = function_exists('wholesale_seo_sitemap_excluded_categories') ? wholesale_seo_sitemap_excluded_categories() : array('channel-letters');
+	foreach (function_exists('wholesale_seo_sitemap_categories') ? wholesale_seo_sitemap_categories() : array() as $term) {
+		$url = wholesale_category_url($term->slug);
+		if (in_array($term->slug, $excluded_terms, true) || isset($urls[$url])) {
+			continue;
+		}
+		$newest = get_posts(array(
+			'post_type' => 'product',
+			'post_status' => 'publish',
+			'posts_per_page' => 1,
+			'orderby' => 'modified',
+			'order' => 'DESC',
+			'no_found_rows' => true,
+			'tax_query' => array(array('taxonomy' => 'product_category', 'field' => 'term_id', 'terms' => (int) $term->term_id, 'include_children' => true)),
+		));
+		$urls[$url] = $newest ? get_post_modified_time('c', true, $newest[0]) : '';
+	}
+
+	// The rest of the catalog, minus products whose canonical is another product.
+	$products = get_posts(array(
+		'post_type' => 'product',
+		'post_status' => 'publish',
+		'posts_per_page' => -1,
+		'post__not_in' => function_exists('wholesale_seo_sitemap_excluded_product_ids') ? wholesale_seo_sitemap_excluded_product_ids() : array(),
+		'orderby' => 'title',
+		'order' => 'ASC',
+		'no_found_rows' => true,
+	));
+	foreach ($products as $product) {
+		$url = get_permalink($product);
+		if ($url && !isset($urls[$url]) && '' === $product->post_password) {
+			$urls[$url] = function_exists('wholesale_product_content_modified') ? wholesale_product_content_modified($product) : get_post_modified_time('c', true, $product);
 		}
 	}
 	return $urls;
@@ -382,6 +731,25 @@ add_action('template_redirect', static function () {
 	echo '</urlset>';
 	exit;
 }, 0);
+
+/**
+ * /signs-letters/ went to the retail Storefront Signs guide, which redirects to
+ * the trade hub: one hop straight to the hub instead of a chain.
+ */
+add_action('template_redirect', static function () {
+	if ('signs-letters' === sanitize_title((string) get_query_var('category_slug'))) {
+		wp_safe_redirect(home_url('/channel-letters/'), 301);
+		exit;
+	}
+}, 0);
+
+/** The home page has no pages: /page/N/ (and ?page=N) were 200 duplicates of it. */
+add_action('template_redirect', static function () {
+	if (is_front_page() && ((int) get_query_var('paged') > 1 || (int) get_query_var('page') > 1)) {
+		wp_safe_redirect(home_url('/'), 301);
+		exit;
+	}
+}, 1);
 
 /** robots.txt for the trade site. */
 add_filter('robots_txt', static function ($output, $public) {

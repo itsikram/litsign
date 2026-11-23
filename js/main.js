@@ -1,25 +1,12 @@
 (function ($) {
-  // Product group buttons (js/product-group-swap.js) swap another product into the page
-  // and fire "retails:product-swapped"; everything below then runs again on the new
-  // product, except the header, menu and scroll-reveal code (first run only). Each run's
-  // document-level product handlers end before the next run binds its own.
-  let pageScope = null;
-  const pageInit = (first, e = $) => {
-    if (pageScope) pageScope.abort();
-    pageScope = new AbortController();
-    const signal = pageScope.signal;
-    $(document).off('.productPage');
-
+  $(document).ready((e) => {
     // Fade sections in as they scroll into view, on desktop only. Phones skip
     // it: visitors there scroll fast, and hidden content read as blank gaps
     // and missing product names (Visitor Insights showed most ad visitors on
     // phones leaving after scrolling a few percent of the page). Only whole
     // sections and cards fade, never their text one element at a time.
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    // While the motion layer is on (inc/motion.php tags <html data-motion>),
-    // js/motion.js does the reveals instead of this block.
-    const allowReveal = first && !prefersReducedMotion && 'IntersectionObserver' in window
-      && !document.documentElement.hasAttribute('data-motion')
+    const allowReveal = !prefersReducedMotion && 'IntersectionObserver' in window
       && window.matchMedia('(min-width: 992px) and (hover: hover)').matches;
     const revealRoots = ['main', '#content', '.home', '.landing-page', '.product-details', '.contact-page', '.site-main'];
     const revealTargets = ['section', '.card', '.sf-type-card', '.cl-step'];
@@ -40,9 +27,7 @@
       return true;
     });
 
-    // Card galleries set up by an earlier run keep their handlers.
-    const galleries = [...document.querySelectorAll('[data-gallery]:not([data-gallery-bound])')];
-    galleries.forEach((gallery) => { gallery.dataset.galleryBound = ''; });
+    const galleries = [...document.querySelectorAll('[data-gallery]')];
     const setGalleryImage = (gallery, nextIndex) => {
       const images = [...gallery.querySelectorAll('.pb-gallery-image')];
       const count = gallery.querySelector('.pb-gallery-count');
@@ -75,7 +60,7 @@
       const currentIndex = Number(gallery.dataset.galleryIndex || 0);
       const isPrevious = arrow.classList.contains('pb-gallery-prev');
       setGalleryImage(gallery, currentIndex + (isPrevious ? -1 : 1));
-    }, { signal });
+    });
 
     galleries.forEach((gallery) => {
       setGalleryImage(gallery, 0);
@@ -355,7 +340,7 @@
       );
       updatePrice(subTotalPrice, totalPrice,'updateDisplay');
       // The customer's option choices stay as they are; the live price quote
-      // (retails_price_quote) prices the size and every chosen option.
+      // (wholesale_price_quote) prices the size and every chosen option.
     };
 
     let validateCalcInputs = (e) => {
@@ -376,7 +361,7 @@
 
     // change attribute
     $(document).on(
-      "change.productPage",
+      "change",
       ".product-attibute-box .dynamic-select:not(.avoid-price)",
       (e) => {
 
@@ -460,14 +445,6 @@
 
           priceAfterChange = totalLftCost + priceBeforeChange;
           $(e.currentTarget).attr("data-cCost", totalLftCost);
-        } else if (costType == "clin") {
-          // Per inch of letter height, per letter (channel letter vinyl faces).
-          let sizeInch = parseFloat($(".select-height option:selected").text()) || 0;
-          let letterCharacters = $("#letterInput").val().replace(/\s/g, "").length;
-          let totalClinCost = selectedAttrVal * sizeInch * letterCharacters;
-
-          priceAfterChange = totalClinCost + priceBeforeChange;
-          $(e.currentTarget).attr("data-cCost", totalClinCost);
         } else {
 
           if (!Number.isNaN(selectedAttrVal)) {
@@ -503,137 +480,40 @@
       if (!feet) return;
       feet.value = (parseFloat(feet.value) || 0) + Math.floor(value / 12);
       inch.value = Math.round((value % 12) * 100) / 100;
-    }, { capture: true, signal });
+    }, true);
 
     // Scrolling the page over a focused size box must not change the size.
     document.addEventListener('wheel', (e) => {
       if (e.target === document.activeElement && e.target.matches && e.target.matches('.dimenstion-calculator input[type="number"]')) e.target.blur();
-    }, { passive: true, signal });
+    }, { passive: true });
 
-    // B2Sign-style Size selector (_size_presets products, single-product.php): a preset
-    // fills in the width and height, whose boxes stay hidden; "Custom Sizes" shows the
-    // boxes. The boxes are what the form posts and the price uses.
-    const sizeSelect = document.querySelector('.pb-size-select');
-    const sizeForm = sizeSelect && sizeSelect.closest('form');
-    if (sizeForm) {
-      const sizeRow = sizeSelect.closest('.pb-size-b2');
-      const button = sizeSelect.querySelector('.pb-size-select__button');
-      const value = sizeSelect.querySelector('.pb-size-select__value');
-      const list = sizeSelect.querySelector('.pb-size-select__list');
-      const options = [...list.querySelectorAll('[role="option"]')];
-      const dimBox = (dim) => sizeForm.querySelector('input[name="' + dim + '-in"]');
-      let active = null;
-      const isOpen = () => !list.hidden;
-      const setActive = (option) => {
-        options.forEach((o) => o.classList.toggle('is-active', o === option));
-        active = option;
-        if (option) {
-          list.setAttribute('aria-activedescendant', option.id);
-          // Scroll the list only, never the page.
-          const top = option.offsetTop;
-          const bottom = top + option.offsetHeight;
-          if (top < list.scrollTop) list.scrollTop = top;
-          else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
-        }
-      };
-      const open = () => {
-        list.hidden = false;
-        button.setAttribute('aria-expanded', 'true');
-        sizeSelect.classList.add('is-open');
-        setActive(options.find((o) => o.getAttribute('aria-selected') === 'true') || options[0]);
-        list.focus({ preventScroll: true });
-      };
-      const close = (focusButton) => {
-        if (!isOpen()) return;
-        list.hidden = true;
-        button.setAttribute('aria-expanded', 'false');
-        sizeSelect.classList.remove('is-open');
-        if (focusButton) button.focus();
-      };
-      const choose = (option) => {
-        options.forEach((o) => o.setAttribute('aria-selected', o === option ? 'true' : 'false'));
-        value.replaceChildren(...[...option.childNodes].map((node) => node.cloneNode(true)));
-        const custom = !!option.dataset.custom;
-        sizeRow.classList.toggle('is-preset', !custom);
-        close(!custom);
-        if (custom) {
-          const width = dimBox('width');
-          if (width) { width.focus(); width.select(); }
-          return;
-        }
-        // Both values first, so the price handlers never see one side changed alone.
-        const boxes = [[dimBox('width'), option.dataset.width], [dimBox('height'), option.dataset.height]].filter(([box]) => box);
-        boxes.forEach(([box, size]) => { box.value = size; });
-        boxes.forEach(([box]) => {
-          box.dispatchEvent(new Event('input', { bubbles: true }));
+    // Preset size dropdown (_size_presets products): a preset fills in the width and
+    // height; typing a size picks the matching preset, or Custom size.
+    const sizePreset = document.getElementById('pbSizePreset');
+    if (sizePreset && sizePreset.form) {
+      const dimBox = (dim) => sizePreset.form.querySelector('input[name="' + dim + '-in"]');
+      sizePreset.addEventListener('change', () => {
+        const option = sizePreset.selectedOptions[0];
+        if (!option || !option.dataset.width) return;
+        [['width', option.dataset.width], ['height', option.dataset.height]].forEach(([dim, value]) => {
+          const box = dimBox(dim);
+          if (!box) return;
+          box.value = value;
           box.dispatchEvent(new Event('change', { bubbles: true }));
         });
-      };
-      button.addEventListener('click', () => (isOpen() ? close(true) : open()));
-      button.addEventListener('keydown', (e) => {
-        if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
-          e.preventDefault();
-          open();
-        }
       });
-      list.addEventListener('keydown', (e) => {
-        const at = options.indexOf(active);
-        if (e.key === 'ArrowDown') setActive(options[Math.min(options.length - 1, at + 1)]);
-        else if (e.key === 'ArrowUp') setActive(options[Math.max(0, at - 1)]);
-        else if (e.key === 'Home') setActive(options[0]);
-        else if (e.key === 'End') setActive(options[options.length - 1]);
-        else if ((e.key === 'Enter' || e.key === ' ') && active) choose(active);
-        else if (e.key === 'Escape') close(true);
-        else if (e.key === 'Tab') { close(false); return; }
-        else return;
-        e.preventDefault();
+      sizePreset.form.addEventListener('change', (e) => {
+        if (e.target !== dimBox('width') && e.target !== dimBox('height')) return;
+        const width = parseFloat(dimBox('width').value) || 0;
+        const height = parseFloat(dimBox('height').value) || 0;
+        const match = [...sizePreset.options].find((o) => o.dataset.width && parseFloat(o.dataset.width) === width && parseFloat(o.dataset.height) === height);
+        sizePreset.value = match ? match.value : (width || height ? 'custom' : '');
       });
-      list.addEventListener('click', (e) => {
-        const option = e.target.closest('[role="option"]');
-        if (option) choose(option);
-      });
-      list.addEventListener('mousemove', (e) => {
-        const option = e.target.closest('[role="option"]');
-        if (option && option !== active) setActive(option);
-      });
-      document.addEventListener('click', (e) => { if (!sizeSelect.contains(e.target)) close(false); }, { signal });
     }
-
-    // Size box in feet and inches (meta _size_unit = ftin, like B2Sign's banner page): the visible
-    // ft / in parts feed the hidden width-in / height-in input (total inches), which the price,
-    // the limits, the chips and the cart read as before. A preset or chip sets the hidden total,
-    // and the parts follow it.
-    document.querySelectorAll('.dim-group--ftin').forEach((group) => {
-      const total = group.querySelector('input.dim-input');
-      const parts = { ft: group.querySelector('input[data-part="ft"]'), in: group.querySelector('input[data-part="in"]') };
-      if (!total || !parts.ft || !parts.in) return;
-      let own = false;
-      const push = (type) => {
-        const inches = Math.round(((parseFloat(parts.ft.value) || 0) * 12 + (parseFloat(parts.in.value) || 0)) * 100) / 100;
-        own = true;
-        total.value = inches > 0 ? inches : '';
-        total.dispatchEvent(new Event(type, { bubbles: true }));
-        own = false;
-      };
-      const pull = () => {
-        if (own) return;
-        const inches = parseFloat(total.value) || 0;
-        const feet = Math.floor(inches / 12);
-        parts.ft.value = inches > 0 ? feet : '';
-        parts.in.value = inches > 0 ? Math.round((inches - feet * 12) * 100) / 100 : '';
-      };
-      ['ft', 'in'].forEach((key) => {
-        parts[key].addEventListener('input', () => push('input'));
-        parts[key].addEventListener('change', () => push('change'));
-      });
-      total.addEventListener('input', pull);
-      total.addEventListener('change', pull);
-      pull();
-    });
 
     // Size limits (B2Sign style): nothing shows until a typed size breaks one, then a
     // red "Maximum width is 1200"" under the boxes and the "Max Size" line. The server
-    // quote rejects the same sizes (retails_product_min_sides / _max_sides).
+    // quote rejects the same sizes (wholesale_product_min_sides / _max_sides).
     const sizeLimits = document.querySelector('.pb-size-summary[data-max-long]');
     if (sizeLimits) {
       const box = sizeLimits.closest('form') || document;
@@ -647,51 +527,15 @@
         const long = limit('maxLong');
         return !(long && (width > long || height > long)) && !(short && width > short && height > short);
       };
-      // Feet-and-inches boxes (_size_unit = ftin, 45 products): notes speak in feet and
-      // inches there, not "Sizes are in inches" (Ads visitors on canvas and backlit film,
-      // Nov 8 2026, saw that next to a feet box and left).
-      const ftin = !!box.querySelector('.dim-group--ftin');
-      const len = (inches) => {
-        if (!ftin) return `${inches}"`;
-        const feet = Math.floor(inches / 12);
-        const rest = Math.round((inches - feet * 12) * 100) / 100;
-        const text = [feet ? `${feet} ft` : '', rest ? `${rest} in` : ''].filter(Boolean).join(' ') || '0 in';
-        return inches >= 12 ? `${text} (${inches}")` : text;
-      };
       // Banner buyers think in feet: a "3" in an inch box is likely 3 ft (Ads visitors left
       // on "3 x 33" and "14 x 3"). The too-small note offers that size in inches as a
-      // one-tap fix: the small side x 12, or both sides when both look like feet. With
-      // feet-and-inches boxes only a size typed in the inch boxes (under 1 ft) gets it.
+      // one-tap fix: the small side x 12, or both sides when both look like feet.
       const feetFix = (width, height) => {
         const small = (value, key) => value > 0 && value < limit(key);
-        const both = ftin ? width > 0 && width < 12 && height > 0 && height < 12 : width <= 20 && height <= 20;
+        const both = width <= 20 && height <= 20;
         const fixed = [both || small(width, 'minWidth') ? width * 12 : width, both || small(height, 'minHeight') ? height * 12 : height]
           .map((value) => Math.round(value * 100) / 100);
         return fixed[0] >= limit('minWidth') && fixed[1] >= limit('minHeight') && fitsMax(fixed[0], fixed[1]) ? { fixed, both } : null;
-      };
-      // The opposite slip on feet-and-inches boxes: inches typed into the feet box. Visitors
-      // on styrene and magnets typed 22 and 40 there and got "Maximum width is 8 ft (96")"
-      // for 264" and 482" (Visitor Insights, Nov 2026). Offer the feet number as inches when
-      // the inch box is empty and that size fits.
-      const inchesFix = (width, height) => {
-        if (!ftin) return null;
-        const feetTyped = (name) => {
-          const group = dimInput(name)?.closest('.dim-group--ftin');
-          const feet = parseFloat(group?.querySelector('input[data-part="ft"]')?.value) || 0;
-          const inches = parseFloat(group?.querySelector('input[data-part="in"]')?.value) || 0;
-          return inches ? 0 : feet;
-        };
-        const short = limit('maxShort');
-        const long = limit('maxLong');
-        const over = (value, other) => (long && value > long) || (short && value > short && other > short);
-        let fixWidth = width;
-        let fixHeight = height;
-        if (over(width, height)) fixWidth = feetTyped('width');
-        if (fixWidth && over(height, fixWidth)) fixHeight = feetTyped('height');
-        if (!fixWidth || !fixHeight || (fixWidth === width && fixHeight === height)) return null;
-        return fixWidth >= limit('minWidth') && fixHeight >= limit('minHeight') && fitsMax(fixWidth, fixHeight)
-          ? { fixed: [fixWidth, fixHeight], inches: true }
-          : null;
       };
       let lastNote = '';
       // While typing, "24" passes through "2": the too-small notes wait for the change
@@ -706,53 +550,30 @@
         let fix = null;
         if (long && (width > long || height > long)) {
           tooBig = true;
-          error = width > long ? `Maximum width is ${len(long)}.` : `Maximum height is ${len(long)}.`;
-          if (!typing) fix = inchesFix(width, height);
+          error = width > long ? `Maximum width is ${long}"` : `Maximum height is ${long}"`;
         } else if (short && width > short && height > short) {
           tooBig = true;
-          // Either side may be the short one: say so, or turning the size looks impossible.
-          error = short < long
-            ? `One side can be at most ${len(short)}; the other up to ${len(long)}.`
-            : (width < height ? `Maximum width is ${len(short)}.` : `Maximum height is ${len(short)}.`);
-          if (!typing) fix = inchesFix(width, height);
+          error = width < height ? `Maximum width is ${short}"` : `Maximum height is ${short}"`;
         } else if (typing) {
           // Too small or fine: no note until the change.
         } else if (width > 0 && width < limit('minWidth')) {
-          error = ftin ? `Minimum width is ${len(limit('minWidth'))}.` : `Minimum width is ${limit('minWidth')}". Sizes are in inches.`;
+          error = `Minimum width is ${limit('minWidth')}". Sizes are in inches.`;
           fix = feetFix(width, height);
         } else if (height > 0 && height < limit('minHeight')) {
-          error = ftin ? `Minimum height is ${len(limit('minHeight'))}.` : `Minimum height is ${limit('minHeight')}". Sizes are in inches.`;
+          error = `Minimum height is ${limit('minHeight')}". Sizes are in inches.`;
           fix = feetFix(width, height);
         }
         if (dimError) {
           dimError.textContent = error;
           dimError.hidden = !error;
-          // Too big is a dead end on the page: offer the quote form for this product.
-          if (tooBig && dimError.dataset.quoteUrl) {
-            const help = document.createElement('a');
-            help.className = 'pb-dim-help';
-            help.href = dimError.dataset.quoteUrl;
-            help.textContent = 'Need a bigger size? Ask for a quote';
-            dimError.append(' ', help);
-          }
           if (fix) {
             const [fixWidth, fixHeight] = fix.fixed;
             const button = document.createElement('button');
             button.type = 'button';
             button.className = 'pb-dim-fix';
-            if (fix.inches) {
-              button.textContent = fixWidth !== width && fixHeight !== height
-                ? `Use ${fixWidth} in x ${fixHeight} in`
-                : (fixWidth !== width ? `Use ${fixWidth} inches wide` : `Use ${fixHeight} inches high`);
-            } else if (ftin) {
-              button.textContent = fix.both
-                ? `Use ${width} ft x ${height} ft`
-                : (fixWidth !== width ? `Use ${width} ft wide` : `Use ${height} ft high`);
-            } else {
-              button.textContent = fix.both
-                ? `Use ${fixWidth}" x ${fixHeight}" (${width} ft x ${height} ft)`
-                : (fixWidth !== width ? `Use ${fixWidth}" (${width} ft)` : `Use ${fixHeight}" (${height} ft)`);
-            }
+            button.textContent = fix.both
+              ? `Use ${fixWidth}" x ${fixHeight}" (${width} ft x ${height} ft)`
+              : (fixWidth !== width ? `Use ${fixWidth}" (${width} ft)` : `Use ${fixHeight}" (${height} ft)`);
             button.addEventListener('click', () => {
               // Both values first, so the change handlers never see one side fixed alone.
               const changed = [['width', fixWidth], ['height', fixHeight]]
@@ -771,13 +592,13 @@
         if (minLine) minLine.hidden = !error || tooBig;
         // js/visitor-tracker.js logs the note the visitor saw, with the typed size.
         if (error && error !== lastNote) {
-          document.dispatchEvent(new CustomEvent('retails:size-note', { detail: { message: error, size: `${width}" x ${height}"` } }));
+          document.dispatchEvent(new CustomEvent('wholesale:size-note', { detail: { message: error, size: `${width}" x ${height}"` } }));
         }
         lastNote = error;
       };
       box.addEventListener('input', (e) => { if (e.target.matches('.dim-input')) checkSize(true); });
-      box.addEventListener('change', (e) => { if (e.target.matches('.dim-input')) checkSize(false); });
-      // The boxes open on a default size (retails_product_default_size()): run the size
+      box.addEventListener('change', (e) => { if (e.target.matches('.dim-input, .pb-size-preset')) checkSize(false); });
+      // The boxes open on a default size (wholesale_product_default_size()): run the size
       // handlers once, after the dimension handler below is bound, so every total matches it.
       const defaultWidth = box.querySelector('input[name="width-in"]');
       if (defaultWidth && parseFloat(defaultWidth.value) > 0) {
@@ -800,7 +621,7 @@
     });
 
     // change dimension inputs
-    $(document).on("change.productPage", ".product-attibute-box .dimenstion-calculator input", (e) => {
+    $(document).on("change", ".product-attibute-box .dimenstion-calculator input", (e) => {
       switch (e.target.name) {
         // Height Feat
         case "height-ft":
@@ -1196,8 +1017,6 @@
 
     }
 
-    // Header, menus and the cart badge: first run only (a product swap keeps the header).
-    if (first) {
     const updateStickyHeader = () => {
       $(".main-header").toggleClass("is-scrolled", window.scrollY > 12);
     };
@@ -1285,6 +1104,58 @@
       toggler.toggleClass('is-open', !isExpanded);
     })
 
+    // custom select
+
+    $(".custom-select-container").click((e) => {
+      $(e.currentTarget).children(".custom-select").toggle();
+    });
+
+    $(".custom-select li").click((e) => {
+      let currentSlectedText = $(e.currentTarget).text();
+      let selectedValue = $(e.currentTarget).data("value");
+      let selectId = $(e.currentTarget)
+        .parents(".custom-select-container")
+        .attr("id")
+        .split("-")[2];
+      $(e.currentTarget)
+        .parents(".custom-select-container")
+        .attr("data-value", selectedValue);
+
+      $(e.currentTarget)
+        .parent()
+        .siblings(".color-sample")
+        .css("background-color", selectedValue.split("/")[2] || selectedValue);
+      $(e.currentTarget)
+        .parent()
+        .siblings(".custom-select-selected")
+        .text(currentSlectedText);
+      $("#select-" + selectId + "").val(selectedValue);
+      $("#select-" + selectId + "").trigger("change");
+    });
+
+    $(".custom-select li:first-child").trigger("click");
+    $(".custom-select").hide();
+
+    $("#select-face").parents(".select-row").hide();
+    $("#select-trimcap").parents(".select-row").hide();
+    $("#select-return").parents(".select-row").hide();
+
+    // The big "Enter Your Text" preview looks like the place to type; visitors
+    // tapped it repeatedly. Send them to the real text box.
+    $('#letter-output').css('cursor', 'text').on('click', () => {
+      $('#letterInput').trigger('focus');
+    });
+
+    $('.option-info-button').click(e => {
+      $(e.currentTarget).siblings('.option-info-content').toggle();
+    })
+
+
+    $('.cart-details-toggler').click(e => {
+      let currentTarget = e.currentTarget
+      $(currentTarget).parent().siblings('.cart-details-container').toggle();
+    })
+
     $('#allProductsBtn').click( e => {
       e.stopPropagation();
       const button = $(e.currentTarget);
@@ -1361,61 +1232,6 @@
     });
 
     $('.mega-menu-backdrop').click(closeMegaMenu);
-    }
-
-    // Product options (channel letter color pickers, letter preview, option info) and the cart page.
-    // custom select
-
-    $(".custom-select-container").click((e) => {
-      $(e.currentTarget).children(".custom-select").toggle();
-    });
-
-    $(".custom-select li").click((e) => {
-      let currentSlectedText = $(e.currentTarget).text();
-      let selectedValue = $(e.currentTarget).data("value");
-      let selectId = $(e.currentTarget)
-        .parents(".custom-select-container")
-        .attr("id")
-        .split("-")[2];
-      $(e.currentTarget)
-        .parents(".custom-select-container")
-        .attr("data-value", selectedValue);
-
-      $(e.currentTarget)
-        .parent()
-        .siblings(".color-sample")
-        .css("background-color", selectedValue.split("/")[2] || selectedValue);
-      $(e.currentTarget)
-        .parent()
-        .siblings(".custom-select-selected")
-        .text(currentSlectedText);
-      $("#select-" + selectId + "").val(selectedValue);
-      $("#select-" + selectId + "").trigger("change");
-    });
-
-    $(".custom-select li:first-child").trigger("click");
-    $(".custom-select").hide();
-
-    $("#select-face").parents(".select-row").hide();
-    $("#select-trimcap").parents(".select-row").hide();
-    $("#select-return").parents(".select-row").hide();
-
-    // The big "Enter Your Text" preview looks like the place to type; visitors
-    // tapped it repeatedly. Send them to the real text box.
-    $('#letter-output').css('cursor', 'text').on('click', () => {
-      $('#letterInput').trigger('focus');
-    });
-
-    $('.option-info-button').click(e => {
-      $(e.currentTarget).siblings('.option-info-content').toggle();
-    })
-
-
-    $('.cart-details-toggler').click(e => {
-      let currentTarget = e.currentTarget
-      $(currentTarget).parent().siblings('.cart-details-container').toggle();
-    })
-
 
 
     //checkout page data 
@@ -1522,7 +1338,7 @@
     //       }
     //     })
 
-    $(document).on('change.productPage', 'input[name="turnaround_option"]', e => {
+    $(document).on('change', 'input[name="turnaround_option"]', e => {
       let turnaroundOption = e.target.value;
       let productTotalCost = parseFloat($('#totalCost').val());
 
@@ -1539,77 +1355,19 @@
       }
     })
 
-    // Option links open the product with those options chosen:
-    //   ?display-size=10ft&of-sides=double-sided&turnaround_option=days_3&quantity=2
-    // A select (#select-<name> or name="<name>") takes the option whose name matches however
-    // the link writes it ("10ft", "10-ft", "Double Sided", "double-sided", "24x18" for 24" x 18",
-    // or the stored "141.17/10ft"); a radio group takes the matching choice; quantity sets the
-    // number box. Selects first, then radios and quantity (an option change resets those).
-    // Unknown keys or values change nothing; hidden and price fields are never set from a link.
-    // ?size=WxH is a size link (single-product.php); ?graphic_only=true etc. picks a product of
-    // the group (inc/product-group-swap.php). Native change events, so the live price (server
-    // quote), the option chips and the advanced finishing box follow.
-    const productForm = document.querySelector('.product-details form[data-noun]');
-    const params = new URLSearchParams(window.location.search);
-    if (productForm && [...params.keys()].length) {
-      const squash = (text) => String(text == null ? '' : text).toLowerCase().replace(/[^a-z0-9]+/g, '');
-      const optionName = (value) => String(value).replace(/^-?[\d.]+\//, '');
-      const chooseSelect = (select, wanted) => {
-        const options = [...select.options].filter((o) => !o.disabled);
-        const option = options.find((o) => o.value === wanted)
-          || options.find((o) => squash(o.textContent) === squash(wanted))
-          || options.find((o) => squash(optionName(o.value)) === squash(wanted))
-          || options.find((o) => squash(o.value) === squash(wanted));
-        if (!option || option.selected) return;
-        // Channel letter color pickers show a list over a hidden select; their click sets both.
-        const picker = document.querySelector(`#custom-select-${CSS.escape(select.id.replace(/^select-/, ''))} li[data-value="${CSS.escape(option.value)}"]`);
-        if (picker) {
-          picker.click();
-        } else {
-          select.value = option.value;
-          select.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        const advanced = select.closest('details.pb-advanced-finishing');
-        if (advanced && select.selectedIndex > 0) advanced.open = true;
-      };
-      const selects = [...productForm.querySelectorAll('select')];
-      const later = [];
-      for (const [key, value] of params) {
-        if (!value) continue;
-        if (key === 'size' && /^\d+(\.\d+)?x\d+(\.\d+)?$/.test(value)) continue;
-        if (document.querySelector(`.product-group-item-link[data-group-key="${CSS.escape(key)}"]`)) continue;
-        const select = productForm.querySelector(`select#select-${CSS.escape(key)}`)
-          || selects.find((s) => s.name === key)
-          || selects.find((s) => squash(s.name) === squash(key) || squash(s.id.replace(/^select-/, '')) === squash(key));
-        if (select) {
-          chooseSelect(select, value);
-        } else {
-          later.push([key, value]);
-        }
+    const windowUrl = new URL(window.location.href);
+    // Use URLSearchParams to get query string parameters
+    const params = new URLSearchParams(windowUrl.search);
+    for (const [key, value] of params) {
+      let querySelector = (`#select-${(key)}`)
+      let currentAttr = $(querySelector);
+      if (currentAttr) {
+        currentAttr.val(value);
+        currentAttr.trigger('change');
       }
-      for (const [key, value] of later) {
-        if (/^(quantity|qty)$/i.test(key)) {
-          const qty = productForm.querySelector('#productQuantity');
-          const count = Math.min(1000, Math.max(1, parseInt(value, 10) || 0));
-          if (qty && count && String(count) !== qty.value) {
-            qty.value = count;
-            qty.dispatchEvent(new Event('change', { bubbles: true }));
-          }
-          continue;
-        }
-        const radios = [...productForm.querySelectorAll('input[type="radio"]')].filter((r) => r.name === key || squash(r.name) === squash(key));
-        const radio = radios.find((r) => r.value === value)
-          || radios.find((r) => squash(r.value) === squash(value))
-          || radios.find((r) => r.labels && r.labels[0] && squash(r.labels[0].textContent) === squash(value));
-        if (radio && !radio.disabled && !radio.checked) {
-          radio.checked = true;
-          radio.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }
+
     }
-  };
-  $(document).ready(() => pageInit(true));
-  document.addEventListener('retails:product-swapped', () => pageInit(false));
+  });
 })(jQuery);
 
 // Footer review slider (rendered by inc/reviews.php on every page).
@@ -1694,15 +1452,10 @@
 
 // Live price from the server (inc/pricing.php) so the product page shows exactly what the cart charges.
 (() => {
-  // Runs again after a product group swap (js/product-group-swap.js); each run's document
-  // listener ends before the next run binds its own.
-  let scope = null;
   const init = () => {
-    if (scope) scope.abort();
-    scope = new AbortController();
     const productIdInput = document.querySelector('form input[name="product_id"]');
     const pricingBox = document.querySelector('.product-pricing-box');
-    if (!productIdInput || !pricingBox || !window.retailsShop) return;
+    if (!productIdInput || !pricingBox || !window.wholesaleShop) return;
 
     const form = productIdInput.closest('form');
     const money = (value) => Number(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -1772,11 +1525,9 @@
           dimError.textContent = empty ? `Please enter the ${blank && blank.name === 'height-in' ? 'height' : 'width'} of your ${form.dataset.noun || 'product'}.` : form.dataset.sizeError;
           dimError.hidden = false;
           const typed = ['width-in', 'height-in'].map((name) => parseFloat(form.querySelector(`input[name="${name}"]`)?.value) || 0);
-          document.dispatchEvent(new CustomEvent('retails:size-note', { detail: { message: dimError.textContent, size: `${typed[0]}" x ${typed[1]}"` } }));
+          document.dispatchEvent(new CustomEvent('wholesale:size-note', { detail: { message: dimError.textContent, size: `${typed[0]}" x ${typed[1]}"` } }));
         }
-        let target = blank || form.querySelector('input[name="width-in"]');
-        // Feet-and-inches boxes: the total is hidden, so the feet part takes the focus.
-        if (target && target.type === 'hidden') target = target.closest('.dim-group')?.querySelector('input[data-part="ft"]') || target;
+        const target = blank || form.querySelector('input[name="width-in"]');
         target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         target?.focus({ preventScroll: true });
       }, true);
@@ -1792,190 +1543,14 @@
       anchor?.after(turnaroundRow);
     }
 
-    // Prices the server has already worked out: this page's earlier quotes, plus the
-    // "variants" each quote brings back (every other choice of every option, and one more /
-    // one less in quantity, priced in the same request by inc/pricing.php). A choice whose
-    // price is here shows it at once instead of waiting for the server. Kept 3 minutes, as a
-    // dated sale or the same-day cut-off can change a price.
-    const quoteCache = new Map();
-    const CACHE_MS = 3 * 60 * 1000;
-    // Fields the price doesn't depend on (filled in by the page itself, or free text).
-    const unpriced = new Set(['action', 'variants', 'custom-artwork', 'total_cost', 'total_sqft', 'turnaround_cost', 'job_name']);
-    const formEntries = () => [...new FormData(form)].filter(([, value]) => typeof value === 'string');
-    const cacheKey = (entries) => entries.filter(([name]) => !unpriced.has(name)).map(([name, value]) => encodeURIComponent(name) + '=' + encodeURIComponent(value)).join('&');
-    const cacheGet = (key) => {
-      const hit = quoteCache.get(key);
-      return hit && Date.now() - hit.at < CACHE_MS ? hit : null;
-    };
-    const cachePut = (key, quote, primed) => {
-      const old = cacheGet(key);
-      if (old && old.primed && !primed) return; // Keep the entry that knows its own variants.
-      if (quoteCache.size > 500) quoteCache.clear();
-      quoteCache.set(key, { quote, primed, at: Date.now() });
-    };
-    // Every other value of each choice on the page (dropdowns, radio choices) and one more /
-    // one less in quantity: the server prices each with the rest of the form unchanged.
-    const variantList = (entries) => {
-      const sent = new Map(entries);
-      const varied = (name) => !!name && sent.has(name) && !unpriced.has(name) && !name.endsWith('[]');
-      const list = [];
-      form.querySelectorAll('select[name]').forEach((select) => {
-        if (select.disabled || select.multiple || !varied(select.name)) return;
-        [...select.options].forEach((option) => {
-          if (!option.disabled && option.value !== sent.get(select.name)) list.push([select.name, option.value]);
-        });
-      });
-      form.querySelectorAll('input[type="radio"][name]:not(:checked):not(:disabled)').forEach((radio) => {
-        if (varied(radio.name)) list.push([radio.name, radio.value]);
-      });
-      const quantity = parseInt(sent.get('product_quantity'), 10);
-      if (quantity > 0) {
-        list.push(['product_quantity', String(quantity + 1)]);
-        if (quantity > 1) list.push(['product_quantity', String(quantity - 1)]);
-      }
-      return list.slice(0, 80);
-    };
-
-    // Shows one quote from the server (fresh or from the cache above).
-    const applyQuote = (quote) => {
-      // Only the size is outside the product's limits: like B2Sign, show its price and
-      // keep Add To Cart clickable (the size guard and the cart still refuse it).
-      form.dataset.sizeError = quote.size_error ? quote.error : '';
-      if (!quote.ok && quote.size_error) {
-        if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
-        message.hidden = true;
-        showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
-        turnaroundRow.hidden = !(quote.turnaround > 0);
-        addButtons.forEach((button) => { button.disabled = false; });
-        return;
-      }
-
-      if (!quote.ok) {
-        // No sign text yet (every channel letter page opens this way):
-        // a prompt rather than an error, and Add To Cart stays enabled so
-        // the browser's required-field check takes the visitor to the box.
-        const letterInput = form.querySelector('#letterInput');
-        const needsText = letterInput && !letterInput.value.trim();
-        message.textContent = needsText ? 'Type your sign text above to see your exact price.' : quote.error;
-        message.classList.toggle('is-hint', !!needsText);
-        message.hidden = false;
-        addButtons.forEach((button) => { button.disabled = !needsText; });
-        return;
-      }
-
-      if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
-
-      message.hidden = true;
-      message.classList.remove('is-hint');
-      // Shown only during a dated sale: the everyday price and what the sale takes off it.
-      showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
-      turnaroundRow.hidden = !(quote.turnaround > 0);
-      turnaroundRow.querySelector('.price-turnaround').textContent = money(quote.turnaround);
-      turnaroundRow.querySelector('.fs-6').textContent = quote.turnaround_label ? quote.turnaround_label + ' production' : 'Same-day production';
-      // Each production-time choice's charge at this price, as B2Sign shows it: "+$8.00" or "Free".
-      if (quote.turnaround_options) {
-        form.querySelectorAll('[data-turnaround-option]').forEach((el) => {
-          const amount = quote.turnaround_options[el.dataset.value];
-          const label = el.querySelector('[data-turnaround-price]');
-          if (label && typeof amount === 'number') label.textContent = amount > 0 ? '+$' + money(amount) : 'Free';
-        });
-      }
-      // The add-to-cart handler applies the discount to this value before submitting.
-      form.querySelectorAll('#totalCost').forEach((input) => { input.value = quote.subtotal.toFixed(2); });
-      addButtons.forEach((button) => { button.disabled = false; });
-    };
-
-    // Channel letters: the text measured in the chosen font as B2Sign measures it, with the same
-    // code as the builder (js/cl-measure.js), and sent as cl_measure, so the server prices every
-    // separate piece of every letter by its own size (a W is wider than tall, a lowercase letter
-    // shorter, the dot of an i a small piece) as the builder and its cart do
-    // (retails_cl_request_measure() in inc/pricing.php). Canvas metrics at 200px: the server
-    // scales them to every height it prices, the other heights' prices included.
-    const letterInput = form.querySelector('#letterInput');
-    let measureInput = null;
-    if (letterInput && window.SfsLetterMeasure) {
-      measureInput = form.querySelector('input[name="cl_measure"]');
-      if (!measureInput) {
-        measureInput = document.createElement('input');
-        measureInput.type = 'hidden';
-        measureInput.name = 'cl_measure';
-        form.appendChild(measureInput);
-      }
-    }
-    // This page's font names as the builder codes them (fontData in js/cl.js).
-    const builderFont = (value) => ({ 'arial black': 'arial-black' })[String(value || '').trim().toLowerCase()] || String(value || 'Arial').replace(/"/g, '');
-    let measureFont = '';
-    const measureSignal = scope.signal;
-    // Fills cl_measure and the width shown under the height for the form as it is now; true when it changed.
-    const syncLetterMeasure = () => {
-      if (!measureInput) return false;
-      const before = measureInput.value;
-      const family = builderFont(form.querySelector('select[name="font"]')?.value);
-      const measured = window.SfsLetterMeasure.measure(letterInput.value, family);
-      measureInput.value = window.SfsLetterMeasure.payload(measured);
-      // The sign's width as B2Sign measures it, at the chosen height (the raceway is priced on it).
-      const height = parseFloat(form.querySelector('select[name="height"] option:checked')?.dataset.size) || 0;
-      const sized = window.SfsLetterMeasure.at(measured, height);
-      const widthDisplay = document.getElementById('widthDisplay');
-      if (sized && widthDisplay) {
-        widthDisplay.innerHTML = `Approximate Width: <b> ${sized.width.toFixed(1)} Inches</b>`;
-      }
-      // Measured in a fallback font until the chosen one has downloaded: measured again then.
-      if (document.fonts && family !== measureFont) {
-        measureFont = family;
-        document.fonts.load(`200px "${family}"`).then(() => {
-          if (measureSignal.aborted) return;
-          window.SfsLetterMeasure.clear();
-          if (syncLetterMeasure()) refresh(0);
-        }).catch(() => {});
-      }
-      return measureInput.value !== before;
-    };
-
     let timer;
     let requestId = 0;
-    // Asks the server. In the foreground (no cached price) the box shows it is updating and
-    // Add To Cart waits for the answer; in the background (a cached price is already shown)
-    // it only brings the prices of the choices after this one.
-    const fetchQuote = async (foreground) => {
-      const thisRequest = ++requestId;
-      const entries = formEntries();
-      const key = cacheKey(entries);
-      const data = new FormData(form);
-      data.delete('custom-artwork');
-      data.append('action', 'retails_price_quote');
-      data.append('variants', JSON.stringify(variantList(entries)));
-      if (foreground) pricingBox.classList.add('is-updating');
-      try {
-        const response = await fetch(window.retailsShop.ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' });
-        const quote = await response.json();
-        // Cached even when the visitor has moved on: these prices are for the form as sent.
-        (quote.variants || []).forEach(([name, value, variantQuote]) => {
-          cachePut(cacheKey(entries.map(([n, v]) => [n, n === name ? value : v])), variantQuote, false);
-        });
-        delete quote.variants;
-        cachePut(key, quote, true);
-        if (thisRequest !== requestId) return;
-        applyQuote(quote);
-      } catch (error) {
-        // Keep the browser-side estimate; the cart still prices the item on the server.
-      } finally {
-        if (thisRequest === requestId) {
-          pricingBox.classList.remove('is-updating');
-          settleQuote();
-        }
-      }
-    };
-
     const refresh = (delay = 250) => {
       clearTimeout(timer);
       form.dataset.quoting = '1';
-      // One tick later, so other handlers of the same change (a custom dropdown filling its
-      // hidden select, a choice that resets another) have run before the form is read.
-      timer = setTimeout(() => {
-        syncLetterMeasure();
+      timer = setTimeout(async () => {
+        const thisRequest = ++requestId;
         if (sizeIsEmpty()) {
-          ++requestId;
           // No size yet (or a box cleared while typing a new one): show the minimum charge,
           // as B2Sign does, without asking the server for a quote that can only fail.
           const minEveryday = parseFloat(sizeSummary.dataset.minEveryday) || 0;
@@ -1995,7 +1570,6 @@
         // visitor sees this prompt. Show it without asking the server.
         const letterInput = form.querySelector('#letterInput');
         if (letterInput && !letterInput.value.trim()) {
-          ++requestId;
           message.textContent = 'Type your sign text above to see your exact price.';
           message.classList.add('is-hint');
           message.hidden = false;
@@ -2004,34 +1578,74 @@
           settleQuote();
           return;
         }
-        const hit = cacheGet(cacheKey(formEntries()));
-        if (hit) {
-          // Priced already: show it now (the exact server answer) and let Add To Cart go.
-          ++requestId;
-          applyQuote(hit.quote);
-          pricingBox.classList.remove('is-updating');
-          settleQuote();
-          // Fetch the next round of choices unless this answer already brought them.
-          if (!hit.primed) timer = setTimeout(() => fetchQuote(false), delay);
-          return;
+        const data = new FormData(form);
+        data.delete('custom-artwork');
+        data.append('action', 'wholesale_price_quote');
+        pricingBox.classList.add('is-updating');
+        try {
+          const response = await fetch(window.wholesaleShop.ajaxUrl, { method: 'POST', body: data, credentials: 'same-origin' });
+          const quote = await response.json();
+          if (thisRequest !== requestId) return;
+
+          // Only the size is outside the product's limits: like B2Sign, show its price and
+          // keep Add To Cart clickable (the size guard and the cart still refuse it).
+          form.dataset.sizeError = quote.size_error ? quote.error : '';
+          if (!quote.ok && quote.size_error) {
+            if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
+            message.hidden = true;
+            showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
+            turnaroundRow.hidden = !(quote.turnaround > 0);
+            addButtons.forEach((button) => { button.disabled = false; });
+            return;
+          }
+
+          if (!quote.ok) {
+            // No sign text yet (every channel letter page opens this way):
+            // a prompt rather than an error, and Add To Cart stays enabled so
+            // the browser's required-field check takes the visitor to the box.
+            const letterInput = form.querySelector('#letterInput');
+            const needsText = letterInput && !letterInput.value.trim();
+            message.textContent = needsText ? 'Type your sign text above to see your exact price.' : quote.error;
+            message.classList.toggle('is-hint', !!needsText);
+            message.hidden = false;
+            addButtons.forEach((button) => { button.disabled = !needsText; });
+            return;
+          }
+
+          if (minChargeText) minChargeText.hidden = !(quote.minimum_order > 0);
+
+          message.hidden = true;
+          message.classList.remove('is-hint');
+          // Shown only during a dated sale: the everyday price and what the sale takes off it.
+          showPrices('everyday' in quote ? quote.everyday : quote.subtotal, 'promo_discount' in quote ? quote.promo_discount : quote.discount, quote.total);
+          turnaroundRow.hidden = !(quote.turnaround > 0);
+          turnaroundRow.querySelector('.price-turnaround').textContent = money(quote.turnaround);
+          // The add-to-cart handler applies the discount to this value before submitting.
+          form.querySelectorAll('#totalCost').forEach((input) => { input.value = quote.subtotal.toFixed(2); });
+          addButtons.forEach((button) => { button.disabled = false; });
+        } catch (error) {
+          // Keep the browser-side estimate; the cart still prices the item on the server.
+        } finally {
+          if (thisRequest === requestId) {
+            pricingBox.classList.remove('is-updating');
+            settleQuote();
+          }
         }
-        timer = setTimeout(() => fetchQuote(true), delay);
-      }, 0);
+      }, delay);
     };
 
-    form.addEventListener('change', () => refresh(60));
+    form.addEventListener('change', () => refresh());
     form.addEventListener('input', (event) => {
-      // A number box waits for a short typing pause, so "24" isn't first priced (and
+      // A number box waits for a typing pause, so "24" isn't first priced (and
       // rejected as too small) at "2" on a phone keyboard; leaving the box prices it at once.
-      // A size or quantity priced before shows at once from the cache.
-      if (event.target.matches('input[type="number"]')) refresh(450);
-      else if (event.target.matches('#letterInput')) refresh(250);
+      if (event.target.matches('input[type="number"]')) refresh(700);
+      else if (event.target.matches('#letterInput')) refresh();
     });
     // Custom color pickers update hidden selects without bubbling a native change event.
     document.addEventListener('click', (event) => {
-      if (event.target.closest('.custom-select li')) refresh(60);
-    }, { signal: scope.signal });
-    refresh(0);
+      if (event.target.closest('.custom-select li')) refresh();
+    });
+    refresh();
   };
 
   if (document.readyState === 'loading') {
@@ -2039,7 +1653,6 @@
   } else {
     init();
   }
-  document.addEventListener('retails:product-swapped', init);
 })();
 
 // "Shop by sign type" rail: show prev/next arrows only while there is more to scroll.
@@ -2099,10 +1712,6 @@
   const frameOf = (node) => (node && node.tagName === 'IMG' ? node.closest(frames) : null);
 
   document.querySelectorAll(frames).forEach((frame) => sync(frame, false));
-  // A product group swap (js/product-group-swap.js) brings in new frames.
-  document.addEventListener('retails:product-swapped', () => {
-    document.querySelectorAll(frames).forEach((frame) => sync(frame, false));
-  });
 
   // Load and error don't bubble; capture catches lazy images loading later.
   const onImage = (event) => {

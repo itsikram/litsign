@@ -295,7 +295,7 @@
 .wpt-proof__actions { display: flex; align-items: center; gap: 10px; }
 
 /* Side: summary */
-#retails_ticket_summary .inside { margin: 0; padding: 0; }
+#wholesale_ticket_summary .inside { margin: 0; padding: 0; }
 .wpt-summary { display: grid; }
 .wpt-summary > * { padding: 12px 14px; }
 .wpt-summary > * + * { border-top: 1px solid var(--wpt-line); }

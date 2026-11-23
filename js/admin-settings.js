@@ -260,7 +260,7 @@ jQuery(function ($) {
     };
 
     var request = function (data) {
-      return $.post(window.ajaxurl, $.extend({ action: "retails_media_sync", nonce: $sync.data("nonce") }, data));
+      return $.post(window.ajaxurl, $.extend({ action: "wholesale_media_sync", nonce: $sync.data("nonce") }, data));
     };
 
     var render = function (s) {

@@ -8,7 +8,7 @@
  * first paint.
  */
 (() => {
-  const config = window.retailsES;
+  const config = window.wholesaleES;
   if (!config || !config.endpoint || !window.fetch || navigator.webdriver) return;
 
   const readCookie = (name) => {

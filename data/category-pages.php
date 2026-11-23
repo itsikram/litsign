@@ -15,7 +15,7 @@
  */
 
 $cat = static function ($slug, $text) {
-	return '<a href="' . esc_url(retails_category_url($slug)) . '">' . esc_html($text) . '</a>';
+	return '<a href="' . esc_url(wholesale_category_url($slug)) . '">' . esc_html($text) . '</a>';
 };
 $prod = static function ($slug, $text) {
 	return '<a href="' . esc_url(home_url('/product/' . $slug . '/')) . '">' . esc_html($text) . '</a>';
@@ -50,7 +50,7 @@ return array(
 					'Vinyl banners include free hems, and you can add grommets, pole pockets, Velcro, webbing with D-rings, sewn-in rope, wind slits or reinforced corners. For street, long-term or very large banners, add webbing and reinforced corners and use every grommet when you hang it. Larger vinyl banners are welded from panels. Fabric banners are hemmed in white or black thread or cut flush. ' . $prod('pole-banner-set-banner-hardware', 'Light pole banners') . ' come as a set: double sided 18oz banners with 2" pole pockets and an optional fiberglass bracket kit.',
 				)),
 				array('h' => 'Artwork, production and shipping', 'p' => array(
-					$artwork . ' Most banners ship the next business day when you order and approve artwork by 4 pm Pacific time, and Same Day production (order by 12 pm) is available for an added charge; each product page shows its own cut-off. 13oz and 18oz banners ship rolled up to 88" on the short side and folded from 89". Need a stand? See ' . $cat('banner-stands', 'banner stands') . '.',
+					$artwork . ' Many banners ship the same business day when you order and approve artwork by 12 pm Pacific time; the rest ship the next business day when ordered by 4 pm, and each product page shows its own cut-off. 13oz and 18oz banners ship rolled up to 88" on the short side and folded from 89". Need a stand? See ' . $cat('banner-stands', 'banner stands') . '.',
 				)),
 			),
 		),
@@ -130,7 +130,7 @@ return array(
 					'Keep text and logos at least 1" from the top and 3" from the bottom of a retractable graphic, because the bottom sits inside the base. Use the template for your stand size. Optional LED lights clip to the top of the Standard, Deluxe and SD stands for dim halls.',
 				)),
 				array('h' => 'Production and shipping', 'p' => array(
-					'Retractable graphics, fabric stands and backdrops ship the next business day when you order and approve artwork by 4 pm Pacific time; most graphics can also be made the same day (order by 12 pm) for an added charge. Stand frames without a graphic are in ' . $cat('hardware-only', 'display hardware') . '.',
+					'Most retractable graphics ship the same business day when you order and approve artwork by 12 pm Pacific time; fabric stands and backdrops ship the next business day when ordered by 4 pm. Stand frames without a graphic are in ' . $cat('hardware-only', 'display hardware') . '.',
 				)),
 			),
 		),
@@ -174,7 +174,7 @@ return array(
 	),
 
 	'a-frame-and-sign-holders' => array(
-		'lead' => 'Frames and holders that make changing a promotion fast, with the print included. Each is printed to order and ships nationwide; most ship the next business day when ordered by 4 pm Pacific time, or the same day for an added charge.',
+		'lead' => 'Frames and holders that make changing a promotion fast, with the print included. Each is printed to order and ships nationwide; most ship the same business day when ordered by 12 pm Pacific time.',
 		'guide' => array(
 			'title' => 'Choosing a Sign Holder',
 			'sections' => array(
@@ -196,7 +196,7 @@ return array(
 	),
 
 	'signicade-a-frames' => array(
-		'lead' => 'Genuine Plasticade sidewalk A-frames with your graphics printed in full color. Most ship the next business day when you order and approve artwork by 4 pm Pacific time (Same Day is available for an added charge), to all 50 states.',
+		'lead' => 'Genuine Plasticade sidewalk A-frames with your graphics printed in full color. Most ship the same business day when you order and approve artwork by 12 pm Pacific time, to all 50 states.',
 		'guide' => array(
 			'title' => 'Which Signicade Is Right for You?',
 			'sections' => array(
@@ -217,7 +217,7 @@ return array(
 	),
 
 	'real-estate-products' => array(
-		'lead' => 'Reusable frames and posts with double sided listing panels, so you can swap a property, rider or status in seconds. Most ship the next business day when ordered by 4 pm Pacific time (Same Day is available for an added charge), to all 50 states.',
+		'lead' => 'Reusable frames and posts with double sided listing panels, so you can swap a property, rider or status in seconds. Most ship the same business day when ordered by 12 pm Pacific time, to all 50 states.',
 		'guide' => array(
 			'title' => 'Choosing Real Estate Hardware',
 			'sections' => array(
@@ -239,7 +239,7 @@ return array(
 	),
 
 	'rigid-signs-and-magnets' => array(
-		'lead' => 'Flat printed boards for indoors and out, cut to size and printed in full color, plus magnets for vehicles. Most ship the next business day when you order and approve artwork by 4 pm Pacific time (Same Day is available for an added charge), to all 50 states.',
+		'lead' => 'Flat printed boards for indoors and out, cut to size and printed in full color, plus magnets for vehicles. Most ship the same business day when you order and approve artwork by 12 pm Pacific time, to all 50 states.',
 		'guide' => array(
 			'title' => 'How to Choose a Rigid Board',
 			'sections' => array(
@@ -258,14 +258,14 @@ return array(
 					'For years outside, choose ' . $prod('aluminum-sign', 'aluminum') . ' or ' . $prod('aluminum-sandwich-board', 'aluminum sandwich board') . ': they will not rust or warp. For weeks or months outside, ' . $prod('coroplast', 'coroplast') . ' costs far less and takes an H-stake. Indoors, ' . $prod('foam-board', 'foam board') . ' is the lightest and ' . $prod('gatorfoam', 'GatorFoam') . ' resists dents on large prints.',
 				)),
 				array('h' => 'Size and shipping', 'p' => array(
-					'Most panels can be ordered online in any size up to 48" x 36" (styrene up to 96" x 48", magnets up to 96" x 36"), but panels larger than 46" x 38" (or 48" x 30") are too big to ship by parcel, so call 866-436-2101 before ordering one. ' . $artwork,
+					'Custom panels go up to 48" x 96", but panels larger than 46" x 38" (or 48" x 30") are too big to ship by parcel, so call 866-436-2101 before ordering one. ' . $artwork,
 				)),
 			),
 		),
 	),
 
 	'reflective-products' => array(
-		'lead' => 'Every product here is faced with engineer grade prismatic reflective vinyl, UV printed in full color, so it lights up in headlights with no power. Most ship the next business day when ordered by 4 pm Pacific time, or the same day for an added charge.',
+		'lead' => 'Every product here is faced with engineer grade prismatic reflective vinyl, UV printed in full color, so it lights up in headlights with no power. Most ship the same business day when ordered by 12 pm Pacific time.',
 		'guide' => array(
 			'title' => 'Choosing a Reflective Product',
 			'sections' => array(
@@ -290,7 +290,7 @@ return array(
 	),
 
 	'dry-erase-products' => array(
-		'lead' => 'Your logo and layout printed in full color, sealed with a gloss dry erase coat, so you can write and wipe around them every day. Most ship the next business day when ordered by 4 pm Pacific time, or the same day for an added charge.',
+		'lead' => 'Your logo and layout printed in full color, sealed with a gloss dry erase coat, so you can write and wipe around them every day. Most ship the same business day when ordered by 12 pm Pacific time.',
 		'guide' => array(
 			'title' => 'Choosing a Dry Erase Product',
 			'sections' => array(
@@ -315,7 +315,7 @@ return array(
 	),
 
 	'seg-products' => array(
-		'lead' => 'SEG displays use a fabric print with a sewn silicone edge that presses into an aluminum frame for a tight, seamless face. Graphics ship the next business day when you order and approve artwork by 4 pm Pacific time.',
+		'lead' => 'SEG displays use a fabric print with a sewn silicone edge that presses into an aluminum frame for a tight, seamless face. Graphics ship the same business day when you order and approve artwork by 12 pm Pacific time.',
 		'guide' => array(
 			'title' => 'How to Choose an SEG Display',
 			'sections' => array(
@@ -340,7 +340,7 @@ return array(
 	),
 
 	'trade-show-products' => array(
-		'lead' => 'Fabric backwalls for booths, events and photo backdrops, with or without the aluminum frame. Graphics ship the next business day when you order and approve artwork by 4 pm Pacific time.',
+		'lead' => 'Fabric backwalls for booths, events and photo backdrops, with or without the frame. Graphics ship the next business day when you order and approve artwork by 4 pm Pacific time.',
 		'guide' => array(
 			'title' => 'Tension Fabric or Pop Up Display?',
 			'sections' => array(
@@ -429,7 +429,7 @@ return array(
 	),
 
 	'wall-art' => array(
-		'lead' => 'Photos, logos and artwork printed as finished wall pieces, most arriving ready to hang. Most ship the next business day when you order and approve artwork by 4 pm Pacific time, or the same day for an added charge.',
+		'lead' => 'Photos, logos and artwork printed as finished wall pieces, most arriving ready to hang. Most ship the same business day when you order and approve artwork by 12 pm Pacific time.',
 		'guide' => array(
 			'title' => 'Choosing Wall Art',
 			'sections' => array(
@@ -453,7 +453,7 @@ return array(
 	),
 
 	'adhesive-products' => array(
-		'lead' => 'Every adhesive vinyl here is printed to the size you enter and priced per square foot, up to 52" high. They ship the next business day when you order and approve artwork by 4 pm Pacific time, or the same day for an added charge.',
+		'lead' => 'Every adhesive vinyl here is printed to the size you enter and priced per square foot, up to 52" high. They ship the same business day when you order and approve artwork by 12 pm Pacific time.',
 		'guide' => array(
 			'title' => 'How to Choose Adhesive Vinyl',
 			'sections' => array(
@@ -481,7 +481,7 @@ return array(
 	),
 
 	'large-format' => array(
-		'lead' => 'Wide format prints for windows, walls, floors, light boxes and vehicles, priced per square foot so you can size a print and see its cost before you order. Most ship the next business day when ordered by 4 pm Pacific time, or the same day for an added charge.',
+		'lead' => 'Wide format prints for windows, walls, floors, light boxes and vehicles, priced per square foot so you can size a print and see its cost before you order. Most ship the same business day when ordered by 12 pm Pacific time.',
 		'guide' => array(
 			'title' => 'Which Large Format Print Do You Need?',
 			'sections' => array(

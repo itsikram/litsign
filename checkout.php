@@ -1,38 +1,35 @@
 <?php
 // Template Name: Checkout
 
-$cart = retails_get_cart();
+$cart = wholesale_get_cart();
 
 if (empty($cart->get_items())) {
     wp_safe_redirect(home_url('/cart/?type=warning&message=' . rawurlencode('Your cart is currently empty.')));
     exit;
 }
 
-$shipping_options = retails_cart_shipping_options($cart);
 $sub_total = round((float) $cart->sub_total, 2);
-$tax_rate = (float) retails_get_setting('tax_rate');
+$tax_rate = (float) wholesale_get_setting('tax_rate');
 $tax = round($sub_total * $tax_rate / 100, 2);
-$free_shipping_min = retails_free_shipping_threshold($cart);
-$free_shipping = retails_cart_qualifies_free_shipping($cart);
-// Free shipping promo code (inc/payments.php): the box in the order summary applies it
-// (?promo_code=), and ?promo= says how that went.
-$promo_live = retails_ship_code_window();
-$promo_applied = retails_applied_ship_code();
-$promo_by_code = retails_cart_ship_code($cart);
-$promo_result = isset($_GET['promo']) ? sanitize_key(wp_unslash($_GET['promo'])) : '';
-// The checked speed: Free Shipping when the cart qualifies, else Standard. A speed the customer picked in the live
-// chat (cookie sfs_ship from the chat widget: 0-3 or "free", 2 hours) is checked instead when this cart offers it.
-$ship_pick = $free_shipping ? 'free' : 0;
-$chat_ship = isset($_COOKIE['sfs_ship']) ? sanitize_key(wp_unslash($_COOKIE['sfs_ship'])) : '';
-if ('free' === $chat_ship && $free_shipping) {
-    $ship_pick = 'free';
-} elseif (preg_match('/^[0-3]$/', $chat_ship) && isset($shipping_options[(int) $chat_ship]) && !($free_shipping && 0 === (int) $chat_ship)) {
-    $ship_pick = (int) $chat_ship;
+$free_shipping_min = wholesale_free_shipping_threshold($cart);
+$free_shipping = wholesale_cart_qualifies_free_shipping($cart);
+
+// Delivery (inc/shipping.php): UPS/FedEx speeds, Blind Drop Ship, Store Pickup.
+$shipping_methods = wholesale_cart_shipping_methods($cart);
+$default_method = wholesale_default_shipping_method($shipping_methods);
+$first_shipping = $default_method ? (float) $shipping_methods[$default_method]['amount'] : 0;
+$method_speeds = array();
+foreach ($shipping_methods as $method) {
+    $method_speeds[$method['speed']][] = $method;
 }
-$first_shipping = 'free' === $ship_pick || !$shipping_options ? 0 : $shipping_options[$ship_pick];
-$card_enabled = !retails_setting_enabled('payment_disabled');
-$direct_card = $card_enabled && 'direct' === retails_payment_method();
-$noun = retails_items_noun($cart->get_items());
+$carriers = wholesale_enabled_shipping_carriers();
+$default_carrier = $default_method ? $shipping_methods[$default_method]['carrier'] : (string) array_key_first($carriers);
+$pickup = wholesale_pickup_location();
+$ship_date = wholesale_estimated_ship_date($cart);
+$blind_from = wholesale_saved_blind_ship_from();
+$card_enabled = !wholesale_setting_enabled('payment_disabled');
+$direct_card = $card_enabled && 'direct' === wholesale_payment_method();
+$noun = wholesale_items_noun($cart->get_items());
 $message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
 
 // Prefill for signed-in customers.
@@ -105,7 +102,7 @@ get_header();
         <?php endif; ?>
 
         <form action="<?php echo esc_url(home_url('/payment/')); ?>" method="post" id="checkoutForm" class="checkout-layout" novalidate>
-            <?php wp_nonce_field('retails_place_order', 'retails_order_nonce'); ?>
+            <?php wp_nonce_field('wholesale_place_order', 'wholesale_order_nonce'); ?>
 
             <div class="checkout-main">
                 <details class="checkout-mobile-summary">
@@ -189,6 +186,7 @@ get_header();
                         <input type="hidden" name="billing_country" value="United States">
                     </div>
 
+                    <div data-ship-only>
                     <label class="checkout-check">
                         <input type="checkbox" name="same_shipping_address" id="sameShippingAddress" checked>
                         Ship my <?php echo esc_html($noun); ?> to this address
@@ -236,6 +234,7 @@ get_header();
                             <input type="hidden" name="shipping_country" value="United States">
                         </div>
                     </div>
+                    </div>
 
                     <label class="checkout-check checkout-check--quiet">
                         <input type="checkbox" id="rememberDetails" checked>
@@ -244,37 +243,140 @@ get_header();
                 </section>
 
                 <section class="checkout-card" aria-labelledby="checkout-shipping">
-                    <h2 id="checkout-shipping"><span class="checkout-step-number">2</span> Shipping Options</h2>
-                    <p class="checkout-muted">Every <?php echo esc_html('order' === $noun ? 'item' : $noun); ?> is made to order and ships by <?php echo esc_html(retails_estimated_ship_date($cart)); ?>. Delivery dates include production time.</p>
-                    <div class="checkout-options" role="radiogroup" aria-labelledby="checkout-shipping">
-                        <?php if ($free_shipping_min > 0 || $free_shipping) : ?>
-                            <label class="checkout-option<?php echo $free_shipping ? '' : ' is-disabled'; ?>">
-                                <input type="radio" name="shipping_method" value="free" <?php checked('free' === $ship_pick); ?> <?php disabled(!$free_shipping); ?> required data-shipping-amount="0">
-                                <span class="checkout-option-body">
-                                    <strong><?php echo esc_html(retails_free_shipping_label($cart)); ?></strong>
-                                    <?php if ($free_shipping) : ?>
-                                        <small>Est. delivery <?php echo esc_html(retails_estimated_delivery_date($cart, 0)); ?></small>
-                                    <?php else : ?>
-                                        <small><?php echo esc_html(sprintf('Free on orders of %s or more. Add %s more to unlock it%s.', $money($free_shipping_min), $money($free_shipping_min - $sub_total), $promo_live ? ', or use a promo code' : '')); ?></small>
-                                    <?php endif; ?>
-                                </span>
-                                <span class="checkout-option-price">FREE</span>
+                    <h2 id="checkout-shipping"><span class="checkout-step-number">2</span> Delivery</h2>
+
+                    <?php if ($pickup && $shipping_methods) : ?>
+                        <div class="checkout-delivery-toggle" role="radiogroup" aria-label="How you get your order">
+                            <label class="checkout-delivery-choice">
+                                <input type="radio" name="delivery_method" value="ship" checked>
+                                <span class="checkout-delivery-choice__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M3 5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v2h3.4a1 1 0 0 1 .8.4l2.6 3.5a1 1 0 0 1 .2.6V16a1 1 0 0 1-1 1h-1.2a3 3 0 0 1-5.6 0H9.8a3 3 0 0 1-5.6 0H4a1 1 0 0 1-1-1V5Zm12 4v6h.2a3 3 0 0 1 4.6-.9V11.8L17.9 9H15ZM7 15.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm10 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg></span>
+                                <span class="checkout-delivery-choice__text"><strong>Ship it</strong><small><?php echo esc_html(implode(' or ', $carriers)); ?> to any US address</small></span>
                             </label>
-                        <?php endif; ?>
-                        <?php foreach ($shipping_options as $index => $amount) : ?>
-                            <?php if ($free_shipping && 0 === $index) {
-                                continue; // Free Shipping replaces Standard.
-                            } ?>
-                            <label class="checkout-option">
-                                <input type="radio" name="shipping_method" value="<?php echo esc_attr($amount); ?>" <?php checked($ship_pick === $index); ?> required data-shipping-amount="<?php echo esc_attr($amount); ?>">
-                                <span class="checkout-option-body">
-                                    <strong><?php echo esc_html(retails_shipping_label($index)); ?></strong>
-                                    <small>Est. delivery <?php echo esc_html(retails_estimated_delivery_date($cart, $index)); ?></small>
-                                </span>
-                                <span class="checkout-option-price"><?php echo esc_html($money($amount)); ?></span>
+                            <label class="checkout-delivery-choice">
+                                <input type="radio" name="delivery_method" value="pickup">
+                                <span class="checkout-delivery-choice__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 4h16l1 5a3 3 0 0 1-2 2.8V20a1 1 0 0 1-1 1h-4v-5h-4v5H6a1 1 0 0 1-1-1v-8.2A3 3 0 0 1 3 9l1-5Zm1.6 2-.6 3a1 1 0 0 0 2 0V6H5.6Zm3.4 0v3a1 1 0 0 0 2 0V6H9Zm4 0v3a1 1 0 0 0 2 0V6h-2Zm4 0v3a1 1 0 0 0 2 0l-.6-3H17Z"/></svg></span>
+                                <span class="checkout-delivery-choice__text"><strong>Store pickup</strong><small>Free &middot; <?php echo esc_html($pickup['city']); ?></small></span>
                             </label>
-                        <?php endforeach; ?>
-                    </div>
+                        </div>
+                    <?php else : ?>
+                        <input type="hidden" name="delivery_method" value="<?php echo $shipping_methods || !$pickup ? 'ship' : 'pickup'; ?>">
+                    <?php endif; ?>
+
+                    <?php if ($shipping_methods) : ?>
+                        <div class="checkout-delivery-panel" data-delivery-panel="ship">
+                            <p class="checkout-muted">Every <?php echo esc_html('order' === $noun ? 'item' : $noun); ?> is made to order and ships by <strong><?php echo esc_html($ship_date); ?></strong>. Delivery dates include production time.</p>
+                            <?php if ($free_shipping_min > 0 && !$free_shipping) : ?>
+                                <p class="checkout-free-hint"><?php echo esc_html(sprintf('Add %s more to get free Ground shipping.', $money($free_shipping_min - $sub_total))); ?> <a href="<?php echo esc_url(home_url('/cart/')); ?>">Back to cart</a></p>
+                            <?php endif; ?>
+
+                            <input type="hidden" name="shipping_quote" value="<?php echo esc_attr(number_format($first_shipping, 2, '.', '')); ?>" data-shipping-quote>
+
+                            <?php if (count($carriers) > 1) : ?>
+                                <div class="checkout-carriers" role="radiogroup" aria-label="Carrier">
+                                    <span class="checkout-carriers__label">Carrier</span>
+                                    <?php foreach ($carriers as $carrier => $carrier_label) : ?>
+                                        <label class="checkout-carrier-choice checkout-carrier-choice--<?php echo esc_attr($carrier); ?>">
+                                            <input type="radio" name="carrier_view" value="<?php echo esc_attr($carrier); ?>" <?php checked($default_carrier, $carrier); ?>>
+                                            <span><?php echo esc_html($carrier_label); ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="checkout-options checkout-rates" role="radiogroup" aria-labelledby="checkout-shipping">
+                                <?php foreach ($method_speeds as $speed => $speed_methods) : ?>
+                                    <?php foreach ($speed_methods as $method) : ?>
+                                        <label class="checkout-option checkout-rate" data-carrier="<?php echo esc_attr($method['carrier']); ?>" data-speed="<?php echo esc_attr($speed); ?>">
+                                            <input type="radio" name="shipping_method" value="<?php echo esc_attr($method['id']); ?>" <?php checked($default_method, $method['id']); ?> required data-shipping-amount="<?php echo esc_attr(number_format($method['amount'], 2, '.', '')); ?>" data-shipping-name="<?php echo esc_attr($method['label']); ?>">
+                                            <span class="checkout-option-body">
+                                                <strong><?php echo esc_html($method['group']); ?> <span class="checkout-rate__carrier checkout-rate__carrier--<?php echo esc_attr($method['carrier']); ?>"><?php echo esc_html($method['carrier_label']); ?></span></strong>
+                                                <small><?php echo esc_html($method['label']); ?> &middot; <?php echo esc_html($method['note']); ?></small>
+                                            </span>
+                                            <span class="checkout-rate__eta">
+                                                <small>Est. delivery</small>
+                                                <strong><?php echo esc_html($method['delivery']); ?></strong>
+                                            </span>
+                                            <span class="checkout-option-price">
+                                                <?php if ($method['free']) : ?>
+                                                    <s><?php echo esc_html($money($method['regular'])); ?></s> FREE
+                                                <?php else : ?>
+                                                    <?php echo esc_html($money($method['amount'])); ?>
+                                                <?php endif; ?>
+                                            </span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            </div>
+
+                            <div class="checkout-blind">
+                                <label class="checkout-blind__toggle">
+                                    <input type="checkbox" name="blind_ship" value="1" id="blindShip">
+                                    <span class="checkout-blind__text">
+                                        <strong>Blind drop ship <span class="checkout-badge">Free</span></strong>
+                                        <small>Ship straight to your client under your business name: your return address on the label, and no Storefront Sign branding, invoice or prices in the box.</small>
+                                    </span>
+                                </label>
+                                <div class="checkout-blind__fields" id="blindShipFields" hidden>
+                                    <div class="checkout-blind__head">
+                                        <h3>Return address on the label</h3>
+                                        <button type="button" class="checkout-link" data-blind-copy>Use my billing details</button>
+                                    </div>
+                                    <div class="checkout-grid">
+                                        <p class="checkout-field checkout-field--full">
+                                            <label for="blindFromCompany">Business name</label>
+                                            <input type="text" id="blindFromCompany" name="blind_from_company" required autocomplete="off" value="<?php echo esc_attr($blind_from['company'] ?? ''); ?>">
+                                        </p>
+                                        <p class="checkout-field checkout-field--half">
+                                            <label for="blindFromName">Contact name <span class="checkout-optional">(optional)</span></label>
+                                            <input type="text" id="blindFromName" name="blind_from_name" autocomplete="off" value="<?php echo esc_attr($blind_from['name'] ?? ''); ?>">
+                                        </p>
+                                        <p class="checkout-field checkout-field--half">
+                                            <label for="blindFromTel">Phone <span class="checkout-optional">(optional)</span></label>
+                                            <input type="tel" id="blindFromTel" name="blind_from_tel" autocomplete="off" inputmode="tel" value="<?php echo esc_attr($blind_from['tel'] ?? ''); ?>">
+                                        </p>
+                                        <p class="checkout-field checkout-field--full">
+                                            <label for="blindFromAddress">Street address</label>
+                                            <input type="text" id="blindFromAddress" name="blind_from_address" required autocomplete="off" value="<?php echo esc_attr($blind_from['address'] ?? ''); ?>">
+                                            <button type="button" class="checkout-link" data-reveal="blindFromAddress2">+ Add suite or unit</button>
+                                            <input type="text" id="blindFromAddress2" name="blind_from_address_2" autocomplete="off" placeholder="Suite, unit (optional)" aria-label="Return address suite or unit" value="<?php echo esc_attr($blind_from['address_2'] ?? ''); ?>" hidden>
+                                        </p>
+                                        <div class="checkout-grid checkout-grid--address checkout-field--full">
+                                            <p class="checkout-field checkout-field--city">
+                                                <label for="blindFromCity">City</label>
+                                                <input type="text" id="blindFromCity" name="blind_from_city" required autocomplete="off" value="<?php echo esc_attr($blind_from['city'] ?? ''); ?>">
+                                            </p>
+                                            <p class="checkout-field">
+                                                <label for="blindFromState">State</label>
+                                                <?php $state_select('blindFromState', 'blind_from_state', 'off', $blind_from['state'] ?? '', 'required'); ?>
+                                            </p>
+                                            <p class="checkout-field">
+                                                <label for="blindFromZip">ZIP code</label>
+                                                <input type="text" id="blindFromZip" name="blind_from_zip" required autocomplete="off" inputmode="numeric" maxlength="10" value="<?php echo esc_attr($blind_from['zip'] ?? ''); ?>">
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($pickup) : ?>
+                        <div class="checkout-delivery-panel" data-delivery-panel="pickup"<?php echo $shipping_methods ? ' hidden' : ''; ?>>
+                            <div class="checkout-pickup">
+                                <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>
+                                <div>
+                                    <strong>Pick up at our shop</strong>
+                                    <p><?php echo esc_html($pickup['address']); ?> &middot; <a href="<?php echo esc_url($pickup['map']); ?>" target="_blank" rel="noopener">Directions</a></p>
+                                    <?php if ($pickup['hours']) : ?><p>Pickup hours: <?php echo esc_html($pickup['hours']); ?></p><?php endif; ?>
+                                    <p class="checkout-pickup__ready">Ready for pickup by <strong><?php echo esc_html($ship_date); ?></strong>. We&rsquo;ll email you when it&rsquo;s ready &mdash; bring your order number.</p>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!$shipping_methods && !$pickup) : ?>
+                        <p class="checkout-alert" role="alert">Online shipping rates aren&rsquo;t available for this order. Please call <a href="tel:+18664362101">866-436-2101</a> and we&rsquo;ll quote delivery.</p>
+                    <?php endif; ?>
                 </section>
 
                 <section class="checkout-card" aria-labelledby="checkout-payment">
@@ -305,8 +407,6 @@ get_header();
                             </p>
                         </div>
                         <p class="checkout-cards">We accept Visa, Mastercard, American Express and Discover. Processed by Elavon Converge; we never store your card number.</p>
-                        <?php $wallet_names = function_exists('retails_public_wallet_names') ? retails_public_wallet_names() : array(); ?>
-                        <?php if ($wallet_names) : ?><p class="checkout-cards checkout-cards--wallets">Also accepted: <?php echo esc_html(implode(', ', $wallet_names)); ?>.</p><?php endif; ?>
                     <?php elseif ($card_enabled) : ?>
                         <div class="checkout-secure">
                             <?php echo $lock_icon; // Static SVG. ?>
@@ -314,8 +414,6 @@ get_header();
                                 <strong>Pay securely by card</strong>
                                 <p>When you click <em>Pay</em>, a secure window from our card processor, Elavon Converge, opens for your card details. Your card number never passes through our website.</p>
                                 <p class="checkout-cards">Visa &middot; Mastercard &middot; American Express &middot; Discover</p>
-                                <?php $wallet_names = function_exists('retails_public_wallet_names') ? retails_public_wallet_names() : array(); ?>
-                                <?php if ($wallet_names) : ?><p class="checkout-cards checkout-cards--wallets">Also accepted: <?php echo esc_html(implode(', ', $wallet_names)); ?>.</p><?php endif; ?>
                             </div>
                         </div>
                     <?php else : ?>
@@ -370,32 +468,9 @@ get_header();
                         <?php endforeach; ?>
                     </ul>
 
-                    <?php if ($promo_live || $promo_result) : ?>
-                        <div class="checkout-promo">
-                            <?php if ($promo_applied) : ?>
-                                <p class="checkout-promo__applied" role="status">
-                                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" d="m5 12.5 4.5 4.5L19 7.5"/></svg>
-                                    <span>Code <strong><?php echo esc_html($promo_applied); ?></strong> applied: <?php echo $promo_by_code ? 'free standard shipping' : 'this order already ships free'; ?>.</span>
-                                    <button type="submit" form="promoForm" name="promo_code" value="" class="checkout-promo__remove">Remove</button>
-                                </p>
-                            <?php elseif ($promo_live) : ?>
-                                <label class="checkout-promo__label" for="promoCode">Promo code</label>
-                                <span class="checkout-promo__row">
-                                    <input type="text" id="promoCode" name="promo_code" form="promoForm" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30" placeholder="Enter code"<?php echo 'invalid' === $promo_result ? ' aria-invalid="true" aria-describedby="promoMessage"' : ''; ?>>
-                                    <button type="submit" form="promoForm" class="checkout-promo__apply">Apply</button>
-                                </span>
-                            <?php endif; ?>
-                            <?php if ('invalid' === $promo_result && !$promo_applied) : ?>
-                                <p class="checkout-promo__message is-error" id="promoMessage" role="alert">That code isn't valid. Check the spelling and try again.</p>
-                            <?php elseif ('removed' === $promo_result && !$promo_applied) : ?>
-                                <p class="checkout-promo__message" role="status">Promo code removed.</p>
-                            <?php endif; ?>
-                        </div>
-                    <?php endif; ?>
-
                     <dl class="checkout-totals" data-subtotal="<?php echo esc_attr($sub_total); ?>" data-tax="<?php echo esc_attr($tax); ?>">
                         <div><dt>Subtotal</dt><dd><?php echo esc_html($money($sub_total)); ?></dd></div>
-                        <div><dt>Shipping</dt><dd data-shipping-total><?php echo esc_html($first_shipping > 0 ? $money($first_shipping) : 'FREE'); ?></dd></div>
+                        <div><dt>Shipping <small class="checkout-totals__method" data-summary-shipping><?php echo $default_method ? esc_html($shipping_methods[$default_method]['label']) : ($pickup ? 'Store pickup' : ''); ?></small></dt><dd data-shipping-total><?php echo esc_html($first_shipping > 0 ? $money($first_shipping) : 'FREE'); ?></dd></div>
                         <div><dt>Tax (<?php echo esc_html(rtrim(rtrim(number_format($tax_rate, 2), '0'), '.')); ?>%)</dt><dd><?php echo esc_html($money($tax)); ?></dd></div>
                         <div class="checkout-grand"><dt>Total</dt><dd data-grand-total><?php echo esc_html($money($grand_total)); ?></dd></div>
                     </dl>
@@ -420,8 +495,6 @@ get_header();
                 </div>
             </aside>
         </form>
-        <?php // The promo code box's own form (its fields sit in the order summary with form="promoForm"). ?>
-        <form id="promoForm" method="get" action="<?php echo esc_url(home_url('/checkout/')); ?>" hidden></form>
     </div>
 </main>
 

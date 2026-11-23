@@ -15,7 +15,7 @@
  * Replaces the Tidio plugin's own footer loader; does nothing when the plugin
  * is inactive or not connected.
  */
-function retails_delay_tidio_widget()
+function wholesale_delay_tidio_widget()
 {
 	global $wp_filter;
 
@@ -62,42 +62,20 @@ function retails_delay_tidio_widget()
 		<?php
 	}, 1000);
 }
-add_action('wp', 'retails_delay_tidio_widget');
-
-/**
- * Hero photos for /banners-displays/ and /window-graphics/: desktop and phone URLs.
- *
- * Uses img/landing-<name>-desktop.webp and -mobile.webp when both files exist.
- * Otherwise it uses the page's featured image, then the default hero. A missing
- * file must never be preloaded: on this site a 404 renders a whole WordPress page.
- */
-function retails_landing_page_hero_images($name)
-{
-	$desktop = '/img/landing-' . $name . '-desktop.webp';
-	$mobile = '/img/landing-' . $name . '-mobile.webp';
-	$dir = get_template_directory();
-	if (file_exists($dir . $desktop) && file_exists($dir . $mobile)) {
-		$uri = get_template_directory_uri();
-		return array($uri . $desktop, $uri . $mobile);
-	}
-
-	$url = get_the_post_thumbnail_url(get_the_ID(), 'large');
-	$url = $url ? retails_webp_url(esc_url_raw($url)) : retails_default_hero_url();
-	return array($url, $url);
-}
+add_action('wp', 'wholesale_delay_tidio_widget');
 
 /**
  * Let the browser fetch the /landing-page/ hero image while CSS is still
  * loading; it is that page's largest paint.
  */
-function retails_preload_landing_hero()
+function wholesale_preload_landing_hero()
 {
 	if (!is_page_template('landing-page.php')) {
 		return;
 	}
 
 	// Set in Settings > Storefront Sign > Images.
-	$hero = retails_landing_hero_urls();
+	$hero = wholesale_landing_hero_urls();
 	if ($hero['phone']) {
 		printf('<link rel="preload" as="image" href="%s" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($hero['phone']));
 	}
@@ -105,16 +83,16 @@ function retails_preload_landing_hero()
 		printf('<link rel="preload" as="image" href="%s" media="(min-width: 768px)" fetchpriority="high">' . "\n", esc_url($hero['wide']));
 	}
 }
-add_action('wp_head', 'retails_preload_landing_hero', 1);
+add_action('wp_head', 'wholesale_preload_landing_hero', 1);
 
 /**
  * On the home page the guide styles only apply below the fold, so load that
  * stylesheet without blocking the first paint (it stays blocking on pages
  * whose hero uses it).
  */
-function retails_async_home_guide_styles($tag, $handle)
+function wholesale_async_home_guide_styles($tag, $handle)
 {
-	if ('retails-seo-pages' !== $handle || !is_front_page()) {
+	if ('wholesale-seo-pages' !== $handle || !is_front_page()) {
 		return $tag;
 	}
 
@@ -123,7 +101,7 @@ function retails_async_home_guide_styles($tag, $handle)
 	// The fallback copy drops the id, which the async tag already uses.
 	return $async . '<noscript>' . preg_replace("/ id='[^']*'/", '', $tag, 1) . '</noscript>';
 }
-add_filter('style_loader_tag', 'retails_async_home_guide_styles', 10, 2);
+add_filter('style_loader_tag', 'wholesale_async_home_guide_styles', 10, 2);
 
 /**
  * Pages a page cache must never store, whatever cache plugin the host uses:
@@ -134,9 +112,9 @@ add_filter('style_loader_tag', 'retails_async_home_guide_styles', 10, 2);
  * Super Cache, LiteSpeed Cache, W3 Total Cache and WP Rocket) and a private,
  * no-store header for any proxy or host cache.
  */
-function retails_cache_excluded_request()
+function wholesale_cache_excluded_request()
 {
-	if (is_user_logged_in() || is_404() || is_search() || get_query_var('retails_thank_you') || is_singular('order')) {
+	if (is_user_logged_in() || is_404() || is_search() || get_query_var('wholesale_thank_you') || is_singular('order')) {
 		return true;
 	}
 
@@ -158,14 +136,14 @@ function retails_cache_excluded_request()
 		|| is_page_template(array('page-channel-letters-ads.php', 'landing-page.php', 'cl_builderr.php', 'b2calc.php', 'cart.php', 'checkout.php', 'account.php', 'my_orders.php', 'login.php', 'signup.php', 'payment.php', 'page-track-order.php'));
 }
 
-function retails_cache_exclusions()
+function wholesale_cache_exclusions()
 {
 	if (is_admin()) {
 		return;
 	}
 
-	if (!retails_cache_excluded_request()) {
-		retails_send_revalidate_headers();
+	if (!wholesale_cache_excluded_request()) {
+		wholesale_send_revalidate_headers();
 		return;
 	}
 
@@ -174,15 +152,15 @@ function retails_cache_exclusions()
 	}
 	if (!headers_sent()) {
 		header('Cache-Control: private, no-store, max-age=0');
-		retails_send_revalidate_headers();
+		wholesale_send_revalidate_headers();
 	}
 }
-add_action('template_redirect', 'retails_cache_exclusions', 5);
+add_action('template_redirect', 'wholesale_cache_exclusions', 5);
 
 /**
  * Whether PHP has already queued a response header with this name.
  */
-function retails_response_has_header($name)
+function wholesale_response_has_header($name)
 {
 	foreach (headers_list() as $header) {
 		if (0 === stripos($header, $name . ':')) {
@@ -202,15 +180,15 @@ function retails_response_has_header($name)
  * Sending an Expires header (and a Cache-Control when none is set yet, such
  * as the session's no-store) keeps mod_expires out of HTML responses.
  */
-function retails_send_revalidate_headers()
+function wholesale_send_revalidate_headers()
 {
 	if (headers_sent()) {
 		return;
 	}
-	if (!retails_response_has_header('Cache-Control')) {
+	if (!wholesale_response_has_header('Cache-Control')) {
 		header('Cache-Control: no-cache, max-age=0, must-revalidate');
 	}
-	if (!retails_response_has_header('Expires')) {
+	if (!wholesale_response_has_header('Expires')) {
 		header('Expires: Wed, 11 Jan 1984 05:00:00 GMT');
 	}
 }
@@ -222,7 +200,7 @@ function retails_send_revalidate_headers()
  * Cache-Control, so a route that allows caching (the live search's 60
  * seconds) keeps it and everything else is checked again.
  */
-function retails_rest_cache_headers($response)
+function wholesale_rest_cache_headers($response)
 {
 	if (!$response instanceof WP_HTTP_Response) {
 		return $response;
@@ -246,17 +224,17 @@ function retails_rest_cache_headers($response)
 
 	return $response;
 }
-add_filter('rest_post_dispatch', 'retails_rest_cache_headers', 99);
+add_filter('rest_post_dispatch', 'wholesale_rest_cache_headers', 99);
 
 /**
  * Stylesheets that never style anything in the first view, loaded without
  * blocking the first paint: the cart drawer (hidden until opened; its other
  * rules are click states) and, on the long home page, the footer.
  */
-function retails_async_offscreen_styles($tag, $handle)
+function wholesale_async_offscreen_styles($tag, $handle)
 {
 	if (is_admin() || false === strpos($tag, "media='all'")
-		|| !('retails-mini-cart' === $handle || ('retails-footer' === $handle && is_front_page()))) {
+		|| !('wholesale-mini-cart' === $handle || ('wholesale-footer' === $handle && is_front_page()))) {
 		return $tag;
 	}
 
@@ -265,39 +243,26 @@ function retails_async_offscreen_styles($tag, $handle)
 	// The fallback copy drops the id, which the async tag already uses.
 	return $async . '<noscript>' . preg_replace("/ id='[^']*'/", '', $tag, 1) . '</noscript>';
 }
-add_filter('style_loader_tag', 'retails_async_offscreen_styles', 10, 2);
+add_filter('style_loader_tag', 'wholesale_async_offscreen_styles', 10, 2);
 
 /**
  * The social icons plugin enqueues jQuery UI core on every page, but nothing
  * on the public site uses it. Scripts that depend on it still pull it in.
  */
-function retails_dequeue_unused_jquery_ui()
+function wholesale_dequeue_unused_jquery_ui()
 {
 	if (!is_admin()) {
 		wp_dequeue_script('jquery-ui-core');
 	}
 }
-add_action('wp_enqueue_scripts', 'retails_dequeue_unused_jquery_ui', 100);
-
-/**
- * The home page no longer uses the quote form styles (css/cl-quote.css, printed
- * inline in the <head>): none of its 64 rules match there (checked 2026-11-20).
- * Leaving them out makes the home HTML about 1 KB (gzip) smaller.
- */
-function retails_home_skip_quote_styles()
-{
-	if (is_front_page() && !is_admin()) {
-		wp_dequeue_style('cl-quote');
-	}
-}
-add_action('wp_enqueue_scripts', 'retails_home_skip_quote_styles', 100);
+add_action('wp_enqueue_scripts', 'wholesale_dequeue_unused_jquery_ui', 100);
 
 /**
  * Add a 480px-wide copy of the header logo to its srcset. The logo shows at
  * about 240px on phones, so on 2x screens the browser otherwise picks the
  * 768px file. The copy is made once, next to the uploaded original.
  */
-function retails_logo_srcset($sources, $size_array, $image_src, $image_meta, $attachment_id)
+function wholesale_logo_srcset($sources, $size_array, $image_src, $image_meta, $attachment_id)
 {
 	$width = 480;
 	if (is_admin() || !is_array($sources) || isset($sources[$width]) || (int) $attachment_id !== (int) get_theme_mod('custom_logo')
@@ -331,56 +296,7 @@ function retails_logo_srcset($sources, $size_array, $image_src, $image_meta, $at
 
 	return $sources;
 }
-add_filter('wp_calculate_image_srcset', 'retails_logo_srcset', 10, 5);
-
-/**
- * Whether a first-paint subset built by utils/critical-css still matches the
- * stylesheet it was cut from. Subsets that record the source's md5 in their
- * first comment ("source-md5: ...") are checked against it. File times are not
- * enough for those: a push or pull rewrites files in name order, so
- * "x-critical.css" is written just before "x.css" and looks older than it.
- * Subsets without the stamp still compare file times.
- */
-function retails_critical_css_fresh($subset, $source)
-{
-	static $fresh = array();
-	$key = $subset . '|' . $source;
-	if (isset($fresh[$key])) {
-		return $fresh[$key];
-	}
-
-	if (!is_readable($subset) || !is_readable($source)) {
-		return $fresh[$key] = false;
-	}
-
-	$head = (string) file_get_contents($subset, false, null, 0, 600);
-	if (preg_match('/source-md5: ([0-9a-f]{32})/', $head, $match)) {
-		return $fresh[$key] = hash_equals($match[1], (string) md5_file($source));
-	}
-
-	return $fresh[$key] = filemtime($subset) >= filemtime($source);
-}
-
-/**
- * A first-paint subset's CSS for an inline <style> block, or '' when it cannot
- * be inlined safely (the caller then links the file as before).
- *
- * The home page prints its subsets inline. As separate files the phone could
- * neither paint nor read past them until both had arrived, so the hero photos
- * and scripts were not even requested until then (PageSpeed mobile, Nov 20
- * 2026: blank screen until 2.8 s, Speed Index 5.5 s, while bootstrap-critical.css
- * shared the connection with the fonts and the hero photo).
- */
-function retails_critical_css_inline($file)
-{
-	$css = is_readable($file) ? (string) file_get_contents($file) : '';
-	if ('' === trim($css) || false !== stripos($css, '</style')) {
-		return '';
-	}
-
-	// The subset's relative URLs point from css/; inline they would resolve against the page.
-	return (string) preg_replace('#url\(\s*(["\']?)\.\./#', 'url($1' . get_template_directory_uri() . '/', $css);
-}
+add_filter('wp_calculate_image_srcset', 'wholesale_logo_srcset', 10, 5);
 
 /**
  * Pages that use css/bootstrap-critical.css instead of the full Bootstrap
@@ -388,7 +304,7 @@ function retails_critical_css_inline($file)
  * logged-out visitors. Product, cart, checkout, account and builder pages,
  * whose forms use much more of Bootstrap, keep the full file.
  */
-function retails_use_critical_bootstrap()
+function wholesale_use_critical_bootstrap()
 {
 	static $use = null;
 	if (null !== $use) {
@@ -397,10 +313,11 @@ function retails_use_critical_bootstrap()
 
 	$dir = get_template_directory() . '/css/';
 	$use = !is_admin() && !is_customize_preview() && !is_user_logged_in()
-		// A changed bootstrap.min.css means the subset is stale.
-		&& retails_critical_css_fresh($dir . 'bootstrap-critical.css', $dir . 'bootstrap.min.css')
+		&& file_exists($dir . 'bootstrap-critical.css')
+		// A newer bootstrap.min.css means the subset is stale.
+		&& filemtime($dir . 'bootstrap-critical.css') >= filemtime($dir . 'bootstrap.min.css')
 		&& !is_singular(array('product', 'order'))
-		&& !get_query_var('retails_thank_you')
+		&& !get_query_var('wholesale_thank_you')
 		&& !is_page(array('cart', 'checkout', 'account', 'my-orders', 'track-order', 'login', 'signup', 'payment', 'pay', 'channel-letter-builder'))
 		&& !is_page_template(array('cart.php', 'checkout.php', 'account.php', 'my_orders.php', 'login.php', 'signup.php', 'payment.php', 'page-pay.php', 'page-track-order.php', 'cl_builderr.php', 'b2calc.php', 'landing-page.php', 'page-channel-letters-ads.php'));
 
@@ -418,32 +335,21 @@ function retails_use_critical_bootstrap()
  * Regenerate the subset with utils/critical-css/ after changing Bootstrap
  * classes in templates; until then any missing rule applies after load.
  */
-function retails_critical_bootstrap_tag($tag, $handle, $href)
+function wholesale_critical_bootstrap_tag($tag, $handle, $href)
 {
-	if ('bootsrap' !== $handle || !retails_use_critical_bootstrap()) {
+	if ('bootsrap' !== $handle || !wholesale_use_critical_bootstrap()) {
 		return $tag;
 	}
 
 	$file = get_template_directory() . '/css/bootstrap-critical.css';
 	$critical = add_query_arg('ver', filemtime($file), get_template_directory_uri() . '/css/bootstrap-critical.css');
-	if (function_exists('retails_cache_bust_asset_src')) {
-		$critical = retails_cache_bust_asset_src($critical);
+	if (function_exists('wholesale_cache_bust_asset_src')) {
+		$critical = wholesale_cache_bust_asset_src($critical);
 	}
-	// Inline on the home page only (see retails_critical_css_inline()); other
-	// pages keep the file, which the browser then reuses from its cache.
-	$inline = is_front_page() ? retails_critical_css_inline($file) : '';
 
 	ob_start();
-	if ('' !== $inline) :
-		?>
-<style id="bootsrap-critical-css"><?php echo $inline; // phpcs:ignore WordPress.Security.EscapeOutput -- theme CSS file. ?></style>
-		<?php
-	else :
-		?>
-<link rel="stylesheet" id="bootsrap-critical-css" href="<?php echo esc_url($critical); ?>" media="all">
-		<?php
-	endif;
 	?>
+<link rel="stylesheet" id="bootsrap-critical-css" href="<?php echo esc_url($critical); ?>" media="all">
 <script>
 	window.addEventListener('load', function () {
 		var critical = document.getElementById('bootsrap-critical-css');
@@ -463,7 +369,7 @@ function retails_critical_bootstrap_tag($tag, $handle, $href)
 	<?php
 	return ob_get_clean();
 }
-add_filter('style_loader_tag', 'retails_critical_bootstrap_tag', 10, 3);
+add_filter('style_loader_tag', 'wholesale_critical_bootstrap_tag', 10, 3);
 
 /**
  * The same split for css/style.css on the home page: it is 27 KB (gzipped) of
@@ -476,34 +382,25 @@ add_filter('style_loader_tag', 'retails_critical_bootstrap_tag', 10, 3);
  * style.css makes the subset stale, and the home page then loads the full
  * file as before until the subset is rebuilt.
  */
-function retails_critical_home_style_tag($tag, $handle, $href)
+function wholesale_critical_home_style_tag($tag, $handle, $href)
 {
-	if ('custom-style' !== $handle || !is_front_page() || !retails_use_critical_bootstrap()) {
+	if ('custom-style' !== $handle || !is_front_page() || !wholesale_use_critical_bootstrap()) {
 		return $tag;
 	}
 
 	$dir = get_template_directory() . '/css/';
-	if (!retails_critical_css_fresh($dir . 'style-home-critical.css', $dir . 'style.css')) {
+	if (!file_exists($dir . 'style-home-critical.css') || filemtime($dir . 'style-home-critical.css') < filemtime($dir . 'style.css')) {
 		return $tag;
 	}
 
 	$critical = add_query_arg('ver', filemtime($dir . 'style-home-critical.css'), get_template_directory_uri() . '/css/style-home-critical.css');
-	if (function_exists('retails_cache_bust_asset_src')) {
-		$critical = retails_cache_bust_asset_src($critical);
+	if (function_exists('wholesale_cache_bust_asset_src')) {
+		$critical = wholesale_cache_bust_asset_src($critical);
 	}
-	$inline = retails_critical_css_inline($dir . 'style-home-critical.css');
 
 	ob_start();
-	if ('' !== $inline) :
-		?>
-<style id="custom-style-critical-css"><?php echo $inline; // phpcs:ignore WordPress.Security.EscapeOutput -- theme CSS file. ?></style>
-		<?php
-	else :
-		?>
-<link rel="stylesheet" id="custom-style-critical-css" href="<?php echo esc_url($critical); ?>" media="all">
-		<?php
-	endif;
 	?>
+<link rel="stylesheet" id="custom-style-critical-css" href="<?php echo esc_url($critical); ?>" media="all">
 <script>
 	window.addEventListener('load', function () {
 		var critical = document.getElementById('custom-style-critical-css');
@@ -521,70 +418,18 @@ function retails_critical_home_style_tag($tag, $handle, $href)
 	<?php
 	return ob_get_clean();
 }
-add_filter('style_loader_tag', 'retails_critical_home_style_tag', 10, 3);
-
-/**
- * css/ui-polish.css is 16 KB (gzipped) of render-blocking CSS, but only 18 of
- * its rules match anything on the home page (header, hero button, steps list,
- * footer bar). On the front page print just those rules inline
- * (css/ui-polish-home-critical.css, under 1 KB gzipped), so the first paint no
- * longer waits for the file, and add the full file in the same cascade
- * position once the page has loaded.
- *
- * Built with utils/critical-css (keep-ui-polish-home.txt). Any later edit to
- * ui-polish.css changes its md5, and the home page then loads the full file as
- * before until the subset is rebuilt.
- */
-function retails_critical_home_ui_polish_tag($tag, $handle, $href)
-{
-	if ('retails-ui-polish' !== $handle || is_admin() || is_customize_preview() || is_user_logged_in() || !is_front_page()) {
-		return $tag;
-	}
-
-	$dir = get_template_directory() . '/css/';
-	if (!retails_critical_css_fresh($dir . 'ui-polish-home-critical.css', $dir . 'ui-polish.css')) {
-		return $tag;
-	}
-
-	$css = (string) file_get_contents($dir . 'ui-polish-home-critical.css');
-	if ('' === trim($css) || false !== stripos($css, '</style')) {
-		return $tag;
-	}
-	// The subset's relative URLs point from css/; inline they would resolve against the page.
-	$css = preg_replace('#url\(\s*(["\']?)\.\./#', 'url($1' . get_template_directory_uri() . '/', $css);
-
-	ob_start();
-	?>
-<style id="retails-ui-polish-critical-css"><?php echo $css; // phpcs:ignore WordPress.Security.EscapeOutput -- theme CSS file. ?></style>
-<script>
-	window.addEventListener('load', function () {
-		var critical = document.getElementById('retails-ui-polish-critical-css');
-		var full = document.createElement('link');
-		full.rel = 'stylesheet';
-		full.id = 'retails-ui-polish-css';
-		full.href = <?php echo wp_json_encode($href); ?>;
-		// media="print" until it has loaded, so it never holds a paint back.
-		full.media = 'print';
-		full.onload = function () { this.media = 'all'; };
-		critical.parentNode.insertBefore(full, critical.nextSibling);
-	});
-</script>
-<noscript><?php echo trim($tag); ?></noscript>
-	<?php
-	return ob_get_clean();
-}
-add_filter('style_loader_tag', 'retails_critical_home_ui_polish_tag', 10, 3);
+add_filter('style_loader_tag', 'wholesale_critical_home_style_tag', 10, 3);
 
 /**
  * Offer AVIF copies of the header logo (about 40% smaller than its WebP; the
  * transparency is what keeps the WebP large). The copies come from the same
- * background job as the hero photos (retails_hero_avif_url()); until they
+ * background job as the hero photos (wholesale_hero_avif_url()); until they
  * exist the plain <img> is printed. display:contents keeps the <picture>
  * wrapper out of the layout, so the logo CSS still sizes the <img> as before.
  */
-function retails_logo_avif_picture($html, $attachment_id)
+function wholesale_logo_avif_picture($html, $attachment_id)
 {
-	if (is_admin() || (int) $attachment_id !== (int) get_theme_mod('custom_logo') || !function_exists('retails_hero_avif_url')
+	if (is_admin() || (int) $attachment_id !== (int) get_theme_mod('custom_logo') || !function_exists('wholesale_hero_avif_url')
 		|| !preg_match('/class="[^"]*(?<![\w-])header-logo(?![\w-])/', $html) || !preg_match('/srcset="([^"]+)"/', $html, $srcset)) {
 		return $html;
 	}
@@ -593,7 +438,7 @@ function retails_logo_avif_picture($html, $attachment_id)
 	$sources = array();
 	foreach ($candidates as $candidate) {
 		$parts = preg_split('/\s+/', trim($candidate));
-		$avif = 2 === count($parts) ? retails_hero_avif_url($parts[0]) : '';
+		$avif = 2 === count($parts) ? wholesale_hero_avif_url($parts[0]) : '';
 		if ($avif) {
 			$sources[] = esc_url($avif) . ' ' . $parts[1];
 		}
@@ -607,4 +452,4 @@ function retails_logo_avif_picture($html, $attachment_id)
 
 	return '<picture style="display:contents"><source type="image/avif" srcset="' . implode(', ', $sources) . '"' . $sizes . '>' . $html . '</picture>';
 }
-add_filter('wp_get_attachment_image', 'retails_logo_avif_picture', 10, 2);
+add_filter('wp_get_attachment_image', 'wholesale_logo_avif_picture', 10, 2);

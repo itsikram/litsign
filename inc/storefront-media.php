@@ -27,7 +27,7 @@
  *
  * @return array
  */
-function retails_storefront_media_manifest()
+function wholesale_storefront_media_manifest()
 {
 	static $manifest = null;
 	if (null === $manifest) {
@@ -42,14 +42,14 @@ function retails_storefront_media_manifest()
 /**
  * Attachment ID for a file in uploads/storefront-files, or 0.
  */
-function retails_storefront_media_id($file)
+function wholesale_storefront_media_id($file)
 {
 	global $wpdb;
 
 	// Look up by the file name recorded at registration: _wp_attached_file
 	// changes when WordPress scales a large image down (name-scaled.jpg).
 	return (int) $wpdb->get_var($wpdb->prepare(
-		"SELECT post_id FROM {$wpdb->postmeta} WHERE (meta_key = '_retails_storefront_file' AND meta_value = %s) OR (meta_key = '_wp_attached_file' AND meta_value = %s) ORDER BY meta_key = '_retails_storefront_file' DESC, post_id ASC LIMIT 1",
+		"SELECT post_id FROM {$wpdb->postmeta} WHERE (meta_key = '_wholesale_storefront_file' AND meta_value = %s) OR (meta_key = '_wp_attached_file' AND meta_value = %s) ORDER BY meta_key = '_wholesale_storefront_file' DESC, post_id ASC LIMIT 1",
 		$file,
 		'storefront-files/' . $file
 	));
@@ -59,12 +59,12 @@ function retails_storefront_media_id($file)
  * Public URL of a storefront file: its media library URL, or the uploads URL
  * while the file is not registered yet.
  */
-function retails_storefront_media_url($file)
+function wholesale_storefront_media_url($file)
 {
-	$attachment_id = retails_storefront_media_id($file);
+	$attachment_id = wholesale_storefront_media_id($file);
 	$url = $attachment_id ? wp_get_attachment_url($attachment_id) : '';
 	if (!$url) {
-		list(, $base_url) = retails_supplier_files_dir();
+		list(, $base_url) = wholesale_supplier_files_dir();
 		$url = trailingslashit($base_url) . rawurlencode($file);
 	}
 
@@ -74,7 +74,7 @@ function retails_storefront_media_url($file)
 /**
  * Media type for files WordPress does not know (CorelDRAW, Photoshop).
  */
-function retails_storefront_media_mime($file)
+function wholesale_storefront_media_mime($file)
 {
 	$type = wp_check_filetype($file);
 	$ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
@@ -88,17 +88,17 @@ function retails_storefront_media_mime($file)
  *
  * @return int Attachment ID, or 0 when the file is not on disk.
  */
-function retails_storefront_media_register($entry)
+function wholesale_storefront_media_register($entry)
 {
-	list($dir) = retails_supplier_files_dir();
+	list($dir) = wholesale_supplier_files_dir();
 	$path = trailingslashit($dir) . $entry['file'];
 	if (!is_file($path)) {
 		return 0;
 	}
 
-	$parent = $entry['parent'] ? retails_seo_product($entry['parent']) : null;
+	$parent = $entry['parent'] ? wholesale_seo_product($entry['parent']) : null;
 	$parent_id = $parent ? (int) $parent->ID : 0;
-	$mime = retails_storefront_media_mime($entry['file']);
+	$mime = wholesale_storefront_media_mime($entry['file']);
 	$is_image = 0 === strpos($mime, 'image/') && 'image/vnd.adobe.photoshop' !== $mime;
 	$description = $is_image ? $entry['alt'] : sprintf('Free %s download for %s.', $entry['title'], $parent ? html_entity_decode(get_the_title($parent), ENT_QUOTES, 'UTF-8') : 'Storefront Sign Online products');
 
@@ -112,7 +112,7 @@ function retails_storefront_media_register($entry)
 		'post_parent' => $parent_id,
 	);
 
-	$attachment_id = retails_storefront_media_id($entry['file']);
+	$attachment_id = wholesale_storefront_media_id($entry['file']);
 	if ($attachment_id) {
 		$attachment['ID'] = $attachment_id;
 		wp_update_post($attachment);
@@ -124,7 +124,7 @@ function retails_storefront_media_register($entry)
 	}
 	// Recorded before the slow part, so an interrupted request never
 	// registers the file twice.
-	update_post_meta($attachment_id, '_retails_storefront_file', $entry['file']);
+	update_post_meta($attachment_id, '_wholesale_storefront_file', $entry['file']);
 
 	if (!wp_get_attachment_metadata($attachment_id)) {
 		if ($is_image) {
@@ -146,7 +146,7 @@ function retails_storefront_media_register($entry)
 		update_post_meta($attachment_id, '_wp_attachment_image_alt', sanitize_text_field($entry['alt']));
 	}
 	if ($entry['parent']) {
-		update_post_meta($attachment_id, '_retails_storefront_product', $entry['parent']);
+		update_post_meta($attachment_id, '_wholesale_storefront_product', $entry['parent']);
 	}
 
 	return (int) $attachment_id;
@@ -159,14 +159,14 @@ function retails_storefront_media_register($entry)
  *
  * @return array array(plain replacements, regex replacements)
  */
-function retails_storefront_media_replacements()
+function wholesale_storefront_media_replacements()
 {
 	$plain = array();
 	$regex = array();
-	foreach (retails_storefront_media_manifest()['files'] as $entry) {
-		$url = retails_storefront_media_url($entry['file']);
+	foreach (wholesale_storefront_media_manifest()['files'] as $entry) {
+		$url = wholesale_storefront_media_url($entry['file']);
 		foreach ($entry['sources'] as $source) {
-			$source = RETAILS_SUPPLIER_URL . $source;
+			$source = WHOLESALE_SUPPLIER_URL . $source;
 			foreach (array($source, str_replace('&', '&amp;', $source), set_url_scheme($source, 'http')) as $variant) {
 				$plain[$variant] = $url;
 			}
@@ -185,18 +185,18 @@ function retails_storefront_media_replacements()
  * Point every supplier URL and earlier copy in a piece of HTML at the media
  * library, then remove what is left of the supplier (names, page links).
  */
-function retails_storefront_media_rewrite_urls($html)
+function wholesale_storefront_media_rewrite_urls($html)
 {
 	static $replacements = null;
 	if (null === $replacements) {
-		$replacements = retails_storefront_media_replacements();
+		$replacements = wholesale_storefront_media_replacements();
 	}
 	list($plain, $regex) = $replacements;
 
 	$html = strtr((string) $html, $plain);
 	$html = preg_replace(array_keys($regex), array_values($regex), $html);
 
-	return retails_clean_supplier_html($html, array());
+	return wholesale_clean_supplier_html($html, array());
 }
 
 /**
@@ -204,15 +204,15 @@ function retails_storefront_media_rewrite_urls($html)
  * loading. Alt text that says nothing ("Description", "step1", file types)
  * is replaced; other alt text is kept.
  */
-function retails_storefront_media_image_tags($html)
+function wholesale_storefront_media_image_tags($html)
 {
 	static $by_url = null;
 	if (null === $by_url) {
 		$by_url = array();
-		foreach (retails_storefront_media_manifest()['files'] as $entry) {
-			$attachment_id = retails_storefront_media_id($entry['file']);
+		foreach (wholesale_storefront_media_manifest()['files'] as $entry) {
+			$attachment_id = wholesale_storefront_media_id($entry['file']);
 			if ($attachment_id) {
-				$by_url[retails_storefront_media_url($entry['file'])] = array($attachment_id, $entry['alt']);
+				$by_url[wholesale_storefront_media_url($entry['file'])] = array($attachment_id, $entry['alt']);
 			}
 		}
 	}
@@ -263,9 +263,9 @@ function retails_storefront_media_image_tags($html)
  * a product edited since is left alone. Formats that were never offered for
  * a product read "N/A".
  */
-function retails_storefront_media_template_links($html, $slug)
+function wholesale_storefront_media_template_links($html, $slug)
 {
-	$links = retails_storefront_media_manifest()['template_links'];
+	$links = wholesale_storefront_media_manifest()['template_links'];
 	if (empty($links[$slug])) {
 		return $html;
 	}
@@ -291,8 +291,8 @@ function retails_storefront_media_template_links($html, $slug)
 
 		return sprintf(
 			'<a href="%s" download aria-label="%s">%s</a>',
-			esc_url(retails_storefront_media_url($file)),
-			esc_attr(sprintf('Download %s', retails_storefront_media_title($file))),
+			esc_url(wholesale_storefront_media_url($file)),
+			esc_attr(sprintf('Download %s', wholesale_storefront_media_title($file))),
 			esc_html($text)
 		);
 	}, $html);
@@ -301,9 +301,9 @@ function retails_storefront_media_template_links($html, $slug)
 /**
  * Manifest title for a file.
  */
-function retails_storefront_media_title($file)
+function wholesale_storefront_media_title($file)
 {
-	foreach (retails_storefront_media_manifest()['files'] as $entry) {
+	foreach (wholesale_storefront_media_manifest()['files'] as $entry) {
 		if ($entry['file'] === $file) {
 			return $entry['title'];
 		}
@@ -315,7 +315,7 @@ function retails_storefront_media_title($file)
 /**
  * Link the first unlinked occurrence of a piece of text.
  */
-function retails_storefront_media_link_text($html, $text, $url)
+function wholesale_storefront_media_link_text($html, $text, $url)
 {
 	$variants = array_unique(array($text, esc_html($text), str_replace('"', '&quot;', $text), str_replace('"', '&#8221;', $text), str_replace('"', '&rdquo;', $text)));
 	$parts = preg_split('#(<a\b.*?</a>|<[^>]+>)#is', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
@@ -340,22 +340,22 @@ function retails_storefront_media_link_text($html, $text, $url)
  * Restore links that pointed at the supplier's product pages, now to the
  * matching product here, and link "Template User Guide" to the guide page.
  */
-function retails_storefront_media_text_links($html, $product)
+function wholesale_storefront_media_text_links($html, $product)
 {
 	$title = html_entity_decode(get_the_title($product), ENT_QUOTES, 'UTF-8');
-	$links = retails_storefront_media_manifest()['text_links'];
+	$links = wholesale_storefront_media_manifest()['text_links'];
 	if (!empty($links[$title])) {
 		foreach ($links[$title] as $link) {
-			$target = retails_seo_product($link[1]);
+			$target = wholesale_seo_product($link[1]);
 			if ($target && false === strpos($html, get_permalink($target))) {
-				$html = retails_storefront_media_link_text($html, $link[0], get_permalink($target));
+				$html = wholesale_storefront_media_link_text($html, $link[0], get_permalink($target));
 			}
 		}
 	}
 
 	$guide = home_url('/design-templates/#template-guide');
 	if (false === strpos($html, '/design-templates/')) {
-		$html = retails_storefront_media_link_text($html, 'Template User Guide', $guide);
+		$html = wholesale_storefront_media_link_text($html, 'Template User Guide', $guide);
 	}
 
 	return $html;
@@ -366,13 +366,13 @@ function retails_storefront_media_text_links($html, $product)
  * letters get the stainless steel chart; other charts were never copied, so
  * those links say what they do (ask us for the chart).
  */
-function retails_storefront_media_component_links($html, $slug)
+function wholesale_storefront_media_component_links($html, $slug)
 {
-	$charts = retails_storefront_media_manifest()['component_links'];
+	$charts = wholesale_storefront_media_manifest()['component_links'];
 
 	return preg_replace_callback('#<a\b[^>]*href=(["\'])[^"\']*/contact/?\1[^>]*>\s*((?:Download|Same as) [^<]*Color Chart)\s*</a>#i', static function ($match) use ($charts, $slug) {
 		if (!empty($charts[$slug])) {
-			return sprintf('<a href="%s" download>%s</a>', esc_url(retails_storefront_media_url($charts[$slug])), esc_html(preg_replace('/^Same as Return/i', 'Download', $match[2])));
+			return sprintf('<a href="%s" download>%s</a>', esc_url(wholesale_storefront_media_url($charts[$slug])), esc_html(preg_replace('/^Same as Return/i', 'Download', $match[2])));
 		}
 
 		return str_replace($match[2], preg_replace('/^Download /i', 'Request ', $match[2]), $match[0]);
@@ -384,17 +384,17 @@ function retails_storefront_media_component_links($html, $slug)
  * 'component' (channel letter component tabs) or 'meta' (any other field,
  * which only gets its URLs and images updated).
  */
-function retails_storefront_media_product_html($html, $product, $field = 'content')
+function wholesale_storefront_media_product_html($html, $product, $field = 'content')
 {
-	$html = retails_storefront_media_rewrite_urls($html);
+	$html = wholesale_storefront_media_rewrite_urls($html);
 	if ('component' === $field) {
-		$html = retails_storefront_media_component_links($html, $product->post_name);
+		$html = wholesale_storefront_media_component_links($html, $product->post_name);
 	} elseif ('content' === $field) {
-		$html = retails_storefront_media_template_links($html, $product->post_name);
-		$html = retails_storefront_media_text_links($html, $product);
+		$html = wholesale_storefront_media_template_links($html, $product->post_name);
+		$html = wholesale_storefront_media_text_links($html, $product);
 	}
 
-	return retails_storefront_media_image_tags($html);
+	return wholesale_storefront_media_image_tags($html);
 }
 
 /**
@@ -402,39 +402,39 @@ function retails_storefront_media_product_html($html, $product, $field = 'conten
  * returns false until all are in the media library; then rewrites products,
  * product meta, pages and revisions and removes leftover supplier records.
  */
-function retails_seo_migrate_storefront_media()
+function wholesale_seo_migrate_storefront_media()
 {
-	$manifest = retails_storefront_media_manifest();
+	$manifest = wholesale_storefront_media_manifest();
 	if (!$manifest['files']) {
 		return false;
 	}
-	list($dir) = retails_supplier_files_dir();
+	list($dir) = wholesale_supplier_files_dir();
 	if (!is_file(trailingslashit($dir) . $manifest['files'][0]['file'])) {
 		return false; // Files not uploaded yet.
 	}
 
 	$started = microtime(true);
 	foreach ($manifest['files'] as $entry) {
-		$attachment_id = retails_storefront_media_id($entry['file']);
+		$attachment_id = wholesale_storefront_media_id($entry['file']);
 		if ($attachment_id && wp_get_attachment_metadata($attachment_id)) {
 			continue;
 		}
-		retails_storefront_media_register($entry);
+		wholesale_storefront_media_register($entry);
 		if (microtime(true) - $started > 15) {
 			return false;
 		}
 	}
 
 	global $wpdb;
-	$like = "(post_content LIKE '%storefront-files%' OR post_content LIKE '%" . RETAILS_SUPPLIER_NAME . "%' OR post_content LIKE '%/contact/%' OR post_content LIKE '%Template User Guide%')";
+	$like = "(post_content LIKE '%storefront-files%' OR post_content LIKE '%" . WHOLESALE_SUPPLIER_NAME . "%' OR post_content LIKE '%/contact/%' OR post_content LIKE '%Template User Guide%')";
 
 	// Products and pages.
 	$posts = $wpdb->get_results("SELECT ID, post_content FROM {$wpdb->posts} WHERE post_type IN ('product', 'page', 'post') AND post_status NOT IN ('inherit', 'auto-draft') AND {$like}");
 	foreach ($posts as $row) {
 		$post = get_post($row->ID);
 		$clean = 'product' === $post->post_type
-			? retails_storefront_media_product_html($row->post_content, $post)
-			: retails_storefront_media_image_tags(retails_storefront_media_rewrite_urls($row->post_content));
+			? wholesale_storefront_media_product_html($row->post_content, $post)
+			: wholesale_storefront_media_image_tags(wholesale_storefront_media_rewrite_urls($row->post_content));
 		if ($clean !== $row->post_content) {
 			$wpdb->update($wpdb->posts, array('post_content' => $clean), array('ID' => $row->ID));
 			clean_post_cache($row->ID);
@@ -442,12 +442,12 @@ function retails_seo_migrate_storefront_media()
 	}
 
 	// Product meta (channel letter component tabs and any other HTML fields).
-	$metas = $wpdb->get_results("SELECT pm.meta_id, pm.post_id, pm.meta_key, pm.meta_value FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = 'product' AND (pm.meta_value LIKE '%storefront-files%' OR pm.meta_value LIKE '%" . RETAILS_SUPPLIER_NAME . "%' OR pm.meta_value LIKE '%/contact/%')");
+	$metas = $wpdb->get_results("SELECT pm.meta_id, pm.post_id, pm.meta_key, pm.meta_value FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = 'product' AND (pm.meta_value LIKE '%storefront-files%' OR pm.meta_value LIKE '%" . WHOLESALE_SUPPLIER_NAME . "%' OR pm.meta_value LIKE '%/contact/%')");
 	foreach ($metas as $meta) {
 		if (is_serialized($meta->meta_value)) {
 			continue;
 		}
-		$clean = retails_storefront_media_product_html($meta->meta_value, get_post($meta->post_id), '_product_component' === $meta->meta_key ? 'component' : 'meta');
+		$clean = wholesale_storefront_media_product_html($meta->meta_value, get_post($meta->post_id), '_product_component' === $meta->meta_key ? 'component' : 'meta');
 		if ($clean !== $meta->meta_value) {
 			$wpdb->update($wpdb->postmeta, array('meta_value' => $clean), array('meta_id' => $meta->meta_id));
 			wp_cache_delete($meta->post_id, 'post_meta');
@@ -455,9 +455,9 @@ function retails_seo_migrate_storefront_media()
 	}
 
 	// Revisions and autosaves keep their own copy of old content.
-	$revisions = $wpdb->get_results("SELECT ID, post_content, post_title FROM {$wpdb->posts} WHERE post_type = 'revision' AND (post_content LIKE '%storefront-files%' OR post_content LIKE '%" . RETAILS_SUPPLIER_NAME . "%' OR post_content LIKE '%b2 sign%' OR post_title LIKE '%" . RETAILS_SUPPLIER_NAME . "%')");
+	$revisions = $wpdb->get_results("SELECT ID, post_content, post_title FROM {$wpdb->posts} WHERE post_type = 'revision' AND (post_content LIKE '%storefront-files%' OR post_content LIKE '%" . WHOLESALE_SUPPLIER_NAME . "%' OR post_content LIKE '%b2 sign%' OR post_title LIKE '%" . WHOLESALE_SUPPLIER_NAME . "%')");
 	foreach ($revisions as $row) {
-		$clean = retails_storefront_media_image_tags(retails_storefront_media_rewrite_urls($row->post_content));
+		$clean = wholesale_storefront_media_image_tags(wholesale_storefront_media_rewrite_urls($row->post_content));
 		if ($clean !== $row->post_content) {
 			$wpdb->update($wpdb->posts, array('post_content' => $clean), array('ID' => $row->ID));
 			clean_post_cache($row->ID);
@@ -466,10 +466,10 @@ function retails_seo_migrate_storefront_media()
 
 	// Leftovers: the earlier copy list, and an inactive SEO plugin's link
 	// index that still lists the supplier's pages.
-	delete_option('retails_supplier_files');
+	delete_option('wholesale_supplier_files');
 	$links_table = $wpdb->prefix . 'rank_math_internal_links';
 	if ($links_table === $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $links_table))) {
-		$wpdb->query("DELETE FROM {$links_table} WHERE url LIKE '%" . RETAILS_SUPPLIER_NAME . "%'");
+		$wpdb->query("DELETE FROM {$links_table} WHERE url LIKE '%" . WHOLESALE_SUPPLIER_NAME . "%'");
 	}
 
 	return true;

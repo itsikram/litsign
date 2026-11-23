@@ -15,20 +15,20 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const RETAILS_REVIEW_MANAGER_PAGE = 'retails-reviews-by-product';
-const RETAILS_REVIEW_MANAGER_CAP = 'edit_others_posts';
+const WHOLESALE_REVIEW_MANAGER_PAGE = 'wholesale-reviews-by-product';
+const WHOLESALE_REVIEW_MANAGER_CAP = 'edit_others_posts';
 
-function retails_review_manager_url($args = array())
+function wholesale_review_manager_url($args = array())
 {
-	return add_query_arg($args, admin_url('edit.php?post_type=review_submission&page=' . RETAILS_REVIEW_MANAGER_PAGE));
+	return add_query_arg($args, admin_url('edit.php?post_type=review_submission&page=' . WHOLESALE_REVIEW_MANAGER_PAGE));
 }
 
-function retails_review_is_sample($review_id)
+function wholesale_review_is_sample($review_id)
 {
 	return (bool) get_post_meta($review_id, '_review_is_sample', true);
 }
 
-function retails_product_by_slug($slug)
+function wholesale_product_by_slug($slug)
 {
 	$slug = sanitize_title($slug);
 	$product = $slug ? get_page_by_path($slug, OBJECT, 'product') : null;
@@ -38,11 +38,11 @@ function retails_product_by_slug($slug)
 /**
  * Review counts and the average of approved, non-sample reviews, keyed by product ID.
  */
-function retails_review_stats_by_product()
+function wholesale_review_stats_by_product()
 {
-	global $retails_review_stats_cache;
-	if (is_array($retails_review_stats_cache)) {
-		return $retails_review_stats_cache;
+	global $wholesale_review_stats_cache;
+	if (is_array($wholesale_review_stats_cache)) {
+		return $wholesale_review_stats_cache;
 	}
 
 	$reviews = get_posts(array(
@@ -52,22 +52,17 @@ function retails_review_stats_by_product()
 	));
 
 	$stats = array();
-	// Reviews hidden on public pages (inc/reviews.php) don't count toward a product's public rating.
-	$hidden = function_exists('retails_hidden_review_ids') ? retails_hidden_review_ids() : array();
 	foreach ($reviews as $review) {
-		if ($hidden && in_array((int) $review->ID, $hidden, true)) {
-			continue;
-		}
 		$product_id = absint(get_post_meta($review->ID, '_review_product_id', true));
 		if (!isset($stats[$product_id])) {
 			$stats[$product_id] = array('published' => 0, 'pending' => 0, 'samples' => 0, 'sum' => 0, 'average' => 0.0, 'imported' => 0);
 		}
-		if (retails_review_is_sample($review->ID)) {
+		if (wholesale_review_is_sample($review->ID)) {
 			$stats[$product_id]['samples']++;
 		} elseif ('publish' === $review->post_status) {
 			$stats[$product_id]['published']++;
 			$stats[$product_id]['sum'] += min(5, max(1, absint(get_post_meta($review->ID, '_review_rating', true))));
-			// Approved reviews that came from an import file (see retails_product_schema()).
+			// Approved reviews that came from an import file (see wholesale_product_schema()).
 			if ('import' === get_post_meta($review->ID, '_review_source', true)) {
 				$stats[$product_id]['imported']++;
 			}
@@ -80,65 +75,64 @@ function retails_review_stats_by_product()
 		$stats[$product_id]['average'] = $row['published'] ? round($row['sum'] / $row['published'], 1) : 0.0;
 	}
 
-	return $retails_review_stats_cache = $stats;
+	return $wholesale_review_stats_cache = $stats;
 }
 
-function retails_product_review_stats($product_id)
+function wholesale_product_review_stats($product_id)
 {
-	$stats = retails_review_stats_by_product();
+	$stats = wholesale_review_stats_by_product();
 	return isset($stats[$product_id]) ? $stats[$product_id] : array('published' => 0, 'pending' => 0, 'samples' => 0, 'sum' => 0, 'average' => 0.0, 'imported' => 0);
 }
 
 // Any review change clears the cached stats, so product cards update right away.
-function retails_review_stats_flush()
+function wholesale_review_stats_flush()
 {
-	global $retails_review_stats_cache;
-	$retails_review_stats_cache = null;
+	global $wholesale_review_stats_cache;
+	$wholesale_review_stats_cache = null;
 }
 
 add_action('transition_post_status', function ($new_status, $old_status, $post) {
 	if ('review_submission' === $post->post_type) {
-		retails_review_stats_flush();
+		wholesale_review_stats_flush();
 	}
 }, 10, 3);
 
 add_action('updated_post_meta', function ($meta_id, $object_id, $meta_key) {
 	if (in_array($meta_key, array('_review_rating', '_review_product_id', '_review_is_sample'), true)) {
-		retails_review_stats_flush();
+		wholesale_review_stats_flush();
 	}
 }, 10, 3);
 
 // Placeholder reviews can never go live, whichever screen tries to publish them.
 add_filter('wp_insert_post_data', function ($data, $postarr) {
-	if ('review_submission' === $data['post_type'] && 'publish' === $data['post_status'] && !empty($postarr['ID']) && retails_review_is_sample($postarr['ID'])) {
+	if ('review_submission' === $data['post_type'] && 'publish' === $data['post_status'] && !empty($postarr['ID']) && wholesale_review_is_sample($postarr['ID'])) {
 		$data['post_status'] = 'draft';
 	}
 	return $data;
 }, 10, 2);
 
 add_filter('post_row_actions', function ($actions, $post) {
-	if ('review_submission' === $post->post_type && retails_review_is_sample($post->ID)) {
-		unset($actions['retails_review']);
+	if ('review_submission' === $post->post_type && wholesale_review_is_sample($post->ID)) {
+		unset($actions['wholesale_review']);
 	}
 	return $actions;
 }, 20, 2);
 
-function retails_review_preview_mode()
+function wholesale_review_preview_mode()
 {
-	return isset($_GET['review_preview']) && current_user_can(RETAILS_REVIEW_MANAGER_CAP);
+	return isset($_GET['review_preview']) && current_user_can(WHOLESALE_REVIEW_MANAGER_CAP);
 }
 
 /**
  * Approved reviews for a product page. In preview mode, sample reviews are included too.
  */
-function retails_product_reviews($product_id, $limit = 6)
+function wholesale_product_reviews($product_id, $limit = 6)
 {
-	$preview = retails_review_preview_mode();
+	$preview = wholesale_review_preview_mode();
 	$reviews = get_posts(array(
 		'post_type' => 'review_submission',
 		'post_status' => $preview ? array('publish', 'draft') : 'publish',
 		'posts_per_page' => $limit,
-		'post__not_in' => function_exists('retails_hidden_review_ids') ? retails_hidden_review_ids() : array(),
 		'meta_key' => '_review_product_id',
 		'meta_value' => absint($product_id),
 		'orderby' => 'date',
@@ -147,7 +141,7 @@ function retails_product_reviews($product_id, $limit = 6)
 
 	if ($preview) {
 		$reviews = array_values(array_filter($reviews, function ($review) {
-			return 'publish' === $review->post_status || retails_review_is_sample($review->ID);
+			return 'publish' === $review->post_status || wholesale_review_is_sample($review->ID);
 		}));
 	}
 
@@ -162,7 +156,7 @@ function retails_product_reviews($product_id, $limit = 6)
  * post IDs differ between the local and live databases. A review already
  * tagged is skipped, so one the owner publishes again on purpose stays live.
  */
-function retails_migrate_hide_unverified_reviews()
+function wholesale_migrate_hide_unverified_reviews()
 {
 	global $wpdb;
 
@@ -189,7 +183,7 @@ function retails_migrate_hide_unverified_reviews()
 		$wpdb->update($wpdb->posts, array('post_status' => 'draft'), array('ID' => $review_id));
 		clean_post_cache($review_id);
 	}
-	retails_review_stats_flush();
+	wholesale_review_stats_flush();
 
 	return true;
 }
@@ -198,11 +192,11 @@ function retails_migrate_hide_unverified_reviews()
 // options table from local, so a "done" flag reached live while live's reviews
 // stayed published (2026-10-27). Re-check on admin visits instead.
 add_action('admin_init', function () {
-	if (!current_user_can('manage_options') || get_transient('retails_unverified_reviews_checked')) {
+	if (!current_user_can('manage_options') || get_transient('wholesale_unverified_reviews_checked')) {
 		return;
 	}
-	set_transient('retails_unverified_reviews_checked', 1, 10 * MINUTE_IN_SECONDS);
-	retails_migrate_hide_unverified_reviews();
+	set_transient('wholesale_unverified_reviews_checked', 1, 10 * MINUTE_IN_SECONDS);
+	wholesale_migrate_hide_unverified_reviews();
 });
 
 // ------------------------------------------------------------------
@@ -214,20 +208,20 @@ add_action('admin_menu', function () {
 		'edit.php?post_type=review_submission',
 		'Reviews by Product',
 		'Reviews by Product',
-		RETAILS_REVIEW_MANAGER_CAP,
-		RETAILS_REVIEW_MANAGER_PAGE,
-		'retails_review_manager_page'
+		WHOLESALE_REVIEW_MANAGER_CAP,
+		WHOLESALE_REVIEW_MANAGER_PAGE,
+		'wholesale_review_manager_page'
 	);
 });
 
-function retails_review_manager_flash($type, $message)
+function wholesale_review_manager_flash($type, $message)
 {
-	set_transient('retails_review_flash_' . get_current_user_id(), array('type' => $type, 'message' => $message), MINUTE_IN_SECONDS);
+	set_transient('wholesale_review_flash_' . get_current_user_id(), array('type' => $type, 'message' => $message), MINUTE_IN_SECONDS);
 }
 
-function retails_review_manager_notice()
+function wholesale_review_manager_notice()
 {
-	$key = 'retails_review_flash_' . get_current_user_id();
+	$key = 'wholesale_review_flash_' . get_current_user_id();
 	$flash = get_transient($key);
 	if (!is_array($flash)) {
 		return;
@@ -239,10 +233,10 @@ function retails_review_manager_notice()
 /**
  * Reads the shared review fields from a manager form. Returns WP_Error on bad input.
  */
-function retails_review_manager_fields($source)
+function wholesale_review_manager_fields($source)
 {
 	$slug = sanitize_title(wp_unslash($source['product_slug'] ?? ''));
-	$product = retails_product_by_slug($slug);
+	$product = wholesale_product_by_slug($slug);
 	if (!$product) {
 		return new WP_Error('product', sprintf('No product has the slug <code>%s</code>.', esc_html($slug)));
 	}
@@ -264,19 +258,19 @@ function retails_review_manager_fields($source)
 		'title' => sanitize_text_field(wp_unslash($source['title'] ?? '')),
 		'company' => sanitize_text_field(wp_unslash($source['company'] ?? '')),
 		'location' => sanitize_text_field(wp_unslash($source['location'] ?? '')),
-		'date' => $date ? retails_review_random_datetime($date->format('Y-m-d')) : '',
+		'date' => $date ? wholesale_review_random_datetime($date->format('Y-m-d')) : '',
 	);
 }
 
 // A random daytime on the given day, so reviews don't all share one timestamp. Never in the future.
-function retails_review_random_datetime($day)
+function wholesale_review_random_datetime($day)
 {
 	$datetime = sprintf('%s %02d:%02d:%02d', $day, wp_rand(7, 21), wp_rand(0, 59), wp_rand(0, 59));
 	$now = current_time('mysql');
 	return $datetime > $now ? $now : $datetime;
 }
 
-function retails_review_manager_post_args($fields)
+function wholesale_review_manager_post_args($fields)
 {
 	// wp_insert_post() unslashes its input.
 	$args = array(
@@ -290,7 +284,7 @@ function retails_review_manager_post_args($fields)
 	return $args;
 }
 
-function retails_review_manager_save_meta($review_id, $fields)
+function wholesale_review_manager_save_meta($review_id, $fields)
 {
 	update_post_meta($review_id, '_review_product_id', $fields['product_id']);
 	update_post_meta($review_id, '_review_rating', $fields['rating']);
@@ -300,13 +294,13 @@ function retails_review_manager_save_meta($review_id, $fields)
 	update_post_meta($review_id, '_review_location', wp_slash($fields['location']));
 }
 
-add_action('admin_post_retails_review_manager', 'retails_review_manager_handle');
-function retails_review_manager_handle()
+add_action('admin_post_wholesale_review_manager', 'wholesale_review_manager_handle');
+function wholesale_review_manager_handle()
 {
-	if (!current_user_can(RETAILS_REVIEW_MANAGER_CAP)) {
+	if (!current_user_can(WHOLESALE_REVIEW_MANAGER_CAP)) {
 		wp_die('Not allowed.');
 	}
-	check_admin_referer('retails_review_manager');
+	check_admin_referer('wholesale_review_manager');
 
 	$task = sanitize_key(wp_unslash($_POST['task'] ?? ''));
 	$product_slug = sanitize_title(wp_unslash($_POST['product'] ?? ''));
@@ -318,12 +312,12 @@ function retails_review_manager_handle()
 		case 'unpublish':
 			$review_id = absint($_POST['review_id'] ?? 0);
 			if ('review_submission' !== get_post_type($review_id)) {
-				retails_review_manager_flash('error', 'That review no longer exists.');
+				wholesale_review_manager_flash('error', 'That review no longer exists.');
 				break;
 			}
-			$fields = retails_review_manager_fields($_POST);
+			$fields = wholesale_review_manager_fields($_POST);
 			if (is_wp_error($fields)) {
-				retails_review_manager_flash('error', $fields->get_error_message());
+				wholesale_review_manager_flash('error', $fields->get_error_message());
 				break;
 			}
 			$old_product_id = absint(get_post_meta($review_id, '_review_product_id', true));
@@ -331,38 +325,38 @@ function retails_review_manager_handle()
 			if ($fields['date'] && substr($fields['date'], 0, 10) === substr(get_post_field('post_date', $review_id), 0, 10)) {
 				$fields['date'] = '';
 			}
-			$args =retails_review_manager_post_args($fields) + array('ID' => $review_id, 'edit_date' => true);
+			$args =wholesale_review_manager_post_args($fields) + array('ID' => $review_id, 'edit_date' => true);
 			if ('approve' === $task) {
-				if (retails_review_is_sample($review_id)) {
-					retails_review_manager_flash('error', 'Sample reviews are placeholder text and can’t be published.');
+				if (wholesale_review_is_sample($review_id)) {
+					wholesale_review_manager_flash('error', 'Sample reviews are placeholder text and can’t be published.');
 					break;
 				}
 				$args['post_status'] = 'publish';
 			} elseif ('unpublish' === $task) {
 				$args['post_status'] = 'pending';
 			}
-			retails_review_manager_save_meta($review_id, $fields);
+			wholesale_review_manager_save_meta($review_id, $fields);
 			wp_update_post($args);
-			retails_review_manager_flash('success', 'approve' === $task ? 'Review approved and shown on the site.' : ('unpublish' === $task ? 'Review hidden from the site.' : 'Review saved.'));
+			wholesale_review_manager_flash('success', 'approve' === $task ? 'Review approved and shown on the site.' : ('unpublish' === $task ? 'Review hidden from the site.' : 'Review saved.'));
 			break;
 
 		case 'trash':
 			$review_id = absint($_POST['review_id'] ?? 0);
 			if ('review_submission' === get_post_type($review_id) && current_user_can('delete_post', $review_id)) {
 				wp_trash_post($review_id);
-				retails_review_manager_flash('success', 'Review moved to the trash.');
+				wholesale_review_manager_flash('success', 'Review moved to the trash.');
 			}
 			break;
 
 		case 'add':
-			$fields = retails_review_manager_fields($_POST);
+			$fields = wholesale_review_manager_fields($_POST);
 			if (is_wp_error($fields)) {
-				retails_review_manager_flash('error', $fields->get_error_message());
+				wholesale_review_manager_flash('error', $fields->get_error_message());
 				break;
 			}
-			$sources = retails_review_manager_sources();
+			$sources = wholesale_review_manager_sources();
 			$source = sanitize_key(wp_unslash($_POST['source'] ?? ''));
-			$review_id = wp_insert_post(retails_review_manager_post_args($fields) + array(
+			$review_id = wp_insert_post(wholesale_review_manager_post_args($fields) + array(
 				'post_type' => 'review_submission',
 				'post_status' => 'publish' === ($_POST['status'] ?? '') ? 'publish' : 'pending',
 				'meta_input' => array(
@@ -372,36 +366,36 @@ function retails_review_manager_handle()
 				),
 			), true);
 			if (is_wp_error($review_id)) {
-				retails_review_manager_flash('error', $review_id->get_error_message());
+				wholesale_review_manager_flash('error', $review_id->get_error_message());
 				break;
 			}
-			retails_review_manager_save_meta($review_id, $fields);
+			wholesale_review_manager_save_meta($review_id, $fields);
 			$redirect_args['product'] = get_post_field('post_name', $fields['product_id']);
-			retails_review_manager_flash('success', 'Review added.');
+			wholesale_review_manager_flash('success', 'Review added.');
 			break;
 
 		case 'import':
-			retails_review_manager_import();
+			wholesale_review_manager_import();
 			break;
 
 		case 'bulk_approve':
-			$product = $product_slug ? retails_product_by_slug($product_slug) : null;
+			$product = $product_slug ? wholesale_product_by_slug($product_slug) : null;
 			$ratings = array_values(array_intersect(array(1, 2, 3, 4, 5), array_map('absint', (array) wp_unslash($_POST['ratings'] ?? array()))));
 			if (!$ratings) {
-				retails_review_manager_flash('error', 'Tick at least one star rating to approve.');
+				wholesale_review_manager_flash('error', 'Tick at least one star rating to approve.');
 				break;
 			}
-			$approved = retails_review_bulk_approve($ratings, $product ? $product->ID : 0);
-			retails_review_manager_flash('success', sprintf('Approved %d reviews (%s).', $approved, implode(', ', array_map(function ($r) {
+			$approved = wholesale_review_bulk_approve($ratings, $product ? $product->ID : 0);
+			wholesale_review_manager_flash('success', sprintf('Approved %d reviews (%s).', $approved, implode(', ', array_map(function ($r) {
 				return $r . '★';
 			}, $ratings))));
 			break;
 
 		case 'featured_text':
-			$product = retails_product_by_slug($product_slug);
+			$product = wholesale_product_by_slug($product_slug);
 			if ($product) {
 				update_post_meta($product->ID, '_product_review_text', sanitize_textarea_field(wp_unslash($_POST['featured_text'] ?? '')));
-				retails_review_manager_flash('success', 'Featured review text saved.');
+				wholesale_review_manager_flash('success', 'Featured review text saved.');
 			}
 			break;
 
@@ -417,15 +411,15 @@ function retails_review_manager_handle()
 			foreach ($samples as $sample_id) {
 				wp_delete_post($sample_id, true);
 			}
-			retails_review_manager_flash('success', sprintf('Deleted %d sample reviews.', count($samples)));
+			wholesale_review_manager_flash('success', sprintf('Deleted %d sample reviews.', count($samples)));
 			break;
 	}
 
-	wp_safe_redirect(retails_review_manager_url(array_filter($redirect_args)));
+	wp_safe_redirect(wholesale_review_manager_url(array_filter($redirect_args)));
 	exit;
 }
 
-function retails_review_manager_sources()
+function wholesale_review_manager_sources()
 {
 	return array(
 		'email' => 'Sent to us by email',
@@ -440,37 +434,37 @@ function retails_review_manager_sources()
  * author, company_name, location, publish_date, is_sample}]}. Reviews are matched to
  * products by slug. Real reviews wait for approval; sample reviews stay drafts.
  */
-function retails_review_manager_import()
+function wholesale_review_manager_import()
 {
 	$file = $_FILES['reviews_json'] ?? null;
 	if (!$file || UPLOAD_ERR_OK !== $file['error'] || !is_uploaded_file($file['tmp_name'])) {
-		retails_review_manager_flash('error', 'Choose a JSON file to import.');
+		wholesale_review_manager_flash('error', 'Choose a JSON file to import.');
 		return;
 	}
 	if ($file['size'] > 2 * MB_IN_BYTES) {
-		retails_review_manager_flash('error', 'The file is larger than 2 MB.');
+		wholesale_review_manager_flash('error', 'The file is larger than 2 MB.');
 		return;
 	}
 
 	$data = json_decode((string) file_get_contents($file['tmp_name']), true);
 	$rows = isset($data['reviews']) && is_array($data['reviews']) ? $data['reviews'] : (is_array($data) && isset($data[0]) ? $data : null);
 	if (null === $rows) {
-		retails_review_manager_flash('error', 'The file isn’t valid JSON or has no <code>reviews</code> list.');
+		wholesale_review_manager_flash('error', 'The file isn’t valid JSON or has no <code>reviews</code> list.');
 		return;
 	}
 
-	$result = retails_review_import_rows($rows);
+	$result = wholesale_review_import_rows($rows);
 	$lines = array(sprintf('<strong>Import finished.</strong> %d reviews added for approval, %d sample reviews added (hidden), %d already imported, %d invalid.', $result['imported'], $result['samples'], $result['duplicates'], $result['invalid']));
 	if ($result['unknown_slugs']) {
 		$lines[] = 'No product matched these slugs: <code>' . implode('</code>, <code>', array_map('esc_html', $result['unknown_slugs'])) . '</code>';
 	}
-	retails_review_manager_flash($result['unknown_slugs'] || $result['invalid'] ? 'warning' : 'success', implode('<br>', $lines));
+	wholesale_review_manager_flash($result['unknown_slugs'] || $result['invalid'] ? 'warning' : 'success', implode('<br>', $lines));
 }
 
 /**
  * Creates review_submission posts from decoded import rows and returns the counts.
  */
-function retails_review_import_rows($rows)
+function wholesale_review_import_rows($rows)
 {
 	$imported = $samples = $duplicates = $invalid = 0;
 	$unknown_slugs = array();
@@ -480,7 +474,7 @@ function retails_review_import_rows($rows)
 			$invalid++;
 			continue;
 		}
-		$fields = retails_review_manager_fields(array(
+		$fields = wholesale_review_manager_fields(array(
 			'product_slug' => $row['product_slug'] ?? '',
 			'rating' => $row['rating'] ?? 0,
 			'text' => $row['body'] ?? '',
@@ -514,7 +508,7 @@ function retails_review_import_rows($rows)
 		}
 
 		$is_sample = !empty($row['is_sample']);
-		$review_id = wp_insert_post(retails_review_manager_post_args($fields) + array(
+		$review_id = wp_insert_post(wholesale_review_manager_post_args($fields) + array(
 			'post_type' => 'review_submission',
 			'post_status' => $is_sample ? 'draft' : 'pending',
 			'meta_input' => array(
@@ -527,7 +521,7 @@ function retails_review_import_rows($rows)
 			$invalid++;
 			continue;
 		}
-		retails_review_manager_save_meta($review_id, $fields);
+		wholesale_review_manager_save_meta($review_id, $fields);
 		$is_sample ? $samples++ : $imported++;
 	}
 
@@ -546,7 +540,7 @@ function retails_review_import_rows($rows)
  * never included, and neither are JSON imports: those carry no proof a customer wrote
  * them, so each one is approved individually after checking it.
  */
-function retails_review_bulk_candidates($product_id = 0)
+function wholesale_review_bulk_candidates($product_id = 0)
 {
 	$query = array(
 		'post_type' => 'review_submission',
@@ -561,7 +555,7 @@ function retails_review_bulk_candidates($product_id = 0)
 
 	$by_rating = array_fill_keys(array(5, 4, 3, 2, 1), array());
 	foreach (get_posts($query) as $review_id) {
-		if (retails_review_is_sample($review_id) || 'import' === get_post_meta($review_id, '_review_source', true)) {
+		if (wholesale_review_is_sample($review_id) || 'import' === get_post_meta($review_id, '_review_source', true)) {
 			continue;
 		}
 		$rating = absint(get_post_meta($review_id, '_review_rating', true));
@@ -572,9 +566,9 @@ function retails_review_bulk_candidates($product_id = 0)
 	return $by_rating;
 }
 
-function retails_review_bulk_approve($ratings, $product_id = 0)
+function wholesale_review_bulk_approve($ratings, $product_id = 0)
 {
-	$candidates = retails_review_bulk_candidates($product_id);
+	$candidates = wholesale_review_bulk_candidates($product_id);
 	$approved = 0;
 
 	foreach ($ratings as $rating) {
@@ -590,24 +584,24 @@ function retails_review_bulk_approve($ratings, $product_id = 0)
 /**
  * Card with one checkbox per star rating for bulk approval, scoped to a product or all.
  */
-function retails_review_bulk_card($product = null)
+function wholesale_review_bulk_card($product = null)
 {
-	$candidates = retails_review_bulk_candidates($product ? $product->ID : 0);
+	$candidates = wholesale_review_bulk_candidates($product ? $product->ID : 0);
 	$total = array_sum(array_map('count', $candidates));
 	?>
-	<div class="retails-rm-card">
+	<div class="wholesale-rm-card">
 		<h2>Bulk approve<?php echo $product ? '' : ' (all products)'; ?></h2>
 		<?php if (!$total) : ?>
 			<p class="description">No reviews from customers or added by you are awaiting approval.</p>
 		<?php else : ?>
-			<?php retails_review_manager_form_open('bulk_approve', $product ? $product->post_name : '', 'onsubmit="return confirm(\'Publish the selected reviews on the site?\');"'); ?>
-				<div class="retails-rm-ratings">
+			<?php wholesale_review_manager_form_open('bulk_approve', $product ? $product->post_name : '', 'onsubmit="return confirm(\'Publish the selected reviews on the site?\');"'); ?>
+				<div class="wholesale-rm-ratings">
 					<?php foreach ($candidates as $rating => $ids) : ?>
 						<label><input type="checkbox" name="ratings[]" value="<?php echo esc_attr($rating); ?>" <?php disabled(!$ids); ?> <?php checked((bool) $ids); ?>>
 							<?php echo esc_html(str_repeat('★', $rating) . ' ' . $rating . ' star (' . count($ids) . ')'); ?></label>
 					<?php endforeach; ?>
 				</div>
-				<div class="retails-rm-actions">
+				<div class="wholesale-rm-actions">
 					<button class="button button-primary">Approve selected</button>
 				</div>
 			</form>
@@ -623,17 +617,17 @@ function retails_review_bulk_card($product = null)
 
 add_filter('bulk_actions-edit-review_submission', function ($actions) {
 	return array(
-		'retails_approve' => 'Approve (show on site)',
-		'retails_unapprove' => 'Move to awaiting approval',
+		'wholesale_approve' => 'Approve (show on site)',
+		'wholesale_unapprove' => 'Move to awaiting approval',
 	) + $actions;
 });
 
 add_filter('handle_bulk_actions-edit-review_submission', function ($redirect, $action, $post_ids) {
-	if (!in_array($action, array('retails_approve', 'retails_unapprove'), true)) {
+	if (!in_array($action, array('wholesale_approve', 'wholesale_unapprove'), true)) {
 		return $redirect;
 	}
 
-	$status = 'retails_approve' === $action ? 'publish' : 'pending';
+	$status = 'wholesale_approve' === $action ? 'publish' : 'pending';
 	$done = $skipped = $failed = 0;
 
 	foreach (array_map('absint', $post_ids) as $review_id) {
@@ -646,7 +640,7 @@ add_filter('handle_bulk_actions-edit-review_submission', function ($redirect, $a
 			continue;
 		}
 		// Sample reviews are placeholders and must never be published.
-		if ('publish' === $status && retails_review_is_sample($review_id)) {
+		if ('publish' === $status && wholesale_review_is_sample($review_id)) {
 			$skipped++;
 			continue;
 		}
@@ -658,18 +652,18 @@ add_filter('handle_bulk_actions-edit-review_submission', function ($redirect, $a
 		}
 	}
 
-	return add_query_arg(array('retails_bulk' => $action, 'retails_done' => $done, 'retails_skipped' => $skipped, 'retails_failed' => $failed), remove_query_arg(array('retails_bulk', 'retails_done', 'retails_skipped', 'retails_failed'), $redirect));
+	return add_query_arg(array('wholesale_bulk' => $action, 'wholesale_done' => $done, 'wholesale_skipped' => $skipped, 'wholesale_failed' => $failed), remove_query_arg(array('wholesale_bulk', 'wholesale_done', 'wholesale_skipped', 'wholesale_failed'), $redirect));
 }, 10, 3);
 
 add_action('admin_notices', function () {
 	$screen = get_current_screen();
-	if (!$screen || 'edit-review_submission' !== $screen->id || empty($_GET['retails_bulk'])) {
+	if (!$screen || 'edit-review_submission' !== $screen->id || empty($_GET['wholesale_bulk'])) {
 		return;
 	}
-	$done = absint($_GET['retails_done'] ?? 0);
-	$skipped = absint($_GET['retails_skipped'] ?? 0);
-	$failed = absint($_GET['retails_failed'] ?? 0);
-	$message = 'retails_approve' === $_GET['retails_bulk']
+	$done = absint($_GET['wholesale_done'] ?? 0);
+	$skipped = absint($_GET['wholesale_skipped'] ?? 0);
+	$failed = absint($_GET['wholesale_failed'] ?? 0);
+	$message = 'wholesale_approve' === $_GET['wholesale_bulk']
 		? sprintf('%d reviews approved and shown on the site.', $done)
 		: sprintf('%d reviews moved to awaiting approval.', $done);
 	if ($skipped) {
@@ -683,7 +677,7 @@ add_action('admin_notices', function () {
 });
 
 add_filter('removable_query_args', function ($args) {
-	return array_merge($args, array('retails_bulk', 'retails_done', 'retails_skipped', 'retails_failed'));
+	return array_merge($args, array('wholesale_bulk', 'wholesale_done', 'wholesale_skipped', 'wholesale_failed'));
 });
 
 add_action('restrict_manage_posts', function ($post_type) {
@@ -691,8 +685,8 @@ add_action('restrict_manage_posts', function ($post_type) {
 		return;
 	}
 	$current = absint($_GET['review_rating'] ?? 0);
-	echo '<label for="retails-filter-rating" class="screen-reader-text">Filter by rating</label>';
-	echo '<select name="review_rating" id="retails-filter-rating"><option value="">All ratings</option>';
+	echo '<label for="wholesale-filter-rating" class="screen-reader-text">Filter by rating</label>';
+	echo '<select name="review_rating" id="wholesale-filter-rating"><option value="">All ratings</option>';
 	for ($i = 5; $i >= 1; $i--) {
 		printf('<option value="%1$d"%2$s>%3$s %1$d star</option>', $i, selected($current, $i, false), esc_html(str_repeat('★', $i)));
 	}
@@ -718,7 +712,7 @@ add_action('pre_get_posts', function ($query) {
 // Hidden value the Quick Edit script reads to preselect the current rating.
 add_action('manage_review_submission_posts_custom_column', function ($column, $post_id) {
 	if ('review_rating' === $column) {
-		printf('<span class="hidden retails-qe-rating">%d</span>', absint(get_post_meta($post_id, '_review_rating', true)));
+		printf('<span class="hidden wholesale-qe-rating">%d</span>', absint(get_post_meta($post_id, '_review_rating', true)));
 	}
 }, 20, 2);
 
@@ -731,7 +725,7 @@ add_action('quick_edit_custom_box', function ($column_name, $post_type) {
 		<div class="inline-edit-col">
 			<label>
 				<span class="title">Rating</span>
-				<?php echo retails_review_manager_rating_select('_review_rating', 5); // Escaped in the helper. ?>
+				<?php echo wholesale_review_manager_rating_select('_review_rating', 5); // Escaped in the helper. ?>
 			</label>
 		</div>
 	</fieldset>
@@ -752,7 +746,7 @@ add_action('admin_footer-edit.php', function () {
 		inlineEditPost.edit = function (id) {
 			edit.apply(this, arguments);
 			var postId = typeof id === 'object' ? this.getId(id) : id;
-			var rating = parseInt($('#post-' + postId + ' .retails-qe-rating').text(), 10);
+			var rating = parseInt($('#post-' + postId + ' .wholesale-qe-rating').text(), 10);
 			if (rating >= 1 && rating <= 5) {
 				$('#edit-' + postId + ' select[name="_review_rating"]').val(String(rating));
 			}
@@ -776,7 +770,7 @@ add_action('save_post_review_submission', function ($post_id) {
 	}
 });
 
-function retails_review_manager_rating_select($name, $selected, $required = true)
+function wholesale_review_manager_rating_select($name, $selected, $required = true)
 {
 	$html = '<select name="' . esc_attr($name) . '"' . ($required ? ' required' : '') . '>';
 	if (!$selected) {
@@ -788,7 +782,7 @@ function retails_review_manager_rating_select($name, $selected, $required = true
 	return $html . '</select>';
 }
 
-function retails_review_manager_products()
+function wholesale_review_manager_products()
 {
 	return get_posts(array(
 		'post_type' => 'product',
@@ -799,64 +793,64 @@ function retails_review_manager_products()
 	));
 }
 
-function retails_review_manager_page()
+function wholesale_review_manager_page()
 {
-	$products = retails_review_manager_products();
-	$product = isset($_GET['product']) ? retails_product_by_slug(wp_unslash($_GET['product'])) : null;
+	$products = wholesale_review_manager_products();
+	$product = isset($_GET['product']) ? wholesale_product_by_slug(wp_unslash($_GET['product'])) : null;
 	?>
-	<div class="wrap retails-rm">
-		<?php retails_review_manager_styles(); ?>
-		<datalist id="retails-rm-slugs">
+	<div class="wrap wholesale-rm">
+		<?php wholesale_review_manager_styles(); ?>
+		<datalist id="wholesale-rm-slugs">
 			<?php foreach ($products as $item) : ?>
 				<option value="<?php echo esc_attr($item->post_name); ?>"><?php echo esc_html($item->post_title); ?></option>
 			<?php endforeach; ?>
 		</datalist>
 		<?php
 		if ($product) {
-			retails_review_manager_product_view($product);
+			wholesale_review_manager_product_view($product);
 		} else {
-			retails_review_manager_overview($products);
+			wholesale_review_manager_overview($products);
 		}
 		?>
 	</div>
 	<?php
 }
 
-function retails_review_manager_form_open($task, $product_slug = '', $extra = '')
+function wholesale_review_manager_form_open($task, $product_slug = '', $extra = '')
 {
 	echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" ' . $extra . '>';
-	echo '<input type="hidden" name="action" value="retails_review_manager">';
+	echo '<input type="hidden" name="action" value="wholesale_review_manager">';
 	if ($task) {
 		echo '<input type="hidden" name="task" value="' . esc_attr($task) . '">';
 	}
 	echo '<input type="hidden" name="product" value="' . esc_attr($product_slug) . '">';
-	wp_nonce_field('retails_review_manager');
+	wp_nonce_field('wholesale_review_manager');
 }
 
-function retails_review_manager_overview($products)
+function wholesale_review_manager_overview($products)
 {
-	$stats = retails_review_stats_by_product();
+	$stats = wholesale_review_stats_by_product();
 	$show_all = isset($_GET['show']) && 'all' === $_GET['show'];
 	$total_samples = array_sum(wp_list_pluck($stats, 'samples'));
 	$empty = array('published' => 0, 'pending' => 0, 'samples' => 0, 'sum' => 0, 'average' => 0.0);
 	?>
 	<h1 class="wp-heading-inline">Reviews by Product</h1>
 	<hr class="wp-header-end">
-	<?php retails_review_manager_notice(); ?>
+	<?php wholesale_review_manager_notice(); ?>
 	<p class="description">Every product review, grouped by product slug. Open a product to edit, approve or move its reviews. The star rating on product cards is the average of each product’s approved reviews and updates on its own.</p>
 
-	<div class="retails-rm-toolbar">
-		<form method="get" action="<?php echo esc_url(admin_url('edit.php')); ?>" class="retails-rm-open">
+	<div class="wholesale-rm-toolbar">
+		<form method="get" action="<?php echo esc_url(admin_url('edit.php')); ?>" class="wholesale-rm-open">
 			<input type="hidden" name="post_type" value="review_submission">
-			<input type="hidden" name="page" value="<?php echo esc_attr(RETAILS_REVIEW_MANAGER_PAGE); ?>">
-			<label for="retails-rm-open-slug" class="screen-reader-text">Product slug</label>
-			<input id="retails-rm-open-slug" type="text" name="product" list="retails-rm-slugs" placeholder="Type a product slug…" class="regular-text" required>
+			<input type="hidden" name="page" value="<?php echo esc_attr(WHOLESALE_REVIEW_MANAGER_PAGE); ?>">
+			<label for="wholesale-rm-open-slug" class="screen-reader-text">Product slug</label>
+			<input id="wholesale-rm-open-slug" type="text" name="product" list="wholesale-rm-slugs" placeholder="Type a product slug…" class="regular-text" required>
 			<button class="button button-primary">Open product</button>
 		</form>
-		<a class="button" href="<?php echo esc_url(retails_review_manager_url($show_all ? array() : array('show' => 'all'))); ?>"><?php echo $show_all ? 'Only products with reviews' : 'Show all products'; ?></a>
+		<a class="button" href="<?php echo esc_url(wholesale_review_manager_url($show_all ? array() : array('show' => 'all'))); ?>"><?php echo $show_all ? 'Only products with reviews' : 'Show all products'; ?></a>
 	</div>
 
-	<table class="widefat striped retails-rm-table">
+	<table class="widefat striped wholesale-rm-table">
 		<thead>
 			<tr>
 				<th>Product</th>
@@ -876,7 +870,7 @@ function retails_review_manager_overview($products)
 					continue;
 				}
 				$rows++;
-				$manage_url = retails_review_manager_url(array('product' => $item->post_name));
+				$manage_url = wholesale_review_manager_url(array('product' => $item->post_name));
 				?>
 				<tr>
 					<td>
@@ -886,7 +880,7 @@ function retails_review_manager_overview($products)
 					<td><?php echo esc_html($row['published']); ?></td>
 					<td><?php echo $row['pending'] ? '<a href="' . esc_url(add_query_arg('view', 'pending', $manage_url)) . '"><strong>' . esc_html($row['pending']) . '</strong></a>' : '0'; ?></td>
 					<td><?php echo esc_html($row['samples']); ?></td>
-					<td><?php echo $row['published'] ? retails_review_stars($row['average'], 'retails-rm-stars') . ' ' . esc_html(number_format($row['average'], 1)) : '&mdash;'; ?></td>
+					<td><?php echo $row['published'] ? wholesale_review_stars($row['average'], 'wholesale-rm-stars') . ' ' . esc_html(number_format($row['average'], 1)) : '&mdash;'; ?></td>
 					<td><a class="button" href="<?php echo esc_url($manage_url); ?>">Manage</a></td>
 				</tr>
 			<?php endforeach; ?>
@@ -899,23 +893,23 @@ function retails_review_manager_overview($products)
 		</tbody>
 	</table>
 
-	<div class="retails-rm-cards">
-		<?php retails_review_bulk_card(); ?>
-		<div class="retails-rm-card">
+	<div class="wholesale-rm-cards">
+		<?php wholesale_review_bulk_card(); ?>
+		<div class="wholesale-rm-card">
 			<h2>Import reviews from JSON</h2>
 			<p>Each review is matched to a product by its <code>product_slug</code>. Imported reviews wait under <em>Awaiting approval</em> until you approve them. Reviews marked <code>"is_sample": true</code> are placeholder text: they stay hidden, can’t be approved, and only appear on a product page when you open it with <code>?review_preview=1</code>.</p>
-			<?php retails_review_manager_form_open('import', '', 'enctype="multipart/form-data"'); ?>
+			<?php wholesale_review_manager_form_open('import', '', 'enctype="multipart/form-data"'); ?>
 				<input type="file" name="reviews_json" accept=".json,application/json" required>
 				<button class="button button-primary">Import</button>
 			</form>
 		</div>
-		<div class="retails-rm-card">
+		<div class="wholesale-rm-card">
 			<h2>Product card ratings</h2>
 			<p>Cards show the average and count of each product’s approved reviews. Approving, hiding or trashing a review changes the card right away. Products with no approved reviews show no stars.</p>
 			<?php if ($total_samples) : ?>
 				<hr>
 				<p><?php echo esc_html(sprintf('%d sample reviews are stored for layout testing.', $total_samples)); ?></p>
-				<?php retails_review_manager_form_open('delete_samples', '', 'onsubmit="return confirm(\'Permanently delete all sample reviews?\');"'); ?>
+				<?php wholesale_review_manager_form_open('delete_samples', '', 'onsubmit="return confirm(\'Permanently delete all sample reviews?\');"'); ?>
 					<button class="button button-link-delete">Delete all sample reviews</button>
 				</form>
 			<?php endif; ?>
@@ -924,10 +918,10 @@ function retails_review_manager_overview($products)
 	<?php
 }
 
-function retails_review_manager_product_view($product)
+function wholesale_review_manager_product_view($product)
 {
-	$stats = retails_product_review_stats($product->ID);
-	$shown = retails_product_review_data($product->ID);
+	$stats = wholesale_product_review_stats($product->ID);
+	$shown = wholesale_product_review_data($product->ID);
 	$view = sanitize_key(wp_unslash($_GET['view'] ?? ''));
 	$views = array(
 		'' => array('All', $stats['published'] + $stats['pending'] + $stats['samples']),
@@ -949,7 +943,7 @@ function retails_review_manager_product_view($product)
 		'order' => 'DESC',
 	));
 	$reviews = array_filter($reviews, function ($review) use ($view) {
-		$is_sample = retails_review_is_sample($review->ID);
+		$is_sample = wholesale_review_is_sample($review->ID);
 		if ('sample' === $view) {
 			return $is_sample;
 		}
@@ -962,7 +956,7 @@ function retails_review_manager_product_view($product)
 		return true;
 	});
 	?>
-	<p><a href="<?php echo esc_url(retails_review_manager_url()); ?>">&larr; All products</a></p>
+	<p><a href="<?php echo esc_url(wholesale_review_manager_url()); ?>">&larr; All products</a></p>
 	<h1 class="wp-heading-inline"><?php echo esc_html($product->post_title); ?></h1>
 	<a class="page-title-action" href="<?php echo esc_url(get_permalink($product)); ?>#product-reviews" target="_blank" rel="noopener">View on site</a>
 	<?php if ($stats['samples']) : ?>
@@ -971,23 +965,23 @@ function retails_review_manager_product_view($product)
 	<a class="page-title-action" href="<?php echo esc_url(get_edit_post_link($product->ID)); ?>">Edit product</a>
 	<hr class="wp-header-end">
 	<p><code><?php echo esc_html($product->post_name); ?></code></p>
-	<?php retails_review_manager_notice(); ?>
+	<?php wholesale_review_manager_notice(); ?>
 
-	<div class="retails-rm-cards">
-		<div class="retails-rm-card">
+	<div class="wholesale-rm-cards">
+		<div class="wholesale-rm-card">
 			<h2>Star rating on product cards</h2>
-			<p><?php echo $stats['published'] ? retails_review_stars($stats['average'], 'retails-rm-stars') . ' ' . esc_html(number_format($stats['average'], 1) . ' from ' . $stats['published'] . ' approved reviews') : 'No approved reviews yet, so the card shows no stars.'; ?></p>
+			<p><?php echo $stats['published'] ? wholesale_review_stars($stats['average'], 'wholesale-rm-stars') . ' ' . esc_html(number_format($stats['average'], 1) . ' from ' . $stats['published'] . ' approved reviews') : 'No approved reviews yet, so the card shows no stars.'; ?></p>
 			<p class="description">Worked out live from the approved reviews below.</p>
 		</div>
-		<div class="retails-rm-card">
+		<div class="wholesale-rm-card">
 			<h2>Featured review text</h2>
-			<?php retails_review_manager_form_open('featured_text', $product->post_name); ?>
+			<?php wholesale_review_manager_form_open('featured_text', $product->post_name); ?>
 				<textarea name="featured_text" rows="3" class="large-text" placeholder="Short quote shown above the reviews"><?php echo esc_textarea($shown['text']); ?></textarea>
 				<p class="description">Use a quote from an approved review. Leave empty to hide it.</p>
 				<button class="button">Save text</button>
 			</form>
 		</div>
-		<?php retails_review_bulk_card($product); ?>
+		<?php wholesale_review_bulk_card($product); ?>
 	</div>
 
 	<ul class="subsubsub">
@@ -996,7 +990,7 @@ function retails_review_manager_product_view($product)
 		foreach ($views as $key => $info) {
 			$links[] = sprintf(
 				'<li><a href="%s"%s>%s <span class="count">(%d)</span></a>',
-				esc_url(retails_review_manager_url(array_filter(array('product' => $product->post_name, 'view' => $key)))),
+				esc_url(wholesale_review_manager_url(array_filter(array('product' => $product->post_name, 'view' => $key)))),
 				$key === $view ? ' class="current" aria-current="page"' : '',
 				esc_html($info[0]),
 				$info[1]
@@ -1008,21 +1002,21 @@ function retails_review_manager_product_view($product)
 	<div class="clear"></div>
 
 	<?php if (!$reviews) : ?>
-		<p class="retails-rm-empty">No reviews here yet.</p>
+		<p class="wholesale-rm-empty">No reviews here yet.</p>
 	<?php endif; ?>
 
 	<?php foreach ($reviews as $review) :
-		$is_sample = retails_review_is_sample($review->ID);
+		$is_sample = wholesale_review_is_sample($review->ID);
 		$status = $review->post_status;
 		$source = get_post_meta($review->ID, '_review_source', true);
 		$email = get_post_meta($review->ID, '_review_email', true);
-		$field_id = 'retails-rm-' . $review->ID;
+		$field_id = 'wholesale-rm-' . $review->ID;
 		?>
-		<div class="retails-rm-review<?php echo $is_sample ? ' is-sample' : ''; ?>">
-			<?php retails_review_manager_form_open('', $product->post_name); ?>
+		<div class="wholesale-rm-review<?php echo $is_sample ? ' is-sample' : ''; ?>">
+			<?php wholesale_review_manager_form_open('', $product->post_name); ?>
 				<input type="hidden" name="review_id" value="<?php echo esc_attr($review->ID); ?>">
 				<input type="hidden" name="view" value="<?php echo esc_attr($view); ?>">
-				<div class="retails-rm-review-head">
+				<div class="wholesale-rm-review-head">
 					<?php if ($is_sample) : ?>
 						<span class="order-badge order-badge--muted">Sample · never shown to customers</span>
 					<?php elseif ('publish' === $status) : ?>
@@ -1030,7 +1024,7 @@ function retails_review_manager_product_view($product)
 					<?php else : ?>
 						<span class="order-badge order-badge--warn">Awaiting approval</span>
 					<?php endif; ?>
-					<span class="retails-rm-meta">
+					<span class="wholesale-rm-meta">
 						<?php
 						$meta = array('#' . $review->ID);
 						$meta[] = '' === $source ? 'Customer form' : ('import' === $source ? 'Imported' : 'Added by admin');
@@ -1041,18 +1035,18 @@ function retails_review_manager_product_view($product)
 						?>
 					</span>
 				</div>
-				<div class="retails-rm-grid">
-					<label>Rating<?php echo retails_review_manager_rating_select('rating', absint(get_post_meta($review->ID, '_review_rating', true))); // Escaped in the helper. ?></label>
+				<div class="wholesale-rm-grid">
+					<label>Rating<?php echo wholesale_review_manager_rating_select('rating', absint(get_post_meta($review->ID, '_review_rating', true))); // Escaped in the helper. ?></label>
 					<label>Date<input type="date" name="date" value="<?php echo esc_attr(get_the_date('Y-m-d', $review)); ?>"></label>
-					<label>Product slug<input type="text" name="product_slug" list="retails-rm-slugs" value="<?php echo esc_attr($product->post_name); ?>" required></label>
+					<label>Product slug<input type="text" name="product_slug" list="wholesale-rm-slugs" value="<?php echo esc_attr($product->post_name); ?>" required></label>
 					<label>Name<input type="text" name="name" value="<?php echo esc_attr(get_post_meta($review->ID, '_review_name', true)); ?>" required></label>
 					<label>Company<input type="text" name="company" value="<?php echo esc_attr(get_post_meta($review->ID, '_review_company', true)); ?>"></label>
 					<label>Location<input type="text" name="location" value="<?php echo esc_attr(get_post_meta($review->ID, '_review_location', true)); ?>" placeholder="City, ST"></label>
 				</div>
-				<label class="retails-rm-wide">Headline<input type="text" name="title" value="<?php echo esc_attr(get_post_meta($review->ID, '_review_title', true)); ?>"></label>
-				<label class="retails-rm-wide" for="<?php echo esc_attr($field_id); ?>">Review</label>
+				<label class="wholesale-rm-wide">Headline<input type="text" name="title" value="<?php echo esc_attr(get_post_meta($review->ID, '_review_title', true)); ?>"></label>
+				<label class="wholesale-rm-wide" for="<?php echo esc_attr($field_id); ?>">Review</label>
 				<textarea id="<?php echo esc_attr($field_id); ?>" name="text" rows="3" class="large-text" required><?php echo esc_textarea($review->post_content); ?></textarea>
-				<div class="retails-rm-actions">
+				<div class="wholesale-rm-actions">
 					<button class="button" name="task" value="save">Save</button>
 					<?php if (!$is_sample && 'publish' !== $status) : ?>
 						<button class="button button-primary" name="task" value="approve">Save &amp; approve</button>
@@ -1065,29 +1059,29 @@ function retails_review_manager_product_view($product)
 		</div>
 	<?php endforeach; ?>
 
-	<details class="retails-rm-card retails-rm-add">
+	<details class="wholesale-rm-card wholesale-rm-add">
 		<summary><strong>Add a review you received</strong> <span class="description">(email, phone, Google…)</span></summary>
 		<p class="description">For genuine feedback a customer gave you outside the website. Reviews added here are labelled “Customer review”, not “Verified buyer”.</p>
-		<?php retails_review_manager_form_open('add', $product->post_name); ?>
-			<div class="retails-rm-grid">
-				<label>Rating<?php echo retails_review_manager_rating_select('rating', 0); // Escaped in the helper. ?></label>
+		<?php wholesale_review_manager_form_open('add', $product->post_name); ?>
+			<div class="wholesale-rm-grid">
+				<label>Rating<?php echo wholesale_review_manager_rating_select('rating', 0); // Escaped in the helper. ?></label>
 				<label>Date<input type="date" name="date" value="<?php echo esc_attr(current_time('Y-m-d')); ?>"></label>
-				<label>Product slug<input type="text" name="product_slug" list="retails-rm-slugs" value="<?php echo esc_attr($product->post_name); ?>" required></label>
+				<label>Product slug<input type="text" name="product_slug" list="wholesale-rm-slugs" value="<?php echo esc_attr($product->post_name); ?>" required></label>
 				<label>Name<input type="text" name="name" required></label>
 				<label>Company<input type="text" name="company"></label>
 				<label>Location<input type="text" name="location" placeholder="City, ST"></label>
 				<label>Customer email<input type="email" name="email"></label>
 				<label>Where it came from<select name="source">
-					<?php foreach (retails_review_manager_sources() as $key => $label) : ?>
+					<?php foreach (wholesale_review_manager_sources() as $key => $label) : ?>
 						<option value="<?php echo esc_attr($key); ?>"><?php echo esc_html($label); ?></option>
 					<?php endforeach; ?>
 				</select></label>
 				<label>Reference (order #, email date…)<input type="text" name="source_note"></label>
 			</div>
-			<label class="retails-rm-wide">Headline<input type="text" name="title"></label>
-			<label class="retails-rm-wide" for="retails-rm-new-text">Review</label>
-			<textarea id="retails-rm-new-text" name="text" rows="3" class="large-text" required></textarea>
-			<div class="retails-rm-actions">
+			<label class="wholesale-rm-wide">Headline<input type="text" name="title"></label>
+			<label class="wholesale-rm-wide" for="wholesale-rm-new-text">Review</label>
+			<textarea id="wholesale-rm-new-text" name="text" rows="3" class="large-text" required></textarea>
+			<div class="wholesale-rm-actions">
 				<label><input type="checkbox" name="status" value="publish"> Show on site right away</label>
 				<button class="button button-primary">Add review</button>
 			</div>
@@ -1096,302 +1090,34 @@ function retails_review_manager_product_view($product)
 	<?php
 }
 
-function retails_review_manager_styles()
+function wholesale_review_manager_styles()
 {
 	?>
 	<style>
-		.retails-rm .retails-rm-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin: 16px 0 12px; }
-		.retails-rm .retails-rm-open { display: flex; gap: 6px; }
-		.retails-rm .retails-rm-table td { vertical-align: middle; }
-		.retails-rm .retails-rm-stars .review-star { color: #c3c4c7; }
-		.retails-rm .retails-rm-stars .review-star.is-full, .retails-rm .retails-rm-stars .review-star.is-half { color: #f5ad27; }
-		.retails-rm .retails-rm-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin: 20px 0; }
-		.retails-rm .retails-rm-card { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; padding: 14px 18px; }
-		.retails-rm .retails-rm-card h2 { margin-top: 4px; font-size: 15px; }
-		.retails-rm .retails-rm-summary th { text-align: left; padding: 4px 16px 4px 0; font-weight: 500; color: #50575e; }
-		.retails-rm .retails-rm-review { background: #fff; border: 1px solid #dcdcde; border-left: 4px solid #72aee6; border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
-		.retails-rm .retails-rm-review.is-sample { border-left-color: #a7aaad; background: #f6f7f7; }
-		.retails-rm .retails-rm-review-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
-		.retails-rm .retails-rm-meta { color: #646970; font-size: 12px; }
-		.retails-rm .retails-rm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
-		.retails-rm label { display: grid; gap: 3px; font-weight: 500; font-size: 12px; color: #3c434a; }
-		.retails-rm .retails-rm-actions label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
-		.retails-rm .retails-rm-wide { margin-bottom: 6px; }
-		.retails-rm .retails-rm-grid input, .retails-rm .retails-rm-grid select, .retails-rm .retails-rm-wide input { width: 100%; max-width: none; }
-		.retails-rm .retails-rm-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
-		.retails-rm .retails-rm-add { margin-top: 20px; }
-		.retails-rm .retails-rm-add summary { cursor: pointer; padding: 4px 0; }
-		.retails-rm .retails-rm-empty { color: #646970; }
-		.retails-rm .retails-rm-ratings { display: grid; gap: 4px; }
-		.retails-rm .retails-rm-ratings label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+		.wholesale-rm .wholesale-rm-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; margin: 16px 0 12px; }
+		.wholesale-rm .wholesale-rm-open { display: flex; gap: 6px; }
+		.wholesale-rm .wholesale-rm-table td { vertical-align: middle; }
+		.wholesale-rm .wholesale-rm-stars .review-star { color: #c3c4c7; }
+		.wholesale-rm .wholesale-rm-stars .review-star.is-full, .wholesale-rm .wholesale-rm-stars .review-star.is-half { color: #f5ad27; }
+		.wholesale-rm .wholesale-rm-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin: 20px 0; }
+		.wholesale-rm .wholesale-rm-card { background: #fff; border: 1px solid #dcdcde; border-radius: 6px; padding: 14px 18px; }
+		.wholesale-rm .wholesale-rm-card h2 { margin-top: 4px; font-size: 15px; }
+		.wholesale-rm .wholesale-rm-summary th { text-align: left; padding: 4px 16px 4px 0; font-weight: 500; color: #50575e; }
+		.wholesale-rm .wholesale-rm-review { background: #fff; border: 1px solid #dcdcde; border-left: 4px solid #72aee6; border-radius: 6px; padding: 12px 16px; margin: 12px 0; }
+		.wholesale-rm .wholesale-rm-review.is-sample { border-left-color: #a7aaad; background: #f6f7f7; }
+		.wholesale-rm .wholesale-rm-review-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+		.wholesale-rm .wholesale-rm-meta { color: #646970; font-size: 12px; }
+		.wholesale-rm .wholesale-rm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; }
+		.wholesale-rm label { display: grid; gap: 3px; font-weight: 500; font-size: 12px; color: #3c434a; }
+		.wholesale-rm .wholesale-rm-actions label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+		.wholesale-rm .wholesale-rm-wide { margin-bottom: 6px; }
+		.wholesale-rm .wholesale-rm-grid input, .wholesale-rm .wholesale-rm-grid select, .wholesale-rm .wholesale-rm-wide input { width: 100%; max-width: none; }
+		.wholesale-rm .wholesale-rm-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+		.wholesale-rm .wholesale-rm-add { margin-top: 20px; }
+		.wholesale-rm .wholesale-rm-add summary { cursor: pointer; padding: 4px 0; }
+		.wholesale-rm .wholesale-rm-empty { color: #646970; }
+		.wholesale-rm .wholesale-rm-ratings { display: grid; gap: 4px; }
+		.wholesale-rm .wholesale-rm-ratings label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 	</style>
 	<?php
 }
-
-// ------------------------------------------------------------------
-// Edit screen (post.php?post=ID): every review field editable
-// ------------------------------------------------------------------
-
-/**
- * Meta keys the edit screen manages, with a label and field type.
- */
-function retails_review_edit_fields()
-{
-	return array(
-		'_review_name' => array('label' => 'Name', 'type' => 'text'),
-		'_review_email' => array('label' => 'Customer email', 'type' => 'email'),
-		'_review_rating' => array('label' => 'Rating', 'type' => 'rating'),
-		'_review_product_id' => array('label' => 'Product', 'type' => 'product'),
-		'_review_order_id' => array('label' => 'Order ID', 'type' => 'number'),
-		'_review_title' => array('label' => 'Headline', 'type' => 'text'),
-		'_review_company' => array('label' => 'Company', 'type' => 'text'),
-		'_review_location' => array('label' => 'Location', 'type' => 'text'),
-		'_review_source' => array('label' => 'Where it came from', 'type' => 'source'),
-		'_review_source_note' => array('label' => 'Reference', 'type' => 'text'),
-		'_review_import_key' => array('label' => 'Import key', 'type' => 'text'),
-		'_review_verified' => array('label' => 'Verified buyer badge', 'type' => 'verified'),
-		'_review_is_sample' => array('label' => 'Sample (placeholder) review', 'type' => 'flag'),
-		'_review_hidden_unverified' => array('label' => 'Hidden as unverified on', 'type' => 'date'),
-	);
-}
-
-function retails_review_edit_register_meta_box()
-{
-	// Replaces the read-only "Review Details" box from functions.php.
-	remove_meta_box('review-submission-details', 'review_submission', 'normal');
-	add_meta_box(
-		'review-submission-fields',
-		'Review details (all editable)',
-		'retails_review_edit_meta_box',
-		'review_submission',
-		'normal',
-		'high'
-	);
-}
-add_action('add_meta_boxes_review_submission', 'retails_review_edit_register_meta_box', 20);
-
-function retails_review_edit_meta_box($post)
-{
-	wp_nonce_field('retails_review_edit_' . $post->ID, 'retails_review_edit_nonce');
-
-	$values = array();
-	foreach (retails_review_edit_fields() as $key => $field) {
-		$values[$key] = get_post_meta($post->ID, $key, true);
-	}
-
-	$product_id = absint($values['_review_product_id']);
-	$order_id = absint($values['_review_order_id']);
-	$source = (string) $values['_review_source'];
-	$sources = array('' => 'Customer form on the site (shows Verified buyer)', 'import' => 'Imported from a file') + retails_review_manager_sources();
-	if (!isset($sources[$source])) {
-		$sources[$source] = $source;
-	}
-
-	$products = get_posts(array(
-		'post_type' => 'product',
-		'post_status' => array('publish', 'draft', 'pending', 'private'),
-		'posts_per_page' => -1,
-		'orderby' => 'title',
-		'order' => 'ASC',
-		'fields' => 'ids',
-		'no_found_rows' => true,
-		'update_post_meta_cache' => false,
-		'update_post_term_cache' => false,
-	));
-	if ($product_id && !in_array($product_id, $products, true)) {
-		$products[] = $product_id;
-	}
-	$rating = min(5, max(0, absint($values['_review_rating'])));
-	$hidden_date = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $values['_review_hidden_unverified']) ? $values['_review_hidden_unverified'] : '';
-	?>
-	<style>
-		.retails-re-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 16px; margin-top: 6px; }
-		.retails-re-grid label { display: grid; gap: 3px; font-weight: 600; align-content: start; }
-		.retails-re-grid input[type=text], .retails-re-grid input[type=email], .retails-re-grid input[type=number], .retails-re-grid input[type=date], .retails-re-grid select { width: 100%; max-width: none; }
-		.retails-re-grid .retails-re-check { display: flex; align-items: center; gap: 8px; }
-		.retails-re-grid .description { font-weight: 400; }
-		.retails-re-links { margin: 4px 0 0; }
-		.retails-re-other { margin-top: 14px; }
-		.retails-re-other td { word-break: break-all; }
-	</style>
-	<p class="retails-re-links description">
-		Review text is the editor below. Status, publish date and the post title are in the Publish box. Rating, product and sample changes refresh the product card stars on save.
-		<?php if ($product_id && 'product' === get_post_type($product_id)) : ?>
-			<a href="<?php echo esc_url(get_permalink($product_id)); ?>#product-reviews" target="_blank" rel="noopener">View on product page</a> &middot;
-		<?php endif; ?>
-		<?php if ($order_id && 'order' === get_post_type($order_id)) : ?>
-			<a href="<?php echo esc_url(get_edit_post_link($order_id)); ?>">Open order #<?php echo esc_html(function_exists('retails_order_number') ? retails_order_number($order_id) : $order_id); ?></a> &middot;
-		<?php endif; ?>
-		<a href="<?php echo esc_url(retails_review_manager_url()); ?>">Reviews by Product</a>
-	</p>
-	<div class="retails-re-grid">
-		<label>Name
-			<input type="text" name="retails_review[_review_name]" value="<?php echo esc_attr($values['_review_name']); ?>">
-		</label>
-		<label>Customer email
-			<input type="email" name="retails_review[_review_email]" value="<?php echo esc_attr($values['_review_email']); ?>">
-		</label>
-		<label>Rating
-			<select name="retails_review[_review_rating]">
-				<?php for ($star = 5; $star >= 1; $star--) : ?>
-					<option value="<?php echo (int) $star; ?>" <?php selected($rating, $star); ?>><?php echo esc_html($star . ' ' . (1 === $star ? 'star' : 'stars')); ?></option>
-				<?php endfor; ?>
-			</select>
-		</label>
-		<label>Product
-			<select name="retails_review[_review_product_id]">
-				<option value="0" <?php selected($product_id, 0); ?>>General feedback (no product)</option>
-				<?php foreach ($products as $id) : ?>
-					<option value="<?php echo (int) $id; ?>" <?php selected($product_id, (int) $id); ?>><?php echo esc_html(html_entity_decode(get_the_title($id), ENT_QUOTES) . ' (#' . $id . ('publish' === get_post_status($id) ? '' : ', ' . get_post_status($id)) . ')'); ?></option>
-				<?php endforeach; ?>
-			</select>
-		</label>
-		<label>Order ID <span class="description">(0 = none)</span>
-			<input type="number" min="0" step="1" name="retails_review[_review_order_id]" value="<?php echo esc_attr($order_id); ?>">
-		</label>
-		<label>Headline
-			<input type="text" name="retails_review[_review_title]" value="<?php echo esc_attr($values['_review_title']); ?>">
-		</label>
-		<label>Company
-			<input type="text" name="retails_review[_review_company]" value="<?php echo esc_attr($values['_review_company']); ?>">
-		</label>
-		<label>Location
-			<input type="text" name="retails_review[_review_location]" value="<?php echo esc_attr($values['_review_location']); ?>" placeholder="City, ST">
-		</label>
-		<label>Where it came from
-			<select name="retails_review[_review_source]">
-				<?php foreach ($sources as $key => $label) : ?>
-					<option value="<?php echo esc_attr($key); ?>" <?php selected($source, (string) $key); ?>><?php echo esc_html($label); ?></option>
-				<?php endforeach; ?>
-			</select>
-		</label>
-		<label>Verified buyer badge
-			<?php $verified_mode = (string) get_post_meta($post->ID, '_review_verified', true); ?>
-			<select name="retails_review[_review_verified]">
-				<option value="" <?php selected($verified_mode, ''); ?>>Automatic (<?php echo retails_review_is_verified_auto($post->ID) ? 'shows the badge' : 'no badge'; ?>)</option>
-				<option value="1" <?php selected($verified_mode, '1'); ?>>Always show "Verified buyer"</option>
-				<option value="0" <?php selected($verified_mode, '0'); ?>>Never show it (plain "Customer review")</option>
-			</select>
-			<span class="description">Automatic = a product review sent through the site's customer form.</span>
-		</label>
-		<label>Reference <span class="description">(order #, email date...)</span>
-			<input type="text" name="retails_review[_review_source_note]" value="<?php echo esc_attr($values['_review_source_note']); ?>">
-		</label>
-		<label>Import key
-			<input type="text" name="retails_review[_review_import_key]" value="<?php echo esc_attr($values['_review_import_key']); ?>">
-		</label>
-		<label>Hidden as unverified on
-			<input type="date" name="retails_review[_review_hidden_unverified]" value="<?php echo esc_attr($hidden_date); ?>">
-			<span class="description">Set by the 2026-10-27 clean-up. Clear it so a review you publish on purpose stays live.</span>
-		</label>
-		<label class="retails-re-check">
-			<input type="checkbox" name="retails_review[_review_is_sample]" value="1" <?php checked((bool) $values['_review_is_sample']); ?>>
-			Sample (placeholder) review - never published
-		</label>
-	</div>
-	<?php
-	// Any other review data stored on this post, so nothing is invisible.
-	$known = array_keys(retails_review_edit_fields());
-	$extra = array();
-	foreach ((array) get_post_meta($post->ID) as $key => $meta_values) {
-		if (0 === strpos($key, '_review_') && !in_array($key, $known, true)) {
-			$extra[$key] = maybe_unserialize($meta_values[0]);
-		}
-	}
-	if ($extra) :
-		?>
-		<div class="retails-re-other">
-			<strong>Other stored fields (read only)</strong>
-			<table class="widefat striped"><tbody>
-				<?php foreach ($extra as $key => $value) : ?>
-					<tr><td><code><?php echo esc_html($key); ?></code></td><td><?php echo esc_html(is_scalar($value) ? (string) $value : wp_json_encode($value)); ?></td></tr>
-				<?php endforeach; ?>
-			</tbody></table>
-		</div>
-		<?php
-	endif;
-}
-
-function retails_review_edit_save($post_id, $post)
-{
-	if (!isset($_POST['retails_review_edit_nonce'], $_POST['retails_review']) || !is_array($_POST['retails_review'])) {
-		return;
-	}
-	if (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) {
-		return;
-	}
-	if (!wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['retails_review_edit_nonce'])), 'retails_review_edit_' . $post_id) || !current_user_can('edit_post', $post_id)) {
-		return;
-	}
-	if ('review_submission' !== $post->post_type) {
-		return;
-	}
-
-	$in = wp_unslash($_POST['retails_review']);
-
-	// update_post_meta() unslashes its value, so text is slashed first.
-	foreach (array('_review_name', '_review_title', '_review_company', '_review_location', '_review_source_note', '_review_import_key') as $key) {
-		update_post_meta($post_id, $key, wp_slash(sanitize_text_field(isset($in[$key]) ? (string) $in[$key] : '')));
-	}
-
-	update_post_meta($post_id, '_review_email', sanitize_email(isset($in['_review_email']) ? (string) $in['_review_email'] : ''));
-	update_post_meta($post_id, '_review_rating', min(5, max(1, absint(isset($in['_review_rating']) ? $in['_review_rating'] : 5))));
-
-	$product_id = absint(isset($in['_review_product_id']) ? $in['_review_product_id'] : 0);
-	if ($product_id && 'product' !== get_post_type($product_id)) {
-		$product_id = absint(get_post_meta($post_id, '_review_product_id', true));
-	}
-	update_post_meta($post_id, '_review_product_id', $product_id);
-	update_post_meta($post_id, '_review_order_id', absint(isset($in['_review_order_id']) ? $in['_review_order_id'] : 0));
-
-	// Empty = customer form; "import" and the admin sources are labelled differently on the site.
-	$source = sanitize_key(isset($in['_review_source']) ? (string) $in['_review_source'] : '');
-	if ('' === $source) {
-		delete_post_meta($post_id, '_review_source');
-	} else {
-		update_post_meta($post_id, '_review_source', $source);
-	}
-
-	$verified = isset($in['_review_verified']) ? (string) $in['_review_verified'] : '';
-	if ('1' === $verified || '0' === $verified) {
-		update_post_meta($post_id, '_review_verified', $verified);
-	} else {
-		delete_post_meta($post_id, '_review_verified');
-	}
-
-	$is_sample = !empty($in['_review_is_sample']);
-	if ($is_sample) {
-		update_post_meta($post_id, '_review_is_sample', 1);
-	} else {
-		delete_post_meta($post_id, '_review_is_sample');
-	}
-
-	$hidden = isset($in['_review_hidden_unverified']) ? sanitize_text_field((string) $in['_review_hidden_unverified']) : '';
-	if ('' === $hidden) {
-		delete_post_meta($post_id, '_review_hidden_unverified');
-	} elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $hidden)) {
-		update_post_meta($post_id, '_review_hidden_unverified', $hidden);
-	}
-
-	// Keep the auto-made title ("5-star review from Name") in step with the rating and name.
-	$update = array();
-	$name = (string) get_post_meta($post_id, '_review_name', true);
-	if (preg_match('/^\d-star review from /', (string) $post->post_title) && '' !== $name) {
-		$new_title = sprintf('%d-star review from %s', (int) get_post_meta($post_id, '_review_rating', true), $name);
-		if ($new_title !== $post->post_title) {
-			$update['post_title'] = wp_slash($new_title);
-		}
-	}
-	// A placeholder review can never stay published.
-	if ($is_sample && 'publish' === get_post_status($post_id)) {
-		$update['post_status'] = 'draft';
-	}
-	if ($update) {
-		remove_action('save_post_review_submission', 'retails_review_edit_save', 10);
-		wp_update_post($update + array('ID' => $post_id));
-		add_action('save_post_review_submission', 'retails_review_edit_save', 10, 2);
-	}
-
-	retails_review_stats_flush();
-}
-add_action('save_post_review_submission', 'retails_review_edit_save', 10, 2);

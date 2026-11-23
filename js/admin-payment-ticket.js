@@ -487,7 +487,7 @@
         });
     }
 
-    document.getElementById('retails_ticket_items').addEventListener('input', recalc);
+    document.getElementById('wholesale_ticket_items').addEventListener('input', recalc);
 
     /* ------------------------------------------------------------------ */
     /* Boot                                                                */

@@ -18,7 +18,7 @@
  * - 'description' Meta description, 140-155 characters.
  * - 'notes'       "Good to know" facts the guide does not already state.
  * - 'faq'         Extra questions and answers (the guide has three).
- * - 'care'        Care advice (HTML), or a key of retails_product_care_texts().
+ * - 'care'        Care advice (HTML), or a key of wholesale_product_care_texts().
  * - 'file_notes'  Artwork notes specific to the product.
  * - 'files'       File rules that replace the standard JPEG/PDF ones.
  * - 'spec'        Label => value rows that replace a wrong supplier Spec section.
@@ -38,14 +38,14 @@ if (!defined('ABSPATH')) {
  * When the copy in data/product-pages/ last changed. Bump it by hand with
  * the copy, so product sitemap <lastmod> tells Google the pages changed.
  */
-define('RETAILS_PRODUCT_PAGES_REVISED', '2026-10-25T00:00:00+00:00');
+define('WHOLESALE_PRODUCT_PAGES_REVISED', '2026-10-25T00:00:00+00:00');
 
 /**
  * Every product page entry, keyed by slug.
  *
  * @return array
  */
-function retails_product_pages()
+function wholesale_product_pages()
 {
 	static $pages = null;
 	if (null === $pages) {
@@ -68,7 +68,7 @@ function retails_product_pages()
  *
  * @param string $src URL or uploads-relative path.
  */
-function retails_product_photo_alt($src, $fallback = '')
+function wholesale_product_photo_alt($src, $fallback = '')
 {
 	static $map = null;
 	if (null === $map) {
@@ -92,19 +92,19 @@ function retails_product_photo_alt($src, $fallback = '')
  * The entry for a product: its own, laid over the entry of the product it
  * canonicalizes to. Empty array when there is none.
  */
-function retails_product_page($product_id)
+function wholesale_product_page($product_id)
 {
-	$pages = retails_product_pages();
+	$pages = wholesale_product_pages();
 	$slug = (string) get_post_field('post_name', $product_id);
 	$own = isset($pages[$slug]) ? $pages[$slug] : array();
-	$primary = retails_seo_product_canonical_of($product_id);
+	$primary = wholesale_seo_product_canonical_of($product_id);
 	$base = array();
 	if ($primary) {
 		$primary_slug = (string) get_post_field('post_name', $primary);
 		$base = isset($pages[$primary_slug]) ? $pages[$primary_slug] : array();
 		// The kit's title and description describe the kit, not this variant;
 		// an exact duplicate listing ("-3" slug) is the same product and keeps them.
-		if (!retails_seo_product_duplicate_of($product_id)) {
+		if (!wholesale_seo_product_duplicate_of($product_id)) {
 			unset($base['title'], $base['description']);
 		}
 	}
@@ -117,16 +117,16 @@ function retails_product_page($product_id)
  * dropping the differentiator, then the brand, to stay within 60 characters.
  * '' when the product has no entry.
  */
-function retails_product_page_title($product_id)
+function wholesale_product_page_title($product_id)
 {
-	$entry = retails_product_page($product_id);
+	$entry = wholesale_product_page($product_id);
 	if (empty($entry['title'])) {
-		$variant = retails_seo_product_variant_label($product_id);
-		if (!$variant || !retails_seo_product_canonical_of($product_id)) {
+		$variant = wholesale_seo_product_variant_label($product_id);
+		if (!$variant || !wholesale_seo_product_canonical_of($product_id)) {
 			return '';
 		}
 		// Variants without their own title: "Name (Flag Only)".
-		$entry['title'] = array(sprintf('%s (%s)', retails_seo_product_search_name($product_id), $variant), '');
+		$entry['title'] = array(sprintf('%s (%s)', wholesale_seo_product_search_name($product_id), $variant), '');
 	}
 
 	$keyword = trim((string) $entry['title'][0]);
@@ -152,9 +152,9 @@ function retails_product_page_title($product_id)
 /**
  * Meta description from the product's entry, or ''.
  */
-function retails_product_page_description($product_id)
+function wholesale_product_page_description($product_id)
 {
-	$entry = retails_product_page($product_id);
+	$entry = wholesale_product_page($product_id);
 
 	return isset($entry['description']) ? trim((string) $entry['description']) : '';
 }
@@ -167,7 +167,7 @@ function retails_product_page_description($product_id)
  *
  * @return array
  */
-function retails_product_supplier_sections($product_id)
+function wholesale_product_supplier_sections($product_id)
 {
 	static $cache = array();
 	$product_id = (int) $product_id;
@@ -219,36 +219,14 @@ function retails_product_supplier_sections($product_id)
  *
  * @return array
  */
-function retails_product_turnaround($product_id)
+function wholesale_product_turnaround($product_id)
 {
-	$sections = retails_product_supplier_sections($product_id);
+	$sections = wholesale_product_supplier_sections($product_id);
 	$same = wp_strip_all_tags(isset($sections['same_day']) ? $sections['same_day'] : '');
 	$next = wp_strip_all_tags(isset($sections['next_day']) ? $sections['next_day'] : '');
-	$same_day = (bool) preg_match('/ships (?:same day|today)/i', $same);
-	// Products with their own production times (B2Sign Sync, the choices the page and cart
-	// offer) promise the 12 pm Same Day only when it is one of those choices. The 10ft SEG
-	// display offers Next Day and later, yet its notes said "ships same day" (2026-11-09).
-	$spec = function_exists('retails_product_turnaround_spec') ? retails_product_turnaround_spec($product_id) : array();
-	// Since the production times copy B2Sign (2026-11-11), the 12 pm Same Day choice
-	// usually costs extra (+100%), and an order approved by an early cut-off (6 am)
-	// gets Same Day free. The sentence below must not promise a paid upgrade as standard.
-	$same_day_extra = 0.0;
-	$free_same_day = '';
-	if ($spec) {
-		$same_day = in_array('same_day', array_column($spec, 'value'), true);
-		foreach ($spec as $choice) {
-			if ('same_day' === $choice['value']) {
-				$same_day_extra = (float) $choice['percent'];
-			} elseif (0 === (int) $choice['days'] && $choice['percent'] <= 0 && $choice['choice'] && $choice['cutoff']) {
-				$free_same_day = $choice['cutoff'];
-			}
-		}
-	}
 
 	return array(
-		'same_day' => $same_day,
-		'same_day_extra' => $same_day_extra,
-		'free_same_day' => $free_same_day,
+		'same_day' => (bool) preg_match('/ships (?:same day|today)/i', $same),
 		// Stock items list only "Order before 12pm PST ships today".
 		'stock' => '' === trim($next) && (bool) preg_match('/ships today/i', $same),
 		'next_days' => preg_match('/ships in (\d+) business days/i', $next, $m) ? (int) $m[1] : 1,
@@ -259,13 +237,13 @@ function retails_product_turnaround($product_id)
 /**
  * Whether the product is printed to order (most are) or stock hardware.
  */
-function retails_product_is_printed($product_id)
+function wholesale_product_is_printed($product_id)
 {
-	$entry = retails_product_page($product_id);
+	$entry = wholesale_product_page($product_id);
 	if (isset($entry['printed'])) {
 		return (bool) $entry['printed'];
 	}
-	$turnaround = retails_product_turnaround($product_id);
+	$turnaround = wholesale_product_turnaround($product_id);
 
 	return !$turnaround['stock'];
 }
@@ -273,32 +251,16 @@ function retails_product_is_printed($product_id)
 /**
  * One sentence on when an order ships, for the shipping section and FAQ.
  */
-function retails_product_ship_sentence($product_id)
+function wholesale_product_ship_sentence($product_id)
 {
-	$t = retails_product_turnaround($product_id);
-	// Stock items keep the 12 pm same-day sentence only while Same Day is one of their
-	// choices (the round table cover offers Next Day, 3 and 5 days; 2026-11-09).
-	if ($t['stock'] && $t['same_day']) {
+	$t = wholesale_product_turnaround($product_id);
+	if ($t['stock']) {
 		return 'Order by 12 pm Pacific time and it ships the same business day; later orders ship the next business day.';
 	}
 
 	$next = 1 === $t['next_days'] ? 'the next business day' : sprintf('in %d business days', $t['next_days']);
-	// Same Day is a paid choice here (Visitor Insights Nov 2026: the page said "by 12 pm it
-	// ships the same business day" while that choice added $77.86).
-	if ($t['same_day'] && $t['same_day_extra'] > 0) {
-		$sentence = sprintf('Order and approve your artwork by 4 pm Pacific time and it ships %s; after 4 pm, allow one more business day. Need it sooner? Choose Same Day under Production Time: order by 12 pm Pacific and it ships the same business day, for an added charge', $next);
-		if ($t['free_same_day']) {
-			$sentence .= sprintf(' (orders approved by %s Pacific ship the same day at no extra charge)', strtolower(wp_date('g a', strtotime('2000-01-01 ' . $t['free_same_day'] . ' UTC'), new DateTimeZone('UTC'))));
-		}
-
-		return $sentence . '.';
-	}
 	if ($t['same_day']) {
 		return sprintf('Order and approve your artwork by 12 pm Pacific time and it ships the same business day. By 4 pm, it ships %s; after 4 pm, allow one more business day.', $next);
-	}
-	// Stock hardware (carrying bags, frames) has no artwork to approve.
-	if ($t['stock'] && !retails_product_is_printed($product_id)) {
-		return sprintf('Order by 4 pm Pacific time and it ships %s; after 4 pm, allow one more business day.', $next);
 	}
 
 	return sprintf('Order and approve your artwork by 4 pm Pacific time and it ships %s; after 4 pm, allow one more business day.', $next);
@@ -309,7 +271,7 @@ function retails_product_ship_sentence($product_id)
  *
  * @return array
  */
-function retails_product_care_texts()
+function wholesale_product_care_texts()
 {
 	return array(
 		'vinyl-banner' => 'Clean the print with mild soap, water and a soft cloth, and skip solvents and pressure washers. Let the banner dry fully before you store it, then roll it with the printed side facing out and keep it somewhere dry. Using every grommet when you hang it spreads the load and helps prevent tears.',
@@ -334,10 +296,10 @@ function retails_product_care_texts()
  *
  * @return array
  */
-function retails_product_page_faq($product_id)
+function wholesale_product_page_faq($product_id)
 {
-	$guide = function_exists('retails_product_guide') ? retails_product_guide($product_id) : array();
-	$entry = retails_product_page($product_id);
+	$guide = function_exists('wholesale_product_guide') ? wholesale_product_guide($product_id) : array();
+	$entry = wholesale_product_page($product_id);
 	$faq = array_merge(
 		!empty($guide['faq']) ? $guide['faq'] : array(),
 		!empty($entry['faq']) ? $entry['faq'] : array()
@@ -347,10 +309,10 @@ function retails_product_page_faq($product_id)
 	}
 
 	// Channel letters state their own production times in their entry.
-	if (!retails_seo_channel_letter_product($product_id)) {
+	if (!wholesale_seo_channel_letter_product($product_id)) {
 		$faq[] = array(
 			'q' => 'When will my order ship?',
-			'a' => retails_product_ship_sentence($product_id) . ' Then it travels by the shipping speed you choose at checkout.',
+			'a' => wholesale_product_ship_sentence($product_id) . ' Then it travels by the shipping speed you choose at checkout.',
 		);
 	}
 
@@ -364,7 +326,7 @@ function retails_product_page_faq($product_id)
  *
  * @return string[]
  */
-function retails_channel_letter_tab_images($product_id, $files)
+function wholesale_channel_letter_tab_images($product_id, $files)
 {
 	$html = (string) get_post_meta($product_id, '_product_description', true) . (string) get_post_meta($product_id, '_product_component', true);
 	preg_match_all('#<img\b[^>]*>#i', $html, $tags);
@@ -394,20 +356,20 @@ function retails_channel_letter_tab_images($product_id, $files)
  * warranty and FAQ in place of the supplier's tabs. False (nothing printed)
  * without an entry in data/product-pages/channel-letters.php.
  */
-function retails_render_channel_letter_details($product_id)
+function wholesale_render_channel_letter_details($product_id)
 {
-	$entry = retails_product_page($product_id);
-	$seo = retails_seo_channel_letter_product($product_id);
+	$entry = wholesale_product_page($product_id);
+	$seo = wholesale_seo_channel_letter_product($product_id);
 	if (empty($entry['parts']) || empty($seo['heading'])) {
 		return false;
 	}
 
 	$heading = $seo['heading'];
 	$stainless = 'stainless' === ($entry['material'] ?? '');
-	$images = retails_channel_letter_tab_images($product_id, $entry['images'] ?? array());
-	$rates = array_values(array_filter(explode(',', (string) retails_get_setting('channel_shipping_options')), 'is_numeric'));
-	$free_min = function_exists('retails_free_shipping_amount') ? retails_free_shipping_amount(true) : '';
-	$faq = retails_product_page_faq($product_id);
+	$images = wholesale_channel_letter_tab_images($product_id, $entry['images'] ?? array());
+	$rates = array_values(array_filter(explode(',', (string) wholesale_get_setting('channel_shipping_options')), 'is_numeric'));
+	$free_min = function_exists('wholesale_free_shipping_amount') ? wholesale_free_shipping_amount(true) : '';
+	$faq = wholesale_product_page_faq($product_id);
 	$link = static function ($path, $text) {
 		$page = get_page_by_path(trim($path, '/'));
 		return $page && 'publish' === $page->post_status ? '<a href="' . esc_url(get_permalink($page)) . '">' . esc_html($text) . '</a>' : esc_html($text);
@@ -431,7 +393,7 @@ function retails_render_channel_letter_details($product_id)
 			<?php if ($images) : ?>
 				<div class="grid grid-lg-3">
 					<?php foreach ($images as $image) : ?>
-						<div><?php echo wp_kses_post(retails_seo_fill_missing_alt($image, $heading)); ?></div>
+						<div><?php echo wp_kses_post(wholesale_seo_fill_missing_alt($image, $heading)); ?></div>
 					<?php endforeach; ?>
 				</div>
 			<?php endif; ?>
@@ -509,10 +471,10 @@ function retails_render_channel_letter_details($product_id)
  * given alt text and responsive sizes. Products without a Spec section use
  * the lists from their description.
  */
-function retails_product_spec_html($product_id)
+function wholesale_product_spec_html($product_id)
 {
 	// An entry's own spec rows win where the supplier's are wrong for the product.
-	$entry = retails_product_page($product_id);
+	$entry = wholesale_product_page($product_id);
 	if (!empty($entry['spec'])) {
 		$rows = '';
 		foreach ((array) $entry['spec'] as $label => $value) {
@@ -521,7 +483,7 @@ function retails_product_spec_html($product_id)
 		return '<table><tbody>' . $rows . '</tbody></table>';
 	}
 
-	$sections = retails_product_supplier_sections($product_id);
+	$sections = wholesale_product_supplier_sections($product_id);
 	$html = isset($sections['spec']) ? $sections['spec'] : '';
 	if ('' === trim(wp_strip_all_tags($html)) && !empty($sections['description']) && preg_match_all('#<ul\b.*?</ul>#is', $sections['description'], $lists)) {
 		$html = implode('', $lists[0]);
@@ -541,30 +503,23 @@ function retails_product_spec_html($product_id)
 		}, $html);
 	}
 
-	// HTML specs with no <p> or <br> (the 14 flag products) break lines with bare newlines,
-	// which browsers run together ("Print Method: Dye Sublimated Graphic Material: ...").
-	// WordPress's paragraph filter turns them into paragraphs and line breaks (2026-11-09).
-	if (false === stripos($html, '<p') && false === stripos($html, '<br')) {
-		$html = wpautop($html);
-	}
-
-	$html = retails_seo_clean_product_content($html);
+	$html = wholesale_seo_clean_product_content($html);
 	// The supplier's section dividers double up with this page's own borders.
 	$html = preg_replace('#<hr\s*/?>#i', '', $html);
 	// Unclosed wrapper <div>s from the supplier layout are dropped by balancing.
 	$html = force_balance_tags($html);
 
-	return retails_seo_fill_missing_alt($html, retails_seo_product_search_name($product_id));
+	return wholesale_seo_fill_missing_alt($html, wholesale_seo_product_search_name($product_id));
 }
 
 /**
  * Template downloads, product diagrams and setup steps from the supplier's
  * File Setup and Installation Guide sections: everything except the generic
- * file rules, which retails_render_product_details() states once.
+ * file rules, which wholesale_render_product_details() states once.
  */
-function retails_product_templates_html($product_id)
+function wholesale_product_templates_html($product_id)
 {
-	$sections = retails_product_supplier_sections($product_id);
+	$sections = wholesale_product_supplier_sections($product_id);
 	$html = '';
 
 	if (!empty($sections['files'])) {
@@ -596,19 +551,9 @@ function retails_product_templates_html($product_id)
 		return '';
 	}
 
-	$html = force_balance_tags(retails_seo_clean_product_content($html));
+	$html = force_balance_tags(wholesale_seo_clean_product_content($html));
 
-	return retails_seo_fill_missing_alt($html, retails_seo_product_search_name($product_id));
-}
-
-/**
- * Wrap each table in a box that scrolls sideways on its own (css/ui-polish.css
- * .product-info-table). Supplier tables can be wider than a phone (flag specs
- * have 6 columns, 484px) and otherwise widen the whole page.
- */
-function retails_product_info_wrap_tables($html)
-{
-	return preg_replace('#<table\b.*?</table>#is', '<div class="product-info-table">$0</div>', (string) $html);
+	return wholesale_seo_fill_missing_alt($html, wholesale_seo_product_search_name($product_id));
 }
 
 /**
@@ -616,26 +561,26 @@ function retails_product_info_wrap_tables($html)
  * sections that replace the supplier description. Returns false (printing
  * nothing) for a product without an entry, so the template can fall back.
  */
-function retails_render_product_details($product_id)
+function wholesale_render_product_details($product_id)
 {
-	$entry = retails_product_page($product_id);
+	$entry = wholesale_product_page($product_id);
 	if (!$entry) {
 		return false;
 	}
 
-	$name = retails_seo_product_search_name($product_id);
-	$printed = retails_product_is_printed($product_id);
-	$turnaround = retails_product_turnaround($product_id);
-	$spec = retails_product_spec_html($product_id);
-	$templates = $printed ? retails_product_templates_html($product_id) : '';
+	$name = wholesale_seo_product_search_name($product_id);
+	$printed = wholesale_product_is_printed($product_id);
+	$turnaround = wholesale_product_turnaround($product_id);
+	$spec = wholesale_product_spec_html($product_id);
+	$templates = $printed ? wholesale_product_templates_html($product_id) : '';
 	$care = isset($entry['care']) ? (string) $entry['care'] : '';
-	$care_texts = retails_product_care_texts();
+	$care_texts = wholesale_product_care_texts();
 	if (isset($care_texts[$care])) {
 		$care = $care_texts[$care];
 	}
-	$free_min = function_exists('retails_free_shipping_amount') ? retails_free_shipping_amount(false) : '';
-	$rates = array_values(array_filter(explode(',', (string) retails_get_setting('standard_shipping_options')), 'is_numeric'));
-	$faq = retails_product_page_faq($product_id);
+	$free_min = function_exists('wholesale_free_shipping_amount') ? wholesale_free_shipping_amount(false) : '';
+	$rates = array_values(array_filter(explode(',', (string) wholesale_get_setting('standard_shipping_options')), 'is_numeric'));
+	$faq = wholesale_product_page_faq($product_id);
 	$templates_page = get_page_by_path('design-templates');
 	?>
 	<section class="product-info" aria-label="<?php echo esc_attr(sprintf('%s details', $name)); ?>">
@@ -653,14 +598,14 @@ function retails_render_product_details($product_id)
 		<?php if ($spec) : ?>
 			<div class="product-info-block product-specs">
 				<h2><?php echo esc_html(sprintf('%s specifications', $name)); ?></h2>
-				<?php echo retails_product_info_wrap_tables(wp_kses_post($spec)); ?>
+				<?php echo wp_kses_post($spec); ?>
 			</div>
 		<?php endif; ?>
 
 		<div class="product-info-block">
 			<h2>Production &amp; shipping</h2>
 			<ul>
-				<li><?php echo esc_html(retails_product_ship_sentence($product_id)); ?><?php echo $turnaround['bulk_extra'] ? esc_html(' Orders of more than 100 pieces need two extra business days.') : ''; ?></li>
+				<li><?php echo esc_html(wholesale_product_ship_sentence($product_id)); ?><?php echo $turnaround['bulk_extra'] ? esc_html(' Orders of more than 100 pieces need two extra business days.') : ''; ?></li>
 				<li><?php echo esc_html($printed ? 'Printed to order in Renton, Washington, and shipped to all 50 states.' : 'Ships to all 50 states.'); ?></li>
 				<li>
 					<?php
@@ -686,7 +631,7 @@ function retails_render_product_details($product_id)
 							<li><?php echo wp_kses_post($rule); ?></li>
 						<?php endforeach; ?>
 					<?php else : ?>
-					<li>Upload a JPEG or a single-page PDF, up to <?php echo esc_html(retails_artwork_max_text()); ?> (larger files: email us a download link), built at the exact size you order (or the same shape at a larger or smaller scale). Artwork with a different shape is turned away at upload, so nothing prints stretched or cut off.</li>
+					<li>Upload a JPEG or a single-page PDF, up to 300 MB, built at the exact size you order. Artwork at a different size is scaled to fit.</li>
 					<li>Use CMYK color, convert Pantone and spot colors to CMYK, and outline your fonts. Raster images need 150 dpi at full size.</li>
 					<li>Leave off crop marks and bleed. Double sided items take one file per side unless the template says otherwise.</li>
 					<?php endif; ?>
@@ -698,7 +643,7 @@ function retails_render_product_details($product_id)
 					<?php endif; ?>
 				</ul>
 				<?php if ($templates) : ?>
-					<div class="product-templates"><?php echo retails_product_info_wrap_tables(wp_kses_post($templates)); ?></div>
+					<div class="product-templates"><?php echo wp_kses_post($templates); ?></div>
 				<?php endif; ?>
 				<?php if ($templates_page && 'publish' === $templates_page->post_status) : ?>
 					<p>Need help? Our <a href="<?php echo esc_url(get_permalink($templates_page)); ?>">design templates and artwork guide</a> covers every product, or a sign specialist can check your file before it prints.</p>

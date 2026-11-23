@@ -39,7 +39,7 @@ add_action( 'wp_head', 'litsign_pingback_header' );
 /**
  * Stroke icons for the channel letter and storefront sign sections (the icon font is a small subset).
  */
-function retails_home_icon($name)
+function wholesale_home_icon($name)
 {
 	$paths = array(
 		'flag' => '<path d="M4 22V4"/><path d="M4 4h13l-2 4 2 4H4"/>',
@@ -56,10 +56,6 @@ function retails_home_icon($name)
 		'check' => '<path d="M20 6L9 17l-5-5"/>',
 		'upload' => '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/>',
 		'grid' => '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
-		'easel' => '<path d="M9.5 3h5L20 21M9.5 3 4 21"/><path d="M6.4 13h11.2"/>',
-		'tent' => '<path d="M3 20 12 4l9 16z"/><path d="m9.5 20 2.5-5 2.5 5"/>',
-		'print' => '<path d="M7 9V3h10v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/>',
-		'lock' => '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
 	);
 
 	if (!isset($paths[$name])) {
@@ -74,7 +70,7 @@ function retails_home_icon($name)
  * page can show the amount large and the unit small. The current price is the last
  * dollar amount outside <del>; e.g. "<del>$9.16</del> $8.25 per ft<sup>2</sup>".
  */
-function retails_emphasize_price($html)
+function wholesale_emphasize_price($html)
 {
 	$html = (string) $html;
 	if ('' === trim($html) || false !== stripos($html, '<strong')) {
@@ -97,33 +93,26 @@ function retails_emphasize_price($html)
 }
 
 /**
- * Card and comparison "starting at" amount, exactly as the product page shows it, only
- * without a ".00": 1.58 -> "$1.58", 13.98 -> "$13.98", 16.00 -> "$16". Owner 2026-11-12:
- * "I don't need you to round" (the banners card read "$2" while its product page said
- * $1.58 per ft²); before that, card prices were rounded up to whole dollars.
+ * Whole-dollar amount for card and comparison "starting at" prices. Rounds up so the
+ * shown price is never below what the customer pays: 1.98 -> "$2", 27.00 -> "$27".
  */
-function retails_whole_dollars($amount)
+function wholesale_whole_dollars($amount)
 {
-	$amount = round((float) $amount, 2);
-
-	return '$' . (abs($amount - round($amount)) < 0.005 ? number_format($amount) : number_format($amount, 2));
+	return '$' . number_format(ceil(round((float) $amount, 2)));
 }
 
 /**
- * Every dollar amount in "starting at" text in the card form above (exact, no ".00"),
- * e.g. "<del>$2.26</del> $1.98 per ft<sup>2</sup>" stays as it is and "$16.00 per item"
- * reads "$16 per item". A struck-through price equal to the current price is removed.
+ * Drops the cents from every dollar amount in "starting at" text, e.g.
+ * "<del>$2.26</del> $1.98 per ft<sup>2</sup>" -> "<del>$3</del> $2 per ft<sup>2</sup>".
+ * A struck-through price that rounds to the current price is removed.
  */
-function retails_price_no_cents($html)
+function wholesale_price_no_cents($html)
 {
-	if (preg_match('/per\s*inch|\/\s*inch/i', wp_strip_all_tags((string) $html))) {
-		return $html;
-	}
 	$html = preg_replace_callback('/\$\s?([\d,]+(?:\.\d+)?)/', static function ($m) {
-		return retails_whole_dollars(str_replace(',', '', $m[1]));
+		return wholesale_whole_dollars(str_replace(',', '', $m[1]));
 	}, (string) $html);
 
-	if (preg_match('/<del\b[^>]*>[^$<]*(\$[\d,]+(?:\.\d+)?)\s*<\/del>/i', $html, $was) && preg_match_all('/\$[\d,]+(?:\.\d+)?/', wp_strip_all_tags(preg_replace('/<del\b.*?<\/del>/is', '', $html)), $now) && end($now[0]) === $was[1]) {
+	if (preg_match('/<del\b[^>]*>[^$<]*(\$[\d,]+)\s*<\/del>/i', $html, $was) && preg_match_all('/\$[\d,]+/', wp_strip_all_tags(preg_replace('/<del\b.*?<\/del>/is', '', $html)), $now) && end($now[0]) === $was[1]) {
 		$html = trim(preg_replace('/<del\b.*?<\/del>\s*/is', '', $html));
 	}
 

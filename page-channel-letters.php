@@ -47,7 +47,7 @@ function get_variant_cost($product_cost, $variable_cost)
     return round(floatval($product_cost) + floatval($variable_cost), 2);
 }
 
-function retails_render_home_product_gallery($product_id, $product_title, $thumbnail_id, $loading = 'lazy')
+function wholesale_render_home_product_gallery($product_id, $product_title, $thumbnail_id, $loading = 'lazy')
 {
     $gallery_images = get_post_meta($product_id, '_product_gallery', true);
     $gallery_images = is_array($gallery_images) ? array_values(array_filter($gallery_images, 'is_string')) : array();
@@ -77,17 +77,17 @@ function retails_render_home_product_gallery($product_id, $product_title, $thumb
     }
 
     if (empty($images)) {
-        $default_cover = !empty($GLOBALS['retails_channel_letter_landing']) ? retails_channel_letter_default_cover_url() : '';
+        $default_cover = !empty($GLOBALS['wholesale_channel_letter_landing']) ? wholesale_channel_letter_default_cover_url() : '';
         if ($default_cover) {
             echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1">';
-            echo '<img class="pb-gallery-image is-active" src="' . esc_url(retails_webp_url($default_cover)) . '" alt="' . esc_attr($product_title) . '" loading="' . esc_attr($loading) . '" decoding="async" width="800" height="600">';
-            retails_render_sale_badge($product_id);
+            echo '<img class="pb-gallery-image is-active" src="' . esc_url(wholesale_webp_url($default_cover)) . '" alt="' . esc_attr($product_title) . '" loading="' . esc_attr($loading) . '" decoding="async" width="800" height="600">';
+            wholesale_render_sale_badge($product_id);
             echo '</a>';
             return;
         }
 
         echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span>';
-        retails_render_sale_badge($product_id);
+        wholesale_render_sale_badge($product_id);
         echo '</a>';
         return;
     }
@@ -95,10 +95,10 @@ function retails_render_home_product_gallery($product_id, $product_title, $thumb
     $has_gallery = count($images) > 1;
     ?>
     <div class="pb-image-top<?php echo $has_gallery ? ' has-gallery' : ''; ?>" data-gallery>
-        <?php retails_render_sale_badge($product_id); ?>
+        <?php wholesale_render_sale_badge($product_id); ?>
         <a class="pb-gallery-track" href="<?php echo esc_url(get_permalink($product_id)); ?>" tabindex="-1">
             <?php foreach ($images as $index => $image) : ?>
-                <?php $image = retails_webp_url($image); ?>
+                <?php $image = wholesale_webp_url($image); ?>
                 <img class="pb-gallery-image<?php echo $index === 0 ? ' is-active' : ''; ?>"
                     <?php echo $index === 0 ? 'src="' . esc_url($image) . '"' : ''; ?>
                     data-gallery-src="<?php echo esc_url($image); ?>"
@@ -129,10 +129,10 @@ $is_channel_letters = 'channel-letters' === $current_category;
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $builder_url = home_url('/channel-letter-builder/');
-$GLOBALS['retails_channel_letter_landing'] = $is_channel_letters;
+$GLOBALS['wholesale_channel_letter_landing'] = $is_channel_letters;
 
 // Google Ads landing: the quote form below, the ad group headline and the lead conversion.
-$is_cl_landing = $is_channel_letters && retails_is_channel_letters_landing();
+$is_cl_landing = $is_channel_letters && wholesale_is_channel_letters_landing();
 $page_url = $is_cl_landing ? get_permalink() : '';
 $logo_max_mb = 10;
 $quote_styles = array('Front lit', 'Back lit', 'Front & back lit (dual lit)', 'Halo lit', 'Reverse lit', 'Trimless with border', 'Borderless');
@@ -155,9 +155,9 @@ $hero_style = isset($hero_variants[$hero_style]) ? $hero_style : '';
 
 // 2048px wide so the full-width hero stays sharp on large screens ('large' is only 1024px).
 $page_hero_image = get_the_post_thumbnail_url(get_the_ID(), '2048x2048');
-$page_hero_image = $page_hero_image ? retails_webp_url(esc_url_raw($page_hero_image)) : '';
-$default_page_hero_image = retails_default_hero_url();
-$page_hero_background = retails_hero_background_style($page_hero_image, $default_page_hero_image);
+$page_hero_image = $page_hero_image ? wholesale_webp_url(esc_url_raw($page_hero_image)) : '';
+$default_page_hero_image = wholesale_default_hero_url();
+$page_hero_background = wholesale_hero_background_style($page_hero_image, $default_page_hero_image);
 
 if ($is_cl_landing && 'POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['clq_submit'])) {
     $field = static function ($key) {
@@ -196,14 +196,14 @@ if ($is_cl_landing && 'POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['clq
     $logo_path = '';
     $logo_url = '';
     // Uploaded in the background (inc/async-uploads.php), or posted with the form.
-    $logo_file = retails_async_upload_take($_POST['clq_logo_token'] ?? '', 'quote');
+    $logo_file = wholesale_async_upload_take($_POST['clq_logo_token'] ?? '', 'quote');
     $logo_file = $logo_file ? $logo_file : ($_FILES['clq_logo'] ?? null);
     if ($logo_file && UPLOAD_ERR_NO_FILE !== (int) $logo_file['error']) {
         if (UPLOAD_ERR_OK !== (int) $logo_file['error'] || (int) $logo_file['size'] > $logo_max_mb * MB_IN_BYTES) {
             $fail('file_error');
         }
 
-        $upload = retails_async_upload_store($logo_file, array(
+        $upload = wholesale_async_upload_store($logo_file, array(
             'mimes' => array(
                 'jpg|jpeg|jpe' => 'image/jpeg',
                 'png' => 'image/png',
@@ -264,12 +264,12 @@ if ($is_cl_landing && 'POST' === $_SERVER['REQUEST_METHOD'] && isset($_POST['clq
         'Reply-To: ' . $name . ' <' . $email . '>',
     );
 
-    list($subject, $body) = retails_contact_mail_tag($subject, $body);
-    retails_mail_team($subject, $body, $headers, $logo_path ? array($logo_path) : array());
-    retails_send_quote_confirmation($submission_id);
+    list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
+    wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers, $logo_path ? array($logo_path) : array());
+    wholesale_send_quote_confirmation($submission_id);
 
     // The quote is saved even when mail fails, so the visitor still sees success.
-    wp_safe_redirect(add_query_arg(retails_quote_lead_args($submission_id), $return_url) . '#quote');
+    wp_safe_redirect(add_query_arg(wholesale_quote_lead_args($submission_id), $return_url) . '#quote');
     exit;
 }
 
@@ -282,7 +282,7 @@ $quote_sent = 'sent' === $quote_status && $quote_lead_id
 
 if ($is_cl_landing) {
     // Fire the Google Ads lead conversion once, only for the visitor who just sent the quote.
-    retails_track_quote_lead('channel_letters_page');
+    wholesale_track_quote_lead('channel_letters_page');
     // Quote links on this page jump to the form below instead of leaving for /contact/.
     $contact_url = '#quote';
 }
@@ -346,7 +346,7 @@ function get_nested_terms($taxonomy = 'product_category', $args = array())
 $all_categories = get_nested_terms('product_category');
 
 // One query for the channel letter styles and the "Shop by sign type" products.
-retails_seo_prime_products(array(
+wholesale_seo_prime_products(array(
     'standard-channel-letter-front-lit', 'standard-channel-letter-back-lit', 'standard-channel-letter-front-back-lit',
     'hidden-back-halo-lit', 'halo-reverse-acrylic-lit-channel-letters', 'inset-acrylic-face-lit-with-border-no-trimcap',
     'exposed-acrylic-face-lit-borderless-no-trimcap', 'adhesive-window-perf', 'deluxe-signicade-graphic-frame',
@@ -354,49 +354,42 @@ retails_seo_prime_products(array(
     'straight-tension-fabric-displays-graphic-frame', 'event-tent-full-canopy-graphic-frame',
 ));
 
-$cl_heights = retails_seo_letter_height_range('standard-channel-letter-front-lit');
+$cl_heights = wholesale_seo_letter_height_range('standard-channel-letter-front-lit');
 $cl_min_height = $cl_heights ? $cl_heights[0] : 8;
 $cl_max_height = $cl_heights ? $cl_heights[1] : 0;
-$storefront_signs_url = function_exists('retails_seo_storefront_signs_url') ? retails_seo_storefront_signs_url() : '';
+$storefront_signs_url = function_exists('wholesale_seo_storefront_signs_url') ? wholesale_seo_storefront_signs_url() : '';
 
 // The last dollar amount in a product's "starting at" text (after any struck-through price), e.g. "$11.70".
-function retails_home_from_price($slug)
+function wholesale_home_from_price($slug)
 {
-    $text = wp_strip_all_tags(retails_seo_product_starting_text($slug));
-    if (!preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', $text, $prices)) {
+    if (!preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', wp_strip_all_tags(wholesale_seo_product_starting_text($slug)), $prices)) {
         return '';
     }
-    $amount = end($prices[1]);
 
-    // Whole dollars, rounded up, like every other card price; per sq ft / per inch rates keep cents.
-    if (function_exists('retails_whole_dollars') && !preg_match('/ft|inch/i', $text)) {
-        return retails_whole_dollars(str_replace(',', '', $amount));
-    }
-
-    return '$' . $amount;
+    return '$' . end($prices[1]);
 }
 
 // Hero proof points: the lowest channel letter price and the Google rating.
-$cl_from_price = function_exists('retails_category_card_from') && retails_category_card_from('channel-letters') ? retails_category_card_from('channel-letters')[0] : retails_home_from_price('standard-channel-letter-front-lit');
-$google_reviews = function_exists('retails_google_reviews') ? retails_google_reviews() : null;
+$cl_from_price = wholesale_home_from_price('standard-channel-letter-front-lit');
+$google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
 $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_reviews : null;
 
 // More product lines for storefronts: product slug (image and starting price), link, name, summary.
 // Listed in the "Shop by sign type" row under the hero and the "More for your storefront" section.
 $more_products = array(
-    array('adhesive-window-perf', retails_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted film and clings for your storefront glass.'),
-    array('deluxe-signicade-graphic-frame', retails_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street.'),
-    array('13oz-vinyl-banner', retails_category_url('banners'), 'Banners', 'Vinyl, mesh and fabric banners for grand openings, sales and events.'),
-    array('feather-angled-flag-pole', retails_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that catch drivers&rsquo; attention from the road.'),
-    array('aluminum-sign', retails_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours and parking.'),
-    array('standard-retractable-insert-stand', retails_category_url('banner-stands'), 'Banner Stands', 'Retractable and X-stands for lobbies, trade shows and in-store promotions.'),
-    array('straight-tension-fabric-displays-graphic-frame', retails_category_url('trade-show-products'), 'Trade Show Displays', 'Tension fabric and pop up backwalls for your booth.'),
-    array('event-tent-full-canopy-graphic-frame', retails_category_url('custom-event-tents'), 'Event Tents', 'Printed 10x10 canopy tents with walls and flags for outdoor events.'),
+    array('adhesive-window-perf', wholesale_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted film and clings for your storefront glass.'),
+    array('deluxe-signicade-graphic-frame', wholesale_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street.'),
+    array('13oz-vinyl-banner', wholesale_category_url('banners'), 'Banners', 'Vinyl, mesh and fabric banners for grand openings, sales and events.'),
+    array('feather-angled-flag-pole', wholesale_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that catch drivers&rsquo; attention from the road.'),
+    array('aluminum-sign', wholesale_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours and parking.'),
+    array('standard-retractable-insert-stand', wholesale_category_url('banner-stands'), 'Banner Stands', 'Retractable and X-stands for lobbies, trade shows and in-store promotions.'),
+    array('straight-tension-fabric-displays-graphic-frame', wholesale_category_url('trade-show-products'), 'Trade Show Displays', 'Tension fabric and pop up backwalls for your booth.'),
+    array('event-tent-full-canopy-graphic-frame', wholesale_category_url('custom-event-tents'), 'Event Tents', 'Printed 10x10 canopy tents with walls and flags for outdoor events.'),
 );
 
 if ($is_channel_letters) {
     // Shown in the FAQ section below and described as FAQPage structured data in the head.
-    retails_seo_set_page_faq(array(
+    wholesale_seo_set_page_faq(array(
         array(
             'q' => 'Which channel letter style is right for my storefront?',
             'a' => 'Front-lit letters give bold, direct illumination. Back-lit and halo-lit letters glow onto the wall behind them for a softer, upscale look. Front-and-back lit letters combine both. Not sure? Call us at <a href="tel:+18664362101">866-436-2101</a> and we&rsquo;ll help you choose.',
@@ -456,7 +449,7 @@ if ($is_channel_letters) {
     ));
 } elseif ($current_term) {
     // Buyer questions shown under the products and described as FAQPage data in the head.
-    retails_seo_set_page_faq(retails_seo_category_faq($current_term->slug));
+    wholesale_seo_set_page_faq(wholesale_seo_category_faq($current_term->slug));
 }
 
 get_header();
@@ -482,20 +475,20 @@ get_header();
                     <?php endif; ?>
                     <p class="home-hero-proof">
                         <?php if ($google_rating) : ?>
-                            <a class="home-hero-rating" href="#customer-reviews"><?php echo retails_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
+                            <a class="home-hero-rating" href="#customer-reviews"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
                         <?php endif; ?>
-                        <span><?php echo retails_home_icon('flag'); ?> Made in Washington &amp; California &middot; ships to all 50 states &middot; order online 24/7</span>
+                        <span><?php echo wholesale_home_icon('flag'); ?> Made in Washington &amp; California &middot; ships to all 50 states</span>
                     </p>
                     <p class="home-hero-lead">UL listed LED channel letters, built to order in Washington and California. Choose your style and see your exact price now, or send your logo and a sign specialist will quote it within one business day.</p>
                     <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
                     <div class="home-hero-actions home-hero-actions--cl">
-                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
-                        <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo retails_home_icon('message'); ?> Get a Free Quote</a>
+                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per letter</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
+                        <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
                     </div>
-                    <?php $cl_example_text = function_exists('retails_cl_worked_example_text') ? retails_cl_worked_example_text() : ''; ?><?php if ($cl_example_text) : ?><p class="home-hero-example"><?php echo wp_kses_post($cl_example_text); ?></p><?php endif; ?>
+                    <?php $cl_example_text = function_exists('wholesale_cl_worked_example_text') ? wholesale_cl_worked_example_text() : ''; ?><?php if ($cl_example_text) : ?><p class="home-hero-example"><?php echo wp_kses_post($cl_example_text); ?></p><?php endif; ?>
                     <p class="home-hero-logo"><a href="<?php echo esc_url($contact_url); ?>">Have a logo? Send it for a free quote</a> <span>or <a href="sms:+12066186543">text your logo to 206-618-6543</a></span></p>
                     <p class="home-hero-help">
-                        <?php echo retails_home_icon('phone'); ?>
+                        <?php echo wholesale_home_icon('phone'); ?>
                         Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
                         <span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT &middot; or <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a></span>
                     </p>
@@ -505,7 +498,7 @@ get_header();
                 <p class="home-hero-lead">Custom LED channel letters, storefront signs, acrylic signs and more.<br class="home-hero-desktop-break"> Built for businesses that want to be seen.</p>
                 <div class="home-hero-actions">
                     <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>
-                    <button class="home-hero-video-link" type="button" data-youtube-video="https://www.youtube-nocookie.com/embed/HA2olg_MLLw?rel=0" aria-controls="homeVideoModal" aria-haspopup="dialog">
+                    <button class="home-hero-video-link" type="button" data-youtube-video="https://www.youtube-nocookie.com/embed?listType=search&amp;list=channel%20letter%20signs" aria-controls="homeVideoModal" aria-haspopup="dialog">
                         <span class="home-hero-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
                         <span>Watch Video</span>
                     </button>
@@ -517,10 +510,10 @@ get_header();
     <?php if ($is_channel_letters) : ?>
     <div class="cll-trust" aria-label="Why our channel letters">
         <ul class="container cll-trust-list">
-            <li><?php echo retails_home_icon('badge'); ?><span><strong>UL listed</strong><small>Labels on every sign section</small></span></li>
-            <li><?php echo retails_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Washington &amp; California</small></span></li>
-            <li><?php echo retails_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>All 7 channel letter styles</small></span></li>
-            <li><?php echo retails_home_icon('plug'); ?><span><strong>Tested before shipping</strong><small>Wiring diagram included</small></span></li>
+            <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong><small>Labels on every sign section</small></span></li>
+            <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Washington &amp; California</small></span></li>
+            <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>All 7 channel letter styles</small></span></li>
+            <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong><small>Wiring diagram included</small></span></li>
         </ul>
     </div>
     <?php else : ?>
@@ -552,25 +545,21 @@ get_header();
     <div class="container">
         <div class="home-types-head">
             <p class="home-types-title">Shop by sign type</p>
-            <a class="home-types-all" href="<?php echo esc_url(retails_shop_url()); ?>">View all products <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            <a class="home-types-all" href="<?php echo esc_url(wholesale_shop_url()); ?>">View all products <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
         </div>
         <div class="home-types-rail" data-types-rail>
         <button type="button" class="home-types-arrow home-types-arrow--prev" data-types-prev aria-label="Scroll sign types left" hidden><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
         <ul class="home-types-list" data-types-list>
             <?php
             $type_links = array_merge(
-                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/inch', 'channel-letters')),
+                array(array('standard-channel-letter-front-lit', '#product-box-container', 'Channel Letters', '', '/letter')),
                 array_map(static function ($item) {
-                    // Category slug from the card's link, e.g. /banners/ -> banners.
-                    return array($item[0], $item[1], $item[2], '', '', basename(untrailingslashit((string) wp_parse_url($item[1], PHP_URL_PATH))));
+                    return array($item[0], $item[1], $item[2], '', '');
                 }, $more_products)
             );
             foreach ($type_links as $type_link) :
-                $type_product = retails_seo_product($type_link[0]);
-                // The cheapest price on the category page the card links to (retails_category_card_from()).
-                $type_from = function_exists('retails_category_card_from') && $type_link[5] ? retails_category_card_from($type_link[5]) : array();
-                $type_price = $type_from ? $type_from[0] : retails_home_from_price($type_link[0]);
-                $type_link[4] = $type_from ? $type_from[1] : $type_link[4];
+                $type_product = wholesale_seo_product($type_link[0]);
+                $type_price = wholesale_home_from_price($type_link[0]);
             ?>
                 <li>
                     <a class="home-types-item" href="<?php echo esc_url($type_link[1]); ?>">
@@ -645,89 +634,10 @@ get_header();
 
 <?php if ($is_channel_letters) : ?>
 <?php
-// The style cards: the home page's dark "Shop Channel Letters" band (inc/cl-style-grid.php).
-// ?style= narrows the cards to that ad group's styles, as the listing used to.
-retails_render_cl_style_grid(array(
-    'slugs' => $hero_style ? $hero_variants[$hero_style][3] : array(),
-    'quote_url' => $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'),
-    'compare_url' => '#cl-compare-title',
-    'kicker' => 'Shop by style',
-    'title' => 'Channel Letter Styles',
-    'title_accent' => '& Starting Prices',
-    'lead' => 'Every custom storefront sign is built to order. Open a style to pick your letter height, colors and wording and see your exact price before checkout.',
-    'notice_html' => $hero_style
-        ? '<p class="cl-style-filter">Showing <strong>' . wp_kses_post($hero_variants[$hero_style][2]) . '</strong> channel letter styles &middot; <a href="' . esc_url(remove_query_arg(array('style', 'quote_status', 'lead', 'lk'))) . '#product-box-container">Show all styles</a></p>'
-        : '',
-));
-?>
-    <?php
-    // Lighting guide rows. Links and starting prices come from each product, so they
-    // stay in step with the price the customer sees on the product page.
-    $cl_compare_styles = array(
-        'standard-channel-letter-front-lit' => array('Front lit (face lit)', 'Light shines through the colored acrylic face.', 'The brightest, easiest-to-read storefront sign at night.'),
-        'standard-channel-letter-back-lit' => array('Back lit', 'Light glows onto the wall behind the letters.', 'A softer glow around each letter.'),
-        'standard-channel-letter-front-back-lit' => array('Front &amp; back lit (dual lit)', 'Light shines through the face and onto the wall.', 'A lit face plus a halo for maximum presence.'),
-        'hidden-back-halo-lit' => array('Halo lit', 'Solid stainless steel face; light shines out the back.', 'An upscale look for salons, offices and boutiques.'),
-        'halo-reverse-acrylic-lit-channel-letters' => array('Reverse lit', 'Exposed acrylic back casts a halo on the wall.', 'A halo glow with a painted metal face.'),
-        'inset-acrylic-face-lit-with-border-no-trimcap' => array('Trimless with border', 'Inset acrylic face with a metal border, no trimcap.', 'A clean face lit look without plastic trimcap.'),
-        'exposed-acrylic-face-lit-borderless-no-trimcap' => array('Borderless', 'Exposed acrylic face with no trimcap or border.', 'The sleekest modern face lit letter.'),
-    );
-    $cl_compare_rows = array();
-    foreach ($cl_compare_styles as $cl_slug => $cl_style) {
-        $cl_product = get_page_by_path($cl_slug, OBJECT, 'product');
-        if (!$cl_product || 'publish' !== $cl_product->post_status) {
-            continue;
-        }
-        $cl_compare_rows[] = array(
-            'style' => $cl_style,
-            'url' => get_permalink($cl_product),
-            'price' => retails_price_no_cents(get_post_meta($cl_product->ID, '_starting_at_text', true)),
-        );
-    }
-    ?>
-    <?php if ($cl_compare_rows) : ?>
-    <section class="cl-compare" aria-labelledby="cl-compare-title">
-        <div class="container">
-            <p class="cl-kicker">Compare lighting styles</p>
-            <h2 id="cl-compare-title" class="cl-section-title">Front Lit, Back Lit, Halo Lit or Reverse Lit Channel Letters?</h2>
-            <p class="cl-section-lead">Seven lighting styles, each priced by letter height. Compare how they light up at night and where each one starts.</p>
-            <div class="cl-compare-table-wrap">
-                <table class="cl-compare-table">
-                    <thead>
-                        <tr>
-                            <th scope="col">Style</th>
-                            <th scope="col">How it lights</th>
-                            <th scope="col">Best for</th>
-                            <th scope="col">Starting at</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($cl_compare_rows as $cl_row) : ?>
-                            <tr>
-                                <th scope="row"><a href="<?php echo esc_url($cl_row['url']); ?>"><?php echo wp_kses_post($cl_row['style'][0]); ?></a></th>
-                                <td><?php echo esc_html($cl_row['style'][1]); ?></td>
-                                <td><?php echo esc_html($cl_row['style'][2]); ?></td>
-                                <td class="cl-compare-price"><?php echo wp_kses_post($cl_row['price']); ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <?php $cl_price_note = function_exists('retails_cl_starting_price_note') ? retails_cl_starting_price_note() : ''; ?>
-            <p class="cl-compare-note"><?php if ($cl_price_note) : ?><?php echo wp_kses_post($cl_price_note); ?> You&rsquo;ll see your exact price before checkout.<?php else : ?>Your exact price depends on letter height, number of letters and options such as a raceway. You&rsquo;ll see it before checkout.<?php endif; ?></p>
-        </div>
-    </section>
-    <?php endif; ?>
-<?php
-// "Try your name/brand on this wall": the wholesale home page's lit preview
-// (inc/cl-lit-preview.php), just above the real example prices.
-require_once get_template_directory() . '/inc/cl-lit-preview.php';
-retails_render_cl_lit_preview();
-
 // Real totals from the same pricing code as the cart (inc/pricing.php), so they track price changes.
 $cl_examples = array();
 foreach (array(12, 18, 24) as $example_inches) {
-    $example = retails_cl_example_price('standard-channel-letter-front-lit', 6, $example_inches);
+    $example = wholesale_cl_example_price('standard-channel-letter-front-lit', 6, $example_inches);
     if ($example) {
         $cl_examples[$example_inches] = $example;
     }
@@ -756,88 +666,28 @@ foreach (array(12, 18, 24) as $example_inches) {
                 </tbody>
             </table>
         </div>
-        <p class="cl-examples-note">This is the price you pay at checkout, before shipping and tax. <?php echo esc_html(retails_cl_shipping_rule_text()); ?> <a href="<?php echo esc_url(get_permalink(get_page_by_path('standard-channel-letter-front-lit', OBJECT, 'product'))); ?>">Price your own wording</a> or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+        <p class="cl-examples-note">This is the price you pay at checkout, before shipping and tax. <a href="<?php echo esc_url(get_permalink(get_page_by_path('standard-channel-letter-front-lit', OBJECT, 'product'))); ?>">Price your own wording</a> or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
     </div>
 </section>
 <?php endif; ?>
-<?php
-// How ordering works, who installs it and what the price covers, as one section.
-// 2026-11-09: the 11-05 journey and the old "How It Works" steps (lower on the page)
-// told the same story twice, so they were merged here. Facts from
-// data/product-pages/channel-letters.php.
-$cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters');
-?>
-<section class="cl-steps cl-journey" aria-labelledby="cl-journey-title">
-    <div class="container">
-        <p class="cl-kicker">From order to opening day</p>
-        <h2 id="cl-journey-title" class="cl-section-title">How Ordering Channel Letters Works</h2>
-        <ol class="cl-steps-list">
-            <li>
-                <span class="cl-step-number" aria-hidden="true">1</span>
-                <h3>Price it or send your logo</h3>
-                <p>Pick a style above and see your price, or <a href="<?php echo esc_url($builder_url); ?>">design it in the sign builder</a>. Have a logo? <a href="<?php echo esc_url($cl_quote_link); ?>">Send it or a storefront photo</a> with the rough wall size for a free quote.</p>
-            </li>
-            <li>
-                <span class="cl-step-number" aria-hidden="true">2</span>
-                <h3>Approve your proof</h3>
-                <p><?php echo esc_html(retails_quote_mockup('A specialist sends your price and a mockup', 'A specialist replies to logo quotes')); ?> <?php echo esc_html(retails_quote_response_text()); ?>. Nothing is made until you have paid and approved your final proof in writing.</p>
-            </li>
-            <li>
-                <span class="cl-step-number" aria-hidden="true">3</span>
-                <h3>We build &amp; test it</h3>
-                <p>Your letters are made to order in Washington and California, and every sign is tested before it ships.</p>
-            </li>
-            <li>
-                <span class="cl-step-number" aria-hidden="true">4</span>
-                <h3>Ship &amp; install</h3>
-                <p>Choose standard, 3-day, 2-day or overnight shipping to any of the 50 states. Your licensed installer mounts it with the included pattern and wiring diagram.</p>
-            </li>
-        </ol>
-        <div class="cll-install">
-            <h3><?php echo retails_home_icon('plug'); ?> Who installs it?</h3>
-            <p>We build, test and ship; we don&rsquo;t install. A licensed electrician or sign installer near you mounts and connects the sign, and in most areas the sign needs a permit first. Your installer can call us with any questions about the wiring.<?php
-                $cll_links = array();
-                foreach (array('sign-permits' => 'How sign permits work', 'how-to-install-channel-letters' => 'Installation guide', 'locations' => 'State permit & licensing guides') as $cll_path => $cll_label) {
-                    $cll_url = function_exists('retails_guide_url') ? retails_guide_url($cll_path, true) : '';
-                    if ($cll_url) {
-                        $cll_links[] = '<a href="' . esc_url($cll_url) . '">' . esc_html($cll_label) . '</a>';
-                    }
-                }
-                echo $cll_links ? ' ' . implode(' &middot; ', $cll_links) : ''; // Escaped above.
-            ?></p>
-        </div>
-        <div class="cl-included">
-            <div>
-                <h3>Included with every sign</h3>
-                <ul>
-                    <li>Letters built to your size, colors and style, with LED modules wired inside</li>
-                    <li>A 3 ft power cord, a wiring diagram and a mounting pattern</li>
-                    <li>5-year warranty on all 7 lit styles</li>
-                </ul>
-            </div>
-            <div>
-                <h3>Priced separately or not included</h3>
-                <ul>
-                    <li>Power supply: an option on each style (the examples above include the standard one)</li>
-                    <li>Raceway, longer cords and mounting accessories: optional add-ons</li>
-                    <li>Wall fasteners and installation: your licensed electrician or sign installer mounts it</li>
-                    <li>Shipping: <?php echo esc_html(lcfirst(retails_cl_shipping_rule_text())); ?> Sales tax is added at checkout.</li>
-                </ul>
-            </div>
-        </div>
-        <div class="cl-journey-actions">
-            <a class="is-primary" href="<?php echo esc_url($cl_quote_link); ?>">Get a Free Quote</a>
-            <a class="is-secondary" href="#product-box-container">View Styles &amp; Prices</a>
-        </div>
-    </div>
-</section>
-<?php echo retails_render_case_studies(); // Empty until a real, permitted project is published in data/case-studies.php. ?>
+<div class="container">
+    <header class="cl-shop-header">
+        <p class="cl-kicker">Step 1 &middot; Choose your style</p>
+        <h2 class="cl-section-title">Channel Letter Styles &amp; Starting Prices</h2>
+        <p class="cl-section-lead">Every custom storefront sign is built to order. Open a style to pick your letter height, colors and wording and see your exact price before checkout.</p>
+        <p class="cl-shop-header-help">Not sure which style fits your storefront? <a href="tel:+18664362101">Call 866-436-2101</a> or <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
+        <p class="cl-shop-header-help cl-shop-header-logo"><a href="<?php echo esc_url($contact_url); ?>">Have a logo? Send it for a free quote</a> or <a href="sms:+12066186543">text your logo to 206-618-6543</a>.</p>
+        <?php if ($hero_style) : ?>
+            <p class="cl-style-filter">Showing <strong><?php echo wp_kses_post($hero_variants[$hero_style][2]); ?></strong> channel letter styles &middot; <a href="<?php echo esc_url(remove_query_arg(array('style', 'quote_status', 'lead', 'lk'))); ?>#product-box-container">Show all styles</a></p>
+        <?php endif; ?>
+    </header>
+</div>
 <?php else : ?>
 <div class="container">
     <header class="shop-header">
         <?php
         $shop_heading_tag = $is_channel_letters ? 'h2' : 'h1';
-        $category_seo = $current_term ? retails_seo_category_meta() : array();
+        $category_seo = $current_term ? wholesale_seo_category_meta() : array();
         $category_seo = $current_term && isset($category_seo[$current_term->slug]) ? $category_seo[$current_term->slug] : array();
         $shop_heading = $current_term ? (!empty($category_seo['h1']) ? $category_seo['h1'] : $current_term->name) : __('Custom Signs', 'litsign');
         ?>
@@ -854,7 +704,6 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
 </div>
 <?php endif; ?>
 
-<?php if (!$is_channel_letters) : // Channel letter pages show the style cards above instead of this listing. ?>
 <div class="container my-3 product-listing-container<?php echo $is_channel_letters ? ' product-listing-container--cl' : ''; ?>">
 
     <div class="row">
@@ -889,7 +738,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                         ?>
 
                             <li class="filter-item text-truncate <?php echo $is_current_item ? 'active' : ''; ?>">
-                                <a href="<?php echo esc_url(retails_category_url($child_slug)); ?>" class="d-flex justify-content-between">
+                                <a href="<?php echo esc_url(wholesale_category_url($child_slug)); ?>" class="d-flex justify-content-between">
                                     <span class="text"><?php echo $child_name; ?></span>
                                     <i class="fa-solid fa-chevron-right"></i>
                                 </a>
@@ -998,20 +847,20 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                         $style_anchor = $is_channel_letters && isset($style_anchors[$product_slug]) ? $style_anchors[$product_slug] : '';
                         ?>
                         <div<?php echo $style_anchor ? ' id="' . esc_attr($style_anchor) . '"' : ''; ?> class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
-                            <?php retails_render_home_product_gallery(
+                            <?php wholesale_render_home_product_gallery(
                                 get_the_ID(),
                                 $is_channel_letters ? 'Custom channel letter sign: ' . get_the_title() : get_the_title(),
                                 $product_thumbnail_id,
                                 $is_first_product ? 'eager' : 'lazy'
                             ); ?>
                             <?php $is_first_product = false; ?>
-                            <?php echo retails_admin_edit_product_link(get_the_ID()); // Escaped in helper. ?>
+                            <?php echo wholesale_admin_edit_product_link(get_the_ID()); // Escaped in helper. ?>
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-details">
                                     <h2 class="pb-title fs-6 text-truncate" title="<?php echo esc_attr(get_the_title()); ?>">
                                         <?php echo esc_html(get_the_title()); ?>
                                     </h2>
-                                    <?php retails_render_product_rating(get_the_ID()); ?>
+                                    <?php wholesale_render_product_rating(get_the_ID()); ?>
                                     <div class="pb-description-list">
                                         <?php echo wp_kses_post($short_desc); ?>
                                     </div>
@@ -1038,7 +887,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                                                                 </a></th>
                                                             <td>
                                                                 <a href="<?php echo get_permalink(get_the_ID()) . '?' . $starting_at_options . '=' . $value; ?>">
-                                                                    <?php echo wp_kses_post(retails_price_no_cents(retails_price_with_sale(get_the_ID(), get_variant_cost($price_per_sqft, str_contains($value, '/') ? explode('/', $value)[0] : $value)))); ?>
+                                                                    <?php echo wp_kses_post(wholesale_price_no_cents(wholesale_price_with_sale(get_the_ID(), get_variant_cost($price_per_sqft, str_contains($value, '/') ? explode('/', $value)[0] : $value)))); ?>
                                                                 </a>
                                                             </td>
 
@@ -1058,14 +907,14 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                                                 Starting at
                                             </span>
                                             <span class="pb-price">
-                                                <?php echo retails_price_no_cents($starting_at_text); ?>
+                                                <?php echo wholesale_price_no_cents($starting_at_text); ?>
                                             </span>
                                         <?php
                                         }; ?>
 
                                     </div>
                                     <?php if ($is_channel_letters) : ?>
-                                        <span class="pb-cta">Get your price <?php echo retails_home_icon('arrow'); ?></span>
+                                        <span class="pb-cta">Get your price <?php echo wholesale_home_icon('arrow'); ?></span>
                                     <?php endif; ?>
 
                                 </div>
@@ -1080,7 +929,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
 
                 <?php if ($ref_term && !$is_channel_letters) : ?>
                     <div class="product-box" data-product-category="adhesive-products">
-                        <a href="<?php echo esc_url(retails_category_url($ref_term->slug)); ?>">
+                        <a href="<?php echo esc_url(wholesale_category_url($ref_term->slug)); ?>">
                             <div class="pb-image-top">
                                 <?php
                                 $ref_term_image_id = attachment_url_to_postid($ref_term_image);
@@ -1107,7 +956,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                                 <p class="pb-pricing d-flex justify-content-between">
                                     <span class="pb-title-short fs-6">
 
-                                        <a href="<?php echo esc_url(retails_category_url($ref_term->slug)); ?>">See All</a>
+                                        <a href="<?php echo esc_url(wholesale_category_url($ref_term->slug)); ?>">See All</a>
 
                                     </span>
                                     <span class="pb-price">
@@ -1125,21 +974,79 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
         </div>
     </div>
 </div>
-<?php endif; // !$is_channel_letters listing ?>
 
-<?php if (!$is_channel_letters && !empty($GLOBALS['retails_page_faq'])) : ?>
+<?php if (!$is_channel_letters && !empty($GLOBALS['wholesale_page_faq'])) : ?>
     <section class="cl-faq" aria-labelledby="category-faq-title">
         <div class="container">
             <p class="cl-kicker">Before you order</p>
             <h2 id="category-faq-title" class="cl-section-title"><?php echo esc_html(sprintf(__('%s: Questions & Answers', 'litsign'), $shop_heading)); ?></h2>
             <div class="cl-faq-list">
-                <?php retails_seo_render_faq(); ?>
+                <?php wholesale_seo_render_faq(); ?>
             </div>
         </div>
     </section>
 <?php endif; ?>
 
 <?php if ($is_channel_letters) : ?>
+    <?php
+    // Lighting guide rows. Links and starting prices come from each product, so they
+    // stay in step with the price the customer sees on the product page.
+    $cl_compare_styles = array(
+        'standard-channel-letter-front-lit' => array('Front lit (face lit)', 'Light shines through the colored acrylic face.', 'The brightest, easiest-to-read storefront sign at night.'),
+        'standard-channel-letter-back-lit' => array('Back lit', 'Light glows onto the wall behind the letters.', 'A softer glow around each letter.'),
+        'standard-channel-letter-front-back-lit' => array('Front &amp; back lit (dual lit)', 'Light shines through the face and onto the wall.', 'A lit face plus a halo for maximum presence.'),
+        'hidden-back-halo-lit' => array('Halo lit', 'Solid stainless steel face; light shines out the back.', 'An upscale look for salons, offices and boutiques.'),
+        'halo-reverse-acrylic-lit-channel-letters' => array('Reverse lit', 'Exposed acrylic back casts a halo on the wall.', 'A halo glow with a painted metal face.'),
+        'inset-acrylic-face-lit-with-border-no-trimcap' => array('Trimless with border', 'Inset acrylic face with a metal border, no trimcap.', 'A clean face lit look without plastic trimcap.'),
+        'exposed-acrylic-face-lit-borderless-no-trimcap' => array('Borderless', 'Exposed acrylic face with no trimcap or border.', 'The sleekest modern face lit letter.'),
+    );
+    $cl_compare_rows = array();
+    foreach ($cl_compare_styles as $cl_slug => $cl_style) {
+        $cl_product = get_page_by_path($cl_slug, OBJECT, 'product');
+        if (!$cl_product || 'publish' !== $cl_product->post_status) {
+            continue;
+        }
+        $cl_compare_rows[] = array(
+            'style' => $cl_style,
+            'url' => get_permalink($cl_product),
+            'price' => wholesale_price_no_cents(get_post_meta($cl_product->ID, '_starting_at_text', true)),
+        );
+    }
+    ?>
+    <?php if ($cl_compare_rows) : ?>
+    <section class="cl-compare" aria-labelledby="cl-compare-title">
+        <div class="container">
+            <p class="cl-kicker">Compare lighting styles</p>
+            <h2 id="cl-compare-title" class="cl-section-title">Front Lit, Back Lit, Halo Lit or Reverse Lit Channel Letters?</h2>
+            <p class="cl-section-lead">Seven lighting styles, each priced by letter height. Compare how they light up at night and where each one starts.</p>
+            <div class="cl-compare-table-wrap">
+                <table class="cl-compare-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Style</th>
+                            <th scope="col">How it lights</th>
+                            <th scope="col">Best for</th>
+                            <th scope="col">Starting at</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($cl_compare_rows as $cl_row) : ?>
+                            <tr>
+                                <th scope="row"><a href="<?php echo esc_url($cl_row['url']); ?>"><?php echo wp_kses_post($cl_row['style'][0]); ?></a></th>
+                                <td><?php echo esc_html($cl_row['style'][1]); ?></td>
+                                <td><?php echo esc_html($cl_row['style'][2]); ?></td>
+                                <td class="cl-compare-price"><?php echo wp_kses_post($cl_row['price']); ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php $cl_price_note = function_exists('wholesale_cl_starting_price_note') ? wholesale_cl_starting_price_note() : ''; ?>
+            <p class="cl-compare-note"><?php if ($cl_price_note) : ?><?php echo wp_kses_post($cl_price_note); ?> You&rsquo;ll see your exact price before checkout.<?php else : ?>Your exact price depends on letter height, number of letters and options such as a raceway. You&rsquo;ll see it before checkout.<?php endif; ?></p>
+        </div>
+    </section>
+    <?php endif; ?>
+
     <section class="cll-why" aria-labelledby="cll-why-title">
         <div class="container">
             <p class="cl-kicker">Why businesses order from us</p>
@@ -1147,22 +1054,22 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
             <p class="cl-section-lead">Most sign companies make you wait for a site visit and a quote. We show you the price up front, build every sign to order in our Washington and California shops, and ship it ready for your installer.</p>
             <div class="cll-why-grid">
                 <article class="cll-why-card">
-                    <?php echo retails_home_icon('pen'); ?>
+                    <?php echo wholesale_home_icon('pen'); ?>
                     <h3>Exact price before you order</h3>
                     <p>Choose a style, enter your wording and letter height, and the price updates as you go. The total you see is the price you pay, before shipping and tax.</p>
                 </article>
                 <article class="cll-why-card">
-                    <?php echo retails_home_icon('message'); ?>
+                    <?php echo wholesale_home_icon('message'); ?>
                     <h3>Logo quotes from a real person</h3>
                     <p>Have a logo, a custom font or landlord sign criteria? Send it with the form below or text it to <a href="sms:+12066186543">206-618-6543</a>. A sign specialist replies within one business day.</p>
                 </article>
                 <article class="cll-why-card">
-                    <?php echo retails_home_icon('badge'); ?>
+                    <?php echo wholesale_home_icon('badge'); ?>
                     <h3>Built for inspection</h3>
                     <p>Outdoor channel letter signs are UL listed and ship with their labels in place, so your electrician and inspector have what they need to sign off.</p>
                 </article>
                 <article class="cll-why-card">
-                    <?php echo retails_home_icon('plug'); ?>
+                    <?php echo wholesale_home_icon('plug'); ?>
                     <h3>Ready to install on arrival</h3>
                     <p>Every sign is tested before it ships, with a wiring diagram and an installation pattern, whether it mounts on a raceway or directly to the wall.</p>
                 </article>
@@ -1184,7 +1091,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                         <tr><th scope="row">Power supply</th><td>12V, 60W Class 2 power supplies, IP67, 5-year warranty</td></tr>
                         <tr><th scope="row">Letter heights</th><td>From <?php echo esc_html($cl_min_height); ?>&rdquo;<?php if ($cl_max_height) : ?> to <?php echo esc_html($cl_max_height); ?>&rdquo; (front lit)<?php endif; ?>; larger letters up to 48&rdquo; by custom order</td></tr>
                         <tr><th scope="row">Mounting</th><td>Direct to the wall with the included installation pattern, or on a 5.5&rdquo; &times; 3.5&rdquo; raceway that holds the wiring and mounts the sign as one unit</td></tr>
-                        <tr><th scope="row">Certification</th><td>Outdoor channel letter signs are UL listed with sign section labels<?php $cll_ul = function_exists('retails_guide_ul_file_number') ? retails_guide_ul_file_number() : ''; if ($cll_ul) : ?> (UL file <?php echo esc_html($cll_ul); ?>)<?php endif; ?></td></tr>
+                        <tr><th scope="row">Certification</th><td>Outdoor channel letter signs are UL listed with sign section labels<?php $cll_ul = function_exists('wholesale_guide_ul_file_number') ? wholesale_guide_ul_file_number() : ''; if ($cll_ul) : ?> (UL file <?php echo esc_html($cll_ul); ?>)<?php endif; ?></td></tr>
                         <tr><th scope="row">In the box</th><td>Your tested letters, power supplies, wiring diagram and installation pattern</td></tr>
                     </tbody>
                 </table>
@@ -1193,16 +1100,48 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
     </section>
 
 
-    <?php // The ordering steps now live in "How Ordering Channel Letters Works" above (merged 2026-11-09). ?>
-    <section class="cl-faq cll-faq" aria-labelledby="cl-faq-title">
+    <section class="cl-steps" aria-labelledby="cl-steps-title">
         <div class="container">
-            <p class="cl-kicker">Before you order</p>
-            <h2 id="cl-faq-title" class="cl-section-title">Frequently Asked Questions</h2>
-            <div class="cl-faq-list">
-                <?php retails_seo_render_faq(); ?>
+            <p class="cl-kicker">From order to opening day</p>
+            <h2 id="cl-steps-title" class="cl-section-title">How It Works</h2>
+            <ol class="cl-steps-list">
+                <li>
+                    <span class="cl-step-number" aria-hidden="true">1</span>
+                    <h3>Price it or send your logo</h3>
+                    <p>Pick a style above and see your price, <a href="<?php echo esc_url($builder_url); ?>">design it in the sign builder</a>, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a quote</a>.</p>
+                </li>
+                <li>
+                    <span class="cl-step-number" aria-hidden="true">2</span>
+                    <h3>Approve your proof</h3>
+                    <p>Production starts only after you approve your final proof in writing, so the sign matches what you expect.</p>
+                </li>
+                <li>
+                    <span class="cl-step-number" aria-hidden="true">3</span>
+                    <h3>We build &amp; test it</h3>
+                    <p>Your letters are made to order in Washington and California, and every sign is tested before it ships.</p>
+                </li>
+                <li>
+                    <span class="cl-step-number" aria-hidden="true">4</span>
+                    <h3>Ship &amp; install</h3>
+                    <p>Choose standard, 3-day, 2-day or overnight shipping to any of the 50 states. Your licensed installer mounts it with the included pattern and wiring diagram.</p>
+                </li>
+            </ol>
+            <div class="cll-install">
+                <h3><?php echo wholesale_home_icon('plug'); ?> Who installs it?</h3>
+                <p>We build, test and ship; we don&rsquo;t install. A licensed electrician or sign installer near you mounts and connects the sign, and in most areas the sign needs a permit first. Your installer can call us with any questions about the wiring.<?php
+                    $cll_links = array();
+                    foreach (array('sign-permits' => 'How sign permits work', 'how-to-install-channel-letters' => 'Installation guide', 'locations' => 'State permit & licensing guides') as $cll_path => $cll_label) {
+                        $cll_url = function_exists('wholesale_guide_url') ? wholesale_guide_url($cll_path, true) : '';
+                        if ($cll_url) {
+                            $cll_links[] = '<a href="' . esc_url($cll_url) . '">' . esc_html($cll_label) . '</a>';
+                        }
+                    }
+                    echo $cll_links ? ' ' . implode(' &middot; ', $cll_links) : ''; // Escaped above.
+                ?></p>
             </div>
         </div>
     </section>
+
 
     <section class="cl-help<?php echo $is_cl_landing ? ' cl-help--quote' : ''; ?>" id="quote" aria-labelledby="cl-help-title">
         <div class="container cl-help-inner">
@@ -1212,23 +1151,23 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                     <h2 id="cl-help-title">Get Your Channel Letter Sign Quote</h2>
                     <p>Tell us what your sign should say and send your logo or a storefront photo. A sign specialist will price the exact letters you need and help you choose the right size and style.</p>
                     <ul class="clq-promise">
-                        <li><?php echo retails_home_icon('check'); ?> A sign specialist prices your exact letters</li>
-                        <li><?php echo retails_home_icon('check'); ?> Reply within one business day, no obligation</li>
-                        <li><?php echo retails_home_icon('check'); ?> Made in USA, UL listed, ready to install</li>
+                        <li><?php echo wholesale_home_icon('check'); ?> A sign specialist prices your exact letters</li>
+                        <li><?php echo wholesale_home_icon('check'); ?> Reply within one business day, no obligation</li>
+                        <li><?php echo wholesale_home_icon('check'); ?> Made in USA, UL listed, ready to install</li>
                     </ul>
                 <?php else : ?>
                     <h2 id="cl-help-title">Talk to a Real Sign Specialist</h2>
                     <p>Have a logo, a storefront photo or a question about sizing? We&rsquo;ll help you pick the right sign before you order.</p>
                 <?php endif; ?>
                 <ul class="cl-help-details">
-                    <li><?php echo retails_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
-                    <li><?php echo retails_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
+                    <li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+                    <li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
                 </ul>
                 <?php if ($is_cl_landing) : ?>
                     <div class="clq-contact">
-                        <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-                        <a class="cl-help-action" href="sms:+12066186543"><?php echo retails_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-                        <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo retails_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+                        <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+                        <a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+                        <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
                     </div>
                 <?php endif; ?>
             </div>
@@ -1236,11 +1175,11 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                 <div class="clq-card">
                     <?php if ($quote_sent) : ?>
                         <div class="clq-success" role="status">
-                            <span class="clq-success-icon"><?php echo retails_home_icon('check'); ?></span>
+                            <span class="clq-success-icon"><?php echo wholesale_home_icon('check'); ?></span>
                             <h3>Thanks! Your quote request is in.</h3>
                             <p>A sign specialist will review your project and reach out with pricing and design options. Need it sooner? Call us during business hours.</p>
-                            <a class="clq-submit" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?> Call 866-436-2101</a>
-                            <a class="clq-alt" href="<?php echo esc_url($builder_url); ?>">Or design your sign online <?php echo retails_home_icon('arrow'); ?></a>
+                            <a class="clq-submit" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> Call 866-436-2101</a>
+                            <a class="clq-alt" href="<?php echo esc_url($builder_url); ?>">Or design your sign online <?php echo wholesale_home_icon('arrow'); ?></a>
                         </div>
                     <?php else : ?>
                         <form class="clq-form" action="<?php echo esc_url($page_url); ?>#quote" method="post" enctype="multipart/form-data" data-clq-form>
@@ -1285,7 +1224,7 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                                     </select>
                                 </label>
                                 <label class="clq-field">
-                                    <span>Sign location ZIP code</span>
+                                    <span>Install ZIP code</span>
                                     <input type="text" name="clq_zip" autocomplete="postal-code" inputmode="numeric" maxlength="10">
                                 </label>
                                 <label class="clq-field clq-field--wide">
@@ -1294,12 +1233,12 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                                 </label>
                                 <label class="clq-upload clq-field--wide">
                                     <input type="file" name="clq_logo" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-clq-file data-async-upload="quote" data-async-field="clq_logo_token">
-                                    <span class="clq-upload-icon"><?php echo retails_home_icon('upload'); ?></span>
+                                    <span class="clq-upload-icon"><?php echo wholesale_home_icon('upload'); ?></span>
                                     <span class="clq-upload-text"><strong data-clq-file-name>Upload your logo (optional)</strong><small>JPG, PNG or PDF up to <?php echo esc_html($logo_max_mb); ?>&nbsp;MB</small></span>
                                 </label>
                             </div>
 
-                            <button class="clq-submit" type="submit">Get My Free Quote <?php echo retails_home_icon('arrow'); ?></button>
+                            <button class="clq-submit" type="submit">Get My Free Quote <?php echo wholesale_home_icon('arrow'); ?></button>
                             <p class="clq-note">Your details stay private. Prefer to talk? Call <a href="tel:+18664362101">866-436-2101</a>.</p>
                         </form>
                         <script>
@@ -1328,17 +1267,27 @@ $cl_quote_link = $is_cl_landing ? '#quote' : retails_quote_url('channel-letters'
                 </div>
             <?php else : ?>
                 <div class="cl-help-actions">
-                    <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-                    <a class="cl-help-action" href="sms:+12066186543"><?php echo retails_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-                    <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo retails_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
-                    <a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo retails_home_icon('arrow'); ?></a>
+                    <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+                    <a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+                    <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+                    <a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
                 </div>
             <?php endif; ?>
         </div>
     </section>
 
+    <section class="cl-faq" aria-labelledby="cl-faq-title">
+        <div class="container">
+            <p class="cl-kicker">Before you order</p>
+            <h2 id="cl-faq-title" class="cl-section-title">Frequently Asked Questions</h2>
+            <div class="cl-faq-list">
+                <?php wholesale_seo_render_faq(); ?>
+            </div>
+        </div>
+    </section>
+
     <nav class="cl-mobile-bar" aria-label="Quick actions">
-        <button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo retails_home_icon('grid'); ?> All Products</button>
+        <button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo wholesale_home_icon('grid'); ?> All Products</button>
         <a class="cl-mobile-bar-quote" href="<?php echo esc_url($contact_url); ?>">Free Quote</a>
         <a class="cl-mobile-bar-shop" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
     </nav>

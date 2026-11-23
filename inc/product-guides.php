@@ -24,13 +24,13 @@ require_once __DIR__ . '/product-guides-catalog.php';
 /**
  * @return array
  */
-function retails_product_guides()
+function wholesale_product_guides()
 {
 	$flag_bases = 'Use the ground stake for grass, sand or soil. For concrete, asphalt, tile or carpet, choose the cross base (add the water bag for extra weight outdoors) or the 21.83 lb steel square base.';
 	$print_thru = 'Single sided flags are dye sublimated so the print shows through: full color on the front, mirrored and lighter but readable from the back. Double sided flags are two prints sewn back to back with a silver block out layer, so both sides read correctly.';
 
 	// The rest of the catalog (inc/product-guides-catalog.php); entries here win.
-	return array_merge(retails_product_guides_catalog(), array(
+	return array_merge(wholesale_product_guides_catalog(), array(
 		'reflective-aluminum-sign' => array(
 			'intro' => array(
 				'A reflective aluminum sign does the job of a regular aluminum sign during the day and keeps working after dark. The graphic is UV printed onto engineer grade reflective vinyl and mounted on a .040 aluminum sheet, so headlights and flashlights bounce your message back to the viewer.',
@@ -656,68 +656,16 @@ function retails_product_guides()
  * Guide for a product page, falling back to the guide of the complete kit a
  * partial variant canonicalizes to. Empty array when there is none.
  */
-function retails_product_guide($product_id)
+function wholesale_product_guide($product_id)
 {
-	$guides = retails_product_guides();
+	$guides = wholesale_product_guides();
 	$slug = (string) get_post_field('post_name', $product_id);
 
-	if (!isset($guides[$slug]) && ($primary = retails_seo_product_canonical_of($product_id))) {
+	if (!isset($guides[$slug]) && ($primary = wholesale_seo_product_canonical_of($product_id))) {
 		$slug = (string) get_post_field('post_name', $primary);
 	}
 
-	return isset($guides[$slug]) ? retails_product_guide_fit_sizes($guides[$slug], $product_id) : array();
-}
-
-/**
- * Size claims in guide copy follow the sizes the cart accepts. B2Sign Sync mirrors
- * B2Sign's limits (_max_size 36x48 on coroplast, PVC, foam board, aluminum...), but
- * the copy said "up to 48" x 96"" / "up to 4 ft x 8 ft" and "from 3" x 4"", so a
- * visitor asking for a bigger panel met "Maximum width" on the page (Nov 2026).
- * Only claims beyond the product's own limits change; parcel notes stay.
- *
- * @param array $guide      Guide entry (strings and nested arrays).
- * @param int   $product_id Product shown.
- * @return array
- */
-function retails_product_guide_fit_sizes($guide, $product_id)
-{
-	$max = function_exists('retails_product_max_sides') ? retails_product_max_sides($product_id) : null;
-	$min = function_exists('retails_product_min_sides') ? retails_product_min_sides($product_id) : null;
-	if (!$max) {
-		return $guide;
-	}
-	$num = static function ($n) {
-		return rtrim(rtrim(number_format((float) $n, 2, '.', ''), '0'), '.');
-	};
-	$min_short = $min ? min($min) : 0;
-	$fit = static function ($text) use (&$fit, $max, $min_short, $num) {
-		if (is_array($text)) {
-			return array_map($fit, $text);
-		}
-		if (!is_string($text) || false === stripos($text, 'up to')) {
-			return $text;
-		}
-		// "up to 4 ft x 8 ft" -> inches first.
-		$text = preg_replace_callback('/(up to) (\d+(?:\.\d+)?) ft x (\d+(?:\.\d+)?) ft/i', static function ($m) use ($num) {
-			return sprintf('%s %s" x %s"', $m[1], $num($m[2] * 12), $num($m[3] * 12));
-		}, $text);
-
-		return preg_replace_callback('/(from (\d+(?:\.\d+)?)" x (\d+(?:\.\d+)?)" )?(up to) (\d+(?:\.\d+)?)" x (\d+(?:\.\d+)?)"/i', static function ($m) use ($max, $min_short, $num) {
-			$long = max((float) $m[5], (float) $m[6]);
-			if ($long <= $max[1] + 0.01) {
-				return $m[0];
-			}
-			$from = '';
-			if ('' !== $m[1]) {
-				$claimed_min = min((float) $m[2], (float) $m[3]);
-				$from = $min_short > $claimed_min ? sprintf('from %s" x %s" ', $num($min_short), $num($min_short)) : $m[1];
-			}
-
-			return sprintf('%s%s %s" x %s"', $from, $m[4], $num($max[1]), $num($max[0]));
-		}, $text);
-	};
-
-	return $fit($guide);
+	return isset($guides[$slug]) ? $guides[$slug] : array();
 }
 
 /**
@@ -726,26 +674,22 @@ function retails_product_guide_fit_sizes($guide, $product_id)
  * so sitemap <lastmod> tells Google the page is new. (A file time would change
  * on every upload and make lastmod meaningless.)
  */
-define('RETAILS_PRODUCT_GUIDES_REVISED', '2026-11-20T00:00:00+00:00');
+define('WHOLESALE_PRODUCT_GUIDES_REVISED', '2026-10-19T00:00:00+00:00');
 
 /**
  * Sitemap lastmod for a product: its own modified time, or the guide revision
  * date when the product shows a guide that changed more recently.
  */
-function retails_product_content_modified($product)
+function wholesale_product_content_modified($product)
 {
 	$modified = get_post_modified_time('c', true, $product);
 	$product = get_post($product);
-	if ($product && retails_product_guide($product->ID) && strtotime(RETAILS_PRODUCT_GUIDES_REVISED) > strtotime($modified)) {
-		$modified = RETAILS_PRODUCT_GUIDES_REVISED;
+	if ($product && wholesale_product_guide($product->ID) && strtotime(WHOLESALE_PRODUCT_GUIDES_REVISED) > strtotime($modified)) {
+		$modified = WHOLESALE_PRODUCT_GUIDES_REVISED;
 	}
 	// Copy in data/product-pages/ (inc/product-page-content.php) changes the page too.
-	if ($product && defined('RETAILS_PRODUCT_PAGES_REVISED') && retails_product_page($product->ID) && strtotime(RETAILS_PRODUCT_PAGES_REVISED) > strtotime($modified)) {
-		$modified = RETAILS_PRODUCT_PAGES_REVISED;
-	}
-	// So do the group option buttons (inc/product-group-swap.php).
-	if ($product && defined('RETAILS_PRODUCT_GROUPS_REVISED') && function_exists('retails_product_group') && retails_product_group($product->ID) && strtotime(RETAILS_PRODUCT_GROUPS_REVISED) > strtotime($modified)) {
-		$modified = RETAILS_PRODUCT_GROUPS_REVISED;
+	if ($product && defined('WHOLESALE_PRODUCT_PAGES_REVISED') && wholesale_product_page($product->ID) && strtotime(WHOLESALE_PRODUCT_PAGES_REVISED) > strtotime($modified)) {
+		$modified = WHOLESALE_PRODUCT_PAGES_REVISED;
 	}
 
 	return $modified;
@@ -754,39 +698,39 @@ function retails_product_content_modified($product)
 /**
  * Register the guide FAQ before the head prints, for FAQPage structured data.
  */
-function retails_product_guide_register_faq()
+function wholesale_product_guide_register_faq()
 {
-	if (!is_singular('product') || !empty($GLOBALS['retails_page_faq'])) {
+	if (!is_singular('product') || !empty($GLOBALS['wholesale_page_faq'])) {
 		return;
 	}
 
 	// Pages with an entry in data/product-pages/ show a longer FAQ (inc/product-page-content.php).
-	$faq = function_exists('retails_product_page_faq') && retails_product_page(get_queried_object_id())
-		? retails_product_page_faq(get_queried_object_id())
+	$faq = function_exists('wholesale_product_page_faq') && wholesale_product_page(get_queried_object_id())
+		? wholesale_product_page_faq(get_queried_object_id())
 		: array();
 	if (!$faq) {
-		$guide = retails_product_guide(get_queried_object_id());
+		$guide = wholesale_product_guide(get_queried_object_id());
 		$faq = !empty($guide['faq']) ? $guide['faq'] : array();
 	}
 	if ($faq) {
-		retails_seo_set_page_faq($faq);
+		wholesale_seo_set_page_faq($faq);
 	}
 }
-add_action('wp', 'retails_product_guide_register_faq');
+add_action('wp', 'wholesale_product_guide_register_faq');
 
 /**
  * Print the buying guide section on a product page.
  */
-function retails_render_product_guide($product_id)
+function wholesale_render_product_guide($product_id)
 {
-	$guide = retails_product_guide($product_id);
+	$guide = wholesale_product_guide($product_id);
 	if (!$guide) {
 		return;
 	}
 
-	$name = retails_seo_product_search_name($product_id);
+	$name = wholesale_seo_product_search_name($product_id);
 	// With an entry in data/product-pages/, the FAQ prints in the details section below.
-	$faq_here = !(function_exists('retails_product_page') && retails_product_page($product_id));
+	$faq_here = !(function_exists('wholesale_product_page') && wholesale_product_page($product_id));
 	$related = array();
 	foreach (isset($guide['related']) ? $guide['related'] : array() as $slug) {
 		$related_product = get_page_by_path($slug, OBJECT, 'product');
@@ -810,10 +754,10 @@ function retails_render_product_guide($product_id)
 			</ul>
 		<?php endif; ?>
 
-		<?php if ($faq_here && !empty($GLOBALS['retails_page_faq'])) : ?>
+		<?php if ($faq_here && !empty($GLOBALS['wholesale_page_faq'])) : ?>
 			<h3>Questions &amp; answers</h3>
 			<div class="cl-faq-list">
-				<?php retails_seo_render_faq(); ?>
+				<?php wholesale_seo_render_faq(); ?>
 			</div>
 		<?php endif; ?>
 
@@ -821,7 +765,7 @@ function retails_render_product_guide($product_id)
 			<h3>Often compared with</h3>
 			<ul>
 				<?php foreach ($related as $related_product) : ?>
-					<li><a href="<?php echo esc_url(get_permalink($related_product)); ?>"><?php echo esc_html(retails_seo_product_search_name($related_product->ID)); ?></a></li>
+					<li><a href="<?php echo esc_url(get_permalink($related_product)); ?>"><?php echo esc_html(wholesale_seo_product_search_name($related_product->ID)); ?></a></li>
 				<?php endforeach; ?>
 			</ul>
 		<?php endif; ?>

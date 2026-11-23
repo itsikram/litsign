@@ -12,8 +12,8 @@
  * @package litsign
  */
 
-$entry = retails_guide_current();
-$states = retails_guide_states();
+$entry = wholesale_guide_current();
+$states = wholesale_guide_states();
 $state = $states[$entry['state']];
 $is_city = 'city' === $entry['type'];
 $place = $is_city ? $state['cities'][$entry['city']] : $state;
@@ -23,61 +23,58 @@ $short_name = $is_city ? $place['name'] : $state['name'];
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $builder_url = home_url('/channel-letter-builder/');
-$permits_url = retails_guide_url('sign-permits');
-$install_url = retails_guide_url('how-to-install-channel-letters');
-$shipping_url = retails_guide_url('shipping-returns');
-$warranty_url = retails_guide_url('warranty');
-$state_url = retails_guide_url('locations/' . $state['slug']);
-$locations_url = retails_guide_url('locations');
+$permits_url = wholesale_guide_url('sign-permits');
+$install_url = wholesale_guide_url('how-to-install-channel-letters');
+$shipping_url = wholesale_guide_url('shipping-returns');
+$warranty_url = wholesale_guide_url('warranty');
+$state_url = wholesale_guide_url('locations/' . $state['slug']);
+$locations_url = wholesale_guide_url('locations');
 
 // Ground transit is shown once verified in the data file;
 // until then the page states the checkout's own standard range.
 $transit = isset($place['transit']) ? $place['transit'] : (isset($state['transit']) ? $state['transit'] : array());
-if (!empty($transit['verified']) && !empty($transit['days'])) {
-	$transit_text = sprintf('Standard shipping to %s usually takes %s business days in transit.', $place_name, $transit['days']);
-} elseif (in_array($state['abbr'], array('AK', 'HI'), true)) {
-	$transit_text = 'Enter your ZIP code at checkout to see the shipping options and estimated delivery for your address.';
-} else {
-	$transit_text = 'Standard shipping takes 3&ndash;6 business days in transit; 3-day, 2-day and overnight shipping are available at checkout.';
-}
+$transit_text = !empty($transit['verified']) && !empty($transit['days'])
+	? sprintf('Standard shipping to %s usually takes %s business days in transit.', $place_name, $transit['days'])
+	: 'Standard shipping takes 3&ndash;6 business days in transit; 3-day, 2-day and overnight shipping are available at checkout.';
 
 $faq = isset($place['faq']) ? $place['faq'] : array();
-retails_seo_set_page_faq($faq);
+wholesale_seo_set_page_faq($faq);
 
 $facts = isset($place['facts']) ? (array) $place['facts'] : array();
 if ($is_city && !empty($place['county']) && !isset($facts['County'])) {
 	$facts['County'] = $place['county'];
 }
 
-$updated = retails_guide_updated($place, true);
+$updated = wholesale_guide_updated($place, true);
 
 // Structured data: the place (State or City, with Wikipedia sameAs), the
 // Service we offer there (manufacture and ship, never a local office) and
 // the product families it covers. No LocalBusiness, ratings or reviews.
 $page_url = trailingslashit(get_permalink());
-$place_entity = retails_guide_place_entity($state, $is_city ? $place : null);
+$place_entity = wholesale_guide_place_entity($state, $is_city ? $place : null);
 $place_entity['@id'] = $page_url . '#place';
-$GLOBALS['retails_page_entities'][] = $place_entity;
+$GLOBALS['wholesale_page_entities'][] = $place_entity;
 
-retails_guide_add_service_schema(
+wholesale_guide_add_service_schema(
 	sprintf('Channel letters and storefront signs shipped to %s', $place_name),
-	sprintf('We ship custom LED channel letters, banners, window graphics, flags and displays to %s. Channel letters are built in Washington and California and ship tested for your licensed local installer.', $place_name),
+	sprintf('Custom LED channel letters built in Washington and California, plus banners, window graphics, flags and displays made in Renton, WA, shipped to %s for a licensed local installer.', $place_name),
 	array('@id' => $place_entity['@id']),
-	array('hasOfferCatalog' => retails_guide_offer_catalog($place_name))
+	array('hasOfferCatalog' => wholesale_guide_offer_catalog($place_name))
 );
 
-add_filter('retails_seo_webpage_schema', static function ($page) use ($place_entity, $is_city, $state, $place, $page_url) {
+add_filter('wholesale_seo_webpage_schema', static function ($page) use ($place_entity, $is_city, $state, $updated) {
 	$page['about'] = array('@id' => $place_entity['@id']);
-	$page['mentions'] = array(array('@id' => $page_url . '#service'));
 	if ($is_city) {
-		$page['mentions'][] = retails_guide_place_entity($state);
+		$page['mentions'] = array(wholesale_guide_place_entity($state));
 	}
-	$page['dateModified'] = retails_location_modified($place);
+	if ($updated) {
+		$page['dateModified'] = $updated;
+	}
 	return $page;
 });
 
 $popular = !empty($place['popular']['products']) ? array_keys((array) $place['popular']['products']) : array();
-retails_seo_prime_products($popular);
+wholesale_seo_prime_products($popular);
 
 $paragraphs = static function ($items) {
 	foreach ((array) $items as $paragraph) {
@@ -106,22 +103,15 @@ get_header();
 <main id="primary" class="sf-page gd-page">
 	<section class="sf-hero" aria-labelledby="gd-title">
 		<div class="container">
-			<?php retails_breadcrumbs(); ?>
+			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker"><?php echo esc_html($is_city ? $state['name'] . ' city guide' : 'State guide'); ?></p>
 			<h1 id="gd-title" class="sf-hero-title"><?php echo esc_html($place['h1']); ?></h1>
 			<?php $paragraphs(array_slice((array) $place['intro'], 0, 1)); ?>
 			<div class="sf-hero-actions">
-				<a class="cl-button" href="<?php echo esc_url($builder_url); ?>">Price Your Channel Letters <?php echo retails_home_icon('arrow'); ?></a>
+				<a class="cl-button" href="<?php echo esc_url($builder_url); ?>">Price Your Channel Letters <?php echo wholesale_home_icon('arrow'); ?></a>
 				<a class="sf-button-outline" href="<?php echo esc_url($contact_url); ?>">Get a Free Quote</a>
-				<a class="gd-hero-call" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?> 866-436-2101</a>
+				<a class="gd-hero-call" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> 866-436-2101</a>
 			</div>
-			<nav class="gd-jump-links" aria-label="On this page">
-				<?php if (!empty($place['permits'])) : ?><a href="#gd-permit-title">Sign permits</a><?php endif; ?>
-				<?php if (!empty($place['licensing'])) : ?><a href="#gd-license-title">Installer licensing</a><?php endif; ?>
-				<?php if (!empty($place['temporary_signs'])) : ?><a href="#gd-temporary_signs-title">Temporary signs</a><?php endif; ?>
-				<?php if (!empty($place['window_signs'])) : ?><a href="#gd-window_signs-title">Window graphics rules</a><?php endif; ?>
-				<a href="#gd-order-title">Ordering and shipping</a>
-			</nav>
 			<?php if ($facts) : ?>
 				<ul class="gd-facts">
 					<?php foreach ($facts as $label => $value) : ?>
@@ -144,7 +134,7 @@ get_header();
 					<?php $paragraphs(array_slice((array) $place['intro'], 1)); ?>
 				</div>
 			<?php endif; ?>
-			<?php retails_guide_render_families($place); ?>
+			<?php wholesale_guide_render_families($place); ?>
 		</div>
 	</section>
 
@@ -156,7 +146,7 @@ get_header();
 				<?php if (!empty($place['popular']['lead'])) : ?>
 					<p class="cl-section-lead"><?php echo wp_kses_post($place['popular']['lead']); ?></p>
 				<?php endif; ?>
-				<?php retails_guide_render_products($place['popular']['products']); ?>
+				<?php wholesale_guide_render_products($place['popular']['products']); ?>
 			</div>
 		</section>
 	<?php endif; ?>
@@ -167,7 +157,7 @@ get_header();
 				<p class="cl-kicker">Who can install it</p>
 				<h2 id="gd-license-title" class="cl-section-title"><?php echo esc_html($place['licensing']['heading']); ?></h2>
 				<?php $render_block(array_diff_key($place['licensing'], array('heading' => 1))); ?>
-				<?php retails_guide_render_sources(isset($place['licensing']['sources']) ? $place['licensing']['sources'] : array()); ?>
+				<?php wholesale_guide_render_sources(isset($place['licensing']['sources']) ? $place['licensing']['sources'] : array()); ?>
 			</div>
 		</section>
 	<?php endif; ?>
@@ -182,7 +172,7 @@ get_header();
 					<h3 class="gd-block-title"><?php echo esc_html(sprintf('Design review and special districts in %s', $short_name)); ?></h3>
 					<ul class="gd-districts">
 						<?php foreach ($place['districts'] as $district) : ?>
-							<li><strong><?php echo esc_html(retails_schema_text($district['name'])); ?></strong> <?php echo wp_kses_post($district['rule']); ?></li>
+							<li><strong><?php echo esc_html(wholesale_schema_text($district['name'])); ?></strong> <?php echo wp_kses_post($district['rule']); ?></li>
 						<?php endforeach; ?>
 					</ul>
 				<?php endif; ?>
@@ -196,7 +186,7 @@ get_header();
 						$permit_sources[] = array($district['name'], $district['source']);
 					}
 				}
-				retails_guide_render_sources($permit_sources);
+				wholesale_guide_render_sources($permit_sources);
 				?>
 			</div>
 		</section>
@@ -209,7 +199,7 @@ get_header();
 					<p class="cl-kicker"><?php echo esc_html($kicker); ?></p>
 					<h2 id="gd-<?php echo esc_attr($key); ?>-title" class="cl-section-title"><?php echo esc_html($place[$key]['heading']); ?></h2>
 					<?php $render_block(array_diff_key($place[$key], array('heading' => 1))); ?>
-					<?php retails_guide_render_sources(isset($place[$key]['sources']) ? $place[$key]['sources'] : array(), 'Sources', false); ?>
+					<?php wholesale_guide_render_sources(isset($place[$key]['sources']) ? $place[$key]['sources'] : array(), 'Sources', false); ?>
 				</div>
 			</section>
 		<?php endif; ?>
@@ -221,7 +211,7 @@ get_header();
 				<p class="cl-kicker">Weather</p>
 				<h2 id="gd-climate-title" class="cl-section-title"><?php echo esc_html(sprintf('Planning for %s Weather', $short_name)); ?></h2>
 				<?php $paragraphs($place['climate']); ?>
-				<?php retails_guide_render_sources(isset($place['climate_sources']) ? $place['climate_sources'] : array(), 'Sources', false); ?>
+				<?php wholesale_guide_render_sources(isset($place['climate_sources']) ? $place['climate_sources'] : array(), 'Sources', false); ?>
 			</div>
 		</section>
 	<?php endif; ?>
@@ -303,7 +293,7 @@ get_header();
 	$city_links = array();
 	if (!$is_city) {
 		foreach ($state['cities'] as $city_slug => $city) {
-			$city_url = retails_guide_url('locations/' . $state['slug'] . '/' . $city_slug);
+			$city_url = wholesale_guide_url('locations/' . $state['slug'] . '/' . $city_slug);
 			if ($city_url) {
 				$city_links[$city_url] = $city;
 			}
@@ -331,7 +321,7 @@ get_header();
 				<p class="cl-kicker">Questions</p>
 				<h2 id="gd-faq-title" class="cl-section-title"><?php echo esc_html(sprintf('%s Storefront Sign FAQ', $short_name)); ?></h2>
 				<div class="cl-faq-list">
-					<?php retails_seo_render_faq(); ?>
+					<?php wholesale_seo_render_faq(); ?>
 				</div>
 			</div>
 		</section>
@@ -353,7 +343,7 @@ get_header();
 			<?php
 			// Nearby places: on a city page the cities named in 'nearby' (or every
 			// other city guide in the state), on a state page the neighbouring
-			// states. The directory link below covers all other guides.
+			// states (or every other state guide until neighbours exist).
 			$nearby = array();
 			if ($is_city) {
 				$candidates = !empty($place['nearby']) ? (array) $place['nearby'] : array_keys($state['cities']);
@@ -361,7 +351,7 @@ get_header();
 					if ($city_slug === $entry['city'] || !isset($state['cities'][$city_slug])) {
 						continue;
 					}
-					$city_url = retails_guide_url('locations/' . $state['slug'] . '/' . $city_slug);
+					$city_url = wholesale_guide_url('locations/' . $state['slug'] . '/' . $city_slug);
 					if ($city_url) {
 						$nearby[$city_url] = sprintf('%s, %s', $state['cities'][$city_slug]['name'], $state['abbr']);
 					}
@@ -372,8 +362,15 @@ get_header();
 			} else {
 				$candidates = !empty($state['neighbors']) ? $state['neighbors'] : array();
 				foreach ($candidates as $slug) {
-					if (isset($states[$slug]) && ($url = retails_guide_url('locations/' . $slug))) {
+					if (isset($states[$slug]) && ($url = wholesale_guide_url('locations/' . $slug))) {
 						$nearby[$url] = $states[$slug]['name'];
+					}
+				}
+				if (!$nearby) {
+					foreach ($states as $slug => $other) {
+						if ($slug !== $state['slug'] && ($url = wholesale_guide_url('locations/' . $slug))) {
+							$nearby[$url] = $other['name'];
+						}
 					}
 				}
 			}
@@ -387,12 +384,12 @@ get_header();
 				</ul>
 			<?php endif; ?>
 			<?php if ($locations_url) : ?>
-				<p class="gd-all-link"><a href="<?php echo esc_url($locations_url); ?>">All state and city sign permit guides <?php echo retails_home_icon('arrow'); ?></a></p>
+				<p class="gd-all-link"><a href="<?php echo esc_url($locations_url); ?>">All state guides <?php echo wholesale_home_icon('arrow'); ?></a></p>
 			<?php endif; ?>
 		</div>
 	</section>
 
-	<?php retails_guide_render_help(sprintf('Planning a Sign in %s?', $place_name), 'Send a storefront photo, your logo and the size and lighting limits confirmed by your landlord or installer. We can suggest options and give you a price before you order.'); ?>
+	<?php wholesale_guide_render_help(sprintf('Planning a Sign in %s?', $place_name), sprintf('Send your storefront photo, logo and your landlord&rsquo;s sign criteria. We&rsquo;ll suggest a size and style that fits %s rules and give you a price before you order.', esc_html($short_name))); ?>
 </main>
 
 <?php

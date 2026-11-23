@@ -15,12 +15,12 @@
 /**
  * Business details shown to customers, from Settings → Storefront Sign → Payment tickets.
  */
-function retails_ticket_business()
+function wholesale_ticket_business()
 {
     $logo_id = get_theme_mod('custom_logo');
-    $defaults = retails_setting_defaults();
+    $defaults = wholesale_setting_defaults();
     $setting = static function ($key) use ($defaults) {
-        $value = trim((string) retails_get_setting($key));
+        $value = trim((string) wholesale_get_setting($key));
         return '' !== $value ? $value : $defaults[$key];
     };
 
@@ -30,11 +30,11 @@ function retails_ticket_business()
         'email' => $setting('ticket_business_email'),
         'address' => $setting('ticket_business_address'),
         'logo' => $logo_id ? (string) wp_get_attachment_image_url($logo_id, 'full') : '',
-        'color' => (string) retails_get_setting('primary_color'),
+        'color' => (string) wholesale_get_setting('primary_color'),
     );
 }
 
-function retails_ticket_statuses()
+function wholesale_ticket_statuses()
 {
     return array(
         'draft' => 'Draft',
@@ -45,31 +45,31 @@ function retails_ticket_statuses()
     );
 }
 
-function retails_ticket_status_label($ticket)
+function wholesale_ticket_status_label($ticket)
 {
-    if ('sent' === $ticket['status'] && retails_ticket_is_expired($ticket)) {
+    if ('sent' === $ticket['status'] && wholesale_ticket_is_expired($ticket)) {
         return 'Expired';
     }
-    $statuses = retails_ticket_statuses();
+    $statuses = wholesale_ticket_statuses();
     return $statuses[$ticket['status']] ?? $ticket['status'];
 }
 
-function retails_ticket_status_key($ticket)
+function wholesale_ticket_status_key($ticket)
 {
-    return ('sent' === $ticket['status'] && retails_ticket_is_expired($ticket)) ? 'expired' : $ticket['status'];
+    return ('sent' === $ticket['status'] && wholesale_ticket_is_expired($ticket)) ? 'expired' : $ticket['status'];
 }
 
-function retails_ticket_number($ticket_id)
+function wholesale_ticket_number($ticket_id)
 {
     return 'PT-' . str_pad((string) absint($ticket_id), 5, '0', STR_PAD_LEFT);
 }
 
-function retails_ticket_money($value)
+function wholesale_ticket_money($value)
 {
     return max(0, round((float) preg_replace('/[^0-9.]/', '', (string) $value), 2));
 }
 
-function retails_format_ticket_amount($amount)
+function wholesale_format_ticket_amount($amount)
 {
     return '$' . number_format((float) $amount, 2, '.', ',');
 }
@@ -80,7 +80,7 @@ function retails_format_ticket_amount($amount)
  *
  * @return array[] Each: name, label, options (option titles).
  */
-function retails_ticket_product_attributes($product_id)
+function wholesale_ticket_product_attributes($product_id)
 {
     $decoded = json_decode((string) get_post_meta($product_id, 'product_attr', true), true);
     if (!is_array($decoded)) {
@@ -120,7 +120,7 @@ function retails_ticket_product_attributes($product_id)
     return array_values($attributes);
 }
 
-function retails_ticket_product_thumb($product_id, $size = 'thumbnail')
+function wholesale_ticket_product_thumb($product_id, $size = 'thumbnail')
 {
     $url = $product_id ? get_the_post_thumbnail_url($product_id, $size) : '';
     return $url ? (string) $url : '';
@@ -129,7 +129,7 @@ function retails_ticket_product_thumb($product_id, $size = 'thumbnail')
 /**
  * Catalog for the ticket editor: every published product with its options.
  */
-function retails_ticket_product_catalog()
+function wholesale_ticket_product_catalog()
 {
     $products = get_posts(array(
         'post_type' => 'product',
@@ -154,10 +154,10 @@ function retails_ticket_product_catalog()
             'id' => $product->ID,
             'title' => $product->post_title,
             'cat' => is_array($terms) && $terms ? $terms[0]->name : '',
-            'thumb' => retails_ticket_product_thumb($product->ID),
+            'thumb' => wholesale_ticket_product_thumb($product->ID),
             'price' => round((float) get_post_meta($product->ID, '_price_per_sqft', true), 2),
-            'attrs' => retails_ticket_product_attributes($product->ID),
-            'cl' => retails_ticket_is_cl_product($product->ID),
+            'attrs' => wholesale_ticket_product_attributes($product->ID),
+            'cl' => wholesale_ticket_is_cl_product($product->ID),
         );
     }
 
@@ -167,12 +167,12 @@ function retails_ticket_product_catalog()
 /**
  * Channel letter products are designed in the channel letter builder.
  */
-function retails_ticket_is_cl_product($product_id)
+function wholesale_ticket_is_cl_product($product_id)
 {
     return $product_id && 'product' === get_post_type($product_id) && has_term('channel-letters', 'product_category', $product_id);
 }
 
-function retails_ticket_line_key($raw_key = '')
+function wholesale_ticket_line_key($raw_key = '')
 {
     $key = strtolower(preg_replace('/[^A-Za-z0-9]/', '', (string) $raw_key));
     return ('' !== $key && strlen($key) <= 24) ? $key : 'k' . strtolower(wp_generate_password(10, false, false));
@@ -181,7 +181,7 @@ function retails_ticket_line_key($raw_key = '')
 /**
  * Fill in fields that older saved lines may not have.
  */
-function retails_ticket_normalize_item($item, $index)
+function wholesale_ticket_normalize_item($item, $index)
 {
     $item = wp_parse_args(is_array($item) ? $item : array(), array(
         'key' => '',
@@ -212,7 +212,7 @@ function retails_ticket_normalize_item($item, $index)
  * already had (matched by line key) unless its product changed or the admin
  * removed it.
  */
-function retails_ticket_sanitize_items($raw, $existing_items = array())
+function wholesale_ticket_sanitize_items($raw, $existing_items = array())
 {
     $items = array();
     if (!is_array($raw)) {
@@ -228,7 +228,7 @@ function retails_ticket_sanitize_items($raw, $existing_items = array())
         if (!is_array($row)) {
             continue;
         }
-        $key = retails_ticket_line_key($raw_key);
+        $key = wholesale_ticket_line_key($raw_key);
 
         $product_id = isset($row['product_id']) ? absint($row['product_id']) : 0;
         if ($product_id && 'product' !== get_post_type($product_id)) {
@@ -240,7 +240,7 @@ function retails_ticket_sanitize_items($raw, $existing_items = array())
         if ($product_id) {
             $title = (string) get_post_field('post_title', $product_id, 'raw');
             $chosen = isset($row['opt']) && is_array($row['opt']) ? $row['opt'] : array();
-            foreach (retails_ticket_product_attributes($product_id) as $attr) {
+            foreach (wholesale_ticket_product_attributes($product_id) as $attr) {
                 $value = isset($chosen[$attr['name']]) ? trim((string) $chosen[$attr['name']]) : '';
                 if ('' !== $value && in_array($value, $attr['options'], true)) {
                     $options[] = array('name' => $attr['name'], 'label' => $attr['label'], 'value' => $value);
@@ -274,7 +274,7 @@ function retails_ticket_sanitize_items($raw, $existing_items = array())
             'width' => isset($row['width']) ? $dimension($row['width']) : '',
             'height' => isset($row['height']) ? $dimension($row['height']) : '',
             'qty' => isset($row['qty']) ? max(1, min(100000, absint($row['qty']))) : 1,
-            'unit_price' => isset($row['unit_price']) ? retails_ticket_money($row['unit_price']) : 0,
+            'unit_price' => isset($row['unit_price']) ? wholesale_ticket_money($row['unit_price']) : 0,
             'notes' => isset($row['notes']) ? sanitize_textarea_field($row['notes']) : '',
             'design' => $design,
         );
@@ -287,16 +287,16 @@ function retails_ticket_sanitize_items($raw, $existing_items = array())
     return $items;
 }
 
-function retails_ticket_line_total($item)
+function wholesale_ticket_line_total($item)
 {
     return round($item['qty'] * $item['unit_price'], 2);
 }
 
-function retails_ticket_calculate_totals($items, $discount, $shipping, $tax_rate)
+function wholesale_ticket_calculate_totals($items, $discount, $shipping, $tax_rate)
 {
     $subtotal = 0;
     foreach ($items as $item) {
-        $subtotal += retails_ticket_line_total($item);
+        $subtotal += wholesale_ticket_line_total($item);
     }
     $subtotal = round($subtotal, 2);
     $discount = min(round((float) $discount, 2), $subtotal);
@@ -317,7 +317,7 @@ function retails_ticket_calculate_totals($items, $discount, $shipping, $tax_rate
 /**
  * @return array Ticket fields read from post meta.
  */
-function retails_get_ticket($ticket_id)
+function wholesale_get_ticket($ticket_id)
 {
     $meta = static function ($key) use ($ticket_id) {
         return get_post_meta($ticket_id, $key, true);
@@ -334,7 +334,7 @@ function retails_get_ticket($ticket_id)
             'unit_price' => round((float) $meta('_ticket_amount'), 2),
         );
     }
-    $items = array_map('retails_ticket_normalize_item', array_values($items), array_keys(array_values($items)));
+    $items = array_map('wholesale_ticket_normalize_item', array_values($items), array_keys(array_values($items)));
 
     // A ticket that has never been saved starts from the defaults in Settings → Storefront Sign.
     $is_new = '' === $status && 'auto-draft' === get_post_status($ticket_id);
@@ -342,18 +342,18 @@ function retails_get_ticket($ticket_id)
     $message = (string) $meta('_ticket_description');
     $due = (string) $meta('_ticket_due');
     if ($is_new) {
-        $tax_rate = retails_setting_enabled('ticket_default_tax') ? (float) retails_get_setting('tax_rate') : 0;
-        $message = (string) retails_get_setting('ticket_default_message');
-        $due_days = absint(retails_get_setting('ticket_due_days'));
+        $tax_rate = wholesale_setting_enabled('ticket_default_tax') ? (float) wholesale_get_setting('tax_rate') : 0;
+        $message = (string) wholesale_get_setting('ticket_default_message');
+        $due_days = absint(wholesale_get_setting('ticket_due_days'));
         $due = $due_days ? wp_date('Y-m-d', time() + $due_days * DAY_IN_SECONDS) : '';
     }
 
-    $totals = retails_ticket_calculate_totals($items, (float) $meta('_ticket_discount'), (float) $meta('_ticket_shipping'), $tax_rate);
+    $totals = wholesale_ticket_calculate_totals($items, (float) $meta('_ticket_discount'), (float) $meta('_ticket_shipping'), $tax_rate);
     $log = $meta('_ticket_log');
 
     return array(
         'id' => (int) $ticket_id,
-        'number' => retails_ticket_number($ticket_id),
+        'number' => wholesale_ticket_number($ticket_id),
         'title' => (string) get_post_field('post_title', $ticket_id, 'raw'),
         'created' => (string) get_post_field('post_date', $ticket_id, 'raw'),
         'customer_name' => (string) $meta('_ticket_customer_name'),
@@ -377,17 +377,17 @@ function retails_get_ticket($ticket_id)
     );
 }
 
-function retails_ticket_is_locked($ticket)
+function wholesale_ticket_is_locked($ticket)
 {
     return in_array($ticket['status'], array('paid', 'accepted', 'cancelled'), true);
 }
 
-function retails_ticket_is_expired($ticket)
+function wholesale_ticket_is_expired($ticket)
 {
     return '' !== $ticket['due'] && current_time('Y-m-d') > $ticket['due'];
 }
 
-function retails_ticket_log($ticket_id, $event, $note = '')
+function wholesale_ticket_log($ticket_id, $event, $note = '')
 {
     $log = get_post_meta($ticket_id, '_ticket_log', true);
     $log = is_array($log) ? $log : array();
@@ -402,7 +402,7 @@ function retails_ticket_log($ticket_id, $event, $note = '')
     update_post_meta($ticket_id, '_ticket_log', array_slice($log, -100));
 }
 
-function retails_ticket_log_labels()
+function wholesale_ticket_log_labels()
 {
     return array(
         'created' => 'Ticket created',
@@ -424,7 +424,7 @@ function retails_ticket_log_labels()
  * The /pay/ page renders page-pay.php. Create it the first time it is needed
  * so the admin never has to set it up by hand.
  */
-function retails_ticket_pay_page_url()
+function wholesale_ticket_pay_page_url()
 {
     if (!get_page_by_path('pay')) {
         wp_insert_post(array(
@@ -438,15 +438,15 @@ function retails_ticket_pay_page_url()
     return home_url('/pay/');
 }
 
-function retails_ticket_payment_url($ticket)
+function wholesale_ticket_payment_url($ticket)
 {
-    return add_query_arg('t', rawurlencode($ticket['token']), retails_ticket_pay_page_url());
+    return add_query_arg('t', rawurlencode($ticket['token']), wholesale_ticket_pay_page_url());
 }
 
 /**
  * @return int Ticket ID, or 0 when the token does not match a ticket.
  */
-function retails_find_ticket_by_token($token)
+function wholesale_find_ticket_by_token($token)
 {
     $token = preg_replace('/[^A-Za-z0-9]/', '', (string) $token);
     if (strlen($token) < 20) {
@@ -473,7 +473,7 @@ function retails_find_ticket_by_token($token)
 /**
  * One-line summary of a line item's options and size, for emails and orders.
  */
-function retails_ticket_item_specs($item)
+function wholesale_ticket_item_specs($item)
 {
     $specs = array();
     if ($item['width'] || $item['height']) {
@@ -493,12 +493,12 @@ function retails_ticket_item_specs($item)
  * Channel letter builder
  * ------------------------------------------------------------------------ */
 
-function retails_ticket_builder_url($ticket_id, $product_id)
+function wholesale_ticket_builder_url($ticket_id, $product_id)
 {
     return add_query_arg(array('product_id' => absint($product_id), 'wpt_ticket' => absint($ticket_id)), home_url('/channel-letter-builder/'));
 }
 
-function retails_ticket_find_line($ticket, $key)
+function wholesale_ticket_find_line($ticket, $key)
 {
     foreach ($ticket['items'] as $index => $item) {
         if ($item['key'] === $key) {
@@ -513,22 +513,22 @@ function retails_ticket_find_line($ticket, $key)
  * builder from a ticket line, returns what the builder needs to design for
  * that line; otherwise null and the builder works as the normal storefront tool.
  */
-function retails_ticket_builder_context($product_id)
+function wholesale_ticket_builder_context($product_id)
 {
     if (empty($_GET['wpt_ticket']) || !is_user_logged_in()) {
         return null;
     }
 
     $ticket_id = absint($_GET['wpt_ticket']);
-    $pending_key = 'retails_ticket_builder_' . get_current_user_id();
+    $pending_key = 'wholesale_ticket_builder_' . get_current_user_id();
     $pending = get_transient($pending_key);
-    if (!is_array($pending) || (int) $pending['ticket'] !== $ticket_id || !current_user_can('edit_post', $ticket_id) || !retails_ticket_is_cl_product($product_id)) {
+    if (!is_array($pending) || (int) $pending['ticket'] !== $ticket_id || !current_user_can('edit_post', $ticket_id) || !wholesale_ticket_is_cl_product($product_id)) {
         return null;
     }
 
-    $ticket = retails_get_ticket($ticket_id);
-    $index = retails_ticket_find_line($ticket, $pending['line']);
-    if (retails_ticket_is_locked($ticket) || null === $index) {
+    $ticket = wholesale_get_ticket($ticket_id);
+    $index = wholesale_ticket_find_line($ticket, $pending['line']);
+    if (wholesale_ticket_is_locked($ticket) || null === $index) {
         return null;
     }
 
@@ -558,13 +558,13 @@ function retails_ticket_builder_context($product_id)
  * mode that permalink is admin-post.php with no action, which WordPress
  * routes to the `admin_post` hook for logged-in users.
  */
-function retails_ticket_save_builder_design()
+function wholesale_ticket_save_builder_design()
 {
     if (!isset($_GET['save_design'], $_GET['design_id'], $_GET['design_data'])) {
         return;
     }
 
-    $pending_key = 'retails_ticket_builder_' . get_current_user_id();
+    $pending_key = 'wholesale_ticket_builder_' . get_current_user_id();
     $pending = get_transient($pending_key);
     if (!is_array($pending) || empty($pending['ticket'])) {
         wp_die(esc_html__('This design session has expired. Open the channel letter builder again from the payment ticket.', 'litsign'), esc_html__('Design not saved', 'litsign'), array('response' => 400, 'back_link' => true));
@@ -573,20 +573,20 @@ function retails_ticket_save_builder_design()
     $ticket_id = (int) $pending['ticket'];
     $product_id = (int) $pending['product'];
     $design_id = absint($_GET['design_id']);
-    $uploads = isset($_SESSION['retails_design_uploads']) && is_array($_SESSION['retails_design_uploads']) ? array_map('absint', $_SESSION['retails_design_uploads']) : array();
+    $uploads = isset($_SESSION['wholesale_design_uploads']) && is_array($_SESSION['wholesale_design_uploads']) ? array_map('absint', $_SESSION['wholesale_design_uploads']) : array();
     $design = json_decode(wp_unslash((string) $_GET['design_data']), true);
-    $ticket = current_user_can('edit_post', $ticket_id) ? retails_get_ticket($ticket_id) : null;
-    $index = $ticket ? retails_ticket_find_line($ticket, $pending['line']) : null;
+    $ticket = current_user_can('edit_post', $ticket_id) ? wholesale_get_ticket($ticket_id) : null;
+    $index = $ticket ? wholesale_ticket_find_line($ticket, $pending['line']) : null;
 
-    if (!$ticket || retails_ticket_is_locked($ticket) || null === $index || !in_array($design_id, $uploads, true) || !is_array($design) || !retails_ticket_is_cl_product($product_id)) {
+    if (!$ticket || wholesale_ticket_is_locked($ticket) || null === $index || !in_array($design_id, $uploads, true) || !is_array($design) || !wholesale_ticket_is_cl_product($product_id)) {
         wp_die(esc_html__('This design could not be attached to the ticket. Please try again from the payment ticket.', 'litsign'), esc_html__('Design not saved', 'litsign'), array('response' => 400, 'back_link' => true));
     }
 
     // Same storage the storefront uses, so the order screen can show the letter details table.
     update_post_meta($design_id, '_cl_data', wp_slash(wp_json_encode($design, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)));
-    update_post_meta($design_id, '_retails_ticket_id', $ticket_id);
+    update_post_meta($design_id, '_wholesale_ticket_id', $ticket_id);
 
-    $total = round(retails_cl_design_total($design, $product_id), 2);
+    $total = round(wholesale_cl_design_total($design, $product_id), 2);
     $item = $ticket['items'][$index];
     if ((int) $item['product_id'] !== $product_id) {
         $item['product_id'] = $product_id;
@@ -606,27 +606,27 @@ function retails_ticket_save_builder_design()
         'id' => $design_id,
         'url' => (string) wp_get_attachment_url($design_id),
         'cost' => $total,
-        'summary' => retails_cl_design_summary($design),
+        'summary' => wholesale_cl_design_summary($design),
     );
     $ticket['items'][$index] = $item;
 
-    retails_ticket_store_items($ticket_id, $ticket['items']);
-    retails_ticket_log($ticket_id, 'design_saved', 'Line ' . ($index + 1) . ' · builder price ' . retails_format_ticket_amount($total));
+    wholesale_ticket_store_items($ticket_id, $ticket['items']);
+    wholesale_ticket_log($ticket_id, 'design_saved', 'Line ' . ($index + 1) . ' · builder price ' . wholesale_format_ticket_amount($total));
     delete_transient($pending_key);
-    retails_ticket_set_notice('design_saved');
+    wholesale_ticket_set_notice('design_saved');
 
-    wp_safe_redirect(admin_url('post.php?post=' . $ticket_id . '&action=edit') . '#retails_ticket_items');
+    wp_safe_redirect(admin_url('post.php?post=' . $ticket_id . '&action=edit') . '#wholesale_ticket_items');
     exit;
 }
-add_action('admin_post', 'retails_ticket_save_builder_design');
+add_action('admin_post', 'wholesale_ticket_save_builder_design');
 
 /**
  * Save line items and keep the stored total in step with them.
  */
-function retails_ticket_store_items($ticket_id, $items)
+function wholesale_ticket_store_items($ticket_id, $items)
 {
     update_post_meta($ticket_id, '_ticket_items', array_values($items));
-    $ticket = retails_get_ticket($ticket_id);
+    $ticket = wholesale_get_ticket($ticket_id);
     update_post_meta($ticket_id, '_ticket_amount', $ticket['amount']);
 }
 
@@ -634,7 +634,7 @@ function retails_ticket_store_items($ticket_id, $items)
  * Admin: assets
  * ------------------------------------------------------------------------ */
 
-function retails_ticket_admin_assets($hook)
+function wholesale_ticket_admin_assets($hook)
 {
     $screen = get_current_screen();
     if (!$screen || 'payment_ticket' !== $screen->post_type) {
@@ -647,65 +647,65 @@ function retails_ticket_admin_assets($hook)
         return file_exists($file) ? (string) filemtime($file) : _S_VERSION;
     };
 
-    wp_enqueue_style('retails-ticket-admin', $theme_uri . '/css/admin-payment-ticket.css', array(), $version('/css/admin-payment-ticket.css'));
+    wp_enqueue_style('wholesale-ticket-admin', $theme_uri . '/css/admin-payment-ticket.css', array(), $version('/css/admin-payment-ticket.css'));
 
     if (!in_array($hook, array('post.php', 'post-new.php'), true)) {
         return;
     }
 
     global $post;
-    $ticket = retails_get_ticket($post->ID);
+    $ticket = wholesale_get_ticket($post->ID);
 
     wp_enqueue_media();
-    wp_enqueue_script('retails-ticket-admin', $theme_uri . '/js/admin-payment-ticket.js', array(), $version('/js/admin-payment-ticket.js'), true);
-    wp_add_inline_script('retails-ticket-admin', 'window.wptData = ' . wp_json_encode(array(
-        'catalog' => retails_ticket_product_catalog(),
+    wp_enqueue_script('wholesale-ticket-admin', $theme_uri . '/js/admin-payment-ticket.js', array(), $version('/js/admin-payment-ticket.js'), true);
+    wp_add_inline_script('wholesale-ticket-admin', 'window.wptData = ' . wp_json_encode(array(
+        'catalog' => wholesale_ticket_product_catalog(),
         'items' => array_map(static function ($item) {
-            $item['thumb'] = retails_ticket_product_thumb($item['product_id']);
+            $item['thumb'] = wholesale_ticket_product_thumb($item['product_id']);
             return $item;
         }, $ticket['items']),
-        'locked' => retails_ticket_is_locked($ticket),
-        'siteTaxRate' => (float) retails_get_setting('tax_rate'),
+        'locked' => wholesale_ticket_is_locked($ticket),
+        'siteTaxRate' => (float) wholesale_get_setting('tax_rate'),
     )) . ';', 'before');
 }
-add_action('admin_enqueue_scripts', 'retails_ticket_admin_assets');
+add_action('admin_enqueue_scripts', 'wholesale_ticket_admin_assets');
 
 /* ---------------------------------------------------------------------------
  * Admin: edit screen
  * ------------------------------------------------------------------------ */
 
-function retails_ticket_title_placeholder($placeholder, $post)
+function wholesale_ticket_title_placeholder($placeholder, $post)
 {
     return 'payment_ticket' === $post->post_type ? 'Project name, e.g. Pho Saigon storefront channel letters' : $placeholder;
 }
-add_filter('enter_title_here', 'retails_ticket_title_placeholder', 10, 2);
+add_filter('enter_title_here', 'wholesale_ticket_title_placeholder', 10, 2);
 
-function retails_ticket_add_meta_boxes()
+function wholesale_ticket_add_meta_boxes()
 {
     remove_meta_box('submitdiv', 'payment_ticket', 'side');
-    add_meta_box('retails_ticket_customer', 'Customer', 'retails_render_ticket_customer_box', 'payment_ticket', 'normal', 'high');
-    add_meta_box('retails_ticket_items', 'Products & pricing', 'retails_render_ticket_items_box', 'payment_ticket', 'normal', 'high');
-    add_meta_box('retails_ticket_message', 'Message, proof & terms', 'retails_render_ticket_message_box', 'payment_ticket', 'normal', 'default');
-    add_meta_box('retails_ticket_summary', 'Payment ticket', 'retails_render_ticket_summary_box', 'payment_ticket', 'side', 'high');
-    add_meta_box('retails_ticket_activity', 'Activity', 'retails_render_ticket_activity_box', 'payment_ticket', 'side', 'default');
+    add_meta_box('wholesale_ticket_customer', 'Customer', 'wholesale_render_ticket_customer_box', 'payment_ticket', 'normal', 'high');
+    add_meta_box('wholesale_ticket_items', 'Products & pricing', 'wholesale_render_ticket_items_box', 'payment_ticket', 'normal', 'high');
+    add_meta_box('wholesale_ticket_message', 'Message, proof & terms', 'wholesale_render_ticket_message_box', 'payment_ticket', 'normal', 'default');
+    add_meta_box('wholesale_ticket_summary', 'Payment ticket', 'wholesale_render_ticket_summary_box', 'payment_ticket', 'side', 'high');
+    add_meta_box('wholesale_ticket_activity', 'Activity', 'wholesale_render_ticket_activity_box', 'payment_ticket', 'side', 'default');
 }
-add_action('add_meta_boxes_payment_ticket', 'retails_ticket_add_meta_boxes');
+add_action('add_meta_boxes_payment_ticket', 'wholesale_ticket_add_meta_boxes');
 
-function retails_ticket_locked_notice($ticket)
+function wholesale_ticket_locked_notice($ticket)
 {
-    if (!retails_ticket_is_locked($ticket)) {
+    if (!wholesale_ticket_is_locked($ticket)) {
         return;
     }
     $reason = 'cancelled' === $ticket['status'] ? 'was cancelled' : 'has been ' . ('paid' === $ticket['status'] ? 'paid' : 'accepted');
     echo '<p class="wpt-locked"><span class="dashicons dashicons-lock" aria-hidden="true"></span> This ticket ' . esc_html($reason) . ', so these details can no longer be changed. Use <b>Duplicate</b> to start a new ticket from it.</p>';
 }
 
-function retails_render_ticket_customer_box($post)
+function wholesale_render_ticket_customer_box($post)
 {
-    $ticket = retails_get_ticket($post->ID);
-    $locked = retails_ticket_is_locked($ticket);
-    wp_nonce_field('retails_save_ticket', 'retails_ticket_nonce');
-    retails_ticket_locked_notice($ticket);
+    $ticket = wholesale_get_ticket($post->ID);
+    $locked = wholesale_ticket_is_locked($ticket);
+    wp_nonce_field('wholesale_save_ticket', 'wholesale_ticket_nonce');
+    wholesale_ticket_locked_notice($ticket);
     ?>
     <div class="wpt-grid wpt-grid--2">
         <p class="wpt-field">
@@ -729,12 +729,12 @@ function retails_render_ticket_customer_box($post)
     <?php
 }
 
-function retails_render_ticket_items_box($post)
+function wholesale_render_ticket_items_box($post)
 {
-    $ticket = retails_get_ticket($post->ID);
+    $ticket = wholesale_get_ticket($post->ID);
     $totals = $ticket['totals'];
-    $locked = retails_ticket_is_locked($ticket);
-    $site_rate = (float) retails_get_setting('tax_rate');
+    $locked = wholesale_ticket_is_locked($ticket);
+    $site_rate = (float) wholesale_get_setting('tax_rate');
     ?>
     <div id="wpt-items" class="wpt-items" aria-live="polite"></div>
     <input type="hidden" name="wpt_builder_line" id="wpt-builder-line" value="">
@@ -751,7 +751,7 @@ function retails_render_ticket_items_box($post)
     <div class="wpt-totals">
         <div class="wpt-totals__row">
             <span>Subtotal</span>
-            <span class="wpt-num" data-wpt-subtotal><?php echo esc_html(retails_format_ticket_amount($totals['subtotal'])); ?></span>
+            <span class="wpt-num" data-wpt-subtotal><?php echo esc_html(wholesale_format_ticket_amount($totals['subtotal'])); ?></span>
         </div>
         <div class="wpt-totals__row">
             <label for="ticket_discount">Discount</label>
@@ -770,21 +770,21 @@ function retails_render_ticket_items_box($post)
             </span>
             <span class="wpt-tax-inputs">
                 <span class="wpt-money wpt-money--pct"><input type="text" inputmode="decimal" id="ticket_tax_rate" name="ticket_tax_rate" value="<?php echo esc_attr($totals['tax_rate'] > 0 ? rtrim(rtrim(number_format($totals['tax_rate'], 3, '.', ''), '0'), '.') : ''); ?>" placeholder="0" <?php disabled($locked); ?>><span aria-hidden="true">%</span></span>
-                <span class="wpt-num" data-wpt-tax><?php echo esc_html(retails_format_ticket_amount($totals['tax'])); ?></span>
+                <span class="wpt-num" data-wpt-tax><?php echo esc_html(wholesale_format_ticket_amount($totals['tax'])); ?></span>
             </span>
         </div>
         <div class="wpt-totals__row wpt-totals__grand">
             <span>Total due</span>
-            <span class="wpt-num" data-wpt-grand><?php echo esc_html(retails_format_ticket_amount($totals['grand_total'])); ?></span>
+            <span class="wpt-num" data-wpt-grand><?php echo esc_html(wholesale_format_ticket_amount($totals['grand_total'])); ?></span>
         </div>
     </div>
     <?php
 }
 
-function retails_render_ticket_message_box($post)
+function wholesale_render_ticket_message_box($post)
 {
-    $ticket = retails_get_ticket($post->ID);
-    $locked = retails_ticket_is_locked($ticket);
+    $ticket = wholesale_get_ticket($post->ID);
+    $locked = wholesale_ticket_is_locked($ticket);
     $proof_url = $ticket['proof_id'] ? wp_get_attachment_url($ticket['proof_id']) : '';
     $proof_name = $proof_url ? wp_basename(get_attached_file($ticket['proof_id'])) : '';
     $proof_thumb = $ticket['proof_id'] && wp_attachment_is_image($ticket['proof_id']) ? wp_get_attachment_image_url($ticket['proof_id'], 'thumbnail') : '';
@@ -828,10 +828,10 @@ function retails_render_ticket_message_box($post)
     <?php
 }
 
-function retails_render_ticket_summary_box($post)
+function wholesale_render_ticket_summary_box($post)
 {
-    $ticket = retails_get_ticket($post->ID);
-    $status_key = retails_ticket_status_key($ticket);
+    $ticket = wholesale_get_ticket($post->ID);
+    $status_key = wholesale_ticket_status_key($ticket);
     $can_send = in_array($ticket['status'], array('draft', 'sent'), true);
     $date = static function ($mysql) {
         return $mysql ? date_i18n('M j, Y g:i a', strtotime($mysql)) : '';
@@ -840,12 +840,12 @@ function retails_render_ticket_summary_box($post)
     <div class="wpt-summary">
         <div class="wpt-summary__head">
             <span class="wpt-summary__number"><?php echo esc_html($ticket['number']); ?></span>
-            <span class="wpt-pill wpt-pill--<?php echo esc_attr($status_key); ?>"><?php echo esc_html(retails_ticket_status_label($ticket)); ?></span>
+            <span class="wpt-pill wpt-pill--<?php echo esc_attr($status_key); ?>"><?php echo esc_html(wholesale_ticket_status_label($ticket)); ?></span>
         </div>
 
         <div class="wpt-summary__total">
             <span>Total due</span>
-            <strong class="wpt-num" data-wpt-grand><?php echo esc_html(retails_format_ticket_amount($ticket['amount'])); ?></strong>
+            <strong class="wpt-num" data-wpt-grand><?php echo esc_html(wholesale_format_ticket_amount($ticket['amount'])); ?></strong>
         </div>
 
         <dl class="wpt-summary__meta">
@@ -863,7 +863,7 @@ function retails_render_ticket_summary_box($post)
                     <?php echo 'sent' === $ticket['status'] ? 'Save &amp; resend' : 'Save &amp; send to customer'; ?>
                 </button>
                 <?php if ('draft' === $ticket['status']) : ?>
-                    <button type="submit" name="wpt_action" value="draft" class="button button-large">Save draft<?php echo retails_setting_enabled('ticket_auto_send') ? ' without sending' : ''; ?></button>
+                    <button type="submit" name="wpt_action" value="draft" class="button button-large">Save draft<?php echo wholesale_setting_enabled('ticket_auto_send') ? ' without sending' : ''; ?></button>
                 <?php else : ?>
                     <button type="submit" name="wpt_action" value="save" class="button button-large">Save changes</button>
                 <?php endif; ?>
@@ -878,7 +878,7 @@ function retails_render_ticket_summary_box($post)
             <div class="wpt-summary__link">
                 <label for="wpt-link">Customer payment link</label>
                 <div class="wpt-copy">
-                    <input type="text" readonly id="wpt-link" value="<?php echo esc_attr(retails_ticket_payment_url($ticket)); ?>">
+                    <input type="text" readonly id="wpt-link" value="<?php echo esc_attr(wholesale_ticket_payment_url($ticket)); ?>">
                     <button type="button" class="button" data-wpt-copy="#wpt-link">Copy</button>
                 </div>
                 <?php if ('draft' === $ticket['status']) : ?><span class="wpt-help">The link works for customers after you send the ticket.</span><?php endif; ?>
@@ -887,10 +887,10 @@ function retails_render_ticket_summary_box($post)
 
         <div class="wpt-summary__links">
             <?php if ($ticket['token']) : ?>
-                <a href="<?php echo esc_url(retails_ticket_payment_url($ticket)); ?>" target="_blank" rel="noopener"><span class="dashicons dashicons-visibility" aria-hidden="true"></span> Preview</a>
+                <a href="<?php echo esc_url(wholesale_ticket_payment_url($ticket)); ?>" target="_blank" rel="noopener"><span class="dashicons dashicons-visibility" aria-hidden="true"></span> Preview</a>
             <?php endif; ?>
             <?php if ('auto-draft' !== $post->post_status) : ?>
-                <a href="<?php echo esc_url(retails_ticket_duplicate_url($post->ID)); ?>"><span class="dashicons dashicons-admin-page" aria-hidden="true"></span> Duplicate</a>
+                <a href="<?php echo esc_url(wholesale_ticket_duplicate_url($post->ID)); ?>"><span class="dashicons dashicons-admin-page" aria-hidden="true"></span> Duplicate</a>
             <?php endif; ?>
             <?php if ('sent' === $ticket['status']) : ?>
                 <button type="submit" name="wpt_action" value="cancel" class="button-link button-link-delete" data-wpt-confirm="Cancel this ticket? The payment link will stop working."><span class="dashicons dashicons-dismiss" aria-hidden="true"></span> Cancel ticket</button>
@@ -902,10 +902,10 @@ function retails_render_ticket_summary_box($post)
     <?php
 }
 
-function retails_render_ticket_activity_box($post)
+function wholesale_render_ticket_activity_box($post)
 {
-    $ticket = retails_get_ticket($post->ID);
-    $labels = retails_ticket_log_labels();
+    $ticket = wholesale_get_ticket($post->ID);
+    $labels = wholesale_ticket_log_labels();
 
     if (empty($ticket['log'])) {
         echo '<p class="wpt-help">Activity such as sending, customer views and payments will appear here.</p>';
@@ -934,9 +934,9 @@ function retails_render_ticket_activity_box($post)
  * The default Publish box is replaced by our own buttons: publish on send,
  * and turn a brand-new auto-draft into a draft on its first save.
  */
-function retails_ticket_filter_post_data($data, $postarr)
+function wholesale_ticket_filter_post_data($data, $postarr)
 {
-    if ('payment_ticket' !== $data['post_type'] || empty($_POST['retails_ticket_nonce'])) {
+    if ('payment_ticket' !== $data['post_type'] || empty($_POST['wholesale_ticket_nonce'])) {
         return $data;
     }
 
@@ -952,25 +952,25 @@ function retails_ticket_filter_post_data($data, $postarr)
 
     return $data;
 }
-add_filter('wp_insert_post_data', 'retails_ticket_filter_post_data', 10, 2);
+add_filter('wp_insert_post_data', 'wholesale_ticket_filter_post_data', 10, 2);
 
-function retails_save_ticket($post_id)
+function wholesale_save_ticket($post_id)
 {
-    $nonce = isset($_POST['retails_ticket_nonce']) ? sanitize_text_field(wp_unslash($_POST['retails_ticket_nonce'])) : '';
-    if (!$nonce || !wp_verify_nonce($nonce, 'retails_save_ticket')) {
+    $nonce = isset($_POST['wholesale_ticket_nonce']) ? sanitize_text_field(wp_unslash($_POST['wholesale_ticket_nonce'])) : '';
+    if (!$nonce || !wp_verify_nonce($nonce, 'wholesale_save_ticket')) {
         return;
     }
     if ((defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || wp_is_post_revision($post_id) || !current_user_can('edit_post', $post_id)) {
         return;
     }
 
-    $ticket = retails_get_ticket($post_id);
+    $ticket = wholesale_get_ticket($post_id);
     $action = isset($_POST['wpt_action']) ? sanitize_key($_POST['wpt_action']) : 'save';
 
     update_post_meta($post_id, '_ticket_internal_note', isset($_POST['ticket_internal_note']) ? sanitize_textarea_field(wp_unslash($_POST['ticket_internal_note'])) : '');
 
-    if (retails_ticket_is_locked($ticket)) {
-        retails_ticket_set_notice('note_saved');
+    if (wholesale_ticket_is_locked($ticket)) {
+        wholesale_ticket_set_notice('note_saved');
         return;
     }
 
@@ -987,11 +987,11 @@ function retails_save_ticket($post_id)
         $proof_id = 0;
     }
 
-    $items = retails_ticket_sanitize_items(isset($_POST['wpt_items']) ? wp_unslash($_POST['wpt_items']) : array(), $ticket['items']);
-    $discount = retails_ticket_money($text('ticket_discount'));
-    $shipping = retails_ticket_money($text('ticket_shipping'));
-    $tax_rate = min(100, retails_ticket_money($text('ticket_tax_rate')));
-    $totals = retails_ticket_calculate_totals($items, $discount, $shipping, $tax_rate);
+    $items = wholesale_ticket_sanitize_items(isset($_POST['wpt_items']) ? wp_unslash($_POST['wpt_items']) : array(), $ticket['items']);
+    $discount = wholesale_ticket_money($text('ticket_discount'));
+    $shipping = wholesale_ticket_money($text('ticket_shipping'));
+    $tax_rate = min(100, wholesale_ticket_money($text('ticket_tax_rate')));
+    $totals = wholesale_ticket_calculate_totals($items, $discount, $shipping, $tax_rate);
 
     update_post_meta($post_id, '_ticket_customer_name', $text('ticket_customer_name'));
     update_post_meta($post_id, '_ticket_customer_company', $text('ticket_customer_company'));
@@ -1012,36 +1012,36 @@ function retails_save_ticket($post_id)
     if (!get_post_meta($post_id, '_ticket_status', true)) {
         update_post_meta($post_id, '_ticket_status', 'draft');
         if (!get_post_meta($post_id, '_ticket_log', true)) {
-            retails_ticket_log($post_id, 'created');
+            wholesale_ticket_log($post_id, 'created');
         }
     }
 
     if ('cancel' === $action && 'sent' === $ticket['status']) {
         update_post_meta($post_id, '_ticket_status', 'cancelled');
-        retails_ticket_log($post_id, 'cancelled');
-        retails_ticket_set_notice('cancelled');
+        wholesale_ticket_log($post_id, 'cancelled');
+        wholesale_ticket_set_notice('cancelled');
         return;
     }
 
     if ('builder' === $action) {
-        retails_ticket_open_builder($post_id, $items);
+        wholesale_ticket_open_builder($post_id, $items);
         return;
     }
 
     // With "email new tickets automatically" on, saving a draft sends it; "Save draft
     // without sending" (action 'draft') keeps it as a draft.
-    $auto_send = 'save' === $action && 'draft' === $ticket['status'] && retails_setting_enabled('ticket_auto_send');
-    retails_ticket_set_notice('send' === $action || $auto_send ? retails_send_ticket($post_id) : 'saved');
+    $auto_send = 'save' === $action && 'draft' === $ticket['status'] && wholesale_setting_enabled('ticket_auto_send');
+    wholesale_ticket_set_notice('send' === $action || $auto_send ? wholesale_send_ticket($post_id) : 'saved');
 }
-add_action('save_post_payment_ticket', 'retails_save_ticket');
+add_action('save_post_payment_ticket', 'wholesale_save_ticket');
 
 /**
  * "Open channel letter builder" on a line: the ticket has just been saved, so
  * remember which line is being designed and send the admin to the builder.
  */
-function retails_ticket_open_builder($ticket_id, $items)
+function wholesale_ticket_open_builder($ticket_id, $items)
 {
-    $key = isset($_POST['wpt_builder_line']) ? retails_ticket_line_key(wp_unslash($_POST['wpt_builder_line'])) : '';
+    $key = isset($_POST['wpt_builder_line']) ? wholesale_ticket_line_key(wp_unslash($_POST['wpt_builder_line'])) : '';
     $line = null;
     foreach ($items as $item) {
         if ($item['key'] === $key) {
@@ -1049,18 +1049,18 @@ function retails_ticket_open_builder($ticket_id, $items)
         }
     }
 
-    if (!$line || !retails_ticket_is_cl_product($line['product_id'])) {
-        retails_ticket_set_notice('builder_invalid');
+    if (!$line || !wholesale_ticket_is_cl_product($line['product_id'])) {
+        wholesale_ticket_set_notice('builder_invalid');
         return;
     }
 
-    set_transient('retails_ticket_builder_' . get_current_user_id(), array(
+    set_transient('wholesale_ticket_builder_' . get_current_user_id(), array(
         'ticket' => (int) $ticket_id,
         'line' => $key,
         'product' => (int) $line['product_id'],
     ), 2 * HOUR_IN_SECONDS);
 
-    $builder_url = retails_ticket_builder_url($ticket_id, $line['product_id']);
+    $builder_url = wholesale_ticket_builder_url($ticket_id, $line['product_id']);
     add_filter('redirect_post_location', static function () use ($builder_url) {
         return $builder_url;
     });
@@ -1071,9 +1071,9 @@ function retails_ticket_open_builder($ticket_id, $items)
  *
  * @return string Notice code for the admin screen.
  */
-function retails_send_ticket($ticket_id)
+function wholesale_send_ticket($ticket_id)
 {
-    $ticket = retails_get_ticket($ticket_id);
+    $ticket = wholesale_get_ticket($ticket_id);
 
     if ('' === $ticket['customer_name'] || !is_email($ticket['customer_email'])) {
         return 'missing_customer';
@@ -1097,27 +1097,27 @@ function retails_send_ticket($ticket_id)
     update_post_meta($ticket_id, '_ticket_status', 'sent');
     $ticket['status'] = 'sent';
 
-    $business = retails_ticket_business();
-    $subject_template = trim((string) retails_get_setting('ticket_email_subject'));
-    $subject = strtr($subject_template ? $subject_template : retails_setting_defaults()['ticket_email_subject'], array(
+    $business = wholesale_ticket_business();
+    $subject_template = trim((string) wholesale_get_setting('ticket_email_subject'));
+    $subject = strtr($subject_template ? $subject_template : wholesale_setting_defaults()['ticket_email_subject'], array(
         '{number}' => $ticket['number'],
         '{title}' => $ticket['title'],
-        '{amount}' => retails_format_ticket_amount($ticket['amount']),
+        '{amount}' => wholesale_format_ticket_amount($ticket['amount']),
         '{business}' => $business['name'],
     ));
-    $headers = retails_ticket_email_headers($ticket_id);
+    $headers = wholesale_ticket_email_headers($ticket_id);
 
-    $result = retails_send_html_mail($ticket['customer_email'], $subject, retails_ticket_email_html($ticket), $headers, $business['name']);
-    retails_ticket_mark_published($ticket_id);
+    $result = wholesale_send_html_mail($ticket['customer_email'], $subject, wholesale_ticket_email_html($ticket), $headers, $business['name']);
+    wholesale_ticket_mark_published($ticket_id);
     if (true !== $result) {
-        error_log('Retails: payment ticket email failed for ticket #' . $ticket_id . ': ' . $result);
-        retails_ticket_log($ticket_id, 'email_failed', $ticket['customer_email'] . ' · ' . $result . ' (retrying automatically)');
-        set_transient('retails_ticket_mail_error_' . get_current_user_id(), $result, 5 * MINUTE_IN_SECONDS);
+        error_log('Wholesale: payment ticket email failed for ticket #' . $ticket_id . ': ' . $result);
+        wholesale_ticket_log($ticket_id, 'email_failed', $ticket['customer_email'] . ' · ' . $result . ' (retrying automatically)');
+        set_transient('wholesale_ticket_mail_error_' . get_current_user_id(), $result, 5 * MINUTE_IN_SECONDS);
         return 'send_failed';
     }
 
     update_post_meta($ticket_id, '_ticket_sent_at', current_time('mysql'));
-    retails_ticket_log($ticket_id, $was_sent ? 'resent' : 'sent', $ticket['customer_email']);
+    wholesale_ticket_log($ticket_id, $was_sent ? 'resent' : 'sent', $ticket['customer_email']);
 
     return 'sent';
 }
@@ -1127,10 +1127,10 @@ function retails_send_ticket($ticket_id)
  * the store notification recipients get a blind copy, and the ticket ID lets an
  * automatic retry (inc/email-log.php) update the ticket.
  */
-function retails_ticket_email_headers($ticket_id)
+function wholesale_ticket_email_headers($ticket_id)
 {
-    $headers = retails_customer_email_headers(array('X-Retails-Ticket: ' . (int) $ticket_id));
-    foreach (retails_contact_admin_recipients() as $admin_email) {
+    $headers = wholesale_customer_email_headers(array('X-Wholesale-Ticket: ' . (int) $ticket_id));
+    foreach (wholesale_contact_admin_recipients() as $admin_email) {
         $headers[] = 'Bcc: ' . $admin_email;
     }
 
@@ -1141,7 +1141,7 @@ function retails_ticket_email_headers($ticket_id)
  * Show a sent ticket as published in the ticket list. Written directly so the
  * save_post hooks (which may be running right now) do not fire again.
  */
-function retails_ticket_mark_published($ticket_id)
+function wholesale_ticket_mark_published($ticket_id)
 {
     global $wpdb;
     if ('publish' !== get_post_status($ticket_id)) {
@@ -1153,33 +1153,33 @@ function retails_ticket_mark_published($ticket_id)
 /**
  * A payment request that failed and was then delivered by an automatic retry.
  */
-add_action('retails_email_retry_succeeded', function ($row) {
-    if (!preg_match('/^X-Retails-Ticket:\s*(\d+)/mi', (string) $row['headers'], $m) || 'payment_ticket' !== get_post_type((int) $m[1])) {
+add_action('wholesale_email_retry_succeeded', function ($row) {
+    if (!preg_match('/^X-Wholesale-Ticket:\s*(\d+)/mi', (string) $row['headers'], $m) || 'payment_ticket' !== get_post_type((int) $m[1])) {
         return;
     }
     $ticket_id = (int) $m[1];
-    $ticket = retails_get_ticket($ticket_id);
+    $ticket = wholesale_get_ticket($ticket_id);
     if (0 === strpos($row['subject'], 'Receipt')) {
-        retails_ticket_log($ticket_id, 'receipt_sent', $ticket['customer_email'] . ' · delivered by automatic retry');
+        wholesale_ticket_log($ticket_id, 'receipt_sent', $ticket['customer_email'] . ' · delivered by automatic retry');
         return;
     }
     update_post_meta($ticket_id, '_ticket_sent_at', current_time('mysql'));
-    retails_ticket_log($ticket_id, 'sent', $ticket['customer_email'] . ' · delivered by automatic retry');
+    wholesale_ticket_log($ticket_id, 'sent', $ticket['customer_email'] . ' · delivered by automatic retry');
 });
 
 /**
  * Email the customer a receipt once they pay (or accept) a ticket.
  */
-function retails_send_ticket_receipt($ticket_id, $order_id, $paid_by_card, $payment_meta = array())
+function wholesale_send_ticket_receipt($ticket_id, $order_id, $paid_by_card, $payment_meta = array())
 {
-    $ticket = retails_get_ticket($ticket_id);
+    $ticket = wholesale_get_ticket($ticket_id);
     if (!is_email($ticket['customer_email'])) {
         return;
     }
 
-    $business = retails_ticket_business();
-    $amount = retails_format_ticket_amount($ticket['amount']);
-    $order_number = $order_id ? retails_order_number($order_id) : '';
+    $business = wholesale_ticket_business();
+    $amount = wholesale_format_ticket_amount($ticket['amount']);
+    $order_number = $order_id ? wholesale_order_number($order_id) : '';
     $details = array(
         'Payment request' => $ticket['number'],
         'Order number' => $order_number ? '#' . $order_number : '',
@@ -1197,25 +1197,25 @@ function retails_send_ticket_receipt($ticket_id, $order_id, $paid_by_card, $paym
         : 'Thank you, ' . $ticket['customer_name'] . '! Your order is confirmed. Our team will contact you shortly to arrange payment of ' . $amount . ', and production starts once it is received.';
     $content = '<p style="margin:0 0 16px;line-height:1.6;">' . esc_html($intro) . '</p>'
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;background:#f8fafc;border:1px solid #e3e8ee;border-radius:8px;font-size:14px;"><tr><td colspan="2" style="height:8px;"></td></tr>' . $detail_rows . '<tr><td colspan="2" style="height:8px;"></td></tr></table>'
-        . retails_ticket_items_email_html($ticket, $paid_by_card ? 'Total paid' : 'Total due')
+        . wholesale_ticket_items_email_html($ticket, $paid_by_card ? 'Total paid' : 'Total due')
         . '<div style="height:20px;"></div>';
 
     $subject = sprintf('Receipt for %s from %s: %s %s', $ticket['number'], $business['name'], $amount, $paid_by_card ? 'paid' : 'confirmed');
-    $html = retails_branded_email_html(
+    $html = wholesale_branded_email_html(
         ($paid_by_card ? 'Payment receipt ' : 'Order confirmation ') . $ticket['number'],
         $paid_by_card ? 'Payment received. Thank you!' : 'Your order is confirmed',
         $content,
-        $order_id ? array('url' => retails_track_order_url($order_id), 'label' => 'Track your order') : array()
+        $order_id ? array('url' => wholesale_track_order_url($order_id), 'label' => 'Track your order') : array()
     );
 
-    $result = retails_send_html_mail($ticket['customer_email'], $subject, $html, retails_ticket_email_headers($ticket_id), $business['name']);
-    retails_ticket_log($ticket_id, true === $result ? 'receipt_sent' : 'email_failed', $ticket['customer_email'] . (true === $result ? '' : ' · receipt: ' . $result . ' (retrying automatically)'));
+    $result = wholesale_send_html_mail($ticket['customer_email'], $subject, $html, wholesale_ticket_email_headers($ticket_id), $business['name']);
+    wholesale_ticket_log($ticket_id, true === $result ? 'receipt_sent' : 'email_failed', $ticket['customer_email'] . (true === $result ? '' : ' · receipt: ' . $result . ' (retrying automatically)'));
 }
 
 /**
  * The ticket's line items and totals as email tables (payment request and receipt).
  */
-function retails_ticket_items_email_html($ticket, $total_label = 'Total due')
+function wholesale_ticket_items_email_html($ticket, $total_label = 'Total due')
 {
     $totals = $ticket['totals'];
     $cell = 'padding:12px 10px;border-bottom:1px solid #e3e8ee;vertical-align:top;';
@@ -1223,7 +1223,7 @@ function retails_ticket_items_email_html($ticket, $total_label = 'Total due')
 
     $rows = '';
     foreach ($ticket['items'] as $item) {
-        $specs = retails_ticket_item_specs($item);
+        $specs = wholesale_ticket_item_specs($item);
         if ($item['notes']) {
             $specs[] = $item['notes'];
         }
@@ -1233,8 +1233,8 @@ function retails_ticket_items_email_html($ticket, $total_label = 'Total due')
             . ($specs ? '<div style="color:#5b6573;font-size:13px;line-height:1.5;margin-top:4px;">' . implode('<br>', array_map('esc_html', $specs)) . '</div>' : '')
             . '</td>'
             . '<td style="' . $cell . 'text-align:center;">' . esc_html($item['qty']) . '</td>'
-            . '<td style="' . $money_cell . '">' . esc_html(retails_format_ticket_amount($item['unit_price'])) . '</td>'
-            . '<td style="' . $money_cell . '">' . esc_html(retails_format_ticket_amount(retails_ticket_line_total($item))) . '</td>'
+            . '<td style="' . $money_cell . '">' . esc_html(wholesale_format_ticket_amount($item['unit_price'])) . '</td>'
+            . '<td style="' . $money_cell . '">' . esc_html(wholesale_format_ticket_amount(wholesale_ticket_line_total($item))) . '</td>'
             . '</tr>';
     }
 
@@ -1242,17 +1242,17 @@ function retails_ticket_items_email_html($ticket, $total_label = 'Total due')
         $style = $strong ? 'font-size:18px;font-weight:bold;color:#0b1f33;padding:10px 10px 0;' : 'color:#5b6573;padding:4px 10px;';
         return '<tr><td style="' . $style . 'text-align:right;">' . esc_html($label) . '</td><td style="' . $style . 'text-align:right;white-space:nowrap;width:120px;">' . esc_html($value) . '</td></tr>';
     };
-    $summary = $total_row('Subtotal', retails_format_ticket_amount($totals['subtotal']));
+    $summary = $total_row('Subtotal', wholesale_format_ticket_amount($totals['subtotal']));
     if ($totals['discount'] > 0) {
-        $summary .= $total_row('Discount', '−' . retails_format_ticket_amount($totals['discount']));
+        $summary .= $total_row('Discount', '−' . wholesale_format_ticket_amount($totals['discount']));
     }
     if ($totals['shipping'] > 0) {
-        $summary .= $total_row('Shipping', retails_format_ticket_amount($totals['shipping']));
+        $summary .= $total_row('Shipping', wholesale_format_ticket_amount($totals['shipping']));
     }
     if ($totals['tax'] > 0) {
-        $summary .= $total_row('Tax (' . rtrim(rtrim(number_format($totals['tax_rate'], 3), '0'), '.') . '%)', retails_format_ticket_amount($totals['tax']));
+        $summary .= $total_row('Tax (' . rtrim(rtrim(number_format($totals['tax_rate'], 3), '0'), '.') . '%)', wholesale_format_ticket_amount($totals['tax']));
     }
-    $summary .= $total_row($total_label, retails_format_ticket_amount($totals['grand_total']), true);
+    $summary .= $total_row($total_label, wholesale_format_ticket_amount($totals['grand_total']), true);
 
     return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;border-collapse:collapse;">'
         . '<tr><th align="left" style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Item</th><th style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Qty</th><th align="right" style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Price</th><th align="right" style="padding:8px 10px;color:#5b6573;font-size:12px;text-transform:uppercase;border-bottom:2px solid #e3e8ee;">Amount</th></tr>'
@@ -1261,10 +1261,10 @@ function retails_ticket_items_email_html($ticket, $total_label = 'Total due')
         . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:14px;margin-top:8px;">' . $summary . '</table>';
 }
 
-function retails_ticket_email_html($ticket)
+function wholesale_ticket_email_html($ticket)
 {
-    $business = retails_ticket_business();
-    $pay_url = retails_ticket_payment_url($ticket);
+    $business = wholesale_ticket_business();
+    $pay_url = wholesale_ticket_payment_url($ticket);
 
     $proof = '';
     if ($ticket['proof_id'] && ($proof_url = wp_get_attachment_url($ticket['proof_id']))) {
@@ -1284,10 +1284,10 @@ function retails_ticket_email_html($ticket)
         . ($ticket['message'] ? '<p style="margin:0 0 16px;line-height:1.6;">' . nl2br(esc_html($ticket['message'])) . '</p>' : '<p style="margin:0 0 16px;line-height:1.6;">Here is the payment request for your custom order. You can review the details and pay securely online.</p>')
         . '</td></tr>'
         . '<tr><td style="padding:0 18px;">'
-        . retails_ticket_items_email_html($ticket)
+        . wholesale_ticket_items_email_html($ticket)
         . '</td></tr>'
         . '<tr><td style="padding:24px 28px 8px;">'
-        . '<p style="margin:0 0 20px;"><a href="' . esc_url($pay_url) . '" style="display:inline-block;background:' . esc_attr($business['color']) . ';color:#ffffff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;">Review &amp; pay ' . esc_html(retails_format_ticket_amount($ticket['amount'])) . '</a></p>'
+        . '<p style="margin:0 0 20px;"><a href="' . esc_url($pay_url) . '" style="display:inline-block;background:' . esc_attr($business['color']) . ';color:#ffffff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:16px;">Review &amp; pay ' . esc_html(wholesale_format_ticket_amount($ticket['amount'])) . '</a></p>'
         . $proof
         . ($ticket['due'] ? '<p style="margin:0 0 12px;color:#5b6573;font-size:13px;">Please pay by ' . esc_html(date_i18n('F j, Y', strtotime($ticket['due']))) . '.</p>' : '')
         . '<p style="margin:0 0 12px;color:#5b6573;font-size:13px;">Button not working? Copy this link: <a href="' . esc_url($pay_url) . '" style="color:#0c7fae;word-break:break-all;">' . esc_html($pay_url) . '</a></p>'
@@ -1299,19 +1299,19 @@ function retails_ticket_email_html($ticket)
         . '</table></td></tr></table></body></html>';
 }
 
-function retails_ticket_set_notice($code)
+function wholesale_ticket_set_notice($code)
 {
-    set_transient('retails_ticket_notice_' . get_current_user_id(), $code, 60);
+    set_transient('wholesale_ticket_notice_' . get_current_user_id(), $code, 60);
 }
 
-function retails_ticket_admin_notice()
+function wholesale_ticket_admin_notice()
 {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
     if (!$screen || 'payment_ticket' !== $screen->post_type) {
         return;
     }
 
-    $key = 'retails_ticket_notice_' . get_current_user_id();
+    $key = 'wholesale_ticket_notice_' . get_current_user_id();
     $code = get_transient($key);
     if (!$code) {
         return;
@@ -1338,7 +1338,7 @@ function retails_ticket_admin_notice()
 
     $message = $notices[$code][1];
     if ('send_failed' === $code) {
-        $error_key = 'retails_ticket_mail_error_' . get_current_user_id();
+        $error_key = 'wholesale_ticket_mail_error_' . get_current_user_id();
         $mail_error = get_transient($error_key);
         delete_transient($error_key);
         if ($mail_error) {
@@ -1350,40 +1350,40 @@ function retails_ticket_admin_notice()
         esc_attr($notices[$code][0]),
         esc_html($message),
         'send_failed' === $code && current_user_can('manage_options')
-            ? '<p><a href="' . esc_url(admin_url('admin.php?page=retails-emails-smtp')) . '">Check email delivery settings and send a test email</a></p>'
+            ? '<p><a href="' . esc_url(admin_url('admin.php?page=wholesale-emails-smtp')) . '">Check email delivery settings and send a test email</a></p>'
             : ''
     );
 }
-add_action('admin_notices', 'retails_ticket_admin_notice');
+add_action('admin_notices', 'wholesale_ticket_admin_notice');
 
 /**
  * Hide WordPress's own "Post updated" message; our notice says what happened.
  */
-function retails_ticket_updated_messages($messages)
+function wholesale_ticket_updated_messages($messages)
 {
     $messages['payment_ticket'] = array_fill(0, 11, '');
     return $messages;
 }
-add_filter('post_updated_messages', 'retails_ticket_updated_messages');
+add_filter('post_updated_messages', 'wholesale_ticket_updated_messages');
 
 /* ---------------------------------------------------------------------------
  * Admin: duplicate
  * ------------------------------------------------------------------------ */
 
-function retails_ticket_duplicate_url($ticket_id)
+function wholesale_ticket_duplicate_url($ticket_id)
 {
-    return wp_nonce_url(admin_url('admin-post.php?action=retails_duplicate_ticket&ticket=' . absint($ticket_id)), 'retails_duplicate_ticket_' . absint($ticket_id));
+    return wp_nonce_url(admin_url('admin-post.php?action=wholesale_duplicate_ticket&ticket=' . absint($ticket_id)), 'wholesale_duplicate_ticket_' . absint($ticket_id));
 }
 
-function retails_handle_duplicate_ticket()
+function wholesale_handle_duplicate_ticket()
 {
     $source_id = isset($_GET['ticket']) ? absint($_GET['ticket']) : 0;
-    check_admin_referer('retails_duplicate_ticket_' . $source_id);
+    check_admin_referer('wholesale_duplicate_ticket_' . $source_id);
     if (!$source_id || 'payment_ticket' !== get_post_type($source_id) || !current_user_can('edit_post', $source_id) || !current_user_can('edit_posts')) {
         wp_die(esc_html__('You are not allowed to copy this ticket.', 'litsign'), '', array('response' => 403));
     }
 
-    $source = retails_get_ticket($source_id);
+    $source = wholesale_get_ticket($source_id);
     $copy_id = wp_insert_post(array(
         'post_type' => 'payment_ticket',
         'post_status' => 'draft',
@@ -1412,19 +1412,19 @@ function retails_handle_duplicate_ticket()
     foreach ($meta as $key => $value) {
         update_post_meta($copy_id, $key, $value);
     }
-    retails_ticket_log($copy_id, 'duplicated', 'From ' . $source['number']);
-    retails_ticket_set_notice('duplicated');
+    wholesale_ticket_log($copy_id, 'duplicated', 'From ' . $source['number']);
+    wholesale_ticket_set_notice('duplicated');
 
     wp_safe_redirect(admin_url('post.php?post=' . $copy_id . '&action=edit'));
     exit;
 }
-add_action('admin_post_retails_duplicate_ticket', 'retails_handle_duplicate_ticket');
+add_action('admin_post_wholesale_duplicate_ticket', 'wholesale_handle_duplicate_ticket');
 
 /* ---------------------------------------------------------------------------
  * Admin: list screen
  * ------------------------------------------------------------------------ */
 
-function retails_ticket_list_columns($columns)
+function wholesale_ticket_list_columns($columns)
 {
     return array(
         'cb' => $columns['cb'],
@@ -1437,11 +1437,11 @@ function retails_ticket_list_columns($columns)
         'ticket_activity' => 'Last activity',
     );
 }
-add_filter('manage_payment_ticket_posts_columns', 'retails_ticket_list_columns');
+add_filter('manage_payment_ticket_posts_columns', 'wholesale_ticket_list_columns');
 
-function retails_ticket_list_column_value($column, $post_id)
+function wholesale_ticket_list_column_value($column, $post_id)
 {
-    $ticket = retails_get_ticket($post_id);
+    $ticket = wholesale_get_ticket($post_id);
 
     switch ($column) {
         case 'ticket_number':
@@ -1464,15 +1464,15 @@ function retails_ticket_list_column_value($column, $post_id)
             }
             break;
         case 'ticket_amount':
-            echo '<strong class="wpt-num">' . esc_html(retails_format_ticket_amount($ticket['amount'])) . '</strong>';
+            echo '<strong class="wpt-num">' . esc_html(wholesale_format_ticket_amount($ticket['amount'])) . '</strong>';
             break;
         case 'ticket_status':
-            echo '<span class="wpt-pill wpt-pill--' . esc_attr(retails_ticket_status_key($ticket)) . '">' . esc_html(retails_ticket_status_label($ticket)) . '</span>';
+            echo '<span class="wpt-pill wpt-pill--' . esc_attr(wholesale_ticket_status_key($ticket)) . '">' . esc_html(wholesale_ticket_status_label($ticket)) . '</span>';
             break;
         case 'ticket_activity':
             $last = end($ticket['log']);
             if ($last) {
-                $labels = retails_ticket_log_labels();
+                $labels = wholesale_ticket_log_labels();
                 echo esc_html($labels[$last['event']] ?? $last['event']) . '<br><small class="wpt-muted">' . esc_html(human_time_diff(strtotime($last['time']), current_time('timestamp')) . ' ago') . '</small>';
             } else {
                 echo '—';
@@ -1480,49 +1480,49 @@ function retails_ticket_list_column_value($column, $post_id)
             break;
     }
 }
-add_action('manage_payment_ticket_posts_custom_column', 'retails_ticket_list_column_value', 10, 2);
+add_action('manage_payment_ticket_posts_custom_column', 'wholesale_ticket_list_column_value', 10, 2);
 
-function retails_ticket_row_actions($actions, $post)
+function wholesale_ticket_row_actions($actions, $post)
 {
     if ('payment_ticket' !== $post->post_type) {
         return $actions;
     }
     unset($actions['inline hide-if-no-js']);
     if (current_user_can('edit_post', $post->ID)) {
-        $actions['wpt_duplicate'] = '<a href="' . esc_url(retails_ticket_duplicate_url($post->ID)) . '">Duplicate</a>';
+        $actions['wpt_duplicate'] = '<a href="' . esc_url(wholesale_ticket_duplicate_url($post->ID)) . '">Duplicate</a>';
     }
     return $actions;
 }
-add_filter('post_row_actions', 'retails_ticket_row_actions', 10, 2);
+add_filter('post_row_actions', 'wholesale_ticket_row_actions', 10, 2);
 
 /* ---------------------------------------------------------------------------
  * Customer payment (page lives in page-pay.php)
  * ------------------------------------------------------------------------ */
 
-function retails_ticket_front_assets()
+function wholesale_ticket_front_assets()
 {
     if (!is_page('pay')) {
         return;
     }
     $path = '/css/payment-ticket.css';
     $file = get_template_directory() . $path;
-    wp_enqueue_style('retails-payment-ticket', get_template_directory_uri() . $path, array(), file_exists($file) ? (string) filemtime($file) : _S_VERSION);
+    wp_enqueue_style('wholesale-payment-ticket', get_template_directory_uri() . $path, array(), file_exists($file) ? (string) filemtime($file) : _S_VERSION);
 }
-add_action('wp_enqueue_scripts', 'retails_ticket_front_assets', 20);
+add_action('wp_enqueue_scripts', 'wholesale_ticket_front_assets', 20);
 
 /**
  * Record the first time the customer opens their link (not admin previews).
  */
-function retails_ticket_mark_viewed($ticket)
+function wholesale_ticket_mark_viewed($ticket)
 {
     if ('sent' !== $ticket['status'] || $ticket['viewed_at'] || current_user_can('edit_post', $ticket['id'])) {
         return;
     }
     update_post_meta($ticket['id'], '_ticket_viewed_at', current_time('mysql'));
-    retails_ticket_log($ticket['id'], 'viewed');
+    wholesale_ticket_log($ticket['id'], 'viewed');
 }
 
-function retails_ticket_pay_redirect($token, $message = '')
+function wholesale_ticket_pay_redirect($token, $message = '')
 {
     $url = add_query_arg('t', rawurlencode($token), home_url('/pay/'));
     if ($message) {
@@ -1537,7 +1537,7 @@ function retails_ticket_pay_redirect($token, $message = '')
  *
  * @return array|WP_Error
  */
-function retails_ticket_billing_from_request($post)
+function wholesale_ticket_billing_from_request($post)
 {
     $field = static function ($key) use ($post) {
         return isset($post[$key]) && !is_array($post[$key]) ? sanitize_text_field(wp_unslash($post[$key])) : '';
@@ -1567,9 +1567,9 @@ function retails_ticket_billing_from_request($post)
  *
  * @return int|false Order ID.
  */
-function retails_ticket_finalize($ticket_id, $billing, $paid_by_card, $payment_meta = array())
+function wholesale_ticket_finalize($ticket_id, $billing, $paid_by_card, $payment_meta = array())
 {
-    $ticket = retails_get_ticket($ticket_id);
+    $ticket = wholesale_get_ticket($ticket_id);
     $amount = $ticket['amount'];
     $totals = $ticket['totals'];
     $billing_data = wp_json_encode($billing);
@@ -1577,15 +1577,15 @@ function retails_ticket_finalize($ticket_id, $billing, $paid_by_card, $payment_m
 
     if ($paid_by_card) {
         update_post_meta($ticket_id, '_ticket_status', 'paid');
-        retails_ticket_log($ticket_id, 'paid', retails_format_ticket_amount($amount) . (!empty($payment_meta['_payment_txn_id']) ? ' (Converge ' . $payment_meta['_payment_txn_id'] . ')' : ''));
+        wholesale_ticket_log($ticket_id, 'paid', wholesale_format_ticket_amount($amount) . (!empty($payment_meta['_payment_txn_id']) ? ' (Converge ' . $payment_meta['_payment_txn_id'] . ')' : ''));
     } else {
         update_post_meta($ticket_id, '_ticket_status', 'accepted');
-        retails_ticket_log($ticket_id, 'accepted', retails_format_ticket_amount($amount));
+        wholesale_ticket_log($ticket_id, 'accepted', wholesale_format_ticket_amount($amount));
     }
     update_post_meta($ticket_id, '_ticket_paid_at', current_time('mysql'));
 
     // One order line per ticket line, in the shape the admin order boxes and emails read.
-    $logo = retails_ticket_business()['logo'];
+    $logo = wholesale_ticket_business()['logo'];
     $order_items = array();
     foreach (array_values($ticket['items']) as $index => $item) {
         $details = array();
@@ -1613,9 +1613,9 @@ function retails_ticket_finalize($ticket_id, $billing, $paid_by_card, $payment_m
             'cart_id' => 'ticket-' . $ticket_id . '-' . ($index + 1),
             'product_id' => $item['product_id'],
             'product_title' => $item['title'],
-            'product_thumbnail' => $item['design'] ? $item['design']['url'] : (retails_ticket_product_thumb($item['product_id'], 'medium') ?: $logo),
+            'product_thumbnail' => $item['design'] ? $item['design']['url'] : (wholesale_ticket_product_thumb($item['product_id'], 'medium') ?: $logo),
             'product_quantity' => $item['qty'],
-            'product_subtotal' => retails_ticket_line_total($item),
+            'product_subtotal' => wholesale_ticket_line_total($item),
             'product_details' => $details,
             'design_id' => $item['design'] ? (int) $item['design']['id'] : 0,
             'job_name' => $ticket['title'],
@@ -1630,22 +1630,22 @@ function retails_ticket_finalize($ticket_id, $billing, $paid_by_card, $payment_m
 
     $comment = array(($payment_disabled ? 'Payment ticket accepted - collect payment manually.' : 'Paid by card via payment ticket') . ' ' . $ticket['number'] . '.');
     if ($totals['discount'] > 0) {
-        $comment[] = 'Discount applied: ' . retails_format_ticket_amount($totals['discount']) . ' (subtotal ' . retails_format_ticket_amount($totals['subtotal']) . ').';
+        $comment[] = 'Discount applied: ' . wholesale_format_ticket_amount($totals['discount']) . ' (subtotal ' . wholesale_format_ticket_amount($totals['subtotal']) . ').';
     }
     if ($ticket['message']) {
         $comment[] = 'Message: ' . $ticket['message'];
     }
 
     // wp_slash() keeps quotes inside the JSON intact when WordPress unslashes meta on save.
-    $order = retails_insert_order(wp_slash(wp_json_encode($order_items)), wp_slash($order_cost), wp_slash($billing_data), wp_slash($billing_data), implode("\n", $comment), '', array_merge(array('_ticket_id' => $ticket_id, '_payment_status' => $paid_by_card ? 'paid' : 'manual'), $payment_meta));
+    $order = wholesale_insert_order(wp_slash(wp_json_encode($order_items)), wp_slash($order_cost), wp_slash($billing_data), wp_slash($billing_data), implode("\n", $comment), '', array_merge(array('_ticket_id' => $ticket_id, '_payment_status' => $paid_by_card ? 'paid' : 'manual'), $payment_meta));
 
     if ($order) {
         update_post_meta($ticket_id, '_ticket_order_id', $order);
-        retails_send_new_order_admin_email($order);
+        wholesale_send_new_order_admin_email($order);
         // Like checkout orders: ties the order to the visit (Visitor Insights) and the ad click.
-        do_action('retails_order_created', $order);
+        do_action('wholesale_order_created', $order);
     }
-    retails_send_ticket_receipt($ticket_id, $order, $paid_by_card, $payment_meta);
+    wholesale_send_ticket_receipt($ticket_id, $order, $paid_by_card, $payment_meta);
     return $order;
 }
 
@@ -1653,61 +1653,61 @@ function retails_ticket_finalize($ticket_id, $billing, $paid_by_card, $payment_m
  * No-JavaScript form post. Card payments go through the secure Converge window
  * (inc/payments.php), so this only confirms tickets when card payment is turned off.
  */
-function retails_handle_ticket_payment()
+function wholesale_handle_ticket_payment()
 {
     $token = isset($_POST['ticket_token']) ? preg_replace('/[^A-Za-z0-9]/', '', (string) wp_unslash($_POST['ticket_token'])) : '';
-    $ticket_id = retails_find_ticket_by_token($token);
+    $ticket_id = wholesale_find_ticket_by_token($token);
     if (!$ticket_id) {
         wp_die(esc_html__('This payment link is not valid.', 'litsign'), esc_html__('Invalid payment link', 'litsign'), array('response' => 404));
     }
 
-    $nonce = isset($_POST['retails_ticket_pay_nonce']) ? sanitize_text_field(wp_unslash($_POST['retails_ticket_pay_nonce'])) : '';
-    if (!wp_verify_nonce($nonce, 'retails_pay_ticket_' . $ticket_id)) {
-        retails_ticket_pay_redirect($token, 'Your session expired. Please try again.');
+    $nonce = isset($_POST['wholesale_ticket_pay_nonce']) ? sanitize_text_field(wp_unslash($_POST['wholesale_ticket_pay_nonce'])) : '';
+    if (!wp_verify_nonce($nonce, 'wholesale_pay_ticket_' . $ticket_id)) {
+        wholesale_ticket_pay_redirect($token, 'Your session expired. Please try again.');
     }
 
-    if (!retails_setting_enabled('payment_disabled')) {
-        retails_ticket_pay_redirect($token, 'Please enable JavaScript to open our secure card payment window, or call us to pay by phone.');
+    if (!wholesale_setting_enabled('payment_disabled')) {
+        wholesale_ticket_pay_redirect($token, 'Please enable JavaScript to open our secure card payment window, or call us to pay by phone.');
     }
 
-    $billing = retails_ticket_billing_from_request($_POST);
+    $billing = wholesale_ticket_billing_from_request($_POST);
     if (is_wp_error($billing)) {
-        retails_ticket_pay_redirect($token, $billing->get_error_message());
+        wholesale_ticket_pay_redirect($token, $billing->get_error_message());
     }
 
     // add_option() is atomic, so two submits of the same ticket can never both be accepted.
-    $lock_key = 'retails_ticket_lock_' . $ticket_id;
+    $lock_key = 'wholesale_ticket_lock_' . $ticket_id;
     $lock_time = (int) get_option($lock_key);
     if ($lock_time && $lock_time < time() - 120) {
         delete_option($lock_key);
     }
     if (!add_option($lock_key, time(), '', 'no')) {
-        retails_ticket_pay_redirect($token, 'Your order is already being processed. Please wait a moment.');
+        wholesale_ticket_pay_redirect($token, 'Your order is already being processed. Please wait a moment.');
     }
 
-    $ticket = retails_get_ticket($ticket_id);
-    if ('sent' !== $ticket['status'] || retails_ticket_is_expired($ticket) || $ticket['amount'] <= 0 || empty($ticket['items'])) {
+    $ticket = wholesale_get_ticket($ticket_id);
+    if ('sent' !== $ticket['status'] || wholesale_ticket_is_expired($ticket) || $ticket['amount'] <= 0 || empty($ticket['items'])) {
         delete_option($lock_key);
-        retails_ticket_pay_redirect($token);
+        wholesale_ticket_pay_redirect($token);
     }
 
-    $order = retails_ticket_finalize($ticket_id, $billing, false);
+    $order = wholesale_ticket_finalize($ticket_id, $billing, false);
     delete_option($lock_key);
 
     if (!$order) {
         wp_die(esc_html__('We could not save your order. Please call us and we will take care of it.', 'litsign'), esc_html__('Order needs attention', 'litsign'), array('response' => 500));
     }
 
-    wp_safe_redirect(retails_thank_you_url($order));
+    wp_safe_redirect(wholesale_thank_you_url($order));
     exit;
 }
-add_action('admin_post_nopriv_retails_pay_ticket', 'retails_handle_ticket_payment');
-add_action('admin_post_retails_pay_ticket', 'retails_handle_ticket_payment');
+add_action('admin_post_nopriv_wholesale_pay_ticket', 'wholesale_handle_ticket_payment');
+add_action('admin_post_wholesale_pay_ticket', 'wholesale_handle_ticket_payment');
 
 /**
  * Payment links are private: keep /pay/ out of search engines.
  */
-function retails_ticket_noindex($robots)
+function wholesale_ticket_noindex($robots)
 {
     if (is_page('pay')) {
         $robots['noindex'] = true;
@@ -1715,9 +1715,9 @@ function retails_ticket_noindex($robots)
     }
     return $robots;
 }
-add_filter('wp_robots', 'retails_ticket_noindex');
+add_filter('wp_robots', 'wholesale_ticket_noindex');
 
-function retails_ticket_rank_math_noindex($robots)
+function wholesale_ticket_rank_math_noindex($robots)
 {
     if (is_page('pay')) {
         $robots['index'] = 'noindex';
@@ -1725,4 +1725,4 @@ function retails_ticket_rank_math_noindex($robots)
     }
     return $robots;
 }
-add_filter('rank_math/frontend/robots', 'retails_ticket_rank_math_noindex');
+add_filter('rank_math/frontend/robots', 'wholesale_ticket_rank_math_noindex');

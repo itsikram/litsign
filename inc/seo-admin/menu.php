@@ -12,22 +12,22 @@ defined('ABSPATH') || exit;
  *
  * @return array
  */
-function retails_seo_admin_pages()
+function wholesale_seo_admin_pages()
 {
-	return apply_filters('retails_seo_admin_pages', array(
-		'retails-seo' => array('Dashboard', 'retails_seo_dashboard_page'),
-		'retails-seo-general' => array('General & Titles', 'retails_seo_general_page'),
-		'retails-seo-business' => array('Business & Schema', 'retails_seo_business_page'),
-		'retails-seo-bulk' => array('Per-page SEO', 'retails_seo_bulk_page'),
+	return apply_filters('wholesale_seo_admin_pages', array(
+		'wholesale-seo' => array('Dashboard', 'wholesale_seo_dashboard_page'),
+		'wholesale-seo-general' => array('General & Titles', 'wholesale_seo_general_page'),
+		'wholesale-seo-business' => array('Business & Schema', 'wholesale_seo_business_page'),
+		'wholesale-seo-bulk' => array('Per-page SEO', 'wholesale_seo_bulk_page'),
 	));
 }
 
 add_action('admin_menu', function () {
-	$pages = retails_seo_admin_pages();
-	add_menu_page('SEO', 'SEO', 'manage_options', 'retails-seo', $pages['retails-seo'][1], 'dashicons-search', 58);
+	$pages = wholesale_seo_admin_pages();
+	add_menu_page('SEO', 'SEO', 'manage_options', 'wholesale-seo', $pages['wholesale-seo'][1], 'dashicons-search', 58);
 
 	foreach ($pages as $slug => $page) {
-		add_submenu_page('retails-seo', $page[0] . ' ‹ SEO', $page[0], 'manage_options', $slug, $page[1]);
+		add_submenu_page('wholesale-seo', $page[0] . ' ‹ SEO', $page[0], 'manage_options', $slug, $page[1]);
 	}
 });
 
@@ -35,9 +35,9 @@ add_action('admin_menu', function () {
  * Whether the current admin screen shows SEO fields (menu pages, edit
  * screens with the SEO box, product category edit screens).
  */
-function retails_seo_is_seo_screen($hook)
+function wholesale_seo_is_seo_screen($hook)
 {
-	if (false !== strpos((string) $hook, 'retails-seo')) {
+	if (false !== strpos((string) $hook, 'wholesale-seo')) {
 		return true;
 	}
 
@@ -47,37 +47,37 @@ function retails_seo_is_seo_screen($hook)
 	}
 
 	if (in_array($hook, array('post.php', 'post-new.php'), true)) {
-		return in_array($screen->post_type, retails_seo_metabox_post_types(), true);
+		return in_array($screen->post_type, wholesale_seo_metabox_post_types(), true);
 	}
 
 	return in_array($hook, array('term.php', 'edit-tags.php'), true) && 'product_category' === $screen->taxonomy;
 }
 
 add_action('admin_enqueue_scripts', function ($hook) {
-	if (!current_user_can('manage_options') || !retails_seo_is_seo_screen($hook)) {
+	if (!current_user_can('manage_options') || !wholesale_seo_is_seo_screen($hook)) {
 		return;
 	}
 
 	$dir = get_template_directory() . '/inc/seo-admin/assets/';
 	$uri = get_template_directory_uri() . '/inc/seo-admin/assets/';
 	wp_enqueue_media();
-	wp_enqueue_style('retails-seo-admin', $uri . 'admin.css', array(), (string) filemtime($dir . 'admin.css'));
-	wp_enqueue_script('retails-seo-admin', $uri . 'admin.js', array('jquery'), (string) filemtime($dir . 'admin.js'), true);
-	wp_localize_script('retails-seo-admin', 'retailsSeo', array(
+	wp_enqueue_style('wholesale-seo-admin', $uri . 'admin.css', array(), (string) filemtime($dir . 'admin.css'));
+	wp_enqueue_script('wholesale-seo-admin', $uri . 'admin.js', array('jquery'), (string) filemtime($dir . 'admin.js'), true);
+	wp_localize_script('wholesale-seo-admin', 'wholesaleSeo', array(
 		'ajaxUrl' => admin_url('admin-ajax.php'),
-		'scanNonce' => wp_create_nonce('retails_seo_scan'),
-		'bulkNonce' => wp_create_nonce('retails_seo_bulk'),
-		'brand' => retails_seo_brand(),
-		'separator' => retails_seo_separator(),
+		'scanNonce' => wp_create_nonce('wholesale_seo_scan'),
+		'bulkNonce' => wp_create_nonce('wholesale_seo_bulk'),
+		'brand' => wholesale_seo_brand(),
+		'separator' => wholesale_seo_separator(),
 	));
 });
 
 /**
  * Open an SEO screen: title, tabs and the saved / error notice.
  */
-function retails_seo_admin_header($current, $intro = '')
+function wholesale_seo_admin_header($current, $intro = '')
 {
-	$pages = retails_seo_admin_pages();
+	$pages = wholesale_seo_admin_pages();
 	?>
 	<div class="wrap wseo">
 		<h1>SEO <span class="wseo-sub"><?php echo esc_html(isset($pages[$current]) ? $pages[$current][0] : ''); ?></span></h1>
@@ -101,7 +101,7 @@ function retails_seo_admin_header($current, $intro = '')
 	<?php
 }
 
-function retails_seo_admin_footer()
+function wholesale_seo_admin_footer()
 {
 	echo '</div>';
 }
@@ -112,20 +112,20 @@ function retails_seo_admin_footer()
  *
  * @return array
  */
-function retails_seo_tab_fields($tab)
+function wholesale_seo_tab_fields($tab)
 {
 	switch ($tab) {
 		case 'general':
-			$fields = retails_seo_general_fields();
+			$fields = wholesale_seo_general_fields();
 			break;
 		case 'business':
-			$fields = retails_seo_business_fields();
+			$fields = wholesale_seo_business_fields();
 			break;
 		default:
 			$fields = array();
 	}
 
-	return apply_filters('retails_seo_tab_fields', $fields, $tab);
+	return apply_filters('wholesale_seo_tab_fields', $fields, $tab);
 }
 
 /**
@@ -133,7 +133,7 @@ function retails_seo_tab_fields($tab)
  *
  * @return mixed
  */
-function retails_seo_sanitize_field(array $field, $raw)
+function wholesale_seo_sanitize_field(array $field, $raw)
 {
 	$type = $field['type'];
 
@@ -177,17 +177,17 @@ function retails_seo_sanitize_field(array $field, $raw)
 	}
 }
 
-add_action('admin_post_retails_seo_save', 'retails_seo_handle_save');
+add_action('admin_post_wholesale_seo_save', 'wholesale_seo_handle_save');
 
-function retails_seo_handle_save()
+function wholesale_seo_handle_save()
 {
 	$tab = isset($_POST['tab']) ? sanitize_key(wp_unslash($_POST['tab'])) : '';
 	if (!current_user_can('manage_options')) {
 		wp_die(esc_html__('You are not allowed to change SEO settings.', 'litsign'), 403);
 	}
-	check_admin_referer('retails_seo_save_' . $tab);
+	check_admin_referer('wholesale_seo_save_' . $tab);
 
-	$fields = retails_seo_tab_fields($tab);
+	$fields = wholesale_seo_tab_fields($tab);
 	if (!$fields) {
 		wp_die('Unknown SEO tab.', 400);
 	}
@@ -199,7 +199,7 @@ function retails_seo_handle_save()
 			continue;
 		}
 		$raw = isset($_POST[$key]) ? wp_unslash($_POST[$key]) : '';
-		$value = retails_seo_sanitize_field($field, $raw);
+		$value = wholesale_seo_sanitize_field($field, $raw);
 
 		if (null === $value) {
 			$dropped[] = $key;
@@ -219,19 +219,19 @@ function retails_seo_handle_save()
 	}
 
 	// Keep an invalid field's previous value rather than wiping it.
-	$previous = retails_seo_settings($tab);
+	$previous = wholesale_seo_settings($tab);
 	foreach ($dropped as $key) {
 		if (isset($previous[$key])) {
 			$saved[$key] = $previous[$key];
 		}
 	}
 
-	$options = retails_seo_options();
-	$name = 'retails_seo_' . $tab;
+	$options = wholesale_seo_options();
+	$name = 'wholesale_seo_' . $tab;
 	update_option($name, $saved, !empty($options[$name]));
-	update_option('retails_seo_changed_at', time(), false);
+	update_option('wholesale_seo_changed_at', time(), false);
 
-	$page = isset($_POST['page_slug']) ? sanitize_key(wp_unslash($_POST['page_slug'])) : 'retails-seo';
+	$page = isset($_POST['page_slug']) ? sanitize_key(wp_unslash($_POST['page_slug'])) : 'wholesale-seo';
 	$args = array('page' => $page, 'wseo_saved' => 1);
 	if ($dropped) {
 		$args['wseo_dropped'] = implode(',', $dropped);
@@ -243,19 +243,19 @@ function retails_seo_handle_save()
 /**
  * Opening tag and hidden fields of a settings form.
  */
-function retails_seo_form_open($tab, $page_slug)
+function wholesale_seo_form_open($tab, $page_slug)
 {
 	echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="wseo-form">';
-	echo '<input type="hidden" name="action" value="retails_seo_save">';
+	echo '<input type="hidden" name="action" value="wholesale_seo_save">';
 	echo '<input type="hidden" name="tab" value="' . esc_attr($tab) . '">';
 	echo '<input type="hidden" name="page_slug" value="' . esc_attr($page_slug) . '">';
-	wp_nonce_field('retails_seo_save_' . $tab);
+	wp_nonce_field('wholesale_seo_save_' . $tab);
 }
 
 /**
  * A settings row: label, input and help text. $value is the saved value.
  */
-function retails_seo_field_row($key, array $field, $value)
+function wholesale_seo_field_row($key, array $field, $value)
 {
 	$id = 'wseo-' . $key;
 	$type = $field['type'];
@@ -316,10 +316,10 @@ function retails_seo_field_row($key, array $field, $value)
 /**
  * Rows for a group of fields of a tab.
  */
-function retails_seo_field_rows($tab, array $keys)
+function wholesale_seo_field_rows($tab, array $keys)
 {
-	$fields = retails_seo_tab_fields($tab);
-	$saved = retails_seo_settings($tab);
+	$fields = wholesale_seo_tab_fields($tab);
+	$saved = wholesale_seo_settings($tab);
 
 	foreach ($keys as $key) {
 		if (!isset($fields[$key])) {
@@ -327,14 +327,14 @@ function retails_seo_field_rows($tab, array $keys)
 		}
 		$field = $fields[$key];
 		$value = !empty($field['option']) ? get_option($field['option'], '') : (isset($saved[$key]) ? $saved[$key] : '');
-		retails_seo_field_row($key, $field, $value);
+		wholesale_seo_field_row($key, $field, $value);
 	}
 }
 
 /**
  * Edit link for a post or term (admin only).
  */
-function retails_seo_edit_link($object_type, $object_id)
+function wholesale_seo_edit_link($object_type, $object_id)
 {
 	if ('term' === $object_type) {
 		$link = get_edit_term_link((int) $object_id, 'product_category');
@@ -351,7 +351,7 @@ function retails_seo_edit_link($object_type, $object_id)
  *
  * @return array title, description, canonical, robots; empty on failure.
  */
-function retails_seo_admin_effective($object_type, $object_id)
+function wholesale_seo_admin_effective($object_type, $object_id)
 {
 	global $wp_query, $wp_the_query, $post;
 
@@ -385,7 +385,7 @@ function retails_seo_admin_effective($object_type, $object_id)
 
 		$wp_query = $query;
 		$wp_the_query = $query;
-		retails_seo_reset_context();
+		wholesale_seo_reset_context();
 
 		$robots = array();
 		foreach ((array) apply_filters('wp_robots', array()) as $directive => $value) {
@@ -398,8 +398,8 @@ function retails_seo_admin_effective($object_type, $object_id)
 
 		$result = array(
 			'title' => html_entity_decode(wp_strip_all_tags(wp_get_document_title()), ENT_QUOTES, 'UTF-8'),
-			'description' => (string) retails_seo_description(),
-			'canonical' => (string) retails_seo_url(),
+			'description' => (string) wholesale_seo_description(),
+			'canonical' => (string) wholesale_seo_url(),
 			'robots' => implode(', ', $robots),
 		);
 	} catch (Throwable $error) {
@@ -411,7 +411,7 @@ function retails_seo_admin_effective($object_type, $object_id)
 		if ($saved_post instanceof WP_Post) {
 			setup_postdata($saved_post);
 		}
-		retails_seo_reset_context();
+		wholesale_seo_reset_context();
 	}
 
 	return $result;
@@ -420,7 +420,7 @@ function retails_seo_admin_effective($object_type, $object_id)
 /**
  * Why the theme keeps a post or term out of search, or ''.
  */
-function retails_seo_theme_noindex_reason($object_type, $object_id)
+function wholesale_seo_theme_noindex_reason($object_type, $object_id)
 {
 	if ('term' === $object_type) {
 		$term = get_term((int) $object_id, 'product_category');
@@ -436,27 +436,27 @@ function retails_seo_theme_noindex_reason($object_type, $object_id)
 	}
 
 	if ('product' === $object->post_type) {
-		$canonical = retails_seo_product_canonical_of($object->ID);
-		return $canonical ? 'Canonical points to "' . retails_schema_text(get_the_title($canonical)) . '" (duplicate or partial variant)' : '';
+		$canonical = wholesale_seo_product_canonical_of($object->ID);
+		return $canonical ? 'Canonical points to "' . wholesale_schema_text(get_the_title($canonical)) . '" (duplicate or partial variant)' : '';
 	}
 
 	if ('page' !== $object->post_type) {
 		return '';
 	}
 
-	if (in_array($object->post_name, retails_seo_noindex_page_slugs(), true)) {
+	if (in_array($object->post_name, wholesale_seo_noindex_page_slugs(), true)) {
 		return 'Private, ads-only or placeholder page (theme list)';
 	}
 
-	if (function_exists('retails_guide_registry')) {
-		$registry = retails_guide_registry();
+	if (function_exists('wholesale_guide_registry')) {
+		$registry = wholesale_guide_registry();
 		$path = get_page_uri($object);
 		if (isset($registry[$path]) && 'live' !== $registry[$path]['status']) {
 			return 'Guide page still in review (data file status)';
 		}
 	}
 
-	if (in_array((int) $object->ID, retails_seo_noindex_page_ids(), true)) {
+	if (in_array((int) $object->ID, wholesale_seo_noindex_page_ids(), true)) {
 		return 'Ads-only template or theme list';
 	}
 
@@ -466,7 +466,7 @@ function retails_seo_theme_noindex_reason($object_type, $object_id)
 /**
  * Character count badge.
  */
-function retails_seo_length_badge($text, $limit)
+function wholesale_seo_length_badge($text, $limit)
 {
 	$length = mb_strlen((string) $text);
 	$class = 0 === $length ? 'is-empty' : ($length > $limit ? 'is-long' : 'is-ok');

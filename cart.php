@@ -1,11 +1,11 @@
 <?php
 // Template Name: Cart
 
-$cart = retails_get_cart();
+$cart = wholesale_get_cart();
 $cart_url = get_permalink();
 
 if (isset($_GET['remove_cart'])) {
-    if (wp_verify_nonce(isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '', 'retails_cart_remove')) {
+    if (wp_verify_nonce(isset($_GET['_wpnonce']) ? sanitize_text_field(wp_unslash($_GET['_wpnonce'])) : '', 'wholesale_cart_remove')) {
         $cart->remove_item(sanitize_text_field(wp_unslash($_GET['remove_cart'])));
     }
     wp_safe_redirect($cart_url);
@@ -13,7 +13,7 @@ if (isset($_GET['remove_cart'])) {
 }
 
 if (isset($_POST['update_quantity'], $_POST['cart_id'])) {
-    if (wp_verify_nonce(isset($_POST['_wpnonce']) ? sanitize_text_field(wp_unslash($_POST['_wpnonce'])) : '', 'retails_cart_update')) {
+    if (wp_verify_nonce(isset($_POST['_wpnonce']) ? sanitize_text_field(wp_unslash($_POST['_wpnonce'])) : '', 'wholesale_cart_update')) {
         $cart->update_quantity(sanitize_text_field(wp_unslash($_POST['cart_id'])), min(1000, absint($_POST['update_quantity'])));
     }
     wp_safe_redirect($cart_url);
@@ -25,18 +25,18 @@ if (isset($_REQUEST['product_id'])) {
 }
 
 $notice = '';
-if (!empty($_SESSION['retails_cart_notice'])) {
-    $notice = (string) $_SESSION['retails_cart_notice'];
-    unset($_SESSION['retails_cart_notice']);
+if (!empty($_SESSION['wholesale_cart_notice'])) {
+    $notice = (string) $_SESSION['wholesale_cart_notice'];
+    unset($_SESSION['wholesale_cart_notice']);
 }
 
 $items = $cart->get_items();
-$shipping_options = retails_cart_shipping_options($cart);
-$lowest_shipping = $shipping_options && !retails_cart_qualifies_free_shipping($cart) ? min($shipping_options) : 0;
-$tax_rate = (float) retails_get_setting('tax_rate');
+$shipping_options = wholesale_cart_shipping_options($cart);
+$lowest_shipping = $shipping_options && !wholesale_cart_qualifies_free_shipping($cart) ? min($shipping_options) : 0;
+$tax_rate = (float) wholesale_get_setting('tax_rate');
 $sub_total = round((float) $cart->sub_total, 2);
 $tax = round($sub_total * $tax_rate / 100, 2);
-$free_shipping_min = retails_free_shipping_threshold($cart);
+$free_shipping_min = wholesale_free_shipping_threshold($cart);
 $money = static function ($value) {
     return '$' . number_format((float) $value, 2);
 };
@@ -66,7 +66,7 @@ get_header();
                 <?php // The home page leads with banners & displays; #product-box-container is gone from it. ?>
                 <div class="cart-empty-actions">
                     <a class="checkout-pay" href="<?php echo esc_url(home_url('/#banners-displays')); ?>">Shop Banners &amp; Displays</a>
-                    <a class="cart-secondary" href="<?php echo esc_url(retails_category_url('channel-letters')); ?>">Shop Channel Letters</a>
+                    <a class="cart-secondary" href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>">Shop Channel Letters</a>
                 </div>
                 <p class="cart-help">Need help? Call <a href="tel:+18664362101">866-436-2101</a>, Mon&ndash;Fri 8am&ndash;5pm PT.</p>
             </section>
@@ -77,7 +77,7 @@ get_header();
                         $details = (array) ($item->product_details ?? array());
                         $design_url = !empty($details['Design Url']) ? $details['Design Url'] : '';
                         $image = $design_url ?: ($item->product_thumbnail ?? '');
-                        $specs = retails_item_specs($item);
+                        $specs = wholesale_item_specs($item);
                         unset($specs['Design Url']);
                         $quantity = max(1, (int) $item->product_quantity);
                         $is_cl = has_term('channel-letters', 'product_category', $item->product_id);
@@ -101,7 +101,7 @@ get_header();
 
                                 <?php if (is_array($design) && !empty($design['elements'])) : ?>
                                     <ul class="cart-line-design">
-                                        <?php foreach (retails_cl_design_summary($design) as $line) : ?>
+                                        <?php foreach (wholesale_cl_design_summary($design) as $line) : ?>
                                             <li><?php echo esc_html($line); ?></li>
                                         <?php endforeach; ?>
                                     </ul>
@@ -109,10 +109,10 @@ get_header();
 
                                 <?php if ($specs) : ?>
                                     <details class="cart-line-specs">
-                                        <summary><?php echo esc_html(ucfirst(retails_product_noun((int) $item->product_id))); ?> details</summary>
+                                        <summary><?php echo esc_html(ucfirst(wholesale_product_noun((int) $item->product_id))); ?> details</summary>
                                         <dl>
                                             <?php foreach ($specs as $label => $value) : ?>
-                                                <div><dt><?php echo esc_html($label); ?></dt><dd><?php echo $value; // Escaped in retails_item_specs(). ?></dd></div>
+                                                <div><dt><?php echo esc_html($label); ?></dt><dd><?php echo $value; // Escaped in wholesale_item_specs(). ?></dd></div>
                                             <?php endforeach; ?>
                                         </dl>
                                     </details>
@@ -120,7 +120,7 @@ get_header();
 
                                 <div class="cart-line-actions">
                                     <form method="post" class="cart-qty">
-                                        <?php wp_nonce_field('retails_cart_update'); ?>
+                                        <?php wp_nonce_field('wholesale_cart_update'); ?>
                                         <input type="hidden" name="cart_id" value="<?php echo esc_attr($item->cart_id); ?>">
                                         <label for="qty-<?php echo esc_attr($item->cart_id); ?>">Qty</label>
                                         <input id="qty-<?php echo esc_attr($item->cart_id); ?>" type="number" name="update_quantity" min="1" max="1000" value="<?php echo esc_attr($quantity); ?>" onchange="this.form.requestSubmit()">
@@ -129,7 +129,7 @@ get_header();
                                     <?php if ($edit_url) : ?>
                                         <a href="<?php echo esc_url($edit_url); ?>">Edit design</a>
                                     <?php endif; ?>
-                                    <a class="cart-remove" href="<?php echo esc_url(wp_nonce_url(add_query_arg('remove_cart', $item->cart_id, $cart_url), 'retails_cart_remove')); ?>">Remove</a>
+                                    <a class="cart-remove" href="<?php echo esc_url(wp_nonce_url(add_query_arg('remove_cart', $item->cart_id, $cart_url), 'wholesale_cart_remove')); ?>">Remove</a>
                                 </div>
                             </div>
                         </article>
@@ -155,7 +155,7 @@ get_header();
                         <a class="checkout-pay" href="<?php echo esc_url(home_url('/checkout/')); ?>">Proceed to Checkout</a>
                         <ul class="checkout-assurance">
                             <li>Choose your shipping speed at checkout</li>
-                            <li><?php echo 'sign' === retails_items_noun($items) ? 'UL listed signs, tested before shipping' : 'Made to order and checked before shipping'; ?></li>
+                            <li><?php echo 'sign' === wholesale_items_noun($items) ? 'UL listed signs, tested before shipping' : 'Made to order and checked before shipping'; ?></li>
                             <li>Questions? <a href="tel:+18664362101">866-436-2101</a></li>
                         </ul>
                     </div>

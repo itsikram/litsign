@@ -5,7 +5,7 @@
  * The scan is started by hand from this screen and runs in small batches
  * (10 URLs, 10 s timeout each) from the admin's browser through admin-ajax.
  * Each URL is fetched over HTTP like a visitor would see it, with a signed
- * X-Retails-SEO-Scan header and a bot user agent, so the 404 log, redirect
+ * X-Wholesale-SEO-Scan header and a bot user agent, so the 404 log, redirect
  * hit counters and Visitor Insights ignore it (Visitor Insights also only
  * counts browsers that run its script). Results are kept in a transient;
  * nothing here ever runs on visitor traffic.
@@ -15,7 +15,7 @@
 
 defined('ABSPATH') || exit;
 
-const RETAILS_SEO_SCAN_BATCH = 10;
+const WHOLESALE_SEO_SCAN_BATCH = 10;
 
 /**
  * Every public URL the site owns: published pages, posts and products, and
@@ -23,7 +23,7 @@ const RETAILS_SEO_SCAN_BATCH = 10;
  *
  * @return array key => array(url, label, object_type, object_id, kind).
  */
-function retails_seo_scan_targets()
+function wholesale_seo_scan_targets()
 {
 	$targets = array();
 	$front_id = (int) get_option('page_on_front');
@@ -44,7 +44,7 @@ function retails_seo_scan_targets()
 		$is_front = (int) $post->ID === $front_id;
 		$targets['p' . $post->ID] = array(
 			'url' => $url,
-			'label' => ($is_front ? 'Homepage: ' : '') . retails_schema_text(get_the_title($post)),
+			'label' => ($is_front ? 'Homepage: ' : '') . wholesale_schema_text(get_the_title($post)),
 			'object_type' => 'post',
 			'object_id' => (int) $post->ID,
 			'kind' => $is_front ? 'home' : $post->post_type,
@@ -54,8 +54,8 @@ function retails_seo_scan_targets()
 	$terms = get_terms(array('taxonomy' => 'product_category', 'hide_empty' => true));
 	foreach (is_wp_error($terms) ? array() : $terms as $term) {
 		$targets['t' . $term->term_id] = array(
-			'url' => retails_category_url($term->slug),
-			'label' => retails_schema_text($term->name),
+			'url' => wholesale_category_url($term->slug),
+			'label' => wholesale_schema_text($term->name),
 			'object_type' => 'term',
 			'object_id' => (int) $term->term_id,
 			'kind' => 'product_category',
@@ -73,7 +73,7 @@ function retails_seo_scan_targets()
  * A URL reduced for comparison: host and path with a trailing slash, no
  * scheme, query or fragment.
  */
-function retails_seo_compare_url($url)
+function wholesale_seo_compare_url($url)
 {
 	$parts = wp_parse_url(html_entity_decode(trim((string) $url), ENT_QUOTES, 'UTF-8'));
 	if (!$parts || empty($parts['host'])) {
@@ -88,13 +88,13 @@ function retails_seo_compare_url($url)
  *
  * @return array code, location, body.
  */
-function retails_seo_scan_fetch($url)
+function wholesale_seo_scan_fetch($url)
 {
 	$response = wp_remote_get($url, array(
 		'timeout' => 10,
 		'redirection' => 0,
-		'user-agent' => 'RetailsSEOScan/1.0 (site health bot; ' . home_url('/') . ')',
-		'headers' => array('X-Retails-SEO-Scan' => retails_seo_scan_signature()),
+		'user-agent' => 'WholesaleSEOScan/1.0 (site health bot; ' . home_url('/') . ')',
+		'headers' => array('X-Wholesale-SEO-Scan' => wholesale_seo_scan_signature()),
 		'sslverify' => apply_filters('https_local_ssl_verify', false),
 		'limit_response_size' => 3 * MB_IN_BYTES,
 	));
@@ -116,7 +116,7 @@ function retails_seo_scan_fetch($url)
  *
  * @return array
  */
-function retails_seo_tag_attributes($tag)
+function wholesale_seo_tag_attributes($tag)
 {
 	$attributes = array();
 	if (preg_match_all('/([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|([^\s>]+))/', $tag, $matches, PREG_SET_ORDER)) {
@@ -133,7 +133,7 @@ function retails_seo_tag_attributes($tag)
  *
  * @return array
  */
-function retails_seo_parse_page($html)
+function wholesale_seo_parse_page($html)
 {
 	$result = array('title' => '', 'titles' => 0, 'description' => '', 'descriptions' => 0, 'robots' => '', 'canonical' => '', 'canonicals' => 0, 'h1' => 0, 'images' => 0, 'no_alt' => array(), 'empty_alt' => array());
 
@@ -145,7 +145,7 @@ function retails_seo_parse_page($html)
 
 	preg_match_all('#<(meta|link)\b[^>]*>#i', $head, $tags);
 	foreach ($tags[0] as $tag) {
-		$attributes = retails_seo_tag_attributes($tag);
+		$attributes = wholesale_seo_tag_attributes($tag);
 		$name = isset($attributes['name']) ? strtolower($attributes['name']) : '';
 		$rel = isset($attributes['rel']) ? strtolower($attributes['rel']) : '';
 		if ('description' === $name) {
@@ -164,7 +164,7 @@ function retails_seo_parse_page($html)
 
 	preg_match_all('#<img\b[^>]*>#i', $body, $images);
 	foreach ($images[0] as $tag) {
-		$attributes = retails_seo_tag_attributes($tag);
+		$attributes = wholesale_seo_tag_attributes($tag);
 		$src = isset($attributes['src']) ? $attributes['src'] : (isset($attributes['data-src']) ? $attributes['data-src'] : '');
 		if ('' === $src || false !== strpos($src, 'facebook.com/tr') || (isset($attributes['width']) && '1' === $attributes['width'])) {
 			continue;
@@ -188,7 +188,7 @@ function retails_seo_parse_page($html)
  *
  * @return array List of array(file, line, text).
  */
-function retails_seo_brand_fallbacks()
+function wholesale_seo_brand_fallbacks()
 {
 	$found = array();
 	$root = get_template_directory();
@@ -209,63 +209,63 @@ function retails_seo_brand_fallbacks()
 	return $found;
 }
 
-add_action('wp_ajax_retails_seo_scan', function () {
+add_action('wp_ajax_wholesale_seo_scan', function () {
 	if (!current_user_can('manage_options')) {
 		wp_send_json_error('You are not allowed to run the SEO scan.', 403);
 	}
-	check_ajax_referer('retails_seo_scan', 'nonce');
+	check_ajax_referer('wholesale_seo_scan', 'nonce');
 
 	$step = isset($_POST['step']) ? sanitize_key(wp_unslash($_POST['step'])) : '';
 
 	if ('start' === $step) {
-		$targets = retails_seo_scan_targets();
+		$targets = wholesale_seo_scan_targets();
 		$sitemap = array();
 		foreach (array('/sitemap.xml', '/product-sitemap.xml', '/category-sitemap.xml') as $path) {
-			$response = retails_seo_scan_fetch(home_url($path));
+			$response = wholesale_seo_scan_fetch(home_url($path));
 			if (preg_match_all('#<loc>(.*?)</loc>#s', $response['body'], $locs)) {
 				foreach ($locs[1] as $loc) {
-					$sitemap[retails_seo_compare_url($loc)] = true;
+					$sitemap[wholesale_seo_compare_url($loc)] = true;
 				}
 			}
 		}
 
-		set_transient('retails_seo_scan_run', array(
+		set_transient('wholesale_seo_scan_run', array(
 			'targets' => $targets,
 			'sitemap' => $sitemap,
 			'results' => array(),
-			'brand' => retails_seo_brand_fallbacks(),
+			'brand' => wholesale_seo_brand_fallbacks(),
 			'started' => time(),
 		), HOUR_IN_SECONDS);
 
-		wp_send_json_success(array('total' => count($targets), 'batch' => RETAILS_SEO_SCAN_BATCH));
+		wp_send_json_success(array('total' => count($targets), 'batch' => WHOLESALE_SEO_SCAN_BATCH));
 	}
 
-	$run = get_transient('retails_seo_scan_run');
+	$run = get_transient('wholesale_seo_scan_run');
 	if (!is_array($run)) {
 		wp_send_json_error('The scan expired. Start it again.');
 	}
 
 	if ('batch' === $step) {
-		@set_time_limit(RETAILS_SEO_SCAN_BATCH * 15);
+		@set_time_limit(WHOLESALE_SEO_SCAN_BATCH * 15);
 		$offset = isset($_POST['offset']) ? max(0, (int) $_POST['offset']) : 0;
-		foreach (array_slice($run['targets'], $offset, RETAILS_SEO_SCAN_BATCH, true) as $key => $target) {
-			$response = retails_seo_scan_fetch($target['url']);
-			$page = 200 === $response['code'] ? retails_seo_parse_page($response['body']) : array();
+		foreach (array_slice($run['targets'], $offset, WHOLESALE_SEO_SCAN_BATCH, true) as $key => $target) {
+			$response = wholesale_seo_scan_fetch($target['url']);
+			$page = 200 === $response['code'] ? wholesale_seo_parse_page($response['body']) : array();
 			$run['results'][$key] = array_merge($page, array(
 				'code' => $response['code'],
 				'location' => $response['location'],
 				'error' => $response['error'],
 			));
 		}
-		set_transient('retails_seo_scan_run', $run, HOUR_IN_SECONDS);
-		wp_send_json_success(array('done' => min(count($run['targets']), $offset + RETAILS_SEO_SCAN_BATCH)));
+		set_transient('wholesale_seo_scan_run', $run, HOUR_IN_SECONDS);
+		wp_send_json_success(array('done' => min(count($run['targets']), $offset + WHOLESALE_SEO_SCAN_BATCH)));
 	}
 
 	if ('finish' === $step) {
 		$run['finished'] = time();
 		// With an expiry the transient is not autoloaded on every request.
-		set_transient('retails_seo_scan', $run, 30 * DAY_IN_SECONDS);
-		delete_transient('retails_seo_scan_run');
+		set_transient('wholesale_seo_scan', $run, 30 * DAY_IN_SECONDS);
+		delete_transient('wholesale_seo_scan_run');
 		wp_send_json_success();
 	}
 
@@ -278,7 +278,7 @@ add_action('wp_ajax_retails_seo_scan', function () {
  * @return array key => array(label, help, items) with items as
  *               array(target key, note).
  */
-function retails_seo_scan_report($scan)
+function wholesale_seo_scan_report($scan)
 {
 	$checks = array(
 		'missing_title' => array('Missing title', 'Indexable pages with no &lt;title&gt;.', array()),
@@ -318,13 +318,13 @@ function retails_seo_scan_report($scan)
 
 		$noindex = false !== stripos($result['robots'], 'noindex');
 		if ($noindex) {
-			$reason = retails_seo_stored_value($target['object_type'], $target['object_id'], 'noindex') ? 'Set on the page (SEO box)' : retails_seo_theme_noindex_reason($target['object_type'], $target['object_id']);
+			$reason = wholesale_seo_stored_value($target['object_type'], $target['object_id'], 'noindex') ? 'Set on the page (SEO box)' : wholesale_seo_theme_noindex_reason($target['object_type'], $target['object_id']);
 			$checks['noindex'][2][] = array($key, $reason ? $reason : 'robots: ' . $result['robots']);
 			continue;
 		}
 
-		$canonical = retails_seo_compare_url($result['canonical']);
-		if ($canonical && $canonical !== retails_seo_compare_url($target['url'])) {
+		$canonical = wholesale_seo_compare_url($result['canonical']);
+		if ($canonical && $canonical !== wholesale_seo_compare_url($target['url'])) {
 			$checks['canonical_elsewhere'][2][] = array($key, '→ ' . $result['canonical']);
 			continue;
 		}
@@ -348,7 +348,7 @@ function retails_seo_scan_report($scan)
 			}
 		}
 
-		if (empty($scan['sitemap'][retails_seo_compare_url($target['url'])])) {
+		if (empty($scan['sitemap'][wholesale_seo_compare_url($target['url'])])) {
 			$checks['not_in_sitemap'][2][] = array($key, '');
 		}
 
@@ -388,7 +388,7 @@ function retails_seo_scan_report($scan)
  *
  * @return array count, items (ID, title).
  */
-function retails_seo_media_without_alt($limit = 100)
+function wholesale_seo_media_without_alt($limit = 100)
 {
 	global $wpdb;
 
@@ -404,9 +404,9 @@ function retails_seo_media_without_alt($limit = 100)
 /**
  * One list item of a check: page name with edit and view links, and a note.
  */
-function retails_seo_report_item($target, $note)
+function wholesale_seo_report_item($target, $note)
 {
-	$edit = retails_seo_edit_link($target['object_type'], $target['object_id']);
+	$edit = wholesale_seo_edit_link($target['object_type'], $target['object_id']);
 	echo '<li><strong>' . esc_html($target['label']) . '</strong> ';
 	if ($edit) {
 		echo '<a href="' . esc_url($edit) . '">Edit</a> · ';
@@ -418,21 +418,21 @@ function retails_seo_report_item($target, $note)
 	echo '</li>';
 }
 
-function retails_seo_dashboard_page()
+function wholesale_seo_dashboard_page()
 {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
 
-	$scan = get_transient('retails_seo_scan');
-	retails_seo_admin_header('retails-seo', 'Health checks from a scan of every page, post, product and product category, fetched the way search engines see them. The scan only runs when you start it.');
+	$scan = get_transient('wholesale_seo_scan');
+	wholesale_seo_admin_header('wholesale-seo', 'Health checks from a scan of every page, post, product and product category, fetched the way search engines see them. The scan only runs when you start it.');
 	?>
 	<div class="wseo-card wseo-scan-panel">
 		<p>
 			<button type="button" class="button button-primary" id="wseo-scan-start"><?php echo $scan ? 'Run the scan again' : 'Run the first scan'; ?></button>
 			<?php if ($scan) : ?>
 				<span class="description">Last scan: <?php echo esc_html(wp_date(get_option('date_format') . ' ' . get_option('time_format'), $scan['finished'])); ?>, <?php echo (int) count($scan['targets']); ?> URLs.
-				<?php if ((int) get_option('retails_seo_changed_at') > (int) $scan['finished']) : ?>
+				<?php if ((int) get_option('wholesale_seo_changed_at') > (int) $scan['finished']) : ?>
 					<strong>SEO settings changed since then.</strong>
 				<?php endif; ?>
 				</span>
@@ -443,7 +443,7 @@ function retails_seo_dashboard_page()
 	</div>
 
 	<?php if ($scan) : ?>
-		<?php $checks = retails_seo_scan_report($scan); ?>
+		<?php $checks = wholesale_seo_scan_report($scan); ?>
 		<div class="wseo-checks-grid">
 			<?php foreach ($checks as $key => $check) : ?>
 				<?php $count = count($check[2]); ?>
@@ -453,7 +453,7 @@ function retails_seo_dashboard_page()
 					<?php if ($count) : ?>
 						<ul class="wseo-list">
 							<?php foreach ($check[2] as $item) : ?>
-								<?php retails_seo_report_item($scan['targets'][$item[0]], $item[1]); ?>
+								<?php wholesale_seo_report_item($scan['targets'][$item[0]], $item[1]); ?>
 							<?php endforeach; ?>
 						</ul>
 					<?php endif; ?>
@@ -463,7 +463,7 @@ function retails_seo_dashboard_page()
 	<?php endif; ?>
 
 	<div class="wseo-checks-grid">
-		<?php $media = retails_seo_media_without_alt(); ?>
+		<?php $media = wholesale_seo_media_without_alt(); ?>
 		<details class="wseo-card wseo-check <?php echo $media['count'] ? 'is-bad' : 'is-good'; ?>">
 			<summary><span class="wseo-count"><?php echo (int) $media['count']; ?></span> Media library images without alt text</summary>
 			<p class="description">Live count. The theme adds a fallback alt to product photos it prints, so the page check above is the one visitors and Google see.</p>
@@ -480,7 +480,7 @@ function retails_seo_dashboard_page()
 		</details>
 
 		<details class="wseo-card wseo-check is-info">
-			<?php $not_found = function_exists('retails_seo_404_recent') ? retails_seo_404_recent(7) : null; ?>
+			<?php $not_found = function_exists('wholesale_seo_404_recent') ? wholesale_seo_404_recent(7) : null; ?>
 			<summary><span class="wseo-count"><?php echo null === $not_found ? '–' : (int) count($not_found); ?></span> 404s in the last 7 days</summary>
 			<?php if (null === $not_found) : ?>
 				<p class="description">The 404 log arrives with the Redirects &amp; 404s screen.</p>
@@ -506,5 +506,5 @@ function retails_seo_dashboard_page()
 		<?php endif; ?>
 	</div>
 	<?php
-	retails_seo_admin_footer();
+	wholesale_seo_admin_footer();
 }

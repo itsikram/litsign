@@ -9,39 +9,34 @@
 
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
-$permits_url = retails_guide_url('sign-permits');
-$install_url = retails_guide_url('how-to-install-channel-letters');
-$shipping_url = retails_guide_url('shipping-returns');
+$permits_url = wholesale_guide_url('sign-permits');
+$install_url = wholesale_guide_url('how-to-install-channel-letters');
+$shipping_url = wholesale_guide_url('shipping-returns');
 
-// Keep the directory, its ItemList schema and the sitemap in sync.
-$guides = retails_location_public_guides();
-$states = retails_guide_states();
+// Approved state guides, and approved city guides grouped by state. The
+// state pages also feed the CollectionPage's ItemList in the page schema.
 $state_links = array();
 $city_groups = array();
-$state_pages = array();
-$city_pages = array();
-foreach ($guides as $guide) {
-	$slug = $guide['state'];
-	$state = $states[$slug];
-	if ('state' === $guide['type']) {
-		$state_pages[] = $guide['page'];
-		$state_links[$slug] = array($guide['loc'], $state['name'], $state['facts']['Sign license'] ?? $state['facts']['Electrician licensing'] ?? '');
-	} else {
-		$city_pages[] = $guide['page'];
-		$city_groups[$slug][$guide['loc']] = $guide['title'] . ', ' . $state['abbr'];
+$GLOBALS['wholesale_page_items'] = array();
+foreach (wholesale_guide_states() as $slug => $state) {
+	$url = wholesale_guide_url('locations/' . $slug);
+	foreach ($url ? $state['cities'] : array() as $city_slug => $city) {
+		$city_url = wholesale_guide_url('locations/' . $slug . '/' . $city_slug);
+		if ($city_url) {
+			$city_groups[$slug]['state'] = array($url, $state['name']);
+			$city_groups[$slug]['cities'][$city_url] = $city['name'] . ', ' . $state['abbr'];
+		}
+	}
+	if ($url) {
+		$GLOBALS['wholesale_page_items'][] = get_page_by_path('locations/' . $slug);
+		$state_links[] = array($url, $state['name'], isset($state['facts']['Sign license']) ? $state['facts']['Sign license'] : (isset($state['facts']['Electrician licensing']) ? $state['facts']['Electrician licensing'] : ''));
 	}
 }
-$GLOBALS['retails_page_items'] = array_merge($state_pages, $city_pages);
 
-add_filter('retails_seo_webpage_schema', static function ($page) use ($guides) {
-	$page['dateModified'] = retails_location_directory_modified($guides);
-	return $page;
-});
-
-retails_seo_set_page_faq(array(
+wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'Do you ship storefront signs to every state?',
-		'a' => 'Yes. We make each sign to order and ship it from Washington or California to all 50 states. Enter your ZIP code at checkout to see the services and delivery estimates available for your address.',
+		'a' => 'Yes. Every sign is made to order and shipped from Washington or California to your address in any of the 50 states, with standard, 3-day, 2-day and overnight options.',
 	),
 	array(
 		'q' => 'Do you install signs in my state?',
@@ -63,15 +58,10 @@ get_header();
 <main id="primary" class="sf-page gd-page">
 	<section class="sf-hero" aria-labelledby="gd-title">
 		<div class="container">
-			<?php retails_breadcrumbs(); ?>
+			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">Shipped to all 50 states</p>
 			<h1 id="gd-title" class="sf-hero-title">Storefront Signs Shipped to Your State</h1>
-			<p class="sf-hero-lead">Find the sign permit office, installer licensing rules and official sources for your state or city. We build custom LED channel letters in Washington and California and ship them to all 50 states for your licensed installer.</p>
-			<nav class="gd-jump-links" aria-label="Location guide directory">
-				<?php if ($state_links) : ?><a href="#gd-states-title">Browse state guides</a><?php endif; ?>
-				<?php if ($city_groups) : ?><a href="#gd-major-cities-title">Browse city guides</a><?php endif; ?>
-				<a href="#gd-works-title">How shipping and installation work</a>
-			</nav>
+			<p class="sf-hero-lead">We make custom channel letters in Washington and California, plus storefront signs, and ship them anywhere in the US, ready for a licensed local installer. Our state guides cover who may install a lit sign where you are and how permits work, with links to the official sources.</p>
 			<ul class="gd-facts">
 				<li><strong>Made in</strong><span>Washington &amp; California, USA</span></li>
 				<li><strong>Ships to</strong><span>All 50 states</span></li>
@@ -84,7 +74,7 @@ get_header();
 	<section class="sf-section" aria-labelledby="gd-states-title">
 		<div class="container">
 			<p class="cl-kicker">State guides</p>
-			<h2 id="gd-states-title" class="cl-section-title">State Sign Permit Guides</h2>
+			<h2 id="gd-states-title" class="cl-section-title">Choose Your State</h2>
 			<p class="cl-section-lead">Each guide covers the state&rsquo;s sign and electrical licensing, how permits work in its largest cities, shipping, and weather to plan for.</p>
 			<?php if ($state_links) : ?>
 				<ul class="gd-link-grid">
@@ -104,17 +94,11 @@ get_header();
 				<h2 id="gd-major-cities-title" class="cl-section-title">Sign Permit Guides for Major Cities</h2>
 				<p class="cl-section-lead">Large cities run their own sign codes and permit offices. Each city guide covers who issues the permit, the local limits on banners and window graphics, and who may install a lit sign there.</p>
 				<div class="gd-city-groups">
-				<?php foreach ($city_groups as $slug => $cities) : ?>
+					<?php foreach ($city_groups as $group) : ?>
 						<div class="gd-city-group">
-						<h3>
-							<?php if (isset($state_links[$slug])) : ?>
-								<a href="<?php echo esc_url($state_links[$slug][0]); ?>"><?php echo esc_html($states[$slug]['name']); ?></a>
-							<?php else : ?>
-								<?php echo esc_html($states[$slug]['name']); ?>
-							<?php endif; ?>
-						</h3>
+							<h3><a href="<?php echo esc_url($group['state'][0]); ?>"><?php echo esc_html($group['state'][1]); ?></a></h3>
 							<ul>
-							<?php foreach ($cities as $city_url => $city_name) : ?>
+								<?php foreach ($group['cities'] as $city_url => $city_name) : ?>
 									<li><a href="<?php echo esc_url($city_url); ?>"><?php echo esc_html($city_name); ?></a></li>
 								<?php endforeach; ?>
 							</ul>
@@ -140,7 +124,7 @@ get_header();
 				</li>
 				<li>
 					<h3>We build, test and ship</h3>
-					<p>Your sign is made to order and tested before it ships from Washington or California. Checkout shows the delivery options for your address<?php if ($shipping_url) : ?> (<a href="<?php echo esc_url($shipping_url); ?>">see shipping details</a>)<?php endif; ?>.</p>
+					<p>Your sign is made to order and tested before it ships from Washington or California. Choose standard, 3-day, 2-day or overnight shipping<?php if ($shipping_url) : ?> (<a href="<?php echo esc_url($shipping_url); ?>">options and prices</a>)<?php endif; ?>.</p>
 				</li>
 				<li>
 					<h3>Your installer puts it up</h3>
@@ -155,12 +139,12 @@ get_header();
 			<p class="cl-kicker">Questions</p>
 			<h2 id="gd-faq-title" class="cl-section-title">Shipping and Installation FAQ</h2>
 			<div class="cl-faq-list">
-				<?php retails_seo_render_faq(); ?>
+				<?php wholesale_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>
 
-	<?php retails_guide_render_help(); ?>
+	<?php wholesale_guide_render_help(); ?>
 </main>
 
 <?php

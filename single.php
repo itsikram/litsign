@@ -24,7 +24,7 @@ $product_attr_array = json_decode($product_attr_json);
 ?>
 
 <div class="container product-details">
-    <?php retails_breadcrumbs(); ?>
+    <?php wholesale_breadcrumbs(); ?>
     <h2 class="fs-3 product-title my-3">
         <?php echo get_the_title(); ?>
     </h2>
@@ -110,7 +110,7 @@ $product_attr_array = json_decode($product_attr_json);
                                         <?php foreach($single_attr -> options as $option){ 
                                             foreach($option as $name => $price){
                                             ?>
-                                        <option  value="<?php echo esc_attr($price); ?>"><?php echo esc_html($name); ?></option>
+                                        <option  value="<?php echo $price; ?>"><?php echo $name; ?></option>
                                         <?php  }};?>
                                     </select>
                                     <?php }else {

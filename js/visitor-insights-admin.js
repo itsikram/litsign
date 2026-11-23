@@ -220,26 +220,6 @@
       return;
     }
 
-    const chat = event.target.closest('[data-chat-visitor]');
-    if (chat && window.retailsVIAdmin) {
-      const text = window.prompt('Message to send through Live Chat:', 'Hi! 👋 Can I help you find the right sign?');
-      if (!text || !text.trim()) return;
-      chat.disabled = true;
-      const form = new FormData();
-      form.append('action', 'retails_vi_chat_message');
-      form.append('nonce', window.retailsVIAdmin.nonce);
-      form.append('visitor', chat.dataset.chatVisitor);
-      form.append('body', text.trim());
-      fetch(window.retailsVIAdmin.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: form })
-        .then((response) => response.json())
-        .then((result) => {
-          chat.textContent = result && result.success ? 'Sent ✓' : 'Failed';
-          if (!(result && result.success)) window.alert((result && result.data) || 'The message could not be sent.');
-        })
-        .catch(() => { chat.textContent = 'Failed'; chat.disabled = false; });
-      return;
-    }
-
     const row = event.target.closest('.wvi-row-link');
     if (row && !event.target.closest('a, button, input')) {
       if (event.ctrlKey || event.metaKey) {
@@ -261,7 +241,7 @@
   // ------------------------------------------------------------------
 
   const body = document.querySelector('[data-live-body]');
-  const settings = window.retailsVIAdmin;
+  const settings = window.wholesaleVIAdmin;
   const status = document.querySelector('[data-live-status]');
   if (!body || !settings || !status) return;
 
@@ -293,8 +273,7 @@
     if (active && body.contains(active) && active.matches('input, select, textarea')) return true;
     const selection = window.getSelection && window.getSelection();
     if (selection && !selection.isCollapsed && body.contains(selection.anchorNode)) return true;
-    // A lead's message opened to read would close on redraw.
-    return !!body.querySelector('.wvi-tip:not([hidden]), details[open]');
+    return !!body.querySelector('.wvi-tip:not([hidden])');
   };
 
   const swap = (html) => {
@@ -335,7 +314,7 @@
     if (busy || paused || expired || document.hidden) return;
     busy = true;
     const data = new FormData();
-    data.append('action', 'retails_vi_refresh');
+    data.append('action', 'wholesale_vi_refresh');
     data.append('nonce', settings.nonce);
     data.append('query', window.location.search.replace(/^\?/, ''));
     data.append('version', force ? '' : version);

@@ -9,9 +9,9 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const RETAILS_REVIEW_PRICING_SNAPSHOT_META = '_retails_review_pricing_snapshot';
+const WHOLESALE_REVIEW_PRICING_SNAPSHOT_META = '_wholesale_review_pricing_snapshot';
 
-function retails_review_pricing_target_products($category_ids = array())
+function wholesale_review_pricing_target_products($category_ids = array())
 {
 	$query = array(
 		'post_type' => 'product',
@@ -35,7 +35,7 @@ function retails_review_pricing_target_products($category_ids = array())
 	return get_posts($query);
 }
 
-function retails_review_pricing_category_ids()
+function wholesale_review_pricing_category_ids()
 {
 	$raw_ids = isset($_POST['category_ids']) ? (array) wp_unslash($_POST['category_ids']) : array();
 	$raw_ids = array_filter($raw_ids, static function ($id) {
@@ -52,7 +52,7 @@ function retails_review_pricing_category_ids()
 	return $valid_ids;
 }
 
-function retails_review_pricing_scale_option_value($value, $multiplier)
+function wholesale_review_pricing_scale_option_value($value, $multiplier)
 {
 	if (!is_string($value) && !is_numeric($value)) {
 		return $value;
@@ -72,7 +72,7 @@ function retails_review_pricing_scale_option_value($value, $multiplier)
 	return $matches[1] . rtrim(rtrim(number_format($scaled, 4, '.', ''), '0'), '.') . $suffix;
 }
 
-function retails_review_pricing_scale_attributes($attributes, $multiplier)
+function wholesale_review_pricing_scale_attributes($attributes, $multiplier)
 {
 	foreach ($attributes as &$attribute) {
 		if (
@@ -85,11 +85,11 @@ function retails_review_pricing_scale_attributes($attributes, $multiplier)
 		foreach ($attribute['options'] as &$option) {
 			if (is_array($option)) {
 				foreach ($option as &$value) {
-					$value = retails_review_pricing_scale_option_value($value, $multiplier);
+					$value = wholesale_review_pricing_scale_option_value($value, $multiplier);
 				}
 				unset($value);
 			} else {
-				$option = retails_review_pricing_scale_option_value($option, $multiplier);
+				$option = wholesale_review_pricing_scale_option_value($option, $multiplier);
 			}
 		}
 		unset($option);
@@ -98,7 +98,7 @@ function retails_review_pricing_scale_attributes($attributes, $multiplier)
 	return $attributes;
 }
 
-function retails_review_pricing_sale_text($text, $multiplier, $old_discount)
+function wholesale_review_pricing_sale_text($text, $multiplier, $old_discount)
 {
 	$text = (string) $text;
 	$source_regular_price = null;
@@ -121,9 +121,9 @@ function retails_review_pricing_sale_text($text, $multiplier, $old_discount)
 	return substr($without_previous_sale, 0, $offset) . $replacement . substr($without_previous_sale, $offset + strlen($last_price[0]));
 }
 
-function retails_review_pricing_apply_product($product_id, $increase_percent)
+function wholesale_review_pricing_apply_product($product_id, $increase_percent)
 {
-	if (metadata_exists('post', $product_id, RETAILS_REVIEW_PRICING_SNAPSHOT_META)) {
+	if (metadata_exists('post', $product_id, WHOLESALE_REVIEW_PRICING_SNAPSHOT_META)) {
 		return 'already_applied';
 	}
 
@@ -137,7 +137,7 @@ function retails_review_pricing_apply_product($product_id, $increase_percent)
 	$old_discount = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
 	$new_discount = 100 * (1 - ((1 - ($old_discount / 100)) / $multiplier));
 	$price_per_sqft = get_post_meta($product_id, '_price_per_sqft', true);
-	$scaled_attributes = retails_review_pricing_scale_attributes($attributes, $multiplier);
+	$scaled_attributes = wholesale_review_pricing_scale_attributes($attributes, $multiplier);
 
 	$has_price = false;
 	$scaled_price_per_sqft = $price_per_sqft;
@@ -160,7 +160,7 @@ function retails_review_pricing_apply_product($product_id, $increase_percent)
 			'value' => get_post_meta($product_id, $key, true),
 		);
 	}
-	update_post_meta($product_id, RETAILS_REVIEW_PRICING_SNAPSHOT_META, $snapshot);
+	update_post_meta($product_id, WHOLESALE_REVIEW_PRICING_SNAPSHOT_META, $snapshot);
 
 	if ($has_price && '' !== (string) $price_per_sqft && is_numeric($price_per_sqft)) {
 		update_post_meta($product_id, '_price_per_sqft', $scaled_price_per_sqft);
@@ -172,24 +172,24 @@ function retails_review_pricing_apply_product($product_id, $increase_percent)
 
 	$starting_text = get_post_meta($product_id, '_starting_at_text', true);
 	if (is_string($starting_text) && '' !== $starting_text) {
-		update_post_meta($product_id, '_starting_at_text', wp_slash(retails_review_pricing_sale_text($starting_text, $multiplier, $old_discount)));
+		update_post_meta($product_id, '_starting_at_text', wp_slash(wholesale_review_pricing_sale_text($starting_text, $multiplier, $old_discount)));
 	}
 
 	return 'applied';
 }
 
-function retails_review_pricing_restore_products()
+function wholesale_review_pricing_restore_products()
 {
 	$product_ids = get_posts(array(
 		'post_type' => 'product',
 		'post_status' => 'any',
 		'posts_per_page' => -1,
 		'fields' => 'ids',
-		'meta_key' => RETAILS_REVIEW_PRICING_SNAPSHOT_META,
+		'meta_key' => WHOLESALE_REVIEW_PRICING_SNAPSHOT_META,
 	));
 	$restored = 0;
 	foreach ($product_ids as $product_id) {
-		$snapshot = get_post_meta($product_id, RETAILS_REVIEW_PRICING_SNAPSHOT_META, true);
+		$snapshot = get_post_meta($product_id, WHOLESALE_REVIEW_PRICING_SNAPSHOT_META, true);
 		if (!is_array($snapshot)) {
 			continue;
 		}
@@ -203,7 +203,7 @@ function retails_review_pricing_restore_products()
 				delete_post_meta($product_id, $key);
 			}
 		}
-		delete_post_meta($product_id, RETAILS_REVIEW_PRICING_SNAPSHOT_META);
+		delete_post_meta($product_id, WHOLESALE_REVIEW_PRICING_SNAPSHOT_META);
 		$restored++;
 	}
 	return $restored;
@@ -214,23 +214,23 @@ add_action('admin_menu', static function () {
 		'edit.php?post_type=review_submission',
 		'Review Product Sale Pricing',
 		'Review Product Sale Pricing',
-		RETAILS_REVIEW_MANAGER_CAP,
-		'retails-review-pricing',
-		'retails_review_pricing_admin_page'
+		WHOLESALE_REVIEW_MANAGER_CAP,
+		'wholesale-review-pricing',
+		'wholesale_review_pricing_admin_page'
 	);
 });
 
-add_action('admin_post_retails_review_pricing', 'retails_review_pricing_handle');
-function retails_review_pricing_handle()
+add_action('admin_post_wholesale_review_pricing', 'wholesale_review_pricing_handle');
+function wholesale_review_pricing_handle()
 {
-	if (!current_user_can(RETAILS_REVIEW_MANAGER_CAP)) {
+	if (!current_user_can(WHOLESALE_REVIEW_MANAGER_CAP)) {
 		wp_die('Not allowed.');
 	}
-	check_admin_referer('retails_review_pricing');
+	check_admin_referer('wholesale_review_pricing');
 
 	$task = sanitize_key(wp_unslash($_POST['task'] ?? ''));
 	if ('restore' === $task) {
-		$result = array('restored' => retails_review_pricing_restore_products());
+		$result = array('restored' => wholesale_review_pricing_restore_products());
 	} elseif ('apply' === $task) {
 		$min_increase_raw = isset($_POST['min_increase_percent']) ? wp_unslash($_POST['min_increase_percent']) : '';
 		$max_increase_raw = isset($_POST['max_increase_percent']) ? wp_unslash($_POST['max_increase_percent']) : '';
@@ -245,13 +245,13 @@ function retails_review_pricing_handle()
 
 		$selection_mode_raw = wp_unslash($_POST['selection_mode'] ?? '');
 		$selection_mode = is_scalar($selection_mode_raw) ? sanitize_key((string) $selection_mode_raw) : '';
-		$all_products = retails_review_pricing_target_products();
+		$all_products = wholesale_review_pricing_target_products();
 		if ('category' === $selection_mode) {
-			$category_ids = retails_review_pricing_category_ids();
+			$category_ids = wholesale_review_pricing_category_ids();
 			if (!$category_ids) {
 				wp_die('Select at least one product category.');
 			}
-			$selected_products = retails_review_pricing_target_products($category_ids);
+			$selected_products = wholesale_review_pricing_target_products($category_ids);
 			if (!$selected_products) {
 				wp_die('No published products were found in the selected categories.');
 			}
@@ -275,7 +275,7 @@ function retails_review_pricing_handle()
 		$result = array('applied' => 0, 'already_applied' => 0, 'invalid_attributes' => 0, 'no_pricing' => 0, 'increase_percentages' => array());
 		foreach ($selected_products as $product_id) {
 			$increase_percent = wp_rand($min_increase_percent, $max_increase_percent);
-			$status = retails_review_pricing_apply_product($product_id, $increase_percent);
+			$status = wholesale_review_pricing_apply_product($product_id, $increase_percent);
 			$result[$status]++;
 			if ('applied' === $status) {
 				$result['increase_percentages'][$increase_percent] = isset($result['increase_percentages'][$increase_percent]) ? $result['increase_percentages'][$increase_percent] + 1 : 1;
@@ -285,14 +285,14 @@ function retails_review_pricing_handle()
 		wp_die('Invalid price update action.');
 	}
 
-	set_transient('retails_review_pricing_result_' . get_current_user_id(), $result, MINUTE_IN_SECONDS);
-	wp_safe_redirect(admin_url('edit.php?post_type=review_submission&page=retails-review-pricing'));
+	set_transient('wholesale_review_pricing_result_' . get_current_user_id(), $result, MINUTE_IN_SECONDS);
+	wp_safe_redirect(admin_url('edit.php?post_type=review_submission&page=wholesale-review-pricing'));
 	exit;
 }
 
-function retails_review_pricing_admin_page()
+function wholesale_review_pricing_admin_page()
 {
-	$products = retails_review_pricing_target_products();
+	$products = wholesale_review_pricing_target_products();
 	$categories = get_terms(array(
 		'taxonomy' => 'product_category',
 		'hide_empty' => true,
@@ -308,9 +308,9 @@ function retails_review_pricing_admin_page()
 		}
 	}
 	$pending_count = count(array_filter($products, static function ($product_id) {
-		return !metadata_exists('post', $product_id, RETAILS_REVIEW_PRICING_SNAPSHOT_META);
+		return !metadata_exists('post', $product_id, WHOLESALE_REVIEW_PRICING_SNAPSHOT_META);
 	}));
-	$result_key = 'retails_review_pricing_result_' . get_current_user_id();
+	$result_key = 'wholesale_review_pricing_result_' . get_current_user_id();
 	$result = get_transient($result_key);
 	if ($result) {
 		delete_transient($result_key);
@@ -320,7 +320,7 @@ function retails_review_pricing_admin_page()
 		'post_status' => 'any',
 		'posts_per_page' => 1,
 		'fields' => 'ids',
-		'meta_key' => RETAILS_REVIEW_PRICING_SNAPSHOT_META,
+		'meta_key' => WHOLESALE_REVIEW_PRICING_SNAPSHOT_META,
 	));
 	?>
 	<div class="wrap">
@@ -348,17 +348,17 @@ function retails_review_pricing_admin_page()
 		<?php endif; ?>
 		<p><strong><?php echo esc_html(count($products)); ?></strong> published product(s) found; <strong><?php echo esc_html($pending_count); ?></strong> have not been updated by this tool.</p>
 		<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('Apply the price change to the selected products?');">
-			<input type="hidden" name="action" value="retails_review_pricing">
+			<input type="hidden" name="action" value="wholesale_review_pricing">
 			<input type="hidden" name="task" value="apply">
-			<?php wp_nonce_field('retails_review_pricing'); ?>
+			<?php wp_nonce_field('wholesale_review_pricing'); ?>
 			<fieldset>
 				<legend><strong>Select products by</strong></legend>
 				<label><input type="radio" name="selection_mode" value="category" checked> Category</label>
 				<label><input type="radio" name="selection_mode" value="manual"> Manually</label>
 			</fieldset>
-			<p class="retails-review-pricing-categories">
-				<label for="retails-review-pricing-category"><strong>Categories</strong></label><br>
-				<select id="retails-review-pricing-category" name="category_ids[]" multiple size="8">
+			<p class="wholesale-review-pricing-categories">
+				<label for="wholesale-review-pricing-category"><strong>Categories</strong></label><br>
+				<select id="wholesale-review-pricing-category" name="category_ids[]" multiple size="8">
 					<?php foreach ($categories as $category) : ?>
 						<option value="<?php echo esc_attr($category->term_id); ?>" <?php selected(in_array((int) $category->term_id, $default_categories, true)); ?>>
 							<?php echo esc_html(str_repeat('- ', count(get_ancestors($category->term_id, 'product_category', 'taxonomy'))) . $category->name); ?>
@@ -367,9 +367,9 @@ function retails_review_pricing_admin_page()
 				</select>
 				<br><span class="description">Select one or more categories; subcategories are included.</span>
 			</p>
-			<p class="retails-review-pricing-products" hidden>
-				<label for="retails-review-pricing-products"><strong>Products</strong></label><br>
-				<select id="retails-review-pricing-products" name="product_ids[]" multiple size="12">
+			<p class="wholesale-review-pricing-products" hidden>
+				<label for="wholesale-review-pricing-products"><strong>Products</strong></label><br>
+				<select id="wholesale-review-pricing-products" name="product_ids[]" multiple size="12">
 					<?php foreach ($products as $product_id) : ?>
 						<option value="<?php echo esc_attr($product_id); ?>">
 							<?php echo esc_html(get_the_title($product_id) . ' (' . get_post_field('post_name', $product_id) . ')'); ?>
@@ -378,10 +378,10 @@ function retails_review_pricing_admin_page()
 				</select>
 			</p>
 			<p>
-				<label for="retails-review-min-increase"><strong>Increase regular price by a random percentage</strong></label><br>
-				<input id="retails-review-min-increase" type="number" name="min_increase_percent" value="10" min="1" max="100" step="1" required>
+				<label for="wholesale-review-min-increase"><strong>Increase regular price by a random percentage</strong></label><br>
+				<input id="wholesale-review-min-increase" type="number" name="min_increase_percent" value="10" min="1" max="100" step="1" required>
 				% min &ndash;
-				<input id="retails-review-max-increase" type="number" name="max_increase_percent" value="20" min="1" max="100" step="1" required> % max
+				<input id="wholesale-review-max-increase" type="number" name="max_increase_percent" value="20" min="1" max="100" step="1" required> % max
 				<br><span class="description">Each product gets a random whole-number regular-price increase within this inclusive range; the current price stays as the sale price.</span>
 			</p>
 			<button type="submit" class="button button-primary">Apply price changes</button>
@@ -389,15 +389,15 @@ function retails_review_pricing_admin_page()
 		<script>
 		(function () {
 			var modes = document.querySelectorAll('input[name="selection_mode"]');
-			var categoryFields = document.querySelector('.retails-review-pricing-categories');
-			var productFields = document.querySelector('.retails-review-pricing-products');
+			var categoryFields = document.querySelector('.wholesale-review-pricing-categories');
+			var productFields = document.querySelector('.wholesale-review-pricing-products');
 			function updateSelectionFields() {
 				var selectedMode = document.querySelector('input[name="selection_mode"]:checked');
 				var manual = selectedMode && selectedMode.value === 'manual';
 				categoryFields.hidden = manual;
 				productFields.hidden = !manual;
-				document.getElementById('retails-review-pricing-category').required = !manual;
-				document.getElementById('retails-review-pricing-products').required = manual;
+				document.getElementById('wholesale-review-pricing-category').required = !manual;
+				document.getElementById('wholesale-review-pricing-products').required = manual;
 			}
 			modes.forEach(function (mode) { mode.addEventListener('change', updateSelectionFields); });
 			updateSelectionFields();
@@ -406,9 +406,9 @@ function retails_review_pricing_admin_page()
 		<?php if ($applied_ids) : ?>
 			<hr>
 			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" onsubmit="return confirm('Restore the original prices for all products updated by this tool?');">
-				<input type="hidden" name="action" value="retails_review_pricing">
+				<input type="hidden" name="action" value="wholesale_review_pricing">
 				<input type="hidden" name="task" value="restore">
-				<?php wp_nonce_field('retails_review_pricing'); ?>
+				<?php wp_nonce_field('wholesale_review_pricing'); ?>
 				<button type="submit" class="button">Restore original prices</button>
 			</form>
 		<?php endif; ?>

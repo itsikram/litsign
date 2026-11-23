@@ -8,7 +8,7 @@
  * @package litsign
  */
 
-$summary = retails_reviews_page_summary();
+$summary = wholesale_reviews_page_summary();
 // Not "product": that is WordPress's product post type query var, and
 // /reviews/?product=123 made WordPress look up a product named "123" (404).
 $filter_product = isset($_GET['review_product']) ? absint($_GET['review_product']) : 0;
@@ -16,11 +16,11 @@ $filter_product = isset($summary['products'][$filter_product]) ? $filter_product
 $filter_rating = isset($_GET['rating']) ? absint($_GET['rating']) : 0;
 $filter_rating = $filter_rating >= 1 && $filter_rating <= 5 ? $filter_rating : 0;
 $current_page = isset($_GET['pg']) ? max(1, absint($_GET['pg'])) : 1;
-$results = retails_reviews_page_query($filter_product, $filter_rating, $current_page);
-$google = function_exists('retails_google_reviews') ? retails_google_reviews() : null;
+$results = wholesale_reviews_page_query($filter_product, $filter_rating, $current_page);
+$google = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
 $filter_url = static function ($args) use ($filter_product, $filter_rating) {
     $args = array_merge(array('review_product' => $filter_product, 'rating' => $filter_rating), $args);
-    return retails_reviews_page_url(array_filter($args));
+    return wholesale_reviews_page_url(array_filter($args));
 };
 
 get_header();
@@ -37,11 +37,11 @@ get_header();
             <?php if ($summary['count']) : ?>
                 <div class="reviews-page-score">
                     <strong><?php echo esc_html(number_format($summary['average'], 1)); ?></strong>
-                    <?php echo retails_review_stars($summary['average']); ?>
+                    <?php echo wholesale_review_stars($summary['average']); ?>
                     <span><?php echo esc_html(sprintf(_n('%s review', '%s reviews', $summary['count'], 'litsign'), number_format_i18n($summary['count']))); ?></span>
                     <?php if ($google && !empty($google['count'])) : ?>
                         <a class="reviews-page-google" href="<?php echo esc_url($google['url']); ?>" target="_blank" rel="noopener">
-                            <?php echo retails_google_logo_svg(16); ?> <?php echo esc_html(number_format((float) $google['rating'], 1)); ?> on Google (<?php echo esc_html(number_format_i18n((int) $google['count'])); ?>)
+                            <?php echo wholesale_google_logo_svg(16); ?> <?php echo esc_html(number_format((float) $google['rating'], 1)); ?> on Google (<?php echo esc_html(number_format_i18n((int) $google['count'])); ?>)
                         </a>
                     <?php endif; ?>
                 </div>
@@ -73,7 +73,7 @@ get_header();
                     </ul>
 
                     <?php if ($summary['products']) : ?>
-                        <form method="get" action="<?php echo esc_url(retails_reviews_page_url()); ?>" class="reviews-page-product">
+                        <form method="get" action="<?php echo esc_url(wholesale_reviews_page_url()); ?>" class="reviews-page-product">
                             <label for="reviews-product">Product</label>
                             <select id="reviews-product" name="review_product" onchange="this.form.submit()">
                                 <option value="">All products</option>
@@ -89,7 +89,7 @@ get_header();
                     <?php endif; ?>
 
                     <?php if ($filter_product || $filter_rating) : ?>
-                        <p><a class="reviews-page-clear" href="<?php echo esc_url(retails_reviews_page_url()); ?>">Clear filters</a></p>
+                        <p><a class="reviews-page-clear" href="<?php echo esc_url(wholesale_reviews_page_url()); ?>">Clear filters</a></p>
                     <?php endif; ?>
                 </aside>
 
@@ -119,7 +119,7 @@ get_header();
                                     get_post_meta($review->ID, '_review_company', true),
                                     get_post_meta($review->ID, '_review_location', true),
                                 )));
-                                $verified = retails_review_is_verified($review->ID);
+                                $verified = $product_id > 0 && '' === get_post_meta($review->ID, '_review_source', true);
                                 ?>
                                 <article class="product-review-card">
                                     <div class="product-review-card-header">
@@ -131,7 +131,7 @@ get_header();
                                     <?php endif; ?>
                                     <p><?php echo nl2br(esc_html($review->post_content)); ?></p>
                                     <div class="product-review-author">
-                                        <strong><?php echo esc_html(retails_review_display_name(get_post_meta($review->ID, '_review_name', true))); ?></strong>
+                                        <strong><?php echo esc_html(wholesale_review_display_name(get_post_meta($review->ID, '_review_name', true))); ?></strong>
                                         <?php if ($byline) : ?>
                                             <span><?php echo esc_html($byline); ?></span>
                                         <?php endif; ?>

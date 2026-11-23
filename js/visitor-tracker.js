@@ -5,7 +5,7 @@
  * field a visitor was on, never what they typed.
  */
 (() => {
-  const config = window.retailsVI;
+  const config = window.wholesaleVI;
   if (!config || !config.endpoint || navigator.webdriver || !window.JSON) return;
   if (/(?:^|;\s*)sso_vi_off=1/.test(document.cookie)) return;
 
@@ -64,27 +64,13 @@
   // ------------------------------------------------------------------
 
   const pageKey = randomKey(8);
-  const screenSize = window.screen ? window.screen.width + 'x' + window.screen.height : '';
-  let timeZone = '';
-  try {
-    timeZone = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 60);
-  } catch (error) {
-    // Very old browsers: no time zone.
-  }
   const queue = [];
   const originalFetch = window.fetch ? window.fetch.bind(window) : null;
   let lastSent = '';
 
   const push = (type, data) => {
     queue.push(Object.assign({ t: type, at: Date.now() }, data || {}));
-    // Problems the visitor ran into also get a screenshot (js/vi-page-copy.js).
-    try {
-      if (shotProblemTypes[type]) shotProblem(type, data && data.label, data && data.value);
-    } catch (error) {
-      // Never let screenshots get in the way of the stats.
-    }
   };
-  const shotProblemTypes = { js_error: 1, price_error: 1, upload_error: 1, cart_error: 1, checkout_error: 1, payment_error: 1 };
 
   const text = (value, max) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, max || 80);
 
@@ -209,10 +195,7 @@
     // DOM the document only sees the host element, so name the inner one.
     const inner = (event.composedPath && event.composedPath()[0]) || event.target;
     const typingBox = inner.matches && inner.matches('input:not([type="submit"]):not([type="button"]):not([type="checkbox"]):not([type="radio"]), textarea, select');
-    // Quantity + / - buttons are meant to be tapped several times in a row (3 taps = 4
-    // pieces): they showed up as rage clicks on "Increase quantity" (Nov 2026).
-    const stepper = inner.closest && inner.closest('[data-qty-step], [data-mc-step]');
-    if (event.isTrusted && !typingBox && !stepper) {
+    if (event.isTrusted && !typingBox) {
       recentClicks = recentClicks.filter((click) => now - click.at < 800 && Math.abs(click.x - event.clientX) < 40 && Math.abs(click.y - event.clientY) < 40);
       recentClicks.push({ at: now, x: event.clientX, y: event.clientY });
       if (recentClicks.length === 3) {
@@ -258,9 +241,7 @@
   // Facebook and Instagram apps on iPhone call window.webkit.messageHandlers),
   // not from the site itself. "ResizeObserver loop ..." is the browser noting a
   // layout pass it postponed; nothing breaks and the visitor sees nothing.
-  // _AutofillCallbackHandler: iPhone in-app browsers' own autofill script, which
-  // calls a handler that doesn't exist on the page (nothing on the site uses it).
-  const injectedError = /webkit\.messageHandlers|__gCrWeb|instantSearchSDKJSBridgeClearHighlight|_AutofillCallbackHandler|^ResizeObserver loop/;
+  const injectedError = /webkit\.messageHandlers|__gCrWeb|instantSearchSDKJSBridgeClearHighlight|^ResizeObserver loop/;
 
   let errorCount = 0;
   const logError = (message, where) => {
@@ -282,19 +263,19 @@
 
   // action => [event on success, event on failure]
   const ajaxEvents = {
-    retails_price_quote: ['price_quote', 'price_error'],
-    retails_upload_design: ['design_upload', 'upload_error'],
-    retails_mini_cart_add: ['add_to_cart', 'cart_error'],
-    retails_mini_cart_remove: ['cart_remove', ''],
-    retails_payment_start: ['payment_start', 'checkout_error'],
-    retails_payment_complete: ['', 'payment_error'],
+    wholesale_price_quote: ['price_quote', 'price_error'],
+    wholesale_upload_design: ['design_upload', 'upload_error'],
+    wholesale_mini_cart_add: ['add_to_cart', 'cart_error'],
+    wholesale_mini_cart_remove: ['cart_remove', ''],
+    wholesale_payment_start: ['payment_start', 'checkout_error'],
+    wholesale_payment_complete: ['', 'payment_error'],
   };
   const seenOnce = new Set();
 
   const recordAjax = (action, json, body) => {
     const events = ajaxEvents[action];
     const ok = !!json && (json.ok === true || json.success === true || (json.ok === undefined && json.success === undefined && !json.error));
-    if (action === 'retails_payment_start') push('payment_start');
+    if (action === 'wholesale_payment_start') push('payment_start');
 
     if (ok) {
       const type = events[0];
@@ -305,12 +286,7 @@
         if (!configured || seenOnce.has('price')) return;
         seenOnce.add('price');
       }
-      // The cart answers with its new subtotal ("$45.00"): the cart's value
-      // for following up people who leave without ordering.
-      const data = json && json.data;
-      const value = json && json.total ? String(json.total)
-        : (type === 'add_to_cart' && data && data.subtotal ? String(data.subtotal).replace(/[^0-9.]/g, '') : '');
-      push(type, { value });
+      push(type, { value: json && json.total ? String(json.total) : '' });
       return send();
     }
 
@@ -319,7 +295,7 @@
     // is typed) fails quietly and the visitor never sees it.
     if (events[1] === 'price_error' && !configured) return;
     // A size outside the limits: the page shows no quote error, only its own size note
-    // once the box is left ("retails:size-note" below). The quote answers 700 ms into
+    // once the box is left ("wholesale:size-note" below). The quote answers 700 ms into
     // typing, so "36" was logged as a "6 x 6 minimum" error at "3".
     if (events[1] === 'price_error' && json && json.size_error) return;
     const data = json && json.data;
@@ -335,7 +311,7 @@
   };
 
   // The size note under a product's size box (js/main.js), with the size typed.
-  document.addEventListener('retails:size-note', (event) => {
+  document.addEventListener('wholesale:size-note', (event) => {
     const detail = event.detail || {};
     const key = 'price_error' + detail.message;
     if (!detail.message || seenOnce.has(key)) return;
@@ -390,10 +366,6 @@
       p: pageKey,
       url: location.href,
       tp: navigator.maxTouchPoints || 0,
-      // Sent every time so the server can tell a robot's browser from a person's
-      // even when the first page view did not arrive.
-      sc: screenSize,
-      tz: timeZone,
       ping: { secs: activeSeconds, scroll: maxScroll, forms: openForms },
       events: queue.splice(0, 40).map((event) => {
         event.ago = now - event.at;
@@ -423,130 +395,11 @@
         keepalive: body.length < 60000,
         credentials: 'same-origin',
         headers: { 'Content-Type': 'text/plain' },
-      }))
-        // 200 + {chat: 1}: an agent started a chat with this visitor; open it.
-        // 200 + {snap: id}: an admin asked for a screenshot of this page.
-        .then((response) => (response && response.status === 200 ? response.json() : null))
-        .then((json) => {
-          if (json && json.snap) sendSnap(String(json.snap));
-          const chat = window.SFSChatLoader;
-          if (!json || !json.chat || !chat || typeof chat.load !== 'function' || chat.widget) return;
-          // Desktop: open the chat. Phones: load it and show the agent's message as a bubble
-          // (an open chat would cover the whole screen).
-          const phone = window.matchMedia && window.matchMedia('(max-width: 767px)').matches;
-          if (!phone) {
-            chat.load(true);
-          } else {
-            chat.invited = true;
-            chat.load(false);
-          }
-        })
-        .catch(() => {});
+      })).catch(() => {});
     } catch (error) {
       // Offline or blocked: drop it.
     }
   };
-
-  // ------------------------------------------------------------------
-  // Screenshots (inc/visitor-snaps.php)
-  // ------------------------------------------------------------------
-
-  // Live Chat's snap.js only copies the page (HTML, typed values, canvas drawings, scroll
-  // spots; password and card fields masked, the chat window left out) in short slices; the
-  // admin's browser draws the picture. So the page never pauses, flashes or scrolls.
-  const snapsAnswered = new Set();
-  let snapScript = null;
-  const loadSnap = () => snapScript || (snapScript = new Promise((resolve, reject) => {
-    if (window.SFSChatSnap) return resolve(window.SFSChatSnap);
-    const script = document.createElement('script');
-    script.src = config.snap;
-    script.async = true;
-    script.onload = () => (window.SFSChatSnap ? resolve(window.SFSChatSnap) : reject(new Error('copier missing')));
-    script.onerror = () => {
-      snapScript = null;
-      reject(new Error('copier blocked'));
-    };
-    document.head.appendChild(script);
-  }));
-  function sendSnap(req) {
-    // A hidden tab is not what's on their screen; the server asks another page later.
-    if (!config.snap || !config.snapEndpoint || !originalFetch || snapsAnswered.has(req) || document.hidden) return;
-    snapsAnswered.add(req);
-    const post = (data) => {
-      try {
-        Promise.resolve(originalFetch(config.snapEndpoint, {
-          method: 'POST',
-          body: JSON.stringify(Object.assign({ s: session, v: visitor, req }, data)),
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'text/plain' },
-        })).catch(() => {});
-      } catch (error) {
-        // Offline or blocked: the admin sees it time out.
-      }
-    };
-    loadSnap()
-      .then((copier) => copier.capture())
-      .then((copy) => post(Object.assign(copy, { page: location.href, title: document.title })))
-      .catch((error) => post({ error: text((error && error.message) || error || 'copy failed', 160) }));
-  }
-
-  // ------------------------------------------------------------------
-  // Automatic screenshots: errors and leaving (inc/screenshots.php)
-  // ------------------------------------------------------------------
-
-  // js/vi-page-copy.js copies the page when the visitor runs into a problem or leaves.
-  // It loads after their first move, scroll or tap, or right after a problem, so it never
-  // costs the page load anything.
-  const shots = config.shots && config.shots.js ? config.shots : null;
-  const shotApi = { config: shots, session, visitor, page: pageKey, fetch: originalFetch, problems: [], report: null };
-  let shotScript = null;
-  const loadShots = () => {
-    if (shotScript || !shots) return;
-    shotScript = document.createElement('script');
-    shotScript.src = shots.js;
-    shotScript.async = true;
-    shotScript.onload = () => {
-      try {
-        if (window.retailsShots) window.retailsShots.start(shotApi);
-      } catch (error) {
-        // Never get in the page's way.
-      }
-    };
-    document.head.appendChild(shotScript);
-  };
-  function shotProblem(type, label, where) {
-    if (!shots || !shots.err || shotApi.problems.length >= 20) return;
-    shotApi.problems.push({ type, label: text(label, 300), where: text(where, 160) });
-    if (shotApi.report) shotApi.report();
-    else loadShots();
-  }
-
-  // The last page in this tab said the visitor left the site, yet here they are: take
-  // that screenshot back.
-  try {
-    const left = JSON.parse(window.sessionStorage.getItem('wsh_exit') || 'null');
-    if (left) {
-      window.sessionStorage.removeItem('wsh_exit');
-      if (left.ref && left.url && left.s === session && navigator.sendBeacon) {
-        navigator.sendBeacon(left.url, new Blob([JSON.stringify({ s: left.s, v: left.v, ref: left.ref })], { type: 'text/plain' }));
-      }
-    }
-  } catch (error) {
-    // No storage (private mode): the server's own check takes it back.
-  }
-
-  if (shots) {
-    if (config.ptype === '404') shotProblem('page_404', 'Page not found: ' + location.pathname, document.referrer ? 'from ' + document.referrer.slice(0, 140) : '');
-    if (shots.exit) {
-      const firstMove = ['pointermove', 'pointerdown', 'keydown', 'scroll', 'touchstart'];
-      const onFirstMove = () => {
-        firstMove.forEach((name) => window.removeEventListener(name, onFirstMove, true));
-        if (window.requestIdleCallback) window.requestIdleCallback(loadShots, { timeout: 3000 });
-        else setTimeout(loadShots, 1200);
-      };
-      firstMove.forEach((name) => window.addEventListener(name, onFirstMove, { capture: true, passive: true }));
-    }
-  }
 
   push('pageview', {
     title: document.title,
@@ -554,8 +407,8 @@
     cart: config.cart || 0,
     ref: document.referrer.slice(0, 500),
     campaign,
-    screen: screenSize,
-    tz: timeZone,
+    screen: window.screen ? window.screen.width + 'x' + window.screen.height : '',
+    tz: (Intl.DateTimeFormat().resolvedOptions().timeZone || '').slice(0, 60),
     lang: (navigator.language || '').slice(0, 20),
   });
   send();

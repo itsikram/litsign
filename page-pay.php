@@ -6,15 +6,9 @@
  * @package litsign
  */
 
-// /pay/?o=<token>: pay an existing order (link sent from the order's "Payment link" box).
-if (isset($_GET['o']) && !isset($_GET['t'])) {
-	require get_template_directory() . '/template-parts/pay-order.php';
-	return;
-}
-
 $token = isset($_GET['t']) ? preg_replace('/[^A-Za-z0-9]/', '', (string) wp_unslash($_GET['t'])) : '';
-$ticket_id = retails_find_ticket_by_token($token);
-$ticket = $ticket_id ? retails_get_ticket($ticket_id) : null;
+$ticket_id = wholesale_find_ticket_by_token($token);
+$ticket = $ticket_id ? wholesale_get_ticket($ticket_id) : null;
 $is_preview = $ticket && current_user_can('edit_post', $ticket['id']);
 
 if (!$ticket || (!$is_preview && in_array($ticket['status'], array('draft', 'cancelled'), true))) {
@@ -25,20 +19,20 @@ if (!$ticket || (!$is_preview && in_array($ticket['status'], array('draft', 'can
 }
 
 nocache_headers();
-retails_ticket_mark_viewed($ticket);
+wholesale_ticket_mark_viewed($ticket);
 
-$business = retails_ticket_business();
+$business = wholesale_ticket_business();
 $totals = $ticket['totals'];
 $message = isset($_GET['message']) ? sanitize_text_field(wp_unslash($_GET['message'])) : '';
-$payment_disabled = retails_setting_enabled('payment_disabled');
+$payment_disabled = wholesale_setting_enabled('payment_disabled');
 $name_parts = explode(' ', trim($ticket['customer_name']), 2);
 $is_complete = in_array($ticket['status'], array('paid', 'accepted'), true);
-$is_expired = !$is_complete && retails_ticket_is_expired($ticket);
+$is_expired = !$is_complete && wholesale_ticket_is_expired($ticket);
 $can_pay = 'sent' === $ticket['status'] && !$is_expired;
 $issued = $ticket['sent_at'] ? $ticket['sent_at'] : $ticket['created'];
 $proof_url = $ticket['proof_id'] ? wp_get_attachment_url($ticket['proof_id']) : '';
 $proof_image = $ticket['proof_id'] && wp_attachment_is_image($ticket['proof_id']) ? wp_get_attachment_image_url($ticket['proof_id'], 'large') : '';
-$amount_label = retails_format_ticket_amount($ticket['amount']);
+$amount_label = wholesale_format_ticket_amount($ticket['amount']);
 
 get_header();
 ?>
@@ -103,8 +97,8 @@ get_header();
 						<span role="columnheader" class="wpt-r">Amount</span>
 					</div>
 					<?php foreach ($ticket['items'] as $item) :
-						$thumb = $item['design'] ? $item['design']['url'] : retails_ticket_product_thumb($item['product_id']);
-						$specs = retails_ticket_item_specs($item);
+						$thumb = $item['design'] ? $item['design']['url'] : wholesale_ticket_product_thumb($item['product_id']);
+						$specs = wholesale_ticket_item_specs($item);
 						?>
 						<div class="wpt-invoice__row" role="row">
 							<div class="wpt-invoice__item" role="cell">
@@ -121,17 +115,17 @@ get_header();
 								</div>
 							</div>
 							<span role="cell" class="wpt-c" data-label="Qty"><?php echo esc_html((string) $item['qty']); ?></span>
-							<span role="cell" class="wpt-r" data-label="Price"><?php echo esc_html(retails_format_ticket_amount($item['unit_price'])); ?></span>
-							<span role="cell" class="wpt-r wpt-invoice__amount" data-label="Amount"><?php echo esc_html(retails_format_ticket_amount(retails_ticket_line_total($item))); ?></span>
+							<span role="cell" class="wpt-r" data-label="Price"><?php echo esc_html(wholesale_format_ticket_amount($item['unit_price'])); ?></span>
+							<span role="cell" class="wpt-r wpt-invoice__amount" data-label="Amount"><?php echo esc_html(wholesale_format_ticket_amount(wholesale_ticket_line_total($item))); ?></span>
 						</div>
 					<?php endforeach; ?>
 				</div>
 
 				<dl class="wpt-invoice__totals">
-					<div><dt>Subtotal</dt><dd><?php echo esc_html(retails_format_ticket_amount($totals['subtotal'])); ?></dd></div>
-					<?php if ($totals['discount'] > 0) : ?><div class="wpt-invoice__discount"><dt>Discount</dt><dd>−<?php echo esc_html(retails_format_ticket_amount($totals['discount'])); ?></dd></div><?php endif; ?>
-					<?php if ($totals['shipping'] > 0) : ?><div><dt>Shipping</dt><dd><?php echo esc_html(retails_format_ticket_amount($totals['shipping'])); ?></dd></div><?php endif; ?>
-					<?php if ($totals['tax'] > 0) : ?><div><dt>Tax (<?php echo esc_html(rtrim(rtrim(number_format($totals['tax_rate'], 3), '0'), '.')); ?>%)</dt><dd><?php echo esc_html(retails_format_ticket_amount($totals['tax'])); ?></dd></div><?php endif; ?>
+					<div><dt>Subtotal</dt><dd><?php echo esc_html(wholesale_format_ticket_amount($totals['subtotal'])); ?></dd></div>
+					<?php if ($totals['discount'] > 0) : ?><div class="wpt-invoice__discount"><dt>Discount</dt><dd>−<?php echo esc_html(wholesale_format_ticket_amount($totals['discount'])); ?></dd></div><?php endif; ?>
+					<?php if ($totals['shipping'] > 0) : ?><div><dt>Shipping</dt><dd><?php echo esc_html(wholesale_format_ticket_amount($totals['shipping'])); ?></dd></div><?php endif; ?>
+					<?php if ($totals['tax'] > 0) : ?><div><dt>Tax (<?php echo esc_html(rtrim(rtrim(number_format($totals['tax_rate'], 3), '0'), '.')); ?>%)</dt><dd><?php echo esc_html(wholesale_format_ticket_amount($totals['tax'])); ?></dd></div><?php endif; ?>
 					<div class="wpt-invoice__grand"><dt><?php echo $is_complete ? 'Total' : 'Total due'; ?></dt><dd><?php echo esc_html($amount_label); ?></dd></div>
 				</dl>
 
@@ -178,9 +172,9 @@ get_header();
 					<?php endif; ?>
 
 					<form action="<?php echo esc_url(admin_url('admin-post.php')); ?>" method="post" class="wpt-payform" id="ticketPayForm">
-						<input type="hidden" name="action" value="retails_pay_ticket">
+						<input type="hidden" name="action" value="wholesale_pay_ticket">
 						<input type="hidden" name="ticket_token" value="<?php echo esc_attr($token); ?>">
-						<?php wp_nonce_field('retails_pay_ticket_' . $ticket['id'], 'retails_ticket_pay_nonce'); ?>
+						<?php wp_nonce_field('wholesale_pay_ticket_' . $ticket['id'], 'wholesale_ticket_pay_nonce'); ?>
 
 						<fieldset>
 							<legend>Billing details</legend>
@@ -205,7 +199,7 @@ get_header();
 							<?php if ($payment_disabled) : ?>
 								<p class="wpt-payform__info">Online card payment is temporarily unavailable. Confirm your order and we'll contact you to arrange payment.</p>
 							<?php else : ?>
-								<?php if ('direct' === retails_payment_method()) : ?>
+								<?php if ('direct' === wholesale_payment_method()) : ?>
 									<p><label for="cardNumber">Card number</label><input required type="text" name="card_number" id="cardNumber" inputmode="numeric" autocomplete="cc-number" pattern="[0-9 ]{12,23}" maxlength="23" placeholder="1234 5678 9012 3456"></p>
 									<div class="wpt-payform__row wpt-payform__row--3">
 										<p><label for="expMonth">Month</label>
@@ -236,7 +230,7 @@ get_header();
 						</button>
 						<p class="wpt-payform__secure">
 							<svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1a5 5 0 0 0-5 5v3H5a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V10a1 1 0 0 0-1-1h-2V6a5 5 0 0 0-5-5Zm-3 5a3 3 0 0 1 6 0v3H9V6Z"/></svg>
-							<?php echo $payment_disabled ? 'No payment is taken online.' : ('direct' === retails_payment_method() ? 'Secure payment processed by Elavon Converge. We never store your card number.' : 'Secure payment through Elavon Converge. Your card details are entered in their secure window and never reach this website.'); ?>
+							<?php echo $payment_disabled ? 'No payment is taken online.' : ('direct' === wholesale_payment_method() ? 'Secure payment processed by Elavon Converge. We never store your card number.' : 'Secure payment through Elavon Converge. Your card details are entered in their secure window and never reach this website.'); ?>
 						</p>
 					</form>
 				<?php endif; ?>

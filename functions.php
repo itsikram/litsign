@@ -1,9 +1,5 @@
 <?php
 
-// Move stored data from the old name prefix before anything below reads it.
-require_once __DIR__ . '/inc/key-migration.php';
-retails_key_migration_run();
-
 if (!defined('WHOLESALE_CONVERGE_MERCHANT_ID')) {
 	define('WHOLESALE_CONVERGE_MERCHANT_ID', '2466214');
 }
@@ -13,9 +9,7 @@ if (!defined('WHOLESALE_CONVERGE_USER_ID')) {
 }
 
 if (!defined('WHOLESALE_CONVERGE_PIN')) {
-	// The PIN is never kept in theme code. It is saved on Settings > Wallet Payments > Card
-	// (option retails_gateway_pin), or defined in wp-config.php.
-	define('WHOLESALE_CONVERGE_PIN', '');
+	define('WHOLESALE_CONVERGE_PIN', 'C2UZW43BPDVLYKUS4ZV0V1OUZWUTHGD66BIR65V4UFRFN8N8VB7OJV6CZOSDKHIW');
 }
 
 if (!defined('WHOLESALE_CONVERGE_TEST_MODE')) {
@@ -49,21 +43,20 @@ if (file_exists(dirname(__FILE__) . '/cmb2/init.php')) {
 if (file_exists(dirname(__FILE__) . '/template/display_admin_orders.php')) {
 	require_once(dirname(__FILE__) . '/template/display_admin_orders.php');
 }
+require_once(dirname(__FILE__) . '/inc/trade/bootstrap.php');
 require_once(dirname(__FILE__) . '/inc/site-timezone.php');
 require_once(dirname(__FILE__) . '/inc/orders.php');
 require_once(dirname(__FILE__) . '/inc/reviews.php');
 require_once(dirname(__FILE__) . '/inc/review-manager.php');
-require_once(dirname(__FILE__) . '/inc/google-review-links.php');
 // inc/review-pricing.php (the "Review Product Sale Pricing" tool) is retired: it raised
 // regular prices to create crossed-out "was" prices nobody paid. Sales now come only from
 // the dated promotion under Settings > Storefront Sign. Its per-product snapshots of the
-// original prices stay in post meta (_retails_review_pricing_snapshot).
+// original prices stay in post meta (_wholesale_review_pricing_snapshot).
 require_once(dirname(__FILE__) . '/inc/order-reviews.php');
-require_once(dirname(__FILE__) . '/inc/review-requests.php');
 require_once(dirname(__FILE__) . '/inc/pricing.php');
 require_once(dirname(__FILE__) . '/inc/stock-status.php');
-require_once(dirname(__FILE__) . '/inc/product-bulk-status.php');
 require_once(dirname(__FILE__) . '/inc/payments.php');
+require_once(dirname(__FILE__) . '/inc/shipping.php');
 require_once(dirname(__FILE__) . '/inc/mini-cart.php');
 require_once(dirname(__FILE__) . '/inc/admin-orders.php');
 require_once(dirname(__FILE__) . '/inc/refunds.php');
@@ -71,58 +64,38 @@ require_once(dirname(__FILE__) . '/inc/email-log.php');
 require_once(dirname(__FILE__) . '/inc/quote-emails.php');
 require_once(dirname(__FILE__) . '/inc/seo.php');
 require_once(dirname(__FILE__) . '/inc/seo-content.php');
-require_once(dirname(__FILE__) . '/inc/product-kit.php');
-require_once(dirname(__FILE__) . '/inc/product-group-swap.php');
-require_once(dirname(__FILE__) . '/inc/size-chips.php');
-require_once(dirname(__FILE__) . '/inc/product-buy-box.php');
-require_once(dirname(__FILE__) . '/inc/product-hero.php');
-require_once(dirname(__FILE__) . '/inc/hero-images.php');
 require_once(dirname(__FILE__) . '/inc/product-guides.php');
 require_once(dirname(__FILE__) . '/inc/product-page-content.php');
 require_once(dirname(__FILE__) . '/inc/category-page-content.php');
 require_once(dirname(__FILE__) . '/inc/merchant-feed.php');
-require_once(dirname(__FILE__) . '/inc/openai-feed.php');
-require_once(dirname(__FILE__) . '/inc/google-customer-reviews.php');
-require_once(dirname(__FILE__) . '/inc/product-reviews-feed.php');
 require_once(dirname(__FILE__) . '/inc/product-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/location-sitemap.php');
 require_once(dirname(__FILE__) . '/inc/ads-tracking.php');
 require_once(dirname(__FILE__) . '/inc/ads-page-conversions.php');
 require_once(dirname(__FILE__) . '/inc/quote-form.php');
-require_once(dirname(__FILE__) . '/inc/buying-journey.php');
-require_once(dirname(__FILE__) . '/inc/cl-style-grid.php');
 require_once(dirname(__FILE__) . '/inc/async-uploads.php');
-require_once(dirname(__FILE__) . '/inc/artwork-size-check.php');
-require_once(dirname(__FILE__) . '/inc/order-artwork.php');
 require_once(dirname(__FILE__) . '/inc/visitor-insights.php');
 require_once(dirname(__FILE__) . '/inc/exit-survey.php');
 require_once(dirname(__FILE__) . '/inc/ads-uploads.php');
 require_once(dirname(__FILE__) . '/inc/brand-cleanup.php');
 require_once(dirname(__FILE__) . '/inc/storefront-media.php');
 require_once(dirname(__FILE__) . '/inc/product-image-alt.php');
-require_once(dirname(__FILE__) . '/inc/product-photo-overrides.php');
 require_once(dirname(__FILE__) . '/inc/shop-catalog.php');
-require_once(dirname(__FILE__) . '/inc/home-catalog-directory.php');
 require_once(dirname(__FILE__) . '/inc/theme-images.php');
 require_once(dirname(__FILE__) . '/inc/settings-page.php');
 require_once(dirname(__FILE__) . '/inc/media-sync.php');
-require_once(dirname(__FILE__) . '/inc/media-source-tabs.php');
 require_once(dirname(__FILE__) . '/inc/theme-zip.php');
 require_once(dirname(__FILE__) . '/inc/performance.php');
 require_once(dirname(__FILE__) . '/inc/page-loader.php');
-require_once(dirname(__FILE__) . '/inc/motion.php');
 require_once(dirname(__FILE__) . '/inc/cache-clear.php');
 require_once(dirname(__FILE__) . '/inc/guide-pages.php');
 require_once(dirname(__FILE__) . '/inc/developer-page.php');
 require_once(dirname(__FILE__) . '/inc/seo-admin/loader.php');
 require_once(dirname(__FILE__) . '/inc/admin-product-editor.php');
 require_once(dirname(__FILE__) . '/inc/admin-edit-links.php');
-require_once(dirname(__FILE__) . '/inc/admin-mobile.php');
 require_once(dirname(__FILE__) . '/template/admin_payment_tickets.php');
-require_once(dirname(__FILE__) . '/inc/order-pay-link.php');
-require_once(dirname(__FILE__) . '/inc/payments-admin.php');
-require_once(dirname(__FILE__) . '/inc/order-partial-refund.php');
 require_once(dirname(__FILE__) . '/ssx-live-search.php');
+wholesale_trade_boot();
 
 /**
  * Sets up theme defaults and registers support for various WordPress features.
@@ -131,7 +104,7 @@ require_once(dirname(__FILE__) . '/ssx-live-search.php');
  * runs before the init hook. The init hook is too late for some features, such
  * as indicating support for post thumbnails.
  */
-function retails_setup()
+function wholesale_setup()
 {
 	/*
 	 * Make theme available for translation.
@@ -354,7 +327,7 @@ function retails_setup()
 		'labels' => array(
 			'name' => 'Review Submissions',
 			'singular_name' => 'Review Submission',
-			'edit_item' => 'Edit Review Submission',
+			'edit_item' => 'View Review Submission',
 		),
 		'public' => false,
 		'show_ui' => true,
@@ -424,17 +397,17 @@ function retails_setup()
 	}
 
 }
-add_action('after_setup_theme', 'retails_setup');
+add_action('after_setup_theme', 'wholesale_setup');
 
-function retails_search_results_per_page($query)
+function wholesale_search_results_per_page($query)
 {
 	if (!is_admin() && $query->is_main_query() && $query->is_search()) {
 		$query->set('posts_per_page', 12);
 	}
 }
-add_action('pre_get_posts', 'retails_search_results_per_page');
+add_action('pre_get_posts', 'wholesale_search_results_per_page');
 
-function retails_hide_admin_bar_for_subscribers()
+function wholesale_hide_admin_bar_for_subscribers()
 {
 	if (!is_user_logged_in()) {
 		return;
@@ -447,9 +420,9 @@ function retails_hide_admin_bar_for_subscribers()
 
 	show_admin_bar(false);
 }
-add_action('after_setup_theme', 'retails_hide_admin_bar_for_subscribers');
+add_action('after_setup_theme', 'wholesale_hide_admin_bar_for_subscribers');
 
-function retails_setting_defaults()
+function wholesale_setting_defaults()
 {
 	return array(
 		'primary_color' => '#1fa8de',
@@ -461,9 +434,6 @@ function retails_setting_defaults()
 		'allow_verified_reviews' => 1,
 		'auto_publish_reviews' => 0,
 		'schema_imported_reviews' => 0,
-		// Review request email a few days after an order arrives (inc/review-requests.php).
-		'review_request_email' => 1,
-		'review_request_days' => 5,
 		'payment_disabled' => defined('WHOLESALE_PAYMENT_DISABLED') && WHOLESALE_PAYMENT_DISABLED ? 1 : 0,
 		'payment_test_mode' => defined('WHOLESALE_CONVERGE_TEST_MODE') && WHOLESALE_CONVERGE_TEST_MODE ? 1 : 0,
 		'merchant_id' => defined('WHOLESALE_CONVERGE_MERCHANT_ID') ? WHOLESALE_CONVERGE_MERCHANT_ID : '',
@@ -474,7 +444,15 @@ function retails_setting_defaults()
 		'channel_shipping_options' => '50,200,250,300',
 		// Standard shipping is free once the cart subtotal reaches these (0 = off).
 		'free_shipping_min' => '100',
-		'free_shipping_channel_min' => '100',
+		'free_shipping_channel_min' => '1000',
+		// Checkout shipping methods (inc/shipping.php): carriers offered, the
+		// surcharges for Saturday and early-morning delivery (0 = off) and Store Pickup.
+		'shipping_carriers' => 'both',
+		'saturday_delivery_fee' => '20',
+		'early_am_fee' => '100',
+		'pickup_enabled' => 1,
+		'pickup_address' => '2601 NE 12th St, Renton, WA 98056',
+		'pickup_hours' => 'Mon–Fri, 8am–5pm PT',
 		'google_places_api_key' => defined('WHOLESALE_GOOGLE_PLACES_API_KEY') ? WHOLESALE_GOOGLE_PLACES_API_KEY : '',
 		'google_place_id' => '',
 		// Google reviews below this many stars are hidden on the site.
@@ -489,20 +467,12 @@ function retails_setting_defaults()
 		'ga4_measurement_id' => '',
 		'page_loader_enabled' => 0,
 		'ul_file_number' => '',
-		// Dated sale (retails_product_promotion() in inc/pricing.php). Off until a
+		// Dated sale (wholesale_product_promotion() in inc/pricing.php). Off until a
 		// percentage and both dates are set.
 		'promo_percent' => '0',
 		'promo_start' => '',
 		'promo_end' => '',
 		'promo_scope' => 'all',
-		// Shown instead of "Sale" while it runs, e.g. "Black Friday Sale". Empty = "Sale".
-		'promo_name' => '',
-		// Free shipping promo code (inc/payments.php retails_ship_code_window()): typed at
-		// checkout, it unlocks free standard shipping below the free shipping minimum
-		// between these Pacific dates (empty start = now, empty end = no end). Empty code = off.
-		'ship_code' => '',
-		'ship_code_start' => '',
-		'ship_code_end' => '',
 		'email_status_updates' => 1,
 		'payment_method' => 'lightbox',
 		'ticket_business_name' => 'Lit Sign Manufacturing',
@@ -517,33 +487,28 @@ function retails_setting_defaults()
 		'ticket_default_message' => '',
 		'ticket_default_tax' => 0,
 		'ticket_due_days' => 0,
-		// Other domains sent to the main site (inc/seo.php, Settings > Domain redirects).
-		// One per line: "domain" keeps the path, "domain /page/" sends every path there.
-		'domain_redirect_enabled' => 1,
-		'domain_redirect_domains' => "storefrontsignwholesale.com\nstorefrontsignwholesales.com\nonlinestorefrontsigns.com\nmystorefrontsigns.com\nmystorefrontsign.com",
-		'domain_redirect_status' => '301',
 	);
 }
 
-function retails_get_setting($key)
+function wholesale_get_setting($key)
 {
-	$defaults = retails_setting_defaults();
-	$value = get_option('retails_' . $key, null);
+	$defaults = wholesale_setting_defaults();
+	$value = get_option('wholesale_' . $key, null);
 	return null === $value && array_key_exists($key, $defaults) ? $defaults[$key] : $value;
 }
 
-function retails_setting_enabled($key)
+function wholesale_setting_enabled($key)
 {
-	return (bool) retails_get_setting($key);
+	return (bool) wholesale_get_setting($key);
 }
 
-function retails_sanitize_hex_color($value)
+function wholesale_sanitize_hex_color($value)
 {
 	$sanitized = sanitize_hex_color($value);
-	return $sanitized ? $sanitized : retails_setting_defaults()['primary_color'];
+	return $sanitized ? $sanitized : wholesale_setting_defaults()['primary_color'];
 }
 
-function retails_sanitize_decimal_list($value)
+function wholesale_sanitize_decimal_list($value)
 {
 	$values = array_filter(array_map('trim', explode(',', (string) $value)), 'is_numeric');
 	return implode(',', array_map(static function ($item) {
@@ -551,49 +516,45 @@ function retails_sanitize_decimal_list($value)
 	}, $values));
 }
 
-function retails_register_settings()
+function wholesale_register_settings()
 {
-	$defaults = retails_setting_defaults();
+	$defaults = wholesale_setting_defaults();
 	foreach ($defaults as $key => $default) {
-		register_setting('retails_settings', 'retails_' . $key, array(
+		register_setting('wholesale_settings', 'wholesale_' . $key, array(
 			'type' => is_int($default) ? 'integer' : 'string',
-			'sanitize_callback' => retails_setting_sanitizer($key),
+			'sanitize_callback' => wholesale_setting_sanitizer($key),
 		));
 	}
 }
 
-function retails_setting_sanitizer($key)
+function wholesale_setting_sanitizer($key)
 {
 	$sanitizers = array(
-		'primary_color' => 'retails_sanitize_hex_color',
-		'accent_color' => 'retails_sanitize_hex_color',
-		'sale_price_color' => 'retails_sanitize_hex_color',
-		'payment_method' => 'retails_sanitize_payment_method',
-		'tax_rate' => 'retails_sanitize_decimal',
-		'standard_shipping_options' => 'retails_sanitize_decimal_list',
-		'channel_shipping_options' => 'retails_sanitize_decimal_list',
-		'free_shipping_min' => 'retails_sanitize_decimal',
-		'free_shipping_channel_min' => 'retails_sanitize_decimal',
+		'primary_color' => 'wholesale_sanitize_hex_color',
+		'accent_color' => 'wholesale_sanitize_hex_color',
+		'sale_price_color' => 'wholesale_sanitize_hex_color',
+		'payment_method' => 'wholesale_sanitize_payment_method',
+		'tax_rate' => 'wholesale_sanitize_decimal',
+		'standard_shipping_options' => 'wholesale_sanitize_decimal_list',
+		'channel_shipping_options' => 'wholesale_sanitize_decimal_list',
+		'free_shipping_min' => 'wholesale_sanitize_decimal',
+		'free_shipping_channel_min' => 'wholesale_sanitize_decimal',
+		'shipping_carriers' => 'wholesale_sanitize_shipping_carriers',
+		'saturday_delivery_fee' => 'wholesale_sanitize_decimal',
+		'early_am_fee' => 'wholesale_sanitize_decimal',
+		'pickup_enabled' => 'absint',
 		'ticket_business_email' => 'sanitize_email',
 		'ticket_default_message' => 'sanitize_textarea_field',
 		'quote_autoreply_message' => 'sanitize_textarea_field',
-		'ticket_due_days' => 'retails_sanitize_days',
-		'review_request_days' => 'retails_sanitize_review_request_days',
-		'default_hero_image' => 'retails_sanitize_image_id',
-		'page_loader_enabled' => 'retails_sanitize_page_loader_enabled',
-		'promo_percent' => 'retails_sanitize_promo_percent',
-		'promo_start' => 'retails_sanitize_date',
-		'promo_end' => 'retails_sanitize_date',
-		'promo_scope' => 'retails_sanitize_promo_scope',
-		'promo_name' => 'retails_sanitize_promo_name',
-		'ship_code' => 'retails_sanitize_ship_code',
-		'ship_code_start' => 'retails_sanitize_date',
-		'ship_code_end' => 'retails_sanitize_date',
-		'google_places_api_key' => 'retails_sanitize_google_api_key',
-		'google_reviews_min_rating' => 'retails_sanitize_star_rating',
-		'domain_redirect_enabled' => 'retails_sanitize_page_loader_enabled',
-		'domain_redirect_domains' => 'retails_sanitize_redirect_domains',
-		'domain_redirect_status' => 'retails_sanitize_redirect_status',
+		'ticket_due_days' => 'wholesale_sanitize_days',
+		'default_hero_image' => 'wholesale_sanitize_image_id',
+		'page_loader_enabled' => 'wholesale_sanitize_page_loader_enabled',
+		'promo_percent' => 'wholesale_sanitize_promo_percent',
+		'promo_start' => 'wholesale_sanitize_date',
+		'promo_end' => 'wholesale_sanitize_date',
+		'promo_scope' => 'wholesale_sanitize_promo_scope',
+		'google_places_api_key' => 'wholesale_sanitize_google_api_key',
+		'google_reviews_min_rating' => 'wholesale_sanitize_star_rating',
 	);
 
 	return $sanitizers[$key] ?? 'sanitize_text_field';
@@ -605,14 +566,14 @@ function retails_setting_sanitizer($key)
  * payment gateway PIN, which would have been sent to Google with every
  * reviews request once a Place ID was set.
  */
-function retails_sanitize_google_api_key($value)
+function wholesale_sanitize_google_api_key($value)
 {
 	$value = trim((string) $value);
 	return preg_match('/^AIza[0-9A-Za-z_-]{35}$/', $value) ? $value : '';
 }
 
 /** A whole star rating from 1 to 5. */
-function retails_sanitize_star_rating($value)
+function wholesale_sanitize_star_rating($value)
 {
 	return max(1, min(5, absint($value)));
 }
@@ -621,79 +582,67 @@ function retails_sanitize_star_rating($value)
  * One-time cleanup (runs with the theme's other migrations): remove a stored
  * Places API key that isn't a Google key, such as the autofilled gateway PIN.
  */
-function retails_migrate_places_key_cleanup()
+function wholesale_migrate_places_key_cleanup()
 {
-	$stored = get_option('retails_google_places_api_key', null);
-	if (null !== $stored && '' === retails_sanitize_google_api_key($stored)) {
-		update_option('retails_google_places_api_key', '');
+	$stored = get_option('wholesale_google_places_api_key', null);
+	if (null !== $stored && '' === wholesale_sanitize_google_api_key($stored)) {
+		update_option('wholesale_google_places_api_key', '');
 	}
 	return true;
 }
-add_action('admin_init', 'retails_register_settings');
+add_action('admin_init', 'wholesale_register_settings');
 
-function retails_sanitize_image_id($value)
+function wholesale_sanitize_image_id($value)
 {
 	$id = absint($value);
 	return $id && wp_attachment_is_image($id) ? $id : 0;
 }
 
-function retails_sanitize_days($value)
+function wholesale_sanitize_days($value)
 {
 	return min(365, max(0, (int) $value));
 }
 
-function retails_sanitize_page_loader_enabled($value)
+function wholesale_sanitize_page_loader_enabled($value)
 {
 	return is_scalar($value) && '1' === (string) $value ? 1 : 0;
 }
 
-function retails_sanitize_promo_percent($value)
+function wholesale_sanitize_promo_percent($value)
 {
 	return is_numeric($value) ? rtrim(rtrim(number_format(min(90, max(0, (float) $value)), 2, '.', ''), '0'), '.') : '0';
 }
 
 // "2026-11-27", or '' for an empty or invalid date.
-function retails_sanitize_date($value)
+function wholesale_sanitize_date($value)
 {
 	$date = DateTime::createFromFormat('!Y-m-d', trim((string) $value));
 	return $date && $date->format('Y-m-d') === trim((string) $value) ? $date->format('Y-m-d') : '';
 }
 
-function retails_sanitize_promo_scope($value)
+function wholesale_sanitize_promo_scope($value)
 {
 	return in_array($value, array('all', 'channel-letters', 'other'), true) ? $value : 'all';
 }
 
-// "Black Friday Sale": plain text, at most 40 characters.
-function retails_sanitize_promo_name($value)
-{
-	return trim(mb_substr(sanitize_text_field((string) $value), 0, 40));
-}
-
-// "BLACKFRIDAY": upper-case letters, digits, - and _, at most 30 characters.
-function retails_sanitize_ship_code($value)
-{
-	return substr(preg_replace('/[^A-Z0-9_-]/', '', strtoupper((string) $value)), 0, 30);
-}
-
-function retails_sanitize_payment_method($value)
+function wholesale_sanitize_payment_method($value)
 {
 	return 'direct' === $value ? 'direct' : 'lightbox';
 }
 
-function retails_sanitize_decimal($value)
+function wholesale_sanitize_decimal($value)
 {
 	return is_numeric($value) && (float) $value >= 0 ? number_format((float) $value, 2, '.', '') : '0.00';
 }
 
-function retails_admin_bar_store_shortcuts($admin_bar)
+function wholesale_admin_bar_store_shortcuts($admin_bar)
 {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
 
 	$admin_bar->add_node(array(
-		'id' => 'retails-store-admin',
+		'id' => 'wholesale-store-admin',
 		'title' => __('Store Admin', 'litsign'),
 		'href' => admin_url('edit.php?post_type=order'),
 	));
@@ -701,23 +650,23 @@ function retails_admin_bar_store_shortcuts($admin_bar)
 	$shortcuts = array(
 		'orders' => array(__('Orders', 'litsign'), admin_url('edit.php?post_type=order')),
 		'products' => array(__('Products', 'litsign'), admin_url('edit.php?post_type=product')),
-		'settings' => array(__('Storefront Sign Settings', 'litsign'), admin_url('admin.php?page=retails-settings')),
+		'settings' => array(__('Storefront Sign Settings', 'litsign'), admin_url('options-general.php?page=wholesale-settings')),
 		'contact-submissions' => array(__('Contact Submissions', 'litsign'), admin_url('edit.php?post_type=contact_submission')),
-		'seo-settings' => array(__('SEO Settings', 'litsign'), admin_url('admin.php?page=retails-seo-general')),
+		'seo-settings' => array(__('SEO Settings', 'litsign'), admin_url('admin.php?page=wholesale-seo-general')),
 	);
 
 	foreach ($shortcuts as $id => $shortcut) {
 		$admin_bar->add_node(array(
-			'id' => 'retails-store-admin-' . $id,
-			'parent' => 'retails-store-admin',
+			'id' => 'wholesale-store-admin-' . $id,
+			'parent' => 'wholesale-store-admin',
 			'title' => $shortcut[0],
 			'href' => $shortcut[1],
 		));
 	}
 }
-add_action('admin_bar_menu', 'retails_admin_bar_store_shortcuts', 110);
+add_action('admin_bar_menu', 'wholesale_admin_bar_store_shortcuts', 110);
 
-function retails_admin_bar_edit_product_category($admin_bar)
+function wholesale_admin_bar_edit_product_category($admin_bar)
 {
 	$term = null;
 	$term_slug = get_query_var('category_slug');
@@ -740,30 +689,30 @@ function retails_admin_bar_edit_product_category($admin_bar)
 	}
 
 	$admin_bar->add_node(array(
-		'id' => 'retails-edit-product-category',
+		'id' => 'wholesale-edit-product-category',
 		'title' => __('Edit Category', 'litsign'),
 		'href' => $edit_link,
 	));
 }
-add_action('admin_bar_menu', 'retails_admin_bar_edit_product_category', 120);
+add_action('admin_bar_menu', 'wholesale_admin_bar_edit_product_category', 120);
 
-function retails_newsletter_table_name()
+function wholesale_newsletter_table_name()
 {
 	global $wpdb;
 
 	return $wpdb->prefix . 'newsletter_emails';
 }
 
-function retails_newsletter_create_table()
+function wholesale_newsletter_create_table()
 {
 	global $wpdb;
 
 	// Create the table once instead of loading upgrade.php and running dbDelta on every request.
-	if ('1' === get_option('retails_newsletter_table_version')) {
+	if ('1' === get_option('wholesale_newsletter_table_version')) {
 		return;
 	}
 
-	$table_name = retails_newsletter_table_name();
+	$table_name = wholesale_newsletter_table_name();
 	$charset_collate = $wpdb->get_charset_collate();
 
 	$sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
@@ -777,20 +726,20 @@ function retails_newsletter_create_table()
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 	dbDelta($sql);
 	if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table_name)) === $table_name) {
-		update_option('retails_newsletter_table_version', '1');
+		update_option('wholesale_newsletter_table_version', '1');
 	}
 }
-add_action('init', 'retails_newsletter_create_table');
-register_activation_hook(__FILE__, 'retails_newsletter_create_table');
+add_action('init', 'wholesale_newsletter_create_table');
+register_activation_hook(__FILE__, 'wholesale_newsletter_create_table');
 
-function retails_newsletter_admin_page()
+function wholesale_newsletter_admin_page()
 {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
 
 	global $wpdb;
-	$table_name = retails_newsletter_table_name();
+	$table_name = wholesale_newsletter_table_name();
 	$subscribers = $wpdb->get_results(
 		"SELECT id, email, created_at FROM {$table_name} ORDER BY id DESC"
 	);
@@ -826,36 +775,36 @@ function retails_newsletter_admin_page()
 	<?php
 }
 
-function retails_newsletter_add_admin_page()
+function wholesale_newsletter_add_admin_page()
 {
 	add_menu_page(
 		'Newsletter Emails',
 		'Newsletter Emails',
 		'manage_options',
-		'retails-newsletter',
-		'retails_newsletter_admin_page',
+		'wholesale-newsletter',
+		'wholesale_newsletter_admin_page',
 		'dashicons-email-alt',
 		26
 	);
 }
-add_action('admin_menu', 'retails_newsletter_add_admin_page');
+add_action('admin_menu', 'wholesale_newsletter_add_admin_page');
 
-function retails_newsletter_get_redirect_url($status)
+function wholesale_newsletter_get_redirect_url($status)
 {
 	return add_query_arg('newsletter', $status, home_url('/'));
 }
 
-function retails_handle_newsletter_subscribe()
+function wholesale_handle_newsletter_subscribe()
 {
 	if (!isset($_POST['newsletter_email']) || empty($_POST['newsletter_email'])) {
-		wp_safe_redirect(retails_newsletter_get_redirect_url('invalid'));
+		wp_safe_redirect(wholesale_newsletter_get_redirect_url('invalid'));
 		exit;
 	}
 
-	check_admin_referer('retails_newsletter_subscribe', 'newsletter_nonce');
+	check_admin_referer('wholesale_newsletter_subscribe', 'newsletter_nonce');
 
 	$email = sanitize_email(wp_unslash($_POST['newsletter_email']));
-	$redirect_url = retails_newsletter_get_redirect_url('invalid');
+	$redirect_url = wholesale_newsletter_get_redirect_url('invalid');
 
 	if (!is_email($email)) {
 		wp_safe_redirect($redirect_url);
@@ -863,7 +812,7 @@ function retails_handle_newsletter_subscribe()
 	}
 
 	global $wpdb;
-	$table_name = retails_newsletter_table_name();
+	$table_name = wholesale_newsletter_table_name();
 	$existing = $wpdb->get_var($wpdb->prepare("SELECT id FROM {$table_name} WHERE email = %s LIMIT 1", $email));
 
 	if (empty($existing)) {
@@ -874,104 +823,77 @@ function retails_handle_newsletter_subscribe()
 		);
 
 		if ($inserted === false) {
-			wp_safe_redirect(retails_newsletter_get_redirect_url('error'));
+			wp_safe_redirect(wholesale_newsletter_get_redirect_url('error'));
 			exit;
 		}
-		$redirect_url = retails_newsletter_get_redirect_url('success');
+		$redirect_url = wholesale_newsletter_get_redirect_url('success');
 	} else {
-		$redirect_url = retails_newsletter_get_redirect_url('exists');
+		$redirect_url = wholesale_newsletter_get_redirect_url('exists');
 	}
 
 	wp_safe_redirect($redirect_url);
 	exit;
 }
-add_action('admin_post_nopriv_retails_newsletter_subscribe', 'retails_handle_newsletter_subscribe');
-add_action('admin_post_retails_newsletter_subscribe', 'retails_handle_newsletter_subscribe');
+add_action('admin_post_nopriv_wholesale_newsletter_subscribe', 'wholesale_handle_newsletter_subscribe');
+add_action('admin_post_wholesale_newsletter_subscribe', 'wholesale_handle_newsletter_subscribe');
 
-function retails_output_dynamic_settings()
+function wholesale_output_dynamic_settings()
 {
 	if (is_admin()) {
 		return;
 	}
-	$primary = retails_get_setting('primary_color');
-	$accent = retails_get_setting('accent_color');
-	$sale = retails_get_setting('sale_price_color');
+	$primary = wholesale_get_setting('primary_color');
+	$accent = wholesale_get_setting('accent_color');
+	$sale = wholesale_get_setting('sale_price_color');
 	?>
-	<style id="retails-dynamic-settings">:root{--bs-primary:<?php echo esc_html($primary); ?>;--bs-link-color:<?php echo esc_html($primary); ?>;--bs-link-hover-color:<?php echo esc_html($primary); ?>}.text-primary,.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($primary); ?>!important}.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($accent); ?>!important}.pb-price span{color:<?php echo esc_html($sale); ?>!important}</style>
+	<style id="wholesale-dynamic-settings">:root{--bs-primary:<?php echo esc_html($primary); ?>;--bs-link-color:<?php echo esc_html($primary); ?>;--bs-link-hover-color:<?php echo esc_html($primary); ?>}.text-primary,.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($primary); ?>!important}.product-rating-star.is-full,.product-rating-star.is-half{color:<?php echo esc_html($accent); ?>!important}.pb-price span{color:<?php echo esc_html($sale); ?>!important}</style>
 	<?php
 }
-add_action('wp_head', 'retails_output_dynamic_settings', 99);
+add_action('wp_head', 'wholesale_output_dynamic_settings', 99);
 
 /**
- * The store team's addresses: Emails → SMTP Settings → Store notifications →
- * Notification recipients, or the defaults below when that box is empty.
+ * Send contact notifications to the configured site admin, administrators,
+ * and the quote-response inbox.
  *
  * @return string[]
  */
-function retails_contact_admin_recipients()
+function wholesale_contact_admin_recipients()
 {
-	$defaults = array(
+	// Set in Emails → SMTP Settings → Store notifications; these are the defaults.
+	$saved = function_exists('wholesale_mail_settings') ? trim((string) wholesale_mail_settings()['notify_recipients']) : '';
+	$recipients = '' !== $saved ? preg_split('/[\s,;]+/', $saved, -1, PREG_SPLIT_NO_EMPTY) : array(
 		'mdikram295@gmail.com',
 		'litsigntonight@gmail.com',
 	);
-	$saved = function_exists('retails_mail_settings') ? trim((string) retails_mail_settings()['notify_recipients']) : '';
-	$recipients = '' !== $saved ? preg_split('/[\s,;]+/', $saved, -1, PREG_SPLIT_NO_EMPTY) : $defaults;
 
-	// Valid addresses only, each once (Gmail ignores letter case).
-	$unique = array();
-	foreach ($recipients as $email) {
-		$email = sanitize_email($email);
-		if (is_email($email)) {
-			$unique[strtolower($email)] = $email;
-		}
-	}
 
-	return $unique ? array_values($unique) : $defaults;
-}
-
-/**
- * Email the store team (contact forms, quote requests): a separate copy to every
- * notification recipient, so each address gets its own message, its own Email
- * Log row and its own automatic retry. One address the mail server refuses can
- * no longer stop the others from getting it, and a retry never sends a second
- * copy to the addresses that already got the first.
- *
- * @return bool True when at least one copy was accepted.
- */
-function retails_mail_team($subject, $message, $headers = array(), $attachments = array())
-{
-	$sent = false;
-	foreach (retails_contact_admin_recipients() as $recipient) {
-		$sent = wp_mail($recipient, $subject, $message, $headers, $attachments) || $sent;
-	}
-
-	return $sent;
+	return array_values(array_unique(array_filter(array_map('sanitize_email', $recipients))));
 }
 
 /**
  * The site's domain without "www.", e.g. storefrontsignonline.com.
  */
-function retails_site_domain()
+function wholesale_site_domain()
 {
 	$host = (string) wp_parse_url(home_url(), PHP_URL_HOST);
 
 	return preg_replace('/^www\./i', '', $host);
 }
 
-function retails_channel_letter_default_cover_url()
+function wholesale_channel_letter_default_cover_url()
 {
 	return get_template_directory_uri() . '/img/channel-letter-default-cover.svg';
 }
 
-function retails_hero_background_style($image_url = '', $fallback_image_url = '')
+function wholesale_hero_background_style($image_url = '', $fallback_image_url = '')
 {
 	$bg_image = $image_url ? $image_url : $fallback_image_url;
 	if (!$bg_image) {
 		return '';
 	}
 
-	// Remembered so retails_preload_front_page_hero() can preload the same file.
-	$GLOBALS['retails_hero_image'] = $bg_image;
+	// Remembered so wholesale_preload_front_page_hero() can preload the same file.
+	$GLOBALS['wholesale_hero_image'] = $bg_image;
 
 	// Only the photo is set here. The dark overlay, crop and position come from
 	// the --hero-image rules at the end of css/style.css, so phones get a
@@ -982,11 +904,11 @@ function retails_hero_background_style($image_url = '', $fallback_image_url = ''
 	// An AVIF copy is about half the size. It goes in its own variable, which
 	// style.css only uses where image-set() is supported, so older browsers
 	// keep the plain photo instead of losing the background.
-	$avif = retails_hero_avif_url($bg_image);
+	$avif = wholesale_hero_avif_url($bg_image);
 	if ($avif) {
 		$style .= " --hero-image-set: image-set(url('" . esc_url($avif) . "') type('image/avif'), {$image} type('image/webp'));";
 		// Phones get a crop of the visible part (style.css, AVIF browsers only).
-		$phone = retails_hero_phone_avif_url($bg_image);
+		$phone = wholesale_hero_phone_avif_url($bg_image);
 		if ($phone) {
 			$style .= " --hero-image-phone: url('" . esc_url($phone) . "');";
 		}
@@ -1000,10 +922,10 @@ function retails_hero_background_style($image_url = '', $fallback_image_url = ''
  * get theirs from a background WP-Cron job (encoding takes a few seconds, so
  * it never runs during a visitor's page load); until then the WebP is used.
  */
-function retails_hero_avif_url($image_url)
+function wholesale_hero_avif_url($image_url)
 {
-	if (retails_is_default_hero($image_url)) {
-		return retails_default_hero_avif_url();
+	if (wholesale_is_default_hero($image_url)) {
+		return wholesale_default_hero_avif_url();
 	}
 
 	$uploads = wp_get_upload_dir();
@@ -1019,16 +941,16 @@ function retails_hero_avif_url($image_url)
 		return $uploads['baseurl'] . substr(preg_replace('/\.webp$/i', '', $url_path), strlen($base_path)) . '.avif';
 	}
 
-	$skipped = (array) get_option('retails_avif_skipped', array());
+	$skipped = (array) get_option('wholesale_avif_skipped', array());
 	if (function_exists('imageavif') && file_exists($file) && !in_array($file, $skipped, true)
-		&& !wp_next_scheduled('retails_make_hero_avif', array($file))) {
-		wp_schedule_single_event(time(), 'retails_make_hero_avif', array($file));
+		&& !wp_next_scheduled('wholesale_make_hero_avif', array($file))) {
+		wp_schedule_single_event(time(), 'wholesale_make_hero_avif', array($file));
 	}
 
 	return '';
 }
 
-function retails_make_hero_avif($file)
+function wholesale_make_hero_avif($file)
 {
 	$uploads = wp_get_upload_dir();
 	if (!function_exists('imageavif') || !is_string($file) || 0 !== strpos(wp_normalize_path($file), wp_normalize_path($uploads['basedir']) . '/')
@@ -1038,9 +960,9 @@ function retails_make_hero_avif($file)
 
 	// Recorded as skipped before encoding, so a run that dies (time or memory
 	// limit) is never retried; cleared again only on success.
-	$skipped = (array) get_option('retails_avif_skipped', array());
+	$skipped = (array) get_option('wholesale_avif_skipped', array());
 	$skipped[] = $file;
-	update_option('retails_avif_skipped', array_slice(array_unique($skipped), -50), false);
+	update_option('wholesale_avif_skipped', array_slice(array_unique($skipped), -50), false);
 
 	$image = preg_match('/\.png$/i', $file) ? @imagecreatefrompng($file) : @imagecreatefromjpeg($file);
 	if (!$image) {
@@ -1061,7 +983,7 @@ function retails_make_hero_avif($file)
 	// Keep it only when it beats the WebP (or the original).
 	$compare = file_exists($file . '.webp') ? $file . '.webp' : $file;
 	if ($saved && file_exists($tmp_file) && filesize($tmp_file) > 0 && filesize($tmp_file) < filesize($compare) && @rename($tmp_file, $avif_file)) {
-		update_option('retails_avif_skipped', array_values(array_diff((array) get_option('retails_avif_skipped', array()), array($file))), false);
+		update_option('wholesale_avif_skipped', array_values(array_diff((array) get_option('wholesale_avif_skipped', array()), array($file))), false);
 		// Cached pages were saved without the AVIF copy.
 		if (function_exists('sfs_page_cache_purge')) {
 			sfs_page_cache_purge();
@@ -1069,7 +991,7 @@ function retails_make_hero_avif($file)
 	}
 	@unlink($tmp_file);
 }
-add_action('retails_make_hero_avif', 'retails_make_hero_avif');
+add_action('wholesale_make_hero_avif', 'wholesale_make_hero_avif');
 
 /**
  * Phone copy of a wide hero photo, or '' until it exists. On phones the hero
@@ -1078,7 +1000,7 @@ add_action('retails_make_hero_avif', 'retails_make_hero_avif');
  * resolution), so phones download a fraction of the file. Made by a
  * background job like the full AVIF copy.
  */
-function retails_hero_phone_avif_url($image_url)
+function wholesale_hero_phone_avif_url($image_url)
 {
 	$uploads = wp_get_upload_dir();
 	$base_path = wp_parse_url($uploads['baseurl'], PHP_URL_PATH);
@@ -1094,16 +1016,16 @@ function retails_hero_phone_avif_url($image_url)
 		return $uploads['baseurl'] . $relative . '.phone.avif';
 	}
 
-	$skipped = (array) get_option('retails_avif_phone_skipped', array());
+	$skipped = (array) get_option('wholesale_avif_phone_skipped', array());
 	if (function_exists('imageavif') && file_exists($file) && !in_array($file, $skipped, true)
-		&& !wp_next_scheduled('retails_make_hero_phone_avif', array($file))) {
-		wp_schedule_single_event(time(), 'retails_make_hero_phone_avif', array($file));
+		&& !wp_next_scheduled('wholesale_make_hero_phone_avif', array($file))) {
+		wp_schedule_single_event(time(), 'wholesale_make_hero_phone_avif', array($file));
 	}
 
 	return '';
 }
 
-function retails_make_hero_phone_avif($file)
+function wholesale_make_hero_phone_avif($file)
 {
 	$uploads = wp_get_upload_dir();
 	if (!function_exists('imageavif') || !is_string($file) || 0 !== strpos(wp_normalize_path($file), wp_normalize_path($uploads['basedir']) . '/')
@@ -1112,9 +1034,9 @@ function retails_make_hero_phone_avif($file)
 	}
 
 	// Recorded before encoding so a run that dies is never retried (as above).
-	$skipped = (array) get_option('retails_avif_phone_skipped', array());
+	$skipped = (array) get_option('wholesale_avif_phone_skipped', array());
 	$skipped[] = $file;
-	update_option('retails_avif_phone_skipped', array_slice(array_unique($skipped), -50), false);
+	update_option('wholesale_avif_phone_skipped', array_slice(array_unique($skipped), -50), false);
 
 	$size = @getimagesize($file);
 	if (!$size || $size[0] < $size[1] * 1.2) {
@@ -1151,7 +1073,7 @@ function retails_make_hero_phone_avif($file)
 	$saved = @imageavif($cropped, $tmp_file, 40, 6);
 	imagedestroy($cropped);
 	if ($saved && file_exists($tmp_file) && filesize($tmp_file) > 0 && @rename($tmp_file, $phone_file)) {
-		update_option('retails_avif_phone_skipped', array_values(array_diff((array) get_option('retails_avif_phone_skipped', array()), array($file))), false);
+		update_option('wholesale_avif_phone_skipped', array_values(array_diff((array) get_option('wholesale_avif_phone_skipped', array()), array($file))), false);
 		// Cached pages were saved without the phone copy.
 		if (function_exists('sfs_page_cache_purge')) {
 			sfs_page_cache_purge();
@@ -1159,33 +1081,33 @@ function retails_make_hero_phone_avif($file)
 	}
 	@unlink($tmp_file);
 }
-add_action('retails_make_hero_phone_avif', 'retails_make_hero_phone_avif');
+add_action('wholesale_make_hero_phone_avif', 'wholesale_make_hero_phone_avif');
 
 /**
  * Hero photo for pages without their own image: the one chosen under
  * Settings > Storefront Sign, or the photo that ships with the theme.
  */
-function retails_default_hero_url()
+function wholesale_default_hero_url()
 {
-	$id = (int) retails_get_setting('default_hero_image');
+	$id = (int) wholesale_get_setting('default_hero_image');
 	if ($id) {
 		// 2048px wide covers large screens; WordPress returns the original when it is smaller.
 		$url = wp_get_attachment_image_url($id, '2048x2048');
 		if ($url) {
-			return retails_webp_url($url);
+			return wholesale_webp_url($url);
 		}
 	}
 
 	return get_template_directory_uri() . '/img/hero-1920.webp';
 }
 
-function retails_is_default_hero($image_url)
+function wholesale_is_default_hero($image_url)
 {
 	return get_template_directory_uri() . '/img/hero-1920.webp' === $image_url
 		&& file_exists(get_template_directory() . '/img/hero-1920.avif');
 }
 
-function retails_default_hero_avif_url()
+function wholesale_default_hero_avif_url()
 {
 	return get_template_directory_uri() . '/img/hero-1920.avif';
 }
@@ -1197,9 +1119,9 @@ function retails_default_hero_avif_url()
  *
  * @return array{0: string, 1: string} Subject and body.
  */
-function retails_contact_mail_tag($subject, $body, $html = false)
+function wholesale_contact_mail_tag($subject, $body, $html = false)
 {
-	$domain = retails_site_domain();
+	$domain = wholesale_site_domain();
 	$subject = '[' . $domain . '] ' . $subject;
 	$body = 'Website: ' . $domain . ($html ? '<br>' : "\n") . $body;
 
@@ -1209,7 +1131,7 @@ function retails_contact_mail_tag($subject, $body, $html = false)
 /**
  * Process a public review submission.
  */
-function retails_handle_review_submission()
+function wholesale_handle_review_submission()
 {
 	$redirect_url = wp_get_referer() ? wp_get_referer() : home_url('/');
 	$review_anchor = !empty($_POST['review_product_id']) ? '#product-reviews' : '#feedbackModal';
@@ -1239,12 +1161,12 @@ function retails_handle_review_submission()
 	}
 
 	if ($product_id) {
-		if (!retails_setting_enabled('allow_verified_reviews')) {
+		if (!wholesale_setting_enabled('allow_verified_reviews')) {
 			wp_safe_redirect(add_query_arg('review_status', 'disabled', $redirect_url) . $review_anchor);
 			exit;
 		}
 		// Signed-in customers, or anyone holding the review link for a completed order.
-		$eligibility = retails_review_eligibility(
+		$eligibility = wholesale_review_eligibility(
 			$product_id,
 			isset($_POST['review_order']) ? absint($_POST['review_order']) : 0,
 			isset($_POST['review_token']) ? sanitize_text_field(wp_unslash($_POST['review_token'])) : ''
@@ -1259,7 +1181,7 @@ function retails_handle_review_submission()
 	// The request takes a few seconds (the admin email is sent before the redirect), so
 	// customers tap Submit again and each tap used to save another copy. add_option() is an
 	// atomic insert, so only one of several parallel requests gets the lock.
-	$lock = '_retails_review_lock_' . md5(strtolower($email) . '|' . $product_id . '|' . $review);
+	$lock = '_wholesale_review_lock_' . md5(strtolower($email) . '|' . $product_id . '|' . $review);
 	if (!add_option($lock, time(), '', 'no')) {
 		if (time() - (int) get_option($lock) < 120) {
 			wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . $review_anchor);
@@ -1267,7 +1189,7 @@ function retails_handle_review_submission()
 		}
 		update_option($lock, time(), false); // Left behind by a request that died.
 	}
-	if (retails_find_duplicate_review($email, $product_id, $review)) {
+	if (wholesale_find_duplicate_review($email, $product_id, $review)) {
 		delete_option($lock);
 		wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . $review_anchor);
 		exit;
@@ -1275,8 +1197,8 @@ function retails_handle_review_submission()
 
 	// Sales pitches sent through the review form carry a link to the sender's site
 	// (2026-11-01: a lead-gen ad went live as a 5-star review), so those always wait for approval.
-	$has_link = retails_review_has_link($review);
-	$auto_publish = retails_setting_enabled('auto_publish_reviews') && !$has_link;
+	$has_link = wholesale_review_has_link($review);
+	$auto_publish = wholesale_setting_enabled('auto_publish_reviews') && !$has_link;
 
 	$submission_id = wp_insert_post(array(
 		'post_type' => 'review_submission',
@@ -1304,33 +1226,33 @@ function retails_handle_review_submission()
 		$body .= 'Product: ' . html_entity_decode(get_the_title($product_id), ENT_QUOTES) . "\n";
 	}
 	if (!empty($review_order_id)) {
-		$body .= 'Order: #' . retails_order_number($review_order_id) . "\n";
+		$body .= 'Order: #' . wholesale_order_number($review_order_id) . "\n";
 	}
 	$body .= "\nReview:\n{$review}\n\n";
-	if ($has_link && retails_setting_enabled('auto_publish_reviews')) {
+	if ($has_link && wholesale_setting_enabled('auto_publish_reviews')) {
 		$body .= "Not published automatically: the review contains a link or email address.\n";
 	}
 	$body .= $auto_publish
 		? "This review was published automatically.\n"
 		: 'Approve or edit it here: ' . admin_url('edit.php?post_status=pending&post_type=review_submission') . "\n";
-	list($subject, $body) = retails_contact_mail_tag($subject, $body);
+	list($subject, $body) = wholesale_contact_mail_tag($subject, $body);
 	$headers = array(
 		'Content-Type: text/plain; charset=UTF-8',
 		'Reply-To: ' . $name . ' <' . $email . '>',
 	);
-	wp_mail(retails_contact_admin_recipients(), $subject, $body, $headers);
+	wp_mail(wholesale_contact_admin_recipients(), $subject, $body, $headers);
 	delete_option($lock); // The saved review now catches any later repeat.
 
 	wp_safe_redirect(add_query_arg('review_status', 'sent', $redirect_url) . $review_anchor);
 	exit;
 }
-add_action('admin_post_nopriv_submit_review', 'retails_handle_review_submission');
-add_action('admin_post_submit_review', 'retails_handle_review_submission');
+add_action('admin_post_nopriv_submit_review', 'wholesale_handle_review_submission');
+add_action('admin_post_submit_review', 'wholesale_handle_review_submission');
 
 /**
  * True when review text holds a web address or email address, which is how spam pitches arrive.
  */
-function retails_review_has_link($text)
+function wholesale_review_has_link($text)
 {
 	return (bool) preg_match('~https?://|www\.|\b[a-z0-9-]+\.(?:com|net|org|io|co|ai|biz|info|app|us|xyz|site|online)\b|[^\s@]+@[^\s@]+\.[a-z]{2,}~i', (string) $text);
 }
@@ -1338,7 +1260,7 @@ function retails_review_has_link($text)
 /**
  * ID of an earlier copy of the same review (same email, product and text, not trashed), or 0.
  */
-function retails_find_duplicate_review($email, $product_id, $review, $exclude_id = 0)
+function wholesale_find_duplicate_review($email, $product_id, $review, $exclude_id = 0)
 {
 	global $wpdb;
 
@@ -1362,10 +1284,10 @@ function retails_find_duplicate_review($email, $product_id, $review, $exclude_id
  * (the oldest copy is kept; trashed copies can be restored from Reviews > Trash).
  */
 add_action('admin_init', function () {
-	if (get_option('retails_review_dedupe_done') || !current_user_can('edit_others_posts')) {
+	if (get_option('wholesale_review_dedupe_done') || !current_user_can('edit_others_posts')) {
 		return;
 	}
-	update_option('retails_review_dedupe_done', time(), false);
+	update_option('wholesale_review_dedupe_done', time(), false);
 
 	$ids = get_posts(array(
 		'post_type' => 'review_submission',
@@ -1377,7 +1299,7 @@ add_action('admin_init', function () {
 		'meta_key' => '_review_email',
 	));
 	foreach ($ids as $id) {
-		$keep = retails_find_duplicate_review(
+		$keep = wholesale_find_duplicate_review(
 			get_post_meta($id, '_review_email', true),
 			get_post_meta($id, '_review_product_id', true),
 			get_post_field('post_content', $id, 'raw'),
@@ -1391,10 +1313,10 @@ add_action('admin_init', function () {
 	}
 });
 
-function retails_user_can_review_product($user_id, $product_id)
+function wholesale_user_can_review_product($user_id, $product_id)
 {
-	foreach (retails_user_completed_order_ids($user_id) as $order_id) {
-		if (retails_order_can_be_reviewed($order_id, $product_id)) {
+	foreach (wholesale_user_completed_order_ids($user_id) as $order_id) {
+		if (wholesale_order_can_be_reviewed($order_id, $product_id)) {
 			return true;
 		}
 	}
@@ -1405,9 +1327,9 @@ function retails_user_can_review_product($user_id, $product_id)
 /**
  * Rating and count come live from the product's approved reviews.
  */
-function retails_product_review_data($product_id)
+function wholesale_product_review_data($product_id)
 {
-	$stats = retails_product_review_stats($product_id);
+	$stats = wholesale_product_review_stats($product_id);
 
 	return array(
 		'rating' => $stats['average'],
@@ -1416,12 +1338,12 @@ function retails_product_review_data($product_id)
 	);
 }
 
-function retails_render_product_rating($product_id, $class = '')
+function wholesale_render_product_rating($product_id, $class = '')
 {
-	if (!retails_setting_enabled('show_product_ratings')) {
+	if (!wholesale_setting_enabled('show_product_ratings')) {
 		return;
 	}
-	$review_data = retails_product_review_data($product_id);
+	$review_data = wholesale_product_review_data($product_id);
 	if (!$review_data['rating'] && !$review_data['count']) {
 		return;
 	}
@@ -1439,7 +1361,7 @@ function retails_render_product_rating($product_id, $class = '')
 	echo '</div>';
 }
 
-function retails_review_submission_columns($columns)
+function wholesale_review_submission_columns($columns)
 {
 	return array(
 		'cb' => isset($columns['cb']) ? $columns['cb'] : '<input type="checkbox">',
@@ -1451,9 +1373,9 @@ function retails_review_submission_columns($columns)
 		'date' => 'Received',
 	);
 }
-add_filter('manage_review_submission_posts_columns', 'retails_review_submission_columns');
+add_filter('manage_review_submission_posts_columns', 'wholesale_review_submission_columns');
 
-function retails_review_submission_column_content($column, $post_id)
+function wholesale_review_submission_column_content($column, $post_id)
 {
 	$meta_keys = array(
 		'review_name' => '_review_name',
@@ -1486,9 +1408,9 @@ function retails_review_submission_column_content($column, $post_id)
 
 	echo esc_html($value);
 }
-add_action('manage_review_submission_posts_custom_column', 'retails_review_submission_column_content', 10, 2);
+add_action('manage_review_submission_posts_custom_column', 'wholesale_review_submission_column_content', 10, 2);
 
-function retails_review_submission_details_meta_box($post)
+function wholesale_review_submission_details_meta_box($post)
 {
 	$fields = array(
 		'Name' => '_review_name',
@@ -1515,20 +1437,20 @@ function retails_review_submission_details_meta_box($post)
 	echo '</tbody></table>';
 }
 
-function retails_review_submission_register_meta_box()
+function wholesale_review_submission_register_meta_box()
 {
 	add_meta_box(
 		'review-submission-details',
 		'Review Details',
-		'retails_review_submission_details_meta_box',
+		'wholesale_review_submission_details_meta_box',
 		'review_submission',
 		'normal',
 		'high'
 	);
 }
-add_action('add_meta_boxes_review_submission', 'retails_review_submission_register_meta_box');
+add_action('add_meta_boxes_review_submission', 'wholesale_review_submission_register_meta_box');
 
-function retails_contact_submission_columns($columns)
+function wholesale_contact_submission_columns($columns)
 {
 	return array(
 		'cb' => isset($columns['cb']) ? $columns['cb'] : '<input type="checkbox">',
@@ -1539,9 +1461,9 @@ function retails_contact_submission_columns($columns)
 		'date' => 'Received',
 	);
 }
-add_filter('manage_contact_submission_posts_columns', 'retails_contact_submission_columns');
+add_filter('manage_contact_submission_posts_columns', 'wholesale_contact_submission_columns');
 
-function retails_contact_submission_column_content($column, $post_id)
+function wholesale_contact_submission_column_content($column, $post_id)
 {
 	$meta_keys = array(
 		'contact_business' => '_contact_business',
@@ -1553,9 +1475,9 @@ function retails_contact_submission_column_content($column, $post_id)
 		echo esc_html(get_post_meta($post_id, $meta_keys[$column], true));
 	}
 }
-add_action('manage_contact_submission_posts_custom_column', 'retails_contact_submission_column_content', 10, 2);
+add_action('manage_contact_submission_posts_custom_column', 'wholesale_contact_submission_column_content', 10, 2);
 
-function retails_contact_submission_details_meta_box($post)
+function wholesale_contact_submission_details_meta_box($post)
 {
 	$fields = array(
 		'Name' => '_contact_name',
@@ -1596,30 +1518,30 @@ function retails_contact_submission_details_meta_box($post)
 	echo '</tbody></table>';
 }
 
-function retails_contact_submission_register_meta_box()
+function wholesale_contact_submission_register_meta_box()
 {
 	add_meta_box(
 		'contact-submission-details',
 		'Contact Details',
-		'retails_contact_submission_details_meta_box',
+		'wholesale_contact_submission_details_meta_box',
 		'contact_submission',
 		'normal',
 		'high'
 	);
 }
-add_action('add_meta_boxes_contact_submission', 'retails_contact_submission_register_meta_box');
+add_action('add_meta_boxes_contact_submission', 'wholesale_contact_submission_register_meta_box');
 
 /**
  * Pages that send a conversion as soon as they open: the order confirmation
- * page, the "quote sent" page (see retails_quote_lead_args()) and pages with
+ * page, the "quote sent" page (see wholesale_quote_lead_args()) and pages with
  * their own conversion label (inc/ads-page-conversions.php).
  */
-function retails_ads_is_conversion_page()
+function wholesale_ads_is_conversion_page()
 {
-	if (get_query_var('retails_thank_you')) {
+	if (get_query_var('wholesale_thank_you')) {
 		return true;
 	}
-	if (function_exists('retails_page_conversion_label') && '' !== retails_page_conversion_label()) {
+	if (function_exists('wholesale_page_conversion_label') && '' !== wholesale_page_conversion_label()) {
 		return true;
 	}
 	$lead_id = isset($_GET['lead']) ? absint($_GET['lead']) : 0;
@@ -1632,7 +1554,7 @@ function retails_ads_is_conversion_page()
 /**
  * Keep conversion tracking, but wait until the page has loaded before fetching it.
  */
-function retails_deferred_conversion_tracking()
+function wholesale_deferred_conversion_tracking()
 {
 	?>
 	<script>
@@ -1648,45 +1570,14 @@ function retails_deferred_conversion_tracking()
 				};
 				window.gtag('js', new Date());
 				window.gtag('config', 'AW-18454059893');
-				<?php if (retails_ga4_measurement_id()) : ?>
-				window.gtag('config', <?php echo wp_json_encode(retails_ga4_measurement_id()); ?>);
+				<?php if (wholesale_ga4_measurement_id()) : ?>
+				window.gtag('config', <?php echo wp_json_encode(wholesale_ga4_measurement_id()); ?>);
 				<?php endif; ?>
-				window.gtag('config', <?php echo wp_json_encode('AW-18454059893/' . RETAILS_ADS_CALL_LABEL); ?>, {
-					'phone_conversion_number': '866-436-2101',
-					// Google calls this only for visitors who came from an ad, with a
-					// forwarding number. Without it Google swaps the shown number but
-					// not the tel: links, so phone visitors who tap "Call" dial
-					// 866-436-2101 directly and the call can't be counted.
-					'phone_conversion_callback': swapCallNumber
+				window.gtag('config', <?php echo wp_json_encode('AW-18454059893/' . WHOLESALE_ADS_CALL_LABEL); ?>, {
+					'phone_conversion_number': '866-436-2101'
 				});
 			};
-			// Put Google's forwarding number in every tel: link that dials the main
-			// line and in the visible "866-436-2101" text. With a callback, Google
-			// leaves both to the page.
-			function swapCallNumber(shown, dial) {
-				if (!shown || !dial || !document.body) {
-					return;
-				}
-				document.querySelectorAll('a[href^="tel:"]').forEach(function (link) {
-					var digits = (link.getAttribute('href') || '').replace(/\D/g, '');
-					if ('18664362101' === digits || '8664362101' === digits) {
-						link.setAttribute('href', 'tel:' + String(dial).replace(/[^0-9+]/g, ''));
-					}
-				});
-				var main = /866[-.\s]?436[-.\s]?2101/g;
-				var skip = { SCRIPT: 1, STYLE: 1, NOSCRIPT: 1, TEXTAREA: 1 };
-				var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null);
-				var found = [];
-				for (var node = walker.nextNode(); node; node = walker.nextNode()) {
-					if (node.parentNode && !skip[node.parentNode.nodeName] && node.nodeValue.search(main) !== -1) {
-						found.push(node);
-					}
-				}
-				found.forEach(function (text) {
-					text.nodeValue = text.nodeValue.replace(main, shown);
-				});
-			}
-			<?php if (retails_ads_is_ad_landing() || retails_ads_is_conversion_page()) : ?>
+			<?php if (wholesale_ads_is_ad_landing() || wholesale_ads_is_conversion_page()) : ?>
 			// Arrived from an ad, or this page sends a conversion: start right away,
 			// before the visitor moves on or closes the page.
 			start();
@@ -1712,13 +1603,13 @@ function retails_deferred_conversion_tracking()
 	</script>
 	<?php
 }
-add_action('wp_footer', 'retails_deferred_conversion_tracking', 20);
+add_action('wp_footer', 'wholesale_deferred_conversion_tracking', 20);
 
 /**
  * Query args for the "quote sent" redirect that let the next page view fire the
  * lead conversion for this visitor only.
  */
-function retails_quote_lead_args($submission_id)
+function wholesale_quote_lead_args($submission_id)
 {
 	return array(
 		'quote_status' => 'sent',
@@ -1729,9 +1620,9 @@ function retails_quote_lead_args($submission_id)
 
 /**
  * Fire the Google Ads "Request quote" conversion once, for the visitor who just
- * sent a quote form (see retails_quote_lead_args()). Runs after the deferred gtag config.
+ * sent a quote form (see wholesale_quote_lead_args()). Runs after the deferred gtag config.
  */
-function retails_track_quote_lead($source)
+function wholesale_track_quote_lead($source)
 {
 	$lead_id = isset($_GET['lead']) ? absint($_GET['lead']) : 0;
 	$lead_key = isset($_GET['lk']) ? sanitize_text_field(wp_unslash($_GET['lk'])) : '';
@@ -1743,7 +1634,7 @@ function retails_track_quote_lead($source)
 	update_post_meta($lead_id, '_conversion_tracked', current_time('mysql'));
 
 	add_action('wp_footer', function () use ($lead_id, $source) {
-		$label = retails_ads_lead_label();
+		$label = wholesale_ads_lead_label();
 		$email = (string) get_post_meta($lead_id, '_contact_email', true);
 		$digits = preg_replace('/\D/', '', (string) get_post_meta($lead_id, '_contact_phone', true));
 		$phone = 10 === strlen($digits) ? '+1' . $digits : (11 === strlen($digits) && '1' === $digits[0] ? '+' . $digits : '');
@@ -1769,7 +1660,7 @@ function retails_track_quote_lead($source)
 /**
  * Do not let the GoDaddy widget become a parser-blocking request.
  */
-function retails_defer_wsimg_script($tag, $handle, $src)
+function wholesale_defer_wsimg_script($tag, $handle, $src)
 {
 	if (false === strpos($src, 'img1.wsimg.com')) {
 		return $tag;
@@ -1777,14 +1668,14 @@ function retails_defer_wsimg_script($tag, $handle, $src)
 
 	return str_replace(' src=', ' defer src=', $tag);
 }
-add_filter('script_loader_tag', 'retails_defer_wsimg_script', 10, 3);
+add_filter('script_loader_tag', 'wholesale_defer_wsimg_script', 10, 3);
 
 /**
  * Remove front-end WordPress features that are not used by this theme.
  *
  * These are otherwise extra requests and inline payload on every public page.
  */
-function retails_trim_frontend_overhead()
+function wholesale_trim_frontend_overhead()
 {
 	if (is_admin()) {
 		return;
@@ -1799,7 +1690,7 @@ function retails_trim_frontend_overhead()
 	remove_action('wp_head', 'wlwmanifest_link');
 	remove_action('wp_head', 'wp_shortlink_wp_head');
 }
-add_action('init', 'retails_trim_frontend_overhead');
+add_action('init', 'wholesale_trim_frontend_overhead');
 
 /**
  * Drop Dashicons for logged-out visitors on public pages.
@@ -1807,55 +1698,32 @@ add_action('init', 'retails_trim_frontend_overhead');
  * Dequeued (not deregistered) on wp_enqueue_scripts so wp-login.php, whose
  * "login" stylesheet depends on dashicons, keeps working.
  */
-function retails_dequeue_dashicons()
+function wholesale_dequeue_dashicons()
 {
 	if (!is_user_logged_in()) {
 		wp_dequeue_style('dashicons');
 	}
 }
-add_action('wp_enqueue_scripts', 'retails_dequeue_dashicons', 100);
+add_action('wp_enqueue_scripts', 'wholesale_dequeue_dashicons', 100);
 
 /**
  * Make the hero background image discoverable while the stylesheets load. It
  * is the largest paint on the home page and the channel letter page.
  *
- * Hero templates record the exact image URLs before calling get_header().
+ * Templates that build their hero before get_header() go through
+ * wholesale_hero_background_style(), which records the exact file used.
  */
-function retails_preload_front_page_hero()
+function wholesale_preload_front_page_hero()
 {
-	// A per-page hero photo (inc/hero-images.php) prints its own preload.
-	if (!empty($GLOBALS['retails_hero_custom'])) {
-		return;
-	}
-	$image = isset($GLOBALS['retails_hero_image']) ? $GLOBALS['retails_hero_image'] : '';
+	$image = isset($GLOBALS['wholesale_hero_image']) ? $GLOBALS['wholesale_hero_image'] : '';
 	if (!$image && !is_front_page()) {
 		return;
 	}
 
-	$mobile = $GLOBALS['retails_hero_mobile_image'] ?? '';
-	if ($mobile) {
-		// Match the viewport rule in css/home-catalog.css. Each size preloads its AVIF when
-		// it has one (browsers without AVIF skip that preload), else its WebP. The home
-		// page's phone photo can come from the Media Library before its AVIF copy exists.
-		$preloads = array(
-			'(max-width: 767px)' => $GLOBALS['retails_hero_mobile_avif'] ?? '',
-			'not all and (max-width: 767px)' => $GLOBALS['retails_hero_image_avif'] ?? '',
-		);
-		foreach ($preloads as $media => $avif) {
-			$fallback = '(max-width: 767px)' === $media ? $mobile : $image;
-			if ($avif) {
-				printf('<link rel="preload" as="image" href="%s" type="image/avif" media="%s" fetchpriority="high">' . "\n", esc_url($avif), esc_attr($media));
-			} elseif ($fallback) {
-				printf('<link rel="preload" as="image" href="%s" media="%s" fetchpriority="high">' . "\n", esc_url($fallback), esc_attr($media));
-			}
-		}
-		return;
-	}
-
-	$avif = $image ? retails_hero_avif_url($image) : retails_default_hero_avif_url();
+	$avif = $image ? wholesale_hero_avif_url($image) : wholesale_default_hero_avif_url();
 	if ($avif) {
 		// Browsers without AVIF support skip this preload and use the WebP fallback.
-		$phone = $image ? retails_hero_phone_avif_url($image) : '';
+		$phone = $image ? wholesale_hero_phone_avif_url($image) : '';
 		if ($phone) {
 			// Same 767px breakpoint as the phone rule in css/style.css.
 			printf('<link rel="preload" as="image" href="%s" type="image/avif" media="(max-width: 767px)" fetchpriority="high">' . "\n", esc_url($phone));
@@ -1868,13 +1736,13 @@ function retails_preload_front_page_hero()
 
 	printf('<link rel="preload" as="image" href="%s" fetchpriority="high">' . "\n", esc_url($image));
 }
-add_action('wp_head', 'retails_preload_front_page_hero', 1);
+add_action('wp_head', 'wholesale_preload_front_page_hero', 1);
 
 /**
  * Return a WebP copy of an uploaded JPEG/PNG, creating it next to the original
  * on first use. Falls back to the original URL when conversion is unavailable.
  */
-function retails_webp_url($url)
+function wholesale_webp_url($url)
 {
 	static $cache = array();
 
@@ -1922,45 +1790,43 @@ function retails_webp_url($url)
 	return $cache[$url] = $webp_url;
 }
 
-function retails_webp_srcset($srcset)
+function wholesale_webp_srcset($srcset)
 {
 	return preg_replace_callback('/(\S+)(\s+\d+[wx])/', function ($matches) {
-		return retails_webp_url($matches[1]) . $matches[2];
+		return wholesale_webp_url($matches[1]) . $matches[2];
 	}, $srcset);
 }
 
-function retails_webp_attachment_attributes($attr)
+function wholesale_webp_attachment_attributes($attr)
 {
 	if (is_admin()) {
 		return $attr;
 	}
 	if (!empty($attr['src'])) {
-		$attr['src'] = retails_webp_url($attr['src']);
+		$attr['src'] = wholesale_webp_url($attr['src']);
 	}
 	if (!empty($attr['srcset'])) {
-		$attr['srcset'] = retails_webp_srcset($attr['srcset']);
+		$attr['srcset'] = wholesale_webp_srcset($attr['srcset']);
 	}
 
 	return $attr;
 }
-add_filter('wp_get_attachment_image_attributes', 'retails_webp_attachment_attributes', 20);
+add_filter('wp_get_attachment_image_attributes', 'wholesale_webp_attachment_attributes', 20);
 
 /**
  * Print the theme's tiny stylesheets inline to save render-blocking requests.
  */
-function retails_inline_small_styles($tag, $handle)
+function wholesale_inline_small_styles($tag, $handle)
 {
 	$files = array(
 		'litsign-style' => '/style.css',
 		'font-awesome' => '/css/icons.css',
-		'retails-header' => '/css/header.css',
+		'wholesale-header' => '/css/header.css',
 		'cl-quote' => '/css/cl-quote.css',
 		'cl-landing' => '/css/cl-landing.css',
-		'cl-style-grid' => '/css/cl-style-grid.css',
-		'retails-home-catalog' => '/css/home-catalog.css',
-		'retails-banners-displays' => '/css/banners-displays.css',
-		'retails-typography' => '/css/typography.css',
-		'retails-hero-phone' => '/css/hero-phone.css',
+		'wholesale-home-catalog' => '/css/home-catalog.css',
+		'wholesale-banners-displays' => '/css/banners-displays.css',
+		'wholesale-typography' => '/css/typography.css',
 	);
 
 	if (is_admin() || is_rtl() || !isset($files[$handle])) {
@@ -1977,7 +1843,7 @@ function retails_inline_small_styles($tag, $handle)
 
 	return '<style id="' . esc_attr($handle) . '-inline-css">' . trim($css) . "</style>\n";
 }
-add_filter('style_loader_tag', 'retails_inline_small_styles', 10, 2);
+add_filter('style_loader_tag', 'wholesale_inline_small_styles', 10, 2);
 
 /**
  * Keep render-blocking JavaScript out of the <head> on the public site.
@@ -1986,7 +1852,7 @@ add_filter('style_loader_tag', 'retails_inline_small_styles', 10, 2);
  * although the theme never outputs its icons, and jQuery itself only needs to
  * be ready before the footer scripts that depend on it.
  */
-function retails_optimize_frontend_scripts()
+function wholesale_optimize_frontend_scripts()
 {
 	if (is_admin() || is_customize_preview()) {
 		return;
@@ -2016,15 +1882,15 @@ function retails_optimize_frontend_scripts()
 		}
 	}
 }
-add_action('wp_enqueue_scripts', 'retails_optimize_frontend_scripts', 100);
+add_action('wp_enqueue_scripts', 'wholesale_optimize_frontend_scripts', 100);
 
 /**
  * Expose product categories as clean URLs while keeping the
  * existing shop page and its category query compatible.
  */
-function retails_category_rewrites()
+function wholesale_category_rewrites()
 {
-	add_rewrite_rule('^thank-you/?$', 'index.php?retails_thank_you=1', 'top');
+	add_rewrite_rule('^thank-you/?$', 'index.php?wholesale_thank_you=1', 'top');
 
 	$terms = get_terms(array(
 		'taxonomy' => 'product_category',
@@ -2044,36 +1910,36 @@ function retails_category_rewrites()
 		);
 	}
 }
-add_action('init', 'retails_category_rewrites', 20);
-function retails_refresh_category_rewrites()
+add_action('init', 'wholesale_category_rewrites', 20);
+function wholesale_refresh_category_rewrites()
 {
 	$rewrite_version = 'category-root-v2';
 
-	if ($rewrite_version === get_option('retails_category_rewrite_version')) {
+	if ($rewrite_version === get_option('wholesale_category_rewrite_version')) {
 		return;
 	}
 
 	flush_rewrite_rules(false);
-	update_option('retails_category_rewrite_version', $rewrite_version);
+	update_option('wholesale_category_rewrite_version', $rewrite_version);
 }
-add_action('init', 'retails_refresh_category_rewrites', 21);
+add_action('init', 'wholesale_refresh_category_rewrites', 21);
 add_action('after_switch_theme', function () {
-	retails_category_rewrites();
-	retails_sitemap_rewrite();
+	wholesale_category_rewrites();
+	wholesale_sitemap_rewrite();
 	flush_rewrite_rules();
 });
 
-function retails_category_query_var($vars)
+function wholesale_category_query_var($vars)
 {
 	$vars[] = 'category_slug';
-	$vars[] = 'retails_thank_you';
+	$vars[] = 'wholesale_thank_you';
 	return $vars;
 }
-add_filter('query_vars', 'retails_category_query_var');
+add_filter('query_vars', 'wholesale_category_query_var');
 
-function retails_category_template($template)
+function wholesale_category_template($template)
 {
-	if (get_query_var('retails_thank_you')) {
+	if (get_query_var('wholesale_thank_you')) {
 		return locate_template('thank-you.php');
 	}
 
@@ -2088,16 +1954,16 @@ function retails_category_template($template)
 
 	return $template;
 }
-add_filter('template_include', 'retails_category_template');
+add_filter('template_include', 'wholesale_category_template');
 
-function retails_category_url($term_slug)
+function wholesale_category_url($term_slug)
 {
 	$term_slug = sanitize_title($term_slug);
 
 	// The channel letters landing page owns the channel letter keywords, so
 	// every channel letter category link points at it.
-	if ('channel-letters' === $term_slug && retails_channel_letters_landing_id()) {
-		return get_permalink(retails_channel_letters_landing_id());
+	if ('channel-letters' === $term_slug && wholesale_channel_letters_landing_id()) {
+		return get_permalink(wholesale_channel_letters_landing_id());
 	}
 
 	return trailingslashit(home_url($term_slug));
@@ -2108,7 +1974,7 @@ function retails_category_url($term_slug)
  * (/custom-channel-letters/), or 0. It is the organic and Google Ads landing
  * page for channel letters; /channel-letters/ redirects to it.
  */
-function retails_channel_letters_landing_id()
+function wholesale_channel_letters_landing_id()
 {
 	static $id = null;
 
@@ -2133,19 +1999,16 @@ function retails_channel_letters_landing_id()
 /**
  * Whether this request is the channel letters landing page itself.
  */
-function retails_is_channel_letters_landing()
+function wholesale_is_channel_letters_landing()
 {
 	return is_page() && is_page_template('page-channel-letters.php');
 }
 
-function retails_normalize_category_menu_urls($items, $args)
+function wholesale_normalize_category_menu_urls($items, $args)
 {
 	if (empty($args->theme_location) || 'category-filter-menu' !== $args->theme_location) {
 		return $items;
 	}
-
-	$current = get_query_var('category_slug');
-	$current = $current ? sanitize_title($current) : (isset($_REQUEST['category_slug']) ? sanitize_title(wp_unslash($_REQUEST['category_slug'])) : '');
 
 	foreach ($items as $item) {
 		$query = wp_parse_url($item->url, PHP_URL_QUERY);
@@ -2157,20 +2020,15 @@ function retails_normalize_category_menu_urls($items, $args)
 
 		$term = get_term_by('slug', sanitize_title($query_vars['category_slug']), 'product_category');
 		if ($term && !is_wp_error($term)) {
-			$item->url = retails_category_url($term->slug);
-			// Mark the category being viewed (styled by .current-item in style.css).
-			if ($current && $term->slug === $current) {
-				$item->classes[] = 'current-item';
-				$item->classes[] = 'current-menu-item';
-			}
+			$item->url = wholesale_category_url($term->slug);
 		}
 	}
 
 	return $items;
 }
-add_filter('wp_nav_menu_objects', 'retails_normalize_category_menu_urls', 10, 2);
+add_filter('wp_nav_menu_objects', 'wholesale_normalize_category_menu_urls', 10, 2);
 
-function retails_category_redirect()
+function wholesale_category_redirect()
 {
 	if (!empty($_GET['category_slug'])) {
 		// On any page but the shop root the parameter is a stray filter
@@ -2186,7 +2044,7 @@ function retails_category_redirect()
 		$term = get_term_by('slug', $term_slug, 'product_category');
 
 		if ($term && !is_wp_error($term)) {
-			wp_safe_redirect(retails_category_url($term->slug), 301);
+			wp_safe_redirect(wholesale_category_url($term->slug), 301);
 			exit;
 		}
 	}
@@ -2196,12 +2054,12 @@ function retails_category_redirect()
 		$term = get_queried_object();
 
 		if ($term instanceof WP_Term) {
-			wp_safe_redirect(retails_category_url($term->slug), 301);
+			wp_safe_redirect(wholesale_category_url($term->slug), 301);
 			exit;
 		}
 	}
 }
-add_action('template_redirect', 'retails_category_redirect', 1);
+add_action('template_redirect', 'wholesale_category_redirect', 1);
 
 add_filter('the_generator', '__return_empty_string');
 
@@ -2209,16 +2067,16 @@ add_filter('the_generator', '__return_empty_string');
  * Register the public XML sitemap endpoints: /sitemap.xml is the index of
  * the theme's sitemaps and /page-sitemap.xml lists the home page and pages.
  */
-function retails_sitemap_rewrite()
+function wholesale_sitemap_rewrite()
 {
-	add_rewrite_rule('^sitemap\.xml$', 'index.php?retails_sitemap=1', 'top');
-	add_rewrite_rule('^page-sitemap\.xml$', 'index.php?retails_sitemap=pages', 'top');
+	add_rewrite_rule('^sitemap\.xml$', 'index.php?wholesale_sitemap=1', 'top');
+	add_rewrite_rule('^page-sitemap\.xml$', 'index.php?wholesale_sitemap=pages', 'top');
 }
-add_action('init', 'retails_sitemap_rewrite', 20);
+add_action('init', 'wholesale_sitemap_rewrite', 20);
 add_action('init', function () {
-	if ('3' !== get_option('retails_sitemap_rewrite_version')) {
+	if ('3' !== get_option('wholesale_sitemap_rewrite_version')) {
 		flush_rewrite_rules(false);
-		update_option('retails_sitemap_rewrite_version', '3');
+		update_option('wholesale_sitemap_rewrite_version', '3');
 	}
 }, 99);
 
@@ -2227,7 +2085,7 @@ add_action('init', function () {
  *
  * @return string[] Absolute sitemap URLs.
  */
-function retails_sitemap_index_urls()
+function wholesale_sitemap_index_urls()
 {
 	return array_map('home_url', array('/page-sitemap.xml', '/product-sitemap.xml', '/category-sitemap.xml', '/location-sitemap.xml'));
 }
@@ -2245,7 +2103,7 @@ add_action('template_redirect', function () {
 	}
 }, -1);
 add_filter('query_vars', function ($vars) {
-	$vars[] = 'retails_sitemap';
+	$vars[] = 'wholesale_sitemap';
 	return $vars;
 });
 
@@ -2254,7 +2112,7 @@ add_filter('query_vars', function ($vars) {
  * sitemap lastmod and its dateModified in structured data. Bump it by hand when
  * that template's copy or product lists change.
  */
-define('RETAILS_HOME_PAGE_REVISED', '2026-11-05T17:30:00+00:00');
+define('WHOLESALE_HOME_PAGE_REVISED', '2026-10-27T08:20:00+00:00');
 
 /**
  * Render /sitemap.xml (the index) and /page-sitemap.xml: the home page, pages
@@ -2262,9 +2120,9 @@ define('RETAILS_HOME_PAGE_REVISED', '2026-11-05T17:30:00+00:00');
  * guides have their own sitemaps (inc/product-sitemap.php,
  * inc/location-sitemap.php).
  */
-function retails_render_sitemap()
+function wholesale_render_sitemap()
 {
-	$which = (string) get_query_var('retails_sitemap');
+	$which = (string) get_query_var('wholesale_sitemap');
 	if ('1' !== $which && 'pages' !== $which) {
 		return;
 	}
@@ -2276,7 +2134,7 @@ function retails_render_sitemap()
 		status_header(200);
 		echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
 		echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
-		foreach (retails_sitemap_index_urls() as $sitemap_url) {
+		foreach (wholesale_sitemap_index_urls() as $sitemap_url) {
 			echo "\t<sitemap>\n\t\t<loc>" . esc_xml(esc_url_raw($sitemap_url)) . "</loc>\n\t</sitemap>\n";
 		}
 		echo '</sitemapindex>';
@@ -2284,7 +2142,7 @@ function retails_render_sitemap()
 	}
 
 	// Location guides are listed, with their review dates, in /location-sitemap.xml.
-	$location_urls = function_exists('retails_location_sitemap_entries') ? wp_list_pluck(retails_location_sitemap_entries(), 'loc') : array();
+	$location_urls = function_exists('wholesale_location_sitemap_entries') ? wp_list_pluck(wholesale_location_sitemap_entries(), 'loc') : array();
 
 	$urls = array();
 	$add_url = function ($url, $lastmod = '', $changefreq = '', $priority = '') use (&$urls) {
@@ -2305,9 +2163,9 @@ function retails_render_sitemap()
 	// A GMT time: mysql2date() would read it as site time (Los Angeles) and date it 7 hours ahead.
 	$last_modified = $last_modified ? gmdate('c', strtotime($last_modified . ' UTC')) : '';
 	// The home page's content lives in its template, so its revision date is kept by hand.
-	$add_url(home_url('/'), max($last_modified, RETAILS_HOME_PAGE_REVISED), 'daily', '1.0');
+	$add_url(home_url('/'), max($last_modified, WHOLESALE_HOME_PAGE_REVISED), 'daily', '1.0');
 
-	$private_pages = retails_seo_noindex_page_slugs();
+	$private_pages = wholesale_seo_noindex_page_slugs();
 	$page_query = new WP_Query(array(
 		'post_type' => array('page', 'post'),
 		'post_status' => 'publish',
@@ -2318,13 +2176,13 @@ function retails_render_sitemap()
 		'ignore_sticky_posts' => true,
 	));
 
-	$private_page_ids = retails_seo_noindex_page_ids();
+	$private_page_ids = wholesale_seo_noindex_page_ids();
 	// Pages set to noindex or "exclude from sitemap" under SEO (inc/seo-admin/).
-	$excluded_post_ids = (array) apply_filters('retails_seo_sitemap_excluded_post_ids', array());
+	$excluded_post_ids = (array) apply_filters('wholesale_seo_sitemap_excluded_post_ids', array());
 
 	foreach ($page_query->posts as $post) {
 		if (('page' === $post->post_type && (in_array($post->post_name, $private_pages, true) || in_array($post->ID, $private_page_ids, true)))
-			|| ('product' === $post->post_type && in_array($post->ID, retails_seo_sitemap_excluded_product_ids(), true))
+			|| ('product' === $post->post_type && in_array($post->ID, wholesale_seo_sitemap_excluded_product_ids(), true))
 			|| in_array($post->ID, $excluded_post_ids, true)) {
 			continue;
 		}
@@ -2332,7 +2190,7 @@ function retails_render_sitemap()
 		$url = get_permalink($post);
 		if ($url && !in_array($url, $location_urls, true)) {
 			// A guide's hand-kept revision date beats the page row's, which its template never touches.
-			$revisions = 'page' === $post->post_type && function_exists('retails_guide_page_revisions') ? retails_guide_page_revisions() : array();
+			$revisions = 'page' === $post->post_type && function_exists('wholesale_guide_page_revisions') ? wholesale_guide_page_revisions() : array();
 			$lastmod = isset($revisions[$post->post_name]) ? max($revisions[$post->post_name] . 'T12:00:00+00:00', get_post_modified_time('c', true, $post)) : get_post_modified_time('c', true, $post);
 			$add_url($url, $lastmod, 'weekly', '0.8');
 		}
@@ -2364,31 +2222,31 @@ function retails_render_sitemap()
 	echo '</urlset>';
 	exit;
 }
-add_action('template_redirect', 'retails_render_sitemap', 0);
+add_action('template_redirect', 'wholesale_render_sitemap', 0);
 
 /**
  * Keep core's dynamic sitemap focused on indexable products and categories.
  */
-function retails_sitemap_post_types($post_types)
+function wholesale_sitemap_post_types($post_types)
 {
 	unset($post_types['cnn'], $post_types['order']);
 	return $post_types;
 }
-add_filter('wp_sitemaps_post_types', 'retails_sitemap_post_types');
+add_filter('wp_sitemaps_post_types', 'wholesale_sitemap_post_types');
 
-function retails_sitemap_taxonomies($taxonomies)
+function wholesale_sitemap_taxonomies($taxonomies)
 {
 	return $taxonomies;
 }
-add_filter('wp_sitemaps_taxonomies', 'retails_sitemap_taxonomies');
+add_filter('wp_sitemaps_taxonomies', 'wholesale_sitemap_taxonomies');
 
-function retails_sitemap_excluded_page_ids($args, $post_type)
+function wholesale_sitemap_excluded_page_ids($args, $post_type)
 {
 	if ('page' !== $post_type) {
 		return $args;
 	}
 
-	$excluded_ids = retails_seo_noindex_page_ids();
+	$excluded_ids = wholesale_seo_noindex_page_ids();
 
 	if ($excluded_ids) {
 		$args['post__not_in'] = $excluded_ids;
@@ -2396,7 +2254,7 @@ function retails_sitemap_excluded_page_ids($args, $post_type)
 
 	return $args;
 }
-add_filter('wp_sitemaps_posts_query_args', 'retails_sitemap_excluded_page_ids', 10, 2);
+add_filter('wp_sitemaps_posts_query_args', 'wholesale_sitemap_excluded_page_ids', 10, 2);
 
 function register_order_post_statuses()
 {
@@ -2408,7 +2266,7 @@ function register_order_post_statuses()
 		'refunded' => 'Refunded',
 		'failed' => 'Failed',
 		'on_hold' => 'On hold',
-		// Production and delivery stages (B2Sign and carrier tracking, see retails_order_status_info()).
+		// Production and delivery stages (B2Sign and carrier tracking, see wholesale_order_status_info()).
 		'finishing' => 'Finishing',
 		'ready-for-pickup' => 'Ready for pickup',
 		'in-transit' => 'In transit',
@@ -2434,14 +2292,14 @@ add_action('init', 'register_order_post_statuses');
 /**
  * Orders hold customer names, emails, phones and addresses. Anyone with the order's link may
  * view it without logging in: the slug carries the order's random 10-character code
- * (retails_generate_order_id()), so the link works like a private key. Reaching an order any
+ * (wholesale_generate_order_id()), so the link works like a private key. Reaching an order any
  * other way (?post_type=order&p=ID, which would redirect to the full link) is left to the
  * customer who placed it and staff, so nobody can walk the post IDs.
  */
-function retails_protect_order_pages()
+function wholesale_protect_order_pages()
 {
 	if (is_post_type_archive('order')) {
-		retails_render_404();
+		wholesale_render_404();
 	}
 
 	if (!is_singular('order')) {
@@ -2464,9 +2322,9 @@ function retails_protect_order_pages()
 		return;
 	}
 
-	retails_render_404();
+	wholesale_render_404();
 }
-add_action('template_redirect', 'retails_protect_order_pages', 5);
+add_action('template_redirect', 'wholesale_protect_order_pages', 5);
 
 /**
  * A 404 under /order/ must not be "guessed" into the order whose slug starts with it:
@@ -2476,7 +2334,7 @@ add_filter('do_redirect_guess_404_permalink', function ($do_redirect) {
 	return 'order' === get_query_var('post_type') ? false : $do_redirect;
 });
 
-function retails_render_404()
+function wholesale_render_404()
 {
 	global $wp_query;
 
@@ -2490,7 +2348,7 @@ function retails_render_404()
 /**
  * Keep orders out of the public REST API; staff still use it through the block editor.
  */
-function retails_protect_order_rest_routes($response, $handler, $request)
+function wholesale_protect_order_rest_routes($response, $handler, $request)
 {
 	if (0 === strpos($request->get_route(), '/wp/v2/order') && !current_user_can('edit_posts')) {
 		return new WP_Error('rest_forbidden', __('Sorry, you are not allowed to view orders.', 'litsign'), array('status' => rest_authorization_required_code()));
@@ -2498,9 +2356,9 @@ function retails_protect_order_rest_routes($response, $handler, $request)
 
 	return $response;
 }
-add_filter('rest_request_before_callbacks', 'retails_protect_order_rest_routes', 10, 3);
+add_filter('rest_request_before_callbacks', 'wholesale_protect_order_rest_routes', 10, 3);
 
-function retails_decode_order_meta_array($value)
+function wholesale_decode_order_meta_array($value)
 {
 	if (is_array($value)) {
 		return $value;
@@ -2528,7 +2386,7 @@ function retails_decode_order_meta_array($value)
 	return is_array($unserialized) ? $unserialized : array();
 }
 
-function retails_format_order_detail_value($name, $value)
+function wholesale_format_order_detail_value($name, $value)
 {
 	if (!is_scalar($value)) {
 		return '';
@@ -2550,7 +2408,7 @@ function retails_format_order_detail_value($name, $value)
 			return '<span class="artwork-links">'
 				. '<a class="artwork-open" href="' . esc_url($url) . '" target="_blank" rel="noopener noreferrer">Open</a>'
 				. '<span class="artwork-links__sep" aria-hidden="true"> | </span>'
-				. '<a class="artwork-download" href="' . esc_url(retails_artwork_download_url($url)) . '" download>Download</a>'
+				. '<a class="artwork-download" href="' . esc_url(wholesale_artwork_download_url($url)) . '" download>Download</a>'
 				. '</span>';
 		}
 	}
@@ -2561,7 +2419,7 @@ function retails_format_order_detail_value($name, $value)
 /**
  * Artwork and design files a Download link may send (the types customers can upload).
  */
-function retails_artwork_download_types()
+function wholesale_artwork_download_types()
 {
 	return array(
 		'jpg|jpeg|jpe' => 'image/jpeg',
@@ -2575,10 +2433,10 @@ function retails_artwork_download_types()
 /**
  * Download link for an order's artwork or design file. Browsers ignore the
  * download attribute on other hosts and open PDFs inline, so files in uploads
- * go through retails_serve_artwork_download(). Orders keep the host they were
+ * go through wholesale_serve_artwork_download(). Orders keep the host they were
  * placed on (localhost, a LAN IP, the live domain), so only the uploads path is kept.
  */
-function retails_artwork_download_url($url)
+function wholesale_artwork_download_url($url)
 {
 	$path = rawurldecode((string) wp_parse_url($url, PHP_URL_PATH));
 	if (!preg_match('#/uploads/(\d{4}/\d{2}/[^/\\\\]+)$#', $path, $matches)) {
@@ -2592,7 +2450,7 @@ function retails_artwork_download_url($url)
  * Sends ?artwork_download=2026/10/custom-artwork-932-6ad7.pdf as a file to save.
  * Only artwork file types inside the dated uploads folders, which are public anyway.
  */
-function retails_serve_artwork_download()
+function wholesale_serve_artwork_download()
 {
 	if (!isset($_GET['artwork_download'])) {
 		return;
@@ -2602,7 +2460,7 @@ function retails_serve_artwork_download()
 	$uploads = wp_upload_dir(null, false);
 	$base = empty($uploads['error']) ? realpath($uploads['basedir']) : false;
 	$file = ($base && preg_match('#^\d{4}/\d{2}/[^/\\\\]+$#', $relative)) ? realpath($base . '/' . $relative) : false;
-	$type = $file ? wp_check_filetype($file, retails_artwork_download_types()) : array('type' => false);
+	$type = $file ? wp_check_filetype($file, wholesale_artwork_download_types()) : array('type' => false);
 
 	if (!$file || !$type['type'] || !is_file($file) || 0 !== strpos(wp_normalize_path($file), trailingslashit(wp_normalize_path($base)))) {
 		wp_die(esc_html__('This artwork file is no longer available.', 'litsign'), esc_html__('File not found', 'litsign'), array('response' => 404));
@@ -2619,35 +2477,35 @@ function retails_serve_artwork_download()
 	readfile($file);
 	exit;
 }
-add_action('init', 'retails_serve_artwork_download', 1);
+add_action('init', 'wholesale_serve_artwork_download', 1);
 
-function retails_send_new_order_admin_email($post_id)
+function wholesale_send_new_order_admin_email($post_id)
 {
 	if ('order' !== get_post_type($post_id)) {
 		return;
 	}
 
-	$billing_data = retails_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+	$billing_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
 
 	$order_id = get_post_meta($post_id, 'order_id', true);
 	$order_cost = json_decode(get_post_meta($post_id, 'product_cost', true), true);
 	$order_cost = is_array($order_cost) ? $order_cost : array();
-	$product_data = retails_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
+	$product_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
 	$order_comment = get_post_meta($post_id, 'order_comment', true);
 	$order_time = get_post_meta($post_id, 'order_time', true);
 	$estimate_delivery_time = get_post_meta($post_id, 'estimate_delivery_time', true);
 	$order_total = isset($order_cost['grand_total']) ? floatval($order_cost['grand_total']) : 0;
 	$customer_email = isset($billing_data['billing_email']) ? $billing_data['billing_email'] : '';
 	$customer_name = trim((isset($billing_data['billing_fname']) ? $billing_data['billing_fname'] : '') . ' ' . (isset($billing_data['billing_lname']) ? $billing_data['billing_lname'] : ''));
-	$shipping_data = retails_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
+	$shipping_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'shipping_address', true));
 
-	$payment_status = retails_get_payment_status($post_id);
+	$payment_status = wholesale_get_payment_status($post_id);
 	$payment_labels = array('paid' => 'PAID by card', 'paid_offline' => 'PAID (offline)', 'needs_review' => 'Card payment - VERIFY IN CONVERGE', 'manual' => 'Not paid - collect payment manually', 'refunded' => 'Refunded');
-	$subject = sprintf('New Order #%s - %s', retails_order_number($post_id), isset($payment_labels[$payment_status]) ? $payment_labels[$payment_status] : 'payment status unknown');
+	$subject = sprintf('New Order #%s - %s', wholesale_order_number($post_id), isset($payment_labels[$payment_status]) ? $payment_labels[$payment_status] : 'payment status unknown');
 	$message = '<html><body>'
 		. '<h2>New Order Notification</h2>'
 		. '<p>A new order has been received on your website.</p>'
-		. '<p><strong>Order ID:</strong> #' . esc_html(retails_order_number($post_id)) . '<br><strong>Payment:</strong> ' . esc_html(isset($payment_labels[$payment_status]) ? $payment_labels[$payment_status] : 'Unknown') . (get_post_meta($post_id, '_payment_txn_id', true) ? ' (Converge transaction ' . esc_html(get_post_meta($post_id, '_payment_txn_id', true)) . ')' : '') . '</p>'
+		. '<p><strong>Order ID:</strong> #' . esc_html(wholesale_order_number($post_id)) . '<br><strong>Payment:</strong> ' . esc_html(isset($payment_labels[$payment_status]) ? $payment_labels[$payment_status] : 'Unknown') . (get_post_meta($post_id, '_payment_txn_id', true) ? ' (Converge transaction ' . esc_html(get_post_meta($post_id, '_payment_txn_id', true)) . ')' : '') . '</p>'
 		. '<p><strong>Customer:</strong> ' . esc_html($customer_name ?: 'N/A') . '<br>'
 		. '<strong>Email:</strong> ' . esc_html($customer_email ?: 'N/A') . '<br>'
 		. '<strong>Order Time:</strong> ' . esc_html($order_time ?: 'N/A') . '<br>'
@@ -2667,9 +2525,9 @@ function retails_send_new_order_admin_email($post_id)
 		}
 
 		if (!empty($product['product_details']) && is_array($product['product_details'])) {
-			foreach (retails_width_first($product['product_details']) as $name => $value) {
+			foreach (wholesale_width_first($product['product_details']) as $name => $value) {
 				if ($value !== null && $value !== '') {
-					$details[] = '<strong>' . esc_html($name) . ':</strong> ' . retails_format_order_detail_value($name, $value);
+					$details[] = '<strong>' . esc_html($name) . ':</strong> ' . wholesale_format_order_detail_value($name, $value);
 				}
 			}
 		}
@@ -2685,10 +2543,11 @@ function retails_send_new_order_admin_email($post_id)
 		. '<h3>Order Details</h3>'
 		. '<p><strong>Subtotal:</strong> $' . number_format(isset($order_cost['sub_total']) ? floatval($order_cost['sub_total']) : 0, 2, '.', ',') . '<br>'
 		. '<strong>Shipping:</strong> $' . number_format(isset($order_cost['shipping_cost']) ? floatval($order_cost['shipping_cost']) : 0, 2, '.', ',') . '<br>'
+		. (($delivery_summary = wholesale_order_delivery_summary(is_array($shipping_data) ? $shipping_data : array(), is_array($order_cost) ? $order_cost : array())) ? '<strong>Delivery:</strong> ' . esc_html($delivery_summary) . '<br>' : '')
 		. '<strong>Tax:</strong> $' . number_format(isset($order_cost['tax']) ? floatval($order_cost['tax']) : 0, 2, '.', ',') . '<br>'
 		. '<strong>Grand Total:</strong> $' . number_format($order_total, 2, '.', ',') . '</p>'
-		. '<h3>Billing Details</h3><p>' . retails_format_order_email_data($billing_data, 'billing_') . '</p>'
-		. '<h3>Shipping Details</h3><p>' . retails_format_order_email_data($shipping_data, 'shipping_') . '</p>'
+		. '<h3>Billing Details</h3><p>' . wholesale_format_order_email_data($billing_data, 'billing_') . '</p>'
+		. '<h3>Shipping Details</h3><p>' . wholesale_format_order_email_data($shipping_data, 'shipping_') . '</p>'
 		. '<h3>Comment</h3><p>' . esc_html($order_comment ?: 'N/A') . '</p>'
 		. '<p><a href="' . esc_url(get_permalink($post_id)) . '" target="_blank">View Order Details</a></p>'
 		. '</body></html>';
@@ -2698,31 +2557,31 @@ function retails_send_new_order_admin_email($post_id)
 		'Reply-To: ' . get_option('admin_email'),
 	);
 
-	if (!get_post_meta($post_id, '_retails_admin_order_email_sent', true)) {
-		$admin_sent = wp_mail(retails_contact_admin_recipients(), $subject, $message, $headers);
+	if (!get_post_meta($post_id, '_wholesale_admin_order_email_sent', true)) {
+		$admin_sent = wp_mail(wholesale_contact_admin_recipients(), $subject, $message, $headers);
 		if ($admin_sent) {
-			update_post_meta($post_id, '_retails_admin_order_email_sent', current_time('mysql'));
+			update_post_meta($post_id, '_wholesale_admin_order_email_sent', current_time('mysql'));
 		} else {
-			error_log('Retails order admin email failed for order #' . ($order_id ?: $post_id));
+			error_log('Wholesale order admin email failed for order #' . ($order_id ?: $post_id));
 		}
 	}
 
-	// Paid tickets email their own receipt (retails_send_ticket_receipt()).
-	if (is_email($customer_email) && !get_post_meta($post_id, '_retails_customer_order_email_sent', true) && !get_post_meta($post_id, '_ticket_id', true)) {
-		$customer_subject = sprintf(__('Order #%s confirmed - Storefront Sign Online', 'litsign'), retails_order_number($post_id));
-		$customer_message = retails_customer_order_email_html($post_id);
+	// Paid tickets email their own receipt (wholesale_send_ticket_receipt()).
+	if (is_email($customer_email) && !get_post_meta($post_id, '_wholesale_customer_order_email_sent', true) && !get_post_meta($post_id, '_ticket_id', true)) {
+		$customer_subject = sprintf(__('Order #%s confirmed - Storefront Sign Online', 'litsign'), wholesale_order_number($post_id));
+		$customer_message = wholesale_customer_order_email_html($post_id);
 		// Customers reply to the sales inbox, not the WordPress admin address.
 		$headers = array('Content-Type: text/html; charset=UTF-8', 'Reply-To: Storefront Sign Online <TR@StorefrontSignOnline.com>');
 		$customer_sent = wp_mail($customer_email, $customer_subject, $customer_message, $headers);
 		if ($customer_sent) {
-			update_post_meta($post_id, '_retails_customer_order_email_sent', current_time('mysql'));
+			update_post_meta($post_id, '_wholesale_customer_order_email_sent', current_time('mysql'));
 		} else {
-			error_log('Retails order customer email failed for order #' . ($order_id ?: $post_id));
+			error_log('Wholesale order customer email failed for order #' . ($order_id ?: $post_id));
 		}
 	}
 }
 
-function retails_format_order_email_data($data, $prefix)
+function wholesale_format_order_email_data($data, $prefix)
 {
 	$formatted_data = array();
 
@@ -2741,7 +2600,7 @@ function retails_format_order_email_data($data, $prefix)
 /**
  * Add the most useful order information to the admin order list.
  */
-function retails_order_admin_columns($columns)
+function wholesale_order_admin_columns($columns)
 {
 	$custom_columns = array(
 		'order_number' => __('Order #', 'litsign'),
@@ -2765,13 +2624,13 @@ function retails_order_admin_columns($columns)
 
 	return $updated_columns;
 }
-add_filter('manage_order_posts_columns', 'retails_order_admin_columns');
+add_filter('manage_order_posts_columns', 'wholesale_order_admin_columns');
 
-function retails_order_admin_column_content($column, $post_id)
+function wholesale_order_admin_column_content($column, $post_id)
 {
-	$billing_data = retails_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
-	$order_cost = retails_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
-	$product_data = retails_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
+	$billing_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'billing_address', true));
+	$order_cost = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_cost', true));
+	$product_data = wholesale_decode_order_meta_array(get_post_meta($post_id, 'product_json', true));
 
 	switch ($column) {
 		case 'order_number':
@@ -2786,9 +2645,9 @@ function retails_order_admin_column_content($column, $post_id)
 		case 'order_status':
 			$status = get_post_status($post_id);
 			printf(
-				'<span class="retails-order-status" data-status="%s">%s</span>',
+				'<span class="wholesale-order-status" data-status="%s">%s</span>',
 				esc_attr($status),
-				retails_order_status_badge($status, $post_id) // Escaped in the helper.
+				wholesale_order_status_badge($status, $post_id) // Escaped in the helper.
 			);
 			break;
 
@@ -2801,12 +2660,12 @@ function retails_order_admin_column_content($column, $post_id)
 			);
 			$email = isset($billing_data['billing_email']) ? sanitize_email($billing_data['billing_email']) : '';
 			$phone = isset($billing_data['billing_tel']) ? $billing_data['billing_tel'] : '';
-			printf('<strong class="retails-order-customer__name">%s</strong>', esc_html($name ?: __('Guest', 'litsign')));
+			printf('<strong class="wholesale-order-customer__name">%s</strong>', esc_html($name ?: __('Guest', 'litsign')));
 			if ($email) {
-				printf('<a class="retails-order-customer__line" href="mailto:%1$s" title="%1$s">%2$s</a>', esc_attr($email), esc_html($email));
+				printf('<a class="wholesale-order-customer__line" href="mailto:%1$s" title="%1$s">%2$s</a>', esc_attr($email), esc_html($email));
 			}
 			if ($phone) {
-				printf('<a class="retails-order-customer__line" href="tel:%s">%s</a>', esc_attr(preg_replace('/[^0-9+]/', '', (string) $phone)), esc_html($phone));
+				printf('<a class="wholesale-order-customer__line" href="tel:%s">%s</a>', esc_attr(preg_replace('/[^0-9+]/', '', (string) $phone)), esc_html($phone));
 			}
 			break;
 
@@ -2819,7 +2678,7 @@ function retails_order_admin_column_content($column, $post_id)
 
 			// Show the first three products; the rest collapse into "+N more".
 			$shown = array_slice($products, 0, 3);
-			echo '<ul class="retails-order-products">';
+			echo '<ul class="wholesale-order-products">';
 			foreach ($shown as $product) {
 				$product_id = isset($product['product_id']) ? absint($product['product_id']) : 0;
 				$title = !empty($product['product_title']) ? $product['product_title'] : ($product_id ? get_the_title($product_id) : __('Product', 'litsign'));
@@ -2835,12 +2694,12 @@ function retails_order_admin_column_content($column, $post_id)
 				if ($thumb) {
 					printf('<img src="%s" alt="" width="36" height="36" loading="lazy">', esc_url($thumb));
 				} else {
-					echo '<span class="retails-order-products__noimg"></span>';
+					echo '<span class="wholesale-order-products__noimg"></span>';
 				}
 				printf(
-					'<span class="retails-order-products__title">%s</span>%s',
+					'<span class="wholesale-order-products__title">%s</span>%s',
 					esc_html($title),
-					$quantity ? ' <span class="retails-order-products__qty">&times; ' . esc_html($quantity) . '</span>' : ''
+					$quantity ? ' <span class="wholesale-order-products__qty">&times; ' . esc_html($quantity) . '</span>' : ''
 				);
 				echo '</li>';
 			}
@@ -2849,7 +2708,7 @@ function retails_order_admin_column_content($column, $post_id)
 			$more = count($products) - count($shown);
 			if ($more > 0) {
 				printf(
-					'<a class="retails-order-products__more" href="%s">%s</a>',
+					'<a class="wholesale-order-products__more" href="%s">%s</a>',
 					esc_url(get_edit_post_link($post_id)),
 					/* translators: %d: number of hidden products */
 					esc_html(sprintf(_n('+%d more product', '+%d more products', $more, 'litsign'), $more))
@@ -2868,7 +2727,7 @@ function retails_order_admin_column_content($column, $post_id)
 			break;
 	}
 }
-add_action('manage_order_posts_custom_column', 'retails_order_admin_column_content', 10, 2);
+add_action('manage_order_posts_custom_column', 'wholesale_order_admin_column_content', 10, 2);
 
 // Thumbnail + title rows in the order list Products column.
 add_action('admin_head-edit.php', function () {
@@ -2879,14 +2738,14 @@ add_action('admin_head-edit.php', function () {
 	?>
 	<style>
 		.fixed .column-products { width: 24%; }
-		.retails-order-products { margin: 0; }
-		.retails-order-products li { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; }
-		.retails-order-products li:last-child { margin-bottom: 0; }
-		.retails-order-products img,
-		.retails-order-products__noimg { flex: 0 0 36px; width: 36px; height: 36px; object-fit: cover; border: 1px solid #dcdcde; border-radius: 4px; background: #f6f7f7; }
-		.retails-order-products__title { line-height: 1.3; }
-		.retails-order-products__qty { color: #646970; white-space: nowrap; }
-		.retails-order-products__more { display: inline-block; margin-top: 4px; font-size: 12px; }
+		.wholesale-order-products { margin: 0; }
+		.wholesale-order-products li { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; }
+		.wholesale-order-products li:last-child { margin-bottom: 0; }
+		.wholesale-order-products img,
+		.wholesale-order-products__noimg { flex: 0 0 36px; width: 36px; height: 36px; object-fit: cover; border: 1px solid #dcdcde; border-radius: 4px; background: #f6f7f7; }
+		.wholesale-order-products__title { line-height: 1.3; }
+		.wholesale-order-products__qty { color: #646970; white-space: nowrap; }
+		.wholesale-order-products__more { display: inline-block; margin-top: 4px; font-size: 12px; }
 	</style>
 	<?php
 });
@@ -2894,13 +2753,13 @@ add_action('admin_head-edit.php', function () {
 /**
  * Add all supported order statuses to the order list quick edit form.
  */
-function retails_order_quick_edit_status($column_name, $post_type)
+function wholesale_order_quick_edit_status($column_name, $post_type)
 {
 	if ('order' !== $post_type || 'order_status' !== $column_name) {
 		return;
 	}
 
-	$statuses = retails_order_status_info();
+	$statuses = wholesale_order_status_info();
 	?>
 	<fieldset class="inline-edit-col-right">
 		<div class="inline-edit-col">
@@ -2916,7 +2775,7 @@ function retails_order_quick_edit_status($column_name, $post_type)
 	</fieldset>
 	<?php
 }
-add_action('quick_edit_custom_box', 'retails_order_quick_edit_status', 10, 2);
+add_action('quick_edit_custom_box', 'wholesale_order_quick_edit_status', 10, 2);
 
 
 function save_custom_post_status($post_id, $post)
@@ -2926,7 +2785,7 @@ function save_custom_post_status($post_id, $post)
 			? $_POST['order_status']
 			: (isset($_POST['hidden_post_status']) ? $_POST['hidden_post_status'] : $_POST['post_status']);
 		$new_status = sanitize_key(wp_unslash($posted_status));
-		$valid_statuses = array_keys(retails_order_status_info());
+		$valid_statuses = array_keys(wholesale_order_status_info());
 
 		if (in_array($new_status, $valid_statuses, true)) {
 			remove_action('save_post', 'save_custom_post_status');
@@ -2945,7 +2804,7 @@ function register_custom_bulk_action($bulk_actions)
 	global $post_type;
 
 	if ($post_type == 'order') { // Replace 'order' with your custom post type ID
-		foreach (retails_order_status_info() as $status => $info) {
+		foreach (wholesale_order_status_info() as $status => $info) {
 			if ('on_hold' !== $status) {
 				$bulk_actions[$status] = sprintf(__('Mark as %s', 'litsign'), $info['label']);
 			}
@@ -2959,7 +2818,7 @@ add_filter('bulk_actions-edit-order', 'register_custom_bulk_action'); // Replace
 function handle_custom_bulk_action($redirect_to, $doaction, $post_ids)
 {
 
-	$valid_statuses = array_keys(retails_order_status_info());
+	$valid_statuses = array_keys(wholesale_order_status_info());
 	if (in_array($doaction, $valid_statuses, true)) {
 		foreach ($post_ids as $post_id) {
 			wp_update_post(array(
@@ -3029,10 +2888,10 @@ function litsign_scripts()
 	wp_enqueue_style('font-awesome', $theme_uri . '/css/icons.css', array(), $asset_version('/css/icons.css'));
 	wp_enqueue_style('litsign-style', get_stylesheet_uri(), array(), $asset_version('/style.css'));
 	wp_enqueue_style('custom-style', $theme_uri . '/css/style.css', array(), $asset_version('/css/style.css'));
-	wp_enqueue_style('retails-header', $theme_uri . '/css/header.css', array('custom-style'), $asset_version('/css/header.css'));
-	wp_enqueue_style('retails-footer', $theme_uri . '/css/footer.css', array('custom-style'), $asset_version('/css/footer.css'));
-	if (is_page(array('cart', 'checkout', 'account', 'my-orders', 'track-order', 'login', 'signup')) || is_singular('order') || get_query_var('retails_thank_you')) {
-		wp_enqueue_style('retails-shop', $theme_uri . '/css/shop.css', array('custom-style'), $asset_version('/css/shop.css'));
+	wp_enqueue_style('wholesale-header', $theme_uri . '/css/header.css', array('custom-style'), $asset_version('/css/header.css'));
+	wp_enqueue_style('wholesale-footer', $theme_uri . '/css/footer.css', array('custom-style'), $asset_version('/css/footer.css'));
+	if (is_page(array('cart', 'checkout', 'account', 'my-orders', 'track-order', 'login', 'signup')) || is_singular('order') || get_query_var('wholesale_thank_you')) {
+		wp_enqueue_style('wholesale-shop', $theme_uri . '/css/shop.css', array('custom-style'), $asset_version('/css/shop.css'));
 	}
 	if (is_page_template('landing-page.php')) {
 		wp_enqueue_style('landing-page', $theme_uri . '/css/landing-page.css', array('litsign-style', 'custom-style'), $asset_version('/css/landing-page.css'));
@@ -3043,25 +2902,23 @@ function litsign_scripts()
 		wp_enqueue_style('cl-quote', $theme_uri . '/css/cl-quote.css', array('custom-style'), $asset_version('/css/cl-quote.css'));
 		if (is_page_template('page-channel-letters.php')) {
 			wp_enqueue_style('cl-landing', $theme_uri . '/css/cl-landing.css', array('cl-quote'), $asset_version('/css/cl-landing.css'));
-			// The style cards (inc/cl-style-grid.php): same look as the home page's channel letter band.
-			wp_enqueue_style('cl-style-grid', $theme_uri . '/css/cl-style-grid.css', array('cl-landing'), $asset_version('/css/cl-style-grid.css'));
 		}
 	}
-	if (is_page(array('storefront-signs', 'about', 'banners-displays', 'window-graphics', 'channel-letter-cost', 'design-templates')) || is_front_page() || (is_singular('product') && retails_seo_channel_letter_product(get_queried_object_id()))) {
-		wp_enqueue_style('retails-seo-pages', $theme_uri . '/css/seo-pages.css', array('custom-style'), $asset_version('/css/seo-pages.css'));
+	if (is_page(array('storefront-signs', 'about', 'banners-displays', 'window-graphics', 'channel-letter-cost', 'design-templates')) || is_front_page() || (is_singular('product') && wholesale_seo_channel_letter_product(get_queried_object_id()))) {
+		wp_enqueue_style('wholesale-seo-pages', $theme_uri . '/css/seo-pages.css', array('custom-style'), $asset_version('/css/seo-pages.css'));
 	}
 	// The window graphics page reuses the banners & displays layout.
 	if (is_page(array('banners-displays', 'window-graphics'))) {
-		wp_enqueue_style('retails-banners-displays', $theme_uri . '/css/banners-displays.css', array('retails-seo-pages'), $asset_version('/css/banners-displays.css'));
+		wp_enqueue_style('wholesale-banners-displays', $theme_uri . '/css/banners-displays.css', array('wholesale-seo-pages'), $asset_version('/css/banners-displays.css'));
 	}
 	if (is_page('window-graphics')) {
-		wp_enqueue_style('retails-window-graphics', $theme_uri . '/css/window-graphics.css', array('retails-banners-displays'), $asset_version('/css/window-graphics.css'));
+		wp_enqueue_style('wholesale-window-graphics', $theme_uri . '/css/window-graphics.css', array('wholesale-banners-displays'), $asset_version('/css/window-graphics.css'));
 	}
 	// The home page (template-parts/home-catalog.php) uses the banners & displays
 	// hero, cards and product grid, plus its own catalog sections.
 	if (is_front_page()) {
-		wp_enqueue_style('retails-banners-displays', $theme_uri . '/css/banners-displays.css', array('custom-style'), $asset_version('/css/banners-displays.css'));
-		wp_enqueue_style('retails-home-catalog', $theme_uri . '/css/home-catalog.css', array('retails-banners-displays'), $asset_version('/css/home-catalog.css'));
+		wp_enqueue_style('wholesale-banners-displays', $theme_uri . '/css/banners-displays.css', array('custom-style'), $asset_version('/css/banners-displays.css'));
+		wp_enqueue_style('wholesale-home-catalog', $theme_uri . '/css/home-catalog.css', array('wholesale-banners-displays'), $asset_version('/css/home-catalog.css'));
 	}
 	//wp_enqueue_style('zebra_dialog', get_template_directory_uri() . '/css/zebra_dialog.css', array(), _S_VERSION);
 
@@ -3069,11 +2926,7 @@ function litsign_scripts()
 
 	wp_enqueue_script('bootsrap', $theme_uri . '/js/bootstrap.min.js', array('jquery'), $asset_version('/js/bootstrap.min.js'), true);
 	wp_enqueue_script('custom-script', $theme_uri . '/js/main.js', array('jquery'), $asset_version('/js/main.js'), true);
-	wp_localize_script('custom-script', 'retailsShop', array('ajaxUrl' => admin_url('admin-ajax.php')));
-	// Channel letters measured as B2Sign measures them, the same on the product page and in the builder.
-	if (is_singular('product') || is_page('channel-letter-builder')) {
-		wp_enqueue_script('cl-measure', $theme_uri . '/js/cl-measure.js', array(), $asset_version('/js/cl-measure.js'), true);
-	}
+	wp_localize_script('custom-script', 'wholesaleShop', array('ajaxUrl' => admin_url('admin-ajax.php')));
 
 	if (is_singular() && comments_open() && get_option('thread_comments')) {
 		wp_enqueue_script('comment-reply');
@@ -3081,7 +2934,7 @@ function litsign_scripts()
 
 
 	if (is_page('channel-letter-builder')) {
-		wp_enqueue_script('cl', $theme_uri . '/js/cl.js', array('jquery', 'redux', 'konva', 'cl-measure'), $asset_version('/js/cl.js'), true);
+		wp_enqueue_script('cl', $theme_uri . '/js/cl.js', array('jquery', 'redux', 'konva'), $asset_version('/js/cl.js'), true);
 		wp_enqueue_script('konva', 'https://cdn.jsdelivr.net/npm/konva@8.3.5/konva.min.js', array(), _S_VERSION, true);
 		wp_enqueue_script('redux', $theme_uri . '/js/redux.min.js', array(), $asset_version('/js/redux.min.js'), true);
 		wp_enqueue_style('cl', $theme_uri . '/css/cl.css', array(), $asset_version('/css/cl.css'));
@@ -3094,7 +2947,7 @@ function litsign_scripts()
 			'rest_url' => esc_url_raw(rest_url('/wp/v2/media')),
 			'nonce' => wp_create_nonce('wp_rest'),
 			'upload_url' => esc_url_raw(admin_url('admin-ajax.php')),
-			'upload_nonce' => wp_create_nonce('retails_upload_design'),
+			'upload_nonce' => wp_create_nonce('wholesale_upload_design'),
 		]);
 	}
 
@@ -3111,73 +2964,37 @@ add_action('wp_enqueue_scripts', 'litsign_scripts');
  * in fonts/ and declared in css/typography.css. Enqueued late so that file prints
  * after every page stylesheet.
  */
-function retails_typography_assets()
+function wholesale_typography_assets()
 {
 	if (is_admin()) {
 		return;
 	}
-	wp_enqueue_style('retails-typography', get_template_directory_uri() . '/css/typography.css', array(), (string) filemtime(get_template_directory() . '/css/typography.css'));
+	wp_enqueue_style('wholesale-typography', get_template_directory_uri() . '/css/typography.css', array(), (string) filemtime(get_template_directory() . '/css/typography.css'));
 }
-add_action('wp_enqueue_scripts', 'retails_typography_assets', 99);
+add_action('wp_enqueue_scripts', 'wholesale_typography_assets', 99);
 
 /**
  * Layout polish for product cards, product pages and guide/location pages, mostly
  * for phones (css/ui-polish.css). Prints after typography.css so it wins ties.
  */
-function retails_ui_polish_assets()
+function wholesale_ui_polish_assets()
 {
 	if (is_admin() || is_page('channel-letter-builder')) {
 		return;
 	}
 	$path = '/css/ui-polish.css';
-	wp_enqueue_style('retails-ui-polish', get_template_directory_uri() . $path, array('retails-typography'), (string) filemtime(get_template_directory() . $path));
+	wp_enqueue_style('wholesale-ui-polish', get_template_directory_uri() . $path, array('wholesale-typography'), (string) filemtime(get_template_directory() . $path));
 	// Phone header that hides on scroll down, the home page guide toggle, and the
 	// product page sticky photo column (desktop) and buy bar (phones).
 	$script = '/js/ui-polish.js';
-	wp_enqueue_script('retails-ui-polish', get_template_directory_uri() . $script, array(), (string) filemtime(get_template_directory() . $script), array('in_footer' => true, 'strategy' => 'defer'));
+	wp_enqueue_script('wholesale-ui-polish', get_template_directory_uri() . $script, array(), (string) filemtime(get_template_directory() . $script), array('in_footer' => true, 'strategy' => 'defer'));
 }
-add_action('wp_enqueue_scripts', 'retails_ui_polish_assets', 100);
-
-/**
- * Tablet-only layout layer (css/tablet.css). The media attribute limits it to
- * 768-1199px wide screens, so phones and desktops never apply it (browsers still
- * fetch it at low priority without holding back the first paint there).
- * Priority 120: prints after ui-polish.css (100), motion.css and the product
- * group styles (110), so its equal-specificity rules win.
- */
-function retails_tablet_assets()
-{
-	if (is_admin() || is_page('channel-letter-builder')) {
-		return;
-	}
-	$path = '/css/tablet.css';
-	wp_enqueue_style('retails-tablet', get_template_directory_uri() . $path, array('retails-ui-polish'), (string) filemtime(get_template_directory() . $path), '(min-width: 768px) and (max-width: 1199.98px)');
-}
-add_action('wp_enqueue_scripts', 'retails_tablet_assets', 120);
-
-/**
- * Phone hero layer (css/hero-phone.css): gives the hero band of every page but
- * the home page the home hero's spacing and width under 768px. The file wraps
- * itself in that media query and is printed inline (retails_inline_small_styles),
- * so it costs no request. Priority 125: after ui-polish.css and tablet.css.
- */
-function retails_hero_phone_assets()
-{
-	if (is_admin() || is_front_page() || is_page('channel-letter-builder')) {
-		return;
-	}
-	if (!is_page() && !get_query_var('category_slug')) {
-		return;
-	}
-	$path = '/css/hero-phone.css';
-	wp_enqueue_style('retails-hero-phone', get_template_directory_uri() . $path, array('retails-ui-polish'), (string) filemtime(get_template_directory() . $path));
-}
-add_action('wp_enqueue_scripts', 'retails_hero_phone_assets', 125);
+add_action('wp_enqueue_scripts', 'wholesale_ui_polish_assets', 100);
 
 /**
  * Preload both font files: body text and the hero heading use them above the fold.
  */
-function retails_preload_typography_fonts()
+function wholesale_preload_typography_fonts()
 {
 	if (is_admin()) {
 		return;
@@ -3186,7 +3003,7 @@ function retails_preload_typography_fonts()
 		printf('<link rel="preload" href="%s" as="font" type="font/woff2" crossorigin>' . "\n", esc_url(get_template_directory_uri() . '/fonts/' . $font));
 	}
 }
-add_action('wp_head', 'retails_preload_typography_fonts', 2);
+add_action('wp_head', 'wholesale_preload_typography_fonts', 2);
 
 /**
  * Upload builder preview images for authenticated users.
@@ -3194,7 +3011,7 @@ add_action('wp_head', 'retails_preload_typography_fonts', 2);
  * Uploaded files are treated as untrusted input and must be restricted to a
  * narrow, safe image allowlist before being stored or referenced.
  */
-function retails_validate_design_upload($file)
+function wholesale_validate_design_upload($file)
 {
 	if (empty($file) || !is_array($file) || empty($file['tmp_name'])) {
 		return new WP_Error('missing_file', __('No design image was provided.', 'litsign'));
@@ -3232,9 +3049,9 @@ function retails_validate_design_upload($file)
 	return true;
 }
 
-function retails_store_design_attachment($file)
+function wholesale_store_design_attachment($file)
 {
-	$file_validation = retails_validate_design_upload($file);
+	$file_validation = wholesale_validate_design_upload($file);
 	if (is_wp_error($file_validation)) {
 		return $file_validation;
 	}
@@ -3285,36 +3102,36 @@ function retails_store_design_attachment($file)
 	return $attachment_id;
 }
 
-function retails_upload_design()
+function wholesale_upload_design()
 {
 	// Guests and customers (subscribers) both use the channel-letter builder; the nonce plus
-	// strict image validation in retails_store_design_attachment() protect this endpoint.
-	check_ajax_referer('retails_upload_design', 'nonce');
+	// strict image validation in wholesale_store_design_attachment() protect this endpoint.
+	check_ajax_referer('wholesale_upload_design', 'nonce');
 
 	if (empty($_FILES['file'])) {
 		wp_send_json_error(array('message' => __('No design image was provided.', 'litsign')), 400);
 	}
 
-	$attachment_id = retails_store_design_attachment($_FILES['file']);
+	$attachment_id = wholesale_store_design_attachment($_FILES['file']);
 	if (is_wp_error($attachment_id)) {
 		wp_send_json_error(array('message' => $attachment_id->get_error_message()), 400);
 	}
 
 	// Remember which design images this visitor uploaded so product pages only accept
 	// (and only ever delete) their own designs.
-	if (!isset($_SESSION['retails_design_uploads']) || !is_array($_SESSION['retails_design_uploads'])) {
-		$_SESSION['retails_design_uploads'] = array();
+	if (!isset($_SESSION['wholesale_design_uploads']) || !is_array($_SESSION['wholesale_design_uploads'])) {
+		$_SESSION['wholesale_design_uploads'] = array();
 	}
-	$_SESSION['retails_design_uploads'][] = absint($attachment_id);
-	$_SESSION['retails_design_uploads'] = array_slice(array_unique($_SESSION['retails_design_uploads']), -50);
+	$_SESSION['wholesale_design_uploads'][] = absint($attachment_id);
+	$_SESSION['wholesale_design_uploads'] = array_slice(array_unique($_SESSION['wholesale_design_uploads']), -50);
 
 	wp_send_json_success(array(
 		'id' => absint($attachment_id),
 		'url' => esc_url_raw(wp_get_attachment_url($attachment_id)),
 	));
 }
-add_action('wp_ajax_retails_upload_design', 'retails_upload_design');
-add_action('wp_ajax_nopriv_retails_upload_design', 'retails_upload_design');
+add_action('wp_ajax_wholesale_upload_design', 'wholesale_upload_design');
+add_action('wp_ajax_nopriv_wholesale_upload_design', 'wholesale_upload_design');
 
 /**
  * Return whether a third-party SEO plugin is active.
@@ -3322,7 +3139,7 @@ add_action('wp_ajax_nopriv_retails_upload_design', 'retails_upload_design');
  * The theme should not emit duplicate metadata when an SEO plugin already
  * owns the document head.
  */
-function retails_has_seo_plugin()
+function wholesale_has_seo_plugin()
 {
 	return defined('WPSEO_VERSION')
 		|| defined('RANK_MATH_VERSION')
@@ -3333,17 +3150,17 @@ function retails_has_seo_plugin()
 /**
  * Build a useful description for the current public request.
  */
-function retails_seo_description()
+function wholesale_seo_description()
 {
 	// Set under SEO in wp-admin (inc/seo-admin/); '' keeps the description below.
-	$override = (string) apply_filters('retails_seo_description_override', '');
+	$override = (string) apply_filters('wholesale_seo_description_override', '');
 	if ('' !== $override) {
 		return $override;
 	}
 
-	$keyword_meta = retails_seo_keyword_meta();
+	$keyword_meta = wholesale_seo_keyword_meta();
 	if (!empty($keyword_meta['description'])) {
-		return retails_seo_localize_description($keyword_meta['description']);
+		return wholesale_seo_localize_description($keyword_meta['description']);
 	}
 
 	$description = '';
@@ -3363,21 +3180,11 @@ function retails_seo_description()
 		if (!$description) {
 			$description = get_post_field('post_content', $product_id);
 		}
-
-		// Products with no copy yet get a plain sentence, not just the site name.
-		if ('' === trim(wp_strip_all_tags((string) $description))) {
-			$description = sprintf(
-				/* translators: %s: product name. */
-				__('Order %s online from Storefront Sign Online, with instant prices and shipping anywhere in the USA.', 'litsign'),
-				retails_schema_text(get_the_title($product_id))
-			);
-		}
 	} elseif (get_query_var('category_slug')) {
 		$term_slug = get_query_var('category_slug');
 		$term_slug = sanitize_title($term_slug);
 		$term = get_term_by('slug', $term_slug, 'product_category');
-		// A one-line note such as "Graphic Not Included" is too short for search results.
-		$description = $term && !is_wp_error($term) && mb_strlen(trim(wp_strip_all_tags((string) $term->description))) >= 50
+		$description = $term && !is_wp_error($term) && $term->description
 			? $term->description
 			: ($term && !is_wp_error($term)
 				? sprintf(__('Shop custom %s from Storefront Sign Online. Signs and print products for retail storefronts and businesses.', 'litsign'), strtolower($term->name))
@@ -3388,7 +3195,7 @@ function retails_seo_description()
 		$description = get_post_meta(get_queried_object_id(), '_seo_description', true);
 
 		if (!$description) {
-			$page_defaults = retails_seo_page_defaults();
+			$page_defaults = wholesale_seo_page_defaults();
 			$page_slug = get_post_field('post_name', get_queried_object_id());
 			$description = isset($page_defaults[$page_slug]['description']) ? $page_defaults[$page_slug]['description'] : '';
 		}
@@ -3421,11 +3228,11 @@ function retails_seo_description()
 	$description = trim(preg_replace('/\s+/', ' ', wp_strip_all_tags((string) $description)));
 
 	// Excerpts of long page content would be cut off mid-sentence in results.
-	if (mb_strlen($description) > 160 && !retails_seo_is_sales_page()) {
-		$description = retails_seo_trim_description($description, 158);
+	if (mb_strlen($description) > 160 && !wholesale_seo_is_sales_page()) {
+		$description = wholesale_seo_trim_description($description, 158);
 	}
 
-	return retails_seo_localize_description($description ?: get_bloginfo('name'));
+	return wholesale_seo_localize_description($description ?: get_bloginfo('name'));
 }
 
 /**
@@ -3434,15 +3241,15 @@ function retails_seo_description()
  * search results read "[product] in Washington & USA" instead of naming only
  * the office's city (Renton).
  */
-function retails_seo_service_area()
+function wholesale_seo_service_area()
 {
 	return __('Washington & USA', 'litsign');
 }
 
-function retails_seo_area_served_schema()
+function wholesale_seo_area_served_schema()
 {
 	// SEO > Business & Schema can replace this list (inc/seo-admin/).
-	return apply_filters('retails_seo_area_served', array(
+	return apply_filters('wholesale_seo_area_served', array(
 		array('@type' => 'State', 'name' => 'Washington', 'containedInPlace' => array('@type' => 'Country', 'name' => 'United States')),
 		array('@type' => 'Country', 'name' => 'United States'),
 	));
@@ -3452,9 +3259,9 @@ function retails_seo_area_served_schema()
  * Pages that sell something: the home page, channel letters, product and
  * category pages, the storefront signs guide and the banners & displays page.
  */
-function retails_seo_is_sales_page()
+function wholesale_seo_is_sales_page()
 {
-	return is_front_page() || retails_is_channel_letters_page() || is_singular('product') || (bool) get_query_var('category_slug') || is_page(array('storefront-signs', 'banners-displays', 'window-graphics'));
+	return is_front_page() || wholesale_is_channel_letters_page() || is_singular('product') || (bool) get_query_var('category_slug') || is_page(array('storefront-signs', 'banners-displays', 'window-graphics'));
 }
 
 /**
@@ -3462,17 +3269,17 @@ function retails_seo_is_sales_page()
  * The site sells nationally and location wording now lives on the /locations/
  * guides, so titles stay as written. Kept as a function (returning the title
  * unchanged) because other code may call it; the old logic is below for
- * reference and runs only if the 'retails_seo_localize_titles' filter
+ * reference and runs only if the 'wholesale_seo_localize_titles' filter
  * returns true.
  */
-function retails_seo_localize_title($title)
+function wholesale_seo_localize_title($title)
 {
-	if (!apply_filters('retails_seo_localize_titles', false) || !retails_seo_is_sales_page() || false !== stripos($title, 'Washington')) {
+	if (!apply_filters('wholesale_seo_localize_titles', false) || !wholesale_seo_is_sales_page() || false !== stripos($title, 'Washington')) {
 		return $title;
 	}
 
 	$parts = explode(' | ', $title, 2);
-	$main = $parts[0] . ' ' . sprintf(__('in %s', 'litsign'), retails_seo_service_area());
+	$main = $parts[0] . ' ' . sprintf(__('in %s', 'litsign'), wholesale_seo_service_area());
 	$rest = isset($parts[1]) ? trim($parts[1]) : '';
 
 	// Long product names ("Standard Retractable Banner Stand (Graphic & Stand)")
@@ -3500,16 +3307,16 @@ function retails_seo_localize_title($title)
 
 /**
  * Sales page descriptions used to end with "Shipped across Washington & the
- * USA." Off for the same reason as retails_seo_localize_title(); the
+ * USA." Off for the same reason as wholesale_seo_localize_title(); the
  * description is only kept within about 160 characters.
  */
-function retails_seo_localize_description($description)
+function wholesale_seo_localize_description($description)
 {
-	if (!apply_filters('retails_seo_localize_titles', false)) {
-		return mb_strlen($description) > 160 ? retails_seo_trim_description($description, 158) : $description;
+	if (!apply_filters('wholesale_seo_localize_titles', false)) {
+		return mb_strlen($description) > 160 ? wholesale_seo_trim_description($description, 158) : $description;
 	}
 
-	if (!retails_seo_is_sales_page() || false !== stripos($description, 'Washington')) {
+	if (!wholesale_seo_is_sales_page() || false !== stripos($description, 'Washington')) {
 		return $description;
 	}
 
@@ -3525,18 +3332,18 @@ function retails_seo_localize_description($description)
 		if ($end <= $room * 0.5) {
 			$end = max((int) mb_strrpos($cut, ', '), (int) mb_strrpos($cut, '; '));
 		}
-		$description = $end > $room * 0.5 ? mb_substr($cut, 0, $end) : retails_seo_trim_description($description, $room);
+		$description = $end > $room * 0.5 ? mb_substr($cut, 0, $end) : wholesale_seo_trim_description($description, $room);
 	}
 
 	return rtrim($description, ' .,;:') . '.' . $suffix;
 }
 
 add_filter('document_title_parts', function ($parts) {
-	if (retails_has_seo_plugin() || empty($parts['title'])) {
+	if (wholesale_has_seo_plugin() || empty($parts['title'])) {
 		return $parts;
 	}
 
-	$parts['title'] = retails_seo_localize_title($parts['title']);
+	$parts['title'] = wholesale_seo_localize_title($parts['title']);
 
 	return $parts;
 }, 20);
@@ -3547,7 +3354,7 @@ add_filter('document_title_parts', function ($parts) {
  *
  * @return array
  */
-function retails_seo_page_defaults()
+function wholesale_seo_page_defaults()
 {
 	return array(
 		'about' => array(
@@ -3573,12 +3380,8 @@ function retails_seo_page_defaults()
 			'description' => __('Shipping options, delivery times and the return and reprint policy for custom made-to-order signs and prints from Storefront Sign Online.', 'litsign'),
 		),
 		'contact' => array(
-			'title' => __('Contact Us | Free Sign, Banner & Display Quote', 'litsign'),
-			'description' => __('Free quote for channel letters, banners, flags, displays and window graphics. Call 866-436-2101 or send your logo, Mon-Fri 8am-5pm PT. Ships nationwide.', 'litsign'),
-		),
-		'sign-packages' => array(
-			'title' => __('Sign Packages: Grand Opening, Trade Show & New Storefront', 'litsign'),
-			'description' => __('Quote a grand opening, trade show or new storefront sign package in one request. Each item priced at its normal price; you approve before anything is made.', 'litsign'),
+			'title' => __('Contact Us | Free Channel Letter & Sign Quote', 'litsign'),
+			'description' => __('Request a free quote for channel letters, banners or displays. Call 866-436-2101, text or email your logo, Mon-Fri 8am-5pm PT. We ship nationwide.', 'litsign'),
 		),
 		// Ads-only pages (noindexed): the title still shows in the browser tab.
 		'chennel-letter-ads' => array(
@@ -3591,8 +3394,8 @@ function retails_seo_page_defaults()
 		),
 		'channel-letter-cost' => array(
 			// The prices are live, so the year stays current.
-			'title' => sprintf(__('Channel Letter Cost: Rates per Inch & Sign Examples (%s)', 'litsign'), wp_date('Y')),
-			'description' => __('How much do channel letters cost? See starting rates per inch for 7 lit styles, example sign totals, and what adds to the price.', 'litsign'),
+			'title' => sprintf(__('Channel Letter Cost: Real Prices per Letter & Height (%s)', 'litsign'), wp_date('Y')),
+			'description' => __('How much do channel letters cost? See real per-letter prices for 7 lit styles from 8" to 36", example sign totals, and what adds to the price.', 'litsign'),
 		),
 		'shop' => array(
 			'title' => __('Shop Custom Signs, Banners & Displays | Prices Online', 'litsign'),
@@ -3653,7 +3456,7 @@ function retails_seo_page_defaults()
  *
  * @return array
  */
-function retails_seo_channel_letter_products()
+function wholesale_seo_channel_letter_products()
 {
 	return array(
 		'standard-channel-letter-front-lit' => array(
@@ -3706,9 +3509,9 @@ function retails_seo_channel_letter_products()
  *
  * @return array
  */
-function retails_seo_channel_letter_product($product_id)
+function wholesale_seo_channel_letter_product($product_id)
 {
-	$products = retails_seo_channel_letter_products();
+	$products = wholesale_seo_channel_letter_products();
 	$slug = get_post_field('post_name', $product_id);
 
 	return isset($products[$slug]) ? $products[$slug] : array();
@@ -3719,12 +3522,12 @@ function retails_seo_channel_letter_product($product_id)
  *
  * @return array Empty when the request has no targeted metadata.
  */
-function retails_seo_keyword_meta()
+function wholesale_seo_keyword_meta()
 {
 	// The landing page targets "custom channel letters" and "channel letter
 	// signs"; the home page is the brand and catalog hub (see home.php), and the
 	// old /channel-letters/ category view keeps the broader title below.
-	if (is_front_page() && retails_is_channel_letters_page()) {
+	if (is_front_page() && wholesale_is_channel_letters_page()) {
 		return array(
 			// Catalog-wide and led by banners & displays (template-parts/home-catalog.php),
 			// so "channel letters" and "storefront signs" stay with /custom-channel-letters/
@@ -3734,14 +3537,14 @@ function retails_seo_keyword_meta()
 		);
 	}
 
-	if (retails_is_channel_letters_landing()) {
+	if (wholesale_is_channel_letters_landing()) {
 		return array(
 			'title' => __('Custom Channel Letter Signs | UL Listed LED, Made in USA', 'litsign'),
 			'description' => __('Custom LED channel letter signs in 7 lighting styles, UL listed and built to order in WA and CA. See your exact price online; ships nationwide.', 'litsign'),
 		);
 	}
 
-	if (retails_is_channel_letters_page()) {
+	if (wholesale_is_channel_letters_page()) {
 		return array(
 			'title' => __('Channel Letters | Custom LED Signs, See Your Price Online', 'litsign'),
 			'description' => __('Custom LED channel letters built to order: front lit, back lit, halo lit, reverse lit and trimless. See your exact price online. UL listed, made in USA.', 'litsign'),
@@ -3750,16 +3553,16 @@ function retails_seo_keyword_meta()
 
 	if (is_singular('product')) {
 		$product_id = get_queried_object_id();
-		$channel_letter = retails_seo_channel_letter_product($product_id);
+		$channel_letter = wholesale_seo_channel_letter_product($product_id);
 		// Titles and descriptions in data/product-pages/channel-letters.php win.
-		if ($channel_letter && function_exists('retails_product_page_title')) {
-			$page_title = retails_product_page_title($product_id);
-			$page_description = retails_product_page_description($product_id);
+		if ($channel_letter && function_exists('wholesale_product_page_title')) {
+			$page_title = wholesale_product_page_title($product_id);
+			$page_description = wholesale_product_page_description($product_id);
 			$channel_letter['title'] = $page_title ? $page_title : $channel_letter['title'];
 			$channel_letter['description'] = $page_description ? $page_description : $channel_letter['description'];
 		}
 
-		return $channel_letter ? $channel_letter : retails_seo_product_meta($product_id);
+		return $channel_letter ? $channel_letter : wholesale_seo_product_meta($product_id);
 	}
 
 	if (is_page('channel-letter-builder')) {
@@ -3779,10 +3582,10 @@ function retails_seo_keyword_meta()
 			);
 		}
 
-		$category_meta = $term && !is_wp_error($term) ? retails_seo_category_meta() : array();
+		$category_meta = $term && !is_wp_error($term) ? wholesale_seo_category_meta() : array();
 		if (isset($category_meta[$term->slug])) {
-			$title = get_term_meta($term->term_id, '_retails_seo_title', true);
-			$description = get_term_meta($term->term_id, '_retails_seo_description', true);
+			$title = get_term_meta($term->term_id, '_wholesale_seo_title', true);
+			$description = get_term_meta($term->term_id, '_wholesale_seo_description', true);
 
 			return array(
 				'title' => $title ? $title : $category_meta[$term->slug]['title'],
@@ -3797,22 +3600,22 @@ function retails_seo_keyword_meta()
 /**
  * Return the canonical URL for the custom product shop.
  */
-function retails_seo_url()
+function wholesale_seo_url()
 {
 	// A canonical set on the page under SEO (inc/seo-admin/) wins.
-	$override = (string) apply_filters('retails_seo_canonical_override', '');
+	$override = (string) apply_filters('wholesale_seo_canonical_override', '');
 	if ('' !== $override) {
 		return $override;
 	}
 
 	// The channel letters landing page ranks on its own; ad URLs with ?gclid,
 	// ?style and UTM tags canonicalize to the clean URL.
-	if (retails_is_channel_letters_landing()) {
+	if (wholesale_is_channel_letters_landing()) {
 		return get_permalink();
 	}
 
 	// The home page shares the channel letter listing and canonicalizes to itself.
-	if (retails_is_channel_letters_page()) {
+	if (wholesale_is_channel_letters_page()) {
 		return home_url('/');
 	}
 
@@ -3824,10 +3627,10 @@ function retails_seo_url()
 			: get_permalink(get_option('page_for_posts'));
 		$shop_url = $shop_url ? $shop_url : home_url('/');
 
-		return $term_slug ? retails_category_url($term_slug) : $shop_url;
+		return $term_slug ? wholesale_category_url($term_slug) : $shop_url;
 	}
 
-	if (is_singular('product') && ($original = retails_seo_product_canonical_of(get_queried_object_id()))) {
+	if (is_singular('product') && ($original = wholesale_seo_product_canonical_of(get_queried_object_id()))) {
 		return get_permalink($original);
 	}
 
@@ -3837,29 +3640,29 @@ function retails_seo_url()
 /**
  * Keep private transactional screens out of search results.
  */
-function retails_seo_is_noindex()
+function wholesale_seo_is_noindex()
 {
 	return is_404()
 		|| is_search()
-		|| is_page(retails_seo_noindex_page_slugs())
+		|| is_page(wholesale_seo_noindex_page_slugs())
 		|| is_page_template(array('page-channel-letters-ads.php', 'landing-page.php'))
 		|| is_singular(array('order', 'cnn'))
 		|| is_post_type_archive('order')
-		|| get_query_var('retails_thank_you')
-		|| retails_seo_is_empty_category_page();
+		|| get_query_var('wholesale_thank_you')
+		|| wholesale_seo_is_empty_category_page();
 }
 
 /**
  * IDs of pages that must stay out of search results and sitemaps: the pages in
- * retails_seo_noindex_page_slugs() plus any page using an ads-only template.
+ * wholesale_seo_noindex_page_slugs() plus any page using an ads-only template.
  *
  * @return int[]
  */
-function retails_seo_noindex_page_ids()
+function wholesale_seo_noindex_page_ids()
 {
 	$ids = array();
 
-	foreach (retails_seo_noindex_page_slugs() as $slug) {
+	foreach (wholesale_seo_noindex_page_slugs() as $slug) {
 		$page = get_page_by_path($slug);
 		if ($page) {
 			$ids[] = (int) $page->ID;
@@ -3878,7 +3681,7 @@ function retails_seo_noindex_page_ids()
 	));
 
 	// Guide pages still in review join the list (inc/guide-pages.php).
-	return apply_filters('retails_seo_noindex_page_ids', array_values(array_unique(array_merge($ids, array_map('intval', $ads_pages)))));
+	return apply_filters('wholesale_seo_noindex_page_ids', array_values(array_unique(array_merge($ids, array_map('intval', $ads_pages)))));
 }
 
 /**
@@ -3886,7 +3689,7 @@ function retails_seo_noindex_page_ids()
  *
  * @return array
  */
-function retails_seo_noindex_page_slugs()
+function wholesale_seo_noindex_page_slugs()
 {
 	// 'pay' only works with a payment link; 'landing-page' is an ads-only page; the
 	// last three are empty placeholders until they have real content.
@@ -3894,17 +3697,17 @@ function retails_seo_noindex_page_slugs()
 }
 
 add_filter('document_title_parts', function ($parts) {
-	if (retails_has_seo_plugin()) {
+	if (wholesale_has_seo_plugin()) {
 		return $parts;
 	}
 
-	$keyword_meta = retails_seo_keyword_meta();
+	$keyword_meta = wholesale_seo_keyword_meta();
 	if (!empty($keyword_meta['title'])) {
 		return array('title' => $keyword_meta['title']);
 	}
 
 	if (is_singular() && !is_singular('product')) {
-		$page_defaults = retails_seo_page_defaults();
+		$page_defaults = wholesale_seo_page_defaults();
 		$page_slug = get_post_field('post_name', get_queried_object_id());
 		$custom_title = get_post_meta(get_queried_object_id(), '_seo_title', true);
 
@@ -3950,7 +3753,7 @@ add_filter('document_title_parts', function ($parts) {
  *
  * @return array
  */
-function retails_merchant_return_policy()
+function wholesale_merchant_return_policy()
 {
 	$policy = array(
 		'@type' => 'MerchantReturnPolicy',
@@ -3977,13 +3780,13 @@ function retails_merchant_return_policy()
  * @param array $product Product schema entity.
  * @return array
  */
-function retails_add_return_policy_to_product($product)
+function wholesale_add_return_policy_to_product($product)
 {
 	if (empty($product['offers']) || !is_array($product['offers'])) {
 		return $product;
 	}
 
-	$policy = retails_merchant_return_policy();
+	$policy = wholesale_merchant_return_policy();
 	$offers = &$product['offers'];
 	$offer_types = isset($offers['@type']) ? (array) $offers['@type'] : array();
 
@@ -4010,32 +3813,6 @@ function retails_add_return_policy_to_product($product)
 }
 
 /**
- * Business-day range of a product's "Turnaround" option (its first choice), e.g.
- * "8-12 Business Days" => array(8, 12), "4 Business Days" => array(4, 4); null without one.
- *
- * @return int[]|null
- */
-function retails_product_turnaround_option_range($product_id)
-{
-	$attrs = json_decode((string) get_post_meta($product_id, 'product_attr', true), true);
-	foreach ((array) $attrs as $attr) {
-		if (!is_array($attr) || 'turnaround' !== strtolower(trim((string) ($attr['name'] ?? '')))) {
-			continue;
-		}
-		foreach ((array) ($attr['options'] ?? array()) as $option) {
-			$label = is_array($option) ? (string) key($option) : (string) $option;
-			if (preg_match('/(\d+)\s*(?:-|–|to)\s*(\d+)\s*business\s*days?/i', $label, $m)) {
-				return array(max(1, (int) $m[1]), max((int) $m[1], (int) $m[2]));
-			}
-			if (preg_match('/(\d+)\s*business\s*days?/i', $label, $m)) {
-				return array(max(1, (int) $m[1]), max(1, (int) $m[1]));
-			}
-		}
-	}
-	return null;
-}
-
-/**
  * Standard shipping for a product as schema.org OfferShippingDetails: the
  * flat Standard rate charged at checkout (channel letters have their own),
  * production time as handling time, and the 3-6 business day transit the
@@ -4043,29 +3820,16 @@ function retails_product_turnaround_option_range($product_id)
  *
  * @return array
  */
-function retails_seo_offer_shipping_details($product_id, $price = null)
+function wholesale_seo_offer_shipping_details($product_id, $price = null)
 {
 	$channel = has_term('channel-letters', 'product_category', $product_id);
-	$rates = array_values(array_filter(explode(',', (string) retails_get_setting($channel ? 'channel_shipping_options' : 'standard_shipping_options')), 'is_numeric'));
-	// The production days the product page and checkout use (at least 4 for channel letters),
-	// so the feed's handling time matches "Ships in 4 business days" on the page.
-	$turnaround = function_exists('retails_product_production_days') ? retails_product_production_days($product_id) : max(1, (int) get_post_meta($product_id, '_product_turnaround', true));
-	$handling_min = 1;
-	$handling_max = $turnaround;
-	// Channel letters: the style's own Turnaround option ("2-4 Business Days" for aluminum,
-	// "8-12 Business Days" for stainless), so Google never shows an earlier delivery than
-	// the product page offers (2026-11-09).
-	if ($channel) {
-		$range = retails_product_turnaround_option_range($product_id);
-		if ($range) {
-			list($handling_min, $handling_max) = $range;
-		}
-	}
+	$rates = array_values(array_filter(explode(',', (string) wholesale_get_setting($channel ? 'channel_shipping_options' : 'standard_shipping_options')), 'is_numeric'));
+	$turnaround = max(1, (int) get_post_meta($product_id, '_product_turnaround', true));
 	// Checkout ships an order free once its subtotal reaches the free shipping
 	// minimum, so an advertised price at or above it ships free.
-	$free_min = max(0.0, (float) retails_get_setting($channel ? 'free_shipping_channel_min' : 'free_shipping_min'));
+	$free_min = max(0.0, (float) wholesale_get_setting($channel ? 'free_shipping_channel_min' : 'free_shipping_min'));
 	if (null === $price) {
-		$price = retails_seo_product_lowest_price($product_id);
+		$price = wholesale_seo_product_lowest_price($product_id);
 	}
 	if ($free_min > 0 && round((float) $price, 2) >= $free_min) {
 		$rates = array(0);
@@ -4084,7 +3848,7 @@ function retails_seo_offer_shipping_details($product_id, $price = null)
 		),
 		'deliveryTime' => array(
 			'@type' => 'ShippingDeliveryTime',
-			'handlingTime' => array('@type' => 'QuantitativeValue', 'minValue' => $handling_min, 'maxValue' => $handling_max, 'unitCode' => 'DAY'),
+			'handlingTime' => array('@type' => 'QuantitativeValue', 'minValue' => 1, 'maxValue' => $turnaround, 'unitCode' => 'DAY'),
 			'transitTime' => array('@type' => 'QuantitativeValue', 'minValue' => 3, 'maxValue' => 6, 'unitCode' => 'DAY'),
 		),
 	);
@@ -4095,15 +3859,14 @@ function retails_seo_offer_shipping_details($product_id, $price = null)
  *
  * @return array
  */
-function retails_product_schema($product_id, $url, $image = '')
+function wholesale_product_schema($product_id, $url, $image = '')
 {
 	$product = array(
 		'@type' => 'Product',
 		'@id' => trailingslashit($url) . '#product',
-		// The name shoppers see in the page's H1, not the catalog post title.
-		'name' => retails_schema_text(retails_product_page_heading($product_id)),
+		'name' => wholesale_schema_text(get_the_title($product_id)),
 		'url' => $url,
-		'description' => retails_seo_description(),
+		'description' => wholesale_seo_description(),
 		'image' => $image ? array($image) : array(),
 		'brand' => array(
 			'@type' => 'Brand',
@@ -4116,37 +3879,31 @@ function retails_product_schema($product_id, $url, $image = '')
 
 	$terms = get_the_terms($product_id, 'product_category');
 	if ($terms && !is_wp_error($terms)) {
-		$product['category'] = retails_schema_text(implode(', ', wp_list_pluck($terms, 'name')));
+		$product['category'] = wholesale_schema_text(implode(', ', wp_list_pluck($terms, 'name')));
 	}
 
 	// The same price the page and cart charge for the smallest configuration.
 	// Products without an online price get no Offer, since Google rejects an
 	// Offer without a price.
-	$price = retails_seo_product_lowest_price($product_id);
-	// A size link (?size=36x72, the Shopping item for that size) offers that size's price.
-	$size_link = function_exists('retails_size_link') ? retails_size_link($product_id) : null;
-	if ($size_link) {
-		$price = $size_link['price'];
-	}
+	$price = wholesale_seo_product_lowest_price($product_id);
 	if ($price > 0) {
 		$product['offers'] = array(
 			'@type' => 'Offer',
 			'price' => number_format($price, 2, '.', ''),
 			'priceCurrency' => 'USD',
-			'availability' => array('instock' => 'https://schema.org/InStock', 'outofstock' => 'https://schema.org/OutOfStock', 'backorder' => 'https://schema.org/BackOrder')[retails_product_stock_status($product_id)],
+			'availability' => array('instock' => 'https://schema.org/InStock', 'outofstock' => 'https://schema.org/OutOfStock', 'backorder' => 'https://schema.org/BackOrder')[wholesale_product_stock_status($product_id)],
 			'itemCondition' => 'https://schema.org/NewCondition',
 			'url' => $url,
-			// Shipping for this offer's price: a ?size= link at $100+ ships free, as the feed and page say.
-			'shippingDetails' => retails_seo_offer_shipping_details($product_id, $price),
-			'hasMerchantReturnPolicy' => retails_merchant_return_policy(),
+			'shippingDetails' => wholesale_seo_offer_shipping_details($product_id),
+			'hasMerchantReturnPolicy' => wholesale_merchant_return_policy(),
 		);
 		// A dated sale price is only valid until the sale's last day.
-		$offer = retails_seo_product_lowest_offer($product_id);
+		$offer = wholesale_seo_product_lowest_offer($product_id);
 		if (!empty($offer['sale_ends'])) {
 			$product['offers']['priceValidUntil'] = wp_date('Y-m-d', $offer['sale_ends'], new DateTimeZone('America/Los_Angeles'));
 		}
-		if ('backorder' === retails_product_stock_status($product_id)) {
-			$product['offers']['availabilityStarts'] = retails_product_backorder_date($product_id);
+		if ('backorder' === wholesale_product_stock_status($product_id)) {
+			$product['offers']['availabilityStarts'] = wholesale_product_backorder_date($product_id);
 		}
 	}
 
@@ -4163,9 +3920,9 @@ function retails_product_schema($product_id, $url, $image = '')
 	// import file count only once the owner confirms they are genuine customer
 	// reviews (Settings > Reviews); until then a product that shows any gets no
 	// rating markup, so the markup never disagrees with the stars on the page.
-	$stats = function_exists('retails_product_review_stats') ? retails_product_review_stats($product_id) : array();
-	$imported_ok = empty($stats['imported']) || retails_setting_enabled('schema_imported_reviews');
-	if (!empty($stats['published']) && $imported_ok && retails_setting_enabled('show_product_reviews')) {
+	$stats = function_exists('wholesale_product_review_stats') ? wholesale_product_review_stats($product_id) : array();
+	$imported_ok = empty($stats['imported']) || wholesale_setting_enabled('schema_imported_reviews');
+	if (!empty($stats['published']) && $imported_ok && wholesale_setting_enabled('show_product_reviews')) {
 		$product['aggregateRating'] = array(
 			'@type' => 'AggregateRating',
 			'ratingValue' => number_format((float) $stats['average'], 1, '.', ''),
@@ -4178,15 +3935,13 @@ function retails_product_schema($product_id, $url, $image = '')
 			'post_type' => 'review_submission',
 			'post_status' => 'publish',
 			'posts_per_page' => 6,
-			// Reviews hidden on the page (inc/reviews.php) stay out of its markup too.
-			'post__not_in' => function_exists('retails_hidden_review_ids') ? retails_hidden_review_ids() : array(),
 			'meta_key' => '_review_product_id',
 			'meta_value' => absint($product_id),
 			'orderby' => 'date',
 			'order' => 'DESC',
 		));
 		foreach ($reviews as $review) {
-			if (retails_review_is_sample($review->ID)) {
+			if (wholesale_review_is_sample($review->ID)) {
 				continue;
 			}
 			$review_name = trim((string) get_post_meta($review->ID, '_review_name', true));
@@ -4208,26 +3963,10 @@ function retails_product_schema($product_id, $url, $image = '')
 }
 
 /**
- * The product page's H1 (single-product.php): the channel letter heading, the
- * kit heading, or the name shoppers search for. Structured data uses the same name.
- */
-function retails_product_page_heading($product_id)
-{
-	$seo = function_exists('retails_seo_channel_letter_product') ? retails_seo_channel_letter_product($product_id) : array();
-	$heading = !empty($seo['heading']) ? $seo['heading'] : (function_exists('retails_seo_product_search_name') ? retails_seo_product_search_name($product_id) : '');
-	$kit = function_exists('retails_product_kit_info') ? retails_product_kit_info($product_id) : array();
-	if ($kit && !empty($kit['heading'])) {
-		$heading = $kit['heading'];
-	}
-
-	return '' !== trim((string) $heading) ? $heading : get_the_title($product_id);
-}
-
-/**
  * Plain text for JSON-LD: get_the_title() returns HTML-escaped text
  * ("Terms &amp; Conditions"), which Google reads literally.
  */
-function retails_schema_text($text)
+function wholesale_schema_text($text)
 {
 	return trim(html_entity_decode(wp_strip_all_tags((string) $text), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 }
@@ -4235,39 +3974,33 @@ function retails_schema_text($text)
 /**
  * Emit canonical, robots, Open Graph, Twitter, and JSON-LD metadata.
  */
-function retails_seo_head()
+function wholesale_seo_head()
 {
-	if (retails_has_seo_plugin()) {
+	if (wholesale_has_seo_plugin()) {
 		return;
 	}
 
 	remove_action('wp_head', 'rel_canonical');
-	$url = retails_seo_url();
+	$url = wholesale_seo_url();
 	$url = $url ? $url : home_url('/');
 	$title = wp_get_document_title();
-	$description = retails_seo_description();
+	$description = wholesale_seo_description();
 	$image = is_singular() ? get_the_post_thumbnail_url(get_queried_object_id(), 'large') : '';
 	// The home page shares its banners & displays hero photo (template-parts/home-catalog.php),
 	// not the Home page's featured image.
-	if (is_front_page() && !empty($GLOBALS['retails_page_image'])) {
-		$image = $GLOBALS['retails_page_image'];
+	if (is_front_page() && !empty($GLOBALS['wholesale_page_image'])) {
+		$image = $GLOBALS['wholesale_page_image'];
 	}
 
 	// Share previews for the channel letters landing page show a lit letter, not the logo.
-	if (!$image && retails_is_channel_letters_landing()) {
-		$front_lit = retails_seo_product('standard-channel-letter-front-lit');
+	if (!$image && wholesale_is_channel_letters_landing()) {
+		$front_lit = wholesale_seo_product('standard-channel-letter-front-lit');
 		$image = $front_lit ? get_the_post_thumbnail_url($front_lit, 'large') : '';
 	}
 
 	// Pages with a hand-picked share image (set by the template before get_header()).
-	if (!$image && !empty($GLOBALS['retails_page_image'])) {
-		$image = $GLOBALS['retails_page_image'];
-	}
-
-	// Pages and categories with their own hero photo (inc/hero-images.php) share it.
-	if (!$image && function_exists('retails_hero_config')) {
-		$hero = retails_hero_config();
-		$image = $hero && !empty($hero['share']) ? $hero['share'] : '';
+	if (!$image && !empty($GLOBALS['wholesale_page_image'])) {
+		$image = $GLOBALS['wholesale_page_image'];
 	}
 
 	// Category pages share their first product's photo instead of the logo.
@@ -4293,15 +4026,12 @@ function retails_seo_head()
 		$image = get_theme_mod('custom_logo') ? wp_get_attachment_image_url(get_theme_mod('custom_logo'), 'full') : '';
 	}
 
-	// A missing page has no canonical address.
-	if (!is_404()) {
-		echo '<link rel="canonical" href="' . esc_url($url) . '">' . "\n";
-	}
+	echo '<link rel="canonical" href="' . esc_url($url) . '">' . "\n";
 	echo '<meta name="description" content="' . esc_attr($description) . '">' . "\n";
 	// Share-preview overrides from SEO in wp-admin (inc/seo-admin/); unchanged by default.
-	$og_title = (string) apply_filters('retails_seo_og_title', $title);
-	$og_description = (string) apply_filters('retails_seo_og_description', $description);
-	$og_image = (string) apply_filters('retails_seo_og_image', $image);
+	$og_title = (string) apply_filters('wholesale_seo_og_title', $title);
+	$og_description = (string) apply_filters('wholesale_seo_og_description', $description);
+	$og_image = (string) apply_filters('wholesale_seo_og_image', $image);
 
 	echo '<meta property="og:type" content="' . esc_attr(is_singular('product') ? 'product' : 'website') . '">' . "\n";
 	echo '<meta property="og:title" content="' . esc_attr($og_title) . '">' . "\n";
@@ -4323,8 +4053,8 @@ function retails_seo_head()
 	$site_id = trailingslashit(home_url('/')) . '#website';
 	$organization_id = trailingslashit(home_url('/')) . '#organization';
 	$page_id = trailingslashit($url) . '#webpage';
-	$is_collection = is_page_template('home.php') || retails_is_channel_letters_landing() || get_query_var('category_slug');
-	$page_items = !empty($GLOBALS['retails_page_items']) ? (array) $GLOBALS['retails_page_items'] : array();
+	$is_collection = is_page_template('home.php') || wholesale_is_channel_letters_landing() || get_query_var('category_slug');
+	$page_items = !empty($GLOBALS['wholesale_page_items']) ? (array) $GLOBALS['wholesale_page_items'] : array();
 
 	if (is_singular('product')) {
 		$page_type = 'ItemPage';
@@ -4341,15 +4071,15 @@ function retails_seo_head()
 	$page = array(
 		'@type' => $page_type,
 		'@id' => $page_id,
-		'name' => retails_schema_text($title),
+		'name' => wholesale_schema_text($title),
 		'url' => $url,
-		'description' => retails_schema_text($description),
+		'description' => wholesale_schema_text($description),
 		'isPartOf' => array('@id' => $site_id),
 		'publisher' => array('@id' => $organization_id),
 		'inLanguage' => get_bloginfo('language'),
 	);
 	// Extra entities a template adds before get_header() (e.g. a Service on guide pages).
-	$entities = !empty($GLOBALS['retails_page_entities']) ? array_values((array) $GLOBALS['retails_page_entities']) : array();
+	$entities = !empty($GLOBALS['wholesale_page_entities']) ? array_values((array) $GLOBALS['wholesale_page_entities']) : array();
 
 	// Home > [category >] current page, matching the visible breadcrumbs.
 	$breadcrumb_items = array(
@@ -4358,7 +4088,7 @@ function retails_seo_head()
 
 	if (is_singular('product')) {
 		$product_id = get_queried_object_id();
-		$product = retails_product_schema($product_id, $url, $image);
+		$product = wholesale_product_schema($product_id, $url, $image);
 		// Google needs an offer or a rating on a Product; a product with
 		// neither (no online price yet) is left as a plain item page.
 		if (!empty($product['offers']) || !empty($product['aggregateRating'])) {
@@ -4374,14 +4104,14 @@ function retails_seo_head()
 			$breadcrumb_items[] = array(
 				'@type' => 'ListItem',
 				'position' => 2,
-				'name' => retails_schema_text($terms[0]->name),
-				'item' => retails_category_url($terms[0]->slug),
+				'name' => wholesale_schema_text($terms[0]->name),
+				'item' => wholesale_category_url($terms[0]->slug),
 			);
 		}
 		$breadcrumb_items[] = array(
 			'@type' => 'ListItem',
 			'position' => count($breadcrumb_items) + 1,
-			'name' => retails_schema_text(get_the_title($product_id)),
+			'name' => wholesale_schema_text(get_the_title($product_id)),
 			'item' => $url,
 		);
 	} elseif ($is_collection) {
@@ -4419,7 +4149,7 @@ function retails_seo_head()
 				'@type' => 'ListItem',
 				'position' => $position + 1,
 				'url' => get_permalink($product_id),
-				'name' => retails_schema_text(get_the_title($product_id)),
+				'name' => wholesale_schema_text(get_the_title($product_id)),
 			);
 		}
 		$page['mainEntity'] = array(
@@ -4433,14 +4163,14 @@ function retails_seo_head()
 			$breadcrumb_items[] = array(
 				'@type' => 'ListItem',
 				'position' => 2,
-				'name' => retails_schema_text($term->name),
+				'name' => wholesale_schema_text($term->name),
 				'item' => $url,
 			);
-		} elseif (retails_is_channel_letters_landing()) {
+		} elseif (wholesale_is_channel_letters_landing()) {
 			$breadcrumb_items[] = array(
 				'@type' => 'ListItem',
 				'position' => 2,
-				'name' => retails_schema_text(get_the_title()),
+				'name' => wholesale_schema_text(get_the_title()),
 				'item' => $url,
 			);
 			$entities[] = array(
@@ -4452,7 +4182,7 @@ function retails_seo_head()
 				'url' => $url,
 				'image' => $image,
 				'provider' => array('@id' => $organization_id),
-				'areaServed' => retails_seo_area_served_schema(),
+				'areaServed' => wholesale_seo_area_served_schema(),
 			);
 		}
 	} elseif (is_singular()) {
@@ -4464,7 +4194,7 @@ function retails_seo_head()
 					'@type' => 'ListItem',
 					'position' => $position + 1,
 					'url' => get_permalink($item),
-					'name' => retails_schema_text(get_the_title($item)),
+					'name' => wholesale_schema_text(get_the_title($item)),
 				);
 			}
 			$page['mainEntity'] = array(
@@ -4476,13 +4206,13 @@ function retails_seo_head()
 		if (is_page('about')) {
 			$page['mainEntity'] = array('@id' => $organization_id);
 		}
-		foreach (retails_page_ancestor_crumbs() as $ancestor) {
+		foreach (wholesale_page_ancestor_crumbs() as $ancestor) {
 			$breadcrumb_items[] = array('@type' => 'ListItem', 'position' => 0, 'name' => $ancestor['name'], 'item' => $ancestor['url']);
 		}
 		$breadcrumb_items[] = array(
 			'@type' => 'ListItem',
 			'position' => 2,
-			'name' => retails_schema_text(get_the_title()),
+			'name' => wholesale_schema_text(get_the_title()),
 			'item' => $url,
 		);
 	}
@@ -4504,7 +4234,7 @@ function retails_seo_head()
 	}
 
 	// Templates may add WebPage properties (e.g. dateModified, about on location guides).
-	$page = (array) apply_filters('retails_seo_webpage_schema', $page);
+	$page = (array) apply_filters('wholesale_seo_webpage_schema', $page);
 
 	$graph = array(
 		'@context' => 'https://schema.org',
@@ -4513,12 +4243,12 @@ function retails_seo_head()
 
 	echo '<script type="application/ld+json">' . wp_json_encode($graph, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
 
-	$faq = retails_seo_faq_schema();
+	$faq = wholesale_seo_faq_schema();
 	if ($faq) {
 		echo '<script type="application/ld+json">' . wp_json_encode(array('@context' => 'https://schema.org') + $faq, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
 	}
 }
-add_action('wp_head', 'retails_seo_head', 1);
+add_action('wp_head', 'wholesale_seo_head', 1);
 
 /**
  * The Ultimate Social Media Icons plugin prints its own Open Graph and Twitter
@@ -4527,7 +4257,7 @@ add_action('wp_head', 'retails_seo_head', 1);
  * come first. Keep the plugin's icons, drop its tags.
  */
 add_action('wp', function () {
-	if (!retails_has_seo_plugin()) {
+	if (!wholesale_has_seo_plugin()) {
 		remove_action('wp_head', 'ultimatefbmetatags');
 	}
 });
@@ -4535,7 +4265,7 @@ add_action('wp', function () {
 /**
  * Identify the public channel-letter category route.
  */
-function retails_is_channel_letters_page()
+function wholesale_is_channel_letters_page()
 {
 	$term_slug = get_query_var('category_slug');
 
@@ -4549,9 +4279,9 @@ function retails_is_channel_letters_page()
 /**
  * Keep Rank Math metadata aligned with the keyword-targeted pages.
  */
-function retails_rank_math_channel_letters_title($title)
+function wholesale_rank_math_channel_letters_title($title)
 {
-	$keyword_meta = retails_seo_keyword_meta();
+	$keyword_meta = wholesale_seo_keyword_meta();
 	if (!empty($keyword_meta['title'])) {
 		return $keyword_meta['title'];
 	}
@@ -4564,66 +4294,66 @@ function retails_rank_math_channel_letters_title($title)
 
 	return $title;
 }
-add_filter('rank_math/frontend/title', 'retails_rank_math_channel_letters_title');
+add_filter('rank_math/frontend/title', 'wholesale_rank_math_channel_letters_title');
 
-function retails_rank_math_channel_letters_description($description)
+function wholesale_rank_math_channel_letters_description($description)
 {
-	$keyword_meta = retails_seo_keyword_meta();
+	$keyword_meta = wholesale_seo_keyword_meta();
 	if (!empty($keyword_meta['description'])) {
 		return $keyword_meta['description'];
 	}
 
-	return get_query_var('category_slug') ? retails_seo_description() : $description;
+	return get_query_var('category_slug') ? wholesale_seo_description() : $description;
 }
-add_filter('rank_math/frontend/description', 'retails_rank_math_channel_letters_description');
+add_filter('rank_math/frontend/description', 'wholesale_rank_math_channel_letters_description');
 
-function retails_rank_math_canonical($canonical)
+function wholesale_rank_math_canonical($canonical)
 {
-	if (retails_is_channel_letters_page() || get_query_var('category_slug')
-		|| (is_singular('product') && retails_seo_product_canonical_of(get_queried_object_id()))) {
-		return retails_seo_url();
+	if (wholesale_is_channel_letters_page() || get_query_var('category_slug')
+		|| (is_singular('product') && wholesale_seo_product_canonical_of(get_queried_object_id()))) {
+		return wholesale_seo_url();
 	}
 
 	return $canonical;
 }
-add_filter('rank_math/frontend/canonical', 'retails_rank_math_canonical');
+add_filter('rank_math/frontend/canonical', 'wholesale_rank_math_canonical');
 
-function retails_rank_math_robots($robots)
+function wholesale_rank_math_robots($robots)
 {
-	if (retails_seo_is_noindex()) {
+	if (wholesale_seo_is_noindex()) {
 		$robots['index'] = 'noindex';
 		$robots['follow'] = 'follow';
 	}
 
 	return $robots;
 }
-add_filter('rank_math/frontend/robots', 'retails_rank_math_robots');
+add_filter('rank_math/frontend/robots', 'wholesale_rank_math_robots');
 
 /**
  * Keep private order records and placeholder pages out of Rank Math sitemaps.
  */
-function retails_rank_math_sitemap_exclude_post_type($exclude, $type)
+function wholesale_rank_math_sitemap_exclude_post_type($exclude, $type)
 {
 	return in_array($type, array('order', 'cnn'), true) ? true : $exclude;
 }
-add_filter('rank_math/sitemap/exclude_post_type', 'retails_rank_math_sitemap_exclude_post_type', 10, 2);
+add_filter('rank_math/sitemap/exclude_post_type', 'wholesale_rank_math_sitemap_exclude_post_type', 10, 2);
 
-function retails_rank_math_sitemap_entry($url, $type, $object)
+function wholesale_rank_math_sitemap_entry($url, $type, $object)
 {
 	if ('post' === $type && $object instanceof WP_Post && 'page' === $object->post_type
-		&& in_array($object->post_name, retails_seo_noindex_page_slugs(), true)) {
+		&& in_array($object->post_name, wholesale_seo_noindex_page_slugs(), true)) {
 		return false;
 	}
 
 	return $url;
 }
-add_filter('rank_math/sitemap/entry', 'retails_rank_math_sitemap_entry', 10, 3);
+add_filter('rank_math/sitemap/entry', 'wholesale_rank_math_sitemap_entry', 10, 3);
 
 /**
  * Add accurate service and business entities without duplicating Rank Math's
  * Organization or LocalBusiness entities when they already exist.
  */
-function retails_rank_math_json_ld($data, $jsonld)
+function wholesale_rank_math_json_ld($data, $jsonld)
 {
 	if (!is_array($data)) {
 		return $data;
@@ -4644,14 +4374,14 @@ function retails_rank_math_json_ld($data, $jsonld)
 		$has_product = $has_product || in_array('Product', $types, true);
 
 		if (in_array('Product', $types, true)) {
-			$data[$key] = retails_add_return_policy_to_product($entity);
+			$data[$key] = wholesale_add_return_policy_to_product($entity);
 		}
 	}
 
 	if (is_singular('product') && !$has_product) {
 		$product_id = get_queried_object_id();
 		$image = get_the_post_thumbnail_url($product_id, 'large');
-		$data['retails-product'] = retails_product_schema($product_id, get_permalink($product_id), $image ? $image : '');
+		$data['wholesale-product'] = wholesale_product_schema($product_id, get_permalink($product_id), $image ? $image : '');
 	}
 
 	$organization_id = trailingslashit(home_url('/')) . '#organization';
@@ -4670,7 +4400,7 @@ function retails_rank_math_json_ld($data, $jsonld)
 		'parentOrganization' => array('@id' => $organization_id),
 		'telephone' => '+1-866-436-2101',
 		// Where we sell: shown by Google instead of only the office's city.
-		'areaServed' => retails_seo_area_served_schema(),
+		'areaServed' => wholesale_seo_area_served_schema(),
 		'address' => array(
 			'@type' => 'PostalAddress',
 			'streetAddress' => '707 S. Grady Way Suite 600',
@@ -4689,30 +4419,30 @@ function retails_rank_math_json_ld($data, $jsonld)
 		$data['site-local-business'] = $local_business;
 	}
 
-	if (retails_is_channel_letters_page()) {
+	if (wholesale_is_channel_letters_page()) {
 		$data['channel-letters-service'] = array(
 			'@type' => 'Service',
-			'@id' => trailingslashit(retails_category_url('channel-letters')) . '#service',
+			'@id' => trailingslashit(wholesale_category_url('channel-letters')) . '#service',
 			'name' => 'Custom Channel Letter Signs',
 			'serviceType' => 'Channel letter signs',
 			'description' => 'LED illuminated channel letters for retail storefronts, with front-lit, reverse-lit, and front-and-back lit options.',
-			'url' => retails_category_url('channel-letters'),
+			'url' => wholesale_category_url('channel-letters'),
 			'provider' => array('@id' => $organization_id),
-			'areaServed' => retails_seo_area_served_schema(),
+			'areaServed' => wholesale_seo_area_served_schema(),
 		);
 	}
 
 	return $data;
 }
-add_filter('rank_math/json_ld', 'retails_rank_math_json_ld', 20, 2);
+add_filter('rank_math/json_ld', 'wholesale_rank_math_json_ld', 20, 2);
 
 /**
  * Emit the business identity required for local and organization search
  * features when no SEO plugin is managing schema.
  */
-function retails_organization_schema()
+function wholesale_organization_schema()
 {
-	if (retails_has_seo_plugin()) {
+	if (wholesale_has_seo_plugin()) {
 		return;
 	}
 
@@ -4734,7 +4464,7 @@ function retails_organization_schema()
 		'telephone' => '+1-866-436-2101',
 		'email' => 'TR@StorefrontSignOnline.com',
 		// Store-wide return policy, so Google can show it for every product.
-		'hasMerchantReturnPolicy' => retails_merchant_return_policy(),
+		'hasMerchantReturnPolicy' => wholesale_merchant_return_policy(),
 	);
 	$local_business = array(
 		'@type' => 'LocalBusiness',
@@ -4746,7 +4476,7 @@ function retails_organization_schema()
 		'email' => 'TR@StorefrontSignOnline.com',
 		'image' => $organization['logo'],
 		// Where we sell: shown by Google instead of only the office's city.
-		'areaServed' => retails_seo_area_served_schema(),
+		'areaServed' => wholesale_seo_area_served_schema(),
 		'address' => array(
 			'@type' => 'PostalAddress',
 			'streetAddress' => '707 S. Grady Way Suite 600',
@@ -4779,14 +4509,14 @@ function retails_organization_schema()
 		$local_business,
 	);
 	// SEO > Business & Schema (inc/seo-admin/) edits these entities; unchanged by default.
-	$graph = apply_filters('retails_seo_organization_graph', $graph);
+	$graph = apply_filters('wholesale_seo_organization_graph', $graph);
 
 	echo '<script type="application/ld+json">' . wp_json_encode(array(
 		'@context' => 'https://schema.org',
 		'@graph' => $graph,
 	), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . '</script>' . "\n";
 }
-add_action('wp_head', 'retails_organization_schema', 2);
+add_action('wp_head', 'wholesale_organization_schema', 2);
 
 /**
  * Parent pages of the current page, top first ("Locations", "Washington" on
@@ -4794,7 +4524,7 @@ add_action('wp_head', 'retails_organization_schema', 2);
  *
  * @return array
  */
-function retails_page_ancestor_crumbs()
+function wholesale_page_ancestor_crumbs()
 {
 	if (!is_page()) {
 		return array();
@@ -4803,7 +4533,7 @@ function retails_page_ancestor_crumbs()
 	$crumbs = array();
 	foreach (array_reverse(get_post_ancestors(get_queried_object_id())) as $ancestor_id) {
 		$crumbs[] = array(
-			'name' => retails_schema_text(get_the_title($ancestor_id)),
+			'name' => wholesale_schema_text(get_the_title($ancestor_id)),
 			'url' => get_permalink($ancestor_id),
 		);
 	}
@@ -4814,7 +4544,7 @@ function retails_page_ancestor_crumbs()
 /**
  * Render visible breadcrumbs for public singular content.
  */
-function retails_breadcrumbs()
+function wholesale_breadcrumbs()
 {
 	if (is_front_page() || is_home() || is_404() || is_search()) {
 		return;
@@ -4832,15 +4562,15 @@ function retails_breadcrumbs()
 		if ($terms && !is_wp_error($terms)) {
 			$items[] = array(
 				'name' => $terms[0]->name,
-				'url' => retails_category_url($terms[0]->slug),
+				'url' => wholesale_category_url($terms[0]->slug),
 			);
 		}
 	}
 
-	$items = array_merge($items, retails_page_ancestor_crumbs());
+	$items = array_merge($items, wholesale_page_ancestor_crumbs());
 
 	$items[] = array(
-		'name' => retails_schema_text(get_the_title()),
+		'name' => wholesale_schema_text(get_the_title()),
 		'url' => get_permalink(),
 	);
 
@@ -4858,9 +4588,9 @@ function retails_breadcrumbs()
 	echo '</ol></nav>';
 }
 
-function retails_seo_robots($robots)
+function wholesale_seo_robots($robots)
 {
-	if (!retails_has_seo_plugin() && retails_seo_is_noindex()) {
+	if (!wholesale_has_seo_plugin() && wholesale_seo_is_noindex()) {
 		return array(
 			'noindex' => true,
 			'follow' => true,
@@ -4869,9 +4599,9 @@ function retails_seo_robots($robots)
 
 	return $robots;
 }
-add_filter('wp_robots', 'retails_seo_robots');
+add_filter('wp_robots', 'wholesale_seo_robots');
 
-function retails_robots_txt($output, $public)
+function wholesale_robots_txt($output, $public)
 {
 	if ($public && false === strpos($output, 'Sitemap:')) {
 		$output .= "\nSitemap: " . esc_url(home_url('/sitemap.xml')) . "\n";
@@ -4879,7 +4609,7 @@ function retails_robots_txt($output, $public)
 
 	return $output;
 }
-add_filter('robots_txt', 'retails_robots_txt', 10, 2);
+add_filter('robots_txt', 'wholesale_robots_txt', 10, 2);
 
 /**
  * Remove resource hints for third-party origins that are not used by the theme.
@@ -4887,7 +4617,7 @@ add_filter('robots_txt', 'retails_robots_txt', 10, 2);
  * The hints otherwise compete with the document and critical stylesheet
  * connections during the initial load.
  */
-function retails_resource_hints($urls, $relation_type)
+function wholesale_resource_hints($urls, $relation_type)
 {
 	if ('preconnect' !== $relation_type) {
 		return $urls;
@@ -4903,7 +4633,7 @@ function retails_resource_hints($urls, $relation_type)
 
 	return $urls;
 }
-add_filter('wp_resource_hints', 'retails_resource_hints', 10, 2);
+add_filter('wp_resource_hints', 'wholesale_resource_hints', 10, 2);
 
 
 function my_enqueue($hook)
@@ -5050,7 +4780,7 @@ add_action('cmb2_admin_init', function () {
 			'id' => '_discount_percent',
 		)
 	);
-	// Empty uses the site default (RETAILS_SQFT_MIN_PRICE); see retails_product_min_order().
+	// Empty uses the site default (WHOLESALE_SQFT_MIN_PRICE); see wholesale_product_min_order().
 	$product->add_field(
 		array(
 			'name' => __('Minimum Order Price', 'tm'),
@@ -5058,7 +4788,7 @@ add_action('cmb2_admin_init', function () {
 			'id' => '_min_order_price',
 		)
 	);
-	// See retails_price_quote(): the minimum is multiplied by the printed sides.
+	// See wholesale_price_quote(): the minimum is multiplied by the printed sides.
 	$product->add_field(
 		array(
 			'name' => __('Minimum Per Side', 'tm'),
@@ -5066,17 +4796,7 @@ add_action('cmb2_admin_init', function () {
 			'id' => '_min_order_per_side',
 		)
 	);
-	// B2Sign-style price limits on the printed size (retails_price_quote()).
-	foreach (array('_min_order_extra_side' => 'Minimum Extra Per Side', '_max_print_price' => 'Full Sheet Price', '_max_print_extra_side' => 'Full Sheet Extra Per Side') as $limit_id => $limit_name) {
-		$product->add_field(
-			array(
-				'name' => __($limit_name, 'tm'),
-				'type' => 'text',
-				'id' => $limit_id,
-			)
-		);
-	}
-	// See retails_product_max_sides().
+	// See wholesale_product_max_sides().
 	$product->add_field(
 		array(
 			'name' => __('Maximum Size', 'tm'),
@@ -5084,7 +4804,7 @@ add_action('cmb2_admin_init', function () {
 			'id' => '_max_size',
 		)
 	);
-	// This product's own dated sale; see retails_product_promotion().
+	// This product's own dated sale; see wholesale_product_promotion().
 	foreach (array('_promo_percent' => 'Product Sale Percent', '_promo_start' => 'Product Sale Start', '_promo_end' => 'Product Sale End') as $promo_id => $promo_name) {
 		$product->add_field(
 			array(
@@ -5175,21 +4895,6 @@ add_action('cmb2_admin_init', function () {
 			'type' => 'checkbox',
 		)
 	);
-	// The Size selector's sizes and notes (inc/size-chips.php retails_size_presets()).
-	$product->add_field(
-		array(
-			'name' => __('Preset Sizes', 'tm'),
-			'id' => '_size_preset_list',
-			'type' => 'textarea_small',
-		)
-	);
-	$product->add_field(
-		array(
-			'name' => __('Custom Size Note', 'tm'),
-			'id' => '_custom_size_note',
-			'type' => 'text',
-		)
-	);
 
 	$product->add_field(
 		array(
@@ -5209,15 +4914,6 @@ add_action('cmb2_admin_init', function () {
 			'default' => false,
 		)
 	);
-	// The print size uploaded artwork must match (inc/artwork-size-check.php).
-	$product->add_field(
-		array(
-			'name' => __('Artwork Size', 'tm'),
-			'id' => '_artwork_size',
-			'type' => 'textarea_small',
-			'after_field' => 'retails_artwork_size_field_summary',
-		)
-	);
 	$product->add_field(
 		array(
 			'name' => __('Prouduct Turnaround', 'tm'),
@@ -5232,7 +4928,7 @@ add_action('cmb2_admin_init', function () {
 			'name' => __('Stock Status', 'tm'),
 			'id' => '_stock_status',
 			'type' => 'select',
-			'options' => retails_stock_status_options(),
+			'options' => wholesale_stock_status_options(),
 		)
 	);
 	$product->add_field(
@@ -5573,7 +5269,7 @@ add_action('save_post', 'cmb2_save_quick_edit_data_product');
  * from the Products list: bulk actions for selected products, plus buttons that
  * apply to every product at once.
  */
-function retails_set_product_artwork_upload($post_ids, $enable)
+function wholesale_set_product_artwork_upload($post_ids, $enable)
 {
 	$count = 0;
 	foreach ($post_ids as $post_id) {
@@ -5603,7 +5299,7 @@ add_filter('handle_bulk_actions-edit-product', function ($redirect_to, $doaction
 		return $redirect_to;
 	}
 	$enable = 'enable_artwork_upload' === $doaction;
-	$count = retails_set_product_artwork_upload($post_ids, $enable);
+	$count = wholesale_set_product_artwork_upload($post_ids, $enable);
 
 	return add_query_arg(array(
 		'artwork_upload_updated' => $count,
@@ -5619,8 +5315,8 @@ add_action('manage_posts_extra_tablenav', function ($which) {
 	}
 	foreach (array('on' => __('Enable artwork for all products', 'tm'), 'off' => __('Disable artwork for all products', 'tm')) as $state => $label) {
 		$url = wp_nonce_url(
-			admin_url('admin-post.php?action=retails_artwork_upload_all&state=' . $state),
-			'retails_artwork_upload_all'
+			admin_url('admin-post.php?action=wholesale_artwork_upload_all&state=' . $state),
+			'wholesale_artwork_upload_all'
 		);
 		$confirm = 'on' === $state
 			? __('Enable custom artwork upload on ALL products?', 'tm')
@@ -5634,11 +5330,11 @@ add_action('manage_posts_extra_tablenav', function ($which) {
 	}
 });
 
-add_action('admin_post_retails_artwork_upload_all', function () {
+add_action('admin_post_wholesale_artwork_upload_all', function () {
 	if (!current_user_can('edit_others_posts')) {
 		wp_die(__('You are not allowed to do this.', 'tm'), 403);
 	}
-	check_admin_referer('retails_artwork_upload_all');
+	check_admin_referer('wholesale_artwork_upload_all');
 
 	$enable = isset($_GET['state']) && 'on' === $_GET['state'];
 	$post_ids = get_posts(array(
@@ -5648,7 +5344,7 @@ add_action('admin_post_retails_artwork_upload_all', function () {
 		'fields' => 'ids',
 		'no_found_rows' => true,
 	));
-	$count = retails_set_product_artwork_upload($post_ids, $enable);
+	$count = wholesale_set_product_artwork_upload($post_ids, $enable);
 
 	wp_safe_redirect(add_query_arg(array(
 		'post_type' => 'product',
@@ -5704,7 +5400,7 @@ add_action('wp_mail_failed', function ($error) {
  * Plain-text version of an HTML email, sent alongside it (mail providers trust
  * multipart messages more than HTML-only ones).
  */
-function retails_html_to_text($html)
+function wholesale_html_to_text($html)
 {
 	$text = preg_replace('#<(head|style|script)\b[^>]*>.*?</\1>#is', '', (string) $html);
 	$text = preg_replace_callback('#<a\s[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)</a>#is', static function ($link) {
@@ -5725,21 +5421,21 @@ function retails_html_to_text($html)
  *
  * @return true|string True when the mail server accepted it, otherwise the reason it failed.
  */
-function retails_send_html_mail($to, $subject, $html, $headers = array(), $from_name = '')
+function wholesale_send_html_mail($to, $subject, $html, $headers = array(), $from_name = '')
 {
 	$error = '';
 	$capture_error = static function ($wp_error) use (&$error) {
 		$error = $wp_error->get_error_message();
 	};
 	$add_text_part = static function ($phpmailer) use ($html, $from_name) {
-		$phpmailer->AltBody = retails_html_to_text($html);
+		$phpmailer->AltBody = wholesale_html_to_text($html);
 		if ('' !== $from_name) {
 			$phpmailer->FromName = $from_name;
 		}
 	};
 
 	add_action('wp_mail_failed', $capture_error);
-	// After retails_configure_smtp_mailer (priority 10) so the sender name sticks.
+	// After wholesale_configure_smtp_mailer (priority 10) so the sender name sticks.
 	add_action('phpmailer_init', $add_text_part, 20);
 	$sent = wp_mail($to, $subject, $html, $headers);
 	remove_action('wp_mail_failed', $capture_error);
@@ -5749,7 +5445,7 @@ function retails_send_html_mail($to, $subject, $html, $headers = array(), $from_
 		return true;
 	}
 
-	$status = retails_mail_status();
+	$status = wholesale_mail_status();
 	if ('' === $error) {
 		$error = 'The mail server did not accept the message.';
 	}
@@ -5778,44 +5474,11 @@ function start_session()
 		$_SESSION = $_SESSION ?? array();
 		return;
 	}
-	if (empty($_COOKIE[session_name()]) && !retails_request_needs_new_session()) {
+	if (empty($_COOKIE[session_name()]) && !wholesale_request_needs_new_session()) {
 		$_SESSION = array();
 		return;
 	}
-	// Requests that only read the session: read it and let go of the lock at once. Held for the
-	// whole request, the lock made each one wait for the visitor's other requests and those
-	// wait for it.
-	if (retails_session_read_only_request()) {
-		session_start(array('read_and_close' => true));
-		return;
-	}
 	session_start();
-}
-
-/**
- * Requests that never write the session:
- * - the product page's price quote (reads a saved builder design);
- * - REST calls (live chat, Visitor Insights, exit survey, search). The chat's AI "add to cart"
- *   call starts the session again itself before it writes (sfs-live-chat Ai/Controller.php);
- * - wp-admin screens opened with GET. With the lock held there, WordPress's own loopback
- *   requests (Site Health's REST check, plugin/theme editor saves), which carry the same
- *   session cookie, waited for the admin page that sent them and timed out after 10 s, and
- *   Site Health reported "An active PHP session was detected" and "The REST API encountered
- *   an error" (live, 2026-11-17).
- * admin-ajax, admin-post and every front-end page or form post keep the session open as before.
- */
-function retails_session_read_only_request()
-{
-	if (wp_doing_ajax()) {
-		return 'retails_price_quote' === ($_POST['action'] ?? '');
-	}
-	$uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
-	if (false !== strpos($uri, '/' . rest_get_url_prefix() . '/') || isset($_GET['rest_route'])) {
-		return true;
-	}
-	return is_admin()
-		&& 'admin-post.php' !== ($GLOBALS['pagenow'] ?? '')
-		&& in_array(strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET'), array('GET', 'HEAD'), true);
 }
 
 /**
@@ -5824,10 +5487,10 @@ function retails_session_read_only_request()
  * AJAX calls that store a cart item, builder design or payment. Page views, REST calls and
  * read-only AJAX (price quotes, mini cart refresh) don't.
  */
-function retails_request_needs_new_session()
+function wholesale_request_needs_new_session()
 {
 	if (wp_doing_ajax()) {
-		$writes = array('retails_mini_cart_add', 'retails_cl_builder_add', 'retails_upload_design', 'retails_payment_start', 'retails_payment_complete');
+		$writes = array('wholesale_mini_cart_add', 'wholesale_cl_builder_add', 'wholesale_upload_design', 'wholesale_payment_start', 'wholesale_payment_complete');
 		return in_array($_REQUEST['action'] ?? '', $writes, true);
 	}
 	if (is_admin() || isset($_REQUEST['product_id'])) {
@@ -5842,17 +5505,12 @@ function retails_request_needs_new_session()
  * Number of lines in the visitor's cart, for the header badge. Kept in a readable cookie
  * (not the HTML) because pages are served from the NitroPack cache.
  */
-function retails_sync_cart_cookie()
+function wholesale_sync_cart_cookie()
 {
 	if (headers_sent()) {
 		return;
 	}
-	// Read as utils/Cart.php does: plain JSON first (inch marks are stored as \"), older
-	// slashed carts without their backslashes.
-	$items = isset($_SESSION['cart_items']) ? json_decode((string) $_SESSION['cart_items']) : array();
-	if (!is_array($items) && isset($_SESSION['cart_items'])) {
-		$items = json_decode(str_replace('\\', '', (string) $_SESSION['cart_items']));
-	}
+	$items = isset($_SESSION['cart_items']) ? json_decode(str_replace('\\', '', (string) $_SESSION['cart_items'])) : array();
 	$count = is_array($items) ? count($items) : 0;
 	if ((string) $count === ($_COOKIE['sso_cart_count'] ?? '0')) {
 		return;
@@ -5865,7 +5523,7 @@ function retails_sync_cart_cookie()
 	));
 	$_COOKIE['sso_cart_count'] = (string) $count;
 }
-add_action('init', 'retails_sync_cart_cookie', 2);
+add_action('init', 'wholesale_sync_cart_cookie', 2);
 
 // Load Quick Edit Data for Product Turnaround
 
@@ -6039,10 +5697,10 @@ function save_product_attr_meta($post_id)
 	// Never replace good options with data the product page can't read.
 	$attrs = json_decode($raw, true);
 	if (!is_array($attrs)) {
-		set_transient('retails_attr_save_error_' . get_current_user_id(), $post_id, 60);
+		set_transient('wholesale_attr_save_error_' . get_current_user_id(), $post_id, 60);
 		return;
 	}
-	update_post_meta($post_id, 'product_attr', wp_slash(wp_json_encode(retails_normalize_product_attrs($attrs), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
+	update_post_meta($post_id, 'product_attr', wp_slash(wp_json_encode(wholesale_normalize_product_attrs($attrs), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
 }
 add_action('save_post', 'save_product_attr_meta');
 
@@ -6054,7 +5712,7 @@ add_action('save_post', 'save_product_attr_meta');
  * Those get their label appended ("9.90/4” - Top Only"), the format the price code already
  * reads as +9.90. Height options are left alone: channel letter pricing parses them.
  */
-function retails_normalize_product_attrs($attrs)
+function wholesale_normalize_product_attrs($attrs)
 {
 	$clean = array();
 	foreach ($attrs as $attr) {
@@ -6092,7 +5750,7 @@ function retails_normalize_product_attrs($attrs)
 }
 
 add_action('admin_notices', function () {
-	$key = 'retails_attr_save_error_' . get_current_user_id();
+	$key = 'wholesale_attr_save_error_' . get_current_user_id();
 	if ($post_id = get_transient($key)) {
 		delete_transient($key);
 		echo '<div class="notice notice-error"><p>The product options for &ldquo;' . esc_html(get_the_title($post_id)) . '&rdquo; were not saved because they could not be read. The previous options were kept.</p></div>';
@@ -6308,15 +5966,15 @@ function add_taxonomy_image_field()
 { ?>
 
 	<div class="form-field">
-		<label for="taxonomy-ref"><?php _e('Reference Category Slug', 'retails'); ?></label>
+		<label for="taxonomy-ref"><?php _e('Reference Category Slug', 'wholesale'); ?></label>
 		<input type="text" id="taxonomy-ref" name="taxonomy-ref" value="" />
-		<p class="description"><?php _e('', 'retails'); ?></p>
+		<p class="description"><?php _e('', 'wholesale'); ?></p>
 	</div>
 
 	<div class="form-field">
-		<label for="taxonomy-image"><?php _e('Category Image', 'retails'); ?></label>
+		<label for="taxonomy-image"><?php _e('Category Image', 'wholesale'); ?></label>
 		<input type="text" id="taxonomy-image" name="taxonomy-image" value="" />
-		<p class="description"><?php _e('Upload an image for this term.', 'retails'); ?></p>
+		<p class="description"><?php _e('Upload an image for this term.', 'wholesale'); ?></p>
 		<button class="button button-secondary upload_image_button">Upload Image</button>
 	</div>
 	<script>
@@ -6358,21 +6016,21 @@ function edit_taxonomy_image_field($term)
 
 	<tr class="form-field">
 		<th scope="row" valign="top">
-			<label for="taxonomy-ref"><?php _e('Reference Category', 'retails'); ?></label>
+			<label for="taxonomy-ref"><?php _e('Reference Category', 'wholesale'); ?></label>
 		</th>
 		<td>
 			<input type="text" id="taxonomy-ref" name="taxonomy-ref" value="<?php echo esc_html($taxonomy_ref); ?>" />
-			<p class="description"><?php _e('', 'retails'); ?></p>
+			<p class="description"><?php _e('', 'wholesale'); ?></p>
 
 		</td>
 	</tr>
 	<tr class="form-field">
 		<th scope="row" valign="top">
-			<label for="taxonomy-image"><?php _e('Image', 'retails'); ?></label>
+			<label for="taxonomy-image"><?php _e('Image', 'wholesale'); ?></label>
 		</th>
 		<td>
 			<input type="text" id="taxonomy-image" name="taxonomy-image" value="<?php echo esc_attr($image_url); ?>" />
-			<p class="description"><?php _e('Upload an image for this term.', 'retails'); ?></p>
+			<p class="description"><?php _e('Upload an image for this term.', 'wholesale'); ?></p>
 			<button type="button" class="button button-secondary upload_image_button">Upload Image</button>
 			<button type="button" class="button remove_image_button"<?php echo $image_url ? '' : ' hidden'; ?>>Remove Image</button>
 			<div class="taxonomy-image-preview">
@@ -6449,7 +6107,7 @@ add_action('create_category', 'save_taxonomy_image_field', 10, 2);
 add_action('edited_product_category', 'save_taxonomy_image_field', 10, 2);
 add_action('create_product_category', 'save_taxonomy_image_field', 10, 2);
 
-function retails_product_category_description_editor($hook)
+function wholesale_product_category_description_editor($hook)
 {
 	if (!in_array($hook, array('edit-tags.php', 'term.php'), true)) {
 		return;
@@ -6481,7 +6139,7 @@ function retails_product_category_description_editor($hook)
 		'after'
 	);
 }
-add_action('admin_enqueue_scripts', 'retails_product_category_description_editor');
+add_action('admin_enqueue_scripts', 'wholesale_product_category_description_editor');
 
 
 add_action('rest_api_init', function () {
@@ -6505,14 +6163,15 @@ function handle_connect_mail($request)
 		return new WP_REST_Response(['success' => false, 'message' => 'Missing or invalid fields.'], 400);
 	}
 
+	$to = wholesale_contact_admin_recipients();
 	$headers = array(
 		'Content-Type: text/html; charset=UTF-8',
 		"Reply-To: $name <$email>",
 	);
 	$body = "Name: $name<br>Email: $email<br><br>Message:<br>$message";
-	list($subject, $body) = retails_contact_mail_tag($subject, $body, true);
+	list($subject, $body) = wholesale_contact_mail_tag($subject, $body, true);
 
-	$sent = retails_mail_team($subject, $body, $headers);
+	$sent = wp_mail($to, $subject, $body, $headers);
 
 	if ($sent) {
 		return new WP_REST_Response(['success' => true, 'message' => 'Mail sent.'], 200);
@@ -6542,14 +6201,15 @@ function handle_portfolio_mail($request)
 		return new WP_REST_Response(['success' => false, 'message' => 'Missing or invalid fields.'], 400);
 	}
 
+	$to = wholesale_contact_admin_recipients();
 	$headers = array(
 		'Content-Type: text/html; charset=UTF-8',
 		"Reply-To: $name <$email>",
 	);
 	$body = "Name: $name<br>Email: $email<br><br>Message:<br>$message";
-	list($subject, $body) = retails_contact_mail_tag($subject, $body, true);
+	list($subject, $body) = wholesale_contact_mail_tag($subject, $body, true);
 
-	$sent = retails_mail_team($subject, $body, $headers);
+	$sent = wp_mail($to, $subject, $body, $headers);
 
 	if ($sent) {
 		return new WP_REST_Response(['success' => true, 'message' => 'Mail sent.'], 200);

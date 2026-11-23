@@ -23,7 +23,7 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-define('RETAILS_CACHE_BUSTER_OPTION', 'retails_cache_buster');
+define('WHOLESALE_CACHE_BUSTER_OPTION', 'wholesale_cache_buster');
 
 /**
  * Transient name prefixes that hold live state, not cached copies: a pending
@@ -31,52 +31,52 @@ define('RETAILS_CACHE_BUSTER_OPTION', 'retails_cache_buster');
  * SEO scan, and the upload and order-tracking rate limits. Clearing these
  * would break a checkout or a ticket that is in progress.
  */
-function retails_cache_protected_transients()
+function wholesale_cache_protected_transients()
 {
 	return array(
-		'retails_payment_',
-		'retails_ticket_builder_',
-		'retails_seo_scan',
-		'retails_async_up_',
-		'retails_track_fail_',
+		'wholesale_payment_',
+		'wholesale_ticket_builder_',
+		'wholesale_seo_scan',
+		'wholesale_async_up_',
+		'wholesale_track_fail_',
 	);
 }
 
-function retails_clear_cache_url()
+function wholesale_clear_cache_url()
 {
-	return wp_nonce_url(admin_url('admin-post.php?action=retails_clear_cache'), 'retails_clear_cache');
+	return wp_nonce_url(admin_url('admin-post.php?action=wholesale_clear_cache'), 'wholesale_clear_cache');
 }
 
-function retails_admin_bar_clear_cache($admin_bar)
+function wholesale_admin_bar_clear_cache($admin_bar)
 {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
 
 	$admin_bar->add_node(array(
-		'id' => 'retails-clear-cache',
+		'id' => 'wholesale-clear-cache',
 		'title' => '<span class="ab-icon" aria-hidden="true"></span><span class="ab-label">' . esc_html__('Clear Cache', 'litsign') . '</span>',
-		'href' => retails_clear_cache_url(),
+		'href' => wholesale_clear_cache_url(),
 		'meta' => array(
 			'title' => __('Clear the entire website cache', 'litsign'),
 		),
 	));
 }
-add_action('admin_bar_menu', 'retails_admin_bar_clear_cache', 105);
+add_action('admin_bar_menu', 'wholesale_admin_bar_clear_cache', 105);
 
 /**
  * Delete cached transients from the options table, keeping the protected ones.
  *
  * @return int Number of transients removed.
  */
-function retails_clear_cache_transients()
+function wholesale_clear_cache_transients()
 {
 	global $wpdb;
 
 	$deleted = 0;
 	foreach (array('_transient_', '_site_transient_') as $prefix) {
 		$where = $wpdb->prepare('option_name LIKE %s', $wpdb->esc_like($prefix) . '%');
-		foreach (retails_cache_protected_transients() as $protected) {
+		foreach (wholesale_cache_protected_transients() as $protected) {
 			$where .= $wpdb->prepare(' AND option_name NOT LIKE %s AND option_name NOT LIKE %s',
 				$wpdb->esc_like($prefix . $protected) . '%',
 				$wpdb->esc_like($prefix . 'timeout_' . $protected) . '%'
@@ -100,7 +100,7 @@ function retails_clear_cache_transients()
  *
  * @return int Number of files removed.
  */
-function retails_clear_cache_files()
+function wholesale_clear_cache_files()
 {
 	$cache_dir = realpath(WP_CONTENT_DIR . '/cache');
 	$content_dir = realpath(WP_CONTENT_DIR);
@@ -135,7 +135,7 @@ function retails_clear_cache_files()
  *
  * @return string[] Names of the plugins that were purged.
  */
-function retails_clear_cache_plugins()
+function wholesale_clear_cache_plugins()
 {
 	$purged = array();
 
@@ -191,15 +191,15 @@ function retails_clear_cache_plugins()
  *
  * @return array{transients:int,files:int,opcache:bool,plugins:string[]}
  */
-function retails_clear_all_cache()
+function wholesale_clear_all_cache()
 {
-	$transients = retails_clear_cache_transients();
+	$transients = wholesale_clear_cache_transients();
 
 	// A new stamp changes every local CSS/JS URL so browsers fetch fresh copies.
-	update_option(RETAILS_CACHE_BUSTER_OPTION, (string) time(), true);
+	update_option(WHOLESALE_CACHE_BUSTER_OPTION, (string) time(), true);
 
-	$plugins = retails_clear_cache_plugins();
-	$files = retails_clear_cache_files();
+	$plugins = wholesale_clear_cache_plugins();
+	$files = wholesale_clear_cache_files();
 
 	wp_clean_themes_cache();
 	if (function_exists('wp_clean_plugins_cache')) {
@@ -213,7 +213,7 @@ function retails_clear_all_cache()
 	}
 	clearstatcache(true);
 
-	do_action('retails_cache_cleared');
+	do_action('wholesale_cache_cleared');
 
 	return array(
 		'transients' => $transients,
@@ -223,7 +223,7 @@ function retails_clear_all_cache()
 	);
 }
 
-function retails_clear_cache_summary($result)
+function wholesale_clear_cache_summary($result)
 {
 	$parts = array(
 		sprintf(_n('%s cached item', '%s cached items', $result['transients'], 'litsign'), number_format_i18n($result['transients'])),
@@ -241,56 +241,56 @@ function retails_clear_cache_summary($result)
 	return sprintf(__('Cache cleared: %s.', 'litsign'), implode(', ', $parts));
 }
 
-function retails_ajax_clear_cache()
+function wholesale_ajax_clear_cache()
 {
 	if (!current_user_can('manage_options')) {
 		wp_send_json_error(array('message' => __('You are not allowed to clear the cache.', 'litsign')), 403);
 	}
-	if (!check_ajax_referer('retails_clear_cache', 'nonce', false)) {
+	if (!check_ajax_referer('wholesale_clear_cache', 'nonce', false)) {
 		wp_send_json_error(array('message' => __('Your session expired. Reload the page and try again.', 'litsign')), 403);
 	}
 
-	$result = retails_clear_all_cache();
-	wp_send_json_success(array('message' => retails_clear_cache_summary($result)) + $result);
+	$result = wholesale_clear_all_cache();
+	wp_send_json_success(array('message' => wholesale_clear_cache_summary($result)) + $result);
 }
-add_action('wp_ajax_retails_clear_cache', 'retails_ajax_clear_cache');
+add_action('wp_ajax_wholesale_clear_cache', 'wholesale_ajax_clear_cache');
 
 /**
  * No-JavaScript fallback: clear, then return to the page the click came from.
  */
-function retails_admin_post_clear_cache()
+function wholesale_admin_post_clear_cache()
 {
 	if (!current_user_can('manage_options')) {
 		wp_die(esc_html__('You are not allowed to clear the cache.', 'litsign'), 403);
 	}
-	check_admin_referer('retails_clear_cache');
+	check_admin_referer('wholesale_clear_cache');
 
-	retails_clear_all_cache();
+	wholesale_clear_all_cache();
 
 	$back = wp_get_referer();
 	if (!$back) {
 		$back = admin_url();
 	}
-	wp_safe_redirect(add_query_arg('retails_cache_cleared', '1', $back));
+	wp_safe_redirect(add_query_arg('wholesale_cache_cleared', '1', $back));
 	exit;
 }
-add_action('admin_post_retails_clear_cache', 'retails_admin_post_clear_cache');
+add_action('admin_post_wholesale_clear_cache', 'wholesale_admin_post_clear_cache');
 
-function retails_clear_cache_admin_notice()
+function wholesale_clear_cache_admin_notice()
 {
-	if (empty($_GET['retails_cache_cleared']) || !current_user_can('manage_options')) {
+	if (empty($_GET['wholesale_cache_cleared']) || !current_user_can('manage_options')) {
 		return;
 	}
 	echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('The website cache was cleared.', 'litsign') . '</p></div>';
 }
-add_action('admin_notices', 'retails_clear_cache_admin_notice');
+add_action('admin_notices', 'wholesale_clear_cache_admin_notice');
 
 /**
  * Add the cache-busting stamp to local stylesheet and script URLs.
  */
-function retails_cache_bust_asset_src($src)
+function wholesale_cache_bust_asset_src($src)
 {
-	$stamp = get_option(RETAILS_CACHE_BUSTER_OPTION);
+	$stamp = get_option(WHOLESALE_CACHE_BUSTER_OPTION);
 	if (!$stamp || !is_string($src) || '' === $src) {
 		return $src;
 	}
@@ -302,13 +302,13 @@ function retails_cache_bust_asset_src($src)
 
 	return add_query_arg('cb', rawurlencode($stamp), $src);
 }
-add_filter('style_loader_src', 'retails_cache_bust_asset_src', 20);
-add_filter('script_loader_src', 'retails_cache_bust_asset_src', 20);
+add_filter('style_loader_src', 'wholesale_cache_bust_asset_src', 20);
+add_filter('script_loader_src', 'wholesale_cache_bust_asset_src', 20);
 
 /**
  * Toolbar script: clear through admin-ajax and show the result in the button.
  */
-function retails_clear_cache_toolbar_script()
+function wholesale_clear_cache_toolbar_script()
 {
 	if (!is_admin_bar_showing() || !current_user_can('manage_options')) {
 		return;
@@ -316,28 +316,28 @@ function retails_clear_cache_toolbar_script()
 
 	$config = array(
 		'ajaxUrl' => admin_url('admin-ajax.php'),
-		'nonce' => wp_create_nonce('retails_clear_cache'),
+		'nonce' => wp_create_nonce('wholesale_clear_cache'),
 		'clearing' => __('Clearing…', 'litsign'),
 		'done' => __('Cache Cleared', 'litsign'),
 		'failed' => __('Clear Failed', 'litsign'),
 	);
 	?>
 	<style>
-		#wpadminbar #wp-admin-bar-retails-clear-cache .ab-icon:before { content: "\f463"; top: 2px; }
-		#wpadminbar #wp-admin-bar-retails-clear-cache.is-busy .ab-icon:before { display: inline-block; animation: retails-cache-spin 1s linear infinite; }
-		#wpadminbar #wp-admin-bar-retails-clear-cache.is-done .ab-icon:before { content: "\f147"; color: #68de7c; }
-		#wpadminbar #wp-admin-bar-retails-clear-cache.is-failed .ab-icon:before { content: "\f534"; color: #f86368; }
-		@keyframes retails-cache-spin { to { transform: rotate(360deg); } }
+		#wpadminbar #wp-admin-bar-wholesale-clear-cache .ab-icon:before { content: "\f463"; top: 2px; }
+		#wpadminbar #wp-admin-bar-wholesale-clear-cache.is-busy .ab-icon:before { display: inline-block; animation: wholesale-cache-spin 1s linear infinite; }
+		#wpadminbar #wp-admin-bar-wholesale-clear-cache.is-done .ab-icon:before { content: "\f147"; color: #68de7c; }
+		#wpadminbar #wp-admin-bar-wholesale-clear-cache.is-failed .ab-icon:before { content: "\f534"; color: #f86368; }
+		@keyframes wholesale-cache-spin { to { transform: rotate(360deg); } }
 		@media screen and (max-width: 782px) {
-			#wpadminbar li#wp-admin-bar-retails-clear-cache { display: block; }
-			#wpadminbar #wp-admin-bar-retails-clear-cache .ab-icon:before { top: 0; }
+			#wpadminbar li#wp-admin-bar-wholesale-clear-cache { display: block; }
+			#wpadminbar #wp-admin-bar-wholesale-clear-cache .ab-icon:before { top: 0; }
 		}
 	</style>
 	<script>
 		(function () {
 			var config = <?php echo wp_json_encode($config); ?>;
 			document.addEventListener('click', function (event) {
-				var link = event.target.closest && event.target.closest('#wp-admin-bar-retails-clear-cache > a');
+				var link = event.target.closest && event.target.closest('#wp-admin-bar-wholesale-clear-cache > a');
 				if (!link || !window.fetch) {
 					return;
 				}
@@ -353,7 +353,7 @@ function retails_clear_cache_toolbar_script()
 				item.classList.add('is-busy');
 				label.textContent = config.clearing;
 
-				var body = new URLSearchParams({ action: 'retails_clear_cache', nonce: config.nonce });
+				var body = new URLSearchParams({ action: 'wholesale_clear_cache', nonce: config.nonce });
 				fetch(config.ajaxUrl, { method: 'POST', credentials: 'same-origin', body: body })
 					.then(function (response) {
 						return response.json().catch(function () { return { success: false }; });
@@ -384,5 +384,5 @@ function retails_clear_cache_toolbar_script()
 	</script>
 	<?php
 }
-add_action('admin_footer', 'retails_clear_cache_toolbar_script');
-add_action('wp_footer', 'retails_clear_cache_toolbar_script');
+add_action('admin_footer', 'wholesale_clear_cache_toolbar_script');
+add_action('wp_footer', 'wholesale_clear_cache_toolbar_script');

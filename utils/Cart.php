@@ -11,14 +11,7 @@ class Cart
     {
 
         if (isset($_SESSION['cart_items'])) {
-            // The cart is stored as plain JSON, where an inch mark in an option such as
-            // 33" x 81" is written \". Removing every backslash (the old reading) broke that
-            // JSON and emptied the whole cart, so the backslashes are only removed for older
-            // carts that were saved with extra slashes and don't read without it.
-            $cart_session = (string) $_SESSION['cart_items'];
-            if (!is_array(json_decode($cart_session))) {
-                $cart_session = str_replace("\\", '', $cart_session);
-            }
+            $cart_session = str_replace("\\", '', $_SESSION['cart_items']);
             if (is_array(json_decode($cart_session))) {
                 $this->have_items = count(json_decode($cart_session)) == 0 ? false : true;
             }
@@ -55,10 +48,7 @@ class Cart
                 }
 
                 foreach ($single_option as $title => $value) {
-                    // The posted value went through sanitize_text_field(), which collapses
-                    // double spaces (round table cover: '31.5"  (Overhang 27")'), the same
-                    // fallback the price check accepts (inc/pricing.php).
-                    if (trim((string) $value) == trim((string) $match) || sanitize_text_field((string) $value) === trim((string) $match)) {
+                    if (trim((string) $value) == trim((string) $match)) {
                         return $title;
                     }
                 }
@@ -75,9 +65,9 @@ class Cart
     {
         $design_id = absint($design_id);
         return $design_id > 0
-            && isset($_SESSION['retails_design_uploads'])
-            && is_array($_SESSION['retails_design_uploads'])
-            && in_array($design_id, array_map('absint', $_SESSION['retails_design_uploads']), true);
+            && isset($_SESSION['wholesale_design_uploads'])
+            && is_array($_SESSION['wholesale_design_uploads'])
+            && in_array($design_id, array_map('absint', $_SESSION['wholesale_design_uploads']), true);
     }
 
     private function redirect_with_error($product_id, $message)
@@ -98,19 +88,18 @@ class Cart
         if (!$product_id || 'product' !== get_post_type($product_id) || 'publish' !== get_post_status($product_id)) {
             $this->redirect_with_error(0, 'This product is no longer available.');
         }
-        if ('outofstock' === retails_product_stock_status($product_id)) {
+        if ('outofstock' === wholesale_product_stock_status($product_id)) {
             $this->redirect_with_error($product_id, sprintf('%s is out of stock right now.', get_the_title($product_id)));
         }
 
         $design_id = isset($request['design_id']) && self::is_session_design($request['design_id']) ? absint($request['design_id']) : '';
-        // Grouped products get their own name ("Yard Sign Only (No H-Stake)"), inc/product-group-swap.php.
-        $product_title = function_exists('retails_product_cart_title') ? retails_product_cart_title($product_id) : get_the_title($product_id);
+        $product_title = get_the_title($product_id);
         $thumbnail_src = wp_get_attachment_image_src(get_post_thumbnail_id($product_id), 'single-post-thumbnail');
         $product_thumbnail = $thumbnail_src ? $thumbnail_src[0] : '';
         // The price is calculated on the server from the product settings; the browser's
         // total_cost is only used to tell the customer if the price they saw was out of date.
-        $design = retails_product_is_channel_letter($product_id) ? retails_session_cl_design($product_id) : null;
-        $quote = retails_price_quote($product_id, $request, $design);
+        $design = wholesale_product_is_channel_letter($product_id) ? wholesale_session_cl_design($product_id) : null;
+        $quote = wholesale_price_quote($product_id, $request, $design);
         if (!$quote['ok']) {
             $this->redirect_with_error($product_id, $quote['error']);
         }
@@ -118,7 +107,7 @@ class Cart
         $turnaround_cost = $quote['turnaround'];
         $shown_price = isset($request['total_cost']) ? floatval($request['total_cost']) : 0;
         if ($shown_price > 0 && abs($shown_price - ($quote['total'] - $turnaround_cost)) > 0.01) {
-            $_SESSION['retails_cart_notice'] = sprintf('The price for %s was updated to $%s based on the options you chose.', get_the_title($product_id), number_format($quote['total'], 2));
+            $_SESSION['wholesale_cart_notice'] = sprintf('The price for %s was updated to $%s based on the options you chose.', get_the_title($product_id), number_format($quote['total'], 2));
         }
         $job_name = isset($request['job_name']) ? $request['job_name'] : '';
         // chennel letter details
@@ -187,15 +176,8 @@ class Cart
         $artwork_id = null;
         $attachment_src = null;
 
-        // Artwork must have the shape of the size ordered (inc/artwork-size-check.php). Checked
-        // before the held upload is claimed, so the customer can fix the size and add it again.
-        $artwork_problem = retails_artwork_request_problem($product_id, $request);
-        if ('' !== $artwork_problem) {
-            $this->redirect_with_error($product_id, $artwork_problem);
-        }
-
         // Uploaded in the background (inc/async-uploads.php), or posted with the form.
-        $file = retails_async_upload_take($_POST['custom-artwork-token'] ?? '', 'artwork');
+        $file = wholesale_async_upload_take($_POST['custom-artwork-token'] ?? '', 'artwork');
         if (!$file && isset($_FILES['custom-artwork']) && UPLOAD_ERR_NO_FILE !== (int) $_FILES['custom-artwork']['error']) {
             $file = $_FILES['custom-artwork'];
         }
@@ -204,20 +186,26 @@ class Cart
                 $this->redirect_with_error($product_id, 'Your artwork could not be uploaded. Please try again.');
             }
 
-            $allowed_artwork_types = retails_artwork_mimes();
+            $allowed_artwork_types = array(
+                'jpg|jpeg|jpe' => 'image/jpeg',
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                'pdf' => 'application/pdf',
+            );
             $checked_type = wp_check_filetype_and_ext($file['tmp_name'], $file['name'], $allowed_artwork_types);
             if (empty($checked_type['ext']) || empty($checked_type['type'])) {
-                $this->redirect_with_error($product_id, 'Artwork must be a ' . retails_artwork_types_text() . ' file.');
+                $this->redirect_with_error($product_id, 'Artwork must be a JPG, PNG, GIF, WebP or PDF file.');
             }
-            if (filesize($file['tmp_name']) > retails_artwork_max_bytes()) {
-                $this->redirect_with_error($product_id, 'Artwork files must be under ' . retails_artwork_max_text() . '. ' . retails_large_file_help());
+            if (filesize($file['tmp_name']) > 25 * 1024 * 1024) {
+                $this->redirect_with_error($product_id, 'Artwork files must be under 25MB.');
             }
 
             $file_ext = $checked_type['ext'];
             $file_name = 'custom-artwork-'.$product_id.'-'.uniqid();
             // Move the temp file into uploads instead of reading it into memory and writing it back.
             $file['name'] = $file_name.'.'.$file_ext;
-            $upload_artwork = retails_async_upload_store($file, array('mimes' => $allowed_artwork_types));
+            $upload_artwork = wholesale_async_upload_store($file, array('mimes' => $allowed_artwork_types));
             if (!empty($upload_artwork['error'])) {
                 $this->redirect_with_error($product_id, 'Your artwork could not be saved. Please try again.');
             }
@@ -332,10 +320,7 @@ class Cart
 		}
 
 
-		if (!empty($quote['turnaround_label'])) {
-			// The product's own production time (mirrored from B2Sign), e.g. "3 Business Days".
-			$turnaround_option = $quote['turnaround_label'];
-		} elseif($turnaround_option == 'same_day') {
+		if($turnaround_option == 'same_day') {
 			$turnaround_option = 'Same Day';
 		}elseif($turnaround_option == 'next_day') {
 			$turnaround_option = 'Next Day';
@@ -434,13 +419,13 @@ class Cart
         // recorded too, so every choice that sets the price reaches the order. A fixed
         // single-choice option isn't posted by the form, so its only label is used.
         $cart_item = json_decode($cart_items_json, true);
-        foreach (retails_product_price_attrs($product_id) as $attr) {
+        foreach (wholesale_product_price_attrs($product_id) as $attr) {
             $label = ucwords(str_replace('-', ' ', (string) ($attr['name'] ?? '')));
             if ('' === $label || array_key_exists($label, $cart_item['product_details'])) {
                 continue;
             }
-            $options = retails_attr_options($attr);
-            $submitted = retails_request_attr_value($request, $attr['name']);
+            $options = wholesale_attr_options($attr);
+            $submitted = wholesale_request_attr_value($request, $attr['name']);
             if (null !== $submitted && '' !== $submitted) {
                 $cart_item['product_details'][$label] = $this->getTitleByValue($product_id, $submitted);
             } elseif (1 === count($options)) {
@@ -466,19 +451,6 @@ class Cart
         // escaped non-ASCII label character (×, ″) into text like "u00d7".
         $cart_items_json = json_encode($cart_item, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-        // The options this line was priced from, so a quantity change in the cart is priced
-        // again with the product's quantity tiers and minimums (update_quantity()). Kept
-        // beside the cart, not in the line, so orders store the same line data as before.
-        if (!$design) {
-            if (!isset($_SESSION['retails_cart_requests']) || !is_array($_SESSION['retails_cart_requests'])) {
-                $_SESSION['retails_cart_requests'] = array();
-            }
-            $_SESSION['retails_cart_requests'][(string) $cart_item['cart_id']] = array_diff_key(
-                $request,
-                array_flip(array('action', 'nonce', '_wpnonce', 'total_cost', 'buy_now', 'job_name', 'product_cl_data'))
-            );
-        }
-
         $cart_items = $this->get_items();
         array_push($cart_items, json_decode($cart_items_json));
         $_SESSION['cart_items'] = json_encode($cart_items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -486,8 +458,7 @@ class Cart
             // The header cart drawer (inc/mini-cart.php) sends its own response.
             return;
         }
-        // Buy Now without JavaScript (single-product.php): straight to checkout.
-        wp_safe_redirect(!empty($request['buy_now']) ? home_url('/checkout/') : get_permalink());
+        wp_safe_redirect(get_permalink());
         exit;
     }
 
@@ -498,25 +469,14 @@ class Cart
         $updated_cart_items = array();
         foreach ($cart_items as $key => $item) {
             if ($item->cart_id == $cart_id) {
+                $current_quanitity = max(1, absint($item->product_quantity));
+                $prodcut_subtotal = floatval($item->product_subtotal);
+                $single_product_cost = $prodcut_subtotal / $current_quanitity;
+                $update_product_cost = $single_product_cost * $quantity;
+
                 $updated_item = $cart_items[$key];
-                $quote = $this->quote_for_quantity($item, $quantity);
-                if (is_string($quote)) {
-                    // This quantity can't be ordered with the chosen options: keep the line as it was.
-                    $_SESSION['retails_cart_notice'] = $quote;
-                } elseif (is_array($quote)) {
-                    // Priced again like the product page does, so quantity tiers and minimums apply.
-                    $updated_item->product_subtotal = $quote['total'];
-                    $updated_item->unit_price = $quote['unit_price'];
-                    $updated_item->discount = $quote['discount'];
-                    $updated_item->turnaround_cost = $quote['turnaround'];
-                    $updated_item->product_quantity = $quote['quantity'];
-                } else {
-                    // Channel letters, and lines added before the options were kept: same price per piece.
-                    $current_quanitity = max(1, absint($item->product_quantity));
-                    $single_product_cost = floatval($item->product_subtotal) / $current_quanitity;
-                    $updated_item->product_subtotal = $single_product_cost * $quantity;
-                    $updated_item->product_quantity = $quantity;
-                }
+                $updated_item->product_subtotal = $update_product_cost;
+                $updated_item->product_quantity = $quantity;
                 $updated_cart_items[] = $updated_item;
             } else {
                 $updated_cart_items[] = $item;
@@ -526,28 +486,6 @@ class Cart
         $_SESSION['cart_items'] = json_encode($updated_cart_items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
-
-    /**
-     * The price quote for a cart line at a new quantity, from the options it was added with.
-     *
-     * @return array|string|null The quote; an error message when that quantity can't be
-     *                           ordered; null when the line's options weren't kept.
-     */
-    private function quote_for_quantity($item, $quantity)
-    {
-        $requests = isset($_SESSION['retails_cart_requests']) && is_array($_SESSION['retails_cart_requests']) ? $_SESSION['retails_cart_requests'] : array();
-        $request = $requests[(string) ($item->cart_id ?? '')] ?? null;
-        $product_id = absint($item->product_id ?? 0);
-        if (!is_array($request) || !$product_id || retails_product_is_channel_letter($product_id)) {
-            return null;
-        }
-        $request['product_quantity'] = $quantity;
-        $quote = retails_price_quote($product_id, $request);
-        if (empty($quote['ok'])) {
-            return sprintf('The quantity of %s was not changed. %s', get_the_title($product_id), $quote['error'] ? $quote['error'] : 'Please remove it and add it again.');
-        }
-        return $quote;
-    }
 
     public function get_items()
     {
@@ -571,8 +509,8 @@ class Cart
 
     public function empty() {
         $_SESSION['cart_items']  = json_encode(array());
-        if (function_exists('retails_sync_cart_cookie')) {
-            retails_sync_cart_cookie();
+        if (function_exists('wholesale_sync_cart_cookie')) {
+            wholesale_sync_cart_cookie();
         }
     }
 }

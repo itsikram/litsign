@@ -9,23 +9,23 @@
  * @package litsign
  */
 
-$entry = retails_guide_current();
-$industries = retails_guide_industries();
+$entry = wholesale_guide_current();
+$industries = wholesale_guide_industries();
 $industry = $industries[$entry['industry']];
 
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
-$industries_url = retails_guide_url('industries');
-$locations_url = retails_guide_url('locations');
-$permits_url = retails_guide_url('sign-permits');
+$industries_url = wholesale_guide_url('industries');
+$locations_url = wholesale_guide_url('locations');
+$permits_url = wholesale_guide_url('sign-permits');
 $is_events = 'event-trade-show-signs' === $industry['slug'];
 
-retails_seo_set_page_faq($industry['faq']);
-retails_guide_add_service_schema(
+wholesale_seo_set_page_faq($industry['faq']);
+wholesale_guide_add_service_schema(
 	sprintf('Signs for %s', $industry['name']),
-	retails_schema_text($industry['seo_description'])
+	wholesale_schema_text($industry['seo_description'])
 );
-$GLOBALS['retails_page_items'] = array_values(array_filter(array_map('retails_seo_product', array_keys($industry['products']))));
+$GLOBALS['wholesale_page_items'] = array_values(array_filter(array_map('wholesale_seo_product', array_keys($industry['products']))));
 
 get_header();
 ?>
@@ -33,7 +33,7 @@ get_header();
 <main id="primary" class="sf-page gd-page">
 	<section class="sf-hero" aria-labelledby="gd-title">
 		<div class="container">
-			<?php retails_breadcrumbs(); ?>
+			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker"><?php echo esc_html($industry['name']); ?></p>
 			<h1 id="gd-title" class="sf-hero-title"><?php echo esc_html($industry['h1']); ?></h1>
 			<?php foreach ($industry['intro'] as $paragraph) : ?>
@@ -41,11 +41,11 @@ get_header();
 			<?php endforeach; ?>
 			<div class="sf-hero-actions">
 				<?php if ($is_events) : ?>
-					<a class="cl-button" href="<?php echo esc_url(home_url('/banners-displays/')); ?>">Shop Banners &amp; Displays <?php echo retails_home_icon('arrow'); ?></a>
+					<a class="cl-button" href="<?php echo esc_url(home_url('/banners-displays/')); ?>">Shop Banners &amp; Displays <?php echo wholesale_home_icon('arrow'); ?></a>
 				<?php else : ?>
-					<a class="cl-button" href="<?php echo esc_url(home_url('/custom-channel-letters/')); ?>">See Channel Letter Prices <?php echo retails_home_icon('arrow'); ?></a>
+					<a class="cl-button" href="<?php echo esc_url(home_url('/custom-channel-letters/')); ?>">See Channel Letter Prices <?php echo wholesale_home_icon('arrow'); ?></a>
 				<?php endif; ?>
-				<a class="sf-button-outline" href="<?php echo esc_url(retails_quote_url('channel-letters')); ?>">Send Your Logo for a Quote</a>
+				<a class="sf-button-outline" href="<?php echo esc_url($contact_url); ?>">Send Your Logo for a Quote</a>
 			</div>
 		</div>
 	</section>
@@ -67,14 +67,14 @@ get_header();
 			<p class="cl-kicker">Recommended products</p>
 			<h2 id="gd-products-title" class="cl-section-title"><?php echo esc_html(sprintf('Signs for %s', $industry['name'])); ?></h2>
 			<p class="cl-section-lead">Every product is made to order and priced online. Prices shown are starting prices.</p>
-			<?php retails_guide_render_products($industry['products']); ?>
+			<?php wholesale_guide_render_products($industry['products']); ?>
 			<?php if (!empty($industry['categories'])) : ?>
 				<p class="gd-all-link">
 					Browse:
 					<?php
 					$category_links = array();
 					foreach ($industry['categories'] as $slug => $label) {
-						$category_links[] = '<a href="' . esc_url(retails_category_url($slug)) . '">' . esc_html($label) . '</a>';
+						$category_links[] = '<a href="' . esc_url(wholesale_category_url($slug)) . '">' . esc_html($label) . '</a>';
 					}
 					echo implode(' &middot; ', $category_links); // Escaped above.
 					?>
@@ -120,7 +120,7 @@ get_header();
 			<p class="cl-kicker">Questions</p>
 			<h2 id="gd-faq-title" class="cl-section-title"><?php echo esc_html(sprintf('%s Sign FAQ', $industry['name'])); ?></h2>
 			<div class="cl-faq-list">
-				<?php retails_seo_render_faq(); ?>
+				<?php wholesale_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>
@@ -128,7 +128,7 @@ get_header();
 	<?php
 	$others = array();
 	foreach ($industries as $slug => $other) {
-		$url = $slug !== $industry['slug'] ? retails_guide_url('industries/' . $slug) : '';
+		$url = $slug !== $industry['slug'] ? wholesale_guide_url('industries/' . $slug) : '';
 		if ($url) {
 			$others[$url] = $other['name'];
 		}
@@ -145,13 +145,13 @@ get_header();
 					<?php endforeach; ?>
 				</ul>
 				<?php if ($industries_url) : ?>
-					<p class="gd-all-link"><a href="<?php echo esc_url($industries_url); ?>">All industries <?php echo retails_home_icon('arrow'); ?></a></p>
+					<p class="gd-all-link"><a href="<?php echo esc_url($industries_url); ?>">All industries <?php echo wholesale_home_icon('arrow'); ?></a></p>
 				<?php endif; ?>
 			</div>
 		</section>
 	<?php endif; ?>
 
-	<?php retails_guide_render_help(sprintf('Signs for Your %s Business', rtrim(preg_replace('/s$/', '', strtok($industry['name'], ' &')))), 'Send your logo, a storefront or booth photo and any landlord or venue rules. We&rsquo;ll recommend the right signs and sizes and price them for you.'); ?>
+	<?php wholesale_guide_render_help(sprintf('Signs for Your %s Business', rtrim(preg_replace('/s$/', '', strtok($industry['name'], ' &')))), 'Send your logo, a storefront or booth photo and any landlord or venue rules. We&rsquo;ll recommend the right signs and sizes and price them for you.'); ?>
 </main>
 
 <?php

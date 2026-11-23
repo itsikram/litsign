@@ -15,6 +15,7 @@
 ?>
 
 
+<?php if (has_action('wholesale_footer')) : do_action('wholesale_footer'); else : ?>
 <footer class="footer">
     <?php
     // The "Storefront Sign's Samples" collage (img/footer-bd-2.webp) and the
@@ -26,7 +27,7 @@
     <?php
     // The adhesive shipping note stays off channel letter pages: home.php sets the
     // global for the channel letter landing page, and made-to-order letters ship later.
-    $is_channel_letter_page = !empty($GLOBALS['retails_channel_letter_landing'])
+    $is_channel_letter_page = !empty($GLOBALS['wholesale_channel_letter_landing'])
         || is_page(array('channel-letter-builder', 'storefront-signs'))
         || (is_singular('product') && has_term('channel-letters', 'product_category', get_queried_object_id()));
     ?>
@@ -38,15 +39,15 @@
             <?php if (!$is_channel_letter_page) : ?>
                 <p class="footer-prelude__ship">
                     <span class="footer-prelude__icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="22" height="22" focusable="false"><path fill="currentColor" d="M3 5h11a1 1 0 0 1 1 1v2h3.4a1 1 0 0 1 .8.4l2.6 3.5a1 1 0 0 1 .2.6V16a1 1 0 0 1-1 1h-1.2a2.8 2.8 0 0 1-5.6 0H9.8a2.8 2.8 0 0 1-5.6 0H3a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm12 5v3h4.5L17.9 10H15zM7 15.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zm10.4 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></svg></span>
-                    <span><strong>Printed products: orders placed by 4 pm PT ship the next business day</strong> Same-day service is also available on many items if ordered by 12 pm PT</span>
+                    <span><strong>Adhesive products: orders placed by 4pm PST ship the next business day</strong> Same-day service is also available if ordered by 12pm PST</span>
                 </p>
             <?php endif; ?>
-            <a href="<?php echo esc_url(retails_category_url('channel-letters')); ?>" class="footer-prelude__link">Shop All Channel Letters <span aria-hidden="true">&rarr;</span></a>
+            <a href="<?php echo esc_url(wholesale_category_url('channel-letters')); ?>" class="footer-prelude__link">Shop All Channel Letters <span aria-hidden="true">&rarr;</span></a>
         </div>
     </div>
     <?php endif; ?>
 
-    <?php retails_render_review_slider(); ?>
+    <?php wholesale_render_review_slider(); ?>
 
     <?php
     $footer_phone_display = '866-436-2101';
@@ -85,7 +86,7 @@
         'track-order' => 'Track Your Order',
     ));
     // Guide pages (shipping, warranty, locations...) appear once approved.
-    $footer_company_links += retails_guide_footer_links();
+    $footer_company_links += wholesale_guide_footer_links();
     $footer_legal_links = $footer_page_links(array(
         'terms-conditions' => 'Terms & Conditions',
     ));
@@ -119,8 +120,8 @@
                         </div>
                     <?php endif; ?>
                     <form class="sf-newsletter__form" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" method="post">
-                        <?php wp_nonce_field('retails_newsletter_subscribe', 'newsletter_nonce'); ?>
-                        <input type="hidden" name="action" value="retails_newsletter_subscribe">
+                        <?php wp_nonce_field('wholesale_newsletter_subscribe', 'newsletter_nonce'); ?>
+                        <input type="hidden" name="action" value="wholesale_newsletter_subscribe">
                         <label class="screen-reader-text" for="newsletter-email">Email address</label>
                         <input id="newsletter-email" type="email" name="newsletter_email" placeholder="Your email address" autocomplete="email" required>
                         <button type="submit">Subscribe</button>
@@ -141,7 +142,7 @@
                                 'sizes' => '260px',
                             ));
                         } else {
-                            echo retails_logo_fallback_html();
+                            echo wholesale_logo_fallback_html();
                         }
                         ?>
                     </a>
@@ -172,6 +173,10 @@
                             <li><a href="<?php echo esc_url($url); ?>"><?php echo esc_html($label); ?></a></li>
                         <?php endforeach; ?>
                     </ul>
+                    <button type="button" class="sf-review-btn" id="feedbackmodalTrigger" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                        <?php echo $footer_icon('star'); // Static SVG. ?>
+                        Leave a Review
+                    </button>
                 </nav>
 
                 <div class="sf-col sf-contact">
@@ -312,6 +317,7 @@
         </div>
     </div>
 </footer>
+<?php endif; ?>
 
 </div><!-- #page -->
 

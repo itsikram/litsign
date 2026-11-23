@@ -18,7 +18,7 @@
         if ($('body').hasClass('edit-php') && $('body').hasClass('post-type-order')) {
             $(document).on('click', '#the-list .editinline', function () {
                 var row = $(this).closest('tr');
-                var status = row.find('.retails-order-status').data('status');
+                var status = row.find('.wholesale-order-status').data('status');
 
                 window.setTimeout(function () {
                     $('#inline-edit select[name="order_status"]').val(status);

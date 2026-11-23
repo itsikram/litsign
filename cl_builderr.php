@@ -57,13 +57,13 @@ if ($product_id > 0) {
     $default_return = get_post_meta($product_id, '_default_return', true) ? get_post_meta($product_id, '_default_return', true) : 0;
     $default_trimcap = get_post_meta($product_id, '_default_trimcap', true) ? get_post_meta($product_id, '_default_trimcap', true) : 0;
     $default_color_cost = get_post_meta($product_id, '_default_color_cost', true) ? get_post_meta($product_id, '_default_color_cost', true) : 0;
-    // Same percentages the cart applies (retails_price_quote() in inc/pricing.php): the
+    // Same percentages the cart applies (wholesale_price_quote() in inc/pricing.php): the
     // product discount gives the everyday price and is never shown as a sale; only a dated
-    // sale (retails_product_promotion()) is.
+    // sale (wholesale_product_promotion()) is.
     $discount_percent = min(100, max(0, (float) get_post_meta($product_id, '_discount_percent', true)));
-    $promotion = retails_product_promotion($product_id);
+    $promotion = wholesale_product_promotion($product_id);
     $promo_percent = $promotion ? (float) $promotion['percent'] : 0;
-    $promo_ends = $promotion ? retails_promotion_end_text($promotion) : '';
+    $promo_ends = $promotion ? wholesale_promotion_end_text($promotion) : '';
 
     $default_data_json = json_encode(array(
         'trimcap' => $default_trimcap,
@@ -74,7 +74,7 @@ if ($product_id > 0) {
 
 
     // Admin designing for a payment ticket line (wp-admin → Payment Tickets).
-    $ticket_builder = function_exists('retails_ticket_builder_context') ? retails_ticket_builder_context($product_id) : null;
+    $ticket_builder = function_exists('wholesale_ticket_builder_context') ? wholesale_ticket_builder_context($product_id) : null;
 
     if ($ticket_builder) {
         $edit_product_data = $ticket_builder['design_data'];
@@ -136,12 +136,7 @@ get_header();
 <input type="hidden" id="standarPsCost" value="<?php echo $standard_ps_cost ? $standard_ps_cost : 99; ?>">
 <input type="hidden" id="backLitCost" value="<?php echo $backlit_cost ? $backlit_cost : 100; ?>">
 <input type="hidden" id="eightFtcableCost" value="<?php echo $eight_ft_cable_cost ? $eight_ft_cable_cost : 77; ?>">
-<input type="hidden" id="racewayPerFoot" value="<?php echo esc_attr(RETAILS_RACEWAY_COST_PER_FOOT); ?>">
-<?php $cl_option_prices = retails_cl_option_prices($product_id); ?>
-<input type="hidden" id="clLexanPercent" value="<?php echo esc_attr($cl_option_prices['lexan_percent']); ?>">
-<input type="hidden" id="clTrimcap1in" value="<?php echo esc_attr(wp_json_encode($cl_option_prices['trimcap_1in'])); ?>">
-<?php // B2Sign's piece rules (large letters by sq ft, longer than the rate table, lit letters under 6"), the same numbers the cart uses. ?>
-<input type="hidden" id="clPiecePricing" value="<?php echo esc_attr(wp_json_encode(array_intersect_key($cl_option_prices, array_flip(array('large_sqft', 'per_sqft', 'width_share', 'lexan_large', 'per_inch', 'under_in', 'under_price'))))); ?>">
+<input type="hidden" id="racewayPerFoot" value="<?php echo esc_attr(WHOLESALE_RACEWAY_COST_PER_FOOT); ?>">
 <input type="hidden" id="clDiscountPercent" value="<?php echo esc_attr($discount_percent); ?>">
 <input type="hidden" id="clPromoPercent" value="<?php echo esc_attr($promo_percent ?? 0); ?>" data-ends="<?php echo esc_attr($promo_ends ?? ''); ?>">
 
@@ -407,10 +402,7 @@ get_header();
                                         <span class="info-btn" role="button" tabindex="0" aria-label="About the standard power supply">i</span>
                                         <div class="info-btn-content top">
                                             <small class="text-muted">
-                                                Fang Hua HMA-60NU-RX 12V / 5A 60W, Class 2, constant voltage and current, IP67, 5-year warranty. Non-brand transformer boxes, for dry locations only. <?php
-                                                // What the cart charges: once per design, after the product's own discount (retails_cl_design_quote()).
-                                                $ps_price = round((float) ($standard_ps_cost ? $standard_ps_cost : 99) * (1 - $discount_percent / 100), 2);
-                                                echo esc_html('$' . number_format($ps_price, floor($ps_price) == $ps_price ? 0 : 2)); ?> per design.
+                                                Fang Hua HMA-60NU-RX 12V / 5A 60W, Class 2, constant voltage and current, IP67, 5-year warranty. Non-brand transformer boxes, for dry locations only. <?php $ps_price = (float) ($standard_ps_cost ? $standard_ps_cost : 99); echo esc_html('$' . number_format($ps_price, floor($ps_price) == $ps_price ? 0 : 2)); ?> each.
                                             </small>
                                             <img class="mt-2 w-100" src="<?php echo esc_url(get_template_directory_uri() . '/img/standard-ps-info.png'); ?>" alt="Standard power supply for channel letters">
                                         </div>
@@ -525,9 +517,9 @@ get_header();
                     class="btn cl-btn-secondary">Price details</button>
                 <button type="button" class="btn btn-primary" id="saveBtn"><?php echo $ticket_builder ? 'Save design to ticket' : 'Save design'; ?></button>
                 <?php if (!$ticket_builder) : ?>
-                    <button type="button" class="btn" id="clAddToCartBtn" data-product-id="<?php echo esc_attr($product_id); ?>" data-cart-url="<?php echo esc_url(home_url('/cart/')); ?>"<?php echo 'outofstock' === retails_product_stock_status($product_id) ? ' data-out-of-stock' : ''; ?> disabled aria-disabled="true">
+                    <button type="button" class="btn" id="clAddToCartBtn" data-product-id="<?php echo esc_attr($product_id); ?>" data-cart-url="<?php echo esc_url(home_url('/cart/')); ?>"<?php echo 'outofstock' === wholesale_product_stock_status($product_id) ? ' data-out-of-stock' : ''; ?> disabled aria-disabled="true">
                         <i class="fa-solid fa-cart-plus" aria-hidden="true"></i>
-                        <span><?php echo 'outofstock' === retails_product_stock_status($product_id) ? 'Out of stock' : 'Add to cart'; ?></span>
+                        <span><?php echo 'outofstock' === wholesale_product_stock_status($product_id) ? 'Out of stock' : 'Add to cart'; ?></span>
                     </button>
                 <?php endif; ?>
                 <p class="cl-cart-status" id="clCartStatus" role="alert" hidden></p>
@@ -549,7 +541,7 @@ get_header();
                     <p class="cost-modal-subtitle"><?php echo esc_html($product_title); ?></p>
                 </div>
                 <?php if (!empty($promo_percent)) : ?>
-                    <span class="cl-sale-badge cl-sale-badge--lg"><?php echo esc_html('' !== retails_promotion_label($promotion, '') ? retails_promotion_label($promotion) . ': ' . round($promo_percent, 2) . '% off, ends ' . $promo_ends : round($promo_percent, 2) . '% off sale, ends ' . $promo_ends); ?></span>
+                    <span class="cl-sale-badge cl-sale-badge--lg"><?php echo esc_html(round($promo_percent, 2) . '% off sale, ends ' . $promo_ends); ?></span>
                 <?php endif; ?>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>

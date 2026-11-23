@@ -11,35 +11,30 @@
 
 $builder_url = home_url('/channel-letter-builder/');
 $contact_page = get_page_by_path('contact');
-$contact_url = function_exists('retails_quote_url') ? retails_quote_url('channel-letters', '', false) : ($contact_page ? get_permalink($contact_page) : home_url('/contact/'));
+$contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $channel_letters_url = home_url('/');
 
 $product_url = static function ($slug, $fallback) {
-	$product = retails_seo_product($slug);
+	$product = wholesale_seo_product($slug);
 	return $product ? get_permalink($product) : $fallback;
 };
 
-$front_lit_heights = retails_seo_letter_height_range('standard-channel-letter-front-lit');
-$halo_heights = retails_seo_letter_height_range('hidden-back-halo-lit');
+$front_lit_heights = wholesale_seo_letter_height_range('standard-channel-letter-front-lit');
+$halo_heights = wholesale_seo_letter_height_range('hidden-back-halo-lit');
 $min_height = $front_lit_heights ? $front_lit_heights[0] : 8;
 $max_height = $front_lit_heights ? $front_lit_heights[1] : 0;
 
-// Sign types: product slug (image and starting price), link, name, summary, lit?, typical use,
-// and for a product category link, its slug: the card then starts at the category's cheapest
-// Starting at, as on every other category card.
+// Sign types: product slug (image and starting price), link, name, summary, lit?, typical use.
 $sign_types = array(
 	array('standard-channel-letter-front-lit', $channel_letters_url, 'LED Channel Letters', 'Individually built, LED lit letters mounted on your building or on a raceway. The most popular lit storefront sign for retail stores, restaurants and offices.', true, 'Primary building sign'),
 	array('hidden-back-halo-lit', $product_url('hidden-back-halo-lit', $channel_letters_url), 'Halo &amp; Reverse Lit Letters', 'Letters with solid metal faces that glow onto the wall behind them, for an upscale look at salons, boutiques, clinics and professional offices.', true, 'Premium building sign'),
 	array('exposed-acrylic-face-lit-borderless-no-trimcap', $product_url('exposed-acrylic-face-lit-borderless-no-trimcap', $channel_letters_url), 'Trimless &amp; Borderless Letters', 'Face lit letters without a plastic trimcap for a clean, modern edge that suits contemporary brands.', true, 'Modern building sign'),
-	array('adhesive-window-perf', retails_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted and clear films and removable clings that turn your glass into advertising for hours, offers and branding.', false, 'Windows and doors', 'adhesive-products'),
-	array('deluxe-signicade-graphic-frame', retails_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street, with printed graphics you can swap as promotions change.', false, 'Sidewalk and entrance', 'signicade-a-frames'),
-	array('13oz-vinyl-banner', retails_category_url('banners'), 'Banners', 'Fast, affordable signs for grand openings and sales, or a temporary sign while your permanent storefront sign is being made.', false, 'Openings and promotions', 'banners'),
-	array('feather-angled-flag-pole', retails_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that move in the wind and catch drivers&rsquo; attention from the road.', false, 'Roadside visibility', 'advertising-flags'),
-	array('aluminum-sign', retails_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours, parking and wayfinding around your building.', false, 'Doors, hours and parking', 'rigid-signs-and-magnets'),
+	array('adhesive-window-perf', wholesale_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted and clear films and removable clings that turn your glass into advertising for hours, offers and branding.', false, 'Windows and doors'),
+	array('deluxe-signicade-graphic-frame', wholesale_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street, with printed graphics you can swap as promotions change.', false, 'Sidewalk and entrance'),
+	array('13oz-vinyl-banner', wholesale_category_url('banners'), 'Banners', 'Fast, affordable signs for grand openings and sales, or a temporary sign while your permanent storefront sign is being made.', false, 'Openings and promotions'),
+	array('feather-angled-flag-pole', wholesale_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that move in the wind and catch drivers&rsquo; attention from the road.', false, 'Roadside visibility'),
+	array('aluminum-sign', wholesale_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours, parking and wayfinding around your building.', false, 'Doors, hours and parking'),
 );
-$type_starting_text = static function ($type) {
-	return isset($type[6]) ? retails_seo_category_starting_text($type[6]) : retails_seo_product_starting_text($type[0]);
-};
 
 // Channel letter styles and where each starts, for the pricing section.
 $cl_styles = array(
@@ -56,14 +51,14 @@ $height_text = $max_height
 	? sprintf('%d to %d inches tall', $min_height, $max_height)
 	: sprintf('from %d inches tall', $min_height);
 
-retails_seo_set_page_faq(array(
+wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'What is the best type of storefront sign?',
 		'a' => 'For most businesses the main building sign should be LED channel letters: they read clearly by day, light up at night and fit almost any brand. Halo lit letters suit upscale brands, while window graphics, A-frames and banners add messages closer to the door. Many storefronts combine a lit sign with window graphics.',
 	),
 	array(
 		'q' => 'How much does a storefront sign cost?',
-		'a' => 'Channel letter starting rates are shown per inch of letter height. The full price depends on how many letters you need, how tall they are and the style. Each style shows its starting rate, and the <a href="' . esc_url($builder_url) . '">online sign builder</a> shows your full price as you design. Window graphics and banners are priced per square foot.',
+		'a' => 'Channel letters are priced per letter by letter height, so the total depends on how many letters you need, how tall they are and the style. Each style shows its starting price, and the <a href="' . esc_url($builder_url) . '">online sign builder</a> shows your full price as you design. Window graphics and banners are priced per square foot.',
 	),
 	array(
 		'q' => 'What size should my storefront sign letters be?',
@@ -97,12 +92,12 @@ get_header();
 <main id="primary" class="sf-page">
 	<section class="sf-hero" aria-labelledby="sf-title">
 		<div class="container">
-			<?php retails_breadcrumbs(); ?>
+			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">Storefront signs</p>
 			<h1 id="sf-title" class="sf-hero-title">Custom Storefront Signs That Bring Customers In</h1>
 			<p class="sf-hero-lead">Your storefront sign is the first thing customers see. Choose lit channel letters for your building, graphics for your windows and signs for the sidewalk, and see prices online before you order.</p>
 			<div class="sf-hero-actions">
-				<a class="cl-button" href="<?php echo esc_url($channel_letters_url); ?>">Shop Channel Letters <?php echo retails_home_icon('arrow'); ?></a>
+				<a class="cl-button" href="<?php echo esc_url($channel_letters_url); ?>">Shop Channel Letters <?php echo wholesale_home_icon('arrow'); ?></a>
 				<a class="sf-button-outline" href="<?php echo esc_url($contact_url); ?>">Get a Free Quote</a>
 			</div>
 			<ul class="sf-hero-points">
@@ -122,8 +117,8 @@ get_header();
 			<div class="sf-type-grid">
 				<?php foreach ($sign_types as $type) : ?>
 					<?php
-					$type_product = retails_seo_product($type[0]);
-					$type_price = retails_price_no_cents($type_starting_text($type));
+					$type_product = wholesale_seo_product($type[0]);
+					$type_price = wholesale_price_no_cents(wholesale_seo_product_starting_text($type[0]));
 					?>
 					<article class="sf-type-card">
 						<a class="sf-type-image" href="<?php echo esc_url($type[1]); ?>" tabindex="-1" aria-hidden="true">
@@ -141,7 +136,6 @@ get_header();
 						<div class="sf-type-body">
 							<h3><a href="<?php echo esc_url($type[1]); ?>"><?php echo wp_kses_post($type[2]); ?></a></h3>
 							<p><?php echo wp_kses_post($type[3]); ?></p>
-							<?php echo function_exists('retails_card_trust') ? retails_card_trust($type_product ? $type_product->ID : 0, $type_product ? '' : 'ship') : ''; // Escaped in helper. ?>
 							<?php if ($type_price) : ?>
 								<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($type_price); ?></p>
 							<?php endif; ?>
@@ -173,7 +167,7 @@ get_header();
 								<th scope="row"><a href="<?php echo esc_url($type[1]); ?>"><?php echo wp_kses_post($type[2]); ?></a></th>
 								<td><?php echo $type[4] ? 'Yes, LED' : 'No'; ?></td>
 								<td><?php echo esc_html($type[5]); ?></td>
-								<td class="cl-compare-price"><?php echo wp_kses_post($type_starting_text($type)); ?></td>
+								<td class="cl-compare-price"><?php echo wp_kses_post(wholesale_seo_product_starting_text($type[0])); ?></td>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>
@@ -191,7 +185,7 @@ get_header();
 			<p>Readability comes first. A common sign industry rule of thumb is about 1 inch of letter height for every 10 feet of viewing distance: letters seen from a 120-foot parking lot or across a busy street work best at around 12 inches or taller. Measure the width and height of the space on your fascia and leave some margin around the letters so the sign doesn&rsquo;t look crowded. Our channel letters are available <?php echo esc_html($height_text); ?>.</p>
 
 			<h3>2. Decide whether the sign needs to work at night</h3>
-			<p>If you&rsquo;re open in the evening, or customers drive past after dark, choose an illuminated sign. <a href="<?php echo esc_url($channel_letters_url); ?>">LED channel letters</a> are the standard for lit storefront signs because each letter is lit from inside and reads clearly day and night. Non-lit options such as <a href="<?php echo esc_url(retails_category_url('adhesive-products')); ?>">window graphics</a> and <a href="<?php echo esc_url(retails_category_url('reflective-products')); ?>">reflective signs</a> cost less and are ideal for secondary messages.</p>
+			<p>If you&rsquo;re open in the evening, or customers drive past after dark, choose an illuminated sign. <a href="<?php echo esc_url($channel_letters_url); ?>">LED channel letters</a> are the standard for lit storefront signs because each letter is lit from inside and reads clearly day and night. Non-lit options such as <a href="<?php echo esc_url(wholesale_category_url('adhesive-products')); ?>">window graphics</a> and <a href="<?php echo esc_url(wholesale_category_url('reflective-products')); ?>">reflective signs</a> cost less and are ideal for secondary messages.</p>
 
 			<h3>3. Match the lighting style to your brand</h3>
 			<p>Front lit letters shine light through a colored acrylic face and are the brightest, easiest-to-read option. Halo lit and reverse lit letters glow onto the wall behind them for a softer, upscale look. Front and back lit letters do both. Trimless and borderless letters drop the plastic trimcap for a sleek, modern edge. The <a href="<?php echo esc_url($channel_letters_url . '#cl-compare-title'); ?>">channel letter comparison</a> shows how each style lights and where it starts.</p>
@@ -220,7 +214,7 @@ get_header();
 			<p>A raceway is a metal box behind the letters that holds the wiring and mounts the whole sign as one unit, so fewer holes go into your building and the sign is easier to remove when you move. Direct (flush) mounting attaches each letter to the wall for the cleanest look. Letters ship with an installation pattern to mark the holes and a wiring diagram for your installer.</p>
 			<h3>Who installs it</h3>
 			<p>Your sign arrives tested and ready to install. Mounting is straightforward for a local sign installer, and in most areas the electrical connection must be made by a licensed electrician or sign contractor.</p>
-			<?php if ($locations_guide_url = retails_guide_url('locations', true)) : ?>
+			<?php if ($locations_guide_url = wholesale_guide_url('locations', true)) : ?>
 				<p>We ship to every state. Who may connect a lit sign, and who issues the permit, depends on where you are: find your state&rsquo;s rules in our <a href="<?php echo esc_url($locations_guide_url); ?>">state-by-state sign permit and licensing guides</a>.</p>
 			<?php endif; ?>
 		</div>
@@ -259,7 +253,7 @@ get_header();
 		<div class="container sf-prose">
 			<p class="cl-kicker">Pricing guidance</p>
 			<h2 id="sf-pricing-title" class="cl-section-title">How Much Does a Storefront Sign Cost?</h2>
-			<p>Starting rates are shown per inch of letter height. Your total depends on the number of letters, the height you choose and options such as a raceway, so a short name in smaller letters costs far less than a long name in tall letters. You see the full price before checkout.<?php $cost_page = get_page_by_path('channel-letter-cost'); if ($cost_page && 'publish' === $cost_page->post_status) : ?> See prices for every style and height, with example signs, in our <a href="<?php echo esc_url(get_permalink($cost_page)); ?>">channel letter cost guide</a>.<?php endif; ?></p>
+			<p>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, so a short name in smaller letters costs far less than a long name in tall letters. You see the full price before checkout.<?php $cost_page = get_page_by_path('channel-letter-cost'); if ($cost_page && 'publish' === $cost_page->post_status) : ?> See prices for every style and height, with example signs, in our <a href="<?php echo esc_url(get_permalink($cost_page)); ?>">channel letter cost guide</a>.<?php endif; ?></p>
 			<div class="cl-compare-table-wrap">
 				<table class="cl-compare-table sf-price-table" aria-label="Channel letter starting prices by style">
 					<thead>
@@ -270,18 +264,18 @@ get_header();
 					</thead>
 					<tbody>
 						<?php foreach ($cl_styles as $slug => $label) : ?>
-							<?php $style_product = retails_seo_product($slug); ?>
+							<?php $style_product = wholesale_seo_product($slug); ?>
 							<?php if ($style_product) : ?>
 								<tr>
 									<th scope="row"><a href="<?php echo esc_url(get_permalink($style_product)); ?>"><?php echo wp_kses_post($label); ?></a></th>
-									<td class="cl-compare-price"><?php echo wp_kses_post(retails_seo_product_starting_text($slug)); ?></td>
+									<td class="cl-compare-price"><?php echo wp_kses_post(wholesale_seo_product_starting_text($slug)); ?></td>
 								</tr>
 							<?php endif; ?>
 						<?php endforeach; ?>
 					</tbody>
 				</table>
 			</div>
-			<p>Window graphics and banners are priced per square foot<?php $vinyl_price = retails_seo_product_starting_text('adhesive-window-perf'); $banner_price = retails_seo_product_starting_text('13oz-vinyl-banner'); if ($vinyl_price && $banner_price) : ?> (window perf starts at <?php echo wp_kses_post($vinyl_price); ?> and 13oz vinyl banners at <?php echo wp_kses_post($banner_price); ?>)<?php endif; ?>. For a logo, a large project or several signs, <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
+			<p>Window graphics and banners are priced per square foot<?php $vinyl_price = wholesale_seo_product_starting_text('adhesive-window-perf'); $banner_price = wholesale_seo_product_starting_text('13oz-vinyl-banner'); if ($vinyl_price && $banner_price) : ?> (window perf starts at <?php echo wp_kses_post($vinyl_price); ?> and 13oz vinyl banners at <?php echo wp_kses_post($banner_price); ?>)<?php endif; ?>. For a logo, a large project or several signs, <a href="<?php echo esc_url($contact_url); ?>">request a free quote</a>.</p>
 		</div>
 	</section>
 
@@ -290,7 +284,7 @@ get_header();
 			<p class="cl-kicker">Before you order</p>
 			<h2 id="sf-faq-title" class="cl-section-title">Storefront Sign FAQ</h2>
 			<div class="cl-faq-list">
-				<?php retails_seo_render_faq(); ?>
+				<?php wholesale_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>
@@ -301,15 +295,15 @@ get_header();
 				<h2 id="sf-help-title">Talk to a Real Sign Specialist</h2>
 				<p>Send a photo of your storefront and your logo, and we&rsquo;ll help you choose the right sign and size before you order.</p>
 				<ul class="cl-help-details">
-					<li><?php echo retails_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
-					<li><?php echo retails_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
+					<li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+					<li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
 				</ul>
 			</div>
 			<div class="cl-help-actions">
-				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-				<a class="cl-help-action" href="sms:+12066186543"><?php echo retails_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo retails_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
-				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo retails_home_icon('arrow'); ?></a>
+				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+				<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
 			</div>
 		</div>
 	</section>

@@ -1,9 +1,16 @@
 <?php
 /**
- * Checkout: the form check against the cart (retails_checkout_build), shipping options and
- * dates, order creation, checkout accounts, the thank-you page and the purchase conversion tag.
- * Also used by the SFS Wallet Payments plugin (Apple Pay, Google Pay, PayPal and, since
- * 2026-11-12, the Converge card payments that used to be in this file).
+ * Card payments through Converge Hosted Payments (Lightbox).
+ *
+ * Card details are typed into Converge's own secure window and never reach this server:
+ *  1. wholesale_payment_start: the server validates the order, fixes the amount, and asks
+ *     Converge for a one-time session token for exactly that amount.
+ *  2. The browser opens PayWithConverge.open() with the token.
+ *  3. wholesale_payment_complete: on approval the server looks the transaction up with
+ *     Converge (txnquery), checks amount + invoice, and only then creates the order.
+ *
+ * Settings → Storefront Sign → "Card payment method" can instead use the older direct
+ * method: card fields on our own page, charged server-to-server (wholesale_converge_direct_sale).
  *
  * @package litsign
  */
@@ -12,25 +19,121 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-/*
- * Card payments through Elavon Converge (Lightbox or card fields, the two AJAX steps,
- * decline alerts and the card-testing pause) live in the SFS Wallet Payments plugin:
- * wp-content/plugins/sfs-wallet-payments/converge/gateway.php. The plugin loads them on
- * after_setup_theme (priority 5), and only when the theme doesn't define them itself.
- * Without the plugin, inc/payment-gateway-missing.php keeps checkout, the pay pages and the
- * order screen working, answers card payments with "please call us" and tells staff.
+/**
+ * 'lightbox' (Converge secure window) or 'direct' (card fields on our page).
  */
-add_action('after_setup_theme', static function () {
-	if (!function_exists('retails_converge_credentials')) {
-		require_once __DIR__ . '/payment-gateway-missing.php';
+function wholesale_payment_method()
+{
+	return 'direct' === wholesale_get_setting('payment_method') ? 'direct' : 'lightbox';
+}
+
+/**
+ * Direct method: validate the card fields from the form. Returns the card data or WP_Error.
+ * Card data is only held in memory for the one gateway request and is never stored or logged.
+ */
+function wholesale_direct_card_from_request($post)
+{
+	$digits = static function ($key) use ($post) {
+		return isset($post[$key]) ? preg_replace('/\D+/', '', (string) wp_unslash($post[$key])) : '';
+	};
+	$card = array(
+		'number' => $digits('card_number'),
+		'cvv' => $digits('card_cvv'),
+		'month' => $digits('card_exp_month'),
+		'year' => $digits('card_exp_year'),
+	);
+	// Checkout sends one "MM / YY" field; the payment-ticket page sends month and year.
+	if ('' === $card['month'] && preg_match('/^(\d{1,2})\D*(\d{2}|\d{4})$/', trim((string) wp_unslash($post['card_exp'] ?? '')), $exp)) {
+		$card['month'] = sprintf('%02d', (int) $exp[1]);
+		$card['year'] = substr($exp[2], -2);
 	}
-}, 20);
+	$exp_year = 2000 + (int) $card['year'];
+	$expired = $exp_year < (int) gmdate('Y') || ($exp_year === (int) gmdate('Y') && (int) $card['month'] < (int) gmdate('n'));
+
+	if (strlen($card['number']) < 12 || strlen($card['number']) > 19) {
+		return new WP_Error('card', 'Please check your card number.', array('field' => 'card_number'));
+	}
+	if (2 !== strlen($card['month']) || (int) $card['month'] < 1 || (int) $card['month'] > 12 || 2 !== strlen($card['year']) || $expired) {
+		return new WP_Error('card', 'Please check your card expiration date.', array('field' => 'card_exp'));
+	}
+	if (strlen($card['cvv']) < 3 || strlen($card['cvv']) > 4) {
+		return new WP_Error('card', 'Please check your card security code (CVV).', array('field' => 'card_cvv'));
+	}
+	return $card;
+}
+
+/**
+ * Direct method: charge the card server-to-server (Converge process.do, ccsale).
+ *
+ * @return array{ok:bool,message:string,txn_id:string,approval_code:string,card_last4:string}
+ */
+function wholesale_converge_direct_sale($amount, $card, $billing, $invoice)
+{
+	$result = array('ok' => false, 'message' => 'Payment failed. No charge was made.', 'txn_id' => '', 'approval_code' => '', 'card_last4' => substr($card['number'], -4));
+	$credentials = wholesale_converge_credentials();
+	if (!$credentials) {
+		$result['message'] = 'Online card payment is not available right now. Please call us at 866-436-2101 to place your order.';
+		return $result;
+	}
+
+	$path = wholesale_setting_enabled('payment_test_mode') ? '/VirtualMerchantDemo/process.do' : '/VirtualMerchant/process.do';
+	$response = wp_remote_post(wholesale_converge_host() . $path, array(
+		'timeout' => 45,
+		'body' => array_merge($credentials, array(
+			'ssl_show_form' => 'false',
+			'ssl_result_format' => 'ASCII',
+			'ssl_transaction_type' => 'ccsale',
+			'ssl_amount' => number_format((float) $amount, 2, '.', ''),
+			'ssl_card_number' => $card['number'],
+			'ssl_exp_date' => $card['month'] . $card['year'],
+			'ssl_cvv2cvc2_indicator' => '1',
+			'ssl_cvv2cvc2' => $card['cvv'],
+			'ssl_invoice_number' => $invoice,
+			'ssl_first_name' => mb_substr($billing['billing_fname'] ?? '', 0, 20),
+			'ssl_last_name' => mb_substr($billing['billing_lname'] ?? '', 0, 30),
+			'ssl_avs_address' => mb_substr($billing['billing_address'] ?? '', 0, 30),
+			'ssl_avs_zip' => mb_substr($billing['billing_zip'] ?? '', 0, 9),
+			'ssl_email' => $billing['billing_email'] ?? '',
+		)),
+	));
+
+	if (is_wp_error($response)) {
+		// A timeout can happen after Converge approved the charge, so staff must check.
+		error_log('Wholesale: direct Converge sale request failed for invoice ' . $invoice . ': ' . $response->get_error_message());
+		$result['message'] = 'We could not reach our payment processor. Please call us at 866-436-2101 before trying again, so you are not charged twice.';
+		return $result;
+	}
+
+	$fields = array();
+	foreach (preg_split('/\r\n|\n|\s+(?=\w+=)/', trim(wp_remote_retrieve_body($response))) as $line) {
+		$pair = explode('=', $line, 2);
+		if (2 === count($pair)) {
+			$fields[trim($pair[0])] = trim($pair[1]);
+		}
+	}
+
+	if (isset($fields['ssl_result']) && '0' === $fields['ssl_result']) {
+		$result['ok'] = true;
+		$result['message'] = 'Approved';
+		$result['txn_id'] = $fields['ssl_txn_id'] ?? '';
+		$result['approval_code'] = $fields['ssl_approval_code'] ?? '';
+		return $result;
+	}
+
+	if (!empty($fields['errorCode'])) {
+		error_log('Wholesale: direct Converge sale error ' . $fields['errorCode'] . ' (' . ($fields['errorName'] ?? '') . ') for invoice ' . $invoice);
+		$result['message'] = 'Payment could not be processed: ' . sanitize_text_field($fields['errorMessage'] ?? $fields['errorName'] ?? 'unknown error') . '. No charge was made.';
+	} elseif (!empty($fields['ssl_result_message'])) {
+		$result['message'] = 'Your card was declined (' . sanitize_text_field($fields['ssl_result_message']) . '). No charge was made. Please try another card.';
+	}
+	return $result;
+}
 
 /**
  * The session cart. utils/Cart.php creates it on include; AJAX requests don't load a
  * template, so load it here.
  */
-function retails_get_cart()
+function wholesale_get_cart()
 {
 	global $cart;
 	if (!class_exists('Cart', false)) {
@@ -42,12 +145,179 @@ function retails_get_cart()
 	return $cart;
 }
 
+function wholesale_converge_host()
+{
+	return wholesale_setting_enabled('payment_test_mode') ? 'https://api.demo.convergepay.com' : 'https://api.convergepay.com';
+}
+
+function wholesale_converge_script_url()
+{
+	return wholesale_converge_host() . '/hosted-payments/PayWithConverge.js';
+}
+
+function wholesale_converge_credentials()
+{
+	$credentials = array(
+		'ssl_merchant_id' => (string) wholesale_get_setting('merchant_id'),
+		'ssl_user_id' => (string) wholesale_get_setting('gateway_user_id'),
+		'ssl_pin' => (string) wholesale_get_setting('gateway_pin'),
+	);
+	return in_array('', $credentials, true) ? null : $credentials;
+}
+
+/**
+ * Server-to-server request for a Lightbox session token (valid 15 minutes, single use).
+ */
+function wholesale_converge_session_token($amount, $invoice, $billing)
+{
+	$credentials = wholesale_converge_credentials();
+	if (!$credentials) {
+		return new WP_Error('not_configured', 'Online card payment is not available right now. Please call us at 866-436-2101 to place your order.');
+	}
+
+	$response = wp_remote_post(wholesale_converge_host() . '/hosted-payments/transaction_token', array(
+		'timeout' => 20,
+		'body' => array_merge($credentials, array(
+			'ssl_transaction_type' => 'ccsale',
+			'ssl_amount' => number_format((float) $amount, 2, '.', ''),
+			'ssl_invoice_number' => $invoice,
+			'ssl_first_name' => mb_substr($billing['billing_fname'] ?? '', 0, 20),
+			'ssl_last_name' => mb_substr($billing['billing_lname'] ?? '', 0, 30),
+			'ssl_company' => mb_substr($billing['billing_company'] ?? '', 0, 50),
+			'ssl_avs_address' => mb_substr($billing['billing_address'] ?? '', 0, 30),
+			'ssl_city' => mb_substr($billing['billing_city'] ?? '', 0, 30),
+			'ssl_state' => mb_substr($billing['billing_state'] ?? '', 0, 30),
+			'ssl_avs_zip' => mb_substr($billing['billing_zip'] ?? '', 0, 9),
+			'ssl_email' => $billing['billing_email'] ?? '',
+		)),
+	));
+
+	$body = is_wp_error($response) ? '' : trim(wp_remote_retrieve_body($response));
+	// A token is a single opaque string; anything with spaces or tags is an error page/message.
+	if (is_wp_error($response) || 200 !== wp_remote_retrieve_response_code($response) || '' === $body || preg_match('/[\s<]/', $body)) {
+		$code = is_wp_error($response) ? 0 : (int) wp_remote_retrieve_response_code($response);
+		error_log(sprintf(
+			'Wholesale: Converge session token request failed (HTTP %d, %s endpoint): %s%s',
+			$code,
+			wholesale_setting_enabled('payment_test_mode') ? 'demo' : 'live',
+			is_wp_error($response) ? $response->get_error_message() : substr(wp_strip_all_tags($body), 0, 300),
+			403 === $code ? ' — the Converge user is not enabled for Hosted Payments (or demo/live credentials are mixed up).' : ''
+		));
+		return new WP_Error('token_failed', 'We could not connect to our secure payment processor. Please try again in a minute, or call us at 866-436-2101.');
+	}
+
+	return $body;
+}
+
+/**
+ * Server-to-server XML request to Converge (processxml.do).
+ *
+ * @return SimpleXMLElement|WP_Error  WP_Error code 'unreachable' means no answer came back,
+ *                                    so a money-moving request may or may not have run.
+ */
+function wholesale_converge_xml_request($fields, $timeout = 30)
+{
+	$credentials = wholesale_converge_credentials();
+	if (!$credentials) {
+		return new WP_Error('not_configured', 'Payment gateway is not configured.');
+	}
+
+	$xml = '<txn>';
+	foreach (array_merge($credentials, $fields) as $key => $value) {
+		$xml .= '<' . $key . '>' . esc_html($value) . '</' . $key . '>';
+	}
+	$xml .= '</txn>';
+
+	$path = wholesale_setting_enabled('payment_test_mode') ? '/VirtualMerchantDemo/processxml.do' : '/VirtualMerchant/processxml.do';
+	$response = wp_remote_post(wholesale_converge_host() . $path, array(
+		'timeout' => $timeout,
+		'body' => array('xmldata' => $xml),
+	));
+	if (is_wp_error($response)) {
+		return new WP_Error('unreachable', $response->get_error_message());
+	}
+
+	$previous = libxml_use_internal_errors(true);
+	$doc = simplexml_load_string(wp_remote_retrieve_body($response));
+	libxml_use_internal_errors($previous);
+	if (!$doc) {
+		return new WP_Error('bad_response', 'Converge returned an unreadable response.');
+	}
+	if (isset($doc->errorCode)) {
+		return new WP_Error('converge_error', trim((string) $doc->errorCode . ' ' . (string) $doc->errorMessage));
+	}
+	return $doc;
+}
+
+function wholesale_converge_xml_fields($txn)
+{
+	$fields = array();
+	foreach ($txn->children() as $child) {
+		$fields[$child->getName()] = trim((string) $child);
+	}
+	return $fields;
+}
+
+/**
+ * Looks a transaction up with Converge. Returns the transaction fields, or WP_Error.
+ */
+function wholesale_converge_query_transaction($txn_id)
+{
+	$doc = wholesale_converge_xml_request(array('ssl_transaction_type' => 'txnquery', 'ssl_txn_id' => $txn_id));
+	if (is_wp_error($doc)) {
+		return $doc;
+	}
+
+	// Responses are either <txnlist><txn>…</txn></txnlist> or a single <txn>.
+	$candidates = isset($doc->txn) ? $doc->txn : array($doc);
+	foreach ($candidates as $txn) {
+		$fields = wholesale_converge_xml_fields($txn);
+		if (isset($fields['ssl_txn_id']) && $fields['ssl_txn_id'] === $txn_id) {
+			return $fields;
+		}
+	}
+
+	return new WP_Error('not_found', 'Converge has no record of this transaction.');
+}
+
+/**
+ * Confirms an approved Lightbox payment really happened for this amount and invoice.
+ *
+ * @return true|WP_Error  WP_Error code 'unverified' means Converge couldn't be reached
+ *                        (the payment may be fine); any other code means it must be rejected.
+ */
+function wholesale_converge_verify($txn_id, $amount, $invoice)
+{
+	$txn = wholesale_converge_query_transaction($txn_id);
+	if (is_wp_error($txn)) {
+		return in_array($txn->get_error_code(), array('not_found'), true)
+			? $txn
+			: new WP_Error('unverified', $txn->get_error_message());
+	}
+
+	if (abs((float) ($txn['ssl_amount'] ?? 0) - (float) $amount) > 0.005) {
+		return new WP_Error('amount_mismatch', sprintf('Charged amount %s does not match the order total %s.', $txn['ssl_amount'] ?? '?', number_format($amount, 2, '.', '')));
+	}
+	if (!empty($txn['ssl_invoice_number']) && $txn['ssl_invoice_number'] !== $invoice) {
+		return new WP_Error('invoice_mismatch', 'Transaction belongs to a different checkout.');
+	}
+	if (isset($txn['ssl_result_message']) && 0 !== stripos($txn['ssl_result_message'], 'APPROV')) {
+		return new WP_Error('not_approved', 'Transaction was not approved: ' . $txn['ssl_result_message']);
+	}
+	// Failed-by-rule statuses (fraud prevention, pre/post-auth rules).
+	if (isset($txn['ssl_trans_status']) && in_array(strtoupper($txn['ssl_trans_status']), array('FPR', 'PRE', 'PST'), true)) {
+		return new WP_Error('not_approved', 'Transaction failed a fraud or authorization rule (' . $txn['ssl_trans_status'] . ').');
+	}
+
+	return true;
+}
+
 /**
  * Validates the checkout form against the server-side cart.
  *
  * @return array|WP_Error Everything needed to create the order.
  */
-function retails_checkout_build($post, $cart)
+function wholesale_checkout_build($post, $cart)
 {
 	$field = static function ($key) use ($post) {
 		return isset($post[$key]) && !is_array($post[$key]) ? sanitize_text_field(wp_unslash($post[$key])) : '';
@@ -75,7 +345,13 @@ function retails_checkout_build($post, $cart)
 		return new WP_Error('billing', 'Please enter a valid email address.', array('field' => 'billing_email'));
 	}
 
-	if ('on' === $field('same_shipping_address')) {
+	$pickup = 'pickup' === $field('delivery_method') ? wholesale_pickup_location() : null;
+	if ('pickup' === $field('delivery_method') && !$pickup) {
+		return new WP_Error('shipping_method', 'Store pickup isn’t available right now. Please choose a shipping method.');
+	}
+
+	if ($pickup || 'on' === $field('same_shipping_address')) {
+		// Pickup orders keep the customer's details as the pickup contact.
 		$shipping = $billing;
 	} else {
 		$shipping = array();
@@ -100,28 +376,51 @@ function retails_checkout_build($post, $cart)
 		}
 	}
 
-	$shipping_options = retails_cart_shipping_options($cart);
-	$shipping_choice = isset($post['shipping_method']) ? sanitize_text_field(wp_unslash($post['shipping_method'])) : '';
-	if ('free' === $shipping_choice) {
-		// Free shipping travels like Standard: same transit, delivery and ship date.
-		if (!retails_cart_qualifies_free_shipping($cart)) {
-			return new WP_Error('shipping_method', 'Your order no longer qualifies for free shipping. Please choose a shipping method.');
-		}
+	// Shipping method (inc/shipping.php). The amount always comes from the
+	// server; the page's quote is only compared so a total that changed since
+	// the page loaded (cart edited in another tab, free shipping lost) is
+	// confirmed by the customer instead of charged silently.
+	$carrier = '';
+	$blind_ship = false;
+	if ($pickup) {
 		$requested_shipping = 0.0;
-		$shipping_index = 0;
-		$shipping_label = retails_free_shipping_label($cart);
+		$shipping_label = 'Store Pickup (' . $pickup['city'] . ')';
+		$shipping['delivery_method'] = 'pickup';
+		$shipping['pickup_location'] = $pickup['address'];
 	} else {
-		$requested_shipping = is_numeric($shipping_choice) ? (float) $shipping_choice : -1;
-		$shipping_index = array_search($requested_shipping, $shipping_options, true);
-		// Standard isn't offered once Free Shipping applies.
-		if (false === $shipping_index || (0 === $shipping_index && retails_cart_qualifies_free_shipping($cart))) {
+		$methods = wholesale_cart_shipping_methods($cart);
+		$choice = $field('shipping_method');
+		if (!isset($methods[$choice])) {
 			return new WP_Error('shipping_method', 'Please choose a shipping method.');
 		}
-		$shipping_label = retails_shipping_label($shipping_index);
+		$method = $methods[$choice];
+		$requested_shipping = (float) $method['amount'];
+		$quote = $field('shipping_quote');
+		if ('' !== $quote && is_numeric($quote) && abs((float) $quote - $requested_shipping) > 0.005) {
+			return new WP_Error('shipping_method', sprintf('%s now costs %s for this order. Please review your shipping choice and try again.', $method['label'], $requested_shipping > 0 ? '$' . number_format($requested_shipping, 2) : 'nothing'));
+		}
+		$carrier = $method['carrier'];
+		$shipping_label = $method['label'] . ($method['free'] ? ' (Free Shipping)' : '');
+		$shipping['delivery_method'] = 'ship';
+		$shipping['shipping_carrier'] = $carrier;
+		$shipping['shipping_service'] = $method['label'];
+
+		// Blind Drop Ship: the customer's business is the return address.
+		if ('1' === $field('blind_ship')) {
+			$blind_ship = true;
+			$shipping['blind_ship'] = 'yes';
+			foreach (wholesale_blind_ship_fields() as $key => $info) {
+				$value = $field('blind_from_' . $key);
+				if ($info['required'] && '' === $value) {
+					return new WP_Error('blind_ship', sprintf('Please enter the %s for your blind ship return address.', strtolower($info['label'])), array('field' => 'blind_from_' . $key));
+				}
+				$shipping['blind_from_' . $key] = $value;
+			}
+		}
 	}
 
 	$sub_total = round((float) $cart->sub_total, 2);
-	$tax = round($sub_total * (float) retails_get_setting('tax_rate') / 100, 2);
+	$tax = round($sub_total * (float) wholesale_get_setting('tax_rate') / 100, 2);
 	$grand_total = round($sub_total + $requested_shipping + $tax, 2);
 
 	$shipping['shipping_cost'] = $requested_shipping;
@@ -133,15 +432,18 @@ function retails_checkout_build($post, $cart)
 		'sub_total' => $sub_total,
 		'shipping_cost' => $requested_shipping,
 		'shipping_label' => $shipping_label,
+		'delivery_method' => $pickup ? 'pickup' : 'ship',
+		'shipping_carrier' => $carrier,
+		'blind_ship' => $blind_ship,
 		'tax' => $tax,
 		'grand_total' => $grand_total,
 		'comment' => isset($post['comment']) ? sanitize_textarea_field(wp_unslash($post['comment'])) : '',
-		'estimate_delivery_time' => retails_estimated_ship_date($cart, $shipping_index),
+		'estimate_delivery_time' => wholesale_estimated_ship_date($cart),
 		'create_account' => !is_user_logged_in() && '1' === $field('create_account'),
 	);
 }
 
-function retails_cart_has_channel_letters($cart)
+function wholesale_cart_has_channel_letters($cart)
 {
 	foreach ($cart->get_items() as $item) {
 		if (has_term('channel-letters', 'product_category', absint($item->product_id))) {
@@ -154,131 +456,39 @@ function retails_cart_has_channel_letters($cart)
 /**
  * Shipping rates for the cart, fastest-last (standard, 3-day, 2-day, overnight).
  */
-function retails_cart_shipping_options($cart)
+function wholesale_cart_shipping_options($cart)
 {
-	$setting = retails_cart_has_channel_letters($cart) ? 'channel_shipping_options' : 'standard_shipping_options';
-	return array_values(array_map('floatval', array_filter(explode(',', (string) retails_get_setting($setting)), 'is_numeric')));
+	$setting = wholesale_cart_has_channel_letters($cart) ? 'channel_shipping_options' : 'standard_shipping_options';
+	return array_values(array_map('floatval', array_filter(explode(',', (string) wholesale_get_setting($setting)), 'is_numeric')));
 }
 
 /**
  * Subtotal at which the Free Shipping option appears for this cart, or 0 when
  * the offer is off. Carts with channel letters have their own, higher minimum.
  */
-function retails_free_shipping_threshold($cart)
+function wholesale_free_shipping_threshold($cart)
 {
-	$setting = retails_cart_has_channel_letters($cart) ? 'free_shipping_channel_min' : 'free_shipping_min';
-	return max(0.0, (float) retails_get_setting($setting));
+	$setting = wholesale_cart_has_channel_letters($cart) ? 'free_shipping_channel_min' : 'free_shipping_min';
+	return max(0.0, (float) wholesale_get_setting($setting));
 }
 
 /**
  * Whether checkout offers Free Shipping, listed above the paid options and
  * delivered on Standard's schedule.
  */
-function retails_cart_qualifies_free_shipping($cart)
+function wholesale_cart_qualifies_free_shipping($cart)
 {
-	$threshold = retails_free_shipping_threshold($cart);
-	return ($threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold) || '' !== retails_applied_ship_code();
+	$threshold = wholesale_free_shipping_threshold($cart);
+	return $threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold;
 }
-
-/**
- * The free shipping promo code (Settings > Storefront Sign > Sales) when today is within
- * its Pacific dates, else ''. An empty start means it already runs; an empty end, that it
- * has no last day.
- */
-function retails_ship_code_window()
-{
-	$code = retails_sanitize_ship_code(retails_get_setting('ship_code'));
-	if ('' === $code) {
-		return '';
-	}
-	$zone = new DateTimeZone('America/Los_Angeles');
-	$start = DateTime::createFromFormat('!Y-m-d', (string) retails_get_setting('ship_code_start'), $zone);
-	$end = DateTime::createFromFormat('!Y-m-d', (string) retails_get_setting('ship_code_end'), $zone);
-	if ($start && time() < $start->getTimestamp()) {
-		return '';
-	}
-	if ($end && time() > $end->modify('+1 day')->getTimestamp() - 1) {
-		return '';
-	}
-	return $code;
-}
-
-/**
- * The promo code this visitor applied at checkout (cookie sfs_promo), while it runs, else ''.
- * With it, every cart gets Free Shipping (standard speed): checkout, the cart page, the mini
- * cart and the wallet window all ask retails_cart_qualifies_free_shipping().
- */
-function retails_applied_ship_code()
-{
-	$code = retails_ship_code_window();
-	$typed = isset($_COOKIE['sfs_promo']) ? retails_sanitize_ship_code(wp_unslash($_COOKIE['sfs_promo'])) : '';
-	return '' !== $code && '' !== $typed && hash_equals($code, $typed) ? $code : '';
-}
-
-/**
- * The applied code when it is what makes this cart ship free (below the minimum), else ''.
- */
-function retails_cart_ship_code($cart)
-{
-	$threshold = retails_free_shipping_threshold($cart);
-	if ($threshold > 0 && round((float) $cart->sub_total, 2) >= $threshold) {
-		return '';
-	}
-	return retails_applied_ship_code();
-}
-
-/**
- * Merchant Center promotion id for the code ("freeship_blackfriday") from the day it is set
- * until its last day (the promotion is reviewed before it starts), else ''. The feed puts it
- * on items that don't already ship free (inc/merchant-feed.php).
- */
-function retails_ship_code_promotion_id()
-{
-	$code = retails_sanitize_ship_code(retails_get_setting('ship_code'));
-	if ('' === $code) {
-		return '';
-	}
-	$end = DateTime::createFromFormat('!Y-m-d', (string) retails_get_setting('ship_code_end'), new DateTimeZone('America/Los_Angeles'));
-	if ($end && time() > $end->modify('+1 day')->getTimestamp() - 1) {
-		return '';
-	}
-	return 'freeship_' . strtolower($code);
-}
-
-/**
- * ?promo_code=BLACKFRIDAY on the checkout or cart page (the promo code box) stores a valid
- * code in the sfs_promo cookie; an empty one removes it. Redirects back without the code,
- * with promo=applied|invalid|removed for the message.
- */
-function retails_handle_promo_code()
-{
-	if (!isset($_GET['promo_code']) || is_admin()) {
-		return;
-	}
-	$typed = retails_sanitize_ship_code(wp_unslash($_GET['promo_code']));
-	$code = retails_ship_code_window();
-	$path = COOKIEPATH ? COOKIEPATH : '/';
-	if ('' === $typed) {
-		setcookie('sfs_promo', '', time() - 3600, $path, COOKIE_DOMAIN, is_ssl(), true);
-		$result = 'removed';
-	} elseif ('' !== $code && hash_equals($code, $typed)) {
-		setcookie('sfs_promo', $code, time() + 30 * DAY_IN_SECONDS, $path, COOKIE_DOMAIN, is_ssl(), true);
-		$result = 'applied';
-	} else {
-		$result = 'invalid';
-	}
-	wp_safe_redirect(add_query_arg('promo', $result, remove_query_arg(array('promo_code', 'promo'))));
-	exit;
-}
-add_action('template_redirect', 'retails_handle_promo_code', 1);
 
 /**
  * A free shipping minimum for display ("$100", "$1,000"; cents only when
  * set), or '' when that offer is off.
  */
-function retails_free_shipping_amount($channel_letters = false)
+function wholesale_free_shipping_amount($channel_letters = false)
 {
-	$amount = max(0.0, (float) retails_get_setting($channel_letters ? 'free_shipping_channel_min' : 'free_shipping_min'));
+	$amount = max(0.0, (float) wholesale_get_setting($channel_letters ? 'free_shipping_channel_min' : 'free_shipping_min'));
 	return $amount > 0 ? '$' . number_format($amount, floor($amount) == $amount ? 0 : 2) : '';
 }
 
@@ -286,9 +496,9 @@ function retails_free_shipping_amount($channel_letters = false)
  * The cheapest paid shipping rate for display ("$18", "$50"), or '' when none
  * is set, so pages can say what shipping costs below the free shipping minimum.
  */
-function retails_shipping_from_amount($channel_letters = false)
+function wholesale_shipping_from_amount($channel_letters = false)
 {
-	$rates = array_filter(array_map('floatval', explode(',', (string) retails_get_setting($channel_letters ? 'channel_shipping_options' : 'standard_shipping_options'))));
+	$rates = array_filter(array_map('floatval', explode(',', (string) wholesale_get_setting($channel_letters ? 'channel_shipping_options' : 'standard_shipping_options'))));
 	if (!$rates) {
 		return '';
 	}
@@ -296,14 +506,12 @@ function retails_shipping_from_amount($channel_letters = false)
 	return '$' . number_format($amount, floor($amount) == $amount ? 0 : 2);
 }
 
-function retails_free_shipping_label($cart = null)
+function wholesale_free_shipping_label()
 {
-	// "Free Shipping, code BLACKFRIDAY": the order and its emails show which code made it free.
-	$code = $cart ? retails_cart_ship_code($cart) : '';
-	return '' !== $code ? 'Free Shipping, code ' . $code . ' (3–6 business days)' : 'Free Shipping (3–6 business days)';
+	return 'Free Shipping (3–6 business days)';
 }
 
-function retails_shipping_label($index)
+function wholesale_shipping_label($index)
 {
 	$labels = array('Standard (3–6 business days)', '3-Day', '2-Day', 'Overnight');
 	return isset($labels[$index]) ? $labels[$index] : 'Shipping option ' . ((int) $index + 1);
@@ -312,7 +520,7 @@ function retails_shipping_label($index)
 /**
  * $date plus $days business days (Saturdays and Sundays skipped).
  */
-function retails_add_business_days(DateTime $date, $days)
+function wholesale_add_business_days(DateTime $date, $days)
 {
 	$date = clone $date;
 	while ($days > 0) {
@@ -328,13 +536,13 @@ function retails_add_business_days(DateTime $date, $days)
  * Production business days for the cart: the longest product turnaround, and
  * at least 4 for channel letters, whose product pages say 2-4 business days.
  */
-function retails_cart_production_days($cart)
+function wholesale_cart_production_days($cart)
 {
 	$turnaround = 1;
 	foreach ($cart->get_items() as $item) {
 		$turnaround = max($turnaround, (int) get_post_meta(absint($item->product_id), '_product_turnaround', true));
 	}
-	return retails_cart_has_channel_letters($cart) ? max($turnaround, 4) : $turnaround;
+	return wholesale_cart_has_channel_letters($cart) ? max($turnaround, 4) : $turnaround;
 }
 
 /**
@@ -344,15 +552,15 @@ function retails_cart_production_days($cart)
  * next business day. The old version added calendar days plus transit, so
  * "Ships by" dates landed on weekends and included delivery time.
  */
-function retails_estimated_ship_datetime($cart, ?DateTime $now = null)
+function wholesale_estimated_ship_datetime($cart, ?DateTime $now = null)
 {
 	$now = $now ? clone $now : new DateTime('now', new DateTimeZone('America/Los_Angeles'));
 	$order_day = clone $now;
 	$order_day->setTime(0, 0);
 	if ($now->format('N') >= 6 || (int) $now->format('G') >= 16) {
-		$order_day = retails_add_business_days($order_day, 1);
+		$order_day = wholesale_add_business_days($order_day, 1);
 	}
-	return retails_add_business_days($order_day, retails_cart_production_days($cart));
+	return wholesale_add_business_days($order_day, wholesale_cart_production_days($cart));
 }
 
 /**
@@ -360,9 +568,9 @@ function retails_estimated_ship_datetime($cart, ?DateTime $now = null)
  * ship by" on the thank-you page, order emails and order tracking. The ship
  * date doesn't depend on the shipping speed; the argument is kept for callers.
  */
-function retails_estimated_ship_date($cart, $shipping_index = 0)
+function wholesale_estimated_ship_date($cart, $shipping_index = 0)
 {
-	return retails_estimated_ship_datetime($cart)->format('D M. j');
+	return wholesale_estimated_ship_datetime($cart)->format('D M. j');
 }
 
 /**
@@ -370,26 +578,35 @@ function retails_estimated_ship_date($cart, $shipping_index = 0)
  * the ship date plus that speed's transit business days, using the slow end
  * of standard shipping's 3-6 days.
  */
-function retails_estimated_delivery_date($cart, $shipping_index = 0)
+function wholesale_estimated_delivery_date($cart, $shipping_index = 0)
 {
 	$transit = array(6, 3, 2, 1);
-	return retails_add_business_days(retails_estimated_ship_datetime($cart), $transit[(int) $shipping_index] ?? 6)->format('D M. j');
+	return wholesale_add_business_days(wholesale_estimated_ship_datetime($cart), $transit[(int) $shipping_index] ?? 6)->format('D M. j');
 }
 
 /**
  * Creates the order for a validated checkout and empties the cart.
  */
-function retails_checkout_create_order($checkout, $cart, $extra_meta = array())
+function wholesale_checkout_create_order($checkout, $cart, $extra_meta = array())
 {
 	$order_cost = wp_json_encode(array(
 		'grand_total' => $checkout['grand_total'],
 		'sub_total' => $checkout['sub_total'],
 		'shipping_cost' => $checkout['shipping_cost'],
 		'shipping_method' => $checkout['shipping_label'],
+		'delivery_method' => $checkout['delivery_method'] ?? 'ship',
 		'tax' => $checkout['tax'],
 	));
 
-	$order = retails_insert_order(
+	// Staff see the carrier preselected when they add tracking, and can find
+	// pickup and blind ship orders by meta.
+	$extra_meta = array_merge(array_filter(array(
+		'_tracking_carrier' => $checkout['shipping_carrier'] ?? '',
+		'_delivery_method' => $checkout['delivery_method'] ?? 'ship',
+		'_blind_ship' => !empty($checkout['blind_ship']) ? 1 : 0,
+	)), $extra_meta);
+
+	$order = wholesale_insert_order(
 		wp_slash(wp_json_encode($checkout['items'])),
 		wp_slash($order_cost),
 		wp_slash(wp_json_encode($checkout['billing'])),
@@ -401,14 +618,22 @@ function retails_checkout_create_order($checkout, $cart, $extra_meta = array())
 
 	if ($order) {
 		$cart->empty();
-		retails_send_new_order_admin_email($order);
-		do_action('retails_order_created', $order);
+		// Next checkout starts with the same blind ship return address.
+		if (!empty($checkout['blind_ship']) && is_user_logged_in()) {
+			$from = array();
+			foreach (array_keys(wholesale_blind_ship_fields()) as $key) {
+				$from[$key] = (string) ($checkout['shipping']['blind_from_' . $key] ?? '');
+			}
+			update_user_meta(get_current_user_id(), '_blind_ship_from', $from);
+		}
+		wholesale_send_new_order_admin_email($order);
+		do_action('wholesale_order_created', $order);
 	}
 
 	return $order;
 }
 
-function retails_create_checkout_account($email, $password, $first_name, $last_name, $telephone)
+function wholesale_create_checkout_account($email, $password, $first_name, $last_name, $telephone)
 {
 	$username = sanitize_user(strstr($email, '@', true), true) ?: 'customer';
 	while (username_exists($username)) {
@@ -436,7 +661,7 @@ function retails_create_checkout_account($email, $password, $first_name, $last_n
 /**
  * Checks the optional "create an account" fields before anything is charged.
  */
-function retails_checkout_account_error($checkout, $password)
+function wholesale_checkout_account_error($checkout, $password)
 {
 	if (!$checkout['create_account']) {
 		return '';
@@ -450,27 +675,263 @@ function retails_checkout_account_error($checkout, $password)
 	return '';
 }
 
-function retails_checkout_attach_account($order, $checkout, $password)
+function wholesale_checkout_attach_account($order, $checkout, $password)
 {
 	if (!$order || !$checkout['create_account']) {
 		return;
 	}
 	$billing = $checkout['billing'];
-	$user_id = retails_create_checkout_account($billing['billing_email'], $password, $billing['billing_fname'], $billing['billing_lname'], $billing['billing_tel']);
+	$user_id = wholesale_create_checkout_account($billing['billing_email'], $password, $billing['billing_fname'], $billing['billing_lname'], $billing['billing_tel']);
 	if (!is_wp_error($user_id)) {
 		update_post_meta($order, 'user_id', $user_id);
 	}
 }
 
+// ------------------------------------------------------------------
+// Pending payments
+// ------------------------------------------------------------------
+
+function wholesale_payment_store($ref, $data = null)
+{
+	$key = 'wholesale_payment_' . $ref;
+	if (null === $data) {
+		return get_transient($key);
+	}
+	set_transient($key, $data, 30 * MINUTE_IN_SECONDS);
+	return $data;
+}
+
+/**
+ * @param string $field Optional form field name the error belongs to, so the page can highlight it.
+ */
+function wholesale_payment_json_error($message, $status = 400, $field = '')
+{
+	wp_send_json(array_filter(array('ok' => false, 'error' => $message, 'field' => $field), static function ($value) {
+		return '' !== $value;
+	}), $status);
+}
+
+/**
+ * AJAX step 1: validate, fix the amount, return a Converge session token.
+ * With card payment disabled it creates the order right away instead.
+ */
+function wholesale_ajax_payment_start()
+{
+	if (!check_ajax_referer('wholesale_payment', 'nonce', false)) {
+		wholesale_payment_json_error('Your session expired. Please refresh the page and try again.', 403);
+	}
+
+	$kind = isset($_POST['kind']) ? sanitize_key(wp_unslash($_POST['kind'])) : '';
+	$password = isset($_POST['account_password']) ? (string) wp_unslash($_POST['account_password']) : '';
+
+	if ('cart' === $kind) {
+		$cart = wholesale_get_cart();
+		$checkout = wholesale_checkout_build($_POST, $cart);
+		if (is_wp_error($checkout)) {
+			$data = $checkout->get_error_data();
+			wholesale_payment_json_error($checkout->get_error_message(), 400, is_array($data) ? ($data['field'] ?? '') : '');
+		}
+		if ($account_error = wholesale_checkout_account_error($checkout, $password)) {
+			wholesale_payment_json_error($account_error, 400, false !== stripos($account_error, 'password must') ? 'account_password' : 'billing_email');
+		}
+
+		if (wholesale_setting_enabled('payment_disabled')) {
+			$order = wholesale_checkout_create_order($checkout, $cart, array('_payment_status' => 'manual'));
+			if (!$order) {
+				wholesale_payment_json_error('We could not create your order. Please try again or call 866-436-2101.', 500);
+			}
+			wholesale_checkout_attach_account($order, $checkout, $password);
+			wp_send_json(array('ok' => true, 'redirect' => wholesale_thank_you_url($order)));
+		}
+
+		$amount = $checkout['grand_total'];
+		$billing = $checkout['billing'];
+		$payload = array('checkout' => $checkout);
+	} elseif ('ticket' === $kind) {
+		$token = isset($_POST['ticket_token']) ? preg_replace('/[^A-Za-z0-9]/', '', (string) wp_unslash($_POST['ticket_token'])) : '';
+		$ticket_id = wholesale_find_ticket_by_token($token);
+		$ticket = $ticket_id ? wholesale_get_ticket($ticket_id) : null;
+		if (!$ticket || 'sent' !== $ticket['status'] || wholesale_ticket_is_expired($ticket) || $ticket['amount'] <= 0 || empty($ticket['items'])) {
+			wholesale_payment_json_error('This payment request is no longer open. Please contact us if you need help.');
+		}
+		$billing = wholesale_ticket_billing_from_request($_POST);
+		if (is_wp_error($billing)) {
+			wholesale_payment_json_error($billing->get_error_message());
+		}
+		if (wholesale_setting_enabled('payment_disabled')) {
+			wholesale_payment_json_error('Online card payment is not available right now. Please call us at 866-436-2101.');
+		}
+		$amount = $ticket['amount'];
+		$payload = array('ticket_id' => $ticket_id, 'billing' => $billing);
+	} else {
+		wholesale_payment_json_error('Unknown payment type.');
+	}
+
+	$ref = 'SSO' . strtoupper(wp_generate_password(12, false, false));
+
+	if ('direct' === wholesale_payment_method()) {
+		wholesale_direct_payment($kind, $payload, $amount, $billing, $ref, $password);
+	}
+
+	$session_token = wholesale_converge_session_token($amount, $ref, $billing);
+	if (is_wp_error($session_token)) {
+		wholesale_payment_json_error($session_token->get_error_message(), 502);
+	}
+
+	wholesale_payment_store($ref, array_merge($payload, array(
+		'kind' => $kind,
+		'amount' => $amount,
+		'session' => session_id(),
+		'created' => time(),
+	)));
+
+	wp_send_json(array(
+		'ok' => true,
+		'ref' => $ref,
+		'token' => $session_token,
+		'script' => wholesale_converge_script_url(),
+		'amount' => number_format($amount, 2),
+	));
+}
+add_action('wp_ajax_wholesale_payment_start', 'wholesale_ajax_payment_start');
+
+/**
+ * Direct method: charge the card fields from the form, then create the order. Always exits.
+ */
+function wholesale_direct_payment($kind, $payload, $amount, $billing, $ref, $password)
+{
+	$card = wholesale_direct_card_from_request($_POST);
+	if (is_wp_error($card)) {
+		wholesale_payment_json_error($card->get_error_message(), 400, $card->get_error_data()['field'] ?? '');
+	}
+
+	// One charge at a time per visitor: a double click can never charge twice.
+	$lock = 'wholesale_direct_lock_' . md5(session_id() . ('ticket' === $kind ? $payload['ticket_id'] : ''));
+	if ((int) get_option($lock) < time() - 120) {
+		delete_option($lock);
+	}
+	if (!add_option($lock, time(), '', 'no')) {
+		wholesale_payment_json_error('Your payment is already being processed. Please wait a moment.');
+	}
+
+	$sale = wholesale_converge_direct_sale($amount, $card, $billing, $ref);
+	unset($card);
+	if (!$sale['ok']) {
+		delete_option($lock);
+		if ('ticket' === $kind) {
+			wholesale_ticket_log($payload['ticket_id'], 'payment_failed', $sale['message']);
+		}
+		wholesale_payment_json_error($sale['message'], 402);
+	}
+
+	$pending = array_merge($payload, array('kind' => $kind, 'amount' => $amount));
+	$order = wholesale_payment_finalize($pending, $ref, array(
+		'_payment_status' => 'paid',
+		'_payment_method' => 'direct',
+		'_payment_txn_id' => $sale['txn_id'],
+		'_payment_ref' => $ref,
+		'_payment_card_last4' => $sale['card_last4'],
+		'_payment_amount' => $amount,
+		'_payment_approval_code' => $sale['approval_code'],
+	), $password);
+	delete_option($lock);
+
+	wp_send_json(array('ok' => true, 'redirect' => wholesale_thank_you_url($order)));
+}
+add_action('wp_ajax_nopriv_wholesale_payment_start', 'wholesale_ajax_payment_start');
+
+/**
+ * Creates the order for a paid checkout or ticket. Sends a JSON error (and alerts staff)
+ * if the order can't be saved, because the customer has already been charged.
+ *
+ * @return int Order ID.
+ */
+function wholesale_payment_finalize($pending, $ref, $payment_meta, $password = '')
+{
+	if ('cart' === $pending['kind']) {
+		$cart = wholesale_get_cart();
+		$order = wholesale_checkout_create_order($pending['checkout'], $cart, $payment_meta);
+		if ($order) {
+			wholesale_checkout_attach_account($order, $pending['checkout'], $password);
+		}
+		$customer = $pending['checkout']['billing'];
+	} else {
+		$order = wholesale_ticket_finalize($pending['ticket_id'], $pending['billing'], true, $payment_meta);
+		$customer = $pending['billing'];
+	}
+
+	delete_transient('wholesale_payment_' . $ref);
+
+	if (!$order) {
+		$txn_id = $payment_meta['_payment_txn_id'] ?? '';
+		error_log(sprintf('Wholesale: Converge payment %s ($%s) approved for %s but the order could not be saved.', $txn_id, number_format($pending['amount'], 2), $customer['billing_email']));
+		unset($pending['checkout']['items']);
+		wp_mail(wholesale_contact_admin_recipients(), 'URGENT: payment approved but order was not saved', sprintf("Converge transaction %s for $%s was approved for %s %s (%s), but the order could not be saved.\n\nDetails: %s", $txn_id, number_format($pending['amount'], 2), $customer['billing_fname'], $customer['billing_lname'], $customer['billing_email'], wp_json_encode($pending)));
+		wholesale_payment_json_error('Your payment was received, but we could not finish saving your order. Please do not pay again. Our team has been notified and will contact you shortly.', 500);
+	}
+
+	return $order;
+}
+
+/**
+ * AJAX step 2: after Converge approves, verify the transaction and create the order.
+ */
+function wholesale_ajax_payment_complete()
+{
+	if (!check_ajax_referer('wholesale_payment', 'nonce', false)) {
+		wholesale_payment_json_error('Your session expired. If you were charged, please call us at 866-436-2101 and we will confirm your order.', 403);
+	}
+
+	$ref = isset($_POST['ref']) ? preg_replace('/[^A-Z0-9]/', '', (string) wp_unslash($_POST['ref'])) : '';
+	$txn_id = isset($_POST['txn_id']) ? preg_replace('/[^A-Za-z0-9\-]/', '', (string) wp_unslash($_POST['txn_id'])) : '';
+	$pending = $ref ? wholesale_payment_store($ref) : false;
+
+	if (!$pending || $pending['session'] !== session_id() || '' === $txn_id) {
+		wholesale_payment_json_error('We could not match this payment to your checkout. If you were charged, please call us at 866-436-2101.');
+	}
+
+	// Each Converge transaction can only ever create one order.
+	if (!add_option('wholesale_txn_' . $txn_id, $ref, '', 'no')) {
+		wholesale_payment_json_error('This payment has already been used for an order.');
+	}
+
+	$verified = wholesale_converge_verify($txn_id, $pending['amount'], $ref);
+	if (is_wp_error($verified) && 'unverified' !== $verified->get_error_code()) {
+		error_log(sprintf('Wholesale: rejected Converge transaction %s for checkout %s: %s', $txn_id, $ref, $verified->get_error_message()));
+		wp_mail(wholesale_contact_admin_recipients(), 'Payment rejected: transaction did not match the order', sprintf("Converge transaction %s was reported approved for checkout %s ($%s), but the server check failed:\n\n%s\n\nPlease review it in Converge.", $txn_id, $ref, number_format($pending['amount'], 2), $verified->get_error_message()));
+		wholesale_payment_json_error('We could not confirm this payment. Please call us at 866-436-2101 before trying again.');
+	}
+
+	$card = isset($_POST['card']) ? preg_replace('/[^0-9*Xx]/', '', (string) wp_unslash($_POST['card'])) : '';
+	$password = isset($_POST['account_password']) ? (string) wp_unslash($_POST['account_password']) : '';
+	$order = wholesale_payment_finalize($pending, $ref, array(
+		'_payment_status' => true === $verified ? 'paid' : 'needs_review',
+		'_payment_method' => 'lightbox',
+		'_payment_txn_id' => $txn_id,
+		'_payment_ref' => $ref,
+		'_payment_card_last4' => substr($card, -4),
+		'_payment_amount' => $pending['amount'],
+		'_payment_approval_code' => isset($_POST['approval_code']) ? sanitize_text_field(wp_unslash($_POST['approval_code'])) : '',
+	), $password);
+
+	if (true !== $verified) {
+		wp_mail(wholesale_contact_admin_recipients(), 'Check payment for order #' . wholesale_order_number($order), sprintf("The order was created, but Converge could not be reached to double-check transaction %s ($%s): %s\n\nPlease confirm the payment in Converge.\n\n%s", $txn_id, number_format($pending['amount'], 2), $verified->get_error_message(), admin_url('post.php?post=' . $order . '&action=edit')));
+	}
+
+	wp_send_json(array('ok' => true, 'redirect' => wholesale_thank_you_url($order)));
+}
+add_action('wp_ajax_wholesale_payment_complete', 'wholesale_ajax_payment_complete');
+add_action('wp_ajax_nopriv_wholesale_payment_complete', 'wholesale_ajax_payment_complete');
+
 /**
  * Thank-you page link that can show this order's summary to the visitor who placed it.
  */
-function retails_thank_you_url($order)
+function wholesale_thank_you_url($order)
 {
 	$key = wp_generate_password(20, false, false);
 	update_post_meta($order, '_order_view_key', $key);
 	if (isset($_SESSION)) {
-		$_SESSION['retails_last_order'] = (int) $order;
+		$_SESSION['wholesale_last_order'] = (int) $order;
 	}
 	return add_query_arg(array('order' => get_post_meta($order, 'order_id', true), 'key' => $key), home_url('/thank-you/'));
 }
@@ -478,27 +939,26 @@ function retails_thank_you_url($order)
 /**
  * Checkout / pay pages: load the checkout script with its settings.
  */
-function retails_enqueue_payment_script()
+function wholesale_enqueue_payment_script()
 {
 	if (!is_page(array('checkout', 'pay'))) {
 		return;
 	}
 	$path = '/js/checkout.js';
-	wp_enqueue_script('retails-checkout', get_template_directory_uri() . $path, array(), (string) filemtime(get_template_directory() . $path), true);
-	wp_localize_script('retails-checkout', 'retailsPayment', array(
+	wp_enqueue_script('wholesale-checkout', get_template_directory_uri() . $path, array(), (string) filemtime(get_template_directory() . $path), true);
+	wp_localize_script('wholesale-checkout', 'wholesalePayment', array(
 		'ajaxUrl' => admin_url('admin-ajax.php'),
-		'nonce' => wp_create_nonce('retails_payment'),
-		// Order payment links (/pay/?o=) always take cards; the setting only covers checkout.
-		'cardEnabled' => !retails_setting_enabled('payment_disabled') || (is_page('pay') && isset($_GET['o'])),
-		'method' => retails_payment_method(),
+		'nonce' => wp_create_nonce('wholesale_payment'),
+		'cardEnabled' => !wholesale_setting_enabled('payment_disabled'),
+		'method' => wholesale_payment_method(),
 	));
 }
-add_action('wp_enqueue_scripts', 'retails_enqueue_payment_script');
+add_action('wp_enqueue_scripts', 'wholesale_enqueue_payment_script');
 
 /**
  * The order the visitor just placed, when the thank-you link matches it.
  */
-function retails_thank_you_order()
+function wholesale_thank_you_order()
 {
 	$order_number = isset($_GET['order']) ? sanitize_text_field(wp_unslash($_GET['order'])) : '';
 	$key = isset($_GET['key']) ? sanitize_text_field(wp_unslash($_GET['key'])) : '';
@@ -519,24 +979,24 @@ function retails_thank_you_order()
 
 /**
  * Google Ads purchase conversion with the real order value, sent once per order.
- * Runs after the deferred gtag config in retails_deferred_conversion_tracking().
+ * Runs after the deferred gtag config in wholesale_deferred_conversion_tracking().
  */
-function retails_purchase_conversion()
+function wholesale_purchase_conversion()
 {
-	if (!get_query_var('retails_thank_you')) {
+	if (!get_query_var('wholesale_thank_you')) {
 		return;
 	}
-	$order = retails_thank_you_order();
+	$order = wholesale_thank_you_order();
 	if (!$order || get_post_meta($order, '_conversion_tracked', true)) {
 		return;
 	}
 	update_post_meta($order, '_conversion_tracked', current_time('mysql'));
 
-	$cost = retails_decode_order_meta_array(get_post_meta($order, 'product_cost', true));
+	$cost = wholesale_decode_order_meta_array(get_post_meta($order, 'product_cost', true));
 	$value = isset($cost['grand_total']) ? (float) $cost['grand_total'] : 0;
 	$transaction_id = (string) get_post_meta($order, 'order_id', true);
-	$user_data = retails_ads_order_user_data($order);
-	$items = retails_ads_order_items($order);
+	$user_data = wholesale_ads_order_user_data($order);
+	$items = wholesale_ads_order_items($order);
 	// Google Ads cart data: the products sold, by feed item ID.
 	$cart_items = array_map(static function ($item) {
 		return array(
@@ -557,7 +1017,7 @@ function retails_purchase_conversion()
 			window.gtag('set', 'user_data', <?php echo wp_json_encode($user_data); ?>);
 			<?php endif; ?>
 			window.gtag('event', 'conversion', {
-				send_to: <?php echo wp_json_encode('AW-18454059893/' . RETAILS_ADS_PURCHASE_LABEL); ?>,
+				send_to: <?php echo wp_json_encode('AW-18454059893/' . WHOLESALE_ADS_PURCHASE_LABEL); ?>,
 				value: <?php echo wp_json_encode(round($value, 2)); ?>,
 				currency: 'USD',
 				transaction_id: <?php echo wp_json_encode($transaction_id); ?><?php if (defined('WHOLESALE_MERCHANT_CENTER_ID')) : ?>,
@@ -580,14 +1040,14 @@ function retails_purchase_conversion()
 	</script>
 	<?php
 }
-add_action('wp_footer', 'retails_purchase_conversion', 21);
+add_action('wp_footer', 'wholesale_purchase_conversion', 21);
 
 // The confirmation page is private to the customer who placed the order.
 add_filter('pre_get_document_title', function ($title) {
-	return get_query_var('retails_thank_you') ? 'Order confirmed | ' . get_bloginfo('name') : $title;
+	return get_query_var('wholesale_thank_you') ? 'Order confirmed | ' . get_bloginfo('name') : $title;
 }, 99);
 add_filter('wp_robots', function ($robots) {
-	if (get_query_var('retails_thank_you')) {
+	if (get_query_var('wholesale_thank_you')) {
 		$robots['noindex'] = true;
 		$robots['nofollow'] = true;
 	}

@@ -1,7 +1,7 @@
 <?php
 /**
  * Per-page SEO box on pages, posts and products, and the same fields on the
- * product category edit screen. Values are stored as _retails_seo_* meta.
+ * product category edit screen. Values are stored as _wholesale_seo_* meta.
  *
  * Every field is empty by default; empty keeps what the theme prints now,
  * which the box shows as grey hints and in the search preview. Older
@@ -16,16 +16,16 @@ defined('ABSPATH') || exit;
 /**
  * @return string[]
  */
-function retails_seo_metabox_post_types()
+function wholesale_seo_metabox_post_types()
 {
 	return array('page', 'post', 'product');
 }
 
 add_action('add_meta_boxes', function ($post_type) {
-	if (!current_user_can('manage_options') || !in_array($post_type, retails_seo_metabox_post_types(), true)) {
+	if (!current_user_can('manage_options') || !in_array($post_type, wholesale_seo_metabox_post_types(), true)) {
 		return;
 	}
-	add_meta_box('retails-seo', 'SEO', 'retails_seo_metabox_render', $post_type, 'normal', 'high');
+	add_meta_box('wholesale-seo', 'SEO', 'wholesale_seo_metabox_render', $post_type, 'normal', 'high');
 });
 
 /**
@@ -33,13 +33,13 @@ add_action('add_meta_boxes', function ($post_type) {
  *
  * @return array
  */
-function retails_seo_object_values($object_type, $object_id)
+function wholesale_seo_object_values($object_type, $object_id)
 {
 	$values = array();
-	foreach (array_keys(retails_seo_object_fields()) as $key) {
+	foreach (array_keys(wholesale_seo_object_fields()) as $key) {
 		$values[$key] = (string) ('term' === $object_type
-			? get_term_meta($object_id, '_retails_seo_' . $key, true)
-			: get_post_meta($object_id, '_retails_seo_' . $key, true));
+			? get_term_meta($object_id, '_wholesale_seo_' . $key, true)
+			: get_post_meta($object_id, '_wholesale_seo_' . $key, true));
 	}
 	return $values;
 }
@@ -47,15 +47,15 @@ function retails_seo_object_values($object_type, $object_id)
 /**
  * The fields, shared by the post box and the category screen.
  */
-function retails_seo_object_form($object_type, $object_id, $permalink)
+function wholesale_seo_object_form($object_type, $object_id, $permalink)
 {
-	$values = retails_seo_object_values($object_type, $object_id);
-	$now = $object_id ? retails_seo_admin_effective($object_type, $object_id) : array();
+	$values = wholesale_seo_object_values($object_type, $object_id);
+	$now = $object_id ? wholesale_seo_admin_effective($object_type, $object_id) : array();
 	$now = wp_parse_args($now, array('title' => '', 'description' => '', 'canonical' => $permalink, 'robots' => ''));
-	$theme_noindex = $object_id ? retails_seo_theme_noindex_reason($object_type, $object_id) : '';
-	$protected = function_exists('retails_seo_protected_url_match') && $permalink ? retails_seo_protected_url_match($permalink) : '';
+	$theme_noindex = $object_id ? wholesale_seo_theme_noindex_reason($object_type, $object_id) : '';
+	$protected = function_exists('wholesale_seo_protected_url_match') && $permalink ? wholesale_seo_protected_url_match($permalink) : '';
 
-	wp_nonce_field('retails_seo_object', 'retails_seo_object_nonce');
+	wp_nonce_field('wholesale_seo_object', 'wholesale_seo_object_nonce');
 	?>
 	<div class="wseo-box" data-wseo-box>
 		<?php if ($protected) : ?>
@@ -72,21 +72,21 @@ function retails_seo_object_form($object_type, $object_id, $permalink)
 		<div class="wseo-grid">
 			<p class="wseo-field">
 				<label for="wseo-title"><strong>SEO title</strong> <span class="wseo-counter" data-wseo-counter="wseo-title" data-limit="60"></span></label>
-				<input type="text" id="wseo-title" name="retails_seo[title]" class="widefat" value="<?php echo esc_attr($values['title']); ?>" placeholder="<?php echo esc_attr($now['title']); ?>" data-wseo-input="title">
+				<input type="text" id="wseo-title" name="wholesale_seo[title]" class="widefat" value="<?php echo esc_attr($values['title']); ?>" placeholder="<?php echo esc_attr($now['title']); ?>" data-wseo-input="title">
 			</p>
 			<p class="wseo-field">
 				<label for="wseo-description"><strong>Meta description</strong> <span class="wseo-counter" data-wseo-counter="wseo-description" data-limit="160"></span></label>
-				<textarea id="wseo-description" name="retails_seo[description]" class="widefat" rows="3" placeholder="<?php echo esc_attr($now['description']); ?>" data-wseo-input="description"><?php echo esc_textarea($values['description']); ?></textarea>
+				<textarea id="wseo-description" name="wholesale_seo[description]" class="widefat" rows="3" placeholder="<?php echo esc_attr($now['description']); ?>" data-wseo-input="description"><?php echo esc_textarea($values['description']); ?></textarea>
 			</p>
 			<p class="wseo-field">
 				<label for="wseo-focus"><strong>Focus keyword</strong></label>
-				<input type="text" id="wseo-focus" name="retails_seo[focus_keyword]" class="widefat" value="<?php echo esc_attr($values['focus_keyword']); ?>" data-wseo-input="focus">
+				<input type="text" id="wseo-focus" name="wholesale_seo[focus_keyword]" class="widefat" value="<?php echo esc_attr($values['focus_keyword']); ?>" data-wseo-input="focus">
 				<span class="wseo-checks-out" data-wseo-focus-checks data-slug="<?php echo esc_attr($permalink); ?>"></span>
 				<span class="description">Not printed on the page; used for the checks above and the Dashboard.</span>
 			</p>
 			<p class="wseo-field">
 				<label for="wseo-canonical"><strong>Canonical URL</strong></label>
-				<input type="url" id="wseo-canonical" name="retails_seo[canonical]" class="widefat code" value="<?php echo esc_attr($values['canonical']); ?>" placeholder="<?php echo esc_attr($now['canonical']); ?>">
+				<input type="url" id="wseo-canonical" name="wholesale_seo[canonical]" class="widefat code" value="<?php echo esc_attr($values['canonical']); ?>" placeholder="<?php echo esc_attr($now['canonical']); ?>">
 				<span class="description">Leave empty unless this page duplicates another one.</span>
 			</p>
 		</div>
@@ -96,9 +96,9 @@ function retails_seo_object_form($object_type, $object_id, $permalink)
 			<?php if ($theme_noindex) : ?>
 				<p class="wseo-flag">Noindex by theme: <?php echo esc_html($theme_noindex); ?>. That cannot be undone here.</p>
 			<?php endif; ?>
-			<label><input type="checkbox" name="retails_seo[noindex]" value="1" <?php checked('1', $values['noindex']); ?> data-wseo-protect="noindex"> Noindex (keep out of search results)</label><br>
-			<label><input type="checkbox" name="retails_seo[nofollow]" value="1" <?php checked('1', $values['nofollow']); ?>> Nofollow (don&rsquo;t follow this page&rsquo;s links)</label><br>
-			<label><input type="checkbox" name="retails_seo[exclude_sitemap]" value="1" <?php checked('1', $values['exclude_sitemap']); ?>> Leave out of the sitemaps</label>
+			<label><input type="checkbox" name="wholesale_seo[noindex]" value="1" <?php checked('1', $values['noindex']); ?> data-wseo-protect="noindex"> Noindex (keep out of search results)</label><br>
+			<label><input type="checkbox" name="wholesale_seo[nofollow]" value="1" <?php checked('1', $values['nofollow']); ?>> Nofollow (don&rsquo;t follow this page&rsquo;s links)</label><br>
+			<label><input type="checkbox" name="wholesale_seo[exclude_sitemap]" value="1" <?php checked('1', $values['exclude_sitemap']); ?>> Leave out of the sitemaps</label>
 			<?php if ($now['robots']) : ?>
 				<p class="description">Robots now: <code><?php echo esc_html($now['robots']); ?></code></p>
 			<?php endif; ?>
@@ -108,16 +108,16 @@ function retails_seo_object_form($object_type, $object_id, $permalink)
 			<summary><strong>Social share (Facebook, LinkedIn, X)</strong></summary>
 			<p class="wseo-field">
 				<label for="wseo-og-title">Share title</label>
-				<input type="text" id="wseo-og-title" name="retails_seo[og_title]" class="widefat" value="<?php echo esc_attr($values['og_title']); ?>" placeholder="Same as the SEO title">
+				<input type="text" id="wseo-og-title" name="wholesale_seo[og_title]" class="widefat" value="<?php echo esc_attr($values['og_title']); ?>" placeholder="Same as the SEO title">
 			</p>
 			<p class="wseo-field">
 				<label for="wseo-og-description">Share description</label>
-				<textarea id="wseo-og-description" name="retails_seo[og_description]" class="widefat" rows="2" placeholder="Same as the meta description"><?php echo esc_textarea($values['og_description']); ?></textarea>
+				<textarea id="wseo-og-description" name="wholesale_seo[og_description]" class="widefat" rows="2" placeholder="Same as the meta description"><?php echo esc_textarea($values['og_description']); ?></textarea>
 			</p>
 			<p class="wseo-field">
 				<label for="wseo-og-image">Share image</label>
 				<span class="wseo-image-field">
-					<input type="url" id="wseo-og-image" name="retails_seo[og_image]" class="widefat code" value="<?php echo esc_attr($values['og_image']); ?>" placeholder="Featured image, else the default social image">
+					<input type="url" id="wseo-og-image" name="wholesale_seo[og_image]" class="widefat code" value="<?php echo esc_attr($values['og_image']); ?>" placeholder="Featured image, else the default social image">
 					<button type="button" class="button wseo-pick-image" data-target="wseo-og-image">Choose image</button>
 				</span>
 			</p>
@@ -126,9 +126,9 @@ function retails_seo_object_form($object_type, $object_id, $permalink)
 	<?php
 }
 
-function retails_seo_metabox_render($post)
+function wholesale_seo_metabox_render($post)
 {
-	retails_seo_object_form('post', 'auto-draft' === $post->post_status ? 0 : (int) $post->ID, get_permalink($post));
+	wholesale_seo_object_form('post', 'auto-draft' === $post->post_status ? 0 : (int) $post->ID, get_permalink($post));
 }
 
 /**
@@ -136,16 +136,16 @@ function retails_seo_metabox_render($post)
  *
  * @return array|null
  */
-function retails_seo_submitted_object_values()
+function wholesale_seo_submitted_object_values()
 {
-	if (!isset($_POST['retails_seo_object_nonce']) || !wp_verify_nonce(sanitize_key(wp_unslash($_POST['retails_seo_object_nonce'])), 'retails_seo_object')) {
+	if (!isset($_POST['wholesale_seo_object_nonce']) || !wp_verify_nonce(sanitize_key(wp_unslash($_POST['wholesale_seo_object_nonce'])), 'wholesale_seo_object')) {
 		return null;
 	}
 
-	$submitted = isset($_POST['retails_seo']) && is_array($_POST['retails_seo']) ? wp_unslash($_POST['retails_seo']) : array();
+	$submitted = isset($_POST['wholesale_seo']) && is_array($_POST['wholesale_seo']) ? wp_unslash($_POST['wholesale_seo']) : array();
 	$values = array();
 	// Checkboxes are absent when unticked, so every field is written.
-	foreach (array_keys(retails_seo_object_fields()) as $key) {
+	foreach (array_keys(wholesale_seo_object_fields()) as $key) {
 		$values[$key] = isset($submitted[$key]) ? $submitted[$key] : '';
 	}
 	return $values;
@@ -155,13 +155,13 @@ add_action('save_post', function ($post_id, $post) {
 	if (wp_is_post_revision($post_id) || wp_is_post_autosave($post_id) || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)) {
 		return;
 	}
-	if (!in_array($post->post_type, retails_seo_metabox_post_types(), true) || !current_user_can('manage_options') || !current_user_can('edit_post', $post_id)) {
+	if (!in_array($post->post_type, wholesale_seo_metabox_post_types(), true) || !current_user_can('manage_options') || !current_user_can('edit_post', $post_id)) {
 		return;
 	}
 
-	$values = retails_seo_submitted_object_values();
+	$values = wholesale_seo_submitted_object_values();
 	if (null !== $values) {
-		retails_seo_save_object_values('post', $post_id, $values);
+		wholesale_seo_save_object_values('post', $post_id, $values);
 	}
 }, 10, 2);
 
@@ -172,7 +172,7 @@ add_action('product_category_edit_form_fields', function ($term) {
 	?>
 	<tr class="form-field">
 		<th scope="row">SEO</th>
-		<td><?php retails_seo_object_form('term', (int) $term->term_id, retails_category_url($term->slug)); ?></td>
+		<td><?php wholesale_seo_object_form('term', (int) $term->term_id, wholesale_category_url($term->slug)); ?></td>
 	</tr>
 	<?php
 });
@@ -182,8 +182,8 @@ add_action('edited_product_category', function ($term_id) {
 		return;
 	}
 
-	$values = retails_seo_submitted_object_values();
+	$values = wholesale_seo_submitted_object_values();
 	if (null !== $values) {
-		retails_seo_save_object_values('term', $term_id, $values);
+		wholesale_seo_save_object_values('term', $term_id, $values);
 	}
 });

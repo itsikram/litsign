@@ -22,7 +22,7 @@ if (!defined('ABSPATH')) {
 /**
  * Whether the current admin screen is the product edit / new product screen.
  */
-function retails_pe_is_product_screen()
+function wholesale_pe_is_product_screen()
 {
 	$screen = function_exists('get_current_screen') ? get_current_screen() : null;
 	return $screen && 'post' === $screen->base && 'product' === $screen->post_type;
@@ -32,7 +32,7 @@ function retails_pe_is_product_screen()
  * Plain-language labels and help text for the CMB2 fields. Only the name, help
  * text and input hints change; ids, types, defaults and saving stay the same.
  */
-function retails_pe_field_copy()
+function wholesale_pe_field_copy()
 {
 	return array(
 		'product_details' => array(
@@ -46,9 +46,6 @@ function retails_pe_field_copy()
 			'_discount_percent' => array('Everyday price adjustment (%)', 'Taken off every price this product shows and the whole cart line, after quantity. Shoppers only see the result, never a sale. 0 to 100. Example: 10. Run sales from Settings &gt; Storefront Sign &gt; Sale promotion.', '0', 'decimal'),
 			'_min_order_price' => array('Minimum order price ($)', 'Size calculator products only. The lowest price one item can cost, after the everyday price adjustment. Smaller sizes (down to the minimum width and height) can still be ordered and pay this price. Leave empty for the standard $16.50. Enter 0 for no minimum. Example: 25', '16.50', 'decimal'),
 			'_min_order_per_side' => array('Minimum order price per side', 'Ticked: the minimum order price is charged once per printed side, so 2 Sides has double the minimum (like B2Sign: $8 one side, $16 two sides).'),
-			'_min_order_extra_side' => array('Minimum order price, extra per side ($)', 'Size calculator products only. Added to the minimum order price for each extra printed side, so 2 Sides has a higher minimum (like B2Sign coroplast: $6.99 one side, $7.99 two). Leave empty for none. Example: 1.65', '1.65', 'decimal'),
-			'_max_print_price' => array('Full sheet price ($)', 'Size calculator products only. The most the printed size can cost (size x price per sq ft, plus per sq ft options such as 2 Sides), like B2Sign\'s full 4 x 8 ft sheet price. Flat options such as grommets and H-stakes are still added on top. Leave empty for no limit. Example: 49.48', '49.48', 'decimal'),
-			'_max_print_extra_side' => array('Full sheet price, extra per side ($)', 'Added to the full sheet price for each extra printed side (B2Sign coroplast: $29.99 one side, $33.99 two). Example: 6.60', '6.60', 'decimal'),
 			'_max_size' => array('Maximum size (inches)', 'Size calculator products only. Largest size, short side x long side, accepted either way round. Example: 48x1200. Leave empty for no limit.', '48x1200', 'text'),
 			'_promo_percent' => array('Product sale (%)', 'This product\'s own dated sale, taken off the everyday price between the start and end dates below (shown crossed out with "Sale"). Replaces the site-wide sale for this product while it runs. Leave empty for none. Example: 10', '0', 'decimal'),
 			'_promo_start' => array('Product sale start date', 'First day of this product\'s sale, Pacific time, YYYY-MM-DD. Example: 2026-10-21', '2026-10-21', 'text'),
@@ -61,13 +58,9 @@ function retails_pe_field_copy()
 			'_product_gallery' => array('Product gallery images', 'Extra photos shown in the product page gallery. Drag to reorder.'),
 			'_product_group_data' => array('Product group links (raw)', 'Buttons that switch between related versions of this product. Edited with the list above; this raw box is kept for reference.'),
 			'_hide_calculator' => array('Hide the size calculator', 'Ticked: customers pick from the options only (fixed-size product). Not ticked: customers type a width and height and pay per square foot.'),
-			'_size_presets' => array('Show preset size dropdown', 'Products with the size calculator: ticked shows a B2Sign-style Size dropdown with the preset sizes below, then "Custom Sizes", which shows the width and height boxes. Price is still per square foot.'),
-			'_size_preset_list' => array('Preset sizes', 'Used when "Show preset size dropdown" is ticked. One size per line, width x height in inches, then | and an optional grey note. Start a line with * to open the page on that size (otherwise the smallest size). Example: *24 x 18 | Vertical Flutes. Left empty, the sizes in the "size" option are used. Sizes under the minimum or over the maximum size are left out.', '24 x 18 | Vertical Flutes', 'text'),
-			'_custom_size_note' => array('Custom size note', 'Optional grey note on the "Custom Sizes" line of the Size dropdown. Example: Width over 48" horizontal flutes', 'Width over 48" horizontal flutes', 'text'),
-			'_size_unit' => array('Size box units', 'Products with the size calculator. Empty: width and height in inches (B2Sign rigid boards). ftin: feet and inches boxes, as on B2Sign\'s banner, flag and vinyl pages. SFS B2Sign Sync sets this from B2Sign.', 'ftin', 'text'),
+			'_size_presets' => array('Show preset size dropdown', 'Products with the size calculator: ticked shows a size dropdown (from its size options, plus Custom size) that fills in the width and height. Price is still per square foot.'),
 			'_show_in_list' => array('Show in product lists', 'Ticked: the product appears in shop and category lists.'),
-			'_has_upload_artwork' => array('Allow artwork upload', 'Ticked: customers can upload their artwork file on the product page, and (see "Artwork after ordering") from their order page if they ordered without one.'),
-			'_artwork_size' => array('Artwork size', 'The print size an uploaded file must match (same shape; a larger or smaller scale is fine). Width x height in inches; use \' for feet. One size for every order: 24 x 36. A size per option, one line each, option = size: 8ft = 94 x 33. Several accepted sizes: 29.5 x 139.5 or 59 x 139.5 (e.g. one side, or both sides in one file as in the double-sided template). Enter off to skip the check. Leave empty to use the size the customer orders (the width and height boxes, or a size option such as 24" x 36"); products with neither are not checked.', '24 x 36', 'text'),
+			'_has_upload_artwork' => array('Allow artwork upload', 'Ticked: customers can upload their artwork file on the product page.'),
 			'_product_turnaround' => array('Production time (business days)', 'Shown as the turnaround on the product page. Example: 2'),
 			'_stock_status' => array('Stock status', 'In stock: normal. Out of stock: the product page shows "Out of stock", Add To Cart is turned off and Google is told it is unavailable. Backorder: customers can still order; the page shows the expected ship date below.'),
 			'_backorder_date' => array('Backorder ship date', 'Backorder only. Date the product is expected to ship again, Pacific time, YYYY-MM-DD. Example: 2026-11-15. Empty or past: 14 days from today is used (Google requires a date).', '2026-11-15', 'text'),
@@ -111,7 +104,7 @@ add_action('cmb2_admin_init', function () {
 		'product_additional_info' => 'Descriptions and FAQ',
 		'product_extra_options' => 'Channel letter extras and defaults',
 	);
-	foreach (retails_pe_field_copy() as $box_id => $fields) {
+	foreach (wholesale_pe_field_copy() as $box_id => $fields) {
 		$box = cmb2_get_metabox($box_id);
 		if (!$box) {
 			continue;
@@ -153,7 +146,7 @@ add_filter('cmb2_override_meta_remove', function ($override, $args) {
  * rich text, wp_kses_post() drops attributes such as decoding="async"). Changed
  * values are cleaned as before. CMB2 works with slashed values here.
  */
-function retails_pe_keep_unchanged_value($override, $value, $object_id, $field_args)
+function wholesale_pe_keep_unchanged_value($override, $value, $object_id, $field_args)
 {
 	if (null !== $override || !is_string($value) || empty($field_args['id']) || 'product' !== get_post_type($object_id)) {
 		return $override;
@@ -164,10 +157,10 @@ function retails_pe_keep_unchanged_value($override, $value, $object_id, $field_a
 	}
 	return $override;
 }
-foreach (array('text', 'text_small', 'text_medium', 'textarea', 'textarea_small', 'wysiwyg') as $retails_pe_type) {
-	add_filter("cmb2_sanitize_{$retails_pe_type}", 'retails_pe_keep_unchanged_value', 10, 4);
+foreach (array('text', 'text_small', 'text_medium', 'textarea', 'textarea_small', 'wysiwyg') as $wholesale_pe_type) {
+	add_filter("cmb2_sanitize_{$wholesale_pe_type}", 'wholesale_pe_keep_unchanged_value', 10, 4);
 }
-unset($retails_pe_type);
+unset($wholesale_pe_type);
 
 /**
  * Swap the render callbacks of the options and channel letter boxes, keeping
@@ -177,8 +170,8 @@ unset($retails_pe_type);
 add_action('add_meta_boxes_product', function () {
 	global $wp_meta_boxes;
 	$swap = array(
-		'product_attr' => array('Product options (attributes)', 'retails_pe_render_attr_box'),
-		'product_cl_data' => array('Channel letter price table and colors', 'retails_pe_render_cl_box'),
+		'product_attr' => array('Product options (attributes)', 'wholesale_pe_render_attr_box'),
+		'product_cl_data' => array('Channel letter price table and colors', 'wholesale_pe_render_cl_box'),
 	);
 	foreach ($swap as $id => $box) {
 		foreach (array('normal', 'advanced', 'side') as $context) {
@@ -196,7 +189,7 @@ add_action('add_meta_boxes_product', function () {
  * Options box. The hidden #productAttrJson holds the stored value untouched;
  * the editor UI is built by JS from the JSON in the data attribute.
  */
-function retails_pe_render_attr_box($post)
+function wholesale_pe_render_attr_box($post)
 {
 	$product_attr = (string) get_post_meta($post->ID, 'product_attr', true);
 	$has_upload_artwork = get_post_meta($post->ID, '_has_upload_artwork', true);
@@ -223,7 +216,7 @@ function retails_pe_render_attr_box($post)
  * comes back byte for byte (the old box printed it unescaped, which cut it at
  * the first quote and gave the legacy '[{' value).
  */
-function retails_pe_render_cl_box($post)
+function wholesale_pe_render_cl_box($post)
 {
 	$product_cl_data = (string) get_post_meta($post->ID, 'product_cl_data', true);
 	$value = '[{' === $product_cl_data ? '[]' : $product_cl_data;
@@ -245,11 +238,11 @@ function retails_pe_render_cl_box($post)
 add_action('init', function () {
 	if (false !== has_action('save_post', 'save_product_attr_meta')) {
 		remove_action('save_post', 'save_product_attr_meta');
-		add_action('save_post', 'retails_pe_save_product_attr');
+		add_action('save_post', 'wholesale_pe_save_product_attr');
 	}
 	if (false !== has_action('save_post', 'save_product_cl_meta')) {
 		remove_action('save_post', 'save_product_cl_meta');
-		add_action('save_post', 'retails_pe_save_product_cl');
+		add_action('save_post', 'wholesale_pe_save_product_cl');
 	}
 });
 
@@ -259,7 +252,7 @@ add_action('init', function () {
  * (which appends the name to options sharing a bare price) would also rewrite
  * older groups nobody edited.
  */
-function retails_pe_save_product_attr($post_id)
+function wholesale_pe_save_product_attr($post_id)
 {
 	if ((defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || !current_user_can('edit_post', $post_id) || !isset($_POST['product_attr'])) {
 		return;
@@ -271,10 +264,10 @@ function retails_pe_save_product_attr($post_id)
 	}
 	$attrs = json_decode($raw, true);
 	if (!is_array($attrs)) {
-		set_transient('retails_attr_save_error_' . get_current_user_id(), $post_id, 60);
+		set_transient('wholesale_attr_save_error_' . get_current_user_id(), $post_id, 60);
 		return;
 	}
-	$clean = retails_normalize_product_attrs($attrs);
+	$clean = wholesale_normalize_product_attrs($attrs);
 
 	$old_by_name = array();
 	$old = json_decode($stored, true);
@@ -298,7 +291,7 @@ function retails_pe_save_product_attr($post_id)
 	update_post_meta($post_id, 'product_attr', wp_slash(wp_json_encode($clean, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)));
 }
 
-function retails_pe_save_product_cl($post_id)
+function wholesale_pe_save_product_cl($post_id)
 {
 	if ((defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) || !current_user_can('edit_post', $post_id) || !isset($_POST['product_cl_data'])) {
 		return;
@@ -311,14 +304,14 @@ function retails_pe_save_product_cl($post_id)
 	// Same cleaning as save_product_cl_meta(); keep the previous value if the result can't be read.
 	$clean = sanitize_text_field($_POST['product_cl_data']);
 	if (!is_array(json_decode(wp_unslash($clean), true))) {
-		set_transient('retails_cl_save_error_' . get_current_user_id(), $post_id, 60);
+		set_transient('wholesale_cl_save_error_' . get_current_user_id(), $post_id, 60);
 		return;
 	}
 	update_post_meta($post_id, 'product_cl_data', $clean);
 }
 
 add_action('admin_notices', function () {
-	$key = 'retails_cl_save_error_' . get_current_user_id();
+	$key = 'wholesale_cl_save_error_' . get_current_user_id();
 	if ($post_id = get_transient($key)) {
 		delete_transient($key);
 		echo '<div class="notice notice-error"><p>The channel letter data for &ldquo;' . esc_html(get_the_title($post_id)) . '&rdquo; was not saved because it could not be read. The previous data was kept.</p></div>';
@@ -326,13 +319,13 @@ add_action('admin_notices', function () {
 });
 
 add_action('admin_enqueue_scripts', function ($hook) {
-	if (!in_array($hook, array('post.php', 'post-new.php'), true) || !retails_pe_is_product_screen()) {
+	if (!in_array($hook, array('post.php', 'post-new.php'), true) || !wholesale_pe_is_product_screen()) {
 		return;
 	}
 	$dir = get_template_directory();
 	$uri = get_template_directory_uri();
-	wp_enqueue_style('retails-product-editor', $uri . '/css/admin-product-editor.css', array(), (string) filemtime($dir . '/css/admin-product-editor.css'));
-	wp_enqueue_script('retails-product-editor', $uri . '/js/admin-product-editor.js', array('jquery', 'jquery-ui-sortable'), (string) filemtime($dir . '/js/admin-product-editor.js'), true);
+	wp_enqueue_style('wholesale-product-editor', $uri . '/css/admin-product-editor.css', array(), (string) filemtime($dir . '/css/admin-product-editor.css'));
+	wp_enqueue_script('wholesale-product-editor', $uri . '/js/admin-product-editor.js', array('jquery', 'jquery-ui-sortable'), (string) filemtime($dir . '/js/admin-product-editor.js'), true);
 
 	$post = get_post();
 	$is_new = !$post || 'auto-draft' === $post->post_status;
@@ -342,7 +335,7 @@ add_action('admin_enqueue_scripts', function ($hook) {
 	// would then write that default in).
 	$stored = array();
 	if (!$is_new) {
-		foreach (retails_pe_field_copy() as $fields) {
+		foreach (wholesale_pe_field_copy() as $fields) {
 			foreach (array_keys($fields) as $key) {
 				$stored[$key] = metadata_exists('post', $post->ID, $key) ? get_post_meta($post->ID, $key, true) : null;
 			}
@@ -362,7 +355,7 @@ add_action('admin_enqueue_scripts', function ($hook) {
 		'no_found_rows' => true,
 	));
 
-	wp_localize_script('retails-product-editor', 'ssoProductEditor', array(
+	wp_localize_script('wholesale-product-editor', 'ssoProductEditor', array(
 		'postId' => $post ? (int) $post->ID : 0,
 		'isNew' => $is_new,
 		'stored' => $is_new ? new stdClass() : $stored,
@@ -373,9 +366,7 @@ add_action('admin_enqueue_scripts', function ($hook) {
 		'products' => array_map(static function ($product) {
 			return array('slug' => $product->post_name, 'title' => html_entity_decode(get_the_title($product), ENT_QUOTES, 'UTF-8'), 'status' => $product->post_status);
 		}, $products),
-		'sqftMinPrice' => defined('RETAILS_SQFT_MIN_PRICE') ? RETAILS_SQFT_MIN_PRICE : 16.5,
-		// retails_product_flat_options_on_top(), for the price preview.
-		'flatOnTop' => $post && function_exists('retails_product_flat_options_on_top') ? retails_product_flat_options_on_top($post->ID) : false,
-		'racewayPerFoot' => defined('RETAILS_RACEWAY_COST_PER_FOOT') ? RETAILS_RACEWAY_COST_PER_FOOT : 55,
+		'sqftMinPrice' => defined('WHOLESALE_SQFT_MIN_PRICE') ? WHOLESALE_SQFT_MIN_PRICE : 16.5,
+		'racewayPerFoot' => defined('WHOLESALE_RACEWAY_COST_PER_FOOT') ? WHOLESALE_RACEWAY_COST_PER_FOOT : 55,
 	));
 });

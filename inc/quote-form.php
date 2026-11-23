@@ -3,7 +3,7 @@
  * Reusable on-page quote form for Google Ads landing pages, modeled on the
  * channel letters page form (page-channel-letters.php, "clq" form): it saves a
  * contact_submission, emails the team and the customer, keeps the ad click,
- * and redirects with retails_quote_lead_args() so retails_track_quote_lead()
+ * and redirects with wholesale_quote_lead_args() so wholesale_track_quote_lead()
  * fires the Google Ads quote conversion once.
  *
  * Used by /banners-displays/. Arguments for both functions:
@@ -15,13 +15,13 @@
  * @package litsign
  */
 
-const RETAILS_QUOTE_FORM_MAX_MB = 10;
+const WHOLESALE_QUOTE_FORM_MAX_MB = 10;
 
 /**
  * Process a submission of this form, if there is one. Call before get_header():
  * it redirects and exits.
  */
-function retails_quote_form_handle(array $args)
+function wholesale_quote_form_handle(array $args)
 {
 	$prefix = $args['prefix'];
 	if ('POST' !== ($_SERVER['REQUEST_METHOD'] ?? '') || !isset($_POST[$prefix . '_submit'])) {
@@ -58,13 +58,13 @@ function retails_quote_form_handle(array $args)
 
 	$file_path = '';
 	$file_url = '';
-	$file = retails_async_upload_take($_POST[$prefix . '_file_token'] ?? '', 'quote');
+	$file = wholesale_async_upload_take($_POST[$prefix . '_file_token'] ?? '', 'quote');
 	$file = $file ? $file : ($_FILES[$prefix . '_file'] ?? null);
 	if ($file && UPLOAD_ERR_NO_FILE !== (int) $file['error']) {
-		if (UPLOAD_ERR_OK !== (int) $file['error'] || (int) $file['size'] > RETAILS_QUOTE_FORM_MAX_MB * MB_IN_BYTES) {
+		if (UPLOAD_ERR_OK !== (int) $file['error'] || (int) $file['size'] > WHOLESALE_QUOTE_FORM_MAX_MB * MB_IN_BYTES) {
 			$fail('file_error');
 		}
-		$upload = retails_async_upload_store($file, array(
+		$upload = wholesale_async_upload_store($file, array(
 			'mimes' => array(
 				'jpg|jpeg|jpe' => 'image/jpeg',
 				'png' => 'image/png',
@@ -116,24 +116,25 @@ function retails_quote_form_handle(array $args)
 		. 'Artwork: ' . ($file_url ? $file_url : 'Not uploaded') . "\n"
 		. ($source ? "Ad source: {$source}\n" : '')
 		. "\nSize, quantity and details:\n{$details}\n";
-	list($subject, $body) = retails_contact_mail_tag(sprintf('New %s quote request from %s', strtolower($args['project_label']), $name), $body);
-	retails_mail_team(
+	list($subject, $body) = wholesale_contact_mail_tag(sprintf('New %s quote request from %s', strtolower($args['project_label']), $name), $body);
+	wp_mail(
+		wholesale_contact_admin_recipients(),
 		$subject,
 		$body,
 		array('Content-Type: text/plain; charset=UTF-8', 'Reply-To: ' . $name . ' <' . $email . '>'),
 		$file_path ? array($file_path) : array()
 	);
-	retails_send_quote_confirmation($submission_id);
+	wholesale_send_quote_confirmation($submission_id);
 
 	// The quote is saved even when mail fails, so the visitor still sees success.
-	wp_safe_redirect(add_query_arg(retails_quote_lead_args($submission_id), $return_url) . '#quote');
+	wp_safe_redirect(add_query_arg(wholesale_quote_lead_args($submission_id), $return_url) . '#quote');
 	exit;
 }
 
 /**
  * Whether this page view is the "quote sent" redirect for a real submission.
  */
-function retails_quote_form_sent()
+function wholesale_quote_form_sent()
 {
 	$lead_id = isset($_GET['lead']) ? absint($_GET['lead']) : 0;
 	$lead_key = isset($_GET['lk']) ? sanitize_text_field(wp_unslash($_GET['lk'])) : '';
@@ -147,7 +148,7 @@ function retails_quote_form_sent()
  * The form card (or the thank-you message after a submission). Uses the
  * channel letters page's clq-* styles in css/cl-quote.css.
  */
-function retails_quote_form_render(array $args)
+function wholesale_quote_form_render(array $args)
 {
 	$prefix = $args['prefix'];
 	$status = isset($_GET['quote_status']) ? sanitize_key(wp_unslash($_GET['quote_status'])) : '';
@@ -159,19 +160,19 @@ function retails_quote_form_render(array $args)
 	};
 	?>
 	<div class="clq-card">
-		<?php if (retails_quote_form_sent()) : ?>
+		<?php if (wholesale_quote_form_sent()) : ?>
 			<div class="clq-success" role="status">
-				<span class="clq-success-icon"><?php echo retails_home_icon('check'); ?></span>
+				<span class="clq-success-icon"><?php echo wholesale_home_icon('check'); ?></span>
 				<h3>Thanks! Your quote request is in.</h3>
 				<p>A sign specialist will review your request and reach out with pricing. Need it sooner? Call us during business hours.</p>
-				<a class="clq-submit" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?> Call 866-436-2101</a>
+				<a class="clq-submit" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> Call 866-436-2101</a>
 			</div>
 		<?php else : ?>
 			<form class="clq-form" action="<?php echo esc_url($args['page_url']); ?>#quote" method="post" enctype="multipart/form-data" data-quote-form>
 				<?php if ('error' === $status) : ?>
 					<p class="clq-alert" role="alert">We couldn&rsquo;t send your request. Please check your name, email and phone, then try again.</p>
 				<?php elseif ('file_error' === $status) : ?>
-					<p class="clq-alert" role="alert">Your file couldn&rsquo;t be uploaded. Please use a JPG, PNG or PDF under <?php echo esc_html(RETAILS_QUOTE_FORM_MAX_MB); ?>&nbsp;MB, or send the form without it.</p>
+					<p class="clq-alert" role="alert">Your file couldn&rsquo;t be uploaded. Please use a JPG, PNG or PDF under <?php echo esc_html(WHOLESALE_QUOTE_FORM_MAX_MB); ?>&nbsp;MB, or send the form without it.</p>
 				<?php endif; ?>
 
 				<input type="hidden" name="<?php echo $name('submit'); ?>" value="1">
@@ -213,12 +214,12 @@ function retails_quote_form_render(array $args)
 					</label>
 					<label class="clq-upload clq-field--wide">
 						<input type="file" name="<?php echo $name('file'); ?>" accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf" data-quote-file data-async-upload="quote" data-async-field="<?php echo $name('file_token'); ?>">
-						<span class="clq-upload-icon"><?php echo retails_home_icon('upload'); ?></span>
-						<span class="clq-upload-text"><strong data-quote-file-name>Upload your artwork or logo (optional)</strong><small>JPG, PNG or PDF up to <?php echo esc_html(RETAILS_QUOTE_FORM_MAX_MB); ?>&nbsp;MB</small></span>
+						<span class="clq-upload-icon"><?php echo wholesale_home_icon('upload'); ?></span>
+						<span class="clq-upload-text"><strong data-quote-file-name>Upload your artwork or logo (optional)</strong><small>JPG, PNG or PDF up to <?php echo esc_html(WHOLESALE_QUOTE_FORM_MAX_MB); ?>&nbsp;MB</small></span>
 					</label>
 				</div>
 
-				<button class="clq-submit" type="submit">Get My Free Quote <?php echo retails_home_icon('arrow'); ?></button>
+				<button class="clq-submit" type="submit">Get My Free Quote <?php echo wholesale_home_icon('arrow'); ?></button>
 				<p class="clq-note">Your details stay private. Prefer to talk? Call <a href="tel:+18664362101">866-436-2101</a>.</p>
 			</form>
 			<script>
@@ -247,30 +248,3 @@ function retails_quote_form_render(array $args)
 	</div>
 	<?php
 }
-
-/**
- * The separate "Channel Letter Quote" pages (/channel-letter-quote/ and
- * /channel-letter-quote-2/) were removed on 2026-11-09: quotes now go through the
- * form on /custom-channel-letters/#quote. Anyone arriving on the old URLs (ads,
- * bookmarks) is sent there with a 301, keeping the query string so ad click IDs
- * and ?style= still reach the page. Works whether or not the old pages still
- * exist in the database.
- */
-function retails_redirect_channel_letter_quote_pages()
-{
-	global $wp;
-	if (is_admin() || empty($wp->request)) {
-		return;
-	}
-	if (!in_array(trim($wp->request, '/'), array('channel-letter-quote', 'channel-letter-quote-2'), true)) {
-		return;
-	}
-	$target = home_url('/custom-channel-letters/');
-	$query = isset($_SERVER['QUERY_STRING']) ? (string) $_SERVER['QUERY_STRING'] : '';
-	if ('' !== $query) {
-		$target .= '?' . $query;
-	}
-	wp_safe_redirect(esc_url_raw($target . '#quote'), 301);
-	exit;
-}
-add_action('template_redirect', 'retails_redirect_channel_letter_quote_pages', 1);

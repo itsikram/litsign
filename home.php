@@ -40,73 +40,7 @@ function get_variant_cost($product_cost, $variable_cost)
     return round(floatval($product_cost) + floatval($variable_cost), 2);
 }
 
-/**
- * What the cart charges for one item in a size from a card's size table: the product's
- * own quote (product discount, margin floor and any dated sale included) at that size
- * with the cheapest choice of every other option, so the cheapest row is the card's
- * "Starting at". array('total' => float, 'was' => the everyday price during a dated
- * sale, else 0). Falls back to the size's listed price when it can't be quoted.
- */
-function retails_size_table_price($product_id, $attr_name, $value, $price_per_sqft)
-{
-    $request = array('product_quantity' => 1, $attr_name => (string) $value);
-    $axes = array();
-    foreach (retails_product_price_attrs($product_id) as $attr) {
-        $options = wp_list_pluck(retails_attr_options($attr), 'value');
-        if (!empty($attr['name']) && $attr['name'] !== $attr_name && $options) {
-            $request[$attr['name']] = $options[0];
-            if (count($options) > 1) {
-                $axes[$attr['name']] = $options;
-            }
-        }
-    }
-
-    $best = null;
-    $try = static function ($try_request) use ($product_id, &$best) {
-        $quote = retails_price_quote($product_id, $try_request);
-        if (empty($quote['ok']) || $quote['total'] <= 0) {
-            return null;
-        }
-        if (null === $best || $quote['total'] < $best['total']) {
-            $best = array('total' => (float) $quote['total'], 'was' => $quote['promo_discount'] > 0 ? round($quote['total'] + $quote['promo_discount'], 2) : 0.0);
-        }
-        return (float) $quote['total'];
-    };
-    if (array_product(array_map('count', $axes)) <= 64) {
-        // Every combination of the other options (a few dozen at most).
-        $requests = array($request);
-        foreach ($axes as $name => $options) {
-            $next = array();
-            foreach ($requests as $each) {
-                foreach ($options as $option) {
-                    $next[] = array_merge($each, array($name => $option));
-                }
-            }
-            $requests = $next;
-        }
-        array_map($try, $requests);
-    } else {
-        // Each option on its own, then the cheapest choice of each together.
-        $pick = $request;
-        foreach ($axes as $name => $options) {
-            $low = null;
-            foreach ($options as $option) {
-                $total = $try(array_merge($request, array($name => $option)));
-                if (null !== $total && (null === $low || $total < $low[0])) {
-                    $low = array($total, $option);
-                }
-            }
-            if ($low) {
-                $pick[$name] = $low[1];
-            }
-        }
-        $try($pick);
-    }
-
-    return $best ? $best : array('total' => get_variant_cost($price_per_sqft, explode('/', (string) $value)[0]), 'was' => 0.0);
-}
-
-function retails_render_home_product_gallery($product_id, $product_title, $thumbnail_id, $loading = 'lazy')
+function wholesale_render_home_product_gallery($product_id, $product_title, $thumbnail_id, $loading = 'lazy')
 {
     $gallery_images = get_post_meta($product_id, '_product_gallery', true);
     $gallery_images = is_array($gallery_images) ? array_values(array_filter($gallery_images, 'is_string')) : array();
@@ -136,38 +70,37 @@ function retails_render_home_product_gallery($product_id, $product_title, $thumb
     }
 
     if (empty($images)) {
-        $default_cover = !empty($GLOBALS['retails_channel_letter_landing']) ? retails_channel_letter_default_cover_url() : '';
+        $default_cover = !empty($GLOBALS['wholesale_channel_letter_landing']) ? wholesale_channel_letter_default_cover_url() : '';
         if ($default_cover) {
             echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1">';
-            echo '<img class="pb-gallery-image is-active" src="' . esc_url(retails_webp_url($default_cover)) . '" alt="' . esc_attr($product_title) . '" loading="' . esc_attr($loading) . '" decoding="async" width="800" height="600">';
-            retails_render_sale_badge($product_id);
+            echo '<img class="pb-gallery-image is-active" src="' . esc_url(wholesale_webp_url($default_cover)) . '" alt="' . esc_attr($product_title) . '" loading="' . esc_attr($loading) . '" decoding="async" width="800" height="600">';
+            wholesale_render_sale_badge($product_id);
             echo '</a>';
             return;
         }
 
         echo '<a class="pb-image-top d-block" href="' . esc_url(get_permalink($product_id)) . '" tabindex="-1"><span class="pb-image-placeholder" aria-hidden="true"><i class="fa-regular fa-image"></i></span>';
-        retails_render_sale_badge($product_id);
+        wholesale_render_sale_badge($product_id);
         echo '</a>';
         return;
     }
 
     $has_gallery = count($images) > 1;
     // Card-sized copies instead of the 1000px originals; alt text per photo.
-    $card_images = retails_card_images($images);
+    $card_images = wholesale_card_images($images);
     ?>
     <div class="pb-image-top<?php echo $has_gallery ? ' has-gallery' : ''; ?>" data-gallery>
-        <?php retails_render_sale_badge($product_id); ?>
+        <?php wholesale_render_sale_badge($product_id); ?>
         <a class="pb-gallery-track" href="<?php echo esc_url(get_permalink($product_id)); ?>" tabindex="-1">
             <?php foreach ($images as $index => $image) : ?>
                 <?php
-                $image_alt = retails_product_photo_alt($image, $product_title);
+                $image_alt = wholesale_product_photo_alt($image, $product_title);
                 $card_image = $card_images[$image];
-                $image = retails_webp_url($index === 0 ? $card_image['src'] : $card_image['large']);
+                $image = wholesale_webp_url($index === 0 ? $card_image['src'] : $card_image['large']);
                 ?>
                 <img class="pb-gallery-image<?php echo $index === 0 ? ' is-active' : ''; ?>"
                     <?php echo $index === 0 ? 'src="' . esc_url($image) . '"' : ''; ?>
-                    <?php echo $index === 0 && $card_image['srcset'] ? 'srcset="' . esc_attr($card_image['srcset']) . '" sizes="(max-width: 767px) 100vw, 300px"' : ''; ?>
-                    width="300" height="300"
+                    <?php echo $index === 0 && $card_image['srcset'] ? 'srcset="' . esc_attr($card_image['srcset']) . '" sizes="(max-width: 767px) 100vw, 300px" width="300" height="300"' : ''; ?>
                     data-gallery-src="<?php echo esc_url($image); ?>"
                     alt="<?php echo esc_attr($image_alt); ?>"
                     loading="<?php echo $index === 0 ? esc_attr($loading) : 'lazy'; ?>"
@@ -196,7 +129,7 @@ $is_channel_letters = 'channel-letters' === $current_category;
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
 $builder_url = home_url('/channel-letter-builder/');
-$GLOBALS['retails_channel_letter_landing'] = $is_channel_letters;
+$GLOBALS['wholesale_channel_letter_landing'] = $is_channel_letters;
 // The front page is the brand and catalog hub; /custom-channel-letters/ is the
 // in-depth channel letters page. The front page summarizes and links to it
 // instead of repeating its comparison table and FAQ, so Google doesn't see two
@@ -219,7 +152,7 @@ if ($is_front_home) {
     get_template_part('template-parts/home', 'catalog');
     return;
 }
-$cl_landing_id = function_exists('retails_channel_letters_landing_id') ? retails_channel_letters_landing_id() : 0;
+$cl_landing_id = function_exists('wholesale_channel_letters_landing_id') ? wholesale_channel_letters_landing_id() : 0;
 $cl_landing_url = $cl_landing_id ? get_permalink($cl_landing_id) : home_url('/custom-channel-letters/');
 $home_page_url = function ($slug) {
     $page = get_page_by_path($slug);
@@ -251,14 +184,14 @@ $category_hero_image = $current_term_image;
 // falls back to the /custom-channel-letters/ hero photo.
 if ($is_channel_letters && is_front_page()) {
     $front_page_hero_image = get_the_post_thumbnail_url((int) get_option('page_on_front'), '2048x2048');
-    if (!$front_page_hero_image && retails_channel_letters_landing_id()) {
-        $front_page_hero_image = get_the_post_thumbnail_url(retails_channel_letters_landing_id(), '2048x2048');
+    if (!$front_page_hero_image && wholesale_channel_letters_landing_id()) {
+        $front_page_hero_image = get_the_post_thumbnail_url(wholesale_channel_letters_landing_id(), '2048x2048');
     }
     $category_hero_image = $front_page_hero_image ? $front_page_hero_image : $category_hero_image;
 }
-$category_hero_image = $category_hero_image ? retails_webp_url(esc_url_raw($category_hero_image)) : '';
-$default_category_hero_image = retails_default_hero_url();
-$category_hero_background = retails_hero_background_style($category_hero_image, $default_category_hero_image);
+$category_hero_image = $category_hero_image ? wholesale_webp_url(esc_url_raw($category_hero_image)) : '';
+$default_category_hero_image = wholesale_default_hero_url();
+$category_hero_background = wholesale_hero_background_style($category_hero_image, $default_category_hero_image);
 
 function get_nested_terms($taxonomy = 'product_category', $args = array())
 {
@@ -305,40 +238,25 @@ function get_nested_terms($taxonomy = 'product_category', $args = array())
 
 $all_categories = get_nested_terms('product_category');
 
-$cl_heights = retails_seo_letter_height_range('standard-channel-letter-front-lit');
+$cl_heights = wholesale_seo_letter_height_range('standard-channel-letter-front-lit');
 $cl_min_height = $cl_heights ? $cl_heights[0] : 8;
 $cl_max_height = $cl_heights ? $cl_heights[1] : 0;
-$storefront_signs_url = function_exists('retails_seo_storefront_signs_url') ? retails_seo_storefront_signs_url() : '';
+$storefront_signs_url = function_exists('wholesale_seo_storefront_signs_url') ? wholesale_seo_storefront_signs_url() : '';
 
 // The last dollar amount in a product's "starting at" text (after any struck-through price), e.g. "$11.70".
-// With a product category: the category's cheapest Starting at (retails_seo_category_starting_text()).
-function retails_home_from_price($slug, $category = '')
+function wholesale_home_from_price($slug)
 {
-    // With a category: the cheapest price shown on that category page, whole dollars
-    // (retails_category_card_from()), so the card matches the page it links to.
-    if ($category && function_exists('retails_category_card_from')) {
-        $from = retails_category_card_from($category);
-
-        return $from ? $from[0] : '';
-    }
-
-    $text = wp_strip_all_tags(retails_seo_product_starting_text($slug));
-    if (!preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', $text, $prices)) {
+    if (!preg_match_all('/\$\s?([\d,]+(?:\.\d+)?)/', wp_strip_all_tags(wholesale_seo_product_starting_text($slug)), $prices)) {
         return '';
     }
 
-    return false !== stripos($text, 'inch') ? '$' . end($prices[1]) : (function_exists('retails_whole_dollars') ? retails_whole_dollars(str_replace(',', '', end($prices[1]))) : '$' . end($prices[1]));
+    return '$' . end($prices[1]);
 }
 
-// The unit a "starting at" price is quoted in, so "$2" reads as "$2/sq ft".
-function retails_home_price_unit($slug, $category = '')
+// The unit a "starting at" price is quoted in, so "$1.98" reads as "$1.98/sq ft".
+function wholesale_home_price_unit($slug)
 {
-    if ($category && function_exists('retails_category_card_from')) {
-        $from = retails_category_card_from($category);
-
-        return $from ? $from[1] : '';
-    }
-    $text = strtolower(wp_strip_all_tags($category ? retails_seo_category_starting_text($category) : retails_seo_product_starting_text($slug)));
+    $text = strtolower(wp_strip_all_tags(wholesale_seo_product_starting_text($slug)));
     if (false !== strpos($text, 'letter')) {
         return '/letter';
     }
@@ -350,22 +268,21 @@ function retails_home_price_unit($slug, $category = '')
 }
 
 // Hero proof points: the lowest channel letter price and the Google rating.
-$cl_from_price = retails_home_from_price('standard-channel-letter-front-lit', 'channel-letters');
-$google_reviews = function_exists('retails_google_reviews') ? retails_google_reviews() : null;
+$cl_from_price = wholesale_home_from_price('standard-channel-letter-front-lit');
+$google_reviews = function_exists('wholesale_google_reviews') ? wholesale_google_reviews() : null;
 $google_rating = $google_reviews && !empty($google_reviews['count']) ? $google_reviews : null;
 
-// More product lines for storefronts: product slug (image), link, name, summary, product category
-// (its cheapest Starting at is the price shown, as on every other category card).
+// More product lines for storefronts: product slug (image and starting price), link, name, summary.
 // Listed in the "Shop by sign type" row under the hero and the "More for your storefront" section.
 $more_products = array(
-    array('adhesive-window-perf', retails_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted film and clings for your storefront glass.', 'adhesive-products'),
-    array('deluxe-signicade-graphic-frame', retails_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street.', 'signicade-a-frames'),
-    array('13oz-vinyl-banner', retails_category_url('banners'), 'Banners', 'Vinyl, mesh and fabric banners for grand openings, sales and events.', 'banners'),
-    array('feather-angled-flag-pole', retails_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that catch drivers&rsquo; attention from the road.', 'advertising-flags'),
-    array('aluminum-sign', retails_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours and parking.', 'rigid-signs-and-magnets'),
-    array('standard-retractable-insert-stand', retails_category_url('banner-stands'), 'Banner Stands', 'Retractable and X-stands for lobbies, trade shows and in-store promotions.', 'banner-stands'),
-    array('straight-tension-fabric-displays-graphic-frame', retails_category_url('trade-show-products'), 'Trade Show Displays', 'Tension fabric and pop up backwalls for your booth.', 'trade-show-products'),
-    array('event-tent-full-canopy-graphic-frame', retails_category_url('custom-event-tents'), 'Event Tents', 'Printed 10x10 canopy tents with walls and flags for outdoor events.', 'custom-event-tents'),
+    array('adhesive-window-perf', wholesale_category_url('adhesive-products'), 'Window Graphics', 'Printed vinyl, see-through window perf, frosted film and clings for your storefront glass.'),
+    array('deluxe-signicade-graphic-frame', wholesale_category_url('signicade-a-frames'), 'Sidewalk A-Frame Signs', 'Double-sided sidewalk signs that pull foot traffic in from the street.'),
+    array('13oz-vinyl-banner', wholesale_category_url('banners'), 'Banners', 'Vinyl, mesh and fabric banners for grand openings, sales and events.'),
+    array('feather-angled-flag-pole', wholesale_category_url('advertising-flags'), 'Advertising Flags', 'Feather and teardrop flags that catch drivers&rsquo; attention from the road.'),
+    array('aluminum-sign', wholesale_category_url('rigid-signs-and-magnets'), 'Rigid Signs', 'Aluminum, PVC and Coroplast signs for doors, store hours and parking.'),
+    array('standard-retractable-insert-stand', wholesale_category_url('banner-stands'), 'Banner Stands', 'Retractable and X-stands for lobbies, trade shows and in-store promotions.'),
+    array('straight-tension-fabric-displays-graphic-frame', wholesale_category_url('trade-show-products'), 'Trade Show Displays', 'Tension fabric and pop up backwalls for your booth.'),
+    array('event-tent-full-canopy-graphic-frame', wholesale_category_url('custom-event-tents'), 'Event Tents', 'Printed 10x10 canopy tents with walls and flags for outdoor events.'),
 );
 
 if ($is_front_home) {
@@ -379,10 +296,10 @@ if ($is_front_home) {
     $home_link = function ($url, $text) {
         return $url ? '<a href="' . esc_url($url) . '">' . $text . '</a>' : $text;
     };
-    retails_seo_set_page_faq(array_values(array_filter(array(
+    wholesale_seo_set_page_faq(array_values(array_filter(array(
         array(
             'q' => 'What does Storefront Sign Online make?',
-            'a' => 'Custom business signs, built to order: LED ' . $home_link($cl_landing_url, 'channel letters') . ' in seven lighting styles, plus ' . $home_link(retails_category_url('banners'), 'banners') . ', ' . $home_link(retails_category_url('adhesive-products'), 'window graphics') . ', sidewalk ' . $home_link(retails_category_url('signicade-a-frames'), 'A-frame signs') . ', ' . $home_link(retails_category_url('advertising-flags'), 'advertising flags') . ', banner stands, trade show displays, rigid signs and event tents. ' . $home_link(retails_shop_url(), 'Browse every product') . '.',
+            'a' => 'Custom business signs, built to order: LED ' . $home_link($cl_landing_url, 'channel letters') . ' in seven lighting styles, plus ' . $home_link(wholesale_category_url('banners'), 'banners') . ', ' . $home_link(wholesale_category_url('adhesive-products'), 'window graphics') . ', sidewalk ' . $home_link(wholesale_category_url('signicade-a-frames'), 'A-frame signs') . ', ' . $home_link(wholesale_category_url('advertising-flags'), 'advertising flags') . ', banner stands, trade show displays, rigid signs and event tents. ' . $home_link(wholesale_shop_url(), 'Browse every product') . '.',
         ),
         array(
             'q' => 'Where are your signs made, and where do you ship?',
@@ -394,7 +311,7 @@ if ($is_front_home) {
         ),
         array(
             'q' => 'How do I find out what my sign will cost?',
-            'a' => 'Every product page shows your price as you choose a size and options, before checkout. Channel letter starting rates are shown per inch of letter height' . ($home_cost_url ? '; the ' . $home_link($home_cost_url, 'channel letter cost guide') . ' shows real examples' : '') . '. For a logo or a large project, ' . $home_link($contact_url, 'request a free quote') . '.',
+            'a' => 'Every product page shows your price as you choose a size and options, before checkout. Channel letters are priced per letter by height' . ($home_cost_url ? '; the ' . $home_link($home_cost_url, 'channel letter cost guide') . ' shows real examples' : '') . '. For a logo or a large project, ' . $home_link($contact_url, 'request a free quote') . '.',
         ),
         array(
             'q' => 'Can you work from my logo?',
@@ -415,7 +332,7 @@ if ($is_front_home) {
     ))));
 } elseif ($is_channel_letters) {
     // Shown in the FAQ section below and described as FAQPage structured data in the head.
-    retails_seo_set_page_faq(array(
+    wholesale_seo_set_page_faq(array(
         array(
             'q' => 'Which channel letter style is right for my storefront?',
             'a' => 'Front-lit letters give bold, direct illumination. Back-lit and halo-lit letters glow onto the wall behind them for a softer, upscale look. Front-and-back lit letters combine both. Not sure? Call us at <a href="tel:+18664362101">866-436-2101</a> and we&rsquo;ll help you choose.',
@@ -467,7 +384,7 @@ if ($is_front_home) {
     ));
 } elseif ($current_term) {
     // Buyer questions shown under the products and described as FAQPage data in the head.
-    retails_seo_set_page_faq(retails_seo_category_faq($current_term->slug));
+    wholesale_seo_set_page_faq(wholesale_seo_category_faq($current_term->slug));
 }
 
 get_header();
@@ -476,7 +393,7 @@ get_header();
 
 // Category heading and copy for the hero. The heading and description are
 // managed under Products > Categories; the SEO intro is a fallback.
-$category_seo = $current_term ? retails_seo_category_meta() : array();
+$category_seo = $current_term ? wholesale_seo_category_meta() : array();
 $category_seo = $current_term && isset($category_seo[$current_term->slug]) ? $category_seo[$current_term->slug] : array();
 $shop_heading = $current_term ? $current_term->name : __('Custom Signs', 'litsign');
 $category_description = $current_term ? trim((string) $current_term->description) : '';
@@ -504,9 +421,9 @@ if ('' === $category_description_text && '' === $category_intro) {
                     <?php endif; ?>
                     <p class="home-hero-proof">
                         <?php if ($google_rating) : ?>
-                            <a class="home-hero-rating" href="#customer-reviews"><?php echo retails_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
+                            <a class="home-hero-rating" href="#customer-reviews"><?php echo wholesale_review_stars($google_rating['rating']); ?> <strong><?php echo esc_html(number_format((float) $google_rating['rating'], 1)); ?></strong> on Google (<?php echo esc_html(number_format_i18n((int) $google_rating['count'])); ?>)</a>
                         <?php endif; ?>
-                        <span><?php echo retails_home_icon('flag'); ?> Made in Washington &amp; California &middot; ships to all 50 states</span>
+                        <span><?php echo wholesale_home_icon('flag'); ?> Made in Washington &amp; California &middot; ships to all 50 states</span>
                     </p>
                     <?php if ($is_front_home) : ?>
                     <p class="home-hero-lead">Storefront Sign Online builds UL listed LED channel letters in Washington and California, and prints banners, window graphics, A-frames and flags in Renton, WA. Every product shows its price online, or send your logo and a sign specialist will quote it within one business day.</p>
@@ -516,13 +433,13 @@ if ('' === $category_description_text && '' === $category_intro) {
                     <p class="home-hero-install">We build, test and ship. Your licensed electrician or sign installer mounts it with the included wiring diagram and install pattern.</p>
                     <?php endif; ?>
                     <div class="home-hero-actions home-hero-actions--cl">
-                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per inch</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
-                        <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo retails_home_icon('message'); ?> Get a Free Quote</a>
+                        <a class="home-hero-shop-button" href="#product-box-container"><span class="home-hero-button-text">See Styles &amp; Prices<?php if ($cl_from_price) : ?><small>From <?php echo esc_html($cl_from_price); ?> per letter</small><?php endif; ?></span> <span aria-hidden="true">&rarr;</span></a>
+                        <a class="home-hero-secondary-button" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
                     </div>
-                    <?php $cl_example_text = function_exists('retails_cl_worked_example_text') ? retails_cl_worked_example_text() : ''; ?><?php if ($cl_example_text) : ?><p class="home-hero-example"><?php echo wp_kses_post($cl_example_text); ?></p><?php endif; ?>
+                    <?php $cl_example_text = function_exists('wholesale_cl_worked_example_text') ? wholesale_cl_worked_example_text() : ''; ?><?php if ($cl_example_text) : ?><p class="home-hero-example"><?php echo wp_kses_post($cl_example_text); ?></p><?php endif; ?>
                     <p class="home-hero-logo"><a href="<?php echo esc_url($contact_url); ?>">Have a logo? Send it for a free quote</a> <span>or <a href="sms:+12066186543">text your logo to 206-618-6543</a></span></p>
                     <p class="home-hero-help">
-                        <?php echo retails_home_icon('phone'); ?>
+                        <?php echo wholesale_home_icon('phone'); ?>
                         Talk to a sign specialist: <a href="tel:+18664362101">866-436-2101</a>
                         <span class="home-hero-help-hours">Mon&ndash;Fri, 8am&ndash;5pm PT &middot; or <a href="<?php echo esc_url($builder_url); ?>">design your sign online</a></span>
                     </p>
@@ -544,15 +461,10 @@ if ('' === $category_description_text && '' === $category_intro) {
                 <?php endif; ?>
                 <div class="home-hero-actions">
                     <a class="home-hero-shop-button" href="#product-box-container">Shop Now <span aria-hidden="true">&rarr;</span></a>
-                    <?php // Our own channel letter video, on the channel letters category only. The old
-                    // YouTube search embed (listType=search) no longer plays and searched channel
-                    // letters on every category page, trade show displays included. ?>
-                    <?php if ($is_channel_letters) : ?>
-                    <button class="home-hero-video-link" type="button" data-youtube-video="https://www.youtube-nocookie.com/embed/HA2olg_MLLw?rel=0" aria-controls="homeVideoModal" aria-haspopup="dialog">
+                    <button class="home-hero-video-link" type="button" data-youtube-video="https://www.youtube-nocookie.com/embed?listType=search&amp;list=channel%20letter%20signs" aria-controls="homeVideoModal" aria-haspopup="dialog">
                         <span class="home-hero-play" aria-hidden="true"><i class="fa-solid fa-play"></i></span>
                         <span>Watch Video</span>
                     </button>
-                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>
@@ -561,10 +473,10 @@ if ('' === $category_description_text && '' === $category_intro) {
     <?php if ($is_channel_letters) : ?>
     <div class="cll-trust" aria-label="Why our channel letters">
         <ul class="container cll-trust-list">
-            <li><?php echo retails_home_icon('badge'); ?><span><strong>UL listed</strong><small>Labels on every sign section</small></span></li>
-            <li><?php echo retails_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Washington &amp; California</small></span></li>
-            <li><?php echo retails_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>All 7 channel letter styles</small></span></li>
-            <li><?php echo retails_home_icon('plug'); ?><span><strong>Tested before shipping</strong><small>Wiring diagram included</small></span></li>
+            <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong><small>Labels on every sign section</small></span></li>
+            <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in the USA</strong><small>Built in Washington &amp; California</small></span></li>
+            <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong><small>All 7 channel letter styles</small></span></li>
+            <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong><small>Wiring diagram included</small></span></li>
         </ul>
     </div>
     <?php endif; ?>
@@ -622,20 +534,20 @@ if ('' === $category_description_text && '' === $category_intro) {
     <div class="container">
         <div class="home-types-head">
             <p class="home-types-title">Shop by sign type</p>
-            <a class="home-types-all" href="<?php echo esc_url(retails_shop_url()); ?>">View all products <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+            <a class="home-types-all" href="<?php echo esc_url(wholesale_shop_url()); ?>">View all products <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
         </div>
         <div class="home-types-rail" data-types-rail>
         <button type="button" class="home-types-arrow home-types-arrow--prev" data-types-prev aria-label="Scroll sign types left" hidden><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></button>
         <ul class="home-types-list" data-types-list>
             <?php
             $type_links = array_merge(
-                array(array('standard-channel-letter-front-lit', $is_channel_letters ? '#product-box-container' : retails_category_url('channel-letters'), 'Channel Letters', '', 'channel-letters')),
+                array(array('standard-channel-letter-front-lit', $is_channel_letters ? '#product-box-container' : wholesale_category_url('channel-letters'), 'Channel Letters')),
                 $more_products
             );
             foreach ($type_links as $type_link) :
-                $type_product = retails_seo_product($type_link[0]);
-                $type_price = retails_home_from_price($type_link[0], isset($type_link[4]) ? $type_link[4] : '');
-                $type_price .= $type_price ? retails_home_price_unit($type_link[0], isset($type_link[4]) ? $type_link[4] : '') : '';
+                $type_product = wholesale_seo_product($type_link[0]);
+                $type_price = wholesale_home_from_price($type_link[0]);
+                $type_price .= $type_price ? wholesale_home_price_unit($type_link[0]) : '';
                 ?>
                 <li>
                     <a class="home-types-item" href="<?php echo esc_url($type_link[1]); ?>">
@@ -670,12 +582,6 @@ if ('' === $category_description_text && '' === $category_intro) {
 </div>
 <?php endif; ?>
 
-<?php
-// The listing's template indentation was up to 40% of a category page's HTML
-// (184 KB on /indoor-outdoor-displays/); it is dropped below. Nothing in the
-// listing uses <pre>, <textarea> or white-space: pre.
-ob_start();
-?>
 <div class="container my-3 product-listing-container<?php echo $is_channel_letters ? ' product-listing-container--cl' : ''; ?>">
 
     <div class="row">
@@ -710,7 +616,7 @@ ob_start();
                         ?>
 
                             <li class="filter-item text-truncate <?php echo $is_current_item ? 'active' : ''; ?>">
-                                <a href="<?php echo esc_url(retails_category_url($child_slug)); ?>" class="d-flex justify-content-between">
+                                <a href="<?php echo esc_url(wholesale_category_url($child_slug)); ?>" class="d-flex justify-content-between">
                                     <span class="text"><?php echo $child_name; ?></span>
                                     <i class="fa-solid fa-chevron-right"></i>
                                 </a>
@@ -731,7 +637,7 @@ ob_start();
 
             <div class="category-filter-menu-wrapper">
                 <button type="button" class="category-filter-toggler" aria-expanded="false" aria-controls="category-filter-menu">
-                    <span class="category-filter-toggler-label"><?php echo esc_html($current_term && !is_wp_error($current_term) ? $current_term->name : 'Browse categories'); ?></span>
+                    <span class="category-filter-toggler-label">Browse categories</span>
                     <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
                 </button>
                 <?php
@@ -763,7 +669,7 @@ ob_start();
             </div> -->
 
             <?php if (!$is_channel_letters && $current_term) {
-                retails_render_category_lead($current_term->slug, $shop_heading);
+                wholesale_render_category_lead($current_term->slug, $shop_heading);
             } ?>
             <div id="product-box-container" class="product-box-container d-flex flex-wrap">
 
@@ -807,42 +713,40 @@ ob_start();
 
                 ?>
                         <div class="product-box <?php echo $product_slug; ?>" data-product-category="<?php echo $product_category_slug; ?>">
-                            <?php retails_render_home_product_gallery(
+                            <?php wholesale_render_home_product_gallery(
                                 get_the_ID(),
                                 $is_channel_letters ? 'Custom channel letter sign: ' . get_the_title() : get_the_title(),
                                 $product_thumbnail_id,
                                 $is_first_product ? 'eager' : 'lazy'
                             ); ?>
                             <?php $is_first_product = false; ?>
-                            <?php echo retails_admin_edit_product_link(get_the_ID()); // Escaped in helper. ?>
+                            <?php echo wholesale_admin_edit_product_link(get_the_ID()); // Escaped in helper. ?>
                             <a href="<?php echo get_permalink(); ?>">
                                 <div class="pb-details">
-                                    <?php $card_name = $is_channel_letters ? get_the_title() : retails_seo_product_search_name(get_the_ID()); ?>
+                                    <?php $card_name = $is_channel_letters ? get_the_title() : wholesale_seo_product_search_name(get_the_ID()); ?>
                                     <h3 class="pb-title fs-6<?php echo $is_channel_letters ? ' text-truncate' : ''; ?>" title="<?php echo esc_attr($card_name); ?>">
                                         <?php echo esc_html($card_name); ?>
                                     </h3>
-                                    <?php retails_render_product_rating(get_the_ID()); ?>
+                                    <?php wholesale_render_product_rating(get_the_ID()); ?>
                                     <div class="pb-description-list">
                                         <?php echo wp_kses_post($short_desc); ?>
                                     </div>
-                                    <?php echo function_exists('retails_card_trust') ? retails_card_trust(get_the_ID()) : ''; // Escaped in helper. ?>
                                     <hr>
                                     <div class="start-at-pricing<?php echo $starting_at_options ? ' start-at-pricing--table' : ''; ?>">
 
                                         <?php if ($starting_at_options) {
                                             $product_size_data = get_product_attribute_data(get_the_ID(), $starting_at_options);
-                                            // Each row is what the cart charges for that size (retails_size_table_price()).
                                             // Phones show one "Starting at" line instead of the size table.
-                                            $size_rows = array();
-                                            foreach ($product_size_data as $size_name => $size_value) {
-                                                $size_rows[$size_name] = retails_size_table_price(get_the_ID(), $starting_at_options, $size_value, $price_per_sqft);
+                                            $size_prices = array();
+                                            foreach ($product_size_data as $size_value) {
+                                                $size_prices[] = get_variant_cost($price_per_sqft, str_contains($size_value, '/') ? explode('/', $size_value)[0] : $size_value);
                                             }
-                                            $size_prices = array_filter(array_column($size_rows, 'total'));
+                                            $size_prices = array_filter($size_prices);
                                         ?>
                                             <?php if ($size_prices || trim(wp_strip_all_tags((string) $starting_at_text)) !== '') : ?>
                                                 <p class="pb-price-summary">
                                                     <span class="pb-title-short">Starting at</span>
-                                                    <span class="pb-price"><?php echo trim(wp_strip_all_tags((string) $starting_at_text)) !== '' ? retails_emphasize_price(retails_price_no_cents($starting_at_text)) : '<strong>' . esc_html(retails_whole_dollars(min($size_prices))) . '</strong>'; ?></span>
+                                                    <span class="pb-price"><?php echo trim(wp_strip_all_tags((string) $starting_at_text)) !== '' ? wholesale_emphasize_price(wholesale_price_no_cents($starting_at_text)) : '<strong>' . esc_html(wholesale_whole_dollars(min($size_prices))) . '</strong>'; ?></span>
                                                 </p>
                                             <?php endif; ?>
                                             <table class="table">
@@ -861,8 +765,7 @@ ob_start();
                                                                 </a></th>
                                                             <td>
                                                                 <a href="<?php echo esc_url(add_query_arg($starting_at_options, $value, get_permalink(get_the_ID()))); ?>" rel="nofollow">
-                                                                    <?php $size_row = $size_rows[$name]; ?>
-                                                                    <?php echo wp_kses_post(retails_price_no_cents(($size_row['was'] > $size_row['total'] ? '<del>$' . number_format($size_row['was'], 2) . '</del> ' : '') . '$' . number_format($size_row['total'], 2))); ?>
+                                                                    <?php echo esc_html(wholesale_whole_dollars(get_variant_cost($price_per_sqft, str_contains($value, '/') ? explode('/', $value)[0] : $value))); ?>
                                                                 </a>
                                                             </td>
 
@@ -882,16 +785,16 @@ ob_start();
                                                 Starting at
                                             </span>
                                             <span class="pb-price">
-                                                <?php echo $is_channel_letters ? retails_price_no_cents($starting_at_text) : retails_emphasize_price(retails_price_no_cents($starting_at_text)); ?>
+                                                <?php echo $is_channel_letters ? wholesale_price_no_cents($starting_at_text) : wholesale_emphasize_price(wholesale_price_no_cents($starting_at_text)); ?>
                                             </span>
                                         <?php
                                         }; ?>
 
                                     </div>
                                     <?php if ($is_channel_letters) : ?>
-                                        <span class="pb-cta">Get your price <?php echo retails_home_icon('arrow'); ?></span>
+                                        <span class="pb-cta">Get your price <?php echo wholesale_home_icon('arrow'); ?></span>
                                     <?php else : ?>
-                                        <span class="pb-shop-cta" aria-hidden="true">Choose size &amp; options <?php echo retails_home_icon('arrow'); ?></span>
+                                        <span class="pb-shop-cta" aria-hidden="true">Choose size &amp; options <?php echo wholesale_home_icon('arrow'); ?></span>
                                     <?php endif; ?>
 
                                 </div>
@@ -906,15 +809,15 @@ ob_start();
                             <h3 class="cl-help-card-title">Not sure which channel letter is right for you?</h3>
                             <p class="cl-help-card-text">Tell us your wall size and logo. A sign specialist will recommend a style and quote it for you.</p>
                             <ul class="cl-help-card-list">
-                                <li><?php echo retails_home_icon('badge'); ?> UL listed for outdoor use</li>
-                                <li><?php echo retails_home_icon('shield'); ?> 5-year warranty on all 7 styles</li>
-                                <li><?php echo retails_home_icon('plug'); ?> Tested, with a wiring diagram and install pattern</li>
-                                <li><?php echo retails_home_icon('flag'); ?> Made in USA, ships to all 50 states</li>
+                                <li><?php echo wholesale_home_icon('badge'); ?> UL listed for outdoor use</li>
+                                <li><?php echo wholesale_home_icon('shield'); ?> 5-year warranty on all 7 styles</li>
+                                <li><?php echo wholesale_home_icon('plug'); ?> Tested, with a wiring diagram and install pattern</li>
+                                <li><?php echo wholesale_home_icon('flag'); ?> Made in USA, ships to all 50 states</li>
                             </ul>
                             <div class="cl-help-card-actions">
-                                <a class="cl-help-card-primary" href="<?php echo esc_url($builder_url); ?>"><?php echo retails_home_icon('pen'); ?> Design Your Sign</a>
-                                <a class="cl-help-card-secondary" href="<?php echo esc_url($contact_url); ?>"><?php echo retails_home_icon('message'); ?> Get a Free Quote</a>
-                                <a class="cl-help-card-phone" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?> 866-436-2101</a>
+                                <a class="cl-help-card-primary" href="<?php echo esc_url($builder_url); ?>"><?php echo wholesale_home_icon('pen'); ?> Design Your Sign</a>
+                                <a class="cl-help-card-secondary" href="<?php echo esc_url($contact_url); ?>"><?php echo wholesale_home_icon('message'); ?> Get a Free Quote</a>
+                                <a class="cl-help-card-phone" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?> 866-436-2101</a>
                             </div>
                         </div>
                     <?php endif;
@@ -924,7 +827,7 @@ ob_start();
 
                 <?php if ($ref_term && !$is_channel_letters) : ?>
                     <div class="product-box" data-product-category="adhesive-products">
-                        <a href="<?php echo esc_url(retails_category_url($ref_term->slug)); ?>">
+                        <a href="<?php echo esc_url(wholesale_category_url($ref_term->slug)); ?>">
                             <div class="pb-image-top">
                                 <?php
                                 $ref_term_image_id = attachment_url_to_postid($ref_term_image);
@@ -951,7 +854,7 @@ ob_start();
                                 <p class="pb-pricing d-flex justify-content-between">
                                     <span class="pb-title-short fs-6">
 
-                                        <a href="<?php echo esc_url(retails_category_url($ref_term->slug)); ?>">See All</a>
+                                        <a href="<?php echo esc_url(wholesale_category_url($ref_term->slug)); ?>">See All</a>
 
                                     </span>
                                     <span class="pb-price">
@@ -969,19 +872,18 @@ ob_start();
         </div>
     </div>
 </div>
-<?php echo preg_replace('/\n\s+/', "\n", (string) ob_get_clean()); // Markup built above; only whitespace removed. ?>
 
 <?php if (!$is_channel_letters && $current_term) {
-    retails_render_category_guide($current_term->slug);
+    wholesale_render_category_guide($current_term->slug);
 } ?>
 
-<?php if (!$is_channel_letters && !empty($GLOBALS['retails_page_faq'])) : ?>
+<?php if (!$is_channel_letters && !empty($GLOBALS['wholesale_page_faq'])) : ?>
     <section class="cl-faq" aria-labelledby="category-faq-title">
         <div class="container">
             <p class="cl-kicker">Before you order</p>
             <h2 id="category-faq-title" class="cl-section-title"><?php echo esc_html(sprintf(__('%s: Questions & Answers', 'litsign'), $shop_heading)); ?></h2>
             <div class="cl-faq-list">
-                <?php retails_seo_render_faq(); ?>
+                <?php wholesale_seo_render_faq(); ?>
             </div>
         </div>
     </section>
@@ -1009,7 +911,7 @@ ob_start();
         $cl_compare_rows[] = array(
             'style' => $cl_style,
             'url' => get_permalink($cl_product),
-            'price' => retails_price_no_cents(get_post_meta($cl_product->ID, '_starting_at_text', true)),
+            'price' => wholesale_price_no_cents(get_post_meta($cl_product->ID, '_starting_at_text', true)),
         );
     }
     ?>
@@ -1082,8 +984,8 @@ ob_start();
             <p>Letters mount directly to the wall or on a raceway, a metal box that holds the wiring and mounts the sign as one unit so fewer holes go into your building. Every sign is tested before it ships and arrives with an installation pattern and a wiring diagram for your installer. In most areas the electrical connection must be made by a licensed electrician or sign contractor.</p>
 
             <h3>How channel letter pricing works</h3>
-            <?php $cl_price_note = function_exists('retails_cl_starting_price_note') ? retails_cl_starting_price_note() : ''; ?>
-            <p><?php if ($cl_price_note) : ?><?php echo wp_kses_post($cl_price_note); ?> You see your total before checkout. <?php else : ?>Starting rates are shown per inch of letter height. Your full price depends on the height, number of letters and options such as a raceway, and appears before checkout. <?php endif; ?><?php if ($is_front_home) : ?>Each style above lists its starting rate; <?php else : ?>The table above shows where each style starts; <?php endif; ?><a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
+            <?php $cl_price_note = function_exists('wholesale_cl_starting_price_note') ? wholesale_cl_starting_price_note() : ''; ?>
+            <p><?php if ($cl_price_note) : ?><?php echo wp_kses_post($cl_price_note); ?> You see your total before checkout. <?php else : ?>Channel letters are priced per letter by letter height. Your total is the number of letters times the price for the height you choose, plus options such as a raceway, and you see it before checkout. <?php endif; ?><?php if ($is_front_home) : ?>Each style above lists its starting price; <?php else : ?>The table above shows where each style starts; <?php endif; ?><a href="<?php echo esc_url($builder_url); ?>">design your sign online</a> for an exact price, or <a href="<?php echo esc_url($contact_url); ?>">send your logo for a free quote</a>.</p>
             <?php if ($is_front_home) : ?>
             <h3>Compare every lighting style</h3>
             <p>Front lit, back lit, dual lit, halo lit, reverse lit, trimless and borderless letters each suit a different storefront. Our <a href="<?php echo esc_url($cl_landing_url); ?>">custom channel letters page</a> compares all seven side by side, with how each one lights, what it is best for and where its price starts.</p>
@@ -1100,8 +1002,8 @@ ob_start();
             <div class="sf-type-grid">
                 <?php foreach ($more_products as $item) : ?>
                     <?php
-                    $item_product = retails_seo_product($item[0]);
-                    $item_price = retails_price_no_cents(retails_seo_category_starting_text($item[4]));
+                    $item_product = wholesale_seo_product($item[0]);
+                    $item_price = wholesale_price_no_cents(wholesale_seo_product_starting_text($item[0]));
                     ?>
                     <article class="sf-type-card">
                         <a class="sf-type-image" href="<?php echo esc_url($item[1]); ?>" tabindex="-1" aria-hidden="true">
@@ -1164,13 +1066,13 @@ ob_start();
                 <p class="cl-kicker">Built to last</p>
                 <h2 id="cl-quality-title" class="cl-section-title">Commercial-Grade Signs for Your Storefront</h2>
                 <p class="cl-section-lead">Custom channel letters give your business a polished look, with bright, energy-efficient LED lighting that stands out day and night.</p>
-                <a class="cl-button" href="#product-box-container">Compare Styles &amp; Prices <?php echo retails_home_icon('arrow'); ?></a>
+                <a class="cl-button" href="#product-box-container">Compare Styles &amp; Prices <?php echo wholesale_home_icon('arrow'); ?></a>
             </div>
             <ul class="cl-quality-list">
-                <li><?php echo retails_home_icon('badge'); ?><span><strong>UL listed</strong> outdoor channel letter signs with sign section labels.</span></li>
-                <li><?php echo retails_home_icon('shield'); ?><span><strong>5-year warranty</strong> on all 7 channel letter styles, plus the LED modules and power supplies.</span></li>
-                <li><?php echo retails_home_icon('flag'); ?><span><strong>Made in USA</strong> with .040 aluminum or welded stainless steel returns and acrylic faces.</span></li>
-                <li><?php echo retails_home_icon('plug'); ?><span><strong>Tested before shipping</strong>, with a wiring diagram and installation pattern included.</span></li>
+                <li><?php echo wholesale_home_icon('badge'); ?><span><strong>UL listed</strong> outdoor channel letter signs with sign section labels.</span></li>
+                <li><?php echo wholesale_home_icon('shield'); ?><span><strong>5-year warranty</strong> on all 7 channel letter styles, plus the LED modules and power supplies.</span></li>
+                <li><?php echo wholesale_home_icon('flag'); ?><span><strong>Made in USA</strong> with .040 aluminum or welded stainless steel returns and acrylic faces.</span></li>
+                <li><?php echo wholesale_home_icon('plug'); ?><span><strong>Tested before shipping</strong>, with a wiring diagram and installation pattern included.</span></li>
             </ul>
         </div>
     </section>
@@ -1181,15 +1083,15 @@ ob_start();
                 <h2 id="cl-help-title">Talk to a Real Sign Specialist</h2>
                 <p>Have a logo, a storefront photo or a question about sizing? We&rsquo;ll help you pick the right sign before you order.</p>
                 <ul class="cl-help-details">
-                    <li><?php echo retails_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
-                    <li><?php echo retails_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
+                    <li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+                    <li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
                 </ul>
             </div>
             <div class="cl-help-actions">
-                <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-                <a class="cl-help-action" href="sms:+12066186543"><?php echo retails_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-                <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo retails_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
-                <a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo retails_home_icon('arrow'); ?></a>
+                <a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+                <a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+                <a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+                <a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
             </div>
         </div>
     </section>
@@ -1199,7 +1101,7 @@ ob_start();
             <p class="cl-kicker">Before you order</p>
             <h2 id="cl-faq-title" class="cl-section-title"><?php echo $is_front_home ? 'Questions About Storefront Sign Online' : 'Frequently Asked Questions'; ?></h2>
             <div class="cl-faq-list">
-                <?php retails_seo_render_faq(); ?>
+                <?php wholesale_seo_render_faq(); ?>
             </div>
             <?php if ($is_front_home) : ?>
                 <p class="cl-section-lead cl-faq-note">Questions about channel letter styles, heights or raceways? See the <a href="<?php echo esc_url($cl_landing_url); ?>#cl-faq-title">channel letter FAQ</a>.</p>
@@ -1208,7 +1110,7 @@ ob_start();
     </section>
 
     <nav class="cl-mobile-bar" aria-label="Quick actions">
-        <button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo retails_home_icon('grid'); ?> All Products</button>
+        <button type="button" class="cl-mobile-bar-products" aria-controls="megaMenu"><?php echo wholesale_home_icon('grid'); ?> All Products</button>
         <a class="cl-mobile-bar-quote" href="<?php echo esc_url($contact_url); ?>">Free Quote</a>
         <a class="cl-mobile-bar-shop" href="<?php echo esc_url(home_url('/channel-letter-builder/')); ?>">Start Building</a>
     </nav>

@@ -5,7 +5,7 @@
  * either way the server fixes the amount and verifies the result. See inc/payments.php.
  */
 (() => {
-  const settings = window.retailsPayment;
+  const settings = window.wholesalePayment;
   if (!settings) return;
 
   const money = (value) => '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -306,16 +306,87 @@
       syncShipping();
     }
 
-    // Totals follow the chosen shipping speed.
+    // Delivery: ship it (carrier + speed, optional blind drop ship) or store pickup.
+    const deliveryMode = () => {
+      const chosen = form.querySelector('input[name="delivery_method"]:checked') || form.querySelector('input[name="delivery_method"][type="hidden"]');
+      return chosen ? chosen.value : 'ship';
+    };
+
+    // Totals follow the delivery choice and shipping speed. The quote goes to the
+    // server, which recomputes the amount and stops if it no longer matches.
     const totals = form.querySelector('.checkout-totals');
+    const quote = form.querySelector('[data-shipping-quote]');
     const updateTotals = () => {
+      const pickup = deliveryMode() === 'pickup';
       const chosen = form.querySelector('input[name="shipping_method"]:checked');
-      const shipping = chosen ? parseFloat(chosen.dataset.shippingAmount) : 0;
+      const shipping = !pickup && chosen ? parseFloat(chosen.dataset.shippingAmount) : 0;
       const grand = parseFloat(totals.dataset.subtotal) + shipping + parseFloat(totals.dataset.tax);
       form.querySelectorAll('[data-shipping-total]').forEach((el) => { el.textContent = shipping > 0 ? money(shipping) : 'FREE'; });
+      form.querySelectorAll('[data-summary-shipping]').forEach((el) => { el.textContent = pickup ? 'Store pickup' : (chosen ? chosen.dataset.shippingName : ''); });
       form.querySelectorAll('[data-grand-total]').forEach((el) => { el.textContent = money(grand); });
+      if (quote) quote.value = shipping.toFixed(2);
     };
     form.querySelectorAll('input[name="shipping_method"]').forEach((radio) => radio.addEventListener('change', updateTotals));
+
+    const shipOnly = form.querySelector('[data-ship-only]');
+    const syncDelivery = () => {
+      const mode = deliveryMode();
+      form.querySelectorAll('[data-delivery-panel]').forEach((panel) => { panel.hidden = panel.dataset.deliveryPanel !== mode; });
+      // Pickup orders have no ship-to address.
+      if (shipOnly) shipOnly.hidden = mode !== 'ship';
+      updateTotals();
+    };
+    form.querySelectorAll('input[name="delivery_method"]').forEach((radio) => radio.addEventListener('change', syncDelivery));
+
+    // UPS and FedEx charge the same, so the carrier buttons show one list of speeds
+    // and switching carrier keeps the chosen speed.
+    const rates = form.querySelector('.checkout-rates');
+    const syncCarrier = () => {
+      const carrier = form.querySelector('input[name="carrier_view"]:checked');
+      if (!rates || !carrier) return;
+      rates.classList.add('is-filtered');
+      const current = form.querySelector('input[name="shipping_method"]:checked');
+      const speed = current ? current.closest('[data-speed]').dataset.speed : '';
+      rates.querySelectorAll('.checkout-rate').forEach((row) => { row.hidden = row.dataset.carrier !== carrier.value; });
+      if (!current || current.closest('.checkout-rate').hidden) {
+        const twin = rates.querySelector(`.checkout-rate[data-carrier="${carrier.value}"][data-speed="${speed}"] input`)
+          || rates.querySelector(`.checkout-rate[data-carrier="${carrier.value}"] input`);
+        if (twin) twin.checked = true;
+      }
+      updateTotals();
+    };
+    form.querySelectorAll('input[name="carrier_view"]').forEach((radio) => radio.addEventListener('change', syncCarrier));
+
+    // Blind drop ship: the return address starts as the customer's billing details.
+    const blind = form.querySelector('#blindShip');
+    const blindFields = form.querySelector('#blindShipFields');
+    const copyBillingToBlind = (onlyEmpty) => {
+      const map = { company: 'billing_company', address: 'billing_address', address_2: 'billing_address_2', city: 'billing_city', state: 'billing_state', zip: 'billing_zip', tel: 'billing_tel' };
+      const fullName = [form.elements.billing_fname, form.elements.billing_lname].map((input) => (input ? input.value.trim() : '')).filter(Boolean).join(' ');
+      const set = (target, value) => {
+        if (!target || (onlyEmpty && target.value.trim())) return;
+        target.value = value;
+        if (target.getAttribute('aria-invalid') === 'true') validateField(target);
+      };
+      Object.entries(map).forEach(([key, source]) => set(form.elements[`blind_from_${key}`], form.elements[source] ? form.elements[source].value : ''));
+      set(form.elements.blind_from_name, fullName);
+    };
+    const syncBlind = () => {
+      if (!blind || !blindFields) return;
+      blindFields.hidden = !blind.checked;
+      const empty = ['company', 'address', 'city', 'zip'].every((key) => !form.elements[`blind_from_${key}`].value.trim());
+      if (blind.checked && empty) copyBillingToBlind(true);
+    };
+    if (blind) blind.addEventListener('change', () => {
+      syncBlind();
+      syncReveals();
+      if (blind.checked) form.elements.blind_from_company.focus();
+    });
+    const blindCopy = form.querySelector('[data-blind-copy]');
+    if (blindCopy) blindCopy.addEventListener('click', () => {
+      copyBillingToBlind(false);
+      syncReveals();
+    });
 
     // "+ Add apartment" links and the order note only open when needed.
     const reveal = (button) => {
@@ -358,10 +429,20 @@
     // Remember contact and address details (never card data or passwords) on this device.
     const remember = form.querySelector('#rememberDetails');
     const remembered = form.querySelector('[data-remembered]');
-    const savedFields = () => fieldsOf(form).filter((input) => /^(billing|shipping)_/.test(input.name) && input.type !== 'password');
+    const savedFields = () => fieldsOf(form).filter((input) => /^(billing|shipping|blind_from)_/.test(input.name) && input.type !== 'password');
+    const checkedValue = (name) => {
+      const input = form.querySelector(`input[name="${name}"]:checked`);
+      return input ? input.value : '';
+    };
     const save = () => {
       if (!remember || !remember.checked) return;
-      const values = { same_shipping_address: same ? same.checked : true };
+      // The speed is chosen fresh each order; carrier, pickup and blind ship are habits.
+      const values = {
+        same_shipping_address: same ? same.checked : true,
+        delivery_method: checkedValue('delivery_method'),
+        carrier_view: checkedValue('carrier_view'),
+        blind_ship: blind ? blind.checked : false,
+      };
       savedFields().forEach((input) => { values[input.name] = input.value; });
       storage.set(values);
     };
@@ -382,8 +463,16 @@
         same.checked = false;
         syncShipping();
       }
+      ['delivery_method', 'carrier_view'].forEach((name) => {
+        const radio = saved[name] && form.querySelector(`input[name="${name}"][value="${String(saved[name]).replace(/[^a-z]/g, '')}"]`);
+        if (radio) radio.checked = true;
+      });
+      if (blind && saved.blind_ship === true) blind.checked = true;
       if (filled && remembered) remembered.hidden = false;
     }
+    syncCarrier();
+    syncBlind();
+    syncDelivery();
     syncReveals();
 
     let saveTimer = null;
@@ -409,6 +498,10 @@
         if (same) {
           same.checked = true;
           syncShipping();
+        }
+        if (blind) {
+          blind.checked = false;
+          syncBlind();
         }
         remembered.hidden = true;
         form.querySelector('[name="billing_email"]').focus();
@@ -490,7 +583,7 @@
       const password = form.querySelector('[name="account_password"]');
       if (password) data.append('account_password', password.value);
       try {
-        const result = await post('retails_payment_complete', data);
+        const result = await post('wholesale_payment_complete', data);
         window.location.href = result.redirect;
       } catch (error) {
         setBusy(false);
@@ -517,7 +610,7 @@
       const data = new FormData(form);
       data.append('kind', kind);
       try {
-        const start = await post('retails_payment_start', data);
+        const start = await post('wholesale_payment_start', data);
         if (start.redirect) {
           window.location.href = start.redirect;
           return;
@@ -538,7 +631,7 @@
           },
           onCancelled: () => {
             setBusy(false);
-            showStatus(kind === 'order' ? 'Payment cancelled. No charge was made.' : 'Payment cancelled. Your order has not been placed.', 'info');
+            showStatus('Payment cancelled. Your order has not been placed.', 'info');
           },
         });
       } catch (error) {
@@ -556,9 +649,6 @@
     if (checkoutForm) setup(checkoutForm, 'cart');
     const ticketForm = document.getElementById('ticketPayForm');
     if (ticketForm) setup(ticketForm, 'ticket');
-    // Payment link for an existing order (/pay/?o=, inc/order-pay-link.php).
-    const orderForm = document.getElementById('orderPayForm');
-    if (orderForm) setup(orderForm, 'order');
   };
 
   if (document.readyState === 'loading') {

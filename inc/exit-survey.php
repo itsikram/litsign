@@ -17,15 +17,15 @@
  * @package litsign
  */
 
-const RETAILS_ES_DB_VERSION = '1.0';
+const WHOLESALE_ES_DB_VERSION = '1.0';
 
 /* ---------------------------------------------------------------------------
  * Settings and storage
  * ------------------------------------------------------------------------ */
 
-function retails_es_settings()
+function wholesale_es_settings()
 {
-	$saved = get_option('retails_es_settings', array());
+	$saved = get_option('wholesale_es_settings', array());
 
 	return wp_parse_args(is_array($saved) ? $saved : array(), array(
 		'enabled' => 1,
@@ -36,55 +36,55 @@ function retails_es_settings()
 	));
 }
 
-function retails_es_setting($key)
+function wholesale_es_setting($key)
 {
-	$settings = retails_es_settings();
+	$settings = wholesale_es_settings();
 
 	return isset($settings[$key]) ? $settings[$key] : null;
 }
 
 /**
  * The on/off switch on Settings > Storefront Sign posts
- * retails_exit_survey_enabled. It is saved into retails_es_settings, the
+ * wholesale_exit_survey_enabled. It is saved into wholesale_es_settings, the
  * same value the Exit Survey page edits, and never stored as its own option.
  */
-function retails_es_register_theme_setting()
+function wholesale_es_register_theme_setting()
 {
-	register_setting('retails_settings', 'retails_exit_survey_enabled', array(
+	register_setting('wholesale_settings', 'wholesale_exit_survey_enabled', array(
 		'type' => 'integer',
 		'sanitize_callback' => static function ($value) {
 			return is_scalar($value) && '1' === (string) $value ? 1 : 0;
 		},
 	));
 }
-add_action('admin_init', 'retails_es_register_theme_setting');
+add_action('admin_init', 'wholesale_es_register_theme_setting');
 
-function retails_es_save_theme_setting($value, $old_value)
+function wholesale_es_save_theme_setting($value, $old_value)
 {
-	$saved = get_option('retails_es_settings', array());
+	$saved = get_option('wholesale_es_settings', array());
 	$saved = is_array($saved) ? $saved : array();
 	$saved['enabled'] = $value ? 1 : 0;
-	update_option('retails_es_settings', $saved);
+	update_option('wholesale_es_settings', $saved);
 
 	return $old_value;
 }
-add_filter('pre_update_option_retails_exit_survey_enabled', 'retails_es_save_theme_setting', 10, 2);
+add_filter('pre_update_option_wholesale_exit_survey_enabled', 'wholesale_es_save_theme_setting', 10, 2);
 
-function retails_es_table()
+function wholesale_es_table()
 {
 	global $wpdb;
 
-	return $wpdb->prefix . 'retails_exit_survey';
+	return $wpdb->prefix . 'wholesale_exit_survey';
 }
 
-function retails_es_install()
+function wholesale_es_install()
 {
-	if (RETAILS_ES_DB_VERSION === get_option('retails_es_db_version')) {
+	if (WHOLESALE_ES_DB_VERSION === get_option('wholesale_es_db_version')) {
 		return;
 	}
 
 	global $wpdb;
-	$table = retails_es_table();
+	$table = wholesale_es_table();
 	$charset_collate = $wpdb->get_charset_collate();
 
 	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
@@ -109,16 +109,16 @@ function retails_es_install()
 		KEY session_id (session_id)
 	) {$charset_collate};");
 
-	update_option('retails_es_db_version', RETAILS_ES_DB_VERSION);
+	update_option('wholesale_es_db_version', WHOLESALE_ES_DB_VERSION);
 }
-add_action('init', 'retails_es_install');
+add_action('init', 'wholesale_es_install');
 
 /**
  * The answers a visitor can pick, with the reply shown after they submit.
  * Replies must stay true to how the business works: signs are made and
  * shipped, never installed.
  */
-function retails_es_reasons()
+function wholesale_es_reasons()
 {
 	return array(
 		'browsing' => array(
@@ -186,95 +186,95 @@ function retails_es_reasons()
  * Pages where the survey would get in the way or makes no sense: after an
  * order, account pages, and paying an invoice.
  */
-function retails_es_is_blocked_page()
+function wholesale_es_is_blocked_page()
 {
-	return get_query_var('retails_thank_you')
+	return get_query_var('wholesale_thank_you')
 		|| is_page(array('account', 'my-orders', 'track-order', 'login', 'signup', 'pay', 'payment'))
 		|| is_page_template(array('page-pay.php', 'payment.php', 'account.php', 'login.php', 'signup.php', 'my_orders.php', 'page-track-order.php'))
 		|| is_singular('order')
 		|| is_404();
 }
 
-function retails_es_preview_requested()
+function wholesale_es_preview_requested()
 {
 	return isset($_GET['exit_survey_preview']) && current_user_can('manage_options');
 }
 
-function retails_es_enqueue()
+function wholesale_es_enqueue()
 {
 	if (is_admin() || is_customize_preview() || is_preview()) {
 		return;
 	}
 
-	$preview = retails_es_preview_requested();
-	$thank_you = (bool) get_query_var('retails_thank_you');
+	$preview = wholesale_es_preview_requested();
+	$thank_you = (bool) get_query_var('wholesale_thank_you');
 
 	// The thank-you page only loads the script to remember the order, so the
 	// survey never asks a customer why they did not buy.
 	if (!$preview && !$thank_you) {
-		if (!retails_es_setting('enabled') || retails_es_is_blocked_page()) {
+		if (!wholesale_es_setting('enabled') || wholesale_es_is_blocked_page()) {
 			return;
 		}
-		if (function_exists('retails_vi_is_excluded') && retails_vi_is_excluded()) {
+		if (function_exists('wholesale_vi_is_excluded') && wholesale_vi_is_excluded()) {
 			return;
 		}
-		$session = function_exists('retails_vi_current_session') ? retails_vi_current_session() : null;
+		$session = function_exists('wholesale_vi_current_session') ? wholesale_vi_current_session() : null;
 		if ($session && (int) $session->order_id > 0) {
 			return;
 		}
 	}
 
-	$ptype = function_exists('retails_vi_page_type') ? retails_vi_page_type() : '';
+	$ptype = function_exists('wholesale_vi_page_type') ? wholesale_vi_page_type() : '';
 	$cart_items = 0;
-	if (in_array($ptype, array('cart', 'checkout'), true) && function_exists('retails_get_cart')) {
-		$cart_items = count((array) retails_get_cart()->get_items());
+	if (in_array($ptype, array('cart', 'checkout'), true) && function_exists('wholesale_get_cart')) {
+		$cart_items = count((array) wholesale_get_cart()->get_items());
 	}
 
 	$reasons = array();
-	foreach (retails_es_reasons() as $key => $reason) {
+	foreach (wholesale_es_reasons() as $key => $reason) {
 		$reasons[] = array('key' => $key) + $reason;
 	}
 
 	$path = '/js/exit-survey.js';
 	$file = get_template_directory() . $path;
-	wp_enqueue_script('retails-exit-survey', get_template_directory_uri() . $path, array(), file_exists($file) ? (string) filemtime($file) : _S_VERSION, array('in_footer' => true, 'strategy' => 'defer'));
+	wp_enqueue_script('wholesale-exit-survey', get_template_directory_uri() . $path, array(), file_exists($file) ? (string) filemtime($file) : _S_VERSION, array('in_footer' => true, 'strategy' => 'defer'));
 
 	$css = '/css/exit-survey.css';
 	// Inline JSON rather than wp_localize_script(), which turns 0 into "0" (truthy in JS).
 	$config = array(
-		'endpoint' => rest_url('retails/v1/exit-survey'),
+		'endpoint' => rest_url('wholesale/v1/exit-survey'),
 		'css' => get_template_directory_uri() . $css . '?ver=' . (file_exists(get_template_directory() . $css) ? filemtime(get_template_directory() . $css) : _S_VERSION),
 		'ptype' => $ptype,
 		'cart' => $cart_items,
 		'ordered' => $thank_you ? 1 : 0,
 		'preview' => $preview ? 1 : 0,
-		'mobile' => (int) retails_es_setting('mobile'),
-		'minSeconds' => max(0, (int) retails_es_setting('min_seconds')),
-		'snoozeDays' => max(1, (int) retails_es_setting('snooze_days')),
+		'mobile' => (int) wholesale_es_setting('mobile'),
+		'minSeconds' => max(0, (int) wholesale_es_setting('min_seconds')),
+		'snoozeDays' => max(1, (int) wholesale_es_setting('snooze_days')),
 		'reasons' => $reasons,
 		'phone' => '866-436-2101',
 		'text' => '206-618-6543',
 		'privacy' => get_privacy_policy_url(),
 	);
-	wp_add_inline_script('retails-exit-survey', 'window.retailsES = ' . wp_json_encode($config) . ';', 'before');
+	wp_add_inline_script('wholesale-exit-survey', 'window.wholesaleES = ' . wp_json_encode($config) . ';', 'before');
 }
-add_action('wp_enqueue_scripts', 'retails_es_enqueue', 25);
+add_action('wp_enqueue_scripts', 'wholesale_es_enqueue', 25);
 
 /* ---------------------------------------------------------------------------
  * Collecting answers
  * ------------------------------------------------------------------------ */
 
-function retails_es_register_route()
+function wholesale_es_register_route()
 {
-	register_rest_route('retails/v1', '/exit-survey', array(
+	register_rest_route('wholesale/v1', '/exit-survey', array(
 		'methods' => 'POST',
-		'callback' => 'retails_es_rest_collect',
+		'callback' => 'wholesale_es_rest_collect',
 		'permission_callback' => '__return_true',
 	));
 }
-add_action('rest_api_init', 'retails_es_register_route');
+add_action('rest_api_init', 'wholesale_es_register_route');
 
-function retails_es_token($id)
+function wholesale_es_token($id)
 {
 	return substr(wp_hash('exit-survey|' . (int) $id), 0, 16);
 }
@@ -283,10 +283,10 @@ function retails_es_token($id)
  * Allow a handful of requests per visitor per hour so the table can not be
  * flooded.
  */
-function retails_es_rate_ok($kind, $limit)
+function wholesale_es_rate_ok($kind, $limit)
 {
-	$ip = function_exists('retails_vi_client_ip') ? retails_vi_client_ip(false) : (isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : '');
-	$key = 'retails_es_' . $kind . '_' . md5($ip);
+	$ip = function_exists('wholesale_vi_client_ip') ? wholesale_vi_client_ip(false) : (isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : '');
+	$key = 'wholesale_es_' . $kind . '_' . md5($ip);
 	$count = (int) get_transient($key);
 	if ($count >= $limit) {
 		return false;
@@ -296,29 +296,29 @@ function retails_es_rate_ok($kind, $limit)
 	return true;
 }
 
-function retails_es_rest_collect(WP_REST_Request $request)
+function wholesale_es_rest_collect(WP_REST_Request $request)
 {
 	global $wpdb;
 
-	if (!retails_es_setting('enabled') && !current_user_can('manage_options')) {
+	if (!wholesale_es_setting('enabled') && !current_user_can('manage_options')) {
 		return new WP_REST_Response(array('ok' => false), 200);
 	}
 	$ua = isset($_SERVER['HTTP_USER_AGENT']) ? (string) wp_unslash($_SERVER['HTTP_USER_AGENT']) : '';
-	if (function_exists('retails_vi_is_bot') && retails_vi_is_bot($ua)) {
+	if (function_exists('wholesale_vi_is_bot') && wholesale_vi_is_bot($ua)) {
 		return new WP_REST_Response(array('ok' => false), 200);
 	}
 
 	$params = (array) $request->get_json_params();
 	$action = isset($params['action']) ? sanitize_key($params['action']) : '';
-	$table = retails_es_table();
+	$table = wholesale_es_table();
 	$now = current_time('mysql', true);
 
 	if ('shown' === $action) {
-		if (!retails_es_rate_ok('shown', 20)) {
+		if (!wholesale_es_rate_ok('shown', 20)) {
 			return new WP_REST_Response(array('ok' => false), 429);
 		}
 
-		$session = function_exists('retails_vi_current_session') ? retails_vi_current_session() : null;
+		$session = function_exists('wholesale_vi_current_session') ? wholesale_vi_current_session() : null;
 		$device = $session ? (string) $session->device : (!empty($params['mobile']) ? 'mobile' : 'desktop');
 		$url = isset($params['url']) ? (string) $params['url'] : '';
 
@@ -326,7 +326,7 @@ function retails_es_rest_collect(WP_REST_Request $request)
 			'created_at' => $now,
 			'status' => 'shown',
 			'trigger_type' => substr(sanitize_key($params['trigger'] ?? ''), 0, 10),
-			'page_url' => function_exists('retails_vi_clean_url') ? retails_vi_clean_url($url) : esc_url_raw(substr($url, 0, 500)),
+			'page_url' => function_exists('wholesale_vi_clean_url') ? wholesale_vi_clean_url($url) : esc_url_raw(substr($url, 0, 500)),
 			'page_type' => substr(sanitize_key($params['ptype'] ?? ''), 0, 20),
 			'device' => substr(sanitize_key($device), 0, 10),
 			'channel' => $session ? (string) $session->channel : '',
@@ -335,12 +335,12 @@ function retails_es_rest_collect(WP_REST_Request $request)
 		));
 		$id = (int) $wpdb->insert_id;
 
-		return new WP_REST_Response(array('ok' => (bool) $id, 'id' => $id, 'token' => $id ? retails_es_token($id) : ''), 200);
+		return new WP_REST_Response(array('ok' => (bool) $id, 'id' => $id, 'token' => $id ? wholesale_es_token($id) : ''), 200);
 	}
 
 	$id = absint($params['id'] ?? 0);
 	$token = isset($params['token']) ? (string) $params['token'] : '';
-	if (!$id || !hash_equals(retails_es_token($id), $token)) {
+	if (!$id || !hash_equals(wholesale_es_token($id), $token)) {
 		return new WP_REST_Response(array('ok' => false), 400);
 	}
 	$row = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id = %d", $id));
@@ -354,7 +354,7 @@ function retails_es_rest_collect(WP_REST_Request $request)
 		return new WP_REST_Response(array('ok' => true), 200);
 	}
 
-	if ('answer' !== $action || !retails_es_rate_ok('answer', 8)) {
+	if ('answer' !== $action || !wholesale_es_rate_ok('answer', 8)) {
 		return new WP_REST_Response(array('ok' => false), 400);
 	}
 	// Bots fill every field, including the one people never see.
@@ -362,7 +362,7 @@ function retails_es_rest_collect(WP_REST_Request $request)
 		return new WP_REST_Response(array('ok' => true), 200);
 	}
 
-	$reasons = retails_es_reasons();
+	$reasons = wholesale_es_reasons();
 	$reason = isset($params['reason']) ? sanitize_key($params['reason']) : '';
 	if (!isset($reasons[$reason])) {
 		return new WP_REST_Response(array('ok' => false), 400);
@@ -379,15 +379,15 @@ function retails_es_rest_collect(WP_REST_Request $request)
 		'contact' => $contact,
 	), array('id' => $id));
 
-	if ((int) $row->session_id && function_exists('retails_vi_log_server_event')) {
-		$session = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . retails_vi_table('sessions') . ' WHERE id = %d', (int) $row->session_id));
+	if ((int) $row->session_id && function_exists('wholesale_vi_log_server_event')) {
+		$session = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . wholesale_vi_table('sessions') . ' WHERE id = %d', (int) $row->session_id));
 		if ($session) {
-			retails_vi_log_server_event($session, 'exit_survey', $reasons[$reason]['label'], $reason, array());
+			wholesale_vi_log_server_event($session, 'exit_survey', $reasons[$reason]['label'], $reason, array());
 		}
 	}
 
-	if ('' !== $contact && retails_es_setting('notify')) {
-		retails_es_notify($id);
+	if ('' !== $contact && wholesale_es_setting('notify')) {
+		wholesale_es_notify($id);
 	}
 
 	return new WP_REST_Response(array('ok' => true), 200);
@@ -397,16 +397,17 @@ function retails_es_rest_collect(WP_REST_Request $request)
  * Email the store when a visitor leaves contact details, so someone can
  * follow up while they are still deciding.
  */
-function retails_es_notify($id)
+function wholesale_es_notify($id)
 {
 	global $wpdb;
 
-	$row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . retails_es_table() . ' WHERE id = %d', $id));
-	if (!$row) {
+	$row = $wpdb->get_row($wpdb->prepare('SELECT * FROM ' . wholesale_es_table() . ' WHERE id = %d', $id));
+	$recipients = function_exists('wholesale_contact_admin_recipients') ? wholesale_contact_admin_recipients() : array(get_option('admin_email'));
+	if (!$row || !$recipients) {
 		return;
 	}
 
-	$reasons = retails_es_reasons();
+	$reasons = wholesale_es_reasons();
 	$lines = array(
 		'A visitor left the site without ordering and asked for a reply.',
 		'',
@@ -416,14 +417,14 @@ function retails_es_notify($id)
 	if ('' !== (string) $row->details) {
 		$lines[] = 'Comment: ' . $row->details;
 	}
-	$lines[] = 'Page: ' . retails_es_site_link($row->page_url);
+	$lines[] = 'Page: ' . wholesale_es_site_link($row->page_url);
 	if ((int) $row->cart_items) {
 		$lines[] = 'Items in cart: ' . (int) $row->cart_items;
 	}
 	$lines[] = '';
-	$lines[] = 'All exit survey answers: ' . admin_url('admin.php?page=retails-es');
+	$lines[] = 'All exit survey answers: ' . admin_url('admin.php?page=wholesale-es');
 	if ((int) $row->session_id) {
-		$lines[] = 'This visitor\'s journey: ' . admin_url('admin.php?page=retails-insights-visitors&session=' . (int) $row->session_id);
+		$lines[] = 'This visitor\'s journey: ' . admin_url('admin.php?page=wholesale-insights-visitors&session=' . (int) $row->session_id);
 	}
 
 	$headers = array();
@@ -431,36 +432,36 @@ function retails_es_notify($id)
 		$headers[] = 'Reply-To: ' . $row->contact;
 	}
 
-	retails_mail_team('Exit survey: a visitor wants a reply', implode("\n", $lines), $headers);
+	wp_mail($recipients, 'Exit survey: a visitor wants a reply', implode("\n", $lines), $headers);
 }
 
 /* ---------------------------------------------------------------------------
  * Admin report
  * ------------------------------------------------------------------------ */
 
-function retails_es_admin_menu()
+function wholesale_es_admin_menu()
 {
-	add_submenu_page('retails-insights', 'Exit Survey', 'Exit Survey', 'manage_options', 'retails-es', 'retails_es_admin_page');
+	add_submenu_page('wholesale-insights', 'Exit Survey', 'Exit Survey', 'manage_options', 'wholesale-es', 'wholesale_es_admin_page');
 }
-add_action('admin_menu', 'retails_es_admin_menu', 20);
+add_action('admin_menu', 'wholesale_es_admin_menu', 20);
 
 /**
- * The page lives at its own slug ("retails-es") so the Visitor Insights
- * live-refresh script, which loads on every "retails-insights" page, leaves
+ * The page lives at its own slug ("wholesale-es") so the Visitor Insights
+ * live-refresh script, which loads on every "wholesale-insights" page, leaves
  * it alone. Only the shared stylesheet is reused.
  */
-function retails_es_admin_assets($hook)
+function wholesale_es_admin_assets($hook)
 {
-	if (false === strpos($hook, 'retails-es')) {
+	if (false === strpos($hook, 'wholesale-es')) {
 		return;
 	}
 
 	$dir = get_template_directory();
-	wp_enqueue_style('retails-vi-admin', get_template_directory_uri() . '/css/visitor-insights.css', array(), (string) filemtime($dir . '/css/visitor-insights.css'));
+	wp_enqueue_style('wholesale-vi-admin', get_template_directory_uri() . '/css/visitor-insights.css', array(), (string) filemtime($dir . '/css/visitor-insights.css'));
 }
-add_action('admin_enqueue_scripts', 'retails_es_admin_assets');
+add_action('admin_enqueue_scripts', 'wholesale_es_admin_assets');
 
-function retails_es_period()
+function wholesale_es_period()
 {
 	$days = isset($_GET['days']) ? absint($_GET['days']) : 30;
 	if (!in_array($days, array(7, 30, 90, 365), true)) {
@@ -470,7 +471,7 @@ function retails_es_period()
 	return $days;
 }
 
-function retails_es_admin_page()
+function wholesale_es_admin_page()
 {
 	global $wpdb;
 
@@ -478,10 +479,10 @@ function retails_es_admin_page()
 		return;
 	}
 
-	$table = retails_es_table();
-	$days = retails_es_period();
+	$table = wholesale_es_table();
+	$days = wholesale_es_period();
 	$since = gmdate('Y-m-d H:i:s', time() - $days * DAY_IN_SECONDS);
-	$reasons = retails_es_reasons();
+	$reasons = wholesale_es_reasons();
 	$reason_filter = isset($_GET['reason']) ? sanitize_key(wp_unslash($_GET['reason'])) : '';
 	if (!isset($reasons[$reason_filter])) {
 		$reason_filter = '';
@@ -520,8 +521,8 @@ function retails_es_admin_page()
 	$answered = (int) $totals->answered;
 	$rate = $shown ? round($answered / $shown * 100) : 0;
 	$top = $by_reason ? reset($by_reason) : null;
-	$base = admin_url('admin.php?page=retails-es');
-	$settings = retails_es_settings();
+	$base = admin_url('admin.php?page=wholesale-es');
+	$settings = wholesale_es_settings();
 	$notice = isset($_GET['es_notice']) ? sanitize_key(wp_unslash($_GET['es_notice'])) : '';
 	?>
 	<div class="wrap wvi">
@@ -550,10 +551,10 @@ function retails_es_admin_page()
 
 		<div class="wvi-stats">
 			<?php
-			retails_es_stat('Times shown', number_format_i18n($shown), 'visibility', 'blue');
-			retails_es_stat('Answers', number_format_i18n($answered), 'yes-alt', 'green');
-			retails_es_stat('Answer rate', $rate . '%', 'chart-pie', 'purple');
-			retails_es_stat('Asked for a reply', number_format_i18n((int) $totals->contacts), 'email-alt', 'amber');
+			wholesale_es_stat('Times shown', number_format_i18n($shown), 'visibility', 'blue');
+			wholesale_es_stat('Answers', number_format_i18n($answered), 'yes-alt', 'green');
+			wholesale_es_stat('Answer rate', $rate . '%', 'chart-pie', 'purple');
+			wholesale_es_stat('Asked for a reply', number_format_i18n((int) $totals->contacts), 'email-alt', 'amber');
 			?>
 		</div>
 
@@ -640,8 +641,8 @@ function retails_es_admin_page()
 											echo '<span class="wes-muted">—</span>';
 										}
 									?></td>
-									<td><a href="<?php echo esc_url(retails_es_site_link($row->page_url)); ?>" target="_blank" rel="noopener"><?php echo esc_html(wp_html_excerpt($row->page_url ?: '/', 40, '…')); ?></a></td>
-									<td><?php echo (int) $row->session_id ? '<a href="' . esc_url(admin_url('admin.php?page=retails-insights-visitors&session=' . (int) $row->session_id)) . '">Journey</a>' : '<span class="wes-muted">—</span>'; ?></td>
+									<td><a href="<?php echo esc_url(wholesale_es_site_link($row->page_url)); ?>" target="_blank" rel="noopener"><?php echo esc_html(wp_html_excerpt($row->page_url ?: '/', 40, '…')); ?></a></td>
+									<td><?php echo (int) $row->session_id ? '<a href="' . esc_url(admin_url('admin.php?page=wholesale-insights-visitors&session=' . (int) $row->session_id)) . '">Journey</a>' : '<span class="wes-muted">—</span>'; ?></td>
 								</tr>
 							<?php endforeach; ?>
 						</tbody>
@@ -653,8 +654,8 @@ function retails_es_admin_page()
 		<section class="wvi-card wvi-section">
 			<div class="wvi-section-head"><h2><span class="dashicons dashicons-admin-generic"></span> Settings</h2></div>
 			<form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="wes-settings">
-				<input type="hidden" name="action" value="retails_es_save">
-				<?php wp_nonce_field('retails_es_save'); ?>
+				<input type="hidden" name="action" value="wholesale_es_save">
+				<?php wp_nonce_field('wholesale_es_save'); ?>
 				<label><input type="checkbox" name="enabled" value="1" <?php checked($settings['enabled']); ?>> Show the exit survey on the site</label>
 				<label><input type="checkbox" name="mobile" value="1" <?php checked($settings['mobile']); ?>> Also show it on phones and tablets (when a visitor scrolls back up quickly)</label>
 				<label><input type="checkbox" name="notify" value="1" <?php checked($settings['notify']); ?>> Email the store notification inbox when a visitor leaves contact details</label>
@@ -689,12 +690,12 @@ function retails_es_admin_page()
  * Page paths are stored as the browser saw them, so join them to the site's
  * origin rather than home_url(), which may already include a subfolder.
  */
-function retails_es_site_link($path)
+function wholesale_es_site_link($path)
 {
 	return preg_replace('#^(https?://[^/]+).*$#', '$1', home_url()) . '/' . ltrim((string) $path, '/');
 }
 
-function retails_es_stat($label, $value, $icon, $color)
+function wholesale_es_stat($label, $value, $icon, $color)
 {
 	?>
 	<div class="wvi-stat">
@@ -704,14 +705,14 @@ function retails_es_stat($label, $value, $icon, $color)
 	<?php
 }
 
-function retails_es_save_settings()
+function wholesale_es_save_settings()
 {
 	if (!current_user_can('manage_options')) {
 		wp_die('Not allowed.');
 	}
-	check_admin_referer('retails_es_save');
+	check_admin_referer('wholesale_es_save');
 
-	update_option('retails_es_settings', array(
+	update_option('wholesale_es_settings', array(
 		'enabled' => empty($_POST['enabled']) ? 0 : 1,
 		'mobile' => empty($_POST['mobile']) ? 0 : 1,
 		'notify' => empty($_POST['notify']) ? 0 : 1,
@@ -719,7 +720,7 @@ function retails_es_save_settings()
 		'snooze_days' => max(1, min(365, absint($_POST['snooze_days'] ?? 7))),
 	));
 
-	wp_safe_redirect(admin_url('admin.php?page=retails-es&es_notice=saved'));
+	wp_safe_redirect(admin_url('admin.php?page=wholesale-es&es_notice=saved'));
 	exit;
 }
-add_action('admin_post_retails_es_save', 'retails_es_save_settings');
+add_action('admin_post_wholesale_es_save', 'wholesale_es_save_settings');

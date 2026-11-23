@@ -235,8 +235,7 @@
   flex: none;
 }
 
-.site-header .sh-icon--call,
-.site-header .sh-icon--sms {
+.site-header .sh-icon--call {
   display: none;
 }
 
@@ -523,17 +522,6 @@ html.sh-lock body {
   margin-top: 10px;
 }
 
-.site-header .mobile-menu-contact .sh-shipping-offer {
-  display: block;
-  margin-top: 12px;
-  color: #0b6f9c;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.4;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
 /* ---------- Tablet and phone ---------- */
 @media (max-width: 1199.98px) {
   .site-header .sh-contact,
@@ -633,15 +621,6 @@ html.sh-lock body {
     display: none;
   }
 
-  /* Phones: Send SMS replaces the call button; the toll-free number sits in the dark bar above. */
-  .site-header .sh-icon--call {
-    display: none;
-  }
-
-  .site-header .sh-icon--sms {
-    display: inline-flex;
-  }
-
   .site-header .sh-menu-toggle {
     padding: 0 11px;
   }
@@ -653,18 +632,6 @@ html.sh-lock body {
 
   .site-header.is-scrolled .header-bottom {
     margin-top: 6px;
-  }
-
-  /* On phones the All Products button (inline display:none) and the category
-     links are hidden, so the row is empty unless it holds a builder button.
-     Collapse it: otherwise its top border and padding leave a blank strip
-     with a line under the logo. #megaMenu is position: fixed here, so it
-     still opens from the bottom bar. */
-  .site-header .header-bottom:not(:has(.header-builder-menu)) {
-    height: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
   }
 
   .site-header .header-bottom-container {
@@ -784,10 +751,4 @@ html.sh-lock body {
   .site-header .logo-container .header-logo {
     transition: none;
   }
-}
-
-/* Mega menu: "All Banners" etc. link to the group's whole category (header.php). */
-.header-bottom-container .megamenu-container #megaMenu .mm-col-container .mm-link.mm-link--all {
-  color: #0b74a3;
-  font-weight: 700;
 }

@@ -19,7 +19,7 @@ $template_files = get_posts(array(
 	'post_type' => 'attachment',
 	'post_status' => 'inherit',
 	'posts_per_page' => -1,
-	'meta_key' => '_retails_storefront_product',
+	'meta_key' => '_wholesale_storefront_product',
 	'orderby' => 'title',
 	'order' => 'ASC',
 	'no_found_rows' => true,
@@ -29,7 +29,7 @@ foreach ($template_files as $template_file) {
 	if (0 === strpos($mime, 'image/') && 'image/vnd.adobe.photoshop' !== $mime) {
 		continue;
 	}
-	$template_product = retails_seo_product(get_post_meta($template_file->ID, '_retails_storefront_product', true));
+	$template_product = wholesale_seo_product(get_post_meta($template_file->ID, '_wholesale_storefront_product', true));
 	if (!$template_product) {
 		continue;
 	}
@@ -54,7 +54,7 @@ $template_size = static function ($attachment) {
 	return $path && file_exists($path) ? size_format(filesize($path), 1) : '';
 };
 
-retails_seo_set_page_faq(array(
+wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'Do I have to use a design template?',
 		'a' => 'No, but it is the easiest way to get a print-ready file. Each template is built to the exact print size of the product, with the safe area, pole pockets and seams marked, so your logo and text land where they will be seen. If you upload artwork without a template, size it to the exact product dimensions.',
@@ -65,7 +65,7 @@ retails_seo_set_page_faq(array(
 	),
 	array(
 		'q' => 'What file should I upload with my order?',
-		'a' => 'A single-page PDF or a JPG at 150 dpi at full print size, in CMYK color, without crop marks or bleed. Delete the template guide layers before you save. For DTF transfers, upload a PNG with a transparent background. Files can be up to ' . retails_artwork_max_text() . '. ' . retails_large_file_help(),
+		'a' => 'A single-page PDF or a JPG at 150 dpi at full print size, in CMYK color, without crop marks or bleed. Delete the template guide layers before you save. For DTF transfers, upload a PNG with a transparent background. Files can be up to 300MB.',
 	),
 	array(
 		'q' => 'Can you set up my artwork for me?',
@@ -79,13 +79,13 @@ get_header();
 <main id="primary" class="sf-page">
 	<section class="sf-hero" aria-labelledby="dt-title">
 		<div class="container">
-			<?php retails_breadcrumbs(); ?>
+			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">Free downloads</p>
 			<h1 id="dt-title" class="sf-hero-title">Sign Design Templates &amp; Artwork Guide</h1>
 			<p class="sf-hero-lead">Download a free print-ready template for your flag, banner stand, tent, table cover or fabric display, drop in your artwork and upload it with your order. Templates come in PDF, Photoshop (PSD) and CorelDRAW (CDR) formats.</p>
-			<?php retails_guide_byline(); ?>
+			<?php wholesale_guide_byline(); ?>
 			<div class="sf-hero-actions">
-				<a class="cl-button" href="#templates">Browse Templates <?php echo retails_home_icon('arrow'); ?></a>
+				<a class="cl-button" href="#templates">Browse Templates <?php echo wholesale_home_icon('arrow'); ?></a>
 				<a class="sf-button-outline" href="#template-guide">How to Use a Template</a>
 			</div>
 			<ul class="sf-hero-points">
@@ -132,7 +132,7 @@ get_header();
 						<tr><th scope="row">Size</th><td>Exactly the template or ordered size; very large graphics (over 200&Prime;) may be scaled proportionally</td></tr>
 						<tr><th scope="row">Fonts &amp; effects</th><td>Text outlined; gradients and transparencies flattened</td></tr>
 						<tr><th scope="row">Marks</th><td>No crop marks, bleed or template guide layers</td></tr>
-						<tr><th scope="row">Max upload</th><td><?php echo esc_html(retails_artwork_max_text()); ?> per file (larger: email a download link)</td></tr>
+						<tr><th scope="row">Max upload</th><td>300MB per file</td></tr>
 					</tbody>
 				</table>
 			</div>
@@ -188,7 +188,7 @@ get_header();
 			<p class="cl-kicker">Artwork questions</p>
 			<h2 id="dt-faq-title" class="cl-section-title">Design Template FAQ</h2>
 			<div class="cl-faq-list">
-				<?php retails_seo_render_faq(); ?>
+				<?php wholesale_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>
@@ -199,15 +199,15 @@ get_header();
 				<h2 id="dt-help-title">Need Help With Your Artwork?</h2>
 				<p>Send us your logo and text, and we&rsquo;ll help you get a print-ready file for your product before you order.</p>
 				<ul class="cl-help-details">
-					<li><?php echo retails_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
-					<li><?php echo retails_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
+					<li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+					<li><?php echo wholesale_home_icon('pin'); ?> 707 S. Grady Way, Suite 600, Renton, WA 98057</li>
 				</ul>
 			</div>
 			<div class="cl-help-actions">
-				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-				<a class="cl-help-action" href="sms:+12066186543"><?php echo retails_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
-				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo retails_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
-				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo retails_home_icon('arrow'); ?></a>
+				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+				<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text us</small>206-618-6543</span></a>
+				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
 			</div>
 		</div>
 	</section>

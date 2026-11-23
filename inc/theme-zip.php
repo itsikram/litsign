@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 /**
  * Whether a path inside the theme (relative, with / separators) stays out of the zip.
  */
-function retails_theme_zip_excluded($rel)
+function wholesale_theme_zip_excluded($rel)
 {
 	foreach (explode('/', $rel) as $part) {
 		if (in_array($part, array('.git', '.github', '.claude', '.vscode', '.idea', '__pycache__', 'node_modules', '.sass-cache'), true)) {
@@ -24,12 +24,12 @@ function retails_theme_zip_excluded($rel)
 		|| (bool) preg_match('/\.(zip|log|part|tmp|swp|bak)$/i', $base);
 }
 
-function retails_handle_theme_zip()
+function wholesale_handle_theme_zip()
 {
 	if (!current_user_can('manage_options')) {
 		wp_die('You are not allowed to do this.');
 	}
-	check_admin_referer('retails_theme_zip');
+	check_admin_referer('wholesale_theme_zip');
 	if (!class_exists('ZipArchive')) {
 		wp_die('The PHP Zip extension (ZipArchive) is not available on this server.');
 	}
@@ -56,7 +56,7 @@ function retails_handle_theme_zip()
 			continue;
 		}
 		$rel = ltrim(substr(wp_normalize_path($file->getPathname()), strlen($root)), '/');
-		if (retails_theme_zip_excluded($rel)) {
+		if (wholesale_theme_zip_excluded($rel)) {
 			continue;
 		}
 		// Inside a "<slug>/" folder, so WordPress installs it as this theme.
@@ -81,9 +81,9 @@ function retails_handle_theme_zip()
 	@unlink($tmp);
 	exit;
 }
-add_action('admin_post_retails_theme_zip', 'retails_handle_theme_zip');
+add_action('admin_post_wholesale_theme_zip', 'wholesale_handle_theme_zip');
 
-function retails_theme_zip_url()
+function wholesale_theme_zip_url()
 {
-	return wp_nonce_url(admin_url('admin-post.php?action=retails_theme_zip'), 'retails_theme_zip');
+	return wp_nonce_url(admin_url('admin-post.php?action=wholesale_theme_zip'), 'wholesale_theme_zip');
 }

@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 /**
  * Stock status choices, stored value => label. '' is In stock.
  */
-function retails_stock_status_options()
+function wholesale_stock_status_options()
 {
 	return array(
 		'' => 'In stock',
@@ -29,7 +29,7 @@ function retails_stock_status_options()
 /**
  * The product's stock status: 'instock', 'outofstock' or 'backorder'.
  */
-function retails_product_stock_status($product_id)
+function wholesale_product_stock_status($product_id)
 {
 	$status = (string) get_post_meta($product_id, '_stock_status', true);
 	return in_array($status, array('outofstock', 'backorder'), true) ? $status : 'instock';
@@ -40,7 +40,7 @@ function retails_product_stock_status($product_id)
  * product's _backorder_date when it is a valid future date, else 14 days from today,
  * because Google Merchant Center rejects a backorder item without a date.
  */
-function retails_product_backorder_date($product_id)
+function wholesale_product_backorder_date($product_id)
 {
 	$today = wp_date('Y-m-d');
 	$date = trim((string) get_post_meta($product_id, '_backorder_date', true));
@@ -54,19 +54,19 @@ function retails_product_backorder_date($product_id)
  * Products list in wp-admin: a Stock column, so out of stock products stand out.
  */
 add_filter('manage_product_posts_columns', function ($columns) {
-	$columns['retails_stock'] = 'Stock';
+	$columns['wholesale_stock'] = 'Stock';
 	return $columns;
 });
 
 add_action('manage_product_posts_custom_column', function ($column, $post_id) {
-	if ('retails_stock' !== $column) {
+	if ('wholesale_stock' !== $column) {
 		return;
 	}
-	$status = retails_product_stock_status($post_id);
+	$status = wholesale_product_stock_status($post_id);
 	$labels = array('instock' => 'In stock', 'outofstock' => 'Out of stock', 'backorder' => 'Backorder');
 	$colors = array('instock' => '#1a7f37', 'outofstock' => '#b32d2e', 'backorder' => '#9a6700');
 	printf('<span style="color:%s;font-weight:600">%s</span>', esc_attr($colors[$status]), esc_html($labels[$status]));
 	if ('backorder' === $status) {
-		echo '<br><small>' . esc_html((new DateTimeImmutable(retails_product_backorder_date($post_id), wp_timezone()))->format('M j, Y')) . '</small>';
+		echo '<br><small>' . esc_html((new DateTimeImmutable(wholesale_product_backorder_date($post_id), wp_timezone()))->format('M j, Y')) . '</small>';
 	}
 }, 10, 2);

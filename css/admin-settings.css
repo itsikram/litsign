@@ -596,19 +596,3 @@
   font-family: Consolas, Monaco, monospace;
   font-size: 12px;
 }
-
-/* Domain redirects: the "What happens" table sits inside a form-table cell. */
-.wss .form-table .wss-redirects {
-  margin: 0 0 10px;
-}
-.wss .form-table .wss-redirects th,
-.wss .form-table .wss-redirects td {
-  width: auto;
-  padding: 8px 10px;
-  border-top: 0;
-  vertical-align: top;
-  overflow-wrap: anywhere;
-}
-.wss .form-table .wss-redirects tr + tr td {
-  border-top: 0;
-}

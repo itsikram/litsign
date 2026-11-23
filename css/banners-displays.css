@@ -153,17 +153,14 @@ a.bd-hero-tile:focus-visible {
   border-bottom: 1px solid #e6ebf1;
 }
 
-/* Product line cards: the photo fills the whole thumbnail, edge to edge.
-   Product photos are square, so a square frame shows them whole, uncropped. */
+/* Product line cards: product shots sit on white, so show them whole. */
 .bd-card .sf-type-image {
-  aspect-ratio: 1 / 1;
   border-bottom: 1px solid #e6ebf1;
   background: #ffffff;
 }
 
 .bd-card .sf-type-image img {
-  object-fit: cover;
-  object-position: center;
+  object-fit: contain;
   transition: transform 0.35s ease;
 }
 
@@ -279,7 +276,7 @@ a.bd-hero-tile:focus-visible {
 
 .bd-product-image {
   display: block;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 4 / 3;
   border-bottom: 1px solid #e6ebf1;
   background: #ffffff;
 }
@@ -287,8 +284,7 @@ a.bd-hero-tile:focus-visible {
 .bd-product-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
+  object-fit: contain;
 }
 
 .bd-product-tag {
@@ -526,101 +522,3 @@ a.bd-hero-tile:focus-visible {
     transform: none;
   }
 }
-
-/* Campaign pages share a responsive photo hero and a compact product selector. */
-.bd-page {
-  --lp-ink: #10243a;
-  --lp-accent: #086e97;
-  --lp-line: #dce7ef;
-}
-.bd-page .bd-hero {
-  padding: 20px 0 64px;
-  background: linear-gradient(90deg, rgba(5,21,38,.72), rgba(5,21,38,.45) 50%, rgba(5,21,38,.06) 77%), var(--lp-desktop) center / cover #071a2e;
-}
-.bd-page .bd-hero-grid {
-  display: block;
-  margin-top: 36px;
-}
-.bd-page .bd-hero-copy { width: min(55%, 640px); }
-.bd-page .bd-hero-title {
-  font-size: clamp(2.5rem, 4.2vw, 3.8rem);
-  letter-spacing: -.04em;
-  line-height: 1.08;
-  text-wrap: balance;
-}
-.bd-page .bd-hero-title span { display: block; color: #90dff7; }
-.bd-page .bd-hero .home-hero-eyebrow {
-  padding: 0; border: 0; border-radius: 0; background: none;
-  color: #95ddf4; font-size: .76rem; line-height: 1.5;
-}
-.bd-page .bd-hero .home-hero-lead { color: #e4edf5; font-size: 1.05rem; line-height: 1.6; }
-.bd-page .home-hero-actions { flex-wrap: wrap; gap: 12px; }
-.bd-page .home-hero-actions a {
-  min-height: 54px; border-radius: 9px; padding: 10px 18px;
-}
-.bd-page .bd-hero .home-hero-shop-button { background: #88dcf7; color: #08243a; }
-.bd-page .bd-hero .home-hero-shop-button:hover { background: #c3f0ff; transform: none; }
-.bd-page .bd-hero .home-hero-secondary-button { border-width: 1px; background: rgba(9,28,47,.65); }
-.bd-page .bd-hero .home-hero-secondary-button:hover { background: #fff; color: #10243a; }
-.bd-page .home-hero-help { font-size: .88rem; }
-.bd-page .lp-jump { background: #f3f7fa; border-bottom: 1px solid var(--lp-line); padding: 16px 0; }
-.lp-jump p { margin: 0 0 8px; color: var(--lp-ink); font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .09em; }
-.lp-jump-links { display: flex; gap: 8px; overflow-x: auto; padding: 3px 3px 8px; scrollbar-width: thin; }
-.lp-jump-links a {
-  display: inline-flex; flex: none; align-items: center; min-height: 44px; padding: 9px 14px;
-  border: 1px solid var(--lp-line); border-radius: 8px; background: #fff;
-  color: var(--lp-accent); font-size: .88rem; font-weight: 700; text-decoration: none;
-}
-.lp-jump-links a:hover { border-color: var(--lp-accent); }
-.bd-page .sf-section { padding-block: clamp(40px, 5vw, 72px); }
-.bd-page .cl-section-title { color: var(--lp-ink); letter-spacing: -.03em; text-wrap: balance; }
-.bd-page .sf-type-card { border-color: var(--lp-line); box-shadow: 0 4px 16px rgba(15,23,42,.05); }
-.bd-page .sf-type-body { padding: 20px; }
-.bd-page .sf-type-price { font-size: 1.22rem; }
-.bd-page .lp-order {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 46px; margin-top: 16px; padding: 10px 12px;
-  border-radius: 8px; background: var(--lp-accent); color: #fff;
-  font-size: .9rem; font-weight: 700; line-height: 1.3; text-align: center; text-decoration: none;
-}
-.bd-page .lp-order svg { flex: none; width: 17px; height: 17px; }
-.bd-page .lp-order:hover, .bd-page .bd-product:hover .lp-order { background: #084b6b; color: #fff; text-decoration: none; }
-.bd-page .bd-product > .lp-order { margin: 0 12px 12px; }
-.bd-page :is(.lp-order, .lp-jump a, .bd-product):focus-visible { outline: 3px solid #0b74a3; outline-offset: 3px; }
-.bd-page .bd-hero a:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-.bd-page .cl-faq-list summary:focus-visible { outline: 2px solid var(--lp-accent); outline-offset: 3px; }
-@media (min-width: 768px) and (max-width: 991px) {
-  .bd-page .bd-hero-copy { width: 70%; }
-  .bd-page .bd-hero { background-position: 30% center; }
-}
-@media (max-width: 767px) {
-  .bd-page .bd-hero {
-    padding-bottom: 96px;
-    background-image: linear-gradient(180deg, rgba(5,21,38,.38), rgba(5,21,38,.74) 60%, rgba(5,21,38,.12)), var(--lp-mobile);
-    background-position: 65% center;
-  }
-  .bd-page .bd-hero-grid { margin-top: 24px; }
-  .bd-page .bd-hero-copy { width: 100%; }
-  .bd-page .bd-hero-title { font-size: clamp(2rem, 8.8vw, 3.2rem); text-wrap: initial; }
-  .bd-page .home-hero-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .bd-page .home-hero-actions a { padding-inline: 8px; font-size: .86rem; height: 100%; text-align: center; }
-  .bd-page .home-hero-actions .cl-icon { display: none; }
-  .bd-page .home-hero-help { gap: 4px 7px; }
-  .bd-page .home-hero-feature { gap: 8px; }
-  .bd-page .home-hero-feature strong { font-size: .81rem; }
-  .bd-page .home-hero-feature small { font-size: .73rem; }
-  .bd-page .cl-compare-table-wrap { overflow-x: auto; }
-}
-@media (max-width: 575px) {
-  .bd-page .sf-type-grid { grid-template-columns: 1fr; gap: 14px; }
-  .bd-page .sf-type-card { display: grid; grid-template-columns: 100px minmax(0,1fr); align-items: stretch; }
-  .bd-page .sf-type-image { aspect-ratio: auto; background: #f3f7fa; }
-  .bd-page .sf-type-image img { object-fit: cover; padding: 0; }
-  .bd-page .sf-type-body { padding: 14px; }
-  .bd-page .sf-type-body h3 { font-size: 1.05rem; }
-  .bd-page .sf-type-body p { font-size: .87rem; }
-  .bd-page .sf-type-body .sf-type-price { font-size: 1.1rem; }
-  .bd-page .wg-card-tag { white-space: normal; }
-  .bd-page .lp-order { font-size: .84rem; padding-inline: 6px; }
-}
-

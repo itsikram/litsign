@@ -25,10 +25,10 @@ defined('ABSPATH') || exit;
  * @return array object_type (post|term|''), object_id, kind, and the guide
  *               registry entry for location and industry pages.
  */
-function retails_seo_context()
+function wholesale_seo_context()
 {
-	if (isset($GLOBALS['retails_seo_context'])) {
-		return $GLOBALS['retails_seo_context'];
+	if (isset($GLOBALS['wholesale_seo_context'])) {
+		return $GLOBALS['wholesale_seo_context'];
 	}
 
 	$context = array('object_type' => '', 'object_id' => 0, 'kind' => '', 'guide' => array());
@@ -48,11 +48,11 @@ function retails_seo_context()
 		if (is_front_page()) {
 			$context['kind'] = 'home';
 		} elseif ('product' === $post_type) {
-			$context['kind'] = retails_seo_channel_letter_product($post_id) ? '' : 'product';
+			$context['kind'] = wholesale_seo_channel_letter_product($post_id) ? '' : 'product';
 		} elseif ('post' === $post_type) {
 			$context['kind'] = 'post';
 		} elseif ('page' === $post_type) {
-			$guide = function_exists('retails_guide_current') ? retails_guide_current() : array();
+			$guide = function_exists('wholesale_guide_current') ? wholesale_guide_current() : array();
 			$guide_type = isset($guide['type']) ? $guide['type'] : '';
 			if (in_array($guide_type, array('state', 'city'), true)) {
 				$context['kind'] = 'location';
@@ -60,7 +60,7 @@ function retails_seo_context()
 			} elseif ('industry' === $guide_type) {
 				$context['kind'] = 'industry';
 				$context['guide'] = $guide;
-			} elseif (!retails_is_channel_letters_landing() && !retails_is_channel_letters_page() && !is_page('channel-letter-builder')) {
+			} elseif (!wholesale_is_channel_letters_landing() && !wholesale_is_channel_letters_page() && !is_page('channel-letter-builder')) {
 				$context['kind'] = 'page';
 			}
 		}
@@ -68,52 +68,52 @@ function retails_seo_context()
 		$context['kind'] = 'home';
 	}
 
-	$GLOBALS['retails_seo_context'] = $context;
+	$GLOBALS['wholesale_seo_context'] = $context;
 	return $context;
 }
 
 /**
  * Forget the cached context (used when the admin previews another page).
  */
-function retails_seo_reset_context()
+function wholesale_seo_reset_context()
 {
-	unset($GLOBALS['retails_seo_context']);
+	unset($GLOBALS['wholesale_seo_context']);
 }
 
 /**
  * Per-page value for the current request, or ''. Meta is read only for
  * objects the overrides index lists.
  */
-function retails_seo_object_value($key)
+function wholesale_seo_object_value($key)
 {
-	$context = retails_seo_context();
-	return $context['object_id'] ? retails_seo_stored_value($context['object_type'], $context['object_id'], $key) : '';
+	$context = wholesale_seo_context();
+	return $context['object_id'] ? wholesale_seo_stored_value($context['object_type'], $context['object_id'], $key) : '';
 }
 
 /**
  * A stored per-page value for any post or term, or ''.
  */
-function retails_seo_stored_value($object_type, $object_id, $key)
+function wholesale_seo_stored_value($object_type, $object_id, $key)
 {
-	$index = retails_seo_settings('overrides');
+	$index = wholesale_seo_settings('overrides');
 	if (empty($index[$object_type][$object_id]) || !in_array($key, (array) $index[$object_type][$object_id], true)) {
 		return '';
 	}
 
 	return (string) ('post' === $object_type
-		? get_post_meta($object_id, '_retails_seo_' . $key, true)
-		: get_term_meta($object_id, '_retails_seo_' . $key, true));
+		? get_post_meta($object_id, '_wholesale_seo_' . $key, true)
+		: get_term_meta($object_id, '_wholesale_seo_' . $key, true));
 }
 
-function retails_seo_brand()
+function wholesale_seo_brand()
 {
-	$brand = retails_seo_opt('general', 'brand');
+	$brand = wholesale_seo_opt('general', 'brand');
 	return '' !== $brand ? $brand : 'Storefront Sign Online';
 }
 
-function retails_seo_separator()
+function wholesale_seo_separator()
 {
-	$separator = retails_seo_opt('general', 'separator');
+	$separator = wholesale_seo_opt('general', 'separator');
 	return '' !== $separator ? $separator : '|';
 }
 
@@ -122,23 +122,23 @@ function retails_seo_separator()
  *
  * @return array
  */
-function retails_seo_template_vars($context = null)
+function wholesale_seo_template_vars($context = null)
 {
-	$context = $context ? $context : retails_seo_context();
+	$context = $context ? $context : wholesale_seo_context();
 	$vars = array(
 		'title' => '',
-		'brand' => retails_seo_brand(),
+		'brand' => wholesale_seo_brand(),
 		'category' => '',
 		'price_from' => '',
 		'state' => '',
 		'city' => '',
-		'sep' => retails_seo_separator(),
+		'sep' => wholesale_seo_separator(),
 	);
 
 	if ('term' === $context['object_type']) {
 		$term = get_term($context['object_id'], 'product_category');
 		if ($term && !is_wp_error($term)) {
-			$vars['title'] = retails_schema_text($term->name);
+			$vars['title'] = wholesale_schema_text($term->name);
 			$vars['category'] = $vars['title'];
 		}
 		return $vars;
@@ -149,26 +149,26 @@ function retails_seo_template_vars($context = null)
 	}
 
 	$post_id = $context['object_id'];
-	$vars['title'] = retails_schema_text(get_the_title($post_id));
+	$vars['title'] = wholesale_schema_text(get_the_title($post_id));
 
 	if ('product' === get_post_type($post_id)) {
-		$vars['title'] = retails_seo_product_name($post_id);
+		$vars['title'] = wholesale_seo_product_name($post_id);
 		$terms = get_the_terms($post_id, 'product_category');
 		foreach ($terms && !is_wp_error($terms) ? $terms : array() as $term) {
 			// A child category is more specific than its parent.
 			if ('' === $vars['category'] || $term->parent) {
-				$vars['category'] = retails_schema_text($term->name);
+				$vars['category'] = wholesale_schema_text($term->name);
 			}
 		}
-		$price = retails_seo_product_lowest_price($post_id);
+		$price = wholesale_seo_product_lowest_price($post_id);
 		if ($price > 0) {
 			$vars['price_from'] = '$' . preg_replace('/\.00$/', '', number_format($price, 2, '.', ','));
 		}
 	}
 
 	$guide = $context['guide'];
-	if (!empty($guide['state']) && function_exists('retails_guide_states')) {
-		$states = retails_guide_states();
+	if (!empty($guide['state']) && function_exists('wholesale_guide_states')) {
+		$states = wholesale_guide_states();
 		$state = isset($states[$guide['state']]) ? $states[$guide['state']] : array();
 		$vars['state'] = isset($state['name']) ? $state['name'] : '';
 		if (!empty($guide['city']) && isset($state['cities'][$guide['city']]['name'])) {
@@ -183,7 +183,7 @@ function retails_seo_template_vars($context = null)
  * Fill a title or description template. Separators and brackets left empty
  * by a missing variable are tidied away.
  */
-function retails_seo_render_template($template, array $vars)
+function wholesale_seo_render_template($template, array $vars)
 {
 	$replace = array();
 	foreach (array('title', 'brand', 'category', 'price_from', 'state', 'city', 'sep') as $key) {
@@ -207,54 +207,54 @@ function retails_seo_render_template($template, array $vars)
  * Title or description from the SEO settings for the current request, or ''
  * to keep the theme's own.
  */
-function retails_seo_resolved_text($field)
+function wholesale_seo_resolved_text($field)
 {
-	$value = retails_seo_object_value($field);
+	$value = wholesale_seo_object_value($field);
 	if ('' !== $value) {
 		return $value;
 	}
 
-	$context = retails_seo_context();
+	$context = wholesale_seo_context();
 	if ('home' === $context['kind']) {
-		return (string) retails_seo_opt('general', 'home_' . $field);
+		return (string) wholesale_seo_opt('general', 'home_' . $field);
 	}
 
-	$template = $context['kind'] ? (string) retails_seo_opt('general', 'tpl_' . $context['kind'] . '_' . $field) : '';
+	$template = $context['kind'] ? (string) wholesale_seo_opt('general', 'tpl_' . $context['kind'] . '_' . $field) : '';
 
-	return '' !== $template ? retails_seo_render_template($template, retails_seo_template_vars($context)) : '';
+	return '' !== $template ? wholesale_seo_render_template($template, wholesale_seo_template_vars($context)) : '';
 }
 
 add_filter('document_title_parts', function ($parts) {
-	if (retails_has_seo_plugin()) {
+	if (wholesale_has_seo_plugin()) {
 		return $parts;
 	}
 
-	$title = retails_seo_resolved_text('title');
+	$title = wholesale_seo_resolved_text('title');
 	return '' !== $title ? array('title' => $title) : $parts;
 }, 99);
 
 add_filter('document_title_separator', function ($separator) {
-	$saved = retails_seo_opt('general', 'separator');
+	$saved = wholesale_seo_opt('general', 'separator');
 	return '' !== $saved ? $saved : $separator;
 });
 
-add_filter('retails_seo_description_override', function ($description) {
-	$saved = retails_seo_resolved_text('description');
+add_filter('wholesale_seo_description_override', function ($description) {
+	$saved = wholesale_seo_resolved_text('description');
 	return '' !== $saved ? $saved : $description;
 });
 
-add_filter('retails_seo_canonical_override', function ($url) {
-	$saved = retails_seo_object_value('canonical');
+add_filter('wholesale_seo_canonical_override', function ($url) {
+	$saved = wholesale_seo_object_value('canonical');
 	return '' !== $saved ? $saved : $url;
 });
 
-add_filter('retails_seo_og_title', function ($title) {
-	$saved = retails_seo_object_value('og_title');
+add_filter('wholesale_seo_og_title', function ($title) {
+	$saved = wholesale_seo_object_value('og_title');
 	return '' !== $saved ? $saved : $title;
 });
 
-add_filter('retails_seo_og_description', function ($description) {
-	$saved = retails_seo_object_value('og_description');
+add_filter('wholesale_seo_og_description', function ($description) {
+	$saved = wholesale_seo_object_value('og_description');
 	return '' !== $saved ? $saved : $description;
 });
 
@@ -262,13 +262,13 @@ add_filter('retails_seo_og_description', function ($description) {
  * Share image: the page's own choice, else the default social image in place
  * of the logo the theme falls back to.
  */
-add_filter('retails_seo_og_image', function ($image) {
-	$saved = retails_seo_object_value('og_image');
+add_filter('wholesale_seo_og_image', function ($image) {
+	$saved = wholesale_seo_object_value('og_image');
 	if ('' !== $saved) {
 		return $saved;
 	}
 
-	$default = retails_seo_opt('general', 'og_image');
+	$default = wholesale_seo_opt('general', 'og_image');
 	if ('' === $default) {
 		return $image;
 	}
@@ -282,7 +282,7 @@ add_filter('retails_seo_og_image', function ($image) {
  * theme keeps out of search stay out.
  */
 add_filter('wp_robots', function ($robots) {
-	if (retails_seo_object_value('noindex')) {
+	if (wholesale_seo_object_value('noindex')) {
 		unset($robots['index'], $robots['max-image-preview']);
 		$robots['noindex'] = true;
 		if (!isset($robots['nofollow'])) {
@@ -290,7 +290,7 @@ add_filter('wp_robots', function ($robots) {
 		}
 	}
 
-	if (retails_seo_object_value('nofollow')) {
+	if (wholesale_seo_object_value('nofollow')) {
 		unset($robots['follow']);
 		$robots['nofollow'] = true;
 	}
@@ -303,10 +303,10 @@ add_filter('wp_robots', function ($robots) {
  *
  * @return int[]
  */
-function retails_seo_sitemap_excluded_ids($object_type)
+function wholesale_seo_sitemap_excluded_ids($object_type)
 {
 	$ids = array();
-	$index = retails_seo_settings('overrides');
+	$index = wholesale_seo_settings('overrides');
 
 	foreach (isset($index[$object_type]) ? (array) $index[$object_type] : array() as $id => $keys) {
 		if (array_intersect(array('noindex', 'exclude_sitemap'), (array) $keys)) {
@@ -317,25 +317,25 @@ function retails_seo_sitemap_excluded_ids($object_type)
 	return $ids;
 }
 
-add_filter('retails_seo_sitemap_excluded_post_ids', function ($ids) {
-	return array_values(array_unique(array_merge((array) $ids, retails_seo_sitemap_excluded_ids('post'))));
+add_filter('wholesale_seo_sitemap_excluded_post_ids', function ($ids) {
+	return array_values(array_unique(array_merge((array) $ids, wholesale_seo_sitemap_excluded_ids('post'))));
 });
 
-add_filter('retails_seo_sitemap_excluded_product_ids', function ($ids) {
-	$excluded = retails_seo_sitemap_excluded_ids('post');
+add_filter('wholesale_seo_sitemap_excluded_product_ids', function ($ids) {
+	$excluded = wholesale_seo_sitemap_excluded_ids('post');
 	return $excluded ? array_values(array_unique(array_merge((array) $ids, $excluded))) : $ids;
 });
 
 add_filter('wp_sitemaps_posts_query_args', function ($args) {
-	$excluded = retails_seo_sitemap_excluded_ids('post');
+	$excluded = wholesale_seo_sitemap_excluded_ids('post');
 	if ($excluded) {
 		$args['post__not_in'] = array_values(array_unique(array_merge(isset($args['post__not_in']) ? (array) $args['post__not_in'] : array(), $excluded)));
 	}
 	return $args;
 }, 30);
 
-add_filter('retails_seo_sitemap_excluded_categories', function ($slugs) {
-	foreach (retails_seo_sitemap_excluded_ids('term') as $term_id) {
+add_filter('wholesale_seo_sitemap_excluded_categories', function ($slugs) {
+	foreach (wholesale_seo_sitemap_excluded_ids('term') as $term_id) {
 		$term = get_term($term_id, 'product_category');
 		if ($term && !is_wp_error($term) && !in_array($term->slug, $slugs, true)) {
 			$slugs[] = $term->slug;
@@ -349,9 +349,9 @@ add_filter('retails_seo_sitemap_excluded_categories', function ($slugs) {
  *
  * @return string[]
  */
-function retails_seo_social_profiles()
+function wholesale_seo_social_profiles()
 {
-	$profiles = retails_seo_opt('general', 'social_profiles');
+	$profiles = wholesale_seo_opt('general', 'social_profiles');
 	return is_array($profiles) ? array_values(array_filter($profiles)) : array();
 }
 
@@ -359,27 +359,27 @@ function retails_seo_social_profiles()
  * Whether the current page may describe the business as a place customers
  * visit: home, contact, about and the Washington location pages.
  */
-function retails_seo_is_wa_page()
+function wholesale_seo_is_wa_page()
 {
-	if (isset($GLOBALS['retails_seo_preview_wa'])) {
-		return (bool) $GLOBALS['retails_seo_preview_wa'];
+	if (isset($GLOBALS['wholesale_seo_preview_wa'])) {
+		return (bool) $GLOBALS['wholesale_seo_preview_wa'];
 	}
 
 	if (is_front_page() || is_page(array('contact', 'about'))) {
 		return true;
 	}
 
-	$guide = function_exists('retails_guide_current') ? retails_guide_current() : array();
+	$guide = function_exists('wholesale_guide_current') ? wholesale_guide_current() : array();
 	return isset($guide['state']) && 'washington' === $guide['state'];
 }
 
 /**
  * Apply Business & Schema settings to the Organization / LocalBusiness graph.
  */
-function retails_seo_business_graph($graph)
+function wholesale_seo_business_graph($graph)
 {
-	$business = retails_seo_settings('business');
-	$social = retails_seo_social_profiles();
+	$business = wholesale_seo_settings('business');
+	$social = wholesale_seo_social_profiles();
 	if (!$business && !$social) {
 		return $graph;
 	}
@@ -452,7 +452,7 @@ function retails_seo_business_graph($graph)
 	// the company's postal address.
 	$mode = $get('visit_mode');
 	if (in_array($mode, array('on', 'off'), true) && $local) {
-		if ('off' === $mode || !retails_seo_is_wa_page()) {
+		if ('off' === $mode || !wholesale_seo_is_wa_page()) {
 			if (!empty($local['address'])) {
 				$org['address'] = $local['address'];
 			}
@@ -471,13 +471,13 @@ function retails_seo_business_graph($graph)
 
 	return array_values($graph);
 }
-add_filter('retails_seo_organization_graph', 'retails_seo_business_graph');
+add_filter('wholesale_seo_organization_graph', 'wholesale_seo_business_graph');
 
 /**
  * Where the business sells, one place per line: "United States" or a state.
  */
-add_filter('retails_seo_area_served', function ($areas) {
-	$lines = (string) retails_seo_opt('business', 'area_served');
+add_filter('wholesale_seo_area_served', function ($areas) {
+	$lines = (string) wholesale_seo_opt('business', 'area_served');
 	if ('' === trim($lines)) {
 		return $areas;
 	}

@@ -13,17 +13,17 @@
 
 // The supplier's name and domain. The digit is escaped so site-wide searches
 // for the supplier's name only find real content, not this cleanup code.
-const RETAILS_SUPPLIER_NAME = "b\x32sign";
-const RETAILS_SUPPLIER_DOMAIN = RETAILS_SUPPLIER_NAME . '.com';
-const RETAILS_SUPPLIER_URL = 'https://www.' . RETAILS_SUPPLIER_DOMAIN;
-const RETAILS_SUPPLIER_HOST_PATTERN = '#https?://(?:www\.)?b\x32sign\.com[^"\'\s<>)]*#i';
+const WHOLESALE_SUPPLIER_NAME = "b\x32sign";
+const WHOLESALE_SUPPLIER_DOMAIN = WHOLESALE_SUPPLIER_NAME . '.com';
+const WHOLESALE_SUPPLIER_URL = 'https://www.' . WHOLESALE_SUPPLIER_DOMAIN;
+const WHOLESALE_SUPPLIER_HOST_PATTERN = '#https?://(?:www\.)?b\x32sign\.com[^"\'\s<>)]*#i';
 
 /**
  * Folder in uploads that holds the copied files.
  *
  * @return array array(path, url)
  */
-function retails_supplier_files_dir()
+function wholesale_supplier_files_dir()
 {
 	$uploads = wp_upload_dir(null, false);
 
@@ -35,18 +35,18 @@ function retails_supplier_files_dir()
  *
  * @return string[]
  */
-function retails_supplier_urls_in_content()
+function wholesale_supplier_urls_in_content()
 {
 	global $wpdb;
 
-	$texts = $wpdb->get_col("SELECT post_content FROM {$wpdb->posts} WHERE post_type = 'product' AND post_status <> 'inherit' AND post_content LIKE '%" . RETAILS_SUPPLIER_NAME . "%'");
+	$texts = $wpdb->get_col("SELECT post_content FROM {$wpdb->posts} WHERE post_type = 'product' AND post_status <> 'inherit' AND post_content LIKE '%" . WHOLESALE_SUPPLIER_NAME . "%'");
 	$texts = array_merge($texts, $wpdb->get_col(
-		"SELECT pm.meta_value FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = 'product' AND pm.meta_value LIKE '%" . RETAILS_SUPPLIER_NAME . "%'"
+		"SELECT pm.meta_value FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = 'product' AND pm.meta_value LIKE '%" . WHOLESALE_SUPPLIER_NAME . "%'"
 	));
 
 	$urls = array();
 	foreach ($texts as $text) {
-		if (preg_match_all(RETAILS_SUPPLIER_HOST_PATTERN, (string) $text, $matches)) {
+		if (preg_match_all(WHOLESALE_SUPPLIER_HOST_PATTERN, (string) $text, $matches)) {
 			foreach ($matches[0] as $url) {
 				$urls[html_entity_decode($url, ENT_QUOTES)] = true;
 			}
@@ -60,7 +60,7 @@ function retails_supplier_urls_in_content()
  * Whether a supplier URL is a file to copy (image or downloadable template)
  * rather than a link to one of the supplier's pages.
  */
-function retails_supplier_url_is_file($url)
+function wholesale_supplier_url_is_file($url)
 {
 	return (bool) preg_match('#b\x32sign\.com/(?:image/|item/download/|downloadable/)#i', $url);
 }
@@ -70,7 +70,7 @@ function retails_supplier_url_is_file($url)
  *
  * @param array $files Supplier file URL => local URL.
  */
-function retails_clean_supplier_html($html, $files)
+function wholesale_clean_supplier_html($html, $files)
 {
 	$html = (string) $html;
 	if (false === stripos($html, 'b2') && false === stripos($html, 'my store front sign')) {
@@ -115,7 +115,7 @@ function retails_clean_supplier_html($html, $files)
  *
  * @return array
  */
-function retails_supplier_local_files()
+function wholesale_supplier_local_files()
 {
 	static $files = null;
 	if (null !== $files) {
@@ -123,12 +123,12 @@ function retails_supplier_local_files()
 	}
 
 	$files = array();
-	list($dir) = retails_supplier_files_dir();
-	foreach (retails_storefront_media_manifest()['files'] as $entry) {
+	list($dir) = wholesale_supplier_files_dir();
+	foreach (wholesale_storefront_media_manifest()['files'] as $entry) {
 		if (is_file(trailingslashit($dir) . $entry['file'])) {
-			$url = retails_storefront_media_url($entry['file']);
+			$url = wholesale_storefront_media_url($entry['file']);
 			foreach ($entry['sources'] as $source) {
-				$files[RETAILS_SUPPLIER_URL . $source] = $url;
+				$files[WHOLESALE_SUPPLIER_URL . $source] = $url;
 			}
 		}
 	}
@@ -141,30 +141,30 @@ function retails_supplier_local_files()
  * drop every supplier name and link. Waits (returns false) until the copied
  * files folder has been uploaded, so images are never removed by mistake.
  */
-function retails_seo_migrate_remove_supplier_references()
+function wholesale_seo_migrate_remove_supplier_references()
 {
-	$files = retails_supplier_local_files();
+	$files = wholesale_supplier_local_files();
 	if (!$files) {
 		return false;
 	}
 	$state = array('files' => $files);
 
 	global $wpdb;
-	$posts = $wpdb->get_results("SELECT ID, post_content FROM {$wpdb->posts} WHERE post_type = 'product' AND post_status <> 'inherit' AND (post_content LIKE '%" . RETAILS_SUPPLIER_NAME . "%' OR post_content LIKE '%b2 sign%' OR post_content LIKE '%my store front sign%')");
+	$posts = $wpdb->get_results("SELECT ID, post_content FROM {$wpdb->posts} WHERE post_type = 'product' AND post_status <> 'inherit' AND (post_content LIKE '%" . WHOLESALE_SUPPLIER_NAME . "%' OR post_content LIKE '%b2 sign%' OR post_content LIKE '%my store front sign%')");
 	foreach ($posts as $post) {
-		$clean = retails_clean_supplier_html($post->post_content, $state['files']);
+		$clean = wholesale_clean_supplier_html($post->post_content, $state['files']);
 		if ($clean !== $post->post_content) {
 			$wpdb->update($wpdb->posts, array('post_content' => $clean), array('ID' => $post->ID));
 			clean_post_cache($post->ID);
 		}
 	}
 
-	$metas = $wpdb->get_results("SELECT pm.meta_id, pm.post_id, pm.meta_value FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = 'product' AND (pm.meta_value LIKE '%" . RETAILS_SUPPLIER_NAME . "%' OR pm.meta_value LIKE '%b2 sign%' OR pm.meta_value LIKE '%my store front sign%')");
+	$metas = $wpdb->get_results("SELECT pm.meta_id, pm.post_id, pm.meta_value FROM {$wpdb->postmeta} pm JOIN {$wpdb->posts} p ON p.ID = pm.post_id WHERE p.post_type = 'product' AND (pm.meta_value LIKE '%" . WHOLESALE_SUPPLIER_NAME . "%' OR pm.meta_value LIKE '%b2 sign%' OR pm.meta_value LIKE '%my store front sign%')");
 	foreach ($metas as $meta) {
 		if (is_serialized($meta->meta_value)) {
 			continue;
 		}
-		$clean = retails_clean_supplier_html($meta->meta_value, $state['files']);
+		$clean = wholesale_clean_supplier_html($meta->meta_value, $state['files']);
 		if ($clean !== $meta->meta_value) {
 			$wpdb->update($wpdb->postmeta, array('meta_value' => $clean), array('meta_id' => $meta->meta_id));
 			wp_cache_delete($meta->post_id, 'post_meta');
@@ -179,16 +179,16 @@ function retails_seo_migrate_remove_supplier_references()
  * revisions and their meta that still mention the supplier (for example the
  * domain written out in the terms) get the same cleanup.
  */
-function retails_seo_migrate_supplier_text()
+function wholesale_seo_migrate_supplier_text()
 {
 	global $wpdb;
-	$like = '%' . $wpdb->esc_like(RETAILS_SUPPLIER_NAME) . '%';
+	$like = '%' . $wpdb->esc_like(WHOLESALE_SUPPLIER_NAME) . '%';
 
 	$posts = $wpdb->get_results($wpdb->prepare("SELECT ID, post_title, post_excerpt, post_content FROM {$wpdb->posts} WHERE post_type NOT IN ('attachment', 'nav_menu_item') AND (post_title LIKE %s OR post_excerpt LIKE %s OR post_content LIKE %s)", $like, $like, $like));
 	foreach ($posts as $post) {
 		$data = array();
 		foreach (array('post_title', 'post_excerpt', 'post_content') as $field) {
-			$clean = retails_clean_supplier_html($post->$field, array());
+			$clean = wholesale_clean_supplier_html($post->$field, array());
 			if ($clean !== $post->$field) {
 				$data[$field] = $clean;
 			}
@@ -204,7 +204,7 @@ function retails_seo_migrate_supplier_text()
 		if (is_serialized($meta->meta_value)) {
 			continue;
 		}
-		$clean = retails_clean_supplier_html($meta->meta_value, array());
+		$clean = wholesale_clean_supplier_html($meta->meta_value, array());
 		if ($clean !== $meta->meta_value) {
 			$wpdb->update($wpdb->postmeta, array('meta_value' => $clean), array('meta_id' => $meta->meta_id));
 			wp_cache_delete($meta->post_id, 'post_meta');
@@ -218,13 +218,13 @@ function retails_seo_migrate_supplier_text()
  * Safety net on the front end: any supplier file URL still printed (for
  * example from a product edited later) is swapped for this site's copy.
  */
-function retails_supplier_urls_to_local($html)
+function wholesale_supplier_urls_to_local($html)
 {
-	return false === stripos($html, RETAILS_SUPPLIER_DOMAIN) ? $html : retails_clean_supplier_html($html, retails_supplier_local_files());
+	return false === stripos($html, WHOLESALE_SUPPLIER_DOMAIN) ? $html : wholesale_clean_supplier_html($html, wholesale_supplier_local_files());
 }
 
 add_action('template_redirect', static function () {
 	if (!is_admin() && is_singular('product')) {
-		ob_start('retails_supplier_urls_to_local');
+		ob_start('wholesale_supplier_urls_to_local');
 	}
 }, 1);

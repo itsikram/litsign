@@ -10,7 +10,7 @@
  * Push: this site's attachment files that the other site does not have are
  *       uploaded to it (staged there, then moved into its uploads folder).
  *
- * A job runs in small steps (admin-ajax, retails_media_sync) so no request
+ * A job runs in small steps (admin-ajax, wholesale_media_sync) so no request
  * runs long, and js/admin-settings.js waits between steps so the live site's
  * firewall does not see a burst of requests.
  */
@@ -19,12 +19,12 @@ if (!defined('ABSPATH')) {
 	exit;
 }
 
-const RETAILS_MSYNC_CHUNK = 1048576 + 524288; // 1.5 MB per file segment.
-const RETAILS_MSYNC_CALL_BYTES = 3145728;     // At most 3 MB of file data per request.
-const RETAILS_MSYNC_STEP_SECONDS = 15;
-const RETAILS_MSYNC_CHECK_BATCH = 250;
+const WHOLESALE_MSYNC_CHUNK = 1048576 + 524288; // 1.5 MB per file segment.
+const WHOLESALE_MSYNC_CALL_BYTES = 3145728;     // At most 3 MB of file data per request.
+const WHOLESALE_MSYNC_STEP_SECONDS = 15;
+const WHOLESALE_MSYNC_CHECK_BATCH = 250;
 
-function retails_msync_available()
+function wholesale_msync_available()
 {
 	return class_exists('\WUDT\Modules\Migration\Remote_Client') && class_exists('\WUDT\Modules\Migration\Migration_Engine');
 }
@@ -34,7 +34,7 @@ function retails_msync_available()
  *
  * @return array<string,array{label:string,url:string}>
  */
-function retails_msync_sites()
+function wholesale_msync_sites()
 {
 	$out = array();
 	$sites = get_option('wudt_migration_sites', array());
@@ -51,7 +51,7 @@ function retails_msync_sites()
 	return $out;
 }
 
-function retails_msync_client($site_id)
+function wholesale_msync_client($site_id)
 {
 	$sites = get_option('wudt_migration_sites', array());
 	$site = is_array($sites) && isset($sites[$site_id]) && is_array($sites[$site_id]) ? $sites[$site_id] : null;
@@ -61,7 +61,7 @@ function retails_msync_client($site_id)
 	return new \WUDT\Modules\Migration\Remote_Client((string) $site['url'], (string) $site['api_key'], (string) ($site['transport'] ?? ''));
 }
 
-function retails_msync_uploads_dir()
+function wholesale_msync_uploads_dir()
 {
 	return untrailingslashit(wp_normalize_path((string) wp_get_upload_dir()['basedir']));
 }
@@ -72,7 +72,7 @@ function retails_msync_uploads_dir()
  *
  * @return string[]
  */
-function retails_msync_attachment_files()
+function wholesale_msync_attachment_files()
 {
 	global $wpdb;
 
@@ -101,7 +101,7 @@ function retails_msync_attachment_files()
 
 	$out = array();
 	foreach (array_keys($files) as $rel) {
-		if (!preg_match('#(^|/)\.\.(/|$)#', $rel) && (!retails_msync_available() || !\WUDT\Modules\Migration\Migration_Engine::is_excluded('uploads', $rel))) {
+		if (!preg_match('#(^|/)\.\.(/|$)#', $rel) && (!wholesale_msync_available() || !\WUDT\Modules\Migration\Migration_Engine::is_excluded('uploads', $rel))) {
 			$out[] = $rel;
 		}
 	}
@@ -114,11 +114,11 @@ function retails_msync_attachment_files()
  *
  * @return string[]
  */
-function retails_msync_missing_here(?array $files = null)
+function wholesale_msync_missing_here(?array $files = null)
 {
-	$base = retails_msync_uploads_dir();
+	$base = wholesale_msync_uploads_dir();
 	$missing = array();
-	foreach ($files ?? retails_msync_attachment_files() as $rel) {
+	foreach ($files ?? wholesale_msync_attachment_files() as $rel) {
 		if (!is_file($base . '/' . $rel)) {
 			$missing[] = $rel;
 		}
@@ -126,17 +126,17 @@ function retails_msync_missing_here(?array $files = null)
 	return $missing;
 }
 
-function retails_msync_job_key()
+function wholesale_msync_job_key()
 {
-	return 'retails_msync_job_' . get_current_user_id();
+	return 'wholesale_msync_job_' . get_current_user_id();
 }
 
-function retails_msync_save_job(array $job)
+function wholesale_msync_save_job(array $job)
 {
-	set_transient(retails_msync_job_key(), $job, DAY_IN_SECONDS);
+	set_transient(wholesale_msync_job_key(), $job, DAY_IN_SECONDS);
 }
 
-function retails_msync_public(array $job)
+function wholesale_msync_public(array $job)
 {
 	return array(
 		'direction' => $job['direction'],
@@ -158,12 +158,12 @@ function retails_msync_public(array $job)
 /**
  * admin-ajax: op=start (site_id, direction) | step | cancel.
  */
-function retails_msync_ajax()
+function wholesale_msync_ajax()
 {
-	if (!current_user_can('manage_options') || !check_ajax_referer('retails_media_sync', 'nonce', false)) {
+	if (!current_user_can('manage_options') || !check_ajax_referer('wholesale_media_sync', 'nonce', false)) {
 		wp_send_json_error(array('message' => 'Not allowed.'), 403);
 	}
-	if (!retails_msync_available()) {
+	if (!wholesale_msync_available()) {
 		wp_send_json_error(array('message' => 'Diagnostics Toolkit is not active.'));
 	}
 
@@ -172,14 +172,14 @@ function retails_msync_ajax()
 		if ('start' === $op) {
 			$site_id = sanitize_key(wp_unslash($_POST['site_id'] ?? ''));
 			$direction = 'push' === ($_POST['direction'] ?? '') ? 'push' : 'pull';
-			$sites = retails_msync_sites();
+			$sites = wholesale_msync_sites();
 			if (!isset($sites[$site_id])) {
 				throw new RuntimeException('Choose a connected site.');
 			}
-			$all = retails_msync_attachment_files();
-			$base = retails_msync_uploads_dir();
+			$all = wholesale_msync_attachment_files();
+			$base = wholesale_msync_uploads_dir();
 			if ('pull' === $direction) {
-				$files = retails_msync_missing_here($all);
+				$files = wholesale_msync_missing_here($all);
 			} else {
 				$files = array_values(array_filter($all, static function ($rel) use ($base) {
 					return is_file($base . '/' . $rel);
@@ -207,16 +207,16 @@ function retails_msync_ajax()
 			if (!$files || ('pull' === $direction && !$job['queue'])) {
 				$job['phase'] = 'done';
 			}
-			retails_msync_save_job($job);
-			wp_send_json_success(retails_msync_public($job));
+			wholesale_msync_save_job($job);
+			wp_send_json_success(wholesale_msync_public($job));
 		}
 
-		$job = get_transient(retails_msync_job_key());
+		$job = get_transient(wholesale_msync_job_key());
 		if (!is_array($job)) {
 			throw new RuntimeException('No media sync is running. Start it again.');
 		}
 		if ('cancel' === $op) {
-			delete_transient(retails_msync_job_key());
+			delete_transient(wholesale_msync_job_key());
 			wp_send_json_success(array('phase' => 'cancelled'));
 		}
 		if ('step' !== $op) {
@@ -224,18 +224,18 @@ function retails_msync_ajax()
 		}
 
 		\WUDT\Modules\Migration\Migration_Engine::raise_limits();
-		$client = retails_msync_client($job['site_id']);
-		$client->set_deadline(microtime(true) + RETAILS_MSYNC_STEP_SECONDS + 40);
+		$client = wholesale_msync_client($job['site_id']);
+		$client->set_deadline(microtime(true) + WHOLESALE_MSYNC_STEP_SECONDS + 40);
 		$job['recent'] = array();
 		$started = microtime(true);
 
 		if ('check' === $job['phase']) {
-			retails_msync_step_check($job, $client);
+			wholesale_msync_step_check($job, $client);
 		} elseif ('transfer' === $job['phase']) {
 			do {
-				$more = 'pull' === $job['direction'] ? retails_msync_step_pull($job, $client) : retails_msync_step_push($job, $client);
+				$more = 'pull' === $job['direction'] ? wholesale_msync_step_pull($job, $client) : wholesale_msync_step_push($job, $client);
 				// Space out requests to the other site (bursts trip the live site's firewall).
-				$more = $more && microtime(true) - $started < RETAILS_MSYNC_STEP_SECONDS - 1;
+				$more = $more && microtime(true) - $started < WHOLESALE_MSYNC_STEP_SECONDS - 1;
 				if ($more) {
 					usleep(800000);
 				}
@@ -248,21 +248,21 @@ function retails_msync_ajax()
 			}
 		}
 
-		retails_msync_save_job($job);
-		wp_send_json_success(retails_msync_public($job));
+		wholesale_msync_save_job($job);
+		wp_send_json_success(wholesale_msync_public($job));
 	} catch (Throwable $e) {
 		wp_send_json_error(array('message' => $e->getMessage()));
 	}
 }
-add_action('wp_ajax_retails_media_sync', 'retails_msync_ajax');
+add_action('wp_ajax_wholesale_media_sync', 'wholesale_msync_ajax');
 
 /**
  * Push, phase 1: ask the other site which of our files it lacks. A read of
  * zero bytes answers "missing" or the file's size without sending data.
  */
-function retails_msync_step_check(array &$job, $client)
+function wholesale_msync_step_check(array &$job, $client)
 {
-	$batch = array_slice($job['files'], (int) $job['checked'], RETAILS_MSYNC_CHECK_BATCH);
+	$batch = array_slice($job['files'], (int) $job['checked'], WHOLESALE_MSYNC_CHECK_BATCH);
 	if ($batch) {
 		$requests = array_map(static function ($rel) {
 			return array('c' => 'uploads', 'p' => $rel, 'o' => 0, 'l' => 0);
@@ -285,15 +285,15 @@ function retails_msync_step_check(array &$job, $client)
  *
  * @return bool Whether there is more to do in this phase.
  */
-function retails_msync_step_pull(array &$job, $client)
+function wholesale_msync_step_pull(array &$job, $client)
 {
-	$base = retails_msync_uploads_dir();
+	$base = wholesale_msync_uploads_dir();
 	$requests = array();
 	$i = (int) $job['index'];
 	$offset = (int) $job['offset'];
 	// Up to two files per request; a large file continues where it left off.
 	while ($i < count($job['queue']) && count($requests) < 2) {
-		$requests[] = array('c' => 'uploads', 'p' => $job['queue'][$i], 'o' => $offset, 'l' => RETAILS_MSYNC_CHUNK);
+		$requests[] = array('c' => 'uploads', 'p' => $job['queue'][$i], 'o' => $offset, 'l' => WHOLESALE_MSYNC_CHUNK);
 		$i++;
 		$offset = 0;
 	}
@@ -369,12 +369,12 @@ function retails_msync_step_pull(array &$job, $client)
  *
  * @return bool Whether there is more to do in this phase.
  */
-function retails_msync_step_push(array &$job, $client)
+function wholesale_msync_step_push(array &$job, $client)
 {
-	$base = retails_msync_uploads_dir();
+	$base = wholesale_msync_uploads_dir();
 	$segments = array();
 	$sent = array();
-	$budget = RETAILS_MSYNC_CALL_BYTES;
+	$budget = WHOLESALE_MSYNC_CALL_BYTES;
 	$i = (int) $job['index'];
 	$offset = (int) $job['offset'];
 
@@ -388,7 +388,7 @@ function retails_msync_step_push(array &$job, $client)
 			$offset = 0;
 			continue;
 		}
-		$length = min(RETAILS_MSYNC_CHUNK, $budget, max(0, $size - $offset));
+		$length = min(WHOLESALE_MSYNC_CHUNK, $budget, max(0, $size - $offset));
 		$fh = fopen($abs, 'rb');
 		if (!$fh) {
 			$job['failed'][] = $rel;
@@ -430,7 +430,7 @@ function retails_msync_step_push(array &$job, $client)
 				$job['recent'][] = $rel;
 			}
 		}
-		$job['bytes'] += RETAILS_MSYNC_CALL_BYTES - $budget;
+		$job['bytes'] += WHOLESALE_MSYNC_CALL_BYTES - $budget;
 	}
 	$job['index'] = $i;
 	$job['offset'] = $offset;
@@ -446,18 +446,18 @@ function retails_msync_step_push(array &$job, $client)
  * The Media sync panel of Settings > Storefront Sign. Its controls have no
  * name, so saving the settings form ignores them.
  */
-function retails_msync_panel()
+function wholesale_msync_panel()
 {
 	$plugin_page = admin_url('admin.php?page=wudt-site-migration');
-	if (!retails_msync_available()) {
+	if (!wholesale_msync_available()) {
 		echo '<div class="notice notice-warning inline"><p>Media sync uses the <strong>Diagnostics Toolkit</strong> plugin&rsquo;s Site Migration connection. Activate that plugin here and on the other site, then connect the sites under Diagnostics Toolkit &rsaquo; Site Migration.</p></div>';
 		return;
 	}
-	$sites = retails_msync_sites();
-	$all = retails_msync_attachment_files();
-	$missing = retails_msync_missing_here($all);
+	$sites = wholesale_msync_sites();
+	$all = wholesale_msync_attachment_files();
+	$missing = wholesale_msync_missing_here($all);
 	?>
-	<div class="wss-msync" data-wss-nosave data-nonce="<?php echo esc_attr(wp_create_nonce('retails_media_sync')); ?>">
+	<div class="wss-msync" data-wss-nosave data-nonce="<?php echo esc_attr(wp_create_nonce('wholesale_media_sync')); ?>">
 		<ul class="wss-msync__stats">
 			<li><strong><?php echo esc_html(number_format_i18n(count($all))); ?></strong> Media Library files on this site</li>
 			<li class="<?php echo $missing ? 'is-warn' : 'is-ok'; ?>"><strong><?php echo esc_html(number_format_i18n(count($missing))); ?></strong> missing from this site&rsquo;s uploads folder</li>

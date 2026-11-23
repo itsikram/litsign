@@ -11,12 +11,12 @@
  * Name of the Google Ads conversion action that offline sales are uploaded to.
  * It must match the action's name in Google Ads exactly.
  */
-const RETAILS_ADS_OFFLINE_CONVERSION = 'Quote won (offline import)';
+const WHOLESALE_ADS_OFFLINE_CONVERSION = 'Quote won (offline import)';
 
 /**
  * Order screen: show whether the order came from a Google ad.
  */
-function retails_ads_order_click_box($post)
+function wholesale_ads_order_click_box($post)
 {
 	$id = (string) get_post_meta($post->ID, '_ads_click_id', true);
 	if ('' === $id) {
@@ -32,45 +32,45 @@ function retails_ads_order_click_box($post)
 }
 
 add_action('add_meta_boxes_order', static function () {
-	add_meta_box('retails-ads-click', 'Google Ads', 'retails_ads_order_click_box', 'order', 'side', 'default');
+	add_meta_box('wholesale-ads-click', 'Google Ads', 'wholesale_ads_order_click_box', 'order', 'side', 'default');
 });
 
 /**
  * Quote screen: record the value of a quote that became a sale, so it can be
  * uploaded to Google Ads as an offline conversion.
  */
-function retails_ads_quote_sale_box($post)
+function wholesale_ads_quote_sale_box($post)
 {
 	$click_id = (string) get_post_meta($post->ID, '_contact_gclid', true);
 	$value = (string) get_post_meta($post->ID, '_won_value', true);
 
-	wp_nonce_field('retails_ads_quote_sale', 'retails_ads_quote_sale_nonce');
+	wp_nonce_field('wholesale_ads_quote_sale', 'wholesale_ads_quote_sale_nonce');
 
 	echo '' === $click_id
 		? '<p>This quote did not come from a Google ad, so it cannot be uploaded.</p>'
 		: '<p><strong>Came from a Google ad.</strong></p>';
 
 	printf(
-		'<p><label for="retails-won-value"><strong>Sale value (USD)</strong></label><br><input type="number" min="0" step="0.01" id="retails-won-value" name="retails_won_value" value="%s" style="width:100%%"></p>',
+		'<p><label for="wholesale-won-value"><strong>Sale value (USD)</strong></label><br><input type="number" min="0" step="0.01" id="wholesale-won-value" name="wholesale_won_value" value="%s" style="width:100%%"></p>',
 		esc_attr($value)
 	);
 	echo '<p class="description">When this quote turns into a paid job, enter the sale amount; Tools &gt; Google Ads uploads adds it to the upload file. Jobs paid through the website checkout or a payment link are counted automatically, so enter a value only for sales paid another way.</p>';
 }
 
 add_action('add_meta_boxes_contact_submission', static function () {
-	add_meta_box('retails-ads-quote-sale', 'Google Ads: closed sale', 'retails_ads_quote_sale_box', 'contact_submission', 'side', 'default');
+	add_meta_box('wholesale-ads-quote-sale', 'Google Ads: closed sale', 'wholesale_ads_quote_sale_box', 'contact_submission', 'side', 'default');
 });
 
-function retails_ads_save_quote_sale($post_id)
+function wholesale_ads_save_quote_sale($post_id)
 {
-	if (!isset($_POST['retails_ads_quote_sale_nonce'])
-		|| !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['retails_ads_quote_sale_nonce'])), 'retails_ads_quote_sale')
+	if (!isset($_POST['wholesale_ads_quote_sale_nonce'])
+		|| !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['wholesale_ads_quote_sale_nonce'])), 'wholesale_ads_quote_sale')
 		|| (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)
 		|| !current_user_can('edit_post', $post_id)) {
 		return;
 	}
 
-	$raw = isset($_POST['retails_won_value']) ? trim((string) wp_unslash($_POST['retails_won_value'])) : '';
+	$raw = isset($_POST['wholesale_won_value']) ? trim((string) wp_unslash($_POST['wholesale_won_value'])) : '';
 	if ('' === $raw || (float) $raw <= 0) {
 		delete_post_meta($post_id, '_won_value');
 		delete_post_meta($post_id, '_won_at');
@@ -82,7 +82,7 @@ function retails_ads_save_quote_sale($post_id)
 		update_post_meta($post_id, '_won_at', current_time('mysql', true));
 	}
 }
-add_action('save_post_contact_submission', 'retails_ads_save_quote_sale');
+add_action('save_post_contact_submission', 'wholesale_ads_save_quote_sale');
 
 /**
  * Quote requests from Google Ads clicks in the last 90 days (Google only
@@ -90,7 +90,7 @@ add_action('save_post_contact_submission', 'retails_ads_save_quote_sale');
  *
  * @return int[]
  */
-function retails_ads_recent_ad_quotes()
+function wholesale_ads_recent_ad_quotes()
 {
 	return get_posts(array(
 		'post_type' => 'contact_submission',
@@ -109,12 +109,12 @@ function retails_ads_recent_ad_quotes()
  *
  * @return array List of array(click ID, conversion time, value).
  */
-function retails_ads_offline_conversion_rows()
+function wholesale_ads_offline_conversion_rows()
 {
 	$timezone = wp_timezone();
 	$rows = array();
 
-	foreach (retails_ads_recent_ad_quotes() as $quote_id) {
+	foreach (wholesale_ads_recent_ad_quotes() as $quote_id) {
 		$click_id = (string) get_post_meta($quote_id, '_contact_gclid', true);
 		$type = (string) get_post_meta($quote_id, '_contact_click_type', true);
 		$value = (float) get_post_meta($quote_id, '_won_value', true);
@@ -137,7 +137,7 @@ function retails_ads_offline_conversion_rows()
 /**
  * The upload file's time zone line: an IANA name, or an offset like -0700.
  */
-function retails_ads_upload_timezone()
+function wholesale_ads_upload_timezone()
 {
 	$timezone = wp_timezone_string();
 
@@ -147,13 +147,13 @@ function retails_ads_upload_timezone()
 /**
  * The offline conversions file, as CSV text.
  */
-function retails_ads_offline_csv_text()
+function wholesale_ads_offline_csv_text()
 {
 	$out = fopen('php://temp', 'r+');
-	fputcsv($out, array('Parameters:TimeZone=' . retails_ads_upload_timezone()));
+	fputcsv($out, array('Parameters:TimeZone=' . wholesale_ads_upload_timezone()));
 	fputcsv($out, array('Google Click ID', 'Conversion Name', 'Conversion Time', 'Conversion Value', 'Conversion Currency'));
-	foreach (retails_ads_offline_conversion_rows() as $row) {
-		fputcsv($out, array($row[0], RETAILS_ADS_OFFLINE_CONVERSION, $row[1], $row[2], 'USD'));
+	foreach (wholesale_ads_offline_conversion_rows() as $row) {
+		fputcsv($out, array($row[0], WHOLESALE_ADS_OFFLINE_CONVERSION, $row[1], $row[2], 'USD'));
 	}
 	rewind($out);
 	$csv = stream_get_contents($out);
@@ -165,10 +165,10 @@ function retails_ads_offline_csv_text()
 /**
  * Tools > Google Ads uploads.
  */
-function retails_ads_uploads_page()
+function wholesale_ads_uploads_page()
 {
-	$rows = retails_ads_offline_conversion_rows();
-	$quotes = retails_ads_recent_ad_quotes();
+	$rows = wholesale_ads_offline_conversion_rows();
+	$quotes = wholesale_ads_recent_ad_quotes();
 	?>
 	<div class="wrap">
 		<h1>Google Ads uploads</h1>
@@ -176,10 +176,10 @@ function retails_ads_uploads_page()
 		<ol>
 			<li>When a quote from an ad becomes a paid job that was <em>not</em> paid through the website, open it under Contact Submissions and enter the <strong>Sale value</strong>.</li>
 			<li>Download the file below once a week.</li>
-			<li>In Google Ads, go to <strong>Goals &gt; Uploads</strong>, upload the file and apply it. The conversion action must be named exactly <code><?php echo esc_html(RETAILS_ADS_OFFLINE_CONVERSION); ?></code>.</li>
+			<li>In Google Ads, go to <strong>Goals &gt; Uploads</strong>, upload the file and apply it. The conversion action must be named exactly <code><?php echo esc_html(WHOLESALE_ADS_OFFLINE_CONVERSION); ?></code>.</li>
 		</ol>
 		<?php if ($rows) : ?>
-			<p><a class="button button-primary" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=retails_ads_offline_csv'), 'retails_ads_offline_csv')); ?>">Download offline conversions (CSV)</a></p>
+			<p><a class="button button-primary" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=wholesale_ads_offline_csv'), 'wholesale_ads_offline_csv')); ?>">Download offline conversions (CSV)</a></p>
 		<?php else : ?>
 			<p><button type="button" class="button" disabled>Download offline conversions (CSV)</button> Nothing to upload yet.</p>
 		<?php endif; ?>
@@ -189,19 +189,19 @@ function retails_ads_uploads_page()
 }
 
 add_action('admin_menu', static function () {
-	add_management_page('Google Ads uploads', 'Google Ads uploads', 'manage_options', 'retails-ads-uploads', 'retails_ads_uploads_page');
+	add_management_page('Google Ads uploads', 'Google Ads uploads', 'manage_options', 'wholesale-ads-uploads', 'wholesale_ads_uploads_page');
 });
 
-function retails_ads_offline_csv()
+function wholesale_ads_offline_csv()
 {
-	if (!current_user_can('manage_options') || !check_admin_referer('retails_ads_offline_csv')) {
+	if (!current_user_can('manage_options') || !check_admin_referer('wholesale_ads_offline_csv')) {
 		wp_die(esc_html__('Not allowed.', 'litsign'));
 	}
 
 	nocache_headers();
 	header('Content-Type: text/csv; charset=UTF-8');
 	header('Content-Disposition: attachment; filename="google-ads-offline-conversions-' . gmdate('Y-m-d') . '.csv"');
-	echo retails_ads_offline_csv_text(); // CSV built with fputcsv.
+	echo wholesale_ads_offline_csv_text(); // CSV built with fputcsv.
 	exit;
 }
-add_action('admin_post_retails_ads_offline_csv', 'retails_ads_offline_csv');
+add_action('admin_post_wholesale_ads_offline_csv', 'wholesale_ads_offline_csv');

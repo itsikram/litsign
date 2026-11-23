@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 /**
  * When data/category-pages.php last changed. Bump it by hand with the copy.
  */
-define('RETAILS_CATEGORY_PAGES_REVISED', '2026-10-26T00:00:00+00:00');
+define('WHOLESALE_CATEGORY_PAGES_REVISED', '2026-10-26T00:00:00+00:00');
 
 /**
  * The lead and guide for a category, or an empty array.
@@ -25,7 +25,7 @@ define('RETAILS_CATEGORY_PAGES_REVISED', '2026-10-26T00:00:00+00:00');
  * @param string $slug product_category slug.
  * @return array
  */
-function retails_category_page($slug)
+function wholesale_category_page($slug)
 {
 	static $pages = null;
 	if (null === $pages) {
@@ -42,9 +42,9 @@ function retails_category_page($slug)
  * @param string $slug    product_category slug.
  * @param string $heading Category heading (the page H1).
  */
-function retails_render_category_lead($slug, $heading)
+function wholesale_render_category_lead($slug, $heading)
 {
-	$page = retails_category_page($slug);
+	$page = wholesale_category_page($slug);
 	if (empty($page['lead'])) {
 		return;
 	}
@@ -61,9 +61,9 @@ function retails_render_category_lead($slug, $heading)
  *
  * @param string $slug product_category slug.
  */
-function retails_render_category_guide($slug)
+function wholesale_render_category_guide($slug)
 {
-	$page = retails_category_page($slug);
+	$page = wholesale_category_page($slug);
 	if (empty($page['guide']['sections'])) {
 		return;
 	}
@@ -128,11 +128,11 @@ function retails_render_category_guide($slug)
  * @param string[] $urls Photo URLs (full size), in display order.
  * @return array URL => array('src' => URL, 'srcset' => string, 'large' => URL).
  */
-function retails_card_images($urls)
+function wholesale_card_images($urls)
 {
 	$images = array();
-	$ids = function_exists('retails_product_image_alt_attachment_ids_by_url')
-		? retails_product_image_alt_attachment_ids_by_url(array_values(array_unique($urls)))
+	$ids = function_exists('wholesale_product_image_alt_attachment_ids_by_url')
+		? wholesale_product_image_alt_attachment_ids_by_url(array_values(array_unique($urls)))
 		: array();
 
 	foreach ($urls as $url) {
@@ -154,11 +154,11 @@ function retails_card_images($urls)
 		}
 
 		$src = wp_get_attachment_image_url($attachment_id, $small);
-		$srcset = array(retails_webp_url($src) . ' ' . (int) $sizes[$small]['width'] . 'w');
+		$srcset = array(wholesale_webp_url($src) . ' ' . (int) $sizes[$small]['width'] . 'w');
 		$large = $url;
 		if (isset($sizes['medium_large'])) {
 			$large = wp_get_attachment_image_url($attachment_id, 'medium_large');
-			$srcset[] = retails_webp_url($large) . ' ' . (int) $sizes['medium_large']['width'] . 'w';
+			$srcset[] = wholesale_webp_url($large) . ' ' . (int) $sizes['medium_large']['width'] . 'w';
 		}
 		$images[$url] = array('src' => $src, 'srcset' => implode(', ', $srcset), 'large' => $large);
 	}

@@ -1,5 +1,4 @@
 import gzip
-import hashlib
 import os
 import re
 import sys
@@ -13,5 +12,5 @@ safe = re.compile(r'\.(collapse|collapsing|fade|show|visually-hidden(-focusable)
 extra = {r[1] for r in cssparse.walk_rules(tree) if safe.search(r[2])}
 keep |= extra
 css = cssparse.emit(tree, keep)
-open(sys.argv[2], 'w', encoding='utf8', newline='').write('/* Bootstrap v5.3.3 rules used by first paint; the full file loads after. Generated from css/bootstrap.min.css, see inc/performance.php. source-md5: ' + hashlib.md5(open(sys.argv[1], 'rb').read()).hexdigest() + ' */' + css)
+open(sys.argv[2], 'w', encoding='utf8', newline='').write('/* Bootstrap v5.3.3 rules used by first paint; the full file loads after. Generated from css/bootstrap.min.css, see inc/performance.php. */' + css)
 print('rules', len(keep), 'bytes', len(css), 'gz', len(gzip.compress(css.encode())))

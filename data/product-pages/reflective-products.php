@@ -18,7 +18,7 @@ return array(
 
 	'reflective-aluminum-sandwich-board' => array(
 		'title' => array('Reflective Aluminum Board', 'Custom Size'),
-		'description' => 'Reflective aluminum sandwich board: a 1/8" composite panel with reflective vinyl, cut to any size up to 48" x 36". Ships nationwide. Order now.',
+		'description' => 'Reflective aluminum sandwich board: a 1/8" composite panel with reflective vinyl, cut to any size up to 48" x 96". Ships nationwide. Order now.',
 		'notes' => array($big),
 		'faq' => array($night),
 		'care' => 'rigid',

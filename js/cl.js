@@ -32,116 +32,7 @@ const backLitCost = parseFloat(document.getElementById("backLitCost").value);
 const eightFtcableCost = parseFloat(
   document.getElementById("eightFtcableCost").value,
 );
-// Lexan face (percent of the letter price), 1" trimcap ([[up to inches, $ per piece]]) and
-// B2Sign's piece rules (large letters by sq ft, small lit letters), the same as
-// retails_cl_option_prices() and retails_cl_letter_cost() in inc/pricing.php.
-const clLexanPercent = Math.max(0, parseFloat(document.getElementById("clLexanPercent")?.value) || 0);
-let clTrimcap1in = [];
-try {
-  clTrimcap1in = JSON.parse(document.getElementById("clTrimcap1in")?.value || "[]") || [];
-} catch (e) {
-  clTrimcap1in = [];
-}
-let clPiecePricing = {};
-try {
-  clPiecePricing = JSON.parse(document.getElementById("clPiecePricing")?.value || "{}") || {};
-} catch (e) {
-  clPiecePricing = {};
-}
-const clPiece = (key) => Math.max(0, parseFloat(clPiecePricing[key]) || 0);
-// Sign letters drawn at their real size, as B2Sign draws them. A text's height (its Konva fontSize:
-// the height the builder shows, prices and orders) is the height of all its letters together, from
-// the top of the tallest to the bottom of the lowest. A plain Konva.Text draws a font-size line box,
-// where capitals fill only about 70% of the height; this draws a font large enough for the letters
-// to fill that height, moved down so they start at its top, without kerning (B2Sign adds up each
-// letter's advance). Its frame (selection box, size arrows, width shown) is the letters' own
-// outline, B2Sign's width. Measured by js/cl-measure.js, as the prices are.
-class LetterText extends Konva.Text {
-  _letterFit() {
-    const lib = window.SfsLetterMeasure;
-    const height = this.fontSize();
-    const family = this.fontFamily();
-    const key = lib ? `${lib.version()}|${height}|${family}|${this.text()}|${this.lineHeight()}` : "";
-    if (this._letterFitKey === key) {
-      return this._letterFitValue;
-    }
-    this._letterFitKey = key;
-    this._letterFitValue = null;
-    if (!lib || !(height > 0)) {
-      return null;
-    }
-    const measured = lib.measure(this.text(), family, true);
-    if (!measured) {
-      return null;
-    }
-    // Pixels per outline unit: the letters together are `height` tall.
-    const k = height / measured.ink;
-    this._letterFitValue = {
-      font: lib.cssFont(lib.SIZE * k, family),
-      // Konva puts its "middle" baseline halfway down the box; the tallest letter's top goes to the top.
-      dy: (measured.maxA - lib.middle(family)) * k - (height * this.lineHeight()) / 2,
-      x: measured.inkLeft * k,
-      width: measured.width * k,
-    };
-    return this._letterFitValue;
-  }
-
-  _getContextFont() {
-    const fit = this._letterFit();
-    return fit ? fit.font : super._getContextFont();
-  }
-
-  _sceneFunc(context) {
-    const fit = this._letterFit();
-    if (!fit) {
-      super._sceneFunc(context);
-      return;
-    }
-    const native = context._context;
-    const kerning = native && "fontKerning" in native ? native.fontKerning : null;
-    if (kerning !== null) {
-      native.fontKerning = "none";
-    }
-    context.translate(0, fit.dy);
-    super._sceneFunc(context);
-    context.translate(0, -fit.dy);
-    if (kerning !== null) {
-      native.fontKerning = kerning;
-    }
-  }
-
-  getSelfRect() {
-    const fit = this._letterFit();
-    return fit ? { x: fit.x, y: 0, width: fit.width, height: this.height() } : super.getSelfRect();
-  }
-}
-
-// A text node's width as B2Sign measures it (the LetterText frame), in px with the node's scale.
-const textInkWidth = (node) => node.getSelfRect().width * Math.abs(node.scaleX());
-
-// A web font that finishes loading changes the letters' outline: refit their frames and readouts.
-if (document.fonts && document.fonts.addEventListener) {
-  document.fonts.addEventListener("loadingdone", () => {
-    requestAnimationFrame(() => {
-      try {
-        nodeLists.forEach((item) => {
-          if (item && item.node instanceof LetterText && item.node.getAttr("transformer")) {
-            item.node.getAttr("transformer").forceUpdate();
-          }
-        });
-        layer.batchDraw();
-        updateHeightWidthDisplay();
-        if (selectedNode instanceof LetterText) {
-          updateNodeDimensionInputs(selectedNode, "text");
-        }
-      } catch (e) {
-        // The builder isn't set up yet; it measures when it draws.
-      }
-    });
-  });
-}
-
-// Same rate the cart charges (RETAILS_RACEWAY_COST_PER_FOOT in inc/pricing.php).
+// Same rate the cart charges (WHOLESALE_RACEWAY_COST_PER_FOOT in inc/pricing.php).
 const racewayPerFoot =
   parseFloat(document.getElementById("racewayPerFoot")?.value) || 55;
 // The product's own discount gives its everyday price: the cart takes it off the whole
@@ -553,14 +444,6 @@ const normalizeCost = (value, fallback = 0) => {
     return numericValue;
   }
   return fallback;
-};
-
-// PHP's round(): half away from zero, on the value first rounded to 15 significant digits, so
-// 354.28499999999997 (393.65 less 10%) rounds to 354.29 here as it does in the cart.
-const phpRound = (value, places = 2) => {
-  const number = normalizeCost(value);
-  const factor = Math.pow(10, places);
-  return (Math.sign(number) * Math.round(Number((Math.abs(number) * factor).toPrecision(15)))) / factor;
 };
 
 const clampRacewayHeight = (node) => {
@@ -1293,7 +1176,7 @@ function getTextDimensions(node) {
 
 function maintainAspectRatio(newWidth = null, newHeight = null) {
   let defaultHeight = selectedNode.height() * selectedNode.scaleY();
-  let defaultWidth = selectedNode instanceof LetterText ? textInkWidth(selectedNode) : selectedNode.width() * selectedNode.scaleX();
+  let defaultWidth = selectedNode.width() * selectedNode.scaleX();
   // Calculate the aspect ratio
   const aspectRatio = defaultWidth / defaultHeight;
 
@@ -2066,8 +1949,7 @@ function syncCanvasBackground() {
 // Function to zoom the stage with center focus
 function zoomStage(scaleFactor) {
   const oldScale = stage.scaleX();
-  // Auto zoom-out may go below the buttons' 30% floor; Zoom out then stays put there.
-  const newScale = Math.min(3, Math.max(Math.min(0.3, oldScale), oldScale * scaleFactor));
+  const newScale = Math.min(3, Math.max(0.3, oldScale * scaleFactor));
   const scaleRatio = newScale / oldScale;
   const oldPos = stage.position();
   const center = {
@@ -2096,266 +1978,6 @@ function zoomStage(scaleFactor) {
 
   updateHeightWidthDisplay();
 }
-
-// Auto zoom-out. When an element (or a Select-all group) gets wider or taller than the visible
-// canvas (dragging a resize handle, typing more letters, a bigger size in the size boxes, a
-// duplicate, a restored design), the canvas zooms out just enough to show all of it with its
-// handles; while it still fits, the view only slides so a dragged handle never leaves the
-// canvas. It never zooms in, so the zoom buttons work as before.
-const clAutoZoom = {
-  frame: null,
-  ids: new Set(), // elements that grew since the last check (store / node ids)
-  sizes: new Map(), // store element id -> { width, height } in inches, as last seen
-  minScale: 0.05,
-  movedView: false, // auto zoom moved the view (an emptied design then gets the start view back)
-};
-
-function getAutoZoomMargin() {
-  // Room for the size arrows along the top and left edges and for the handles.
-  return window.matchMedia("(max-width: 767.98px)").matches ? 24 : 44;
-}
-
-// Box around the nodes in canvas pixels, trimcap and return included.
-function getScreenBoundsOfNodes(nodes) {
-  let left = Infinity;
-  let top = Infinity;
-  let right = -Infinity;
-  let bottom = -Infinity;
-  nodes.forEach((node) => {
-    if (!node || !node.getLayer() || !node.isVisible()) {
-      return;
-    }
-    const box = node.getClientRect();
-    if (![box.x, box.y, box.width, box.height].every(Number.isFinite)) {
-      return;
-    }
-    left = Math.min(left, box.x);
-    top = Math.min(top, box.y);
-    right = Math.max(right, box.x + box.width);
-    bottom = Math.max(bottom, box.y + box.height);
-  });
-  return left === Infinity
-    ? null
-    : { x: left, y: top, width: right - left, height: bottom - top };
-}
-
-function getActiveTransformer() {
-  return stage.find("Transformer").find((transformer) => transformer.isTransforming()) || null;
-}
-
-// A resize handle can follow a zoom mid-drag only when Konva's drag state is there to re-measure.
-function canZoomDuringTransform(transformer) {
-  return !!(
-    transformer._movingAnchorName &&
-    transformer._movingAnchorName !== "rotater" &&
-    transformer._anchorDragOffset
-  );
-}
-
-// Konva moves the dragged handle to "pointer minus a fixed offset"; after a zoom the handle sits
-// somewhere else on screen, so measure the offset again. The size then carries on from where it
-// is instead of jumping.
-function syncTransformerDragOffset(transformer) {
-  const anchor = transformer.findOne("." + transformer._movingAnchorName);
-  const pointer = stage.getPointerPosition();
-  if (!anchor || !pointer) {
-    return;
-  }
-  const position = anchor.getAbsolutePosition();
-  transformer._anchorDragOffset = {
-    x: pointer.x - position.x,
-    y: pointer.y - position.y,
-  };
-}
-
-function autoZoomToFit(nodes, transformer = null) {
-  const width = stage.width();
-  const height = stage.height();
-  const margin = getAutoZoomMargin();
-  const roomWidth = width - margin * 2;
-  const roomHeight = height - margin * 2;
-  if (roomWidth < 60 || roomHeight < 60) {
-    return false;
-  }
-  const box = getScreenBoundsOfNodes(nodes);
-  if (!box) {
-    return false;
-  }
-  const fitsSize = box.width <= roomWidth + 1 && box.height <= roomHeight + 1;
-  // While a handle is dragged the element is kept inside the margin (so the handle never goes
-  // off the canvas); after other changes only when part of it is actually cut off.
-  const edge = transformer ? margin : 4;
-  const inView =
-    box.x >= edge - 1 &&
-    box.y >= edge - 1 &&
-    box.x + box.width <= width - edge + 1 &&
-    box.y + box.height <= height - edge + 1;
-  if (fitsSize && inView) {
-    return false;
-  }
-
-  const oldScale = stage.scaleX() || 1;
-  let newScale = oldScale;
-  if (!fitsSize) {
-    const fit = Math.min(
-      roomWidth / Math.max(1, box.width),
-      roomHeight / Math.max(1, box.height),
-    );
-    // While a handle is dragged the zoom follows it frame by frame; otherwise leave a little room.
-    newScale = Math.min(
-      oldScale,
-      Math.max(clAutoZoom.minScale, oldScale * fit * (transformer ? 1 : 0.95)),
-    );
-  }
-  const ratio = newScale / oldScale;
-
-  // Zoom around the finger or mouse while dragging, so the handle stays under it; otherwise
-  // around the element. Then slide the element fully into view.
-  const pointer = transformer ? stage.getPointerPosition() : null;
-  const focus = {
-    x: Math.min(width - margin, Math.max(margin, pointer ? pointer.x : box.x + box.width / 2)),
-    y: Math.min(height - margin, Math.max(margin, pointer ? pointer.y : box.y + box.height / 2)),
-  };
-  const oldPosition = stage.position();
-  const position = {
-    x: focus.x - (focus.x - oldPosition.x) * ratio,
-    y: focus.y - (focus.y - oldPosition.y) * ratio,
-  };
-  const slideIntoView = (start, size, view) => {
-    if (size > view - margin * 2 + 1) {
-      return (view - size) / 2 - start;
-    }
-    if (start < margin) {
-      return margin - start;
-    }
-    if (start + size > view - margin) {
-      return view - margin - (start + size);
-    }
-    return 0;
-  };
-  position.x += slideIntoView(focus.x + (box.x - focus.x) * ratio, box.width * ratio, width);
-  position.y += slideIntoView(focus.y + (box.y - focus.y) * ratio, box.height * ratio, height);
-  if (
-    ratio > 0.999 &&
-    Math.abs(position.x - oldPosition.x) < 0.5 &&
-    Math.abs(position.y - oldPosition.y) < 0.5
-  ) {
-    return false;
-  }
-
-  stage.scale({ x: newScale, y: newScale });
-  stage.position(position);
-  clAutoZoom.movedView = true;
-  syncCanvasBackground();
-  stage.find("Transformer").forEach((item) => item.update());
-  if (transformer) {
-    syncTransformerDragOffset(transformer);
-  }
-  updateHeightWidthDisplay(true);
-  stage.batchDraw();
-  return true;
-}
-
-// The middle of what the canvas shows, in design coordinates; new elements go there. It is the
-// stage middle until auto zoom moves the view, so the starting view places them as before.
-function getVisibleStageCenter() {
-  const scale = stage.scaleX() || 1;
-  return {
-    x: (stage.width() / 2 - stage.x()) / scale,
-    y: (stage.height() / 2 - stage.y()) / scale,
-  };
-}
-
-// An emptied design gets the starting view back, if auto zoom had moved it.
-function resetAutoZoomView() {
-  if (!clAutoZoom.movedView) {
-    return;
-  }
-  clAutoZoom.movedView = false;
-  const scale = window.matchMedia("(max-width: 767.98px)").matches ? mobileDefaultZoom : 1;
-  stage.scale({ x: scale, y: scale });
-  stage.position({
-    x: (stage.width() * (1 - scale)) / 2,
-    y: (stage.height() * (1 - scale)) / 2,
-  });
-  syncCanvasBackground();
-  updateHeightWidthDisplay(true);
-  stage.batchDraw();
-}
-
-// Checks once per frame. `nodes` are elements that just grew (optional).
-function scheduleAutoZoom(nodes = null) {
-  if (nodes) {
-    nodes.forEach((node) => {
-      if (node) {
-        clAutoZoom.ids.add(String(node._id));
-      }
-    });
-  }
-  if (clAutoZoom.frame !== null) {
-    return;
-  }
-  clAutoZoom.frame = requestAnimationFrame(() => {
-    clAutoZoom.frame = null;
-    const ids = new Set(clAutoZoom.ids);
-    clAutoZoom.ids.clear();
-    if (!nodeLists.length) {
-      resetAutoZoomView();
-      return;
-    }
-    const transformer = getActiveTransformer();
-    if (transformer) {
-      // Rotating waits for the release (transformend checks again).
-      if (canZoomDuringTransform(transformer)) {
-        autoZoomToFit(transformer.nodes(), transformer);
-      }
-      return;
-    }
-    const grown = nodeLists
-      .map((item) => item.node)
-      .filter((node) => node && ids.has(String(node._id)));
-    if (grown.length) {
-      autoZoomToFit(grown);
-    }
-  });
-}
-
-// Each resize handle set (letters, shapes, raceways, duplicates, Select all) calls this.
-function watchTransformerForAutoZoom(transformer) {
-  transformer.on("transform", () => scheduleAutoZoom());
-  transformer.on("transformend", () => scheduleAutoZoom(transformer.nodes()));
-}
-
-// Growth that does not come from a handle: letters typed, size boxes, font, duplicate, restore.
-store.subscribe(() => {
-  const elements = store.getState().elements || [];
-  const seen = new Set();
-  const grown = [];
-  elements.forEach((element) => {
-    const id = String(element.id);
-    const size = {
-      width: parseFloat(element.width) || 0,
-      height: parseFloat(element.height) || 0,
-    };
-    const last = clAutoZoom.sizes.get(id);
-    seen.add(id);
-    clAutoZoom.sizes.set(id, size);
-    if (!last || size.width > last.width + 0.05 || size.height > last.height + 0.05) {
-      grown.push(id);
-    }
-  });
-  clAutoZoom.sizes.forEach((size, id) => {
-    if (!seen.has(id)) {
-      clAutoZoom.sizes.delete(id);
-    }
-  });
-  if (grown.length) {
-    grown.forEach((id) => clAutoZoom.ids.add(id));
-    scheduleAutoZoom();
-  } else if (!elements.length) {
-    scheduleAutoZoom();
-  }
-});
 
 function triggerTransformEvent() {
   if (selectedNode == null) {
@@ -2470,10 +2092,6 @@ function updateNodeDimensionInputs(node, type = null) {
           ? "raceway"
           : null);
   updateHeightWidthInput(bounds.height, bounds.width, inputType);
-  // The "W x H" under Selected element follows resizing too, not only selection.
-  if (node === selectedNode && elementDimenstionContainer && !isMultiSelectActive()) {
-    elementDimenstionContainer.innerHTML = getTextDimensions(node);
-  }
 }
 
 let heightWidthDisplayFrame = null;
@@ -2736,7 +2354,7 @@ let handleChooseItemClick = (
               type: "UPDATE_ELEMENT",
               payload: {
                 id: selectedNode._id,
-                width: pxToIn(textInkWidth(selectedNode)),
+                width: pxToIn(selectedNode.width() * selectedNode.scaleX()),
                 height: singleHeightInch,
                 cost: costPerInch(singleHeightInch) * totalLength,
                 text: selectedNode.text(),
@@ -2963,11 +2581,9 @@ let showLeftSlider = (data, type, column) => {
     headingText.innerText = heading;
     headingContainer.appendChild(headingText);
 
-    // A per-inch face (3M vinyl): what it adds per inch of letter height after the product
-    // discount, as the breakdown and the cart charge it (the stored rate is before the discount).
-    if (normalizeCost(cost) > 0) {
+    if (cost != "0") {
       let costText = document.createElement("span");
-      costText.innerText = `+${formatMoney(everydayPrice(cost))} per inch of letter height`;
+      costText.innerText = cost;
       headingContainer.appendChild(costText);
     }
 
@@ -3545,299 +3161,26 @@ let updateLeftsideBar = () => {
   updateDimenstionDisplay();
 };
 
-// Money to the cent as the cart rounds it (PHP round(), see phpRound()).
 const formatMoney = (amount) =>
   "$" +
-  phpRound(amount, 2).toLocaleString("en-US", {
+  normalizeCost(amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 
-// An amount at the everyday price, and after any dated sale, worked out as retails_price_quote()
-// does: the product discount taken off the amount, then the sale off the everyday price in cents.
+// An amount at the everyday price, and after any dated sale.
 const everydayPrice = (amount) =>
-  normalizeCost(amount) - (normalizeCost(amount) * everydayPercent) / 100;
+  normalizeCost(amount) * (1 - everydayPercent / 100);
 const salePrice = (amount) =>
-  discountPercent > 0
-    ? phpRound(phpRound(everydayPrice(amount), 2) * (1 - discountPercent / 100), 2)
-    : everydayPrice(amount);
+  everydayPrice(amount) * (1 - discountPercent / 100);
 
-// Design totals, matching retails_cl_design_quote() and retails_price_quote():
+// Design totals, matching wholesale_cl_design_quote() and wholesale_price_quote():
 // power supply, lighting and cable are only charged once there is something to
 // power, and the product discount, then any dated sale, come off the whole total.
-// The face color's per-inch rate from the current product data, as retails_cl_face_rate():
-// the group holding that name and color code, else the first group holding the name.
-const getFaceRate = (faceColor, fallback) => {
-  const title = String((faceColor && faceColor.title) || "").trim();
-  if (!title) {
-    return normalizeCost(fallback);
-  }
-  const code = String((faceColor && faceColor.code) || "").replace(/\s+/g, "").toLowerCase();
-  let byTitle = null;
-  for (const group of productClData || []) {
-    if (!group || String(group.id || "").indexOf("color-") !== 0) {
-      continue;
-    }
-    for (const option of group.options || []) {
-      for (const label in option) {
-        if (String(label).trim() !== title) {
-          continue;
-        }
-        if (code && String(option[label]).replace(/\s+/g, "").toLowerCase() === code) {
-          return normalizeCost(group.cost);
-        }
-        if (byTitle === null) {
-          byTitle = normalizeCost(group.cost);
-        }
-      }
-    }
-  }
-  return byTitle === null ? normalizeCost(fallback) : byTitle;
-};
-
-// An element's letter price and face price from the current rate table, the same way
-// retails_cl_design_quote() prices it, so a restored draft or an element re-priced with
-// another element's face rate never shows a different total from the cart.
-// B2Sign prices each letter by its own longer side, rounded up to the next inch, within the
-// product's height table; same as retails_cl_rate_for_side() in inc/pricing.php.
-const rateHeights = () =>
-  ((getDataById(["cost-per-inch"], productClData)[0] || {}).options || [])
-    .map((o) => parseInt(Object.keys(o)[0], 10))
-    .filter((h) => Number.isFinite(h));
-const rateForSide = (side) => {
-  const heights = rateHeights();
-  if (!heights.length) {
-    return 0;
-  }
-  let inches = Math.ceil(phpRound(side, 1) - 0.000001);
-  inches = Math.max(Math.min(...heights), Math.min(Math.max(...heights), inches));
-  return costPerInch(inches);
-};
-
-// Separate pieces in one character (the dot of an i, an accent): B2Sign prices each piece.
-// Same list as retails_cl_char_pieces().
-const charPieces = (ch) =>
-  'ij!?:;="%'.includes(ch) ||
-  /^[À-ÅÇ-ÏÑ-ÖÙ-Ýà-åç-ïñ-öù-ýÿ]$/.test(ch)
-    ? 2
-    : 1;
-
-// Each letter's measured size in inches ([width, height] per non-space character), with the
-// text's height taken as the height of all its letters together, as on B2Sign. Sent with the
-// design so the cart prices the same letters (retails_cl_text_letters()).
-const glyphCanvas = document.createElement("canvas").getContext("2d");
-const glyphCache = new Map();
-if (document.fonts && document.fonts.addEventListener) {
-  document.fonts.addEventListener("loadingdone", () => glyphCache.clear());
-}
-const getGlyphSizes = (element) => {
-  if (!element || element.type !== "Text" || !glyphCanvas || typeof glyphCanvas.measureText !== "function") {
-    return null;
-  }
-  const chars = Array.from(String(element.text || "").replace(/\s/g, ""));
-  const height = normalizeCost(element.height);
-  if (!chars.length || !(height > 0)) {
-    return null;
-  }
-  const family = String((element.font && element.font.code) || "Arial").replace(/"/g, "");
-  const key = family + "|" + chars.join("");
-  let metrics = glyphCache.get(key);
-  if (!metrics) {
-    glyphCanvas.font = `200px "${family}", Arial, sans-serif`;
-    metrics = chars.map((ch) => {
-      const m = glyphCanvas.measureText(ch);
-      const left = Number(m.actualBoundingBoxLeft) || 0;
-      const right = Number.isFinite(m.actualBoundingBoxRight) ? m.actualBoundingBoxRight : m.width;
-      return [Math.max(0, left + right), Number(m.actualBoundingBoxAscent) || 0, Number(m.actualBoundingBoxDescent) || 0];
-    });
-    glyphCache.set(key, metrics);
-  }
-  const ink = Math.max(...metrics.map((m) => m[1])) + Math.max(0, ...metrics.map((m) => m[2]));
-  if (!(ink > 0)) {
-    return null;
-  }
-  const scale = height / ink;
-  return metrics.map((m) => [Math.round(m[0] * scale * 10) / 10, Math.round((m[1] + m[2]) * scale * 10) / 10]);
-};
-
-// Every separate piece of a text element's letters, measured as B2Sign measures them
-// (js/cl-measure.js): per non-space character, its pieces as [[width, height], ...] in inches
-// (the dot of an i is its own piece). Sent with the design; null without a canvas.
-const getTextPieces = (element) => {
-  if (!element || element.type !== "Text" || !window.SfsLetterMeasure) {
-    return null;
-  }
-  const family = String((element.font && element.font.code) || "Arial").replace(/"/g, "");
-  const sized = window.SfsLetterMeasure.at(window.SfsLetterMeasure.measure(element.text, family), normalizeCost(element.height));
-  return sized ? sized.pieces : null;
-};
-
-// The pieces as retails_cl_text_pieces() reads them, each priced as a letter of its own on its
-// longer side, as on B2Sign; null where the server would not believe them (then the letters below).
-const getPieceLetters = (element) => {
-  const chars = Array.from(String(element.text || "").replace(/\s/g, ""));
-  const height = normalizeCost(element.height);
-  const pieces = getTextPieces(element);
-  if (!pieces || pieces.length !== chars.length || !chars.length || !(height > 0)) {
-    return null;
-  }
-  const letters = [];
-  for (let i = 0; i < chars.length; i++) {
-    const parts = pieces[i];
-    if (!Array.isArray(parts) || !parts.length || parts.length > 8 || (parts.length < 2 && 'ij!?:;="%'.includes(chars[i]))) {
-      return null;
-    }
-    let largest = 0;
-    for (const part of parts) {
-      const w = Math.min(Math.max(0, normalizeCost(part[0])), 2.5 * height);
-      const h = Math.min(Math.max(0, normalizeCost(part[1])), 2.5 * height);
-      largest = Math.max(largest, w, h);
-      letters.push({ ch: "", side: Math.max(w, h), raw: Math.max(w, h), w, h });
-    }
-    if (/^[\p{L}\p{N}]$/u.test(chars[i]) && largest < 0.3 * height) {
-      return null;
-    }
-  }
-  return letters;
-};
-
-// Each letter of a text element as retails_cl_text_letters() reads it: every measured piece
-// (getPieceLetters()); else its measured width w and height h (up to 2.5 times the text height),
-// its longer side raw, and the side the rate table prices (at least half the text height).
-// Without measured sizes, as retails_cl_text_letters_unmeasured(): the text height, 80% as wide
-// as it is tall.
-const getTextLetters = (element) => {
-  const pieceLetters = getPieceLetters(element);
-  if (pieceLetters) {
-    return pieceLetters;
-  }
-  const chars = Array.from(String(element.text || "").replace(/\s/g, ""));
-  const height = normalizeCost(element.height);
-  const glyphs = getGlyphSizes(element);
-  return chars.map((ch, i) => {
-    if (glyphs && glyphs.length === chars.length && height > 0) {
-      const w = Math.min(Math.max(0, normalizeCost(glyphs[i][0])), 2.5 * height);
-      const h = Math.min(Math.max(0, normalizeCost(glyphs[i][1])), 2.5 * height);
-      return { ch, side: Math.max(Math.max(w, h), 0.5 * height), raw: Math.max(w, h), w, h };
-    }
-    return { ch, side: height, raw: height, w: 0.8 * height, h: height };
-  });
-};
-
-// Pieces in a text (the dot of an i is its own piece), as retails_cl_count_pieces().
-const countPieces = (text) =>
-  Array.from(String(text || "").replace(/\s/g, "")).reduce((sum, ch) => sum + charPieces(ch), 0);
-
-// One letter (a text character, or a whole shape) priced as B2Sign prices its pieces, before the
-// product discount; same as retails_cl_letter_cost() in inc/pricing.php.
-const getLetterCosts = (letter, element) => {
-  const heights = rateHeights();
-  const pieces = letter.ch === "" ? 1 : charPieces(letter.ch);
-  let rate = rateForSide(letter.side);
-  // Longer than the rate table: at least B2Sign's price per inch.
-  const inches = Math.ceil(phpRound(letter.side, 1) - 0.000001);
-  if (clPiece("per_inch") > 0 && heights.length && inches > Math.max(...heights)) {
-    rate = Math.max(rate, clPiece("per_inch") * inches);
-  }
-  // B2Sign's lit letters: a piece under 6" costs its small-piece price; the pieces of a
-  // two-piece character are small, so they all count as under it.
-  if (clPiece("under_price") > 0 && (pieces > 1 || phpRound(letter.raw, 1) < clPiece("under_in"))) {
-    rate = Math.max(rate, clPiece("under_price"));
-  }
-  // B2Sign's standard letter over 10 sq ft: a price per sq ft of its real width x height, when it
-  // is larger than the letter the rate table holds at that height.
-  let large = 0;
-  if (clPiece("per_sqft") > 0 && heights.length) {
-    const sqft = phpRound((phpRound(letter.w, 1) * phpRound(letter.h, 1)) / 144, 1);
-    const tableInches = Math.max(Math.min(...heights), Math.min(Math.max(...heights), inches));
-    const tableSqft = phpRound((phpRound(clPiece("width_share") * tableInches, 1) * tableInches) / 144, 1);
-    if (sqft > clPiece("large_sqft") && sqft > tableSqft) {
-      large = clPiece("per_sqft") * sqft;
-    }
-  }
-  const main = Math.max(rate, large);
-  const costs = { cost: main + rate * (pieces - 1), lexan: 0, trimcap: 0 };
-  const faceTitle = (element.faceColor && element.faceColor.title) || "";
-  if (clLexanPercent > 0 && /lexan/i.test(faceTitle)) {
-    costs.lexan =
-      Math.max(rate * (1 + clLexanPercent / 100), large * (1 + clPiece("lexan_large") / 100)) - main +
-      (rate * (pieces - 1) * clLexanPercent) / 100;
-  }
-  const trimcapTitle = ((element.trimcapSize && element.trimcapSize.title) || "").trim();
-  if (clTrimcap1in.length && /^1\s*inch/i.test(trimcapTitle)) {
-    // On every piece by its own size (B2Sign: up to 16" / 24" / 30"); the pieces of a two-piece
-    // character are small, so they take the smallest size's price.
-    const side = pieces > 1 ? 0 : phpRound(letter.raw, 1);
-    const tier = clTrimcap1in.find((t) => Array.isArray(t) && t.length >= 2 && side <= parseFloat(t[0]));
-    if (tier) {
-      costs.trimcap = parseFloat(tier[1]) * pieces;
-    }
-  }
-  return costs;
-};
-
-// The design as the cart receives it: text elements carry their measured letter sizes.
-const withLetterSizes = (elements) =>
-  (elements || []).map((element) =>
-    element && element.type === "Text" ? { ...element, glyphs: getGlyphSizes(element) || undefined, pieces: getTextPieces(element) || undefined } : element,
-  );
-
-// One element's prices before the product discount: letters (cost), face (colorCost), Lexan and
-// 1" trimcap, and each letter's total in the order retails_cl_design_quote() adds them (parts).
-const getElementCosts = (element) => {
-  const costs = { cost: 0, colorCost: 0, lexan: 0, trimcap: 0, parts: [] };
-  if (!element) {
-    return costs;
-  }
-  if (element.type === "Raceway") {
-    costs.cost = (normalizeCost(element.width) / 12) * racewayPerFoot;
-    costs.parts.push(costs.cost);
-    return costs;
-  }
-  const faceRate = getFaceRate(element.faceColor, element.faceCostPerInch);
-  let letters;
-  if (element.type === "Text") {
-    letters = getTextLetters(element);
-  } else {
-    // A shape is one piece, priced on its larger side like a letter and by its width x height.
-    const width = normalizeCost(element.width);
-    const height = normalizeCost(element.height);
-    const size = Math.max(width, height);
-    letters = [{ ch: "", side: size, raw: size, w: width, h: height }];
-  }
-  letters.forEach((letter) => {
-    const letterCosts = getLetterCosts(letter, element);
-    costs.cost += letterCosts.cost;
-    costs.colorCost += letter.side * faceRate;
-    costs.lexan += letterCosts.lexan;
-    costs.trimcap += letterCosts.trimcap;
-    costs.parts.push(letterCosts.cost + letter.side * faceRate + letterCosts.lexan + letterCosts.trimcap);
-  });
-  return costs;
-};
-
-const getElementPrices = (element) => {
-  const costs = getElementCosts(element);
-  return { cost: costs.cost, colorCost: costs.colorCost };
-};
-
-// Lexan face and 1" trimcap charges for one element (none for a raceway).
-const getElementOptionCosts = (element) => {
-  const costs = getElementCosts(element);
-  return { lexan: costs.lexan, trimcap: costs.trimcap };
-};
-
 const getDesignTotals = (elements, extras) => {
   let elementTotal = 0;
-  let lexanTotal = 0;
-  let trimcapTotal = 0;
   elements.forEach((element) => {
-    const costs = getElementCosts(element);
-    lexanTotal += costs.lexan;
-    trimcapTotal += costs.trimcap;
-    costs.parts.forEach((part) => {
-      elementTotal += part;
-    });
+    elementTotal += normalizeCost(element.cost) + normalizeCost(element.colorCost);
   });
   const hasElements = elements.length > 0;
   const powerSupply =
@@ -3849,13 +3192,11 @@ const getDesignTotals = (elements, extras) => {
   const lit = (elementTotal * litPercent) / 100;
   const cable =
     hasElements && extras.cable && extras.cable.qty > 0 ? normalizeCost(extras.cable.cost) : 0;
-  // Rounded to cents before the discount, as retails_cl_design_quote() does, then the
-  // everyday and sale prices to cents as retails_price_quote() does.
-  const listed = hasElements ? phpRound(elementTotal + (powerSupply + lit + cable), 2) : 0;
-  const regular = phpRound(everydayPrice(listed), 2);
-  const sale = discountPercent > 0 ? salePrice(listed) : regular;
+  const listed = hasElements ? elementTotal + powerSupply + lit + cable : 0;
+  const regular = everydayPrice(listed);
+  const sale = salePrice(listed);
 
-  return { elementTotal, lexanTotal, trimcapTotal, powerSupply, litPercent, lit, cable, regular, sale, saving: regular - sale };
+  return { elementTotal, powerSupply, litPercent, lit, cable, regular, sale, saving: regular - sale };
 };
 
 const getElementLabel = (element, elementNode) => {
@@ -3914,13 +3255,9 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
       continue;
     }
     const elementHeight = normalizeCost(elements[i].height);
-    // Letters: B2Sign's width, measured now (a web font may have loaded since it was stored).
-    const sizedText =
-      elements[i].type === "Text" && elementNode instanceof LetterText ? textInkWidth(elementNode) / dpi : null;
-    const elementWidth = sizedText > 0 ? sizedText : normalizeCost(elements[i].width);
-    const elementPrices = getElementPrices(elements[i]);
-    const elementCost = elementPrices.cost;
-    const elementColorCost = elementPrices.colorCost;
+    const elementWidth = normalizeCost(elements[i].width);
+    const elementCost = normalizeCost(elements[i].cost);
+    const elementColorCost = normalizeCost(elements[i].colorCost);
 
     const row = document.createElement("tr");
     row.appendChild(createCell(String(getNodeIndex(elements[i].id)), "cost-index"));
@@ -3931,14 +3268,9 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
     typeCell.appendChild(typeName);
     const letterText = (elements[i].text || "").trim();
     if (letterText) {
-      const letterCount = Array.from(letterText.replace(/\s/g, "")).length;
-      const pieceLetters = elements[i].type === "Text" ? getPieceLetters(elements[i]) : null;
-      const pieceCount = pieceLetters ? pieceLetters.length : countPieces(letterText);
+      const letterCount = letterText.replace(/\s/g, "").length;
       const detail = document.createElement("span");
-      // The dot of an i or an accent is its own piece, priced by its own size as on B2Sign (as the product page line says).
-      detail.textContent =
-        `“${letterText}” · ${letterCount} ${letterCount == 1 ? "letter" : "letters"}` +
-        (pieceCount > letterCount ? ` (${pieceCount} pieces)` : "");
+      detail.textContent = `“${letterText}” · ${letterCount} ${letterCount == 1 ? "letter" : "letters"}`;
       typeCell.appendChild(detail);
     }
     row.appendChild(typeCell);
@@ -3973,12 +3305,6 @@ let updateDetailTable = (elements = elementsArray, extras = extrasArray) => {
   };
 
   if (elements.length) {
-    if (totals.lexanTotal > 0) {
-      appendExtraRow("Face", `Lexan (+${+clLexanPercent.toFixed(2)}%)`, totals.lexanTotal);
-    }
-    if (totals.trimcapTotal > 0) {
-      appendExtraRow("Trimcap", "1 Inch", totals.trimcapTotal);
-    }
     if (extras.powerSupply && extras.powerSupply.qty > 0) {
       appendExtraRow("Power supply", extras.powerSupply.value, totals.powerSupply);
     }
@@ -4172,8 +3498,8 @@ window.addEventListener("load", function (e) {
   //   });
   function addText(
     text,
-    x = getVisibleStageCenter().x,
-    y = getVisibleStageCenter().y,
+    x = stage.width() / 2,
+    y = stage.height() / 2,
     isUpdateId = false,
   ) {
     dualColorBg =
@@ -4222,19 +3548,15 @@ window.addEventListener("load", function (e) {
       };
     }
 
-    const textNode = new LetterText(textConfig);
+    const textNode = new Konva.Text(textConfig);
 
     let changeEvent = new CustomEvent("change", { bubbles: true });
-    // Centred on the letters' own outline (the LetterText frame).
-    const textFrame = textNode.getSelfRect();
-    textNode.x(x - ((textFrame.x + textFrame.width / 2) * textNode.scaleX()));
+    textNode.x(x - (textNode.width() * textNode.scaleX()) / 2);
     textNode.y(y - (textNode.height() * textNode.scaleY()) / 2);
 
     layer.add(textNode);
 
     const tr = new Konva.Transformer({
-    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
-    flipEnabled: false,
       nodes: [textNode],
       keepRatio: true,
       boundBoxFunc: function (oldBoundBox, newBoundBox) {
@@ -4270,7 +3592,6 @@ window.addEventListener("load", function (e) {
     layer.add(tr);
 
     textNode.setAttr("transformer", tr);
-    watchTransformerForAutoZoom(tr);
 
     let textTransformFrame = null;
     let scheduleTextTransformUpdate = () => {
@@ -4292,7 +3613,7 @@ window.addEventListener("load", function (e) {
     };
 
     let persistTextTransform = () => {
-      let widthInInch = pxToIn(textInkWidth(textNode));
+      let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
       let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
       let textLength = textNode.text().replace(/\s/g, "").length;
 
@@ -4331,7 +3652,7 @@ window.addEventListener("load", function (e) {
     textNode.on("transformend", persistTextTransform);
 
     let persistText = () => {
-      let widthInInch = pxToIn(textInkWidth(textNode));
+      let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
       let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
       let textLength = textNode.text().replace(/\s/g, "").length;
       totalColorCost = heightInInch * textLength * parseFloat(colorCost);
@@ -4386,7 +3707,7 @@ window.addEventListener("load", function (e) {
     updatePreview("text", textNode);
     updateLeftsideBar();
 
-    let widthInInch = pxToIn(textInkWidth(textNode));
+    let widthInInch = pxToIn(textNode.width() * textNode.scaleX());
     let heightInInch = pxToIn(textNode.height() * textNode.scaleY());
     let textLength = textNode.text().replace(/\s/g, "").length;
 
@@ -4590,12 +3911,11 @@ window.addEventListener("load", function (e) {
 
     // Center each new shape using the current stage size, including on mobile.
     const shapeBounds = shape.getClientRect({ skipTransform: true });
-    const viewCenter = getVisibleStageCenter();
     shape.x(
-      shape.x() + viewCenter.x - (shapeBounds.x + shapeBounds.width / 2),
+      shape.x() + stage.width() / 2 - (shapeBounds.x + shapeBounds.width / 2),
     );
     shape.y(
-      shape.y() + viewCenter.y - (shapeBounds.y + shapeBounds.height / 2),
+      shape.y() + stage.height() / 2 - (shapeBounds.y + shapeBounds.height / 2),
     );
 
     selectedNodeType = shape.getClassName();
@@ -4609,8 +3929,6 @@ window.addEventListener("load", function (e) {
     }
 
     const tr = new Konva.Transformer({
-    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
-    flipEnabled: false,
       nodes: [shape],
       keepRatio: isKeepRatio,
       boundBoxFunc: function (oldBoundBox, newBoundBox) {
@@ -4658,7 +3976,6 @@ window.addEventListener("load", function (e) {
     });
     layer.add(tr);
     shape.setAttr("transformer", tr);
-    watchTransformerForAutoZoom(tr);
     selectedNode = shape;
 
     let persistShape = () => {
@@ -5050,10 +4367,9 @@ window.addEventListener("load", function (e) {
     // Create the rectangle
     var rectWidth = Math.min(600, Math.max(80, stage.width() - 24));
     var rectHeight = 80;
-    var racewayCenter = getVisibleStageCenter();
     var raceway = new Konva.Rect({
-      x: racewayCenter.x - rectWidth / 2,
-      y: racewayCenter.y - rectHeight / 2,
+      x: (stage.width() - rectWidth) / 2,
+      y: (stage.height() - rectHeight) / 2,
       width: rectWidth,
       height: rectHeight,
       fill: "#D3D3D3",
@@ -5072,8 +4388,6 @@ window.addEventListener("load", function (e) {
     updatePreview("raceway", raceway);
 
     const tr = new Konva.Transformer({
-    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
-    flipEnabled: false,
       nodes: [raceway],
       rotateEnabled: false,
       rotateLineVisible: false,
@@ -5085,7 +4399,6 @@ window.addEventListener("load", function (e) {
     });
 
     raceway.setAttr("transformer", tr);
-    watchTransformerForAutoZoom(tr);
 
     layer.add(tr);
     layer.add(raceway);
@@ -5587,11 +4900,6 @@ window.addEventListener("load", function (e) {
       x: selectedNode.x() + 100, // Adjust position of the cloned arrow
       y: selectedNode.y() + 100, // Adjust position of the cloned arrow
     });
-    // Konva's clone() also copies the original's handlers, and those act on the original: while
-    // the copy was resized or tapped they selected the original and showed its colors and size
-    // (and saved it with the copy's position). The copy gets its own handlers below. Konva's
-    // internal listeners are kept by off().
-    cloneNode.off();
 
     let enabledAnchors = undefined;
 
@@ -5616,31 +4924,36 @@ window.addEventListener("load", function (e) {
     }
 
     const tr = new Konva.Transformer({
-    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
-    flipEnabled: false,
       nodes: [cloneNode],
       keepRatio: true,
       rotationSnaps: false,
       boundBoxFunc: function (oldBoundBox, newBoundBox) {
-        // The original element's limits, in inches at any zoom (the boxes are screen pixels):
-        // letters by height, shapes by height and width, raceways unlimited here (their height is
-        // clamped in the transform handler). At a limit the copy stops at its last size.
-        if (cloneNode.getAttr("textIndex")) {
-          return newBoundBox;
-        }
-        const zoom = stage.scaleX() || 1;
-        const reduction =
-          cloneNode.getClassName() == "RegularPolygon" ? triangleReduction : 1;
-        const heightInch = (newBoundBox.height / zoom / dpi) * reduction;
-        const widthInch = (newBoundBox.width / zoom / dpi) * reduction;
-        if (heightInch > maxHeight || heightInch < minHeight) {
-          return oldBoundBox;
-        }
-        if (
-          cloneNode.getClassName() != "Text" &&
-          (widthInch > maxWidth || widthInch < minWidth)
-        ) {
-          return oldBoundBox;
+        // Set minimum and maximum size constraints
+        var minWidth = 82;
+        var minHeight = 82;
+        var maxWidth = 455;
+        var maxHeight = 455;
+
+        if (cloneNode.getClassName() == "Text") {
+          // Constrain height
+          if (newBoundBox.height < minHeight) {
+            oldBoundBox.height = minHeight;
+
+            return oldBoundBox;
+          } else if (newBoundBox.height > maxHeight) {
+            oldBoundBox.height = maxHeight;
+
+            return oldBoundBox;
+          }
+        } else {
+          // Constrain width
+          if (newBoundBox.width < minWidth) {
+            oldBoundBox.width = minWidth;
+            return oldBoundBox;
+          } else if (newBoundBox.width > maxWidth) {
+            oldBoundBox.width = maxWidth;
+            return oldBoundBox;
+          }
         }
         return newBoundBox;
       },
@@ -5655,7 +4968,6 @@ window.addEventListener("load", function (e) {
     });
 
     cloneNode.setAttr("transformer", tr);
-    watchTransformerForAutoZoom(tr);
 
     layer.add(cloneNode);
 
@@ -5709,10 +5021,6 @@ window.addEventListener("load", function (e) {
     cloneNode.on("dragmove", () => {
       updateNodeDimensionInputs(cloneNode);
       scheduleHeightWidthDisplayUpdate();
-      // A raceway copy's label follows while dragging, not only on release.
-      if (clonedRacewayText) {
-        scheduleCloneUpdate();
-      }
     });
 
     cloneNode.on("dragend", () => {
@@ -5762,7 +5070,7 @@ window.addEventListener("load", function (e) {
         cloneNode._id,
       ).faceCostPerInch;
       let clonedNodeHeight = pxToIn(cloneNode.height() * cloneNode.scaleY());
-      let clonedNodeWidth = pxToIn(cloneNode instanceof LetterText ? textInkWidth(cloneNode) : cloneNode.width() * cloneNode.scaleX());
+      let clonedNodeWidth = pxToIn(cloneNode.width() * cloneNode.scaleX());
       let clonedNodeTotalCost = costPerInch(clonedNodeWidth);
       let cloneNodeTotalColorCost =
         parseFloat(currentElementColorCost) * clonedNodeWidth;
@@ -5778,7 +5086,7 @@ window.addEventListener("load", function (e) {
         type: "UPDATE_ELEMENT",
         payload: {
           id: cloneNode._id,
-          width: clonedNodeWidth,
+          width: pxToIn(cloneNode.width() * cloneNode.scaleX()),
           height: pxToIn(cloneNode.height() * cloneNode.scaleY()),
           text: text,
           cost: clonedNodeTotalCost,
@@ -5802,19 +5110,6 @@ window.addEventListener("load", function (e) {
 
     cloneNode.on("click tap", (e) => {
       selectedNode = cloneNode;
-      selectedNodeType = cloneNode.getClassName();
-      if (selectedNodeType === "Text") {
-        textInput.value = cloneNode.text();
-      }
-      updatePreview(
-        cloneNode.getAttr("textIndex")
-          ? "raceway"
-          : selectedNodeType === "Text"
-            ? "text"
-            : "shape",
-        cloneNode,
-      );
-      updateLeftsideBar();
       updateFocusedTransformer(cloneNode);
       updateNodeDimensionInputs(cloneNode);
     });
@@ -5946,7 +5241,7 @@ window.addEventListener("load", function (e) {
       if (text.length > 0) {
         let heightInInch =
           (selectedNode.height() * selectedNode.scaleY()) / dpi;
-        let widhtInInch = textInkWidth(selectedNode) / dpi;
+        let widhtInInch = (selectedNode.width() * selectedNode.scaleX()) / dpi;
 
         let currentElement = getElementById(selectedNode._id);
         let totalLength = selectedNode.text().replace(/\s/g, "").length;
@@ -5974,8 +5269,6 @@ window.addEventListener("load", function (e) {
       }
 
       updateDimenstionDisplay();
-      // New letters, new width: the size boxes show it at once.
-      updateNodeDimensionInputs(selectedNode, "text");
     }
     fontSize = parseFloat(sizeHeightInput.value) * dpi || 20;
     // The size halves ("activeSecond") are only set once the visitor picks a return
@@ -6091,8 +5384,7 @@ window.addEventListener("load", function (e) {
           selectedNode.width(undefined);
           fontSize = selectedNode.fontSize() * selectedNode.scaleX();
           heightInInch = pxToIn(selectedNode.height() * selectedNode.scaleY());
-          widthInInch = pxToIn(textInkWidth(selectedNode));
-          widhtInPx = textInkWidth(selectedNode);
+          widthInInch = pxToIn(selectedNode.width() * selectedNode.scaleX());
           store.dispatch({
             type: "UPDATE_ELEMENT",
             payload: {
@@ -6138,8 +5430,6 @@ window.addEventListener("load", function (e) {
             return sizeHeightInput.dispatchEvent(changeEvent);
           }
 
-          // Keep the current width when the scale is folded back to 1 (mid-drag it is not 1).
-          selectedNode.width(widhtInPx);
           selectedNode.scaleX(1);
           selectedNode.scaleY(1);
           selectedNode.height(heightInPx);
@@ -6407,17 +5697,28 @@ window.addEventListener("load", function (e) {
 
     let text = "";
     switch (selectedNode.getClassName()) {
-      case "Text": {
-        // The letters keep their proportions: the typed width (the letters' own width, as B2Sign
-        // measures it) sets their height, within the product's smallest and largest letters.
-        const currentWidth = textInkWidth(selectedNode);
-        const currentFontSize = selectedNode.fontSize() * Math.abs(selectedNode.scaleY());
-        let newFontSize = currentWidth > 0 ? currentFontSize * (widthInPx / currentWidth) : currentFontSize;
-        newFontSize = Math.min(maxHeight * dpi, Math.max(minHeight * dpi, newFontSize));
+      case "Text":
+        let currentWidth = selectedNode.width() * selectedNode.scaleX();
+        let currentHeight = selectedNode.height() * selectedNode.scaleY();
+        let currentFontSize = selectedNode.fontSize();
 
-        selectedNode.scaleX(1);
-        selectedNode.scaleY(1);
-        selectedNode.width(undefined);
+        if (pxToIn(currentHeight) > maxHeight) {
+          sizeHeightInput.value = maxHeight;
+          return sizeHeightInput.dispatchEvent(changeEvent);
+        }
+
+        selectedNode.width(widthInPx);
+        layer.batchDraw();
+
+        let updatedHeight = selectedNode.height() * selectedNode.scaleY();
+        let updatedWidth = selectedNode.width() * selectedNode.scaleX();
+
+        let scaleFactor = widthInPx / currentWidth;
+        let newFontSize =
+          getTextFSI(selectedNode._id) == "yes"
+            ? currentFontSize * scaleFactor - 1.3
+            : currentFontSize * scaleFactor;
+
         selectedNode.fontSize(newFontSize);
         fontSize = newFontSize;
 
@@ -6425,10 +5726,11 @@ window.addEventListener("load", function (e) {
         tr.update();
 
         triggerTransformEvent();
+        selectedNode.scaleX(1);
+        selectedNode.scaleY(1);
         layer.batchDraw();
 
         break;
-      }
 
       case "Shape":
         if (widthInInch < minWidth) {
@@ -6521,10 +5823,10 @@ window.addEventListener("load", function (e) {
             totalRectColorCost = heightInInch * parseFloat(colorCost);
           }
 
-          // The typed width and height at scale 1. (Multiplying by the current scale made a
-          // drag that reached the largest width jump past it, e.g. 45" to 98.5".)
-          selectedNode.width(widthInPx);
-          selectedNode.height(heightInPx);
+          selectedNode.width(widthInPx * selectedNode.scaleX());
+          selectedNode.height(
+            sizeHeightInput.value * dpi * selectedNode.scaleY(),
+          );
           selectedNode.scaleX(1);
           //selectedNode.height(newSizeByHeight.height);
           updateHeightWidthInput(selectedNode.height(), selectedNode.width());
@@ -7054,7 +6356,7 @@ window.addEventListener("load", function (e) {
     layer.draw();
   });
 
-  // Uploads a PNG of the canvas (selection handles hidden) through retails_upload_design
+  // Uploads a PNG of the canvas (selection handles hidden) through wholesale_upload_design
   // and returns the attachment id with the design JSON the product page and cart expect.
   async function uploadDesignSnapshot() {
     exitMultiSelection();
@@ -7067,8 +6369,6 @@ window.addEventListener("load", function (e) {
       }
     });
     stage.height(container.clientHeight);
-    // The picture is what the canvas shows: bring the whole design into view first.
-    autoZoomToFit(nodeLists.map((item) => item.node));
     layer.draw();
     const dataURL = stage.toDataURL({ mimeType: "image/png" });
     transformers.forEach((transformer) => transformer.visible(true));
@@ -7076,7 +6376,7 @@ window.addEventListener("load", function (e) {
 
     const formData = new FormData();
     formData.append("file", dataURLtoBlob(dataURL), "clDesign-" + Math.random() + ".png");
-    formData.append("action", "retails_upload_design");
+    formData.append("action", "wholesale_upload_design");
     formData.append("nonce", window.mediaUploadData.upload_nonce);
 
     const response = await fetch(window.mediaUploadData.upload_url, {
@@ -7099,7 +6399,7 @@ window.addEventListener("load", function (e) {
     }
 
     const designData = JSON.stringify({
-      elements: withLetterSizes(store.getState()["elements"]),
+      elements: store.getState()["elements"],
       extras: store.getState()["extras"],
       contentDimenstion: { height: contentHeight, width: contentWidth },
     });
@@ -7123,12 +6423,12 @@ window.addEventListener("load", function (e) {
       addToCartBtn.innerHTML =
         '<span>Adding to cart...</span><img alt="" src="' +
         siteUrl +
-        '/wp-content/themes/tr-retails/img/ajax_loader.gif">';
+        '/wp-content/themes/wholesale/img/ajax_loader.gif">';
 
       try {
         const snapshot = await uploadDesignSnapshot();
         const body = new FormData();
-        body.append("action", "retails_cl_builder_add");
+        body.append("action", "wholesale_cl_builder_add");
         body.append("product_id", addToCartBtn.getAttribute("data-product-id"));
         body.append("design_id", snapshot.id);
         body.append("design_data", snapshot.designData);
@@ -7151,7 +6451,7 @@ window.addEventListener("load", function (e) {
         clearBuilderDraft();
         if (document.getElementById("miniCart")) {
           // js/mini-cart.js renders the drawer and opens it.
-          document.dispatchEvent(new CustomEvent("retails:minicart-added", { detail: json }));
+          document.dispatchEvent(new CustomEvent("wholesale:minicart-added", { detail: json }));
         } else {
           window.location.href = addToCartBtn.getAttribute("data-cart-url");
           return;
@@ -7181,7 +6481,7 @@ window.addEventListener("load", function (e) {
     loadingImage.height = 20;
     loadingImage.style.marginLeft = "5px";
     loadingImage.src =
-      siteUrl + "/wp-content/themes/tr-retails/img/ajax_loader.gif";
+      siteUrl + "/wp-content/themes/wholesale/img/ajax_loader.gif";
 
     saveBtn.disabled = true;
     saveBtn.setAttribute("aria-busy", "true");
@@ -7201,8 +6501,6 @@ window.addEventListener("load", function (e) {
     });
 
     stage.height(container.clientHeight);
-    // The picture is what the canvas shows: bring the whole design into view first.
-    autoZoomToFit(nodeLists.map((item) => item.node));
 
     var dataURL = stage.toDataURL({ mimeType: "image/png" });
     let imageBlob = dataURLtoBlob(dataURL);
@@ -7210,7 +6508,7 @@ window.addEventListener("load", function (e) {
     // Prepare the form data
     var formData = new FormData();
     formData.append("file", imageBlob, "clDesign-" + Math.random() + ".png");
-    formData.append("action", "retails_upload_design");
+    formData.append("action", "wholesale_upload_design");
     formData.append("nonce", window.mediaUploadData.upload_nonce);
 
     try {
@@ -7248,7 +6546,7 @@ window.addEventListener("load", function (e) {
         height: contentHeight,
         width: contentWidth,
       };
-      const elements = withLetterSizes(store.getState()["elements"]);
+      const elements = store.getState()["elements"];
       const extras = store.getState()["extras"];
       const updatedState = { elements, extras, contentDimenstion };
       const designData = JSON.stringify(updatedState);
@@ -7293,7 +6591,7 @@ window.addEventListener("load", function (e) {
                 height: contentHeight,
                 width: contentWidth
             }
-            let elements = withLetterSizes(store.getState()['elements'])
+            let elements = store.getState()['elements']
             let extras = store.getState()['extras']
             let updatedState = { elements, extras, contentDimenstion }
 
@@ -7422,29 +6720,12 @@ window.addEventListener("load", function (e) {
       switch (element.type) {
         case "Text":
           let textNodeId = addText(text, element.x, element.y, true);
-          // Back at the height it was saved (and priced) at: a design resized with the handles keeps
-          // its scale apart from its font size, which the plain font size would lose.
-          const restoredText = getNodeById(textNodeId);
-          const savedHeight = parseFloat(element.height);
-          const restoredSize = {};
-          if (restoredText instanceof LetterText && savedHeight > 0) {
-            restoredText.scale({ x: 1, y: 1 });
-            restoredText.fontSize(savedHeight * dpi);
-            restoredSize.scale = { x: 1, y: 1 };
-            restoredSize.width = pxToIn(textInkWidth(restoredText));
-            const restoredFrame = restoredText.getAttr("transformer");
-            if (restoredFrame) {
-              restoredFrame.forceUpdate();
-            }
-          }
 
           store.dispatch({
             type: "UPDATE_ELEMENT",
             payload: {
-              ...element,
-              ...restoredSize,
-              // The new node's id last: the saved design's own id would match nothing.
               id: textNodeId,
+              ...element,
               //colorCost : element.colorCost
             },
           });
@@ -8410,7 +7691,7 @@ function renderMultiSelectionSize() {
 function renderMultiSelectionHeading() {
   const box = getMultiSelectionBounds();
   elementIndexContainer.textContent = clMultiSelect.nodes.length + " items";
-  elementDimenstionContainer.textContent = "W:" + pxToIn(box.width) + " x H:" + pxToIn(box.height);
+  elementDimenstionContainer.textContent = "H:" + pxToIn(box.height) + " x W:" + pxToIn(box.width);
 }
 
 // Shows the shared choice on an option row, or "Mixed" when the elements differ.
@@ -8502,8 +7783,6 @@ function selectAllElements() {
   hideLeftSlider();
 
   const transformer = new Konva.Transformer({
-    // Dragging a handle past the opposite edge must not mirror or flip letters (negative sizes).
-    flipEnabled: false,
     nodes,
     keepRatio: true,
     rotateEnabled: false,
@@ -8524,7 +7803,6 @@ function selectAllElements() {
     },
   });
   layer.add(transformer);
-  watchTransformerForAutoZoom(transformer);
   transformer.on("transformstart", () => {
     clMultiSelect.transforming = true;
   });

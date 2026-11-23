@@ -13,7 +13,7 @@
  * The WordPress page for each entry is created (or re-parented) on the next
  * admin page load after the registry changes. Each entry has a status:
  * 'review' pages render normally but are noindexed and left out of the
- * sitemaps and footer; 'live' pages are eligible for indexing. Switch an entry (or a whole
+ * sitemaps and footer; 'live' pages are indexed. Switch an entry (or a whole
  * state file) to 'live' only after the content has been checked.
  *
  * @package litsign
@@ -24,7 +24,7 @@
  *
  * @return array
  */
-function retails_guide_data_file($relative)
+function wholesale_guide_data_file($relative)
 {
 	$path = get_template_directory() . '/data/' . $relative;
 	if (!file_exists($path)) {
@@ -46,7 +46,7 @@ function retails_guide_data_file($relative)
  *
  * @return array
  */
-function retails_guide_states()
+function wholesale_guide_states()
 {
 	static $states = null;
 
@@ -54,14 +54,14 @@ function retails_guide_states()
 		$states = array();
 		$dir = get_template_directory() . '/data/locations/';
 		foreach ((array) glob($dir . '*.php') as $file) {
-			$state = retails_guide_data_file('locations/' . basename($file));
+			$state = wholesale_guide_data_file('locations/' . basename($file));
 			if (empty($state['slug'])) {
 				continue;
 			}
 
 			$state['cities'] = isset($state['cities']) ? (array) $state['cities'] : array();
 			foreach ((array) glob($dir . $state['slug'] . '/*.php') as $city_file) {
-				$city = retails_guide_data_file('locations/' . $state['slug'] . '/' . basename($city_file));
+				$city = wholesale_guide_data_file('locations/' . $state['slug'] . '/' . basename($city_file));
 				if (empty($city['name'])) {
 					continue;
 				}
@@ -84,13 +84,13 @@ function retails_guide_states()
 /**
  * @return array Industry entries keyed by slug.
  */
-function retails_guide_industries()
+function wholesale_guide_industries()
 {
 	static $industries = null;
 
 	if (null === $industries) {
 		$industries = array();
-		foreach (retails_guide_data_file('industries.php') as $industry) {
+		foreach (wholesale_guide_data_file('industries.php') as $industry) {
 			if (!empty($industry['slug'])) {
 				$industries[$industry['slug']] = $industry;
 			}
@@ -108,7 +108,7 @@ function retails_guide_industries()
  *
  * @return array
  */
-function retails_guide_registry()
+function wholesale_guide_registry()
 {
 	static $registry = null;
 
@@ -150,8 +150,8 @@ function retails_guide_registry()
 			'title' => 'Locations',
 			'template' => 'page-locations.php',
 			'status' => 'live',
-			'seo_title' => 'State & City Sign Permit Guides | Storefront Signs',
-			'seo_description' => 'Find sign permit offices and installer licensing rules in our state and city guides. Get custom LED channel letters shipped to any of the 50 states.',
+			'seo_title' => 'Storefront Signs Shipped to Every State | Permit Guides',
+			'seo_description' => 'Channel letters and storefront signs shipped from Washington and California to all 50 states. Find your state\'s sign permit guide and see prices online.',
 		),
 		'industries' => array(
 			'title' => 'Industries',
@@ -162,7 +162,7 @@ function retails_guide_registry()
 		),
 	);
 
-	foreach (retails_guide_states() as $state_slug => $state) {
+	foreach (wholesale_guide_states() as $state_slug => $state) {
 		$registry['locations/' . $state_slug] = array(
 			'title' => $state['name'],
 			'template' => 'page-location.php',
@@ -187,7 +187,7 @@ function retails_guide_registry()
 		}
 	}
 
-	foreach (retails_guide_industries() as $industry_slug => $industry) {
+	foreach (wholesale_guide_industries() as $industry_slug => $industry) {
 		$registry['industries/' . $industry_slug] = array(
 			'title' => $industry['name'],
 			'template' => 'page-industry.php',
@@ -205,28 +205,28 @@ function retails_guide_registry()
 /**
  * Registry path of the page being viewed, or ''.
  */
-function retails_guide_current_path()
+function wholesale_guide_current_path()
 {
 	if (!is_page()) {
 		return '';
 	}
 
 	$path = get_page_uri(get_queried_object_id());
-	return isset(retails_guide_registry()[$path]) ? $path : '';
+	return isset(wholesale_guide_registry()[$path]) ? $path : '';
 }
 
 /**
  * Registry entry for the page being viewed, or an empty array.
  */
-function retails_guide_current()
+function wholesale_guide_current()
 {
-	$path = retails_guide_current_path();
-	return $path ? retails_guide_registry()[$path] : array();
+	$path = wholesale_guide_current_path();
+	return $path ? wholesale_guide_registry()[$path] : array();
 }
 
-function retails_guide_is_live($path)
+function wholesale_guide_is_live($path)
 {
-	$registry = retails_guide_registry();
+	$registry = wholesale_guide_registry();
 	return isset($registry[$path]) && 'live' === $registry[$path]['status'];
 }
 
@@ -236,17 +236,17 @@ function retails_guide_is_live($path)
  * so reviewers can click through while live pages never link to them; pass
  * $live_only to require an approved page everywhere (footer).
  */
-function retails_guide_url($path, $live_only = false)
+function wholesale_guide_url($path, $live_only = false)
 {
-	if (!retails_guide_is_live($path)) {
-		$current = retails_guide_current();
+	if (!wholesale_guide_is_live($path)) {
+		$current = wholesale_guide_current();
 		if ($live_only || !$current || 'live' === $current['status']) {
 			return '';
 		}
 	}
 
 	$page = get_page_by_path($path);
-	return $page && 'publish' === $page->post_status && '' === $page->post_password ? get_permalink($page) : '';
+	return $page && 'publish' === $page->post_status ? get_permalink($page) : '';
 }
 
 /**
@@ -255,15 +255,15 @@ function retails_guide_url($path, $live_only = false)
  * gets its pages on the next admin page load. Page content stays empty: the
  * templates render everything. Existing pages keep their content and title.
  */
-function retails_guide_sync_pages()
+function wholesale_guide_sync_pages()
 {
 	if (!current_user_can('manage_options')) {
 		return;
 	}
 
-	$registry = retails_guide_registry();
+	$registry = wholesale_guide_registry();
 	$version = md5(implode('|', array_keys($registry)) . '|v1');
-	if ($version === get_option('retails_guide_pages_version')) {
+	if ($version === get_option('wholesale_guide_pages_version')) {
 		return;
 	}
 
@@ -298,17 +298,17 @@ function retails_guide_sync_pages()
 		}
 	}
 
-	update_option('retails_guide_pages_version', $version, false);
+	update_option('wholesale_guide_pages_version', $version, false);
 }
-add_action('admin_init', 'retails_guide_sync_pages', 20);
+add_action('admin_init', 'wholesale_guide_sync_pages', 20);
 
 /**
  * Render registry pages with their template whatever the page's own
  * template setting says.
  */
-function retails_guide_template($template)
+function wholesale_guide_template($template)
 {
-	$entry = retails_guide_current();
+	$entry = wholesale_guide_current();
 	if ($entry) {
 		$located = locate_template($entry['template']);
 		if ($located) {
@@ -318,13 +318,13 @@ function retails_guide_template($template)
 
 	return $template;
 }
-add_filter('template_include', 'retails_guide_template', 20);
+add_filter('template_include', 'wholesale_guide_template', 20);
 
 /**
  * Feed the registry's title and description to the theme's SEO head, which
  * reads _seo_title and _seo_description for pages.
  */
-function retails_guide_seo_meta($value, $object_id, $meta_key, $single)
+function wholesale_guide_seo_meta($value, $object_id, $meta_key, $single)
 {
 	if ('_seo_title' !== $meta_key && '_seo_description' !== $meta_key) {
 		return $value;
@@ -335,7 +335,7 @@ function retails_guide_seo_meta($value, $object_id, $meta_key, $single)
 		return $value;
 	}
 
-	$registry = retails_guide_registry();
+	$registry = wholesale_guide_registry();
 	$path = get_page_uri($post);
 	if (!isset($registry[$path])) {
 		return $value;
@@ -344,14 +344,14 @@ function retails_guide_seo_meta($value, $object_id, $meta_key, $single)
 	$text = '_seo_title' === $meta_key ? $registry[$path]['seo_title'] : $registry[$path]['seo_description'];
 	return $single ? $text : array($text);
 }
-add_filter('get_post_metadata', 'retails_guide_seo_meta', 10, 4);
+add_filter('get_post_metadata', 'wholesale_guide_seo_meta', 10, 4);
 
 /**
  * Pages still in review stay out of search results.
  */
-function retails_guide_robots($robots)
+function wholesale_guide_robots($robots)
 {
-	$entry = retails_guide_current();
+	$entry = wholesale_guide_current();
 	if ($entry && 'live' !== $entry['status']) {
 		unset($robots['index'], $robots['max-image-preview']);
 		$robots['noindex'] = true;
@@ -360,17 +360,17 @@ function retails_guide_robots($robots)
 
 	return $robots;
 }
-add_filter('wp_robots', 'retails_guide_robots', 20);
+add_filter('wp_robots', 'wholesale_guide_robots', 20);
 
 /**
  * IDs of registry pages still in review, for the sitemaps.
  *
  * @return int[]
  */
-function retails_guide_review_page_ids()
+function wholesale_guide_review_page_ids()
 {
 	$ids = array();
-	foreach (retails_guide_registry() as $path => $entry) {
+	foreach (wholesale_guide_registry() as $path => $entry) {
 		if ('live' === $entry['status']) {
 			continue;
 		}
@@ -383,31 +383,31 @@ function retails_guide_review_page_ids()
 	return $ids;
 }
 
-add_filter('retails_seo_noindex_page_ids', function ($ids) {
-	return array_values(array_unique(array_merge($ids, retails_guide_review_page_ids())));
+add_filter('wholesale_seo_noindex_page_ids', function ($ids) {
+	return array_values(array_unique(array_merge($ids, wholesale_guide_review_page_ids())));
 });
 
 /**
  * Styles for the guide pages: the shared guide page styles plus their own.
  */
-function retails_guide_styles()
+function wholesale_guide_styles()
 {
-	if (!retails_guide_current()) {
+	if (!wholesale_guide_current()) {
 		return;
 	}
 
 	$uri = get_template_directory_uri();
 	$dir = get_template_directory();
-	wp_enqueue_style('retails-seo-pages', $uri . '/css/seo-pages.css', array('custom-style'), (string) filemtime($dir . '/css/seo-pages.css'));
-	wp_enqueue_style('retails-guides', $uri . '/css/guides.css', array('retails-seo-pages'), (string) filemtime($dir . '/css/guides.css'));
+	wp_enqueue_style('wholesale-seo-pages', $uri . '/css/seo-pages.css', array('custom-style'), (string) filemtime($dir . '/css/seo-pages.css'));
+	wp_enqueue_style('wholesale-guides', $uri . '/css/guides.css', array('wholesale-seo-pages'), (string) filemtime($dir . '/css/guides.css'));
 }
-add_action('wp_enqueue_scripts', 'retails_guide_styles', 20);
+add_action('wp_enqueue_scripts', 'wholesale_guide_styles', 20);
 
 /**
  * The organization these pages describe: ships from Washington and California, does not
  * install. Used as the provider of Service entities on guide pages.
  */
-function retails_guide_organization_ref()
+function wholesale_guide_organization_ref()
 {
 	return array('@id' => trailingslashit(home_url('/')) . '#organization');
 }
@@ -416,7 +416,7 @@ function retails_guide_organization_ref()
  * Add a Service entity to the page's structured data (state, city and
  * industry pages). areaServed is where we ship, never where we are.
  */
-function retails_guide_add_service_schema($name, $description, $area_served = null, $extra = array())
+function wholesale_guide_add_service_schema($name, $description, $area_served = null, $extra = array())
 {
 	$service = array(
 		'@type' => 'Service',
@@ -425,11 +425,11 @@ function retails_guide_add_service_schema($name, $description, $area_served = nu
 		'serviceType' => 'Custom sign manufacturing and shipping',
 		'description' => $description,
 		'url' => get_permalink(),
-		'provider' => retails_guide_organization_ref(),
+		'provider' => wholesale_guide_organization_ref(),
 		'areaServed' => $area_served ? $area_served : array('@type' => 'Country', 'name' => 'United States'),
 	);
 
-	$GLOBALS['retails_page_entities'][] = array_merge($service, (array) $extra);
+	$GLOBALS['wholesale_page_entities'][] = array_merge($service, (array) $extra);
 }
 
 /**
@@ -441,11 +441,11 @@ function retails_guide_add_service_schema($name, $description, $area_served = nu
  * @param array|null $city  City data, or null for the state itself.
  * @return array
  */
-function retails_guide_place_entity($state, $city = null)
+function wholesale_guide_place_entity($state, $city = null)
 {
 	$state_entity = array(
 		'@type' => 'State',
-		'name' => retails_schema_text($state['name']),
+		'name' => wholesale_schema_text($state['name']),
 		'containedInPlace' => array('@type' => 'Country', 'name' => 'United States'),
 	);
 	if (!empty($state['wikipedia'])) {
@@ -459,14 +459,14 @@ function retails_guide_place_entity($state, $city = null)
 	if (!empty($city['county'])) {
 		$parent = array(
 			'@type' => 'AdministrativeArea',
-			'name' => retails_schema_text($city['county'] . ', ' . $state['name']),
+			'name' => wholesale_schema_text($city['county'] . ', ' . $state['name']),
 			'containedInPlace' => $state_entity,
 		);
 	}
 
 	$city_entity = array(
 		'@type' => 'City',
-		'name' => retails_schema_text($city['name']),
+		'name' => wholesale_schema_text($city['name']),
 		'containedInPlace' => $parent,
 	);
 	if (!empty($city['wikipedia'])) {
@@ -484,7 +484,7 @@ function retails_guide_place_entity($state, $city = null)
  * @param bool  $date_only  True to return '' when there is no 'updated' date.
  * @return string Y-m-d, or ''.
  */
-function retails_guide_updated($place, $date_only = false)
+function wholesale_guide_updated($place, $date_only = false)
 {
 	if (!empty($place['updated']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $place['updated'])) {
 		return $place['updated'];
@@ -497,24 +497,13 @@ function retails_guide_updated($place, $date_only = false)
 }
 
 /**
- * Significant content, link or schema changes, independent of upload times.
- * Keep the source review date separate for the note shown to readers.
- */
-function retails_location_modified($place = array())
-{
-	return max('2026-11-05', retails_guide_updated($place, true));
-}
-
-/**
  * Product families on location pages, in display order: the page each links
- * to, where it is made and the product whose card price is quoted, or for
- * product categories ('price_categories') the cheapest Starting at among the
- * categories it links to, as on every other category card. Only channel
- * letters are called signs.
+ * to, where it is made and the product whose card price is quoted. Only
+ * channel letters are called signs.
  *
  * @return array
  */
-function retails_guide_product_families()
+function wholesale_guide_product_families()
 {
 	return array(
 		'channel-letters' => array(
@@ -525,33 +514,29 @@ function retails_guide_product_families()
 		),
 		'banners' => array(
 			'label' => 'Banners and banner stands',
-			'url' => retails_category_url('banners'),
+			'url' => wholesale_category_url('banners'),
 			'made' => 'Made in Renton, WA',
 			'price' => '13oz-vinyl-banner',
-			'price_categories' => array('banners', 'banner-stands'),
-			'more' => array(retails_category_url('banner-stands') => 'Banner stands'),
+			'more' => array(wholesale_category_url('banner-stands') => 'Banner stands'),
 		),
 		'window-graphics' => array(
 			'label' => 'Window graphics and vinyl',
 			'url' => home_url('/window-graphics/'),
 			'made' => 'Made in Renton, WA',
 			'price' => 'adhesive-window-perf',
-			'price_categories' => array('adhesive-products'),
 		),
 		'flags-aframes' => array(
 			'label' => 'Flags and A-frames',
-			'url' => retails_category_url('advertising-flags'),
+			'url' => wholesale_category_url('advertising-flags'),
 			'made' => 'Made in Renton, WA',
 			'price' => 'feather-angled-flag-pole',
-			'price_categories' => array('advertising-flags', 'signicade-a-frames'),
-			'more' => array(retails_category_url('signicade-a-frames') => 'A-frames'),
+			'more' => array(wholesale_category_url('signicade-a-frames') => 'A-frames'),
 		),
 		'displays' => array(
 			'label' => 'Trade show displays',
-			'url' => retails_category_url('trade-show-products'),
+			'url' => wholesale_category_url('trade-show-products'),
 			'made' => 'Made in Renton, WA',
 			'price' => 'curved-tension-fabric-display-graphic-frame',
-			'price_categories' => array('trade-show-products'),
 		),
 	);
 }
@@ -561,15 +546,15 @@ function retails_guide_product_families()
  * 'categories' note when it has one; there is no generic fallback text, so
  * the same sentences don't repeat across hundreds of location pages.
  */
-function retails_guide_render_families($place)
+function wholesale_guide_render_families($place)
 {
 	$notes = isset($place['categories']) ? (array) $place['categories'] : array();
-	$families = retails_guide_product_families();
-	retails_seo_prime_products(wp_list_pluck($families, 'price'));
+	$families = wholesale_guide_product_families();
+	wholesale_seo_prime_products(wp_list_pluck($families, 'price'));
 	?>
 	<div class="gd-family-grid">
 		<?php foreach ($families as $key => $family) : ?>
-			<?php $price = retails_price_no_cents(!empty($family['price_categories']) ? retails_seo_category_starting_text($family['price_categories']) : retails_seo_product_starting_text($family['price'])); ?>
+			<?php $price = wholesale_price_no_cents(wholesale_seo_product_starting_text($family['price'])); ?>
 			<article class="gd-family">
 				<h3><a href="<?php echo esc_url($family['url']); ?>"><?php echo esc_html($family['label']); ?></a></h3>
 				<p class="gd-family-made"><?php echo esc_html($family['made']); ?></p>
@@ -596,10 +581,10 @@ function retails_guide_render_families($place)
  * OfferCatalog of the product families a location page shows, for its
  * Service entity. No prices: they change and live on the product pages.
  */
-function retails_guide_offer_catalog($place_name)
+function wholesale_guide_offer_catalog($place_name)
 {
 	$items = array();
-	foreach (retails_guide_product_families() as $family) {
+	foreach (wholesale_guide_product_families() as $family) {
 		$items[] = array(
 			'@type' => 'Offer',
 			'itemOffered' => array(
@@ -612,7 +597,7 @@ function retails_guide_offer_catalog($place_name)
 
 	return array(
 		'@type' => 'OfferCatalog',
-		'name' => retails_schema_text(sprintf('Signs and graphics shipped to %s', $place_name)),
+		'name' => wholesale_schema_text(sprintf('Signs and graphics shipped to %s', $place_name)),
 		'itemListElement' => $items,
 	);
 }
@@ -620,7 +605,7 @@ function retails_guide_offer_catalog($place_name)
 /**
  * Sources list: array of array(label, url). Only http(s) links are printed.
  */
-function retails_guide_render_sources($sources, $heading = 'Official sources', $note = true)
+function wholesale_guide_render_sources($sources, $heading = 'Official sources', $note = true)
 {
 	$sources = array_filter((array) $sources, static function ($source) {
 		return !empty($source[1]) && preg_match('#^https?://#', $source[1]);
@@ -647,15 +632,15 @@ function retails_guide_render_sources($sources, $heading = 'Official sources', $
  * The UL file number from Settings > Storefront Sign, or ''. Pages show it
  * only once it has been entered.
  */
-function retails_guide_ul_file_number()
+function wholesale_guide_ul_file_number()
 {
-	return trim((string) retails_get_setting('ul_file_number'));
+	return trim((string) wholesale_get_setting('ul_file_number'));
 }
 
 /**
  * Shared "talk to us" block used at the bottom of guide pages.
  */
-function retails_guide_render_help($title = 'Talk to a Real Sign Specialist', $text = '')
+function wholesale_guide_render_help($title = 'Talk to a Real Sign Specialist', $text = '')
 {
 	$contact_page = get_page_by_path('contact');
 	$contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
@@ -667,15 +652,15 @@ function retails_guide_render_help($title = 'Talk to a Real Sign Specialist', $t
 				<h2 id="gd-help-title"><?php echo esc_html($title); ?></h2>
 				<p><?php echo wp_kses_post($text); ?></p>
 				<ul class="cl-help-details">
-					<li><?php echo retails_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
-					<li><?php echo retails_home_icon('pin'); ?> Channel letters made in Washington &amp; California &middot; shipped to all 50 states</li>
+					<li><?php echo wholesale_home_icon('clock'); ?> Mon&ndash;Fri, 8:00am&ndash;5:00pm PST</li>
+					<li><?php echo wholesale_home_icon('pin'); ?> Channel letters made in Washington &amp; California &middot; shipped to all 50 states</li>
 				</ul>
 			</div>
 			<div class="cl-help-actions">
-				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo retails_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
-				<a class="cl-help-action" href="sms:+12066186543"><?php echo retails_home_icon('message'); ?><span><small>Text your logo</small>206-618-6543</span></a>
-				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo retails_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
-				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo retails_home_icon('arrow'); ?></a>
+				<a class="cl-help-action cl-help-action--primary" href="tel:+18664362101"><?php echo wholesale_home_icon('phone'); ?><span><small>Call toll free</small>866-436-2101</span></a>
+				<a class="cl-help-action" href="sms:+12066186543"><?php echo wholesale_home_icon('message'); ?><span><small>Text your logo</small>206-618-6543</span></a>
+				<a class="cl-help-action" href="mailto:TR@StorefrontSignOnline.com"><?php echo wholesale_home_icon('mail'); ?><span><small>Email</small>TR@StorefrontSignOnline.com</span></a>
+				<a class="cl-help-quote" href="<?php echo esc_url($contact_url); ?>">Request a free quote <?php echo wholesale_home_icon('arrow'); ?></a>
 			</div>
 		</div>
 	</section>
@@ -686,11 +671,11 @@ function retails_guide_render_help($title = 'Talk to a Real Sign Specialist', $t
  * Product cards for a list of product slugs: photo, name, starting price.
  * Slugs that don't exist are skipped.
  */
-function retails_guide_render_products($slugs)
+function wholesale_guide_render_products($slugs)
 {
 	$cards = array();
 	foreach ((array) $slugs as $slug => $note) {
-		$product = retails_seo_product($slug);
+		$product = wholesale_seo_product($slug);
 		if ($product) {
 			$cards[] = array($product, $slug, $note);
 		}
@@ -702,7 +687,7 @@ function retails_guide_render_products($slugs)
 	<div class="sf-type-grid">
 		<?php foreach ($cards as $card) : ?>
 			<?php list($product, $slug, $note) = $card; ?>
-			<?php $price = retails_price_no_cents(retails_seo_product_starting_text($slug)); ?>
+			<?php $price = wholesale_price_no_cents(wholesale_seo_product_starting_text($slug)); ?>
 			<article class="sf-type-card">
 				<a class="sf-type-image" href="<?php echo esc_url(get_permalink($product)); ?>" tabindex="-1" aria-hidden="true">
 					<?php
@@ -710,18 +695,17 @@ function retails_guide_render_products($slugs)
 						echo get_the_post_thumbnail($product, 'medium_large', array(
 							'loading' => 'lazy',
 							'decoding' => 'async',
-							'alt' => retails_schema_text(get_the_title($product)),
+							'alt' => wholesale_schema_text(get_the_title($product)),
 							'sizes' => '(max-width: 575px) 112px, (max-width: 991px) 50vw, 25vw',
 						));
 					}
 					?>
 				</a>
 				<div class="sf-type-body">
-					<h3><a href="<?php echo esc_url(get_permalink($product)); ?>"><?php echo esc_html(retails_schema_text(get_the_title($product))); ?></a></h3>
+					<h3><a href="<?php echo esc_url(get_permalink($product)); ?>"><?php echo esc_html(wholesale_schema_text(get_the_title($product))); ?></a></h3>
 					<?php if ($note) : ?>
 						<p><?php echo wp_kses_post($note); ?></p>
 					<?php endif; ?>
-					<?php echo function_exists('retails_card_trust') ? retails_card_trust($product->ID) : ''; // Escaped in helper. ?>
 					<?php if ($price) : ?>
 						<p class="sf-type-price"><small>Starting at</small> <?php echo wp_kses_post($price); ?></p>
 					<?php endif; ?>
@@ -737,18 +721,18 @@ function retails_guide_render_products($slugs)
  *
  * @return array URL => label.
  */
-function retails_guide_footer_links()
+function wholesale_guide_footer_links()
 {
 	$links = array();
 	foreach (array(
-		'locations' => 'State & City Sign Permit Guides',
+		'locations' => 'Shipping by State',
 		'industries' => 'Signs by Industry',
 		'sign-permits' => 'Sign Permit Help',
 		'how-to-install-channel-letters' => 'Installation Guide',
 		'warranty' => 'Warranty',
 		'shipping-returns' => 'Shipping & Returns',
 	) as $path => $label) {
-		$url = retails_guide_url($path, true);
+		$url = wholesale_guide_url($path, true);
 		if ($url) {
 			$links[$url] = $label;
 		}

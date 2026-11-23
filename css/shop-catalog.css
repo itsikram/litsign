@@ -207,9 +207,6 @@
   border: 1px solid var(--sc-line);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.85);
-  /* Own color: the hero photo layer (inc/hero-images.php) turns .sc-hero text
-     white, and these cards stay white, so the subtitle must not inherit it. */
-  color: var(--sc-muted);
   font-size: 0.9rem;
   line-height: 1.35;
 }
@@ -990,144 +987,6 @@
   background: linear-gradient(135deg, var(--sc-soft), #e6eef4);
 }
 
-/* Card photo gallery (cards with more than one photo): swipe on touch screens,
-   arrows on hover, a 1/N counter. Sits above the card-wide title link, so
-   swipes and arrow taps reach it; the photos link to the product themselves. */
-.sc-gal {
-  z-index: 2;
-}
-
-.sc-gal-track {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-
-.sc-gal-track::-webkit-scrollbar {
-  display: none;
-}
-
-.sc-gal-slide {
-  flex: 0 0 100%;
-  height: 100%;
-  overflow: hidden;
-  background: var(--sc-soft);
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-}
-
-.sc-gal-slide img {
-  display: block;
-}
-
-.sc-gal-arrow {
-  position: absolute;
-  top: 50%;
-  z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  margin-top: -17px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.94);
-  color: #0f172a;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
-}
-
-/* Chevron drawn in CSS: no icon markup in 200+ cards. */
-.sc-gal-arrow::before {
-  content: "";
-  width: 9px;
-  height: 9px;
-  border-top: 2.5px solid currentColor;
-  border-right: 2.5px solid currentColor;
-}
-
-.sc-gal-arrow--prev {
-  left: 8px;
-  transform: translateX(-6px);
-}
-
-.sc-gal-arrow--prev::before {
-  margin-left: 4px;
-  transform: rotate(-135deg);
-}
-
-.sc-gal-arrow--next {
-  right: 8px;
-  transform: translateX(6px);
-}
-
-.sc-gal-arrow--next::before {
-  margin-right: 4px;
-  transform: rotate(45deg);
-}
-
-.sc-gal:hover .sc-gal-arrow,
-.sc-gal-arrow:focus-visible {
-  opacity: 1;
-  transform: none;
-}
-
-.sc-gal-arrow:hover {
-  background: #ffffff;
-  color: #0b74a3;
-}
-
-.sc-gal-arrow:focus-visible {
-  outline: 3px solid #1fa8de;
-  outline-offset: 2px;
-}
-
-.sc-gal-count {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(11, 23, 36, 0.72);
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 700;
-  line-height: 1.3;
-  pointer-events: none;
-}
-
-/* Camera icon. */
-.sc-gal-count::before {
-  content: "";
-  width: 13px;
-  height: 13px;
-  margin-right: 4px;
-  background: currentColor;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'/%3E%3Ccircle cx='12' cy='13' r='4'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'/%3E%3Ccircle cx='12' cy='13' r='4'/%3E%3C/svg%3E") center / contain no-repeat;
-}
-
-/* Tablets and other touch screens without hover: keep the arrows in view. */
-@media (hover: none) and (min-width: 576px) {
-  .sc-gal-arrow {
-    opacity: 1;
-    transform: none;
-  }
-}
-
 .sc-card-body {
   display: flex;
   flex: 1;
@@ -1575,10 +1434,8 @@
     display: inline-flex;
   }
 
-  /* Without the script the filters stay in the page flow. sc-js is set in the
-     head, so phones never lay the panel out in the flow and then jump when the
-     script finishes. */
-  html:not(.sc-js) .sc-filters {
+  /* Without the script the filters stay in the page flow. */
+  html:not(.sc-ready) .sc-filters {
     position: static;
     width: auto;
     margin-bottom: 20px;
@@ -1740,18 +1597,6 @@
     min-height: 120px;
   }
 
-  .sc-gal-count {
-    right: 7px;
-    bottom: 7px;
-    padding: 2px 7px;
-    font-size: 0.66rem;
-  }
-
-  .sc-gal-count::before {
-    width: 11px;
-    height: 11px;
-  }
-
   .sc-grid--list .sc-card-body {
     padding: 12px 14px;
   }
@@ -1788,16 +1633,5 @@
 
   .sc-card-inner:hover {
     transform: none;
-  }
-
-  .sc-card-inner:hover .sc-card-media img {
-    transform: none;
-  }
-}
-
-/* Phones swipe; the arrows stay hidden and the counter is enough. */
-@media (max-width: 575.98px) {
-  .sc-gal-arrow {
-    display: none;
   }
 }

@@ -8,12 +8,12 @@
  *   <input type="file" name="x" data-async-upload="artwork" data-async-field="x_token">
  *
  * Single-file inputs marked like that are handled here. The contact page's multi-file
- * picker uses window.retailsAsyncUpload.upload() directly.
+ * picker uses window.wholesaleAsyncUpload.upload() directly.
  */
 (function () {
   "use strict";
 
-  var config = window.retailsAsyncUpload || {};
+  var config = window.wholesaleAsyncUpload || {};
   if (!config.ajaxUrl || !window.FormData || !window.XMLHttpRequest) return;
 
   // Resolves to the token; rejects with an Error whose message can be shown.
@@ -21,7 +21,7 @@
     var xhr = new XMLHttpRequest();
     var promise = new Promise(function (resolve, reject) {
       var data = new FormData();
-      data.append("action", "retails_async_upload");
+      data.append("action", "wholesale_async_upload");
       data.append("context", context);
       data.append("file", file);
       xhr.open("POST", config.ajaxUrl);
@@ -55,7 +55,7 @@
   // visitor can still add the item and send the file by email.
   function rejectedText(input, message) {
     if (input.getAttribute("data-async-upload") !== "artwork") return message;
-    return message + " Choose another file (a PDF or JPG export works best), or add to cart without it and email a download link (Google Drive, Dropbox or WeTransfer) to TR@StorefrontSignOnline.com with your order number.";
+    return message + " Choose another file (a PDF or JPG export works best), or add to cart without it and email your artwork to TR@StorefrontSignOnline.com with your order number.";
   }
 
   // Hold a form's submit until its uploads finish, then submit it again.
@@ -92,8 +92,7 @@
     var context = input.getAttribute("data-async-upload");
     var field = input.getAttribute("data-async-field");
     var form = input.form;
-    if (!context || !field || !form || input.hasAttribute("data-async-bound")) return;
-    input.setAttribute("data-async-bound", "");
+    if (!context || !field || !form) return;
 
     var name = input.name;
     var status = document.createElement("small");
@@ -111,13 +110,10 @@
         pending.delete(job);
         job = null;
       }
-      var hadToken = Boolean(hidden.parentNode);
       if (hidden.parentNode) hidden.parentNode.removeChild(hidden);
       input.name = name;
       status.textContent = "";
       status.className = "async-upload-status";
-      // js/artwork-size-check.js clears its size message.
-      if (hadToken) input.dispatchEvent(new CustomEvent("async-upload:cleared", { bubbles: true }));
     }
 
     input.addEventListener("change", function () {
@@ -152,8 +148,6 @@
         input.removeAttribute("name");
         status.textContent = "Uploaded ✓";
         status.className = "async-upload-status is-done";
-        // js/artwork-size-check.js compares the file with the ordered size.
-        input.dispatchEvent(new CustomEvent("async-upload:done", { bubbles: true, detail: { token: token, context: context } }));
       }, function (err) {
         if (job !== current || err.message === "aborted") return;
         if (err.status === 400 && err.message !== "upload_failed") {
@@ -176,12 +170,8 @@
   }
 
   document.querySelectorAll("input[type=file][data-async-upload]").forEach(bindInput);
-  // A product group swap (js/product-group-swap.js) brings in a new artwork box.
-  document.addEventListener("retails:product-swapped", function () {
-    document.querySelectorAll("input[type=file][data-async-upload]").forEach(bindInput);
-  });
 
-  window.retailsAsyncUpload = Object.assign(config, {
+  window.wholesaleAsyncUpload = Object.assign(config, {
     upload: upload,
     track: function (job, form) {
       job.form = form;

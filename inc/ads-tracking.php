@@ -9,14 +9,14 @@
 /**
  * Name of the first-party cookie that remembers the last ad click for 90 days.
  */
-const RETAILS_ADS_CLICK_COOKIE = 'sso_ads_click';
+const WHOLESALE_ADS_CLICK_COOKIE = 'sso_ads_click';
 
 /**
  * The ad click ID on this request's URL, or an empty array.
  *
  * @return array array('type' => gclid|gbraid|wbraid, 'id' => click ID)
  */
-function retails_ads_click_from_request()
+function wholesale_ads_click_from_request()
 {
 	foreach (array('gclid', 'gbraid', 'wbraid') as $type) {
 		if (!empty($_GET[$type])) {
@@ -33,20 +33,20 @@ function retails_ads_click_from_request()
 /**
  * The remembered ad click: this request's, else the cookie's.
  *
- * @return array Same shape as retails_ads_click_from_request().
+ * @return array Same shape as wholesale_ads_click_from_request().
  */
-function retails_ads_click()
+function wholesale_ads_click()
 {
-	$click = retails_ads_click_from_request();
+	$click = wholesale_ads_click_from_request();
 	if ($click) {
 		return $click;
 	}
 
-	if (empty($_COOKIE[RETAILS_ADS_CLICK_COOKIE])) {
+	if (empty($_COOKIE[WHOLESALE_ADS_CLICK_COOKIE])) {
 		return array();
 	}
 
-	$parts = explode(':', sanitize_text_field(wp_unslash($_COOKIE[RETAILS_ADS_CLICK_COOKIE])), 2);
+	$parts = explode(':', sanitize_text_field(wp_unslash($_COOKIE[WHOLESALE_ADS_CLICK_COOKIE])), 2);
 	if (2 !== count($parts) || !in_array($parts[0], array('gclid', 'gbraid', 'wbraid'), true)) {
 		return array();
 	}
@@ -60,18 +60,18 @@ function retails_ads_click()
  * Remember an ad click for 90 days, so an order placed later (after browsing
  * the builder or coming back another day) keeps its click ID.
  */
-function retails_ads_remember_click()
+function wholesale_ads_remember_click()
 {
 	if (is_admin() || wp_doing_ajax() || headers_sent()) {
 		return;
 	}
 
-	$click = retails_ads_click_from_request();
+	$click = wholesale_ads_click_from_request();
 	if (!$click) {
 		return;
 	}
 
-	setcookie(RETAILS_ADS_CLICK_COOKIE, $click['type'] . ':' . $click['id'], array(
+	setcookie(WHOLESALE_ADS_CLICK_COOKIE, $click['type'] . ':' . $click['id'], array(
 		'expires' => time() + 90 * DAY_IN_SECONDS,
 		'path' => COOKIEPATH ? COOKIEPATH : '/',
 		'domain' => COOKIE_DOMAIN,
@@ -79,50 +79,50 @@ function retails_ads_remember_click()
 		'httponly' => true,
 		'samesite' => 'Lax',
 	));
-	$_COOKIE[RETAILS_ADS_CLICK_COOKIE] = $click['type'] . ':' . $click['id'];
+	$_COOKIE[WHOLESALE_ADS_CLICK_COOKIE] = $click['type'] . ':' . $click['id'];
 }
-add_action('init', 'retails_ads_remember_click');
+add_action('init', 'wholesale_ads_remember_click');
 
 /**
  * Save the ad click on a new order, for offline conversion uploads and for
  * seeing which orders came from ads.
  */
-function retails_ads_attach_click_to_order($order_id)
+function wholesale_ads_attach_click_to_order($order_id)
 {
-	$click = retails_ads_click();
+	$click = wholesale_ads_click();
 	if ($click && !get_post_meta($order_id, '_ads_click_id', true)) {
 		update_post_meta($order_id, '_ads_click_type', $click['type']);
 		update_post_meta($order_id, '_ads_click_id', $click['id']);
 	}
 }
-add_action('retails_order_created', 'retails_ads_attach_click_to_order');
+add_action('wholesale_order_created', 'wholesale_ads_attach_click_to_order');
 
 /**
  * Quote forms outside the ads landing page don't read the click ID from the
  * URL; fill it in from the remembered click when a submission is created.
  */
-function retails_ads_attach_click_to_quote($post_id, $post, $update)
+function wholesale_ads_attach_click_to_quote($post_id, $post, $update)
 {
 	if ($update || wp_is_post_revision($post_id) || is_admin()) {
 		return;
 	}
 
-	$click = retails_ads_click();
+	$click = wholesale_ads_click();
 	if ($click && !get_post_meta($post_id, '_contact_gclid', true)) {
 		update_post_meta($post_id, '_contact_gclid', $click['id']);
 		update_post_meta($post_id, '_contact_click_type', $click['type']);
 	}
 }
-add_action('save_post_contact_submission', 'retails_ads_attach_click_to_quote', 10, 3);
+add_action('save_post_contact_submission', 'wholesale_ads_attach_click_to_quote', 10, 3);
 
 /**
  * Whether this page view came straight from an ad click. The Google tag then
  * loads right away instead of after the page finishes loading, so the click
  * is recorded even if the visitor moves on quickly.
  */
-function retails_ads_is_ad_landing()
+function wholesale_ads_is_ad_landing()
 {
-	return (bool) retails_ads_click_from_request();
+	return (bool) wholesale_ads_click_from_request();
 }
 
 /**
@@ -130,9 +130,9 @@ function retails_ads_is_ad_landing()
  *
  * @return array Google tag user_data (unhashed; the tag hashes it).
  */
-function retails_ads_order_user_data($order_id)
+function wholesale_ads_order_user_data($order_id)
 {
-	$billing = retails_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true));
+	$billing = wholesale_decode_order_meta_array(get_post_meta($order_id, 'billing_address', true));
 	$digits = preg_replace('/\D/', '', (string) ($billing['billing_tel'] ?? ''));
 	$phone = 10 === strlen($digits) ? '+1' . $digits : (11 === strlen($digits) && '1' === $digits[0] ? '+' . $digits : '');
 
@@ -159,9 +159,9 @@ function retails_ads_order_user_data($order_id)
  * Product ID for GA4 items: the Merchant Center feed item ID
  * (inc/merchant-feed.php), so sales match the Shopping products.
  */
-function retails_ads_item_id($product_id)
+function wholesale_ads_item_id($product_id)
 {
-	return function_exists('retails_merchant_feed_id') ? retails_merchant_feed_id($product_id) : (string) $product_id;
+	return function_exists('wholesale_merchant_feed_id') ? wholesale_merchant_feed_id($product_id) : (string) $product_id;
 }
 
 /**
@@ -169,15 +169,15 @@ function retails_ads_item_id($product_id)
  *
  * @return array
  */
-function retails_ads_order_items($order_id)
+function wholesale_ads_order_items($order_id)
 {
 	$items = array();
 
-	foreach (retails_decode_order_meta_array(get_post_meta($order_id, 'product_json', true)) as $item) {
+	foreach (wholesale_decode_order_meta_array(get_post_meta($order_id, 'product_json', true)) as $item) {
 		$quantity = max(1, (int) ($item['product_quantity'] ?? 1));
 		$subtotal = (float) ($item['product_subtotal'] ?? 0);
 		$items[] = array_filter(array(
-			'item_id' => isset($item['product_id']) ? retails_ads_item_id($item['product_id']) : '',
+			'item_id' => isset($item['product_id']) ? wholesale_ads_item_id($item['product_id']) : '',
 			'item_name' => html_entity_decode(wp_strip_all_tags((string) ($item['product_title'] ?? '')), ENT_QUOTES, 'UTF-8'),
 			'quantity' => $quantity,
 			'price' => round($subtotal / $quantity, 2),
@@ -193,19 +193,19 @@ function retails_ads_order_items($order_id)
  * GA4 begin_checkout when the checkout page opens, so the funnel from cart to
  * purchase shows where buyers drop off.
  */
-function retails_ads_begin_checkout_event()
+function wholesale_ads_begin_checkout_event()
 {
-	if (!is_page('checkout') || !function_exists('retails_get_cart')) {
+	if (!is_page('checkout') || !function_exists('wholesale_get_cart')) {
 		return;
 	}
 
-	$cart = retails_get_cart();
+	$cart = wholesale_get_cart();
 	$items = array();
 	foreach ((array) $cart->get_items() as $item) {
 		$item = (array) $item;
 		$quantity = max(1, (int) ($item['product_quantity'] ?? 1));
 		$items[] = array(
-			'item_id' => isset($item['product_id']) ? retails_ads_item_id($item['product_id']) : '',
+			'item_id' => isset($item['product_id']) ? wholesale_ads_item_id($item['product_id']) : '',
 			'item_name' => html_entity_decode(wp_strip_all_tags((string) ($item['product_title'] ?? '')), ENT_QUOTES, 'UTF-8'),
 			'quantity' => $quantity,
 			'price' => round((float) ($item['product_subtotal'] ?? 0) / $quantity, 2),
@@ -228,7 +228,7 @@ function retails_ads_begin_checkout_event()
 	</script>
 	<?php
 }
-add_action('wp_footer', 'retails_ads_begin_checkout_event', 21);
+add_action('wp_footer', 'wholesale_ads_begin_checkout_event', 21);
 
 /**
  * Secondary Google Ads conversions sent from the browser, keyed by their theme
@@ -236,7 +236,7 @@ add_action('wp_footer', 'retails_ads_begin_checkout_event', 21);
  *
  * @return array setting key => array('event' => script key, 'label' => admin label, 'help' => admin help)
  */
-function retails_ads_click_conversions()
+function wholesale_ads_click_conversions()
 {
 	return array(
 		'google_ads_phone_tap_label' => array('event' => 'phone_tap', 'label' => 'Phone tap conversion label', 'help' => 'Sent when someone taps or clicks a phone number link.'),
@@ -251,17 +251,17 @@ function retails_ads_click_conversions()
 /**
  * Conversion labels fixed in the theme (purchase, website calls).
  */
-const RETAILS_ADS_PURCHASE_LABEL = 'UkFKCJGGp_kcEPW2yt9E';
-const RETAILS_ADS_CALL_LABEL = 'e7GrCJqb85sdEPW2yt9E';
+const WHOLESALE_ADS_PURCHASE_LABEL = 'UkFKCJGGp_kcEPW2yt9E';
+const WHOLESALE_ADS_CALL_LABEL = 'e7GrCJqb85sdEPW2yt9E';
 
 /**
  * The quote request label: the theme setting, else the built-in default.
  */
-function retails_ads_lead_label()
+function wholesale_ads_lead_label()
 {
-	$label = trim((string) retails_get_setting('google_ads_lead_label'));
+	$label = trim((string) wholesale_get_setting('google_ads_lead_label'));
 
-	return '' !== $label ? $label : retails_setting_defaults()['google_ads_lead_label'];
+	return '' !== $label ? $label : wholesale_setting_defaults()['google_ads_lead_label'];
 }
 
 /**
@@ -269,12 +269,12 @@ function retails_ads_lead_label()
  *
  * @return array[] Each: name, label, when.
  */
-function retails_ads_builtin_conversions()
+function wholesale_ads_builtin_conversions()
 {
 	return array(
-		array('name' => 'Purchase', 'label' => RETAILS_ADS_PURCHASE_LABEL, 'when' => 'Once per order on the order confirmation page, with the order total, order number and customer details (enhanced conversions).'),
-		array('name' => 'Quote request', 'label' => retails_ads_lead_label(), 'when' => 'Once per quote, on the page the quote form returns to (contact page, /custom-channel-letters/, /banners-displays/, landing pages).'),
-		array('name' => 'Calls from website', 'label' => RETAILS_ADS_CALL_LABEL, 'when' => 'Google shows ad visitors a forwarding number in place of 866-436-2101 and counts their calls. Not a click event.'),
+		array('name' => 'Purchase', 'label' => WHOLESALE_ADS_PURCHASE_LABEL, 'when' => 'Once per order on the order confirmation page, with the order total, order number and customer details (enhanced conversions).'),
+		array('name' => 'Quote request', 'label' => wholesale_ads_lead_label(), 'when' => 'Once per quote, on the page the quote form returns to (contact page, /custom-channel-letters/, /banners-displays/, landing pages).'),
+		array('name' => 'Calls from website', 'label' => WHOLESALE_ADS_CALL_LABEL, 'when' => 'Google shows ad visitors a forwarding number in place of 866-436-2101 and counts their calls. Not a click event.'),
 	);
 }
 
@@ -284,11 +284,11 @@ function retails_ads_builtin_conversions()
  *
  * @return string[]
  */
-function retails_ads_sitewide_labels()
+function wholesale_ads_sitewide_labels()
 {
-	$labels = wp_list_pluck(retails_ads_builtin_conversions(), 'label');
-	foreach (array_keys(retails_ads_click_conversions()) as $key) {
-		$labels[] = trim((string) retails_get_setting($key));
+	$labels = wp_list_pluck(wholesale_ads_builtin_conversions(), 'label');
+	foreach (array_keys(wholesale_ads_click_conversions()) as $key) {
+		$labels[] = trim((string) wholesale_get_setting($key));
 	}
 
 	return array_values(array_filter($labels));
@@ -297,9 +297,9 @@ function retails_ads_sitewide_labels()
 /**
  * The GA4 measurement ID from the theme settings, or '' when unset or malformed.
  */
-function retails_ga4_measurement_id()
+function wholesale_ga4_measurement_id()
 {
-	$id = strtoupper(trim((string) retails_get_setting('ga4_measurement_id')));
+	$id = strtoupper(trim((string) wholesale_get_setting('ga4_measurement_id')));
 
 	return preg_match('/^G-[A-Z0-9]{4,20}$/', $id) ? $id : '';
 }
@@ -307,42 +307,28 @@ function retails_ga4_measurement_id()
 /**
  * Phone, text and email taps, builder starts and cart adds. Events queue in
  * dataLayer, so ones that happen before the deferred Google tag loads
- * (retails_deferred_conversion_tracking) are sent once it does.
+ * (wholesale_deferred_conversion_tracking) are sent once it does.
  */
-function retails_ads_click_tracking_script()
+function wholesale_ads_click_tracking_script()
 {
 	$labels = array();
-	foreach (retails_ads_click_conversions() as $key => $conversion) {
-		$label = trim((string) retails_get_setting($key));
+	foreach (wholesale_ads_click_conversions() as $key => $conversion) {
+		$label = trim((string) wholesale_get_setting($key));
 		if ('' !== $label) {
 			$labels[$conversion['event']] = $label;
 		}
 	}
-	$ga4 = '' !== retails_ga4_measurement_id();
+	$ga4 = '' !== wholesale_ga4_measurement_id();
 	if (!$labels && !$ga4) {
 		return;
-	}
-	// This product page's feed item IDs, so add_to_cart names the item as the feed does. Group
-	// buttons swap the other products of the group into the page (inc/product-group-swap.php).
-	$feed_ids = array();
-	if (is_singular('product')) {
-		$feed_product_ids = array((int) get_queried_object_id());
-		if (function_exists('retails_product_group_for_page')) {
-			foreach (retails_product_group_for_page() as $group_member) {
-				$feed_product_ids[] = (int) $group_member['id'];
-			}
-		}
-		foreach (array_unique($feed_product_ids) as $feed_product_id) {
-			$feed_ids[(string) $feed_product_id] = retails_ads_item_id($feed_product_id);
-		}
 	}
 	?>
 	<script>
 		(function () {
 			var labels = <?php echo wp_json_encode((object) $labels); ?>;
 			var ga4 = <?php echo $ga4 ? 'true' : 'false'; ?>;
-			// This product page's feed item IDs (with its group's, which a group button can swap in).
-			var feedIds = <?php echo wp_json_encode($feed_ids ? $feed_ids : (object) array()); ?>;
+			// This product page's feed item ID, so add_to_cart names it as the feed does.
+			var feedIds = <?php echo wp_json_encode(is_singular('product') ? array((string) get_queried_object_id() => wholesale_ads_item_id(get_queried_object_id())) : (object) array()); ?>;
 			window.dataLayer = window.dataLayer || [];
 			function gtag() { window.dataLayer.push(arguments); }
 			function convert(key, params) {
@@ -385,16 +371,16 @@ function retails_ads_click_tracking_script()
 				var chat = e.detail || {};
 				if (!chat.conversation_id || 'order' === chat.source) return;
 				var seen = [];
-				try { seen = JSON.parse(localStorage.getItem('retails_chat_conversions') || '[]'); } catch (err) {}
+				try { seen = JSON.parse(localStorage.getItem('wholesale_chat_conversions') || '[]'); } catch (err) {}
 				if (seen.indexOf(chat.conversation_id) > -1) return;
 				seen.push(chat.conversation_id);
-				try { localStorage.setItem('retails_chat_conversions', JSON.stringify(seen.slice(-20))); } catch (err) {}
+				try { localStorage.setItem('wholesale_chat_conversions', JSON.stringify(seen.slice(-20))); } catch (err) {}
 				convert('chat_start', { transaction_id: 'chat-' + chat.conversation_id });
 				if (ga4) gtag('event', 'generate_lead', { method: 'live_chat' });
 			});
 
 			// js/mini-cart.js dispatches this after the cart confirms the add.
-			document.addEventListener('retails:cart-added', function (e) {
+			document.addEventListener('wholesale:cart-added', function (e) {
 				var item = e.detail || {};
 				var value = Number(item.value) || 0;
 				var quantity = Number(item.quantity) || 1;
@@ -411,4 +397,4 @@ function retails_ads_click_tracking_script()
 	</script>
 	<?php
 }
-add_action('wp_footer', 'retails_ads_click_tracking_script', 21);
+add_action('wp_footer', 'wholesale_ads_click_tracking_script', 21);

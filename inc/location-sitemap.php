@@ -4,29 +4,29 @@
  *
  * Lists the /locations/ hub and every approved ('live') state and city guide
  * (inc/guide-pages.php) whose WordPress page is published, indexable and
- * canonical to itself. <lastmod> reflects significant content updates;
- * the hub takes the newest of its own revision and its guides. Guides
- * still in review never appear.
+ * canonical to itself. <lastmod> is the date the entry's facts were last
+ * checked ('updated' in its data file), else the data file's date; the hub
+ * takes the newest of its guides. Guides still in review never appear.
  * Submit it in Search Console next to /sitemap.xml.
  *
  * @package litsign
  */
 
-function retails_location_sitemap_rewrite()
+function wholesale_location_sitemap_rewrite()
 {
-	add_rewrite_rule('^location-sitemap\.xml$', 'index.php?retails_location_sitemap=1', 'top');
+	add_rewrite_rule('^location-sitemap\.xml$', 'index.php?wholesale_location_sitemap=1', 'top');
 }
-add_action('init', 'retails_location_sitemap_rewrite', 20);
+add_action('init', 'wholesale_location_sitemap_rewrite', 20);
 
 add_action('init', function () {
-	if ('1' !== get_option('retails_location_sitemap_rewrite_version')) {
+	if ('1' !== get_option('wholesale_location_sitemap_rewrite_version')) {
 		flush_rewrite_rules(false);
-		update_option('retails_location_sitemap_rewrite_version', '1');
+		update_option('wholesale_location_sitemap_rewrite_version', '1');
 	}
 }, 99);
 
 add_filter('query_vars', function ($vars) {
-	$vars[] = 'retails_location_sitemap';
+	$vars[] = 'wholesale_location_sitemap';
 	return $vars;
 });
 
@@ -36,27 +36,24 @@ add_filter('query_vars', function ($vars) {
  *
  * @param WP_Post|null $page
  */
-function retails_location_sitemap_listable($page)
+function wholesale_location_sitemap_listable($page)
 {
 	if (!$page || 'publish' !== $page->post_status || '' !== $page->post_password) {
 		return false;
 	}
 
-	static $excluded = null;
-	if (null === $excluded) {
-		$excluded = array_fill_keys(array_map('intval', array_merge(
-			retails_seo_noindex_page_ids(),
-			(array) apply_filters('retails_seo_sitemap_excluded_post_ids', array())
-		)), true);
-	}
-	if (isset($excluded[$page->ID])) {
+	$excluded = array_map('intval', array_merge(
+		wholesale_seo_noindex_page_ids(),
+		(array) apply_filters('wholesale_seo_sitemap_excluded_post_ids', array())
+	));
+	if (in_array((int) $page->ID, $excluded, true)) {
 		return false;
 	}
 
 	// A canonical set on the page under SEO (inc/seo-admin/) that isn't the page itself.
-	if (function_exists('retails_seo_stored_value')) {
-		$canonical = retails_seo_stored_value('post', $page->ID, 'canonical');
-		if ('' !== $canonical && $canonical !== get_permalink($page)) {
+	if (function_exists('wholesale_seo_stored_value')) {
+		$canonical = wholesale_seo_stored_value('post', $page->ID, 'canonical');
+		if ('' !== $canonical && untrailingslashit($canonical) !== untrailingslashit(get_permalink($page))) {
 			return false;
 		}
 	}
@@ -65,68 +62,58 @@ function retails_location_sitemap_listable($page)
 }
 
 /**
- * The same published, indexable guides appear in the directory and sitemap.
+ * The URLs the location sitemap lists: hub first, then states A-Z, each
+ * followed by its cities A-Z.
  *
- * @return array Registry entries with the WordPress page, URL and lastmod.
+ * @return array List of array('loc' => URL, 'lastmod' => Y-m-d).
  */
-function retails_location_public_guides()
+function wholesale_location_sitemap_entries()
 {
-	$states = retails_guide_states();
+	$states = wholesale_guide_states();
 	$entries = array();
+	$newest = '';
 
-	foreach (retails_guide_registry() as $path => $entry) {
+	foreach (wholesale_guide_registry() as $path => $entry) {
 		if (empty($entry['type']) || !in_array($entry['type'], array('state', 'city'), true) || 'live' !== $entry['status']) {
 			continue;
 		}
 
 		$page = get_page_by_path($path);
-		if (!retails_location_sitemap_listable($page)) {
+		if (!wholesale_location_sitemap_listable($page)) {
 			continue;
 		}
 
 		$state = $states[$entry['state']];
-		$place = 'city' === $entry['type'] ? $state['cities'][$entry['city']] : $state;
+		$lastmod = 'city' === $entry['type'] ? wholesale_guide_updated($state['cities'][$entry['city']]) : '';
+		// Inline cities live in the state file, so they share its date.
+		$lastmod = $lastmod ? $lastmod : wholesale_guide_updated($state);
 
 		// Sort key: state name, then city name, so each state is followed by its cities A-Z.
 		$sort = $state['name'] . "\0" . ('city' === $entry['type'] ? $state['cities'][$entry['city']]['name'] : '');
-		$entries[] = $entry + array(
-			'page' => $page,
-			'loc' => get_permalink($page),
-			'lastmod' => retails_location_modified($place),
-			'sort' => $sort,
-		);
+		$entries[] = array('loc' => get_permalink($page), 'lastmod' => $lastmod, 'sort' => $sort);
+		$newest = max($newest, $lastmod);
 	}
 
 	usort($entries, static function ($a, $b) {
 		return strcasecmp($a['sort'], $b['sort']);
 	});
-	return $entries;
-}
 
-function retails_location_directory_modified($guides)
-{
-	return $guides ? max(array_column($guides, 'lastmod')) : retails_location_modified();
-}
-
-/** @return array Sitemap URLs and dates, with the location hub first. */
-function retails_location_sitemap_entries()
-{
-	$entries = retails_location_public_guides();
 	$hub = get_page_by_path('locations');
-	if (retails_guide_is_live('locations') && retails_location_sitemap_listable($hub)) {
-		array_unshift($entries, array('loc' => get_permalink($hub), 'lastmod' => retails_location_directory_modified($entries)));
+	if (wholesale_guide_is_live('locations') && wholesale_location_sitemap_listable($hub)) {
+		$hub_date = gmdate('Y-m-d', (int) filemtime(get_template_directory() . '/page-locations.php'));
+		array_unshift($entries, array('loc' => get_permalink($hub), 'lastmod' => max($newest, $hub_date)));
 	}
 
 	return $entries;
 }
 
-function retails_render_location_sitemap()
+function wholesale_render_location_sitemap()
 {
-	if ('1' !== get_query_var('retails_location_sitemap')) {
+	if ('1' !== get_query_var('wholesale_location_sitemap')) {
 		return;
 	}
 
-	$entries = retails_location_sitemap_entries();
+	$entries = wholesale_location_sitemap_entries();
 
 	nocache_headers();
 	header('Content-Type: application/xml; charset=UTF-8');
@@ -146,4 +133,4 @@ function retails_render_location_sitemap()
 	echo '</urlset>';
 	exit;
 }
-add_action('template_redirect', 'retails_render_location_sitemap', 0);
+add_action('template_redirect', 'wholesale_render_location_sitemap', 0);

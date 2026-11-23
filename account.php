@@ -12,7 +12,7 @@ $account_redirect = static function ($type, $message) {
 };
 
 if (isset($_GET['logout'])) {
-    check_admin_referer('retails_account_logout');
+    check_admin_referer('wholesale_account_logout');
     wp_logout();
     wp_safe_redirect(home_url('/'));
     exit;
@@ -23,7 +23,7 @@ $user_data = get_userdata(get_current_user_id());
 $user_id = $user_data->ID;
 
 if ('POST' === $_SERVER['REQUEST_METHOD'] && (isset($_POST['account_details']) || isset($_POST['user_address']) || isset($_POST['change_password']))) {
-    check_admin_referer('retails_account_update', 'retails_account_nonce');
+    check_admin_referer('wholesale_account_update', 'wholesale_account_nonce');
 }
 
 if (isset($_POST['account_details'])) {
@@ -148,7 +148,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                 <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#v-pills-address" type="button" role="tab" aria-controls="v-pills-address" aria-selected="false">Address</button>
                                 <button class="nav-link text-start" data-bs-toggle="pill" data-bs-target="#v-pills-password" type="button" role="tab" aria-controls="v-pills-password" aria-selected="false">Password</button>
                                 <a href="<?php echo esc_url(home_url('/my-orders/')); ?>" class="nav-link text-start">My Orders</a>
-                                <a href="<?php echo esc_url(wp_nonce_url(add_query_arg('logout', 'true', get_permalink()), 'retails_account_logout')); ?>" class="nav-link text-start account-logout" id="v-pills-settings-tab" role="tab" aria-selected="false">Logout</a>
+                                <a href="<?php echo esc_url(wp_nonce_url(add_query_arg('logout', 'true', get_permalink()), 'wholesale_account_logout')); ?>" class="nav-link text-start account-logout" id="v-pills-settings-tab" role="tab" aria-selected="false">Logout</a>
                             </div>
                         </div>
                         <div class="col-md-9">
@@ -159,7 +159,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                         <h3>Account Details</h3>
                                         <form method="POST">
                                             <input type="hidden" name="account_details" value="1">
-                                            <?php wp_nonce_field('retails_account_update', 'retails_account_nonce'); ?>
+                                            <?php wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce'); ?>
 
                                             <div class="row mb-2">
                                                 <div class="col-md-6">
@@ -242,7 +242,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                         <h3>Address</h3>
                                         <form method="POST">
                                             <input type="hidden" name="user_address" value="1">
-                                            <?php wp_nonce_field('retails_account_update', 'retails_account_nonce'); ?>
+                                            <?php wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce'); ?>
                                             <div class="row mb-2">
                                                 <div class="col-md-4">
                                                     <div class="form-group">
@@ -304,7 +304,7 @@ $account_notice_message = isset($_GET['message']) ? sanitize_text_field($_GET['m
                                         <h3>Change Password</h3>
                                         <form method="POST">
                                             <input type="hidden" name="change_password" value="1">
-                                            <?php wp_nonce_field('retails_account_update', 'retails_account_nonce'); ?>
+                                            <?php wp_nonce_field('wholesale_account_update', 'wholesale_account_nonce'); ?>
                                             <div class="row mb-2">
                                                 <div class="form-group">
                                                     <label for="input-fName" class="form-label mb-0">Current Password</label>

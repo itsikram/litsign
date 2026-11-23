@@ -12,12 +12,12 @@
 
 $contact_page = get_page_by_path('contact');
 $contact_url = $contact_page ? get_permalink($contact_page) : home_url('/contact/');
-$permits_url = retails_guide_url('sign-permits');
-$warranty_url = retails_guide_url('warranty');
-$locations_url = retails_guide_url('locations');
-$ul_number = retails_guide_ul_file_number();
+$permits_url = wholesale_guide_url('sign-permits');
+$warranty_url = wholesale_guide_url('warranty');
+$locations_url = wholesale_guide_url('locations');
+$ul_number = wholesale_guide_ul_file_number();
 
-retails_seo_set_page_faq(array(
+wholesale_seo_set_page_faq(array(
 	array(
 		'q' => 'Can I install channel letters myself?',
 		'a' => 'Usually not. The electrical connection must be made by a licensed electrician or licensed sign contractor in almost every state, and some states, such as Washington, require an electrical license to install any part of a lit sign, not only to wire it. Lit signs usually also need an electrical permit and inspection. Most owners hire one licensed local sign installer to do both.',
@@ -46,11 +46,11 @@ get_header();
 <main id="primary" class="sf-page gd-page">
 	<section class="sf-hero" aria-labelledby="gd-title">
 		<div class="container">
-			<?php retails_breadcrumbs(); ?>
+			<?php wholesale_breadcrumbs(); ?>
 			<p class="cl-kicker">Installation overview</p>
 			<h1 id="gd-title" class="sf-hero-title">How to Install Channel Letters</h1>
 			<p class="sf-hero-lead">An overview for you and your licensed installer: how raceway and direct-mount letters go up, how the install pattern is used, and how power is connected and inspected. Always follow the wiring diagram and install pattern that ship with your sign.</p>
-			<?php retails_guide_byline(); ?>
+			<?php wholesale_guide_byline(); ?>
 			<div class="gd-note">
 				<p><strong>Who installs it?</strong> We build, test and ship your sign. A licensed sign installer or electrician in your area mounts it and makes the electrical connection. We don&rsquo;t install signs.</p>
 			</div>
@@ -66,7 +66,7 @@ get_header();
 				<li><strong>Power planned.</strong> Your electrician confirms there is a circuit for the sign at the wall, or plans to run one, and where the disconnect will go.</li>
 				<li><strong>Wall checked.</strong> Know what&rsquo;s behind the fascia (wood framing, metal studs, concrete block, EIFS) so the installer brings the right anchors, and whether the inside of the wall can be reached.</li>
 				<li><strong>Access arranged.</strong> A ladder, scaffold or lift for the sign height, and any landlord or property manager sign-off on the day.</li>
-				<li><strong>Delivery inspected.</strong> When the sign arrives, check the packaging before you sign for it and report any damage right away (see <a href="<?php echo esc_url(retails_guide_url('shipping-returns') ? retails_guide_url('shipping-returns') : home_url('/terms-conditions/')); ?>">shipping damage</a>).</li>
+				<li><strong>Delivery inspected.</strong> When the sign arrives, check the packaging before you sign for it and report any damage right away (see <a href="<?php echo esc_url(wholesale_guide_url('shipping-returns') ? wholesale_guide_url('shipping-returns') : home_url('/terms-conditions/')); ?>">shipping damage</a>).</li>
 			</ul>
 		</div>
 	</section>
@@ -159,12 +159,12 @@ get_header();
 			<p class="cl-kicker">Questions</p>
 			<h2 id="gd-faq-title" class="cl-section-title">Installation FAQ</h2>
 			<div class="cl-faq-list">
-				<?php retails_seo_render_faq(); ?>
+				<?php wholesale_seo_render_faq(); ?>
 			</div>
 		</div>
 	</section>
 
-	<?php retails_guide_render_help('Questions From Your Installer?', 'Your installer or electrician can call us during business hours with questions about the wiring diagram, install pattern or power supplies. Have your order number ready.'); ?>
+	<?php wholesale_guide_render_help('Questions From Your Installer?', 'Your installer or electrician can call us during business hours with questions about the wiring diagram, install pattern or power supplies. Have your order number ready.'); ?>
 </main>
 
 <?php
